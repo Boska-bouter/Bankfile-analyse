@@ -420,6 +420,7 @@
 .leading-none { line-height: 1; }
 .text-\[9px\] { font-size: 9px; line-height: 1.2; }
 .list-none { list-style-type: none; }
+.pt-1 { padding-top: 0.25rem; }
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
@@ -1404,6 +1405,7 @@ function BankOverzichtTool() {
   const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
   const [reviewedPersonKeys, setReviewedPersonKeys] = useState([]);
   const [reviewedOverigKeys, setReviewedOverigKeys] = useState([]);
+  const [manualPriveUitgaven, setManualPriveUitgaven] = useState({});
   const [loanInterestRates, setLoanInterestRates] = useState({});
   const [showPersonReview, setShowPersonReview] = useState(false);
   const [showOverigReview, setShowOverigReview] = useState(false);
@@ -1549,6 +1551,7 @@ function BankOverzichtTool() {
     setReviewedIncomeKeys(parsed.reviewedIncomeKeys || []);
     setReviewedPersonKeys(parsed.reviewedPersonKeys || []);
     setReviewedOverigKeys(parsed.reviewedOverigKeys || []);
+    setManualPriveUitgaven(parsed.manualPriveUitgaven || {});
     setLoanInterestRates(parsed.loanInterestRates || {});
     setOverridesByCounterparty(migrateOverridesMap(parsed.overridesByCounterparty || {}));
     setOverridesByRow(migrateOverridesMap(parsed.overridesByRow || {}));
@@ -1721,6 +1724,7 @@ function BankOverzichtTool() {
       setReviewedIncomeKeys([]);
       setReviewedPersonKeys([]);
       setReviewedOverigKeys([]);
+      setManualPriveUitgaven({});
       setLoanInterestRates({});
       setExcludedDuplicateFingerprints([]);
       setDismissedDuplicateNotice(false);
@@ -1785,6 +1789,7 @@ function BankOverzichtTool() {
       reviewedIncomeKeys,
       reviewedPersonKeys,
       reviewedOverigKeys,
+      manualPriveUitgaven,
       loanInterestRates,
       excludedDuplicateFingerprints,
       categoryBtwRates,
@@ -1858,6 +1863,7 @@ function BankOverzichtTool() {
         reviewedIncomeKeys: project.reviewedIncomeKeys || [],
         reviewedPersonKeys: project.reviewedPersonKeys || [],
         reviewedOverigKeys: project.reviewedOverigKeys || [],
+        manualPriveUitgaven: project.manualPriveUitgaven || {},
         loanInterestRates: project.loanInterestRates || {},
         excludedDuplicateFingerprints: project.excludedDuplicateFingerprints || [],
         categoryBtwRates: mergeBtwRates(project.categoryBtwRates, project.btwRatesVersion),
@@ -1880,6 +1886,7 @@ function BankOverzichtTool() {
       setReviewedIncomeKeys(nextSettings.reviewedIncomeKeys);
       setReviewedPersonKeys(nextSettings.reviewedPersonKeys);
       setReviewedOverigKeys(nextSettings.reviewedOverigKeys);
+      setManualPriveUitgaven(nextSettings.manualPriveUitgaven);
       setLoanInterestRates(nextSettings.loanInterestRates);
       setExcludedDuplicateFingerprints(nextSettings.excludedDuplicateFingerprints);
       setCategoryBtwRates(nextSettings.categoryBtwRates);
@@ -2219,8 +2226,8 @@ function BankOverzichtTool() {
       skipNextPersistRef.current = false;
       return;
     }
-    persistSettings({ businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys, loanInterestRates, categoryRules, excludedDuplicateFingerprints, categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION, voorbelastingExcluded, fixedCategories, notesByRow, knownCounterparties, kwartaalStatus });
-  }, [loaded, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys, loanInterestRates, categoryRules, excludedDuplicateFingerprints, categoryBtwRates, btwVerlegd, korRegeling, voorbelastingExcluded, fixedCategories, notesByRow, knownCounterparties, kwartaalStatus, persistSettings]);
+    persistSettings({ businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys, manualPriveUitgaven, loanInterestRates, categoryRules, excludedDuplicateFingerprints, categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION, voorbelastingExcluded, fixedCategories, notesByRow, knownCounterparties, kwartaalStatus });
+  }, [loaded, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys, manualPriveUitgaven, loanInterestRates, categoryRules, excludedDuplicateFingerprints, categoryBtwRates, btwVerlegd, korRegeling, voorbelastingExcluded, fixedCategories, notesByRow, knownCounterparties, kwartaalStatus, persistSettings]);
   const setCounterpartyOverride = (counterparty, amount, patch) => {
     const key = counterpartyKey(counterparty, amount);
     if (!key) return;
@@ -2738,7 +2745,8 @@ function BankOverzichtTool() {
     const winst = btwData.zakBruto - btwData.zakBtwTotaal;
     const teBetalenOB = yearlyOpenOB[activeYear] || 0;
     const ibSchatting = estimateIncomeTax(winst, activeYear);
-    const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : btwData.uitkeringenAanPrive;
+    const manualPrive = manualPriveUitgaven[activeYear];
+    const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : manualPrive !== void 0 && manualPrive !== "" ? Number(manualPrive) : btwData.uitkeringenAanPrive;
     const verschil = winst - effectievePriveUitgegeven - teBetalenOB - ibSchatting.belasting;
     const tekort = verschil < -tekortSignalThreshold ? { bedrag: Math.abs(verschil) } : null;
     const priSpend = priGroupForYear.items.filter((tx) => !tx.isMirror && tx.amount < 0);
@@ -2776,7 +2784,7 @@ function BankOverzichtTool() {
       kostenstijging = best;
     }
     return { tekort, concentratie, kostenstijging };
-  }, [activeYear, yearlyBtwData, yearlyOpenOB, volledigeJaren, priGroupForYear, zakGroupForYear, zakGroupForPrevYear, priGroupForPrevYear, tekortSignalThreshold, concentratieSignalPct, kostenstijgingSignalPct]);
+  }, [activeYear, yearlyBtwData, yearlyOpenOB, volledigeJaren, priGroupForYear, zakGroupForYear, zakGroupForPrevYear, priGroupForPrevYear, tekortSignalThreshold, concentratieSignalPct, kostenstijgingSignalPct, manualPriveUitgaven]);
   const businessAdvies = useMemo(() => {
     if (!activeYear) return null;
     const btwData = yearlyBtwData[activeYear] || {
@@ -2791,7 +2799,8 @@ function BankOverzichtTool() {
     const winst = btwData.zakBruto - btwData.zakBtwTotaal;
     const teBetalenOB = yearlyOpenOB[activeYear] || 0;
     const ibSchatting = estimateIncomeTax(winst, activeYear);
-    const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : btwData.uitkeringenAanPrive;
+    const manualPriveForAdvies = manualPriveUitgaven[activeYear];
+    const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : manualPriveForAdvies !== void 0 && manualPriveForAdvies !== "" ? Number(manualPriveForAdvies) : btwData.uitkeringenAanPrive;
     const verschil = winst - effectievePriveUitgegeven - teBetalenOB - ibSchatting.belasting;
     let niveau, tekst;
     if (verschil < 0) {
@@ -2807,7 +2816,7 @@ function BankOverzichtTool() {
       tekst += ` Let op: er staan geen typische, alledaagse priv\xE9-uitgaven tussen (zoals boodschappen, huur/hypotheek, energie-water, vrijetijd-uitgaan/vakantie) \u2014 mogelijk zijn niet alle priv\xE9-uitgaven opgegeven, waardoor het beeld bij Tekort/Over kan afwijken van de werkelijkheid.`;
     }
     return { niveau, tekst };
-  }, [activeYear, yearlyBtwData, yearlyOpenOB, priGroupForYear]);
+  }, [activeYear, yearlyBtwData, yearlyOpenOB, priGroupForYear, manualPriveUitgaven]);
   const btwBoxMapping = useMemo(() => {
     const omzetRate = effectiveCategoryBtwRates["Zakelijke inkomsten"];
     const voorbelastingCategorieen = CATEGORY_ORDER.filter(
@@ -3087,6 +3096,7 @@ function BankOverzichtTool() {
         reviewedIncomeKeys,
         reviewedPersonKeys,
         reviewedOverigKeys,
+        manualPriveUitgaven,
         loanInterestRates,
         categoryRules,
         excludedDuplicateFingerprints,
@@ -3116,6 +3126,7 @@ function BankOverzichtTool() {
     setReviewedIncomeKeys(s.reviewedIncomeKeys);
     setReviewedPersonKeys(s.reviewedPersonKeys);
     setReviewedOverigKeys(s.reviewedOverigKeys);
+    setManualPriveUitgaven(s.manualPriveUitgaven);
     setLoanInterestRates(s.loanInterestRates);
     setCategoryRules(s.categoryRules);
     setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
@@ -3584,7 +3595,7 @@ function BankOverzichtTool() {
       {
         key: "jaaroverzicht",
         titel: "Jaaroverzicht (WUO, Tekort/Over, trend)",
-        inhoud: /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Zak. Ink."), ' is de categorie "Zakelijke inkomsten"; ', /* @__PURE__ */ React.createElement("strong", null, "WUO (bruto)"), ' is de winst uit onderneming v\xF3\xF3r persoonlijke belastingen (Zakelijke inkomsten min de overige zakelijke kosten, na aftrek van BTW \u2014 "Uitbetaling aan prive"/"Prive opnames"/"Terugboeking van prive", "Belastingen: ZVW"/"Belastingen: IH", en "Belastingen: Naheffingen OB/IB voorgaande jaren" tellen bewust niet mee: de eerste drie zijn onttrekkingen aan/inbreng in de winst, de rest zijn persoonlijke belastingen of een balansmutatie (OB-naheffing is het aflossen van een schuld aan de Belastingdienst, geen kostenpost \u2014 de OB was toch al nooit "jouw" geld) \u2014 geen van alle zijn het zakelijke kosten of omzet. "Belastingen: Naheffingen LH voorgaande jaren" telt WEL gewoon mee als kosten, net als reguliere LH. Trek je de onterechte posten er w\xE9l vanaf, dan schuift WUO ongemerkt richting een nettobedrag). ', /* @__PURE__ */ React.createElement("strong", null, "Al betaald ZVW/IH"), " is wat er dat jaar al daadwerkelijk aan die twee is betaald \u2014 nog niet verwerkt in WUO, dus hou hier apart rekening mee bij het bepalen van wat er nog beschikbaar is. ", /* @__PURE__ */ React.createElement("strong", null, "Uitbetaald/opgenomen naar prive"), ' is wat er dat jaar daadwerkelijk vanuit Zakelijk naar Priv\xE9 is overgemaakt ("Uitbetaling aan prive"/"Prive opnames"). ', /* @__PURE__ */ React.createElement("strong", null, "Zak./Prive Vast"), " en ", /* @__PURE__ */ React.createElement("strong", null, "Zak./Prive Var."), ' (bij "Toon Zak. Uit...") zijn de vaste resp. variabele kosten volgens de indeling bij "Vaste/variabele kosten" hierboven \u2014 Prive alleen zichtbaar als er dat jaar priv\xE9-data is. ', /* @__PURE__ */ React.createElement("strong", null, "Totaal prive uitgegeven"), ' is al het geld dat dat jaar daadwerkelijk priv\xE9 is uitgegeven \u2014 is er geen priv\xE9-rekening ge\xFCpload (dus geen directe priv\xE9-data bekend), dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar prive" ook echt is uitgegeven (gemarkeerd met *). ', /* @__PURE__ */ React.createElement("strong", null, "OB/BTW"), " en ", /* @__PURE__ */ React.createElement("strong", null, "Voorbelasting"), " zijn jaartotalen (som van alle kwartalen, ongeacht betaalstatus); ", /* @__PURE__ */ React.createElement("strong", null, "Te betalen OB"), ' is het saldo van all\xE9\xE9n de kwartalen die nog ni\xE9t als "betaald" zijn aangevinkt bij "BTW-aangifte per kwartaal" \u2014 kwartalen die al wel zijn afgevinkt tellen hier niet meer mee. Met een \u2212 als je moet betalen en een + als je terugkrijgt; ', /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " staat er met een \u2212 voor, want dat is altijd een bedrag dat je nog moet betalen."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Zakelijk totaal (netto)"), " is WUO min Totaal prive uitgegeven \u2014 dit plus ", /* @__PURE__ */ React.createElement("strong", null, "Te betalen OB"), " (met omgekeerd teken: te betalen = min) plus ", /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " (ook min) telt precies op tot ", /* @__PURE__ */ React.createElement("strong", null, "Tekort / Over"), "."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Tekort / Over"), " is WUO min Totaal prive uitgegeven, min Te betalen OB, min Geschat IB \u2014 dus wat er overblijft nadat zowel al het priv\xE9 uitgegeven geld als de nog te betalen belastingen zijn meegerekend. Een tekort betekent dat de winst dat niet dekt. Dit geeft het meest werkelijke beeld."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Trend t.o.v. vorig jaar"), ' vergelijkt Tekort/Over met hetzelfde cijfer van het voorgaande jaar (zelfde berekening) \u2014 "beter" betekent een kleiner tekort of een groter overschot dan vorig jaar, "slechter" het omgekeerde. Alleen te zien als het voorgaande jaar ook in dit overzicht staat, \xE9n als BEIDE jaren volledig zijn (alle 4 kwartalen bevatten minstens 1 zakelijke transactie) \u2014 een lopend jaar kan niet eerlijk vergeleken worden met een compleet jaar.'), /* @__PURE__ */ React.createElement("p", null, "* ", /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " is een grove, indicatieve schatting van de ", /* @__PURE__ */ React.createElement("strong", null, "inkomstenbelasting"), " over WUO (niet loonbelasting \u2014 dat is voor werknemers in loondienst; als zzp'er/eenmanszaak betaal je zelf inkomstenbelasting over je winst). Berekend met de belastingschijven, zelfstandigenaftrek en mkb-winstvrijstelling van dat jaar, ", /* @__PURE__ */ React.createElement("strong", null, "zonder"), " heffingskortingen, startersaftrek, of overig inkomen (bijv. loondienst ernaast of een partner) mee te rekenen \u2014 de werkelijke aanslag valt hierdoor vrijwel altijd lager uit. Geen belastingadvies, alleen een indicatie. Jaren buiten 2023-2026 gebruiken bij benadering de dichtstbijzijnde bekende schijven (gemarkeerd met *)."))
+        inhoud: /* @__PURE__ */ React.createElement("div", { className: "space-y-2" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Zak. Ink."), ' is de categorie "Zakelijke inkomsten"; ', /* @__PURE__ */ React.createElement("strong", null, "WUO (bruto)"), ' is de winst uit onderneming v\xF3\xF3r persoonlijke belastingen (Zakelijke inkomsten min de overige zakelijke kosten, na aftrek van BTW \u2014 "Uitbetaling aan prive"/"Prive opnames"/"Terugboeking van prive", "Belastingen: ZVW"/"Belastingen: IH", en "Belastingen: Naheffingen OB/IB voorgaande jaren" tellen bewust niet mee: de eerste drie zijn onttrekkingen aan/inbreng in de winst, de rest zijn persoonlijke belastingen of een balansmutatie (OB-naheffing is het aflossen van een schuld aan de Belastingdienst, geen kostenpost \u2014 de OB was toch al nooit "jouw" geld) \u2014 geen van alle zijn het zakelijke kosten of omzet. "Belastingen: Naheffingen LH voorgaande jaren" telt WEL gewoon mee als kosten, net als reguliere LH. Trek je de onterechte posten er w\xE9l vanaf, dan schuift WUO ongemerkt richting een nettobedrag). ', /* @__PURE__ */ React.createElement("strong", null, "Al betaald ZVW/IH"), " is wat er dat jaar al daadwerkelijk aan die twee is betaald \u2014 nog niet verwerkt in WUO, dus hou hier apart rekening mee bij het bepalen van wat er nog beschikbaar is. ", /* @__PURE__ */ React.createElement("strong", null, "Uitbetaald/opgenomen naar prive"), ' is wat er dat jaar daadwerkelijk vanuit Zakelijk naar Priv\xE9 is overgemaakt ("Uitbetaling aan prive"/"Prive opnames"). ', /* @__PURE__ */ React.createElement("strong", null, "Zak./Prive Vast"), " en ", /* @__PURE__ */ React.createElement("strong", null, "Zak./Prive Var."), ' (bij "Toon Zak. Uit...") zijn de vaste resp. variabele kosten volgens de indeling bij "Vaste/variabele kosten" hierboven \u2014 Prive alleen zichtbaar als er dat jaar priv\xE9-data is. ', /* @__PURE__ */ React.createElement("strong", null, "Totaal prive uitgegeven"), ' is al het geld dat dat jaar daadwerkelijk priv\xE9 is uitgegeven \u2014 is er geen priv\xE9-rekening ge\xFCpload (dus geen directe priv\xE9-data bekend), dan kun je zelf een bedrag invullen (gemarkeerd met \u2020) als je weet hoeveel dat was; vul je niets in, dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar prive" ook echt is uitgegeven (gemarkeerd met *). ', /* @__PURE__ */ React.createElement("strong", null, "OB/BTW"), " en ", /* @__PURE__ */ React.createElement("strong", null, "Voorbelasting"), " zijn jaartotalen (som van alle kwartalen, ongeacht betaalstatus); ", /* @__PURE__ */ React.createElement("strong", null, "Te betalen OB"), ' is het saldo van all\xE9\xE9n de kwartalen die nog ni\xE9t als "betaald" zijn aangevinkt bij "BTW-aangifte per kwartaal" \u2014 kwartalen die al wel zijn afgevinkt tellen hier niet meer mee. Met een \u2212 als je moet betalen en een + als je terugkrijgt; ', /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " staat er met een \u2212 voor, want dat is altijd een bedrag dat je nog moet betalen."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Zakelijk totaal (netto)"), " is WUO min Totaal prive uitgegeven \u2014 dit plus ", /* @__PURE__ */ React.createElement("strong", null, "Te betalen OB"), " (met omgekeerd teken: te betalen = min) plus ", /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " (ook min) telt precies op tot ", /* @__PURE__ */ React.createElement("strong", null, "Tekort / Over"), "."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Tekort / Over"), " is WUO min Totaal prive uitgegeven, min Te betalen OB, min Geschat IB \u2014 dus wat er overblijft nadat zowel al het priv\xE9 uitgegeven geld als de nog te betalen belastingen zijn meegerekend. Een tekort betekent dat de winst dat niet dekt. Dit geeft het meest werkelijke beeld."), /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Trend t.o.v. vorig jaar"), ' vergelijkt Tekort/Over met hetzelfde cijfer van het voorgaande jaar (zelfde berekening) \u2014 "beter" betekent een kleiner tekort of een groter overschot dan vorig jaar, "slechter" het omgekeerde. Alleen te zien als het voorgaande jaar ook in dit overzicht staat, \xE9n als BEIDE jaren volledig zijn (alle 4 kwartalen bevatten minstens 1 zakelijke transactie) \u2014 een lopend jaar kan niet eerlijk vergeleken worden met een compleet jaar.'), /* @__PURE__ */ React.createElement("p", null, "* ", /* @__PURE__ */ React.createElement("strong", null, "Geschat IB"), " is een grove, indicatieve schatting van de ", /* @__PURE__ */ React.createElement("strong", null, "inkomstenbelasting"), " over WUO (niet loonbelasting \u2014 dat is voor werknemers in loondienst; als zzp'er/eenmanszaak betaal je zelf inkomstenbelasting over je winst). Berekend met de belastingschijven, zelfstandigenaftrek en mkb-winstvrijstelling van dat jaar, ", /* @__PURE__ */ React.createElement("strong", null, "zonder"), " heffingskortingen, startersaftrek, of overig inkomen (bijv. loondienst ernaast of een partner) mee te rekenen \u2014 de werkelijke aanslag valt hierdoor vrijwel altijd lager uit. Geen belastingadvies, alleen een indicatie. Jaren buiten 2023-2026 gebruiken bij benadering de dichtstbijzijnde bekende schijven (gemarkeerd met *)."))
       }
     ].map((chapter) => /* @__PURE__ */ React.createElement("div", { key: chapter.key, ref: (el) => {
       helpChapterElRefs.current[chapter.key] = el;
@@ -4075,8 +4086,10 @@ function BankOverzichtTool() {
       const winst = btwData.zakBruto - btwData.zakBtwTotaal;
       const teBetalenOB = yearlyOpenOB[year] || 0;
       const ibSchatting = estimateIncomeTax(winst, year);
-      const priUitgegevenIsAanname = btwData.priUitgegeven === 0 && btwData.uitkeringenAanPrive > 0;
-      const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : btwData.uitkeringenAanPrive;
+      const manualPriveForYear = manualPriveUitgaven[year];
+      const heeftManualPrive = manualPriveForYear !== void 0 && manualPriveForYear !== "";
+      const priUitgegevenIsAanname = btwData.priUitgegeven === 0 && btwData.uitkeringenAanPrive > 0 && !heeftManualPrive;
+      const effectievePriveUitgegeven = btwData.priUitgegeven > 0 ? btwData.priUitgegeven : heeftManualPrive ? Number(manualPriveForYear) : btwData.uitkeringenAanPrive;
       const verschil = winst - effectievePriveUitgegeven - teBetalenOB - ibSchatting.belasting;
       const isTekort = verschil < 0;
       const zakelijkTotaalNetto = winst - effectievePriveUitgegeven;
@@ -4091,7 +4104,20 @@ function BankOverzichtTool() {
         const prevVerschil = prevWinst - prevEffectievePriveUitgegeven - prevTeBetalenOB - prevIbSchatting.belasting;
         trendDelta = verschil - prevVerschil;
       }
-      return /* @__PURE__ */ React.createElement("tr", { key: year, className: "hover:bg-slate-50 cursor-pointer", onClick: () => setActiveYear(year) }, /* @__PURE__ */ React.createElement("td", { className: "py-2 pr-3 font-medium" }, year), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap" }, eurTight(btwData.zakelijkeInkomsten)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, eurTight(winst)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.alBetaaldeZvwIh)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.uitkeringenAanPrive)), showMultiYearHiddenCols && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap" }, eurTight(btwData.zakelijkeUitgaven)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.zakVast)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.zakVariabel)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, btwData.priVast > 0 || btwData.priVariabel > 0 ? eurTight(btwData.priVast) : "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, btwData.priVast > 0 || btwData.priVariabel > 0 ? eurTight(btwData.priVariabel) : "\u2014")), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap" }, eurTight(effectievePriveUitgegeven), priUitgegevenIsAanname ? "*" : ""), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, eurTight(zakelijkTotaalNetto)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.verschuldigdBtw)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.voorbelasting)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, teBetalenOB >= 0 ? "-" : "+", eurTight(Math.abs(teBetalenOB))), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, "-", eurTight(ibSchatting.belasting), ibSchatting.ge\u00EBxtrapoleerd ? "*" : ""), /* @__PURE__ */ React.createElement("td", { className: `py-2 px-3 text-right font-mono font-medium whitespace-nowrap ${isTekort ? "text-rose-700" : "text-emerald-700"}` }, isTekort ? "Tekort: " : "Over: ", eurTight(Math.abs(verschil))), /* @__PURE__ */ React.createElement("td", { className: "py-2 pl-3 text-right whitespace-nowrap" }, !prevBtwData ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-300" }, "\u2014") : !beideJarenVolledig ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-400 text-[10px]", title: "Trend alleen te vergelijken als beide jaren alle 4 kwartalen hebben" }, "\u2014 (jaar niet compleet)") : Math.abs(trendDelta) < 1 ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-500" }, "\u2248 gelijk aan vorig jaar") : trendDelta > 0 ? /* @__PURE__ */ React.createElement("span", { className: "text-emerald-700" }, "\u25B2 ", eurTight(trendDelta), " beter") : /* @__PURE__ */ React.createElement("span", { className: "text-rose-700" }, "\u25BC ", eurTight(Math.abs(trendDelta)), " slechter")));
+      return /* @__PURE__ */ React.createElement("tr", { key: year, className: "hover:bg-slate-50 cursor-pointer", onClick: () => setActiveYear(year) }, /* @__PURE__ */ React.createElement("td", { className: "py-2 pr-3 font-medium" }, year), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap" }, eurTight(btwData.zakelijkeInkomsten)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, eurTight(winst)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.alBetaaldeZvwIh)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.uitkeringenAanPrive)), showMultiYearHiddenCols && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap" }, eurTight(btwData.zakelijkeUitgaven)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.zakVast)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, eurTight(btwData.zakVariabel)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, btwData.priVast > 0 || btwData.priVariabel > 0 ? eurTight(btwData.priVast) : "\u2014"), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap" }, btwData.priVast > 0 || btwData.priVariabel > 0 ? eurTight(btwData.priVariabel) : "\u2014")), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap" }, eurTight(effectievePriveUitgegeven), priUitgegevenIsAanname ? "*" : heeftManualPrive ? "\u2020" : "", btwData.priUitgegeven === 0 && /* @__PURE__ */ React.createElement("div", { className: "mt-0.5" }, /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: "number",
+          min: "0",
+          step: "0.01",
+          value: manualPriveForYear != null ? manualPriveForYear : "",
+          onChange: (e) => setManualPriveUitgaven((prev) => ({ ...prev, [year]: e.target.value })),
+          onClick: (e) => e.stopPropagation(),
+          placeholder: "handmatig\u2026",
+          title: "Optioneel: vul hier zelf een bedrag in als je weet hoeveel er dit jaar priv\xE9 is uitgegeven",
+          className: "w-24 text-[10px] font-normal rounded border border-slate-300 px-1 py-0.5 text-right"
+        }
+      ))), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, eurTight(zakelijkTotaalNetto)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.verschuldigdBtw)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, eurTight(btwData.voorbelasting)), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono font-medium whitespace-nowrap" }, teBetalenOB >= 0 ? "-" : "+", eurTight(Math.abs(teBetalenOB))), /* @__PURE__ */ React.createElement("td", { className: "py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap" }, "-", eurTight(ibSchatting.belasting), ibSchatting.ge\u00EBxtrapoleerd ? "*" : ""), /* @__PURE__ */ React.createElement("td", { className: `py-2 px-3 text-right font-mono font-medium whitespace-nowrap ${isTekort ? "text-rose-700" : "text-emerald-700"}` }, isTekort ? "Tekort: " : "Over: ", eurTight(Math.abs(verschil))), /* @__PURE__ */ React.createElement("td", { className: "py-2 pl-3 text-right whitespace-nowrap" }, !prevBtwData ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-300" }, "\u2014") : !beideJarenVolledig ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-400 text-[10px]", title: "Trend alleen te vergelijken als beide jaren alle 4 kwartalen hebben" }, "\u2014 (jaar niet compleet)") : Math.abs(trendDelta) < 1 ? /* @__PURE__ */ React.createElement("span", { className: "text-slate-500" }, "\u2248 gelijk aan vorig jaar") : trendDelta > 0 ? /* @__PURE__ */ React.createElement("span", { className: "text-emerald-700" }, "\u25B2 ", eurTight(trendDelta), " beter") : /* @__PURE__ */ React.createElement("span", { className: "text-rose-700" }, "\u25BC ", eurTight(Math.abs(trendDelta)), " slechter")));
     }))), /* @__PURE__ */ React.createElement("p", { className: "mt-2 text-xs text-slate-400 max-w-3xl" }, "Uitleg bij WUO, Tekort/Over, Trend en Geschat IB: ", /* @__PURE__ */ React.createElement(HelpHint, { chapter: "jaaroverzicht", label: "lees hier de volledige uitleg" })), /* @__PURE__ */ React.createElement("p", { className: "mt-2 text-xs text-slate-400" }, "Klik op een jaar om ernaartoe te springen."), /* @__PURE__ */ React.createElement(
       "button",
       {
