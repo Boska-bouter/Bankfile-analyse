@@ -1119,7 +1119,17 @@ const ZERO_BTW_CATEGORIES = /* @__PURE__ */ new Set([
 ]);
 const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
 DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9;
-const DEFAULT_VOORBELASTING_EXCLUDED = ["Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen"];
+const DEFAULT_VOORBELASTING_EXCLUDED = [
+  "Lease (operationeel)",
+  "Lease (financieel)",
+  "Gemeentelijke kosten",
+  "Webshops & online aankopen",
+  "Kinderopvang",
+  "Prive - mobiel/internet",
+  "Prive overige abonnementen",
+  "Prive - vrijetijd-uitgaan-vakantie",
+  "Verkoop activa"
+];
 const EMPTY_BTW_RATES = {};
 const MAAND_NAMEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 const KIA_MIN_TOTAAL = 2901;
