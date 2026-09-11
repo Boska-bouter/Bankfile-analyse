@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CATEGORY_ORDER, CATEGORY_COLOR } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
+import SearchInput from "../shared/SearchInput.jsx";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026").
 function CategorySummary({ items, categoryBtwRates, btwVerlegd }) {
@@ -47,23 +48,38 @@ function CategorySummary({ items, categoryBtwRates, btwVerlegd }) {
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
 export default function GroupView({ group, onCounterpartyOverride, onRowOverride, categoryBtwRates, btwVerlegd }) {
+  const [query, setQuery] = useState("");
   const applyChange = (tx, patch) => {
     const key = (tx.counterparty || tx.description || "").trim();
     if (key) onCounterpartyOverride(key, tx.amount, patch);
     else onRowOverride(tx.id, patch);
   };
 
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return group.items;
+    // Exacte categorienaam? Dan die categorie filteren, niet los op tekst zoeken (voorkomt dat
+    // zoeken op "huur" ook "Inhuur personeel" laat zien).
+    const isExactCategoryName = CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
+    return group.items.filter((t) =>
+      isExactCategoryName ? t.category.toLowerCase() === q : `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(q)
+    );
+  }, [group.items, query]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Categorieën</h3>
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Categorieën — {group.label}</h3>
         <CategorySummary items={group.items} categoryBtwRates={categoryBtwRates} btwVerlegd={btwVerlegd} />
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white">
         <div className="p-4 border-b border-slate-100">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({group.items.length} transacties)</h3>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({filteredItems.length} van {group.items.length})</h3>
+            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-64" />
+          </div>
+          <p className="text-xs text-slate-400">
             Categorie en type direct aanpasbaar — geldt meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
           </p>
         </div>
@@ -80,7 +96,7 @@ export default function GroupView({ group, onCounterpartyOverride, onRowOverride
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {group.items
+              {filteredItems
                 .slice()
                 .sort((a, b) => b.date - a.date)
                 .map((t) => (
@@ -112,6 +128,11 @@ export default function GroupView({ group, onCounterpartyOverride, onRowOverride
                     <td className="px-4 py-2 text-slate-500 max-w-[14rem] truncate" title={t.fullDescription || t.description}>{t.description}</td>
                   </tr>
                 ))}
+              {filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

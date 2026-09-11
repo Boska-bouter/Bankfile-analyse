@@ -4,8 +4,12 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
 import { resolveClassification } from "./classification/classify.js";
-import { DEFAULT_RULES, mergeCategoryRules } from "./classification/categories.js";
-import { DEFAULT_BTW_RATES } from "./tax/btw.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName } from "./classification/categories.js";
+import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
+import { computeYearlySummary, computeYearlyOpenOB } from "./tax/yearlySummary.js";
+import { estimateIncomeTax } from "./tax/incomeTax.js";
+import { computeDuplicateInfo } from "./importers/duplicates.js";
+import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey } from "./utils/normalization.js";
 import {
@@ -17,6 +21,11 @@ import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
 import GroupView from "./components/overview/GroupView.jsx";
+import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
+import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
+import ReviewStep from "./components/review/ReviewStep.jsx";
+import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
+import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -46,6 +55,21 @@ export default function App() {
   const [categoryRules, setCategoryRules] = useState(DEFAULT_RULES);
   const [overridesByCounterparty, setOverridesByCounterparty] = useState({});
   const [overridesByRow, setOverridesByRow] = useState({});
+  const [categoryBtwRates, setCategoryBtwRates] = useState(DEFAULT_BTW_RATES);
+  const [btwVerlegd, setBtwVerlegd] = useState(null); // null = nog niet gevraagd
+  const [korRegeling, setKorRegeling] = useState(null); // null = nog niet gevraagd
+  const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
+  const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
+  const [businessKeywords, setBusinessKeywords] = useState([]);
+  const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
+  const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
+  const [reviewedPersonKeys, setReviewedPersonKeys] = useState([]);
+  const [reviewedOverigKeys, setReviewedOverigKeys] = useState([]);
+  const [kwartaalStatus, setKwartaalStatus] = useState({});
+  const [voorbelastingExcluded, setVoorbelastingExcluded] = useState(DEFAULT_VOORBELASTING_EXCLUDED);
+  const [incomeSearch, setIncomeSearch] = useState("");
+  const [personSearch, setPersonSearch] = useState("");
+  const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -56,11 +80,27 @@ export default function App() {
   const projectFileInputRef = useRef(null);
   const skipNextPersistRef = useRef(false);
 
+  const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
+
   const applySettingsToState = (settings) => {
     setAccountTypeByFile(settings.accountTypeByFile || {});
     setOverridesByCounterparty(settings.overridesByCounterparty || {});
     setOverridesByRow(settings.overridesByRow || {});
     if (Array.isArray(settings.categoryRules)) setCategoryRules(mergeCategoryRules(settings.categoryRules));
+    setCategoryBtwRates(mergeBtwRates(settings.categoryBtwRates, settings.btwRatesVersion, migrateLegacyCategoryName));
+    setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
+    setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
+    setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
+    setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
+    setBusinessExpenseKeywords(Array.isArray(settings.businessExpenseKeywords) ? settings.businessExpenseKeywords : []);
+    setReviewedIncomeKeys(Array.isArray(settings.reviewedIncomeKeys) ? settings.reviewedIncomeKeys : []);
+    setReviewedPersonKeys(Array.isArray(settings.reviewedPersonKeys) ? settings.reviewedPersonKeys : []);
+    setReviewedOverigKeys(Array.isArray(settings.reviewedOverigKeys) ? settings.reviewedOverigKeys : []);
+    setKwartaalStatus(settings.kwartaalStatus && typeof settings.kwartaalStatus === "object" ? settings.kwartaalStatus : {});
+    setVoorbelastingExcluded(Array.isArray(settings.voorbelastingExcluded) ? settings.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
+  };
+  const setKwartaalStatusField = (key, field, value) => {
+    setKwartaalStatus((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
   };
 
   // ---- Eerder opgeslagen project laden bij openen ----
@@ -85,10 +125,22 @@ export default function App() {
     (async () => {
       setSaveState("saving");
       const ok1 = await persistParsedFiles(parsedFiles);
-      const ok2 = await persistSettings({ accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules });
+      const ok2 = await persistSettings({
+        accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
+        categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
+        excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
+        reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
+        kwartaalStatus, voorbelastingExcluded,
+      });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
-  }, [parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules, loaded]);
+  }, [
+    parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
+    categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
+    businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
+    kwartaalStatus, voorbelastingExcluded,
+    loaded,
+  ]);
 
   const handleFiles = async (fileList) => {
     setError(null);
@@ -111,6 +163,20 @@ export default function App() {
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
 
+  const { fingerprintByTxId, duplicateGroups, duplicateFingerprints } = useMemo(
+    () => computeDuplicateInfo(allTransactions),
+    [allTransactions]
+  );
+  const transactions = useMemo(() => {
+    if (excludedDuplicateFingerprints.length === 0) return allTransactions;
+    const excludedSet = new Set(excludedDuplicateFingerprints);
+    return allTransactions.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
+  }, [allTransactions, excludedDuplicateFingerprints, fingerprintByTxId]);
+  const removeDuplicates = () => {
+    setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...duplicateFingerprints])]);
+  };
+  const pendingDuplicateCount = duplicateFingerprints.size - excludedDuplicateFingerprints.filter((fp) => duplicateFingerprints.has(fp)).length;
+
   const pendingAccountFiles = useMemo(
     () => parsedFiles.map((f) => f.fileName).filter((name) => !(name in accountTypeByFile)),
     [parsedFiles, accountTypeByFile]
@@ -121,12 +187,53 @@ export default function App() {
 
   const classified = useMemo(
     () =>
-      allTransactions.map((tx) => ({
+      transactions.map((tx) => ({
         ...tx,
-        ...resolveClassification(tx, categoryRules, [], [], accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
+        ...resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
       })),
-    [allTransactions, categoryRules, accountTypeByFile, overridesByCounterparty, overridesByRow]
+    [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow]
   );
+
+  // ---- Inkomstenbronnen-review ----
+  const incomeSummary = useMemo(() => computeIncomeSummary(transactions, accountTypeByFile), [transactions, accountTypeByFile]);
+  const pendingIncomeReview = useMemo(() => incomeSummary.filter((i) => !reviewedIncomeKeys.includes(i.key)), [incomeSummary, reviewedIncomeKeys]);
+  const markIncomeSource = (item, choice) => {
+    if (choice === "zakelijk") {
+      setBusinessKeywords((prev) => (prev.includes(item.name) ? prev : [...prev, item.name]));
+      setCounterpartyOverride(item.name, 1, { category: "Zakelijke inkomsten", type: "Zakelijk" });
+      const kw = item.name.trim().toLowerCase();
+      const matchingKeys = incomeSummary
+        .filter((i) => {
+          const n = i.name.trim().toLowerCase();
+          return kw && n && (n.includes(kw) || kw.includes(n));
+        })
+        .map((i) => i.key);
+      setReviewedIncomeKeys((prev) => [...new Set([...prev, item.key, ...matchingKeys])]);
+      return;
+    } else if (choice === "prive") {
+      setCounterpartyOverride(item.name, 1, { category: "Inkomsten", type: "Prive" });
+    } else if (choice === "overig") {
+      setCounterpartyOverride(item.name, 1, { category: "Overig", type: "Prive" });
+    }
+    setReviewedIncomeKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
+
+  // ---- "Overboekingen aan personen" en "Overig" opruimen ----
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen"), [classified]);
+  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  const markPersonSource = (item, category, type) => {
+    setCounterpartyOverride(item.name, item.amount, { category, type });
+    setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
+  const confirmPersonAsIs = (item) => setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig"), [classified]);
+  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
+  const markOverigItem = (item, category, type) => {
+    setCounterpartyOverride(item.name, item.amount, { category, type });
+    setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
+  const confirmOverigAsIs = (item) => setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -175,9 +282,32 @@ export default function App() {
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
+  const quarterlyBtwData = useMemo(
+    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded) : []),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded]
+  );
+  const yearlySummary = useMemo(
+    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd) : null),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd]
+  );
+  const yearlyOpenOB = useMemo(
+    () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus),
+    [classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus]
+  );
+  const ibEstimate = useMemo(
+    () => (yearlySummary ? estimateIncomeTax(yearlySummary.winst, activeYear) : { belasting: 0, geëxtrapoleerd: false }),
+    [yearlySummary, activeYear]
+  );
+
   // ---- Project opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
-    const project = buildProjectFile({ parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules });
+    const project = buildProjectFile({
+      parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
+      categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
+      excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
+      reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
+      kwartaalStatus, voorbelastingExcluded,
+    });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
   };
@@ -191,6 +321,17 @@ export default function App() {
       setOverridesByCounterparty(project.overridesByCounterparty || {});
       setOverridesByRow(project.overridesByRow || {});
       if (Array.isArray(project.categoryRules)) setCategoryRules(mergeCategoryRules(project.categoryRules));
+      setCategoryBtwRates(mergeBtwRates(project.categoryBtwRates, project.btwRatesVersion, migrateLegacyCategoryName));
+      setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
+      setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
+      setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
+      setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
+      setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
+      setReviewedIncomeKeys(Array.isArray(project.reviewedIncomeKeys) ? project.reviewedIncomeKeys : []);
+      setReviewedPersonKeys(Array.isArray(project.reviewedPersonKeys) ? project.reviewedPersonKeys : []);
+      setReviewedOverigKeys(Array.isArray(project.reviewedOverigKeys) ? project.reviewedOverigKeys : []);
+      setKwartaalStatus(project.kwartaalStatus && typeof project.kwartaalStatus === "object" ? project.kwartaalStatus : {});
+      setVoorbelastingExcluded(Array.isArray(project.voorbelastingExcluded) ? project.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -210,6 +351,18 @@ export default function App() {
     setOverridesByCounterparty({});
     setOverridesByRow({});
     setCategoryRules(DEFAULT_RULES);
+    setCategoryBtwRates(DEFAULT_BTW_RATES);
+    setBtwVerlegd(null);
+    setKorRegeling(null);
+    setExcludedDuplicateFingerprints([]);
+    setDismissedDuplicateNotice(false);
+    setBusinessKeywords([]);
+    setBusinessExpenseKeywords([]);
+    setReviewedIncomeKeys([]);
+    setReviewedPersonKeys([]);
+    setReviewedOverigKeys([]);
+    setKwartaalStatus({});
+    setVoorbelastingExcluded(DEFAULT_VOORBELASTING_EXCLUDED);
     setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
@@ -348,40 +501,155 @@ export default function App() {
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
-        {years.length > 0 && activeYear && (
-          <>
-            {years.length > 1 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-400">Jaar:</span>
-                {years.map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => setActiveYear(year)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
-                      year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {year}
-                  </button>
-                ))}
+        {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
+          <section className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-amber-900">
+                <strong>{pendingDuplicateCount} mogelijk dubbele transactie(s)</strong> gevonden (zelfde datum, bedrag
+                én omschrijving) — kan gebeuren als bankexports elkaar overlappen.
+              </p>
+              <div className="mt-2 flex gap-3">
+                <button onClick={removeDuplicates} className="text-xs font-medium text-amber-900 underline hover:no-underline">
+                  Duplicaten verwijderen (bewaar de eerste van elk stel)
+                </button>
+                <button onClick={() => setDismissedDuplicateNotice(true)} className="text-xs text-amber-700 hover:text-amber-900">
+                  Negeren
+                </button>
               </div>
-            )}
-            <div className="grid md:grid-cols-2 gap-4 items-start">
-              <GroupView
-                group={zakGroupForYear}
-                onCounterpartyOverride={setCounterpartyOverride}
-                onRowOverride={setRowOverride}
-                categoryBtwRates={DEFAULT_BTW_RATES}
-                btwVerlegd={false}
-              />
-              <GroupView
-                group={priGroupForYear}
-                onCounterpartyOverride={setCounterpartyOverride}
-                onRowOverride={setRowOverride}
-                categoryBtwRates={DEFAULT_BTW_RATES}
-                btwVerlegd={false}
-              />
             </div>
+          </section>
+        )}
+
+        {parsedFiles.length > 0 && (
+          <BtwRatesPanel
+            categoryBtwRates={categoryBtwRates}
+            setCategoryBtwRates={setCategoryBtwRates}
+            btwVerlegd={btwVerlegd}
+            setBtwVerlegd={setBtwVerlegd}
+            korRegeling={korRegeling}
+            setKorRegeling={setKorRegeling}
+          />
+        )}
+
+        {transactions.length > 0 && pendingIncomeReview.length > 0 && (
+          <IncomeReviewStep
+            items={pendingIncomeReview}
+            totalCount={incomeSummary.length}
+            doneCount={incomeSummary.length - pendingIncomeReview.length}
+            search={incomeSearch}
+            onSearch={setIncomeSearch}
+            onMark={markIncomeSource}
+            accountTypeByFile={accountTypeByFile}
+          />
+        )}
+
+        {transactions.length > 0 && pendingIncomeReview.length === 0 && (
+          <>
+            {personSummary.length > 0 && (
+              <section className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2">
+                  <span className="text-sm font-semibold">Overboekingen aan personen controleren</span>
+                  {pendingPersonReview.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingPersonReview.length}
+                    </span>
+                  )}
+                </div>
+                <ReviewStep
+                  items={pendingPersonReview.length > 0 ? pendingPersonReview : personSummary}
+                  allDone={pendingPersonReview.length === 0}
+                  search={personSearch}
+                  onSearch={setPersonSearch}
+                  onMark={markPersonSource}
+                  onConfirm={confirmPersonAsIs}
+                  defaultCategory="Overboekingen aan personen"
+                  confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
+                  explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
+                />
+              </section>
+            )}
+
+            {overigSummary.length > 0 && (
+              <section className="rounded-lg border border-amber-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2">
+                  <span className="text-sm font-semibold">"Overig" opruimen</span>
+                  {pendingOverigReview.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingOverigReview.length}
+                    </span>
+                  )}
+                </div>
+                <ReviewStep
+                  items={pendingOverigReview.length > 0 ? pendingOverigReview : overigSummary}
+                  allDone={pendingOverigReview.length === 0}
+                  search={overigSearch}
+                  onSearch={setOverigSearch}
+                  onMark={markOverigItem}
+                  onConfirm={confirmOverigAsIs}
+                  defaultCategory="Overig"
+                  confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
+                />
+              </section>
+            )}
+
+            {years.length > 0 && activeYear && (
+              <>
+                {years.length > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-slate-400">Jaar:</span>
+                    {years.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => setActiveYear(year)}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
+                          year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {yearlySummary && (
+                  <YearSummaryCard
+                    year={activeYear}
+                    summary={yearlySummary}
+                    openOB={yearlyOpenOB[activeYear] || 0}
+                    ibEstimate={ibEstimate}
+                    korRegeling={korRegeling}
+                  />
+                )}
+
+                {!korRegeling && (
+                  <QuarterlyBtwPanel
+                    quarters={quarterlyBtwData}
+                    kwartaalStatus={kwartaalStatus}
+                    setKwartaalStatusField={setKwartaalStatusField}
+                    activeYear={activeYear}
+                  />
+                )}
+
+                <div className="grid md:grid-cols-2 gap-4 items-start">
+                  <GroupView
+                    group={zakGroupForYear}
+                    onCounterpartyOverride={setCounterpartyOverride}
+                    onRowOverride={setRowOverride}
+                    categoryBtwRates={effectiveCategoryBtwRates}
+                    btwVerlegd={btwVerlegd}
+                  />
+                  <GroupView
+                    group={priGroupForYear}
+                    onCounterpartyOverride={setCounterpartyOverride}
+                    onRowOverride={setRowOverride}
+                    categoryBtwRates={effectiveCategoryBtwRates}
+                    btwVerlegd={btwVerlegd}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </main>
