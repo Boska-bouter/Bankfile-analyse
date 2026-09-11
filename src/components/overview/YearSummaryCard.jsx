@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { eur } from "../../utils/amounts.js";
 
 // Compact jaaroverzicht: winst uit onderneming, wat er naar privé is gegaan, nog te betalen OB
 // en een grove IB-schatting. Zie tax/yearlySummary.js en tax/incomeTax.js voor de berekening.
 export default function YearSummaryCard({ year, summary, openOB, ibEstimate, korRegeling }) {
+  const [showFixedVar, setShowFixedVar] = useState(false);
   const verschil = summary.winst - summary.priUitgegeven - (korRegeling ? 0 : openOB) - ibEstimate.belasting;
   const isTekort = verschil < 0;
+  const hasFixedVarData = summary.zakVast > 0 || summary.zakVariabel > 0 || summary.priVast > 0 || summary.priVariabel > 0;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">
@@ -41,6 +44,39 @@ export default function YearSummaryCard({ year, summary, openOB, ibEstimate, kor
           </p>
         </div>
       </div>
+
+      {hasFixedVarData && (
+        <>
+          <button onClick={() => setShowFixedVar((v) => !v)} className="mt-3 text-xs font-medium text-slate-500 underline hover:no-underline">
+            {showFixedVar ? "Verberg vast/variabel" : "Toon vast/variabel"}
+          </button>
+          {showFixedVar && (
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm pt-2 border-t border-slate-100">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase">Zakelijk vast</p>
+                <p className="font-mono text-slate-600">{eur(summary.zakVast)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase">Zakelijk variabel</p>
+                <p className="font-mono text-slate-600">{eur(summary.zakVariabel)}</p>
+              </div>
+              {(summary.priVast > 0 || summary.priVariabel > 0) && (
+                <>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase">Privé vast</p>
+                    <p className="font-mono text-slate-600">{eur(summary.priVast)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase">Privé variabel</p>
+                    <p className="font-mono text-slate-600">{eur(summary.priVariabel)}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
       <p className="mt-3 text-[10px] text-slate-400">
         * Grove, indicatieve schatting van de inkomstenbelasting over de winst — zonder heffingskortingen, startersaftrek
         of overig inkomen. Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit.

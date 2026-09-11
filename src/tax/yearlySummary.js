@@ -11,12 +11,19 @@ const ONTTREKKING_CATS = [
 ];
 
 // Winst uit onderneming (bruto) voor één jaar = Zakelijke inkomsten min BTW min de overige
-// zakelijke kosten (na aftrek BTW), zonder de onttrekkingen hierboven.
-export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd) {
+// zakelijke kosten (na aftrek BTW), zonder de onttrekkingen hierboven. `fixedCategories` en
+// `incomeTransferCategories` zijn optioneel — zonder die twee worden zakVast/zakVariabel/
+// priVast/priVariabel gewoon op 0 gehouden (bijv. voor code die deze uitsplitsing niet nodig heeft).
+export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = []) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
+  let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
       priUitgegeven += Math.abs(tx.amount);
+      if (!incomeTransferCategories.includes(tx.category)) {
+        if (fixedCategories.includes(tx.category)) priVast += Math.abs(tx.amount);
+        else priVariabel += Math.abs(tx.amount);
+      }
     }
     if (tx.type !== "Zakelijk" || tx.isMirror || tx.year !== year) continue;
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
@@ -28,8 +35,15 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") {
       uitkeringenAanPrive += Math.abs(tx.amount);
     }
+    if (tx.amount < 0 && !incomeTransferCategories.includes(tx.category)) {
+      if (fixedCategories.includes(tx.category)) zakVast += Math.abs(tx.amount);
+      else zakVariabel += Math.abs(tx.amount);
+    }
   }
-  return { zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven, winst: zakBruto - zakBtwTotaal };
+  return {
+    zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
+    winst: zakBruto - zakBtwTotaal, zakVast, zakVariabel, priVast, priVariabel,
+  };
 }
 
 // Nog te betalen/terug te vragen OB per jaar — alleen de kwartalen die nog NIET als "betaald"

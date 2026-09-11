@@ -4,7 +4,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
 import { resolveClassification } from "./classification/classify.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName } from "./classification/categories.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
@@ -32,6 +32,7 @@ import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
+import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
 import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
@@ -79,6 +80,7 @@ export default function App() {
   const [reviewedOverigKeys, setReviewedOverigKeys] = useState([]);
   const [kwartaalStatus, setKwartaalStatus] = useState({});
   const [voorbelastingExcluded, setVoorbelastingExcluded] = useState(DEFAULT_VOORBELASTING_EXCLUDED);
+  const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
   const [reviewedPeriodeKeys, setReviewedPeriodeKeys] = useState([]);
   const [loanDetails, setLoanDetails] = useState({});
@@ -126,6 +128,7 @@ export default function App() {
     setReviewedOverigKeys(Array.isArray(settings.reviewedOverigKeys) ? settings.reviewedOverigKeys : []);
     setKwartaalStatus(settings.kwartaalStatus && typeof settings.kwartaalStatus === "object" ? settings.kwartaalStatus : {});
     setVoorbelastingExcluded(Array.isArray(settings.voorbelastingExcluded) ? settings.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
+    setFixedCategories(Array.isArray(settings.fixedCategories) ? settings.fixedCategories : DEFAULT_FIXED_CATEGORIES);
     setPeriodeQuarterOverrides(settings.periodeQuarterOverrides && typeof settings.periodeQuarterOverrides === "object" ? settings.periodeQuarterOverrides : {});
     setReviewedPeriodeKeys(Array.isArray(settings.reviewedPeriodeKeys) ? settings.reviewedPeriodeKeys : []);
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
@@ -164,7 +167,7 @@ export default function App() {
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, confirmedLeaseTypeKeys,
+        leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -173,7 +176,7 @@ export default function App() {
     categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, confirmedLeaseTypeKeys,
+    leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
     loaded,
   ]);
 
@@ -361,8 +364,8 @@ export default function App() {
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
   const yearlySummary = useMemo(
-    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd) : null),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd]
+    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES) : null),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories]
   );
   const yearlyOpenOB = useMemo(
     () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus),
@@ -374,9 +377,9 @@ export default function App() {
   );
   const yearlySummaries = useMemo(() => {
     const map = {};
-    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd);
+    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES);
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories]);
 
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useMemo(() => {
@@ -439,7 +442,7 @@ export default function App() {
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, confirmedLeaseTypeKeys,
+      leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -470,6 +473,7 @@ export default function App() {
       setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
+      setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -506,6 +510,7 @@ export default function App() {
     setLoanDetails({});
     setLeaseDetails({});
     setConfirmedLeaseTypeKeys([]);
+    setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
@@ -681,6 +686,10 @@ export default function App() {
 
         {parsedFiles.length > 0 && (
           <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRules} />
+        )}
+
+        {parsedFiles.length > 0 && (
+          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategories} />
         )}
 
         {parsedFiles.length > 0 && (
