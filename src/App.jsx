@@ -6,7 +6,7 @@ import { buildTransactions, checkBalanceConsistency } from "./importers/transact
 import { resolveClassification } from "./classification/classify.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
-import { computeYearlySummary, computeYearlyOpenOB } from "./tax/yearlySummary.js";
+import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { computeLoanSummary, computeLeaseSummary } from "./tax/loanAmortization.js";
@@ -87,6 +87,8 @@ export default function App() {
   const [kwartaalStatus, setKwartaalStatus] = useState({});
   const [voorbelastingExcluded, setVoorbelastingExcluded] = useState(DEFAULT_VOORBELASTING_EXCLUDED);
   const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
+  const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
+  const [manualPriveUitgaven, setManualPriveUitgaven] = useState({}); // { "2025": "150" }
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
   const [reviewedPeriodeKeys, setReviewedPeriodeKeys] = useState([]);
   const [loanDetails, setLoanDetails] = useState({});
@@ -142,10 +144,13 @@ export default function App() {
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
     setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
+    setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
+    setManualPriveUitgaven(settings.manualPriveUitgaven && typeof settings.manualPriveUitgaven === "object" ? settings.manualPriveUitgaven : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
     setKwartaalStatus((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
   };
+  const setIbGedaan = (year, gedaan) => setIbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
 
   // ---- Eerder opgeslagen project laden bij openen ----
   useEffect(() => {
@@ -176,6 +181,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+        ibStatus, manualPriveUitgaven,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -185,6 +191,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+    ibStatus, manualPriveUitgaven,
     loaded,
   ]);
 
@@ -428,8 +435,8 @@ export default function App() {
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
   const yearlySummary = useMemo(
-    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES) : null),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories]
+    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded) : null),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded]
   );
   const yearlyOpenOB = useMemo(
     () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus),
@@ -441,13 +448,19 @@ export default function App() {
   );
   const yearlySummaries = useMemo(() => {
     const map = {};
-    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES);
+    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded);
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded]);
+  const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
   );
+  const businessAdvies = useMemo(() => {
+    if (!activeYear || !yearlySummary) return null;
+    const manualCorrectie = Number(manualPriveUitgaven[activeYear]) || 0;
+    return computeBusinessAdvies(activeYear, yearlySummary, yearlyOpenOB[activeYear] || 0, ibEstimate, !!ibStatus[activeYear]?.gedaan, priGroupForYear.items, manualCorrectie);
+  }, [activeYear, yearlySummary, yearlyOpenOB, ibEstimate, ibStatus, priGroupForYear, manualPriveUitgaven]);
 
   // ---- Voortgangspercentage per jaar (voor de jaarknoppen in "Werk te doen") ----
   const yearlyProgress = useMemo(() => {
@@ -485,6 +498,7 @@ export default function App() {
         }
         checks.push({ frac: kwTotal > 0 ? kwScore / kwTotal : 1 });
       }
+      checks.push({ frac: ibStatus[year]?.gedaan ? 1 : 0 });
       const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
       map[year] = { pct: Math.round(avgFrac * 100) };
     }
@@ -553,6 +567,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+      ibStatus, manualPriveUitgaven,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -581,10 +596,25 @@ export default function App() {
       setPeriodeQuarterOverrides(project.periodeQuarterOverrides && typeof project.periodeQuarterOverrides === "object" ? project.periodeQuarterOverrides : {});
       setReviewedPeriodeKeys(Array.isArray(project.reviewedPeriodeKeys) ? project.reviewedPeriodeKeys : []);
       setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
+      // Oudere projectbestanden bewaarden alleen een simpel rentepercentage per lening
+      // ("loanInterestRates"), zonder de volledige leningbedrag/startdatum-gegevens. Die
+      // vullen we hier aan in loanDetails (alleen als daar nog geen rente in staat), zodat
+      // een ouder projectbestand niet zomaar de eerder ingevulde rente verliest.
+      if (project.loanInterestRates && typeof project.loanInterestRates === "object") {
+        setLoanDetails((prev) => {
+          const merged = { ...prev };
+          for (const [key, rate] of Object.entries(project.loanInterestRates)) {
+            if (merged[key]?.rente == null) merged[key] = { ...(merged[key] || {}), rente: Number(rate) };
+          }
+          return merged;
+        });
+      }
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
+      setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
+      setManualPriveUitgaven(project.manualPriveUitgaven && typeof project.manualPriveUitgaven === "object" ? project.manualPriveUitgaven : {});
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -624,6 +654,8 @@ export default function App() {
     setLeaseDetails({});
     setConfirmedLeaseTypeKeys([]);
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
+    setIbStatus({});
+    setManualPriveUitgaven({});
     setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
@@ -1012,6 +1044,10 @@ export default function App() {
                     openOB={yearlyOpenOB[activeYear] || 0}
                     ibEstimate={ibEstimate}
                     korRegeling={korRegeling}
+                    manualPriveUitgaven={manualPriveUitgaven}
+                    setManualPriveUitgaven={setManualPriveUitgaven}
+                    ibGedaan={!!ibStatus[activeYear]?.gedaan}
+                    setIbGedaan={setIbGedaan}
                   />
                 )}
 
@@ -1022,6 +1058,11 @@ export default function App() {
                     yearlyOpenOB={yearlyOpenOB}
                     korRegeling={korRegeling}
                     onYearClick={setActiveYear}
+                    ibStatus={ibStatus}
+                    manualPriveUitgaven={manualPriveUitgaven}
+                    volledigeJaren={volledigeJaren}
+                    businessAdvies={businessAdvies}
+                    activeYear={activeYear}
                   />
                 </div>
 
