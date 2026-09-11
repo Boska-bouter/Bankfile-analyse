@@ -464,6 +464,8 @@ export default function App() {
 
   // ---- Slepen tussen Zakelijk en Prive (Pointer Events — werkt ook op iOS/iPad) ----
   const [dragState, setDragState] = useState(null); // { tx, x, y, overZone }
+  const [expandedTable, setExpandedTable] = useState(null); // "Zakelijk" | "Prive" | null
+  const [expandedBusinessIncomeList, setExpandedBusinessIncomeList] = useState(false);
   const dragStateRef = useRef(null);
   dragStateRef.current = dragState;
   const startRowDrag = (e, tx) => {
@@ -1004,7 +1006,7 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className={expandedBusinessIncomeList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
             <section className="rounded-lg border border-slate-200 bg-white p-5">
               <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
               <p className="text-xs text-slate-500 mb-3">
@@ -1020,26 +1022,30 @@ export default function App() {
                 entries={businessIncomeEntries}
                 entriesLabel="Nu herkend als Zakelijke inkomsten"
                 onReclassify={reclassifyBusinessEntry}
+                isExpanded={expandedBusinessIncomeList}
+                onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
               />
             </section>
-            <section className="rounded-lg border border-slate-200 bg-white p-5">
-              <h2 className="text-sm font-semibold mb-1">Zakelijke uitgaven (leveranciers)</h2>
-              <p className="text-xs text-slate-500 mb-3">
-                Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
-                automatisch het label Zakelijk.
-              </p>
-              <KeywordManager
-                keywords={businessExpenseKeywords}
-                onAdd={addBusinessExpenseKeyword}
-                onRemove={removeBusinessExpenseKeyword}
-                placeholder="bijv. LeasePlan, boekhouder-naam…"
-                chipClass="bg-teal-100 text-teal-800"
-                addButtonClass="bg-teal-600 hover:bg-teal-700"
-                entries={businessExpenseEntries}
-                entriesLabel="Nu herkend als Zakelijke uitgaven"
-                onReclassify={reclassifyBusinessEntry}
-              />
-            </section>
+            {!expandedBusinessIncomeList && (
+              <section className="rounded-lg border border-slate-200 bg-white p-5">
+                <h2 className="text-sm font-semibold mb-1">Zakelijke uitgaven (leveranciers)</h2>
+                <p className="text-xs text-slate-500 mb-3">
+                  Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
+                  automatisch het label Zakelijk.
+                </p>
+                <KeywordManager
+                  keywords={businessExpenseKeywords}
+                  onAdd={addBusinessExpenseKeyword}
+                  onRemove={removeBusinessExpenseKeyword}
+                  placeholder="bijv. LeasePlan, boekhouder-naam…"
+                  chipClass="bg-teal-100 text-teal-800"
+                  addButtonClass="bg-teal-600 hover:bg-teal-700"
+                  entries={businessExpenseEntries}
+                  entriesLabel="Nu herkend als Zakelijke uitgaven"
+                  onReclassify={reclassifyBusinessEntry}
+                />
+              </section>
+            )}
           </div>
         )}
 
@@ -1297,33 +1303,41 @@ export default function App() {
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
-                <div className="grid md:grid-cols-2 gap-4 items-start">
-                  <div
-                    data-dropzone="Zakelijk"
-                    className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
-                  >
-                    <DetailTable
-                      group={zakGroupForYear}
-                      onCounterpartyOverride={setCounterpartyOverride}
-                      onRowOverride={setRowOverride}
-                      enableDrag
-                      onRowDragStart={startRowDrag}
-                      draggingTxId={dragState ? dragState.tx.id : null}
-                    />
-                  </div>
-                  <div
-                    data-dropzone="Prive"
-                    className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
-                  >
-                    <DetailTable
-                      group={priGroupForYear}
-                      onCounterpartyOverride={setCounterpartyOverride}
-                      onRowOverride={setRowOverride}
-                      enableDrag
-                      onRowDragStart={startRowDrag}
-                      draggingTxId={dragState ? dragState.tx.id : null}
-                    />
-                  </div>
+                <div className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
+                  {(!expandedTable || expandedTable === "Zakelijk") && (
+                    <div
+                      data-dropzone="Zakelijk"
+                      className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
+                    >
+                      <DetailTable
+                        group={zakGroupForYear}
+                        onCounterpartyOverride={setCounterpartyOverride}
+                        onRowOverride={setRowOverride}
+                        enableDrag
+                        onRowDragStart={startRowDrag}
+                        draggingTxId={dragState ? dragState.tx.id : null}
+                        isExpanded={expandedTable === "Zakelijk"}
+                        onToggleExpand={() => setExpandedTable((v) => (v === "Zakelijk" ? null : "Zakelijk"))}
+                      />
+                    </div>
+                  )}
+                  {(!expandedTable || expandedTable === "Prive") && (
+                    <div
+                      data-dropzone="Prive"
+                      className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
+                    >
+                      <DetailTable
+                        group={priGroupForYear}
+                        onCounterpartyOverride={setCounterpartyOverride}
+                        onRowOverride={setRowOverride}
+                        enableDrag
+                        onRowDragStart={startRowDrag}
+                        draggingTxId={dragState ? dragState.tx.id : null}
+                        isExpanded={expandedTable === "Prive"}
+                        onToggleExpand={() => setExpandedTable((v) => (v === "Prive" ? null : "Prive"))}
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             )}

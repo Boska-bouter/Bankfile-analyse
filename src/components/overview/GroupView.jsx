@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { CATEGORY_ORDER, CATEGORY_COLOR } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
@@ -52,7 +53,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd }) {
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enableDrag, onRowDragStart, draggingTxId }) {
+export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountMin, setAmountMin] = useState("");
@@ -61,6 +62,7 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
 
   const applyChange = (tx, patch) => {
     const key = (tx.counterparty || tx.description || "").trim();
@@ -108,7 +110,18 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
     <div className="rounded-lg border border-slate-200 bg-white">
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({filteredItems.length} van {group.items.length})</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({filteredItems.length} van {group.items.length})</h3>
+            {onToggleExpand && (
+              <button onClick={onToggleExpand} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700" title={isExpanded ? "Terug naar naast elkaar" : "Deze tabel over de volle breedte tonen"}>
+                {isExpanded ? (
+                  <>Verkleinen <ChevronRight className="h-3.5 w-3.5 rotate-180" /></>
+                ) : (
+                  <>Uitvergroten <ChevronRight className="h-3.5 w-3.5" /></>
+                )}
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" />
             <div className="relative shrink-0">
@@ -234,8 +247,20 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
                       <option value="Zakelijk">Zakelijk</option>
                     </select>
                   </td>
-                  <td className="px-4 py-2 max-w-[10rem] truncate" title={t.counterparty}>{t.counterparty}</td>
-                  <td className="px-4 py-2 text-slate-500 max-w-[14rem] truncate" title={t.fullDescription || t.description}>{t.description}</td>
+                  <td
+                    className={`px-4 py-2 cursor-pointer ${expandedCell === `${t.id}:cp` ? "whitespace-normal break-words max-w-xs" : "max-w-[10rem] truncate"}`}
+                    onClick={() => setExpandedCell((cur) => (cur === `${t.id}:cp` ? null : `${t.id}:cp`))}
+                    title="Klik om de volledige tekst te tonen/verbergen"
+                  >
+                    {t.counterparty}
+                  </td>
+                  <td
+                    className={`px-4 py-2 text-slate-500 cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words max-w-sm" : "max-w-[14rem] truncate"}`}
+                    onClick={() => setExpandedCell((cur) => (cur === `${t.id}:desc` ? null : `${t.id}:desc`))}
+                    title="Klik om de volledige tekst te tonen/verbergen"
+                  >
+                    {expandedCell === `${t.id}:desc` ? (t.fullDescription || t.description) : t.description}
+                  </td>
                 </tr>
               ))}
             {filteredItems.length === 0 && (
