@@ -2,8 +2,9 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
-export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown }) {
+export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp }) {
   const [open, setOpen] = useState(false);
   if (loanSummary.length === 0) return null;
 
@@ -19,7 +20,8 @@ export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModa
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
             Categorie "Leningen" is altijd 0% BTW; de rente is aftrekbaar, de aflossing niet. Vul de volledige gegevens
-            in om de rente/aflossing-splitsing per betaling te laten berekenen.
+            in om de rente/aflossing-splitsing per betaling te laten berekenen.{" "}
+            {onOpenHelp && <HelpHint chapter="rente-per-lening" onOpen={onOpenHelp} />}
           </p>
           <div className="space-y-3">
             {loanSummary.map((loan) => {

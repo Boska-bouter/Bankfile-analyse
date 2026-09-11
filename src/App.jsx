@@ -21,6 +21,8 @@ import {
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
+import HelpHint from "./components/shared/HelpHint.jsx";
+import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
@@ -112,6 +114,8 @@ export default function App() {
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [helpPopupChapter, setHelpPopupChapter] = useState(null);
+  const [helpAutoOpenChapter, setHelpAutoOpenChapter] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState(null);
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
@@ -520,6 +524,15 @@ export default function App() {
     if (!activeYear && years.length) setActiveYear(years[0]);
     if (activeYear && !years.includes(activeYear) && years.length) setActiveYear(years[years.length - 1]);
   }, [years, activeYear]);
+  const prevActiveYearRef = useRef(null);
+  useEffect(() => {
+    if (prevActiveYearRef.current != null && activeYear != null && prevActiveYearRef.current !== activeYear) {
+      // Van jaar gewisseld — de Help-uitleg is voor de vorige context, dus sluit die.
+      setShowHelp(false);
+      setHelpPopupChapter(null);
+    }
+    prevActiveYearRef.current = activeYear;
+  }, [activeYear]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
@@ -890,7 +903,19 @@ export default function App() {
           </section>
         )}
 
-        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
+        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} openChapter={helpAutoOpenChapter} />}
+
+        {helpPopupChapter && (
+          <HelpPopupModal
+            chapterKey={helpPopupChapter}
+            onClose={() => setHelpPopupChapter(null)}
+            onViewAll={() => {
+              setHelpAutoOpenChapter(helpPopupChapter);
+              setHelpPopupChapter(null);
+              setShowHelp(true);
+            }}
+          />
+        )}
 
         <section
           className="rounded-lg border-2 border-dashed border-slate-300 bg-white p-8 text-center"
@@ -993,6 +1018,7 @@ export default function App() {
               setBtwVerlegd={setBtwVerlegd}
               korRegeling={korRegeling}
               setKorRegeling={setKorRegeling}
+              onOpenHelp={setHelpPopupChapter}
             />
           </div>
         )}
@@ -1002,7 +1028,7 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategories} />
+          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategories} onOpenHelp={setHelpPopupChapter} />
         )}
 
         {parsedFiles.length > 0 && (
@@ -1119,7 +1145,7 @@ export default function App() {
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {periodeMismatches.length}
                   </span>
                 </div>
-                <PeriodeReviewStep items={periodeMismatches} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
+                <PeriodeReviewStep items={periodeMismatches} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} onOpenHelp={setHelpPopupChapter} />
               </section>
             )}
 
@@ -1130,6 +1156,7 @@ export default function App() {
                 onOpenModal={setLoanDetailsModalKey}
                 onMarkUnknown={markLoanUnknown}
                 onUnmarkUnknown={unmarkLoanUnknown}
+                onOpenHelp={setHelpPopupChapter}
               />
             </div>
 
@@ -1142,6 +1169,7 @@ export default function App() {
                 onOpenModal={setLeaseDetailsModalKey}
                 onMarkUnknown={markLeaseUnknown}
                 onUnmarkUnknown={unmarkLeaseUnknown}
+                onOpenHelp={setHelpPopupChapter}
               />
             </div>
 
@@ -1230,6 +1258,7 @@ export default function App() {
                     setManualPriveUitgaven={setManualPriveUitgaven}
                     ibGedaan={!!ibStatus[activeYear]?.gedaan}
                     setIbGedaan={setIbGedaan}
+                    onOpenHelp={setHelpPopupChapter}
                   />
                 )}
 
@@ -1272,6 +1301,7 @@ export default function App() {
                       kwartaalStatus={kwartaalStatus}
                       setKwartaalStatusField={setKwartaalStatusField}
                       activeYear={activeYear}
+                      onOpenHelp={setHelpPopupChapter}
                     />
                   )}
                 </div>

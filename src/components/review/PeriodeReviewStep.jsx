@@ -1,6 +1,7 @@
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
-export default function PeriodeReviewStep({ items, onConfirm, onMove }) {
+export default function PeriodeReviewStep({ items, onConfirm, onMove, onOpenHelp }) {
   if (items.length === 0) return null;
   return (
     <div className="p-5">
@@ -8,7 +9,8 @@ export default function PeriodeReviewStep({ items, onConfirm, onMove }) {
         Bij deze ontvangsten noemt de bankomschrijving een factuurperiode die in een ander kwartaal valt dan de
         boekingsdatum. Geen automatische wijziging — dit hangt af van het gehanteerde stelsel (factuurstelsel:
         factuurperiode is leidend; kasstelsel: boekingsdatum is al correct). Een verplaatsing raakt alleen de
-        indeling in "BTW-aangifte per kwartaal".
+        indeling in "BTW-aangifte per kwartaal".{" "}
+        {onOpenHelp && <HelpHint chapter="factuurperiode" onOpen={onOpenHelp} />}
       </p>
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
         {items.map(({ tx, boekingKwartaal, voorgesteldKwartaal }) => (

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
-export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear }) {
+export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, onOpenHelp }) {
   const [open, setOpen] = useState(true);
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
@@ -27,7 +28,8 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
         <div className="px-5 pb-5 overflow-x-auto">
           <p className="text-xs text-slate-500 mb-3">
             De omzet- en kostenbedragen staan hier <strong>netto</strong> (excl. BTW), met het bruto bankbedrag er klein
-            tussen haakjes onder.
+            tussen haakjes onder.{" "}
+            {onOpenHelp && <HelpHint chapter="btw-aangifte-kwartaal" onOpen={onOpenHelp} />}
           </p>
           <table className="w-full text-sm">
             <thead>

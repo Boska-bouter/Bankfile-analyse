@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
 // Compact jaaroverzicht: winst uit onderneming, wat er naar privé is gegaan, nog te betalen OB
 // en een grove IB-schatting. Zie tax/yearlySummary.js en tax/incomeTax.js voor de berekening.
-export default function YearSummaryCard({ year, summary, openOB, ibEstimate, korRegeling, manualPriveUitgaven, setManualPriveUitgaven, ibGedaan, setIbGedaan }) {
+export default function YearSummaryCard({ year, summary, openOB, ibEstimate, korRegeling, manualPriveUitgaven, setManualPriveUitgaven, ibGedaan, setIbGedaan, onOpenHelp }) {
   const [showFixedVar, setShowFixedVar] = useState(false);
   const manualCorrectie = Number(manualPriveUitgaven?.[year]) || 0;
   const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
@@ -35,7 +36,10 @@ export default function YearSummaryCard({ year, summary, openOB, ibEstimate, kor
           IB-aangifte {year} is al gedaan
         </label>
       </div>
-      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Jaaroverzicht {year}</h3>
+      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+        Jaaroverzicht {year}
+        {onOpenHelp && <HelpHint chapter="jaaroverzicht" onOpen={onOpenHelp} />}
+      </h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         <div>
           <p className="text-[10px] text-slate-400 uppercase">Zakelijke inkomsten</p>

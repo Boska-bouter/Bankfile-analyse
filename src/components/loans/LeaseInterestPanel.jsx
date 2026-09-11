@@ -2,9 +2,10 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
 export default function LeaseInterestPanel({
-  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
+  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
   if (leaseSummary.length === 0) return null;

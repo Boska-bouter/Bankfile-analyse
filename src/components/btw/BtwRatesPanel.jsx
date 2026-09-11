@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { CATEGORY_ORDER, CATEGORY_COLOR } from "../../classification/categories.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
 // BTW-instellingen: KOR (kleineondernemersregeling), BTW-verlegd, en het percentage per
 // categorie. Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op
 // basis van dit percentage. Bij KOR wordt nergens BTW berekend (zie effectiveCategoryBtwRates
 // in App.jsx), dus dit paneel is dan uitgeschakeld.
-export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling }) {
+export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling, onOpenHelp }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -22,7 +23,8 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
             Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op basis van het percentage
-            per categorie. Alleen van toepassing op Zakelijke transacties.
+            per categorie. Alleen van toepassing op Zakelijke transacties.{" "}
+            {onOpenHelp && <HelpHint chapter="btw-percentages" onOpen={onOpenHelp} />}
           </p>
 
           <div className="flex items-center gap-3 mb-3 p-3 rounded-md bg-slate-50">
