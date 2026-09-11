@@ -28,6 +28,9 @@ import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
+import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
+import KeywordManager from "./components/settings/KeywordManager.jsx";
+import { exportExcel } from "./reports/excelExport.js";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -242,6 +245,11 @@ export default function App() {
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
   const confirmOverigAsIs = (item) => setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+
+  const addBusinessKeyword = (kw) => setBusinessKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
+  const removeBusinessKeyword = (kw) => setBusinessKeywords((prev) => prev.filter((k) => k !== kw));
+  const addBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
+  const removeBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -586,6 +594,44 @@ export default function App() {
           </div>
         )}
 
+        {parsedFiles.length > 0 && (
+          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRules} />
+        )}
+
+        {parsedFiles.length > 0 && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
+              <p className="text-xs text-slate-500 mb-3">
+                Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
+              </p>
+              <KeywordManager
+                keywords={businessKeywords}
+                onAdd={addBusinessKeyword}
+                onRemove={removeBusinessKeyword}
+                placeholder="Naam tegenpartij…"
+                chipClass="bg-emerald-100 text-emerald-800"
+                addButtonClass="bg-emerald-600 hover:bg-emerald-700"
+              />
+            </section>
+            <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <h2 className="text-sm font-semibold mb-1">Zakelijke uitgaven (leveranciers)</h2>
+              <p className="text-xs text-slate-500 mb-3">
+                Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
+                automatisch het label Zakelijk.
+              </p>
+              <KeywordManager
+                keywords={businessExpenseKeywords}
+                onAdd={addBusinessExpenseKeyword}
+                onRemove={removeBusinessExpenseKeyword}
+                placeholder="bijv. LeasePlan, boekhouder-naam…"
+                chipClass="bg-teal-100 text-teal-800"
+                addButtonClass="bg-teal-600 hover:bg-teal-700"
+              />
+            </section>
+          </div>
+        )}
+
         {transactions.length > 0 && pendingIncomeReview.length > 0 && (
           <IncomeReviewStep
             items={pendingIncomeReview}
@@ -651,19 +697,37 @@ export default function App() {
             {years.length > 0 && activeYear && (
               <>
                 {years.length > 1 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-slate-400">Jaar:</span>
-                    {years.map((year) => (
-                      <button
-                        key={year}
-                        onClick={() => setActiveYear(year)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
-                          year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                        }`}
-                      >
-                        {year}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-slate-400">Jaar:</span>
+                      {years.map((year) => (
+                        <button
+                          key={year}
+                          onClick={() => setActiveYear(year)}
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
+                            year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Excel exporteren
+                    </button>
+                  </div>
+                )}
+                {years.length === 1 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Excel exporteren
+                    </button>
                   </div>
                 )}
 
