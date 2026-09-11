@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
@@ -34,6 +34,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
+import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
 import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
@@ -112,6 +113,7 @@ export default function App() {
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState(null);
+  const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
@@ -159,17 +161,43 @@ export default function App() {
   };
   const setIbGedaan = (year, gedaan) => setIbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
 
-  // ---- Eerder opgeslagen project laden bij openen ----
+  // ---- Eerder opgeslagen project laden bij openen — met keuze i.p.v. automatisch ----
+  const [showStartupChoice, setShowStartupChoice] = useState(false);
+  const pendingProjectRef = useRef(null);
   useEffect(() => {
     (async () => {
       const pendingData = await loadPersistedParsedFiles();
       const pendingSettings = await loadPersistedSettings();
-      skipNextPersistRef.current = true;
-      if (pendingData) setParsedFiles(pendingData);
-      if (pendingSettings) applySettingsToState(pendingSettings);
-      setLoaded(true);
+      if (pendingData && pendingData.length > 0) {
+        // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen.
+        pendingProjectRef.current = { parsedFiles: pendingData, settings: pendingSettings };
+        setShowStartupChoice(true);
+      } else {
+        // Niets om te kiezen — gewoon meteen starten, eventuele losse instellingen (zonder
+        // bestanden) mogen alsnog ingeladen worden.
+        skipNextPersistRef.current = true;
+        if (pendingSettings) applySettingsToState(pendingSettings);
+        setLoaded(true);
+      }
     })();
   }, []);
+  const resumeLastProject = () => {
+    const pending = pendingProjectRef.current;
+    skipNextPersistRef.current = true;
+    if (pending) {
+      setParsedFiles(pending.parsedFiles);
+      if (pending.settings) applySettingsToState(pending.settings);
+    }
+    setShowStartupChoice(false);
+    setLoaded(true);
+  };
+  const startEmpty = () => {
+    // Bewust niets inladen — de eerder opgeslagen data in deze browser blijft intact totdat er
+    // weer iets nieuws wordt opgeslagen (bijv. door een bestand te uploaden).
+    skipNextPersistRef.current = true;
+    setShowStartupChoice(false);
+    setLoaded(true);
+  };
 
   // ---- Automatisch bewaren per browser bij elke wijziging ----
   useEffect(() => {
@@ -232,7 +260,54 @@ export default function App() {
     const excludedSet = new Set([...excludedDuplicateFingerprints, ...excludedManualFingerprints]);
     return allTransactions.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
   }, [allTransactions, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId]);
+  // ---- Ongedaan maken laatste actie — momentopname/herstel voor de grote, risicovolle acties
+  // (duplicaten verwijderen, wis alles). Bewust maar 1 stap terug — elke volgende momentopname
+  // overschrijft de vorige. ----
+  const snapshotBeforeAction = (label) => {
+    setLastActionSnapshot({
+      label,
+      state: {
+        parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
+        categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints, excludedManualFingerprints,
+        businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
+        kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+        leaseDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
+      },
+    });
+  };
+  const undoLastAction = () => {
+    if (!lastActionSnapshot) return;
+    const s = lastActionSnapshot.state;
+    setParsedFiles(s.parsedFiles);
+    setAccountTypeByFile(s.accountTypeByFile);
+    setOverridesByCounterparty(s.overridesByCounterparty);
+    setOverridesByRow(s.overridesByRow);
+    setCategoryRules(s.categoryRules);
+    setCategoryBtwRates(s.categoryBtwRates);
+    setBtwVerlegd(s.btwVerlegd);
+    setKorRegeling(s.korRegeling);
+    setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
+    setExcludedManualFingerprints(s.excludedManualFingerprints);
+    setBusinessKeywords(s.businessKeywords);
+    setBusinessExpenseKeywords(s.businessExpenseKeywords);
+    setReviewedIncomeKeys(s.reviewedIncomeKeys);
+    setReviewedPersonKeys(s.reviewedPersonKeys);
+    setReviewedOverigKeys(s.reviewedOverigKeys);
+    setKwartaalStatus(s.kwartaalStatus);
+    setVoorbelastingExcluded(s.voorbelastingExcluded);
+    setPeriodeQuarterOverrides(s.periodeQuarterOverrides);
+    setReviewedPeriodeKeys(s.reviewedPeriodeKeys);
+    setLoanDetails(s.loanDetails);
+    setLeaseDetails(s.leaseDetails);
+    setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
+    setFixedCategories(s.fixedCategories);
+    setIbStatus(s.ibStatus);
+    setManualPriveUitgaven(s.manualPriveUitgaven);
+    setLastActionSnapshot(null);
+  };
+
   const removeDuplicates = () => {
+    snapshotBeforeAction("Duplicaten verwijderen");
     setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...duplicateFingerprints])]);
   };
   const pendingDuplicateCount = duplicateFingerprints.size - excludedDuplicateFingerprints.filter((fp) => duplicateFingerprints.has(fp)).length;
@@ -646,6 +721,7 @@ export default function App() {
     );
   };
   const doClearAllData = async () => {
+    snapshotBeforeAction("Wis alles");
     setConfirmMessage(null);
     setParsedFiles([]);
     setAccountTypeByFile({});
@@ -681,6 +757,48 @@ export default function App() {
     await clearPersistedSettings();
     setSaveState("idle");
   };
+
+  if (showStartupChoice) {
+    const pending = pendingProjectRef.current;
+    const fileCount = pending ? pending.parsedFiles.length : 0;
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <h1 className="text-lg font-semibold mb-1">Vorig project gevonden</h1>
+          <p className="text-sm text-slate-500 mb-5">
+            Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}). Wil je daarmee verdergaan, of leeg beginnen?
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={resumeLastProject}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-slate-700"
+            >
+              Gebruik laatste project
+            </button>
+            <button
+              onClick={startEmpty}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
+            >
+              Leeg beginnen
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-4">
+            Het eerder opgeslagen project blijft bewaard totdat je zelf iets nieuws uploadt of instelt.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" /> Opgeslagen gegevens laden…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 text-slate-900 font-sans">
@@ -751,7 +869,25 @@ export default function App() {
         </div>
       </header>
 
+      <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {lastActionSnapshot && (
+          <section className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-700">
+              Laatste actie: <strong>{lastActionSnapshot.label}</strong>.
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+                Ongedaan maken
+              </button>
+              <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </section>
+        )}
+
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         <section
@@ -1091,6 +1227,10 @@ export default function App() {
                   />
                 )}
 
+                <div ref={checklistSectionRef}>
+                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
+                </div>
+
                 <div ref={obIbSectionRef}>
                   <ObIbExplanationPanel
                     activeYear={activeYear}
@@ -1128,10 +1268,6 @@ export default function App() {
                       activeYear={activeYear}
                     />
                   )}
-                </div>
-
-                <div ref={checklistSectionRef}>
-                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
                 </div>
 
                 {(() => {
