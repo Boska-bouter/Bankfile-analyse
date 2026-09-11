@@ -20,6 +20,44 @@ export function installStoragePolyfill() {
   };
 }
 
+// Automatische per-browser opslag van de geüploade bestanden — dezelfde sleutel als de
+// originele tool gebruikte ("bankoverzicht:data"), zodat een eerder opgeslagen project in deze
+// browser blijft werken na de migratie. Los van het downloadbare projectbestand (zie
+// projectFile.js) — dit hier gebeurt automatisch, op de achtergrond, bij elke wijziging.
+const DATA_KEY = "bankoverzicht:data";
+
+export async function loadPersistedParsedFiles() {
+  try {
+    const res = await window.storage.get(DATA_KEY);
+    if (res && res.value) {
+      const parsed = JSON.parse(res.value);
+      if (Array.isArray(parsed.parsedFiles) && parsed.parsedFiles.length > 0) {
+        return parsed.parsedFiles;
+      }
+    }
+  } catch (e) {
+    // nog geen eerder opgeslagen data — dat is prima, gewoon leeg beginnen
+  }
+  return null;
+}
+
+export async function persistParsedFiles(parsedFiles) {
+  try {
+    const result = await window.storage.set(DATA_KEY, JSON.stringify({ parsedFiles }));
+    return !!result;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function clearPersistedData() {
+  try {
+    await window.storage.delete(DATA_KEY);
+  } catch (e) {
+    // al leeg, niets te doen
+  }
+}
+
 // Bouwt de volgende versienaam voor een projectbestand: "naam.json" -> "naam_v2.json", en
 // "naam_v3.json" -> "naam_v4.json".
 export function nextVersionedFilename(name) {
