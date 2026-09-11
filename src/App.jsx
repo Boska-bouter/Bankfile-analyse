@@ -96,7 +96,6 @@ export default function App() {
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [manualPriveUitgaven, setManualPriveUitgaven] = useState({}); // { "2025": "150" }
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
-  const aangiftevoorstelPreviewRef = useRef(null);
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
@@ -504,11 +503,6 @@ export default function App() {
     setShowAangifteYearPicker(false);
   };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
-  useEffect(() => {
-    if (aangiftevoorstelPreview && aangiftevoorstelPreviewRef.current) {
-      aangiftevoorstelPreviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [aangiftevoorstelPreview]);
   const downloadAangiftevoorstelPreview = () => downloadAangiftevoorstel(aangiftevoorstelPreview, selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
@@ -1448,27 +1442,29 @@ export default function App() {
         )}
 
         {aangiftevoorstelPreview && (
-          <section ref={aangiftevoorstelPreviewRef} className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
-              <p className="text-sm font-semibold">Voorbeeld: Aangiftevoorstel {selectedAangifteYears.join(", ")}</p>
-              <div className="flex gap-2 shrink-0">
-                <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
-                  <Download className="h-4 w-4" /> Downloaden
-                </button>
-                <button
-                  onClick={printAangiftevoorstelPreview}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
-                  title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
-                >
-                  <Printer className="h-4 w-4" /> Printen
-                </button>
-                <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                  Sluiten
-                </button>
+          <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={() => setAangiftevoorstelPreview(null)}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                <p className="text-sm font-semibold">Voorbeeld: Aangiftevoorstel {selectedAangifteYears.join(", ")}</p>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                    <Download className="h-4 w-4" /> Downloaden
+                  </button>
+                  <button
+                    onClick={printAangiftevoorstelPreview}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
+                    title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
+                  >
+                    <Printer className="h-4 w-4" /> Printen
+                  </button>
+                  <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    Sluiten
+                  </button>
+                </div>
               </div>
+              <iframe srcDoc={aangiftevoorstelPreview} title="Voorbeeld aangiftevoorstel" className="w-full bg-white flex-1" style={{ border: "none" }} />
             </div>
-            <iframe srcDoc={aangiftevoorstelPreview} title="Voorbeeld aangiftevoorstel" className="w-full bg-white" style={{ height: "70vh", border: "none" }} />
-          </section>
+          </div>
         )}
       </main>
 
