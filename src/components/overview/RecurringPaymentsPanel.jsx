@@ -4,10 +4,11 @@ import { extractRecurringName } from "../../utils/normalization.js";
 import { MAAND_NAMEN } from "../../utils/dates.js";
 import { CATEGORY_COLOR } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
 const PAGE_SIZE = 15;
 
-export default function RecurringPaymentsPanel({ classified, activeYear }) {
+export default function RecurringPaymentsPanel({ classified, activeYear, onOpenHelp }) {
   const [open, setOpen] = useState(false);
   const [minCount, setMinCount] = useState(4);
   const [page, setPage] = useState(0);
@@ -50,7 +51,10 @@ export default function RecurringPaymentsPanel({ classified, activeYear }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-sm font-semibold">
-        <span>Terugkerende betalingen {activeYear}</span>
+        <span className="flex items-center gap-2">
+          Terugkerende betalingen {activeYear}
+          {onOpenHelp && <HelpHint chapter="terugkerende-betalingen" onOpen={onOpenHelp} />}
+        </span>
         <span className="text-xs font-normal text-slate-400">({recurringPayments.length})</span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}

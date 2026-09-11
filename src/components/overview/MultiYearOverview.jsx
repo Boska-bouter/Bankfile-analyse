@@ -2,10 +2,11 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eurTight } from "../../utils/amounts.js";
 import { estimateIncomeTax } from "../../tax/incomeTax.js";
+import HelpHint from "../shared/HelpHint.jsx";
 
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus,
-  manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear,
+  manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp,
 }) {
   const [open, setOpen] = useState(years.length > 1);
   const [showHiddenCols, setShowHiddenCols] = useState(false);
@@ -30,7 +31,10 @@ export default function MultiYearOverview({
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
-        <span>{years.length > 1 ? `Meerjarenoverzicht (${years.length} jaar)` : "Jaaroverzicht — is dit rendabel?"}</span>
+        <span className="flex items-center gap-2">
+          {years.length > 1 ? `Meerjarenoverzicht (${years.length} jaar)` : "Jaaroverzicht — is dit rendabel?"}
+          {onOpenHelp && <HelpHint chapter="jaaroverzicht" onOpen={onOpenHelp} />}
+        </span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
       {businessAdvies && (

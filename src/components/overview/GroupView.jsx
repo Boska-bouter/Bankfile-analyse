@@ -4,11 +4,12 @@ import { CATEGORY_ORDER, CATEGORY_COLOR } from "../../classification/categories.
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
+import HelpHint from "../shared/HelpHint.jsx";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026") — losstaand van de detailtabel zodat
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen.
-export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd }) {
+export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp }) {
   const totals = useMemo(() => {
     const t = {};
     for (const tx of group.items) t[tx.category] = (t[tx.category] || 0) + tx.amount;
@@ -24,7 +25,10 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd }) {
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Categorieën — {group.label}</h3>
+      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+        Categorieën — {group.label}
+        {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
+      </h3>
       <table className="w-full text-sm">
         <tbody>
           {CATEGORY_ORDER.filter((c) => c in totals).map((c) => (
@@ -53,7 +57,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd }) {
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand }) {
+export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountMin, setAmountMin] = useState("");
@@ -112,6 +116,7 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({filteredItems.length} van {group.items.length})</h3>
+            {onOpenHelp && <HelpHint chapter="detailtabel" onOpen={onOpenHelp} />}
             {onToggleExpand && (
               <button onClick={onToggleExpand} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700" title={isExpanded ? "Terug naar naast elkaar" : "Deze tabel over de volle breedte tonen"}>
                 {isExpanded ? (

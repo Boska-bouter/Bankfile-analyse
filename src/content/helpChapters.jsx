@@ -129,4 +129,57 @@ export const HELP_CHAPTERS = [
       </div>
     ),
   },
+  {
+    key: "aangifte-checklist",
+    titel: "Aangifte-checklist",
+    inhoud: (
+      <p>
+        Een verzamellijst van alles wat de moeite waard is om te checken vóór je aangifte doet: hoeveel procent is al
+        gecategoriseerd, of de KOR- en BTW-verlegd-vragen beantwoord zijn, welke kwartalen nog niet zijn aangegeven of
+        betaald, een indicatieve controle op de loonheffing-verhouding, en signalen zoals boetes bij naheffingen of
+        een factuurdatum die in een ander kwartaal valt dan de boekingsdatum. Een groen vinkje betekent dat er niets
+        meer te doen is voor dat punt; een amber icoontje betekent dat er nog iets openstaat.
+      </p>
+    ),
+  },
+  {
+    key: "terugkerende-betalingen",
+    titel: "Terugkerende betalingen",
+    inhoud: (
+      <p>
+        Toont tegenpartijen die minstens een instelbaar aantal keer voorkomen binnen het actieve jaar — handig om
+        vaste lasten te herkennen of om te zien of er een maand ontbreekt bij iets dat normaal elke maand terugkomt.
+        Het bedrag hoeft niet vast te zijn (bijv. energienota's wisselen legitiem, maar zijn wel terugkerend). De
+        herkenning kijkt naar de naam zonder datum/tijd/pasvolgnummer, zodat bijv. "Albert Heijn 1234" en "Albert
+        Heijn 5678" als dezelfde tegenpartij tellen.
+      </p>
+    ),
+  },
+  {
+    key: "categorieen-overzicht",
+    titel: "Categorieën — Zakelijk/Prive",
+    inhoud: (
+      <p>
+        Alle transacties van dat jaar en type, opgeteld per categorie, met de BTW ernaast. Let op het verschil met{" "}
+        <strong>WUO</strong> in het jaaroverzicht: dit "Totaal"-bedrag hier telt écht alle categorieën bij elkaar op,
+        inclusief de onttrekkingen (privé-overmakingen) en persoonlijke belastingen die WUO bewust uitsluit. Bij een
+        flinke privé-onttrekking dat jaar kunnen die twee bedragen dus behoorlijk uit elkaar liggen — dat is geen
+        fout, het zijn gewoon twee verschillende dingen: het ene is "alles wat er over de rekening ging", het andere
+        is de zakelijke winst.
+      </p>
+    ),
+  },
+  {
+    key: "detailtabel",
+    titel: "Detailtabel",
+    inhoud: (
+      <p>
+        Categorie en type zijn direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
+        dezelfde tegenpartij, in alle jaren (tenzij er geen bruikbare naam is, dan alleen voor die ene transactie).
+        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Sleep een transactie (aan het handvat)
+        naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom. Gebruik de filters op bedrag
+        en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte te bekijken.
+      </p>
+    ),
+  },
 ];

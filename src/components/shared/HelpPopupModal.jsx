@@ -1,7 +1,9 @@
 import { X } from "lucide-react";
 import { HELP_CHAPTERS } from "../../content/helpChapters.jsx";
 
-export default function HelpPopupModal({ chapterKey, onClose, onViewAll }) {
+// Toont alleen de uitleg voor dit ene onderdeel — opent bewust NOOIT het volledige
+// "Help en uitleg"-paneel, dat blijft een apart, los te openen overzicht.
+export default function HelpPopupModal({ chapterKey, onClose }) {
   const chapter = HELP_CHAPTERS.find((c) => c.key === chapterKey);
   if (!chapter) return null;
   return (
@@ -14,11 +16,6 @@ export default function HelpPopupModal({ chapterKey, onClose, onViewAll }) {
           </button>
         </div>
         <div className="p-4 overflow-y-auto text-sm text-slate-700">{chapter.inhoud}</div>
-        <div className="px-4 py-3 border-t border-slate-200 shrink-0">
-          <button onClick={onViewAll} className="text-xs text-slate-500 hover:text-slate-800 underline">
-            Bekijk alle hoofdstukken in Help en uitleg
-          </button>
-        </div>
       </div>
     </div>
   );

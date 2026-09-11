@@ -1,4 +1,4 @@
-export default function HelpHint({ chapter, onOpen, label = "meer uitleg" }) {
+export default function HelpHint({ chapter, onOpen, label = "uitleg" }) {
   return (
     <button
       type="button"

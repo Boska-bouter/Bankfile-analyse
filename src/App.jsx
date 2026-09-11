@@ -116,7 +116,6 @@ export default function App() {
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
-  const [helpAutoOpenChapter, setHelpAutoOpenChapter] = useState(null);
   const [confirmMessage, setConfirmMessage] = useState(null);
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
@@ -984,19 +983,9 @@ export default function App() {
           </section>
         )}
 
-        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} openChapter={helpAutoOpenChapter} />}
+        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
-        {helpPopupChapter && (
-          <HelpPopupModal
-            chapterKey={helpPopupChapter}
-            onClose={() => setHelpPopupChapter(null)}
-            onViewAll={() => {
-              setHelpAutoOpenChapter(helpPopupChapter);
-              setHelpPopupChapter(null);
-              setShowHelp(true);
-            }}
-          />
-        )}
+        {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
 
         <section
           className="rounded-lg border-2 border-dashed border-slate-300 bg-white p-8 text-center"
@@ -1355,6 +1344,7 @@ export default function App() {
                     volledigeJaren={volledigeJaren}
                     businessAdvies={businessAdvies}
                     activeYear={activeYear}
+                    onOpenHelp={setHelpPopupChapter}
                   />
                 </div>
 
@@ -1371,7 +1361,7 @@ export default function App() {
                 </div>
 
                 <div ref={checklistSectionRef}>
-                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
+                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                 </div>
 
                 <div ref={obIbSectionRef}>
@@ -1388,11 +1378,11 @@ export default function App() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
 
-                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
+                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
 
                 {(() => {
                   const isTransferCat = (c) => c === "Uitbetaling aan prive" || c === "Prive opnames";
@@ -1430,6 +1420,7 @@ export default function App() {
                         draggingTxId={dragState ? dragState.tx.id : null}
                         isExpanded={expandedTable === "Zakelijk"}
                         onToggleExpand={() => setExpandedTable((v) => (v === "Zakelijk" ? null : "Zakelijk"))}
+                        onOpenHelp={setHelpPopupChapter}
                       />
                     </div>
                   )}
