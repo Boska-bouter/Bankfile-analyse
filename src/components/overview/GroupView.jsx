@@ -47,7 +47,7 @@ function CategorySummary({ items, categoryBtwRates, btwVerlegd }) {
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export default function GroupView({ group, onCounterpartyOverride, onRowOverride, categoryBtwRates, btwVerlegd }) {
+export default function GroupView({ group, onCounterpartyOverride, onRowOverride, categoryBtwRates, btwVerlegd, enableDrag, onRowDragStart, draggingTxId }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountMin, setAmountMin] = useState("");
@@ -185,6 +185,7 @@ export default function GroupView({ group, onCounterpartyOverride, onRowOverride
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50 text-xs text-slate-500 uppercase">
               <tr>
+                {enableDrag && <th className="px-2 py-2 w-8"></th>}
                 <th className="text-left font-medium px-4 py-2">Datum</th>
                 <th className="text-right font-medium px-4 py-2">Bedrag</th>
                 <th className="text-left font-medium px-4 py-2">Categorie</th>
@@ -198,7 +199,19 @@ export default function GroupView({ group, onCounterpartyOverride, onRowOverride
                 .slice()
                 .sort((a, b) => b.date - a.date)
                 .map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50">
+                  <tr key={t.id} className={`hover:bg-slate-50 ${draggingTxId === t.id ? "opacity-30" : ""}`}>
+                    {enableDrag && (
+                      <td className="px-1 py-1 text-center">
+                        <span
+                          onPointerDown={(e) => onRowDragStart(e, t)}
+                          className="inline-flex items-center justify-center cursor-grab text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md"
+                          style={{ fontSize: "1.1rem", lineHeight: 1, width: "2.25rem", height: "2.25rem", touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
+                          title="Sleep naar de andere tabel om Zakelijk/Prive te wijzigen"
+                        >
+                          ⠿
+                        </span>
+                      </td>
+                    )}
                     <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">{t.date.toLocaleDateString("nl-NL")}</td>
                     <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                     <td className="px-4 py-2">
@@ -228,7 +241,7 @@ export default function GroupView({ group, onCounterpartyOverride, onRowOverride
                 ))}
               {filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+                  <td colSpan={enableDrag ? 7 : 6} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
                 </tr>
               )}
             </tbody>

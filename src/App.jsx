@@ -37,6 +37,7 @@ import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
+import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 
@@ -73,6 +74,8 @@ export default function App() {
   const [korRegeling, setKorRegeling] = useState(null); // null = nog niet gevraagd
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
+  const [excludedManualFingerprints, setExcludedManualFingerprints] = useState([]);
+  const [reviewFileModal, setReviewFileModal] = useState(null);
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
   const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
@@ -121,6 +124,7 @@ export default function App() {
     setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
+    setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
     setBusinessExpenseKeywords(Array.isArray(settings.businessExpenseKeywords) ? settings.businessExpenseKeywords : []);
     setReviewedIncomeKeys(Array.isArray(settings.reviewedIncomeKeys) ? settings.reviewedIncomeKeys : []);
@@ -167,7 +171,7 @@ export default function App() {
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
+        leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -176,7 +180,7 @@ export default function App() {
     categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
+    leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     loaded,
   ]);
 
@@ -206,10 +210,10 @@ export default function App() {
     [allTransactions]
   );
   const transactions = useMemo(() => {
-    if (excludedDuplicateFingerprints.length === 0) return allTransactions;
-    const excludedSet = new Set(excludedDuplicateFingerprints);
+    if (excludedDuplicateFingerprints.length === 0 && excludedManualFingerprints.length === 0) return allTransactions;
+    const excludedSet = new Set([...excludedDuplicateFingerprints, ...excludedManualFingerprints]);
     return allTransactions.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
-  }, [allTransactions, excludedDuplicateFingerprints, fingerprintByTxId]);
+  }, [allTransactions, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId]);
   const removeDuplicates = () => {
     setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...duplicateFingerprints])]);
   };
@@ -342,6 +346,48 @@ export default function App() {
     setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
   };
 
+  // ---- Slepen tussen Zakelijk en Prive (Pointer Events — werkt ook op iOS/iPad) ----
+  const [dragState, setDragState] = useState(null); // { tx, x, y, overZone }
+  const dragStateRef = useRef(null);
+  dragStateRef.current = dragState;
+  const startRowDrag = (e, tx) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {
+      /* ignore */
+    }
+    setDragState({ tx, x: e.clientX, y: e.clientY, overZone: null });
+  };
+  useEffect(() => {
+    if (!dragState) return;
+    const handleMove = (e) => {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const zoneEl = el && el.closest ? el.closest("[data-dropzone]") : null;
+      const overZone = zoneEl ? zoneEl.getAttribute("data-dropzone") : null;
+      setDragState((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY, overZone } : prev));
+    };
+    const handleUp = () => {
+      const cur = dragStateRef.current;
+      if (cur && cur.overZone && cur.overZone !== cur.tx.type) {
+        const patch = { category: cur.tx.category, type: cur.overZone };
+        const key = (cur.tx.counterparty || cur.tx.description || "").trim();
+        if (key) setCounterpartyOverride(key, cur.tx.amount, patch);
+        else setRowOverride(cur.tx.id, patch);
+      }
+      setDragState(null);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [!!dragState]);
+
   const groups = useMemo(() => {
     const map = {};
     for (const tx of classified) {
@@ -442,7 +488,7 @@ export default function App() {
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, confirmedLeaseTypeKeys, fixedCategories,
+      leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -474,6 +520,7 @@ export default function App() {
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
+      setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -498,6 +545,8 @@ export default function App() {
     setKorRegeling(null);
     setExcludedDuplicateFingerprints([]);
     setDismissedDuplicateNotice(false);
+    setExcludedManualFingerprints([]);
+    setReviewFileModal(null);
     setBusinessKeywords([]);
     setBusinessExpenseKeywords([]);
     setReviewedIncomeKeys([]);
@@ -637,14 +686,29 @@ export default function App() {
                         <Check className="h-2.5 w-2.5" /> saldo klopt
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800">
+                      <button
+                        onClick={() => setReviewFileModal(f.fileName)}
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 hover:bg-amber-200"
+                        title="Klik om de losse transacties te bekijken en zo nodig uit te sluiten"
+                      >
                         <AlertCircle className="h-2.5 w-2.5" /> saldo klopt niet ({eur(balanceCheck.diff)})
-                      </span>
+                      </button>
                     ))}
                 </span>
               );
             })}
           </section>
+        )}
+
+        {reviewFileModal && (
+          <RawFileReviewModal
+            fileName={reviewFileModal}
+            rawTx={allTransactions.filter((t) => t.source === reviewFileModal)}
+            fingerprintByTxId={fingerprintByTxId}
+            excludedManualFingerprints={excludedManualFingerprints}
+            setExcludedManualFingerprints={setExcludedManualFingerprints}
+            onClose={() => setReviewFileModal(null)}
+          />
         )}
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
@@ -904,27 +968,61 @@ export default function App() {
                   )}
                 </div>
 
+                <p className="text-xs text-slate-400">
+                  Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
+                </p>
                 <div className="grid md:grid-cols-2 gap-4 items-start">
-                  <GroupView
-                    group={zakGroupForYear}
-                    onCounterpartyOverride={setCounterpartyOverride}
-                    onRowOverride={setRowOverride}
-                    categoryBtwRates={effectiveCategoryBtwRates}
-                    btwVerlegd={btwVerlegd}
-                  />
-                  <GroupView
-                    group={priGroupForYear}
-                    onCounterpartyOverride={setCounterpartyOverride}
-                    onRowOverride={setRowOverride}
-                    categoryBtwRates={effectiveCategoryBtwRates}
-                    btwVerlegd={btwVerlegd}
-                  />
+                  <div
+                    data-dropzone="Zakelijk"
+                    className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
+                  >
+                    <GroupView
+                      group={zakGroupForYear}
+                      onCounterpartyOverride={setCounterpartyOverride}
+                      onRowOverride={setRowOverride}
+                      categoryBtwRates={effectiveCategoryBtwRates}
+                      btwVerlegd={btwVerlegd}
+                      enableDrag
+                      onRowDragStart={startRowDrag}
+                      draggingTxId={dragState ? dragState.tx.id : null}
+                    />
+                  </div>
+                  <div
+                    data-dropzone="Prive"
+                    className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
+                  >
+                    <GroupView
+                      group={priGroupForYear}
+                      onCounterpartyOverride={setCounterpartyOverride}
+                      onRowOverride={setRowOverride}
+                      categoryBtwRates={effectiveCategoryBtwRates}
+                      btwVerlegd={btwVerlegd}
+                      enableDrag
+                      onRowDragStart={startRowDrag}
+                      draggingTxId={dragState ? dragState.tx.id : null}
+                    />
+                  </div>
                 </div>
               </>
             )}
           </>
         )}
       </main>
+
+      {dragState && (
+        <div
+          className={`fixed z-50 pointer-events-none rounded-md border-2 shadow-lg px-3 py-2 text-xs font-medium bg-white ${
+            dragState.overZone && dragState.overZone !== dragState.tx.type
+              ? dragState.overZone === "Zakelijk" ? "border-emerald-500 text-emerald-800" : "border-slate-500 text-slate-800"
+              : "border-slate-300 text-slate-500"
+          }`}
+          style={{ left: dragState.x + 12, top: dragState.y + 12, maxWidth: "16rem" }}
+        >
+          <p className="truncate font-semibold">{dragState.tx.counterparty || dragState.tx.description || "(geen omschrijving)"}</p>
+          <p className="font-mono">{eur(dragState.tx.amount)}</p>
+          {dragState.overZone && dragState.overZone !== dragState.tx.type && <p className="mt-0.5">→ naar {dragState.overZone}</p>}
+        </div>
+      )}
 
       {loanDetailsModalKey && (
         <LoanDetailsModal
