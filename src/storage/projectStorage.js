@@ -58,6 +58,37 @@ export async function clearPersistedData() {
   }
 }
 
+// Instellingen (rekeningtype per bestand, correcties, categorieregels, ...) worden apart van de
+// geüploade bestanden bewaard — zelfde opzet als de originele tool ("bankoverzicht:settings").
+const SETTINGS_KEY = "bankoverzicht:settings";
+
+export async function loadPersistedSettings() {
+  try {
+    const res = await window.storage.get(SETTINGS_KEY);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) {
+    // nog geen eerder opgeslagen instellingen
+  }
+  return null;
+}
+
+export async function persistSettings(settings) {
+  try {
+    const result = await window.storage.set(SETTINGS_KEY, JSON.stringify(settings));
+    return !!result;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function clearPersistedSettings() {
+  try {
+    await window.storage.delete(SETTINGS_KEY);
+  } catch (e) {
+    // al leeg, niets te doen
+  }
+}
+
 // Bouwt de volgende versienaam voor een projectbestand: "naam.json" -> "naam_v2.json", en
 // "naam_v3.json" -> "naam_v4.json".
 export function nextVersionedFilename(name) {

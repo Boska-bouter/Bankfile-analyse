@@ -4,13 +4,19 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
 import { resolveClassification } from "./classification/classify.js";
-import { DEFAULT_RULES, CATEGORY_ORDER, CATEGORY_COLOR } from "./classification/categories.js";
-import { computeBtw, DEFAULT_BTW_RATES } from "./tax/btw.js";
+import { DEFAULT_RULES, mergeCategoryRules } from "./classification/categories.js";
+import { DEFAULT_BTW_RATES } from "./tax/btw.js";
 import { eur } from "./utils/amounts.js";
-import { loadPersistedParsedFiles, persistParsedFiles, clearPersistedData } from "./storage/projectStorage.js";
+import { counterpartyKey } from "./utils/normalization.js";
+import {
+  loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
+  loadPersistedSettings, persistSettings, clearPersistedSettings,
+} from "./storage/projectStorage.js";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
+import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
+import GroupView from "./components/overview/GroupView.jsx";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -18,21 +24,29 @@ import HelpPanel from "./components/shared/HelpPanel.jsx";
 // volledige 1-op-1 kopie van de originele ~2000-regelige hoofdcomponent.
 //
 // Wat hier al werkt, end-to-end, met de nieuwe module-structuur:
-//   upload -> parseFile() -> buildTransactions() -> resolveClassification() ->
-//   categorietotalen + saldo-consistentiecheck
-//   + project opslaan/laden (downloadbaar .json-bestand)
+//   upload -> rekeningtype per bestand -> parseFile() -> buildTransactions() ->
+//   resolveClassification() (met correcties) -> per-jaar detailtabel, direct
+//   bewerkbaar (categorie/type, tegenpartij-breed) -> categorietotalen + saldo-check
+//   + project opslaan/laden (downloadbaar .json-bestand, incl. correcties/instellingen)
 //   + automatisch bewaren per browser (window.storage), net als de vorige versie
 //   + "Wis alles" en een geactualiseerd Help-paneel
 //
 // Wat hier NOG NIET zit (volgende fase van het migratieplan):
-//   - alle review-stappen (inkomsten/personen/overig/periode)
+//   - review-stappen (inkomstenbronnen, overboekingen aan personen, "Overig" opruimen,
+//     factuurperiode)
 //   - BTW-kwartaaloverzicht, meerjarenoverzicht, aangiftevoorstel
-//   - leningen/lease-invoervensters, instellingen-hub, categorie-/BTW-correcties,
-//     "Werk te doen"-dashboard, importcontrole-scherm
+//   - leningen/lease-invoervensters, instellingen-hub (categorieregels bewerken,
+//     BTW-tarieven), zoeken/filteren in de detailtabel, "Werk te doen"-dashboard,
+//     importcontrole-scherm
 // ---------------------------------------------------------------------------
 
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
+  const [accountTypeByFile, setAccountTypeByFile] = useState({});
+  const [categoryRules, setCategoryRules] = useState(DEFAULT_RULES);
+  const [overridesByCounterparty, setOverridesByCounterparty] = useState({});
+  const [overridesByRow, setOverridesByRow] = useState({});
+  const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
@@ -42,14 +56,21 @@ export default function App() {
   const projectFileInputRef = useRef(null);
   const skipNextPersistRef = useRef(false);
 
+  const applySettingsToState = (settings) => {
+    setAccountTypeByFile(settings.accountTypeByFile || {});
+    setOverridesByCounterparty(settings.overridesByCounterparty || {});
+    setOverridesByRow(settings.overridesByRow || {});
+    if (Array.isArray(settings.categoryRules)) setCategoryRules(mergeCategoryRules(settings.categoryRules));
+  };
+
   // ---- Eerder opgeslagen project laden bij openen ----
   useEffect(() => {
     (async () => {
-      const pending = await loadPersistedParsedFiles();
-      if (pending) {
-        skipNextPersistRef.current = true;
-        setParsedFiles(pending);
-      }
+      const pendingData = await loadPersistedParsedFiles();
+      const pendingSettings = await loadPersistedSettings();
+      skipNextPersistRef.current = true;
+      if (pendingData) setParsedFiles(pendingData);
+      if (pendingSettings) applySettingsToState(pendingSettings);
       setLoaded(true);
     })();
   }, []);
@@ -63,10 +84,11 @@ export default function App() {
     }
     (async () => {
       setSaveState("saving");
-      const ok = await persistParsedFiles(parsedFiles);
-      setSaveState(ok ? "saved" : "error");
+      const ok1 = await persistParsedFiles(parsedFiles);
+      const ok2 = await persistSettings({ accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules });
+      setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
-  }, [parsedFiles, loaded]);
+  }, [parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules, loaded]);
 
   const handleFiles = async (fileList) => {
     setError(null);
@@ -89,32 +111,73 @@ export default function App() {
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
 
+  const pendingAccountFiles = useMemo(
+    () => parsedFiles.map((f) => f.fileName).filter((name) => !(name in accountTypeByFile)),
+    [parsedFiles, accountTypeByFile]
+  );
+  const setAccountType = (fileName, type) => {
+    setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
+  };
+
   const classified = useMemo(
     () =>
       allTransactions.map((tx) => ({
         ...tx,
-        ...resolveClassification(tx, DEFAULT_RULES, [], [], "Beide", {}, {}),
+        ...resolveClassification(tx, categoryRules, [], [], accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
       })),
-    [allTransactions]
+    [allTransactions, categoryRules, accountTypeByFile, overridesByCounterparty, overridesByRow]
   );
 
-  const totals = useMemo(() => {
-    const t = {};
-    for (const tx of classified) t[tx.category] = (t[tx.category] || 0) + tx.amount;
-    return t;
-  }, [classified]);
+  // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
+  // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
+  // — anders zou die voorrang blijven houden boven deze bredere wijziging.
+  const setCounterpartyOverride = (counterparty, amount, patch) => {
+    const key = counterpartyKey(counterparty, amount);
+    if (!key) return;
+    setOverridesByCounterparty((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] || {}), ...patch, displayName: prev[key]?.displayName || counterparty, sign: amount >= 0 ? "pos" : "neg" },
+    }));
+    setOverridesByRow((prev) => {
+      const idsToClear = classified
+        .filter((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount) === key)
+        .map((tx) => tx.id);
+      if (idsToClear.length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of idsToClear) {
+        if (id in next) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+  const setRowOverride = (id, patch) => {
+    setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+  };
 
-  const btwByCategory = useMemo(() => {
-    const t = {};
-    for (const tx of classified) t[tx.category] = (t[tx.category] || 0) + computeBtw(tx, DEFAULT_BTW_RATES, false);
-    return t;
+  const groups = useMemo(() => {
+    const map = {};
+    for (const tx of classified) {
+      const key = `${tx.type} ${tx.year}`;
+      if (!map[key]) map[key] = { label: `${tx.type === "Zakelijk" ? "Zakelijk" : "Prive"} ${tx.year}`, type: tx.type, year: tx.year, items: [] };
+      map[key].items.push(tx);
+    }
+    return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
-
-  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+  const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
+  useEffect(() => {
+    if (!activeYear && years.length) setActiveYear(years[0]);
+    if (activeYear && !years.includes(activeYear) && years.length) setActiveYear(years[years.length - 1]);
+  }, [years, activeYear]);
+  const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
+  const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
   // ---- Project opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
-    const project = buildProjectFile({ parsedFiles });
+    const project = buildProjectFile({ parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
   };
@@ -124,6 +187,10 @@ export default function App() {
     try {
       const project = await readProjectFile(file);
       setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
+      setAccountTypeByFile(project.accountTypeByFile || {});
+      setOverridesByCounterparty(project.overridesByCounterparty || {});
+      setOverridesByRow(project.overridesByRow || {});
+      if (Array.isArray(project.categoryRules)) setCategoryRules(mergeCategoryRules(project.categoryRules));
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -133,15 +200,21 @@ export default function App() {
   // ---- Wis alles ----
   const clearAllData = () => {
     setConfirmMessage(
-      "Alle geüploade bestanden verwijderen? Dit kan niet ongedaan worden gemaakt zodra je bevestigt."
+      "Alle geüploade bestanden, rekeningtypes en correcties verwijderen? Dit kan niet ongedaan worden gemaakt zodra je bevestigt."
     );
   };
   const doClearAllData = async () => {
     setConfirmMessage(null);
     setParsedFiles([]);
+    setAccountTypeByFile({});
+    setOverridesByCounterparty({});
+    setOverridesByRow({});
+    setCategoryRules(DEFAULT_RULES);
+    setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
     await clearPersistedData();
+    await clearPersistedSettings();
     setSaveState("idle");
   };
 
@@ -273,32 +346,43 @@ export default function App() {
           </section>
         )}
 
-        {classified.length > 0 && (
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-              Categorieën ({classified.length} transacties — automatische classificatie, rekeningtype "Beide")
-            </h2>
-            <table className="w-full text-sm">
-              <tbody>
-                {CATEGORY_ORDER.filter((c) => c in totals).map((c) => (
-                  <tr key={c} className="border-b border-slate-50">
-                    <td className="py-1.5">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
-                    </td>
-                    <td className="py-1.5 text-right font-mono">{eur(totals[c])}</td>
-                    <td className="py-1.5 text-right font-mono text-slate-400 text-xs">{eur(btwByCategory[c] || 0)}</td>
-                  </tr>
+        <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
+
+        {years.length > 0 && activeYear && (
+          <>
+            {years.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-400">Jaar:</span>
+                {years.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => setActiveYear(year)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
+                      year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {year}
+                  </button>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-slate-200 font-semibold">
-                  <td className="pt-2">Totaal</td>
-                  <td className="pt-2 text-right font-mono">{eur(grandTotal)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </section>
+              </div>
+            )}
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+              <GroupView
+                group={zakGroupForYear}
+                onCounterpartyOverride={setCounterpartyOverride}
+                onRowOverride={setRowOverride}
+                categoryBtwRates={DEFAULT_BTW_RATES}
+                btwVerlegd={false}
+              />
+              <GroupView
+                group={priGroupForYear}
+                onCounterpartyOverride={setCounterpartyOverride}
+                onRowOverride={setRowOverride}
+                categoryBtwRates={DEFAULT_BTW_RATES}
+                btwVerlegd={false}
+              />
+            </div>
+          </>
         )}
       </main>
 
