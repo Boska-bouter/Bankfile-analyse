@@ -26,6 +26,8 @@ import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
+import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
+import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -79,6 +81,12 @@ export default function App() {
   const [confirmMessage, setConfirmMessage] = useState(null);
   const projectFileInputRef = useRef(null);
   const skipNextPersistRef = useRef(false);
+  const duplicatesSectionRef = useRef(null);
+  const personReviewSectionRef = useRef(null);
+  const overigReviewSectionRef = useRef(null);
+  const quarterlyBtwSectionRef = useRef(null);
+  const multiYearSectionRef = useRef(null);
+  const btwSettingsSectionRef = useRef(null);
 
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
@@ -298,6 +306,48 @@ export default function App() {
     () => (yearlySummary ? estimateIncomeTax(yearlySummary.winst, activeYear) : { belasting: 0, geëxtrapoleerd: false }),
     [yearlySummary, activeYear]
   );
+  const yearlySummaries = useMemo(() => {
+    const map = {};
+    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd);
+    return map;
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd]);
+
+  // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
+  const todoItems = useMemo(() => {
+    const items = [];
+    if (pendingDuplicateCount > 0 && !dismissedDuplicateNotice) {
+      items.push({ key: "duplicates", text: `${pendingDuplicateCount} mogelijk dubbele transactie(s)`, ref: duplicatesSectionRef });
+    }
+    if (pendingPersonReview.length > 0) {
+      items.push({ key: "personReview", text: `${pendingPersonReview.length} overboeking(en) aan personen nog te bepalen`, ref: personReviewSectionRef });
+    }
+    if (pendingOverigReview.length > 0) {
+      items.push({ key: "overigReview", text: `${pendingOverigReview.length} tegenpartij(en) nog te bepalen in "Overig"`, ref: overigReviewSectionRef });
+    }
+    if (activeYear && !korRegeling) {
+      const openQuarters = quarterlyBtwData.filter((q) => {
+        const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
+        return !s.aangegeven || !s.betaald;
+      });
+      if (openQuarters.length > 0) {
+        items.push({
+          key: "quarters",
+          text: `${openQuarters.length} kwartaal(en) nog niet aangegeven/betaald (${activeYear})`,
+          ref: quarterlyBtwSectionRef,
+        });
+      }
+    }
+    if (transactions.length > 0 && korRegeling === null) {
+      items.push({ key: "kor", text: "KOR-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
+    }
+    if (transactions.length > 0 && korRegeling === false && btwVerlegd === null) {
+      items.push({ key: "btwVerlegd", text: "BTW-verlegd-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
+    }
+    return items;
+  }, [
+    pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
+    activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
+  ]);
 
   // ---- Project opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
@@ -501,8 +551,10 @@ export default function App() {
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
+        <TodoPanel items={todoItems} />
+
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
-          <section className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-amber-900">
@@ -522,14 +574,16 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <BtwRatesPanel
-            categoryBtwRates={categoryBtwRates}
-            setCategoryBtwRates={setCategoryBtwRates}
-            btwVerlegd={btwVerlegd}
-            setBtwVerlegd={setBtwVerlegd}
-            korRegeling={korRegeling}
-            setKorRegeling={setKorRegeling}
-          />
+          <div ref={btwSettingsSectionRef}>
+            <BtwRatesPanel
+              categoryBtwRates={categoryBtwRates}
+              setCategoryBtwRates={setCategoryBtwRates}
+              btwVerlegd={btwVerlegd}
+              setBtwVerlegd={setBtwVerlegd}
+              korRegeling={korRegeling}
+              setKorRegeling={setKorRegeling}
+            />
+          </div>
         )}
 
         {transactions.length > 0 && pendingIncomeReview.length > 0 && (
@@ -547,7 +601,7 @@ export default function App() {
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
             {personSummary.length > 0 && (
-              <section className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden">
+              <section ref={personReviewSectionRef} className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">Overboekingen aan personen controleren</span>
                   {pendingPersonReview.length > 0 && (
@@ -571,7 +625,7 @@ export default function App() {
             )}
 
             {overigSummary.length > 0 && (
-              <section className="rounded-lg border border-amber-200 bg-white overflow-hidden">
+              <section ref={overigReviewSectionRef} className="rounded-lg border border-amber-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">"Overig" opruimen</span>
                   {pendingOverigReview.length > 0 && (
@@ -623,14 +677,26 @@ export default function App() {
                   />
                 )}
 
-                {!korRegeling && (
-                  <QuarterlyBtwPanel
-                    quarters={quarterlyBtwData}
-                    kwartaalStatus={kwartaalStatus}
-                    setKwartaalStatusField={setKwartaalStatusField}
-                    activeYear={activeYear}
+                <div ref={multiYearSectionRef}>
+                  <MultiYearOverview
+                    years={years}
+                    yearlySummaries={yearlySummaries}
+                    yearlyOpenOB={yearlyOpenOB}
+                    korRegeling={korRegeling}
+                    onYearClick={setActiveYear}
                   />
-                )}
+                </div>
+
+                <div ref={quarterlyBtwSectionRef}>
+                  {!korRegeling && (
+                    <QuarterlyBtwPanel
+                      quarters={quarterlyBtwData}
+                      kwartaalStatus={kwartaalStatus}
+                      setKwartaalStatusField={setKwartaalStatusField}
+                      activeYear={activeYear}
+                    />
+                  )}
+                </div>
 
                 <div className="grid md:grid-cols-2 gap-4 items-start">
                   <GroupView
