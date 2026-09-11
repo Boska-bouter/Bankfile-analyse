@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
@@ -31,6 +31,7 @@ import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
 import AangifteChecklistPanel from "./components/overview/AangifteChecklistPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
+import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
@@ -43,6 +44,8 @@ import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
+import { printReport, printHtmlDocument } from "./reports/printReport.js";
+import { computeBtwBoxMapping, computeIbBoxMapping } from "./tax/boxMapping.js";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -89,6 +92,9 @@ export default function App() {
   const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [manualPriveUitgaven, setManualPriveUitgaven] = useState({}); // { "2025": "150" }
+  const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
+  const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
+  const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
   const [reviewedPeriodeKeys, setReviewedPeriodeKeys] = useState([]);
   const [loanDetails, setLoanDetails] = useState({});
@@ -115,6 +121,7 @@ export default function App() {
   const multiYearSectionRef = useRef(null);
   const btwSettingsSectionRef = useRef(null);
   const checklistSectionRef = useRef(null);
+  const obIbSectionRef = useRef(null);
   const periodeReviewSectionRef = useRef(null);
   const loansSectionRef = useRef(null);
   const leasesSectionRef = useRef(null);
@@ -335,11 +342,17 @@ export default function App() {
     if (type === "financieel") setLeaseDetailsModalKey(lease.key);
   };
 
-  const downloadAangiftevoorstelForActiveYear = () => {
-    if (!activeYear) return;
-    const html = buildAangiftevoorstelHtml([activeYear], classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides);
-    downloadAangiftevoorstel(html, [activeYear]);
+  const exportAangiftevoorstel = () => {
+    if (selectedAangifteYears.length === 0) {
+      window.alert("Selecteer minstens één jaar.");
+      return;
+    }
+    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides);
+    setAangiftevoorstelPreview(html);
+    setShowAangifteYearPicker(false);
   };
+  const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
+  const downloadAangiftevoorstelPreview = () => downloadAangiftevoorstel(aangiftevoorstelPreview, selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -456,6 +469,8 @@ export default function App() {
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
   );
+  const btwBoxMapping = useMemo(() => computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded), [effectiveCategoryBtwRates, voorbelastingExcluded]);
+  const ibBoxMapping = useMemo(() => computeIbBoxMapping(zakGroupForYear.items), [zakGroupForYear]);
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
     const manualCorrectie = Number(manualPriveUitgaven[activeYear]) || 0;
@@ -667,12 +682,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-stone-50 text-slate-900 font-sans">
       <header className="border-b border-slate-200 bg-slate-900 text-stone-50">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé (v2, in migratie)</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Vite/React-versie — logicalagen volledig gemigreerd, UI-panelen worden stapsgewijs overgezet.
-            </p>
+            <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé</h1>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -736,7 +748,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         <section
@@ -988,8 +1000,8 @@ export default function App() {
 
             {years.length > 0 && activeYear && (
               <>
-                {years.length > 1 && (
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  {years.length > 1 ? (
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-slate-400">Jaar:</span>
                       {years.map((year) => (
@@ -1004,6 +1016,10 @@ export default function App() {
                         </button>
                       ))}
                     </div>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
@@ -1011,29 +1027,48 @@ export default function App() {
                       <Download className="h-3.5 w-3.5" /> Excel exporteren
                     </button>
                     <button
-                      onClick={downloadAangiftevoorstelForActiveYear}
+                      onClick={() => printReport(groups)}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Downloadbaar HTML-rapport voor het actieve jaar, ter voorbereiding op de aangifte"
+                      title="Opent direct het printvenster van je browser — kies daar een printer, of 'Opslaan als PDF'"
                     >
-                      <Download className="h-3.5 w-3.5" /> Aangiftevoorstel ({activeYear})
-                    </button>
-                  </div>
-                )}
-                {years.length === 1 && (
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                    >
-                      <Download className="h-3.5 w-3.5" /> Excel exporteren
+                      <Printer className="h-3.5 w-3.5" /> Print
                     </button>
                     <button
-                      onClick={downloadAangiftevoorstelForActiveYear}
+                      onClick={() => {
+                        if (!showAangifteYearPicker && selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
+                        setShowAangifteYearPicker((v) => !v);
+                      }}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Downloadbaar HTML-rapport voor het actieve jaar, ter voorbereiding op de aangifte"
+                      title="Kies voor welke jaren je een voorstel wilt zien"
                     >
                       <Download className="h-3.5 w-3.5" /> Aangiftevoorstel
                     </button>
+                  </div>
+                </div>
+
+                {showAangifteYearPicker && (
+                  <div className="rounded-lg border border-slate-300 bg-white p-4">
+                    <p className="text-sm font-medium mb-2">Voor welke jaren wil je een aangiftevoorstel?</p>
+                    <div className="flex flex-wrap gap-3 mb-3">
+                      {years.map((year) => (
+                        <label key={year} className="inline-flex items-center gap-1.5 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={selectedAangifteYears.includes(year)}
+                            onChange={(e) => setSelectedAangifteYears((prev) => (e.target.checked ? [...prev, year].sort() : prev.filter((y) => y !== year)))}
+                          />
+                          {year}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={exportAangiftevoorstel} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                        Toon voorbeeld
+                      </button>
+                      <button onClick={() => setShowAangifteYearPicker(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                        Annuleren
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -1050,6 +1085,19 @@ export default function App() {
                     setIbGedaan={setIbGedaan}
                   />
                 )}
+
+                <div ref={obIbSectionRef}>
+                  <ObIbExplanationPanel
+                    activeYear={activeYear}
+                    btwBoxMapping={btwBoxMapping}
+                    ibBoxMapping={ibBoxMapping}
+                    korRegeling={korRegeling}
+                    ibGedaan={!!ibStatus[activeYear]?.gedaan}
+                    setIbGedaan={setIbGedaan}
+                    loanSummary={loanSummary}
+                    loanDetails={loanDetails}
+                  />
+                </div>
 
                 <div ref={multiYearSectionRef}>
                   <MultiYearOverview
@@ -1099,6 +1147,8 @@ export default function App() {
                   );
                 })()}
 
+                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
+
                 <p className="text-xs text-slate-400">
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
@@ -1134,11 +1184,33 @@ export default function App() {
                     />
                   </div>
                 </div>
-
-                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
               </>
             )}
           </>
+        )}
+
+        {aangiftevoorstelPreview && (
+          <section className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
+              <p className="text-sm font-semibold">Voorbeeld: Aangiftevoorstel {selectedAangifteYears.join(", ")}</p>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                  <Download className="h-4 w-4" /> Downloaden
+                </button>
+                <button
+                  onClick={printAangiftevoorstelPreview}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
+                  title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
+                >
+                  <Printer className="h-4 w-4" /> Printen
+                </button>
+                <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                  Sluiten
+                </button>
+              </div>
+            </div>
+            <iframe srcDoc={aangiftevoorstelPreview} title="Voorbeeld aangiftevoorstel" className="w-full bg-white" style={{ height: "70vh", border: "none" }} />
+          </section>
         )}
       </main>
 
