@@ -3,7 +3,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2,
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
-import { resolveClassification } from "./classification/classify.js";
+import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
@@ -22,7 +22,7 @@ import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storag
 import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
-import GroupView from "./components/overview/GroupView.jsx";
+import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
@@ -313,6 +313,9 @@ export default function App() {
   const removeBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
   const businessIncomeEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkomsten"), [classified]);
   const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
+  const reclassifyBusinessEntry = (item, newCategory) => {
+    setCounterpartyOverride(item.name, item.amount, { category: newCategory, type: defaultTypeForCategory(newCategory) });
+  };
 
   // ---- Factuurperiode vs. boekingskwartaal ----
   const periodeMismatches = useMemo(
@@ -880,6 +883,7 @@ export default function App() {
                 addButtonClass="bg-emerald-600 hover:bg-emerald-700"
                 entries={businessIncomeEntries}
                 entriesLabel="Nu herkend als Zakelijke inkomsten"
+                onReclassify={reclassifyBusinessEntry}
               />
             </section>
             <section className="rounded-lg border border-slate-200 bg-white p-5">
@@ -897,6 +901,7 @@ export default function App() {
                 addButtonClass="bg-teal-600 hover:bg-teal-700"
                 entries={businessExpenseEntries}
                 entriesLabel="Nu herkend als Zakelijke uitgaven"
+                onReclassify={reclassifyBusinessEntry}
               />
             </section>
           </div>
@@ -1152,17 +1157,19 @@ export default function App() {
                 <p className="text-xs text-slate-400">
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                </div>
                 <div className="grid md:grid-cols-2 gap-4 items-start">
                   <div
                     data-dropzone="Zakelijk"
                     className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
                   >
-                    <GroupView
+                    <DetailTable
                       group={zakGroupForYear}
                       onCounterpartyOverride={setCounterpartyOverride}
                       onRowOverride={setRowOverride}
-                      categoryBtwRates={effectiveCategoryBtwRates}
-                      btwVerlegd={btwVerlegd}
                       enableDrag
                       onRowDragStart={startRowDrag}
                       draggingTxId={dragState ? dragState.tx.id : null}
@@ -1172,12 +1179,10 @@ export default function App() {
                     data-dropzone="Prive"
                     className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
                   >
-                    <GroupView
+                    <DetailTable
                       group={priGroupForYear}
                       onCounterpartyOverride={setCounterpartyOverride}
                       onRowOverride={setRowOverride}
-                      categoryBtwRates={effectiveCategoryBtwRates}
-                      btwVerlegd={btwVerlegd}
                       enableDrag
                       onRowDragStart={startRowDrag}
                       draggingTxId={dragState ? dragState.tx.id : null}

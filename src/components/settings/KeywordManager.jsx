@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
+import { CATEGORY_ORDER } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 
 // Generieke beheerder voor een lijst losse tekst-items (tegenpartijnamen) — gebruikt voor zowel
 // "Zakelijke tegenpartijen (inkomsten)" als "Zakelijke uitgaven (leveranciers)". `entries`
 // (optioneel) toont daaronder een uitklapbaar overzicht van wat er nu al op basis hiervan is
-// herkend, met het aantal/totaal per tegenpartij.
-export default function KeywordManager({ keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass, entries, entriesLabel }) {
+// herkend — met een dropdown per tegenpartij om de categorie alsnog aan te passen.
+export default function KeywordManager({ keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass, entries, entriesLabel, onReclassify }) {
   const [value, setValue] = useState("");
   const [showEntries, setShowEntries] = useState(false);
   const submit = () => {
@@ -53,6 +54,18 @@ export default function KeywordManager({ keywords, onAdd, onRemove, placeholder,
                     <p className="text-xs font-medium truncate">{item.name}</p>
                     <p className="text-[10px] text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
                   </div>
+                  {onReclassify && (
+                    <select
+                      value={item.category}
+                      onChange={(e) => onReclassify(item, e.target.value)}
+                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      title="Naar een andere categorie verplaatsen"
+                    >
+                      {CATEGORY_ORDER.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               ))}
             </div>
