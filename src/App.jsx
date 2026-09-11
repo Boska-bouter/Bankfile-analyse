@@ -96,6 +96,7 @@ export default function App() {
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [manualPriveUitgaven, setManualPriveUitgaven] = useState({}); // { "2025": "150" }
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
+  const aangiftevoorstelPreviewRef = useRef(null);
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
@@ -161,9 +162,13 @@ export default function App() {
     setManualPriveUitgaven(settings.manualPriveUitgaven && typeof settings.manualPriveUitgaven === "object" ? settings.manualPriveUitgaven : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
+    snapshotBeforeAction("BTW-kwartaalstatus aangepast");
     setKwartaalStatus((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
   };
-  const setIbGedaan = (year, gedaan) => setIbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
+  const setIbGedaan = (year, gedaan) => {
+    snapshotBeforeAction("IB-status aangepast");
+    setIbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
+  };
 
   // ---- Eerder opgeslagen project laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
@@ -310,6 +315,29 @@ export default function App() {
     setLastActionSnapshot(null);
   };
 
+  // Wrappers voor panelen die de raw setState-functie direct doorkrijgen (CategoryRulesPanel,
+  // FixedCategoriesPanel, BtwRatesPanel) — zodat ook die wijzigingen ongedaan te maken zijn.
+  const setCategoryRulesWithUndo = (updater) => {
+    snapshotBeforeAction("Categorieregels aangepast");
+    setCategoryRules(updater);
+  };
+  const setFixedCategoriesWithUndo = (updater) => {
+    snapshotBeforeAction("Vaste/variabele kosten aangepast");
+    setFixedCategories(updater);
+  };
+  const setCategoryBtwRatesWithUndo = (updater) => {
+    snapshotBeforeAction("BTW-percentage aangepast");
+    setCategoryBtwRates(updater);
+  };
+  const setBtwVerlegdWithUndo = (value) => {
+    snapshotBeforeAction("BTW-verlegd aangepast");
+    setBtwVerlegd(value);
+  };
+  const setKorRegelingWithUndo = (value) => {
+    snapshotBeforeAction("KOR-instelling aangepast");
+    setKorRegeling(value);
+  };
+
   const removeDuplicates = () => {
     snapshotBeforeAction("Duplicaten verwijderen");
     setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...duplicateFingerprints])]);
@@ -321,6 +349,7 @@ export default function App() {
     [parsedFiles, accountTypeByFile]
   );
   const setAccountType = (fileName, type) => {
+    snapshotBeforeAction("Rekeningtype aangepast");
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
   };
 
@@ -376,7 +405,10 @@ export default function App() {
     setCounterpartyOverride(item.name, item.amount, { category, type });
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
-  const confirmPersonAsIs = (item) => setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  const confirmPersonAsIs = (item) => {
+    snapshotBeforeAction('"Klopt zo" bevestigd');
+    setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
 
   const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig"), [classified]);
   const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
@@ -384,12 +416,27 @@ export default function App() {
     setCounterpartyOverride(item.name, item.amount, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
-  const confirmOverigAsIs = (item) => setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  const confirmOverigAsIs = (item) => {
+    snapshotBeforeAction('"Klopt zo" bevestigd');
+    setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
 
-  const addBusinessKeyword = (kw) => setBusinessKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
-  const removeBusinessKeyword = (kw) => setBusinessKeywords((prev) => prev.filter((k) => k !== kw));
-  const addBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
-  const removeBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
+  const addBusinessKeyword = (kw) => {
+    snapshotBeforeAction("Zakelijke tegenpartij toegevoegd");
+    setBusinessKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
+  };
+  const removeBusinessKeyword = (kw) => {
+    snapshotBeforeAction("Zakelijke tegenpartij verwijderd");
+    setBusinessKeywords((prev) => prev.filter((k) => k !== kw));
+  };
+  const addBusinessExpenseKeyword = (kw) => {
+    snapshotBeforeAction("Zakelijke uitgave toegevoegd");
+    setBusinessExpenseKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
+  };
+  const removeBusinessExpenseKeyword = (kw) => {
+    snapshotBeforeAction("Zakelijke uitgave verwijderd");
+    setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
+  };
   const businessIncomeEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkomsten"), [classified]);
   const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
   const reclassifyBusinessEntry = (item, newCategory) => {
@@ -401,20 +448,44 @@ export default function App() {
     () => computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides),
     [classified, reviewedPeriodeKeys, periodeQuarterOverrides]
   );
-  const confirmPeriodeAsIs = (tx) => setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
-  const movePeriodeToQuarter = (tx, quarterKey) => setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
+  const confirmPeriodeAsIs = (tx) => {
+    snapshotBeforeAction("Factuurperiode bevestigd");
+    setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
+  };
+  const movePeriodeToQuarter = (tx, quarterKey) => {
+    snapshotBeforeAction("Factuurperiode verplaatst");
+    setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
+  };
 
   // ---- Leningen ----
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
-  const setLoanDetailField = (key, newDetails) => setLoanDetails((prev) => ({ ...prev, [key]: newDetails }));
-  const markLoanUnknown = (key) => setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
-  const unmarkLoanUnknown = (key) => setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  const setLoanDetailField = (key, newDetails) => {
+    snapshotBeforeAction("Leninggegevens aangepast");
+    setLoanDetails((prev) => ({ ...prev, [key]: newDetails }));
+  };
+  const markLoanUnknown = (key) => {
+    snapshotBeforeAction("Lening op onbekend gezet");
+    setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
+  };
+  const unmarkLoanUnknown = (key) => {
+    snapshotBeforeAction("Lening op onbekend gezet");
+    setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  };
 
   // ---- Lease (operationeel/financieel) ----
   const leaseSummary = useMemo(() => computeLeaseSummary(classified), [classified]);
-  const setLeaseDetailField = (key, newDetails) => setLeaseDetails((prev) => ({ ...prev, [key]: newDetails }));
-  const markLeaseUnknown = (key) => setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
-  const unmarkLeaseUnknown = (key) => setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  const setLeaseDetailField = (key, newDetails) => {
+    snapshotBeforeAction("Leasegegevens aangepast");
+    setLeaseDetails((prev) => ({ ...prev, [key]: newDetails }));
+  };
+  const markLeaseUnknown = (key) => {
+    snapshotBeforeAction("Lease op onbekend gezet");
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
+  };
+  const unmarkLeaseUnknown = (key) => {
+    snapshotBeforeAction("Lease op onbekend gezet");
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  };
   const confirmLeaseType = (lease, type) => {
     setCounterpartyOverride(lease.name, lease.transactions[0].amount, {
       category: type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)",
@@ -434,12 +505,18 @@ export default function App() {
     setShowAangifteYearPicker(false);
   };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
+  useEffect(() => {
+    if (aangiftevoorstelPreview && aangiftevoorstelPreviewRef.current) {
+      aangiftevoorstelPreviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [aangiftevoorstelPreview]);
   const downloadAangiftevoorstelPreview = () => downloadAangiftevoorstel(aangiftevoorstelPreview, selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
   // — anders zou die voorrang blijven houden boven deze bredere wijziging.
   const setCounterpartyOverride = (counterparty, amount, patch) => {
+    snapshotBeforeAction("Categorie/type aangepast");
     const key = counterpartyKey(counterparty, amount);
     if (!key) return;
     setOverridesByCounterparty((prev) => ({
@@ -463,6 +540,7 @@ export default function App() {
     });
   };
   const setRowOverride = (id, patch) => {
+    snapshotBeforeAction("Categorie/type aangepast");
     setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
   };
 
@@ -765,6 +843,9 @@ export default function App() {
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setIbStatus({});
     setManualPriveUitgaven({});
+    setAangiftevoorstelPreview(null);
+    setShowAangifteYearPicker(false);
+    setSelectedAangifteYears([]);
     setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
@@ -1013,22 +1094,22 @@ export default function App() {
           <div ref={btwSettingsSectionRef}>
             <BtwRatesPanel
               categoryBtwRates={categoryBtwRates}
-              setCategoryBtwRates={setCategoryBtwRates}
+              setCategoryBtwRates={setCategoryBtwRatesWithUndo}
               btwVerlegd={btwVerlegd}
-              setBtwVerlegd={setBtwVerlegd}
+              setBtwVerlegd={setBtwVerlegdWithUndo}
               korRegeling={korRegeling}
-              setKorRegeling={setKorRegeling}
+              setKorRegeling={setKorRegelingWithUndo}
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
         )}
 
         {parsedFiles.length > 0 && (
-          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRules} />
+          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
         )}
 
         {parsedFiles.length > 0 && (
-          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategories} onOpenHelp={setHelpPopupChapter} />
+          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
         )}
 
         {parsedFiles.length > 0 && (
@@ -1375,7 +1456,7 @@ export default function App() {
         )}
 
         {aangiftevoorstelPreview && (
-          <section className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
+          <section ref={aangiftevoorstelPreviewRef} className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
               <p className="text-sm font-semibold">Voorbeeld: Aangiftevoorstel {selectedAangifteYears.join(", ")}</p>
               <div className="flex gap-2 shrink-0">
