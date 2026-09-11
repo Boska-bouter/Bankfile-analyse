@@ -1343,23 +1343,6 @@ export default function App() {
                   />
                 )}
 
-                <div ref={checklistSectionRef}>
-                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
-                </div>
-
-                <div ref={obIbSectionRef}>
-                  <ObIbExplanationPanel
-                    activeYear={activeYear}
-                    btwBoxMapping={btwBoxMapping}
-                    ibBoxMapping={ibBoxMapping}
-                    korRegeling={korRegeling}
-                    ibGedaan={!!ibStatus[activeYear]?.gedaan}
-                    setIbGedaan={setIbGedaan}
-                    loanSummary={loanSummary}
-                    loanDetails={loanDetails}
-                  />
-                </div>
-
                 <div ref={multiYearSectionRef}>
                   <MultiYearOverview
                     years={years}
@@ -1387,6 +1370,30 @@ export default function App() {
                   )}
                 </div>
 
+                <div ref={checklistSectionRef}>
+                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
+                </div>
+
+                <div ref={obIbSectionRef}>
+                  <ObIbExplanationPanel
+                    activeYear={activeYear}
+                    btwBoxMapping={btwBoxMapping}
+                    ibBoxMapping={ibBoxMapping}
+                    korRegeling={korRegeling}
+                    ibGedaan={!!ibStatus[activeYear]?.gedaan}
+                    setIbGedaan={setIbGedaan}
+                    loanSummary={loanSummary}
+                    loanDetails={loanDetails}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                </div>
+
+                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
+
                 {(() => {
                   const isTransferCat = (c) => c === "Uitbetaling aan prive" || c === "Prive opnames";
                   const zakSum = zakGroupForYear.items.filter((t) => isTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
@@ -1405,15 +1412,9 @@ export default function App() {
                   );
                 })()}
 
-                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
-
                 <p className="text-xs text-slate-400">
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
-                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
-                </div>
                 <div className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
                   {(!expandedTable || expandedTable === "Zakelijk") && (
                     <div
