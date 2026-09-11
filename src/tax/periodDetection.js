@@ -31,3 +31,29 @@ export function detectPeriodeInDescription(description) {
   }
   return null;
 }
+
+// Zoekt "Zakelijke inkomsten"-transacties waarvan de omschrijving een factuurperiode noemt die
+// in een ander kwartaal valt dan de boekingsdatum — puur een suggestie, nooit automatisch.
+export function computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides) {
+  const results = [];
+  for (const tx of classified) {
+    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || tx.type !== "Zakelijk") continue;
+    if (reviewedPeriodeKeys.includes(tx.id) || periodeQuarterOverrides[tx.id] !== undefined) continue;
+    const periode = detectPeriodeInDescription(tx.fullDescription || tx.description);
+    if (!periode) continue;
+    const startQ = Math.ceil((periode.start.getMonth() + 1) / 3);
+    const startY = periode.start.getFullYear();
+    const endQ = Math.ceil((periode.end.getMonth() + 1) / 3);
+    const endY = periode.end.getFullYear();
+    if (startY !== endY || startQ !== endQ) continue; // periode moet binnen 1 kwartaal vallen
+    const boekingQ = Math.ceil((tx.date.getMonth() + 1) / 3);
+    const boekingY = tx.date.getFullYear();
+    if (startY === boekingY && startQ === boekingQ) continue; // komt al overeen
+    results.push({
+      tx,
+      boekingKwartaal: `${boekingY}-Q${boekingQ}`,
+      voorgesteldKwartaal: `${startY}-Q${startQ}`,
+    });
+  }
+  return results.sort((a, b) => a.tx.date - b.tx.date);
+}

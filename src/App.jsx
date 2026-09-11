@@ -8,6 +8,8 @@ import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName } from "./
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
+import { computePeriodeMismatches } from "./tax/periodDetection.js";
+import { computeLoanSummary, computeLeaseSummary } from "./tax/loanAmortization.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
@@ -30,7 +32,12 @@ import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
+import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
+import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
+import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
+import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
+import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -72,6 +79,13 @@ export default function App() {
   const [reviewedOverigKeys, setReviewedOverigKeys] = useState([]);
   const [kwartaalStatus, setKwartaalStatus] = useState({});
   const [voorbelastingExcluded, setVoorbelastingExcluded] = useState(DEFAULT_VOORBELASTING_EXCLUDED);
+  const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
+  const [reviewedPeriodeKeys, setReviewedPeriodeKeys] = useState([]);
+  const [loanDetails, setLoanDetails] = useState({});
+  const [loanDetailsModalKey, setLoanDetailsModalKey] = useState(null);
+  const [leaseDetails, setLeaseDetails] = useState({});
+  const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
+  const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
   const [personSearch, setPersonSearch] = useState("");
   const [overigSearch, setOverigSearch] = useState("");
@@ -90,6 +104,9 @@ export default function App() {
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
   const btwSettingsSectionRef = useRef(null);
+  const periodeReviewSectionRef = useRef(null);
+  const loansSectionRef = useRef(null);
+  const leasesSectionRef = useRef(null);
 
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
@@ -109,6 +126,11 @@ export default function App() {
     setReviewedOverigKeys(Array.isArray(settings.reviewedOverigKeys) ? settings.reviewedOverigKeys : []);
     setKwartaalStatus(settings.kwartaalStatus && typeof settings.kwartaalStatus === "object" ? settings.kwartaalStatus : {});
     setVoorbelastingExcluded(Array.isArray(settings.voorbelastingExcluded) ? settings.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
+    setPeriodeQuarterOverrides(settings.periodeQuarterOverrides && typeof settings.periodeQuarterOverrides === "object" ? settings.periodeQuarterOverrides : {});
+    setReviewedPeriodeKeys(Array.isArray(settings.reviewedPeriodeKeys) ? settings.reviewedPeriodeKeys : []);
+    setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
+    setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
+    setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
   };
   const setKwartaalStatusField = (key, field, value) => {
     setKwartaalStatus((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
@@ -141,7 +163,8 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-        kwartaalStatus, voorbelastingExcluded,
+        kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+        leaseDetails, confirmedLeaseTypeKeys,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -149,7 +172,8 @@ export default function App() {
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
     categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-    kwartaalStatus, voorbelastingExcluded,
+    kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+    leaseDetails, confirmedLeaseTypeKeys,
     loaded,
   ]);
 
@@ -251,6 +275,40 @@ export default function App() {
   const addBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
   const removeBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
 
+  // ---- Factuurperiode vs. boekingskwartaal ----
+  const periodeMismatches = useMemo(
+    () => computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides),
+    [classified, reviewedPeriodeKeys, periodeQuarterOverrides]
+  );
+  const confirmPeriodeAsIs = (tx) => setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
+  const movePeriodeToQuarter = (tx, quarterKey) => setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
+
+  // ---- Leningen ----
+  const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
+  const setLoanDetailField = (key, newDetails) => setLoanDetails((prev) => ({ ...prev, [key]: newDetails }));
+  const markLoanUnknown = (key) => setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
+  const unmarkLoanUnknown = (key) => setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+
+  // ---- Lease (operationeel/financieel) ----
+  const leaseSummary = useMemo(() => computeLeaseSummary(classified), [classified]);
+  const setLeaseDetailField = (key, newDetails) => setLeaseDetails((prev) => ({ ...prev, [key]: newDetails }));
+  const markLeaseUnknown = (key) => setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
+  const unmarkLeaseUnknown = (key) => setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  const confirmLeaseType = (lease, type) => {
+    setCounterpartyOverride(lease.name, lease.transactions[0].amount, {
+      category: type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)",
+      type: "Zakelijk",
+    });
+    setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
+    if (type === "financieel") setLeaseDetailsModalKey(lease.key);
+  };
+
+  const downloadAangiftevoorstelForActiveYear = () => {
+    if (!activeYear) return;
+    const html = buildAangiftevoorstelHtml([activeYear], classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides);
+    downloadAangiftevoorstel(html, [activeYear]);
+  };
+
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
   // — anders zou die voorrang blijven houden boven deze bredere wijziging.
@@ -299,8 +357,8 @@ export default function App() {
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
   const quarterlyBtwData = useMemo(
-    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded) : []),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded]
+    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides) : []),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
   const yearlySummary = useMemo(
     () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd) : null),
@@ -345,6 +403,21 @@ export default function App() {
         });
       }
     }
+    if (periodeMismatches.length > 0) {
+      items.push({ key: "periode", text: `${periodeMismatches.length} zakelijke ontvangst(en) met factuurperiode in ander kwartaal`, ref: periodeReviewSectionRef });
+    }
+    const incompleteLoans = loanSummary.filter((l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend);
+    if (incompleteLoans.length > 0) {
+      items.push({ key: "loans", text: `${incompleteLoans.length} lening(en) nog zonder volledige gegevens`, ref: loansSectionRef });
+    }
+    const incompleteLeases = leaseSummary.filter((l) => {
+      if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+      if (leaseDetails[l.key]?.onbekend) return false;
+      return l.category === "Lease (financieel)" && !(leaseDetails[l.key]?.leasebedrag && leaseDetails[l.key]?.startdatum);
+    });
+    if (incompleteLeases.length > 0) {
+      items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });
+    }
     if (transactions.length > 0 && korRegeling === null) {
       items.push({ key: "kor", text: "KOR-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
@@ -355,6 +428,7 @@ export default function App() {
   }, [
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
+    periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
   ]);
 
   // ---- Project opslaan als downloadbaar bestand ----
@@ -364,7 +438,8 @@ export default function App() {
       categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-      kwartaalStatus, voorbelastingExcluded,
+      kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+      leaseDetails, confirmedLeaseTypeKeys,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -390,6 +465,11 @@ export default function App() {
       setReviewedOverigKeys(Array.isArray(project.reviewedOverigKeys) ? project.reviewedOverigKeys : []);
       setKwartaalStatus(project.kwartaalStatus && typeof project.kwartaalStatus === "object" ? project.kwartaalStatus : {});
       setVoorbelastingExcluded(Array.isArray(project.voorbelastingExcluded) ? project.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
+      setPeriodeQuarterOverrides(project.periodeQuarterOverrides && typeof project.periodeQuarterOverrides === "object" ? project.periodeQuarterOverrides : {});
+      setReviewedPeriodeKeys(Array.isArray(project.reviewedPeriodeKeys) ? project.reviewedPeriodeKeys : []);
+      setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
+      setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
+      setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -421,6 +501,11 @@ export default function App() {
     setReviewedOverigKeys([]);
     setKwartaalStatus({});
     setVoorbelastingExcluded(DEFAULT_VOORBELASTING_EXCLUDED);
+    setPeriodeQuarterOverrides({});
+    setReviewedPeriodeKeys([]);
+    setLoanDetails({});
+    setLeaseDetails({});
+    setConfirmedLeaseTypeKeys([]);
     setActiveYear(null);
     setLoadedProjectFileName(null);
     setError(null);
@@ -694,6 +779,40 @@ export default function App() {
               </section>
             )}
 
+            {periodeMismatches.length > 0 && (
+              <section ref={periodeReviewSectionRef} className="rounded-lg border border-sky-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2">
+                  <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {periodeMismatches.length}
+                  </span>
+                </div>
+                <PeriodeReviewStep items={periodeMismatches} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
+              </section>
+            )}
+
+            <div ref={loansSectionRef}>
+              <LoanInterestPanel
+                loanSummary={loanSummary}
+                loanDetails={loanDetails}
+                onOpenModal={setLoanDetailsModalKey}
+                onMarkUnknown={markLoanUnknown}
+                onUnmarkUnknown={unmarkLoanUnknown}
+              />
+            </div>
+
+            <div ref={leasesSectionRef}>
+              <LeaseInterestPanel
+                leaseSummary={leaseSummary}
+                leaseDetails={leaseDetails}
+                confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+                onConfirmType={confirmLeaseType}
+                onOpenModal={setLeaseDetailsModalKey}
+                onMarkUnknown={markLeaseUnknown}
+                onUnmarkUnknown={unmarkLeaseUnknown}
+              />
+            </div>
+
             {years.length > 0 && activeYear && (
               <>
                 {years.length > 1 && (
@@ -718,15 +837,29 @@ export default function App() {
                     >
                       <Download className="h-3.5 w-3.5" /> Excel exporteren
                     </button>
+                    <button
+                      onClick={downloadAangiftevoorstelForActiveYear}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                      title="Downloadbaar HTML-rapport voor het actieve jaar, ter voorbereiding op de aangifte"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Aangiftevoorstel ({activeYear})
+                    </button>
                   </div>
                 )}
                 {years.length === 1 && (
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
                     <button
                       onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
                     >
                       <Download className="h-3.5 w-3.5" /> Excel exporteren
+                    </button>
+                    <button
+                      onClick={downloadAangiftevoorstelForActiveYear}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                      title="Downloadbaar HTML-rapport voor het actieve jaar, ter voorbereiding op de aangifte"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Aangiftevoorstel
                     </button>
                   </div>
                 )}
@@ -783,6 +916,25 @@ export default function App() {
           </>
         )}
       </main>
+
+      {loanDetailsModalKey && (
+        <LoanDetailsModal
+          loan={loanSummary.find((l) => l.key === loanDetailsModalKey)}
+          details={loanDetails[loanDetailsModalKey]}
+          onSave={setLoanDetailField}
+          onClose={() => setLoanDetailsModalKey(null)}
+        />
+      )}
+
+      {leaseDetailsModalKey && (
+        <LoanDetailsModal
+          kind="lease"
+          loan={leaseSummary.find((l) => l.key === leaseDetailsModalKey)}
+          details={leaseDetails[leaseDetailsModalKey]}
+          onSave={setLeaseDetailField}
+          onClose={() => setLeaseDetailsModalKey(null)}
+        />
+      )}
 
       <ConfirmBanner message={confirmMessage} onConfirm={doClearAllData} onCancel={() => setConfirmMessage(null)} />
     </div>

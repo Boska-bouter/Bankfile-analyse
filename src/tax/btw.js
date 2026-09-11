@@ -59,12 +59,24 @@ export function computeBtw(tx, categoryBtwRates, btwVerlegd) {
   return tx.amount - tx.amount / (1 + rate / 100);
 }
 
-export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded) {
+export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
   const map = {};
   for (const tx of classified) {
-    if (tx.type !== "Zakelijk" || tx.isMirror || tx.year !== year) continue;
-    const [y, m] = tx.month.split("-");
-    const kwartaal = Math.ceil(Number(m) / 3);
+    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    // Standaard: kwartaal op basis van boekingsdatum. Is er een bevestigde periode-verplaatsing
+    // (zie periodeMismatches), dan telt die mee in plaats van de boekingsdatum.
+    const override = periodeQuarterOverrides[tx.id];
+    let y, kwartaal;
+    if (override) {
+      const [oy, oq] = override.split("-Q");
+      y = oy;
+      kwartaal = Number(oq);
+    } else {
+      const [my, mm] = tx.month.split("-");
+      y = my;
+      kwartaal = Math.ceil(Number(mm) / 3);
+    }
+    if (Number(y) !== year) continue;
     const key = `${y}-Q${kwartaal}`;
     if (!map[key]) {
       map[key] = {
