@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
+import { eur } from "../../utils/amounts.js";
 
 // Generieke beheerder voor een lijst losse tekst-items (tegenpartijnamen) — gebruikt voor zowel
-// "Zakelijke tegenpartijen (inkomsten)" als "Zakelijke uitgaven (leveranciers)".
-export default function KeywordManager({ keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass }) {
+// "Zakelijke tegenpartijen (inkomsten)" als "Zakelijke uitgaven (leveranciers)". `entries`
+// (optioneel) toont daaronder een uitklapbaar overzicht van wat er nu al op basis hiervan is
+// herkend, met het aantal/totaal per tegenpartij.
+export default function KeywordManager({ keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass, entries, entriesLabel }) {
   const [value, setValue] = useState("");
+  const [showEntries, setShowEntries] = useState(false);
   const submit = () => {
     const kw = value.trim();
     if (kw) onAdd(kw);
@@ -35,6 +39,26 @@ export default function KeywordManager({ keywords, onAdd, onRemove, placeholder,
           <Plus className="h-4 w-4" /> Toevoegen
         </button>
       </div>
+      {entries && entries.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <button onClick={() => setShowEntries((v) => !v)} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800">
+            {showEntries ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            {entriesLabel || "Nu herkend"} ({entries.length})
+          </button>
+          {showEntries && (
+            <div className="mt-2 max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+              {entries.map((item) => (
+                <div key={item.key} className="flex items-center gap-2 p-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{item.name}</p>
+                    <p className="text-[10px] text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

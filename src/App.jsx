@@ -27,7 +27,10 @@ import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
+import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
+import AangifteChecklistPanel from "./components/overview/AangifteChecklistPanel.jsx";
+import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
@@ -109,6 +112,7 @@ export default function App() {
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
   const btwSettingsSectionRef = useRef(null);
+  const checklistSectionRef = useRef(null);
   const periodeReviewSectionRef = useRef(null);
   const loansSectionRef = useRef(null);
   const leasesSectionRef = useRef(null);
@@ -227,14 +231,26 @@ export default function App() {
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
   };
 
-  const classified = useMemo(
-    () =>
-      transactions.map((tx) => ({
-        ...tx,
-        ...resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
-      })),
-    [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow]
-  );
+  const classified = useMemo(() => {
+    const base = transactions.map((tx) => ({
+      ...tx,
+      ...resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
+    }));
+    // "Prive opnames"/"Uitbetaling aan prive"/"Terugboeking van prive" zijn geld dat tussen
+    // zakelijk en privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
+    // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
+    // zakelijk en privé in beide richtingen klopt, zonder de oorspronkelijke boeking te veranderen.
+    const mirrors = [];
+    for (const tx of base) {
+      if (
+        (tx.category === "Prive opnames" || tx.category === "Uitbetaling aan prive" || tx.category === "Terugboeking van prive") &&
+        tx.type === "Zakelijk"
+      ) {
+        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
+      }
+    }
+    return mirrors.length ? [...base, ...mirrors] : base;
+  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow]);
 
   // ---- Inkomstenbronnen-review ----
   const incomeSummary = useMemo(() => computeIncomeSummary(transactions, accountTypeByFile), [transactions, accountTypeByFile]);
@@ -281,6 +297,8 @@ export default function App() {
   const removeBusinessKeyword = (kw) => setBusinessKeywords((prev) => prev.filter((k) => k !== kw));
   const addBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => (prev.includes(kw) ? prev : [...prev, kw]));
   const removeBusinessExpenseKeyword = (kw) => setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
+  const businessIncomeEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkomsten"), [classified]);
+  const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
 
   // ---- Factuurperiode vs. boekingskwartaal ----
   const periodeMismatches = useMemo(
@@ -426,6 +444,52 @@ export default function App() {
     for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES);
     return map;
   }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories]);
+  const checklistData = useMemo(
+    () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
+    [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
+  );
+
+  // ---- Voortgangspercentage per jaar (voor de jaarknoppen in "Werk te doen") ----
+  const yearlyProgress = useMemo(() => {
+    const map = {};
+    for (const year of years) {
+      const zakItems = (groups.find((g) => g.year === year && g.type === "Zakelijk") || { items: [] }).items;
+      const priItems = (groups.find((g) => g.year === year && g.type === "Prive") || { items: [] }).items;
+      const allYearItems = [...zakItems, ...priItems];
+      const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides);
+      const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus);
+      const checks = [{ frac: yc.categorizedPct / 100 }];
+
+      const personKeysThisYear = new Set(
+        allYearItems.filter((tx) => tx.category === "Overboekingen aan personen" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
+      );
+      if (personKeysThisYear.size > 0) {
+        const done = [...personKeysThisYear].filter((k) => reviewedPersonKeys.includes(k)).length;
+        checks.push({ frac: done / personKeysThisYear.size });
+      }
+      const overigKeysThisYear = new Set(
+        allYearItems.filter((tx) => tx.category === "Overig" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
+      );
+      if (overigKeysThisYear.size > 0) {
+        const done = [...overigKeysThisYear].filter((k) => reviewedOverigKeys.includes(k)).length;
+        checks.push({ frac: done / overigKeysThisYear.size });
+      }
+      checks.push({ frac: korRegeling !== null ? 1 : 0 });
+      if (korRegeling === false) {
+        checks.push({ frac: btwVerlegd !== null ? 1 : 0 });
+        const kwTotal = quartersForYear.length;
+        let kwScore = 0;
+        for (const q of quartersForYear) {
+          const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
+          kwScore += (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0);
+        }
+        checks.push({ frac: kwTotal > 0 ? kwScore / kwTotal : 1 });
+      }
+      const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
+      map[year] = { pct: Math.round(avgFrac * 100) };
+    }
+    return map;
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys]);
 
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useMemo(() => {
@@ -713,7 +777,7 @@ export default function App() {
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
-        <TodoPanel items={todoItems} />
+        <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
           <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
@@ -770,6 +834,8 @@ export default function App() {
                 placeholder="Naam tegenpartij…"
                 chipClass="bg-emerald-100 text-emerald-800"
                 addButtonClass="bg-emerald-600 hover:bg-emerald-700"
+                entries={businessIncomeEntries}
+                entriesLabel="Nu herkend als Zakelijke inkomsten"
               />
             </section>
             <section className="rounded-lg border border-slate-200 bg-white p-5">
@@ -785,6 +851,8 @@ export default function App() {
                 placeholder="bijv. LeasePlan, boekhouder-naam…"
                 chipClass="bg-teal-100 text-teal-800"
                 addButtonClass="bg-teal-600 hover:bg-teal-700"
+                entries={businessExpenseEntries}
+                entriesLabel="Nu herkend als Zakelijke uitgaven"
               />
             </section>
           </div>
@@ -968,6 +1036,28 @@ export default function App() {
                   )}
                 </div>
 
+                <div ref={checklistSectionRef}>
+                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} />
+                </div>
+
+                {(() => {
+                  const isTransferCat = (c) => c === "Uitbetaling aan prive" || c === "Prive opnames";
+                  const zakSum = zakGroupForYear.items.filter((t) => isTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+                  const priSum = priGroupForYear.items.filter((t) => isTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+                  const diff = Math.round((zakSum + priSum) * 100) / 100;
+                  if (zakSum === 0 && priSum === 0) return null;
+                  const ok = Math.abs(diff) < 0.01;
+                  return (
+                    <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`}>
+                      {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
+                      <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
+                        <strong>Controle "Uitbetaling aan prive" / "Prive opnames"</strong>: Zakelijk {eur(zakSum)} tegenover Prive {eur(priSum)}
+                        {ok ? " — komt overeen (samen nul, zoals het hoort)." : <> — komt <strong>niet</strong> overeen (verschil {eur(diff)}). Mogelijk staat er aan de privékant een aparte, niet-gekoppelde transactie, of ontbreekt er iets.</>}
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 <p className="text-xs text-slate-400">
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
@@ -1003,6 +1093,8 @@ export default function App() {
                     />
                   </div>
                 </div>
+
+                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} />
               </>
             )}
           </>
