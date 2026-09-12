@@ -181,3 +181,138 @@ export function migrateOverridesMap(map, counterpartyKeyFn) {
   }
   return next;
 }
+
+// ---- Hoofdcategorieën — een overzichtelijke laag bovenop de fijnmazige subtypes hierboven ----
+//
+// Alle BTW-percentages, vaste/variabele-indeling, keyword-herkenning en fiscale speciale gevallen
+// (zakelijke inkomsten, spiegelboekingen, "Overig"-review, personen-overboekingen) blijven
+// werken op het fijnmazige subtype hierboven (het bestaande `category`-veld op een transactie) —
+// daar verandert niets aan. Deze hoofdcategorie is puur een weergavelaag erbovenop: voor de
+// categorie-overzichten en de dropdown in de detailtabel ziet de gebruiker maar ~17 categorieën,
+// met de subtype-precisie er direct naast beschikbaar (net als "Categorie: Vervoer & auto,
+// Subtype: Brandstof").
+export const MAIN_CATEGORY_ORDER = [
+  "Zakelijke inkomsten", "Huisvesting", "Vervoer & auto", "Inkoop & zakelijke uitgaven",
+  "Apparatuur & inventaris", "Personeel", "Marketing & verkoop", "Telecom & abonnementen",
+  "Verzekeringen", "Boekhouding & advies", "Bank & betaalverkeer", "Juridisch & incasso",
+  "Financiering", "Belastingen & heffingen", "Overig zakelijk", "Privé", "Nog te beoordelen",
+];
+
+export const MAIN_CATEGORY_COLOR = {
+  "Zakelijke inkomsten": "bg-emerald-100 text-emerald-800",
+  "Huisvesting": "bg-amber-100 text-amber-800",
+  "Vervoer & auto": "bg-orange-100 text-orange-800",
+  "Inkoop & zakelijke uitgaven": "bg-sky-200 text-sky-900",
+  "Apparatuur & inventaris": "bg-orange-50 text-orange-700",
+  "Personeel": "bg-indigo-200 text-indigo-900",
+  "Marketing & verkoop": "bg-green-100 text-green-800",
+  "Telecom & abonnementen": "bg-indigo-100 text-indigo-800",
+  "Verzekeringen": "bg-sky-100 text-sky-800",
+  "Boekhouding & advies": "bg-purple-100 text-purple-800",
+  "Bank & betaalverkeer": "bg-slate-200 text-slate-800",
+  "Juridisch & incasso": "bg-rose-100 text-rose-800",
+  "Financiering": "bg-teal-200 text-teal-900",
+  "Belastingen & heffingen": "bg-fuchsia-200 text-fuchsia-900",
+  "Overig zakelijk": "bg-rose-200 text-rose-900",
+  "Privé": "bg-stone-200 text-stone-700",
+  "Nog te beoordelen": "bg-slate-200 text-slate-700",
+};
+
+// Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de tool
+// zelf herkent op naam (zakelijke inkomsten, spiegelboekingen zoals "Prive opnames"/"Uitbetaling
+// aan prive"/"Terugboeking van prive", "Overboekingen aan personen", "Overig") blijven onder de
+// motorkap gewoon dat subtype — alleen hun WEERGAVE valt hier onder een bredere hoofdcategorie.
+export const SUBTYPE_TO_MAIN = {
+  "Autokosten": "Vervoer & auto",
+  "Bankkosten": "Bank & betaalverkeer",
+  "Belastingen: IB": "Belastingen & heffingen",
+  "Belastingen: IH": "Belastingen & heffingen",
+  "Belastingen: LH": "Belastingen & heffingen",
+  "Belastingen: MRB": "Belastingen & heffingen",
+  "Belastingen: OB": "Belastingen & heffingen",
+  "Belastingen: ZVW": "Belastingen & heffingen",
+  "Belastingen: Naheffingen OB voorgaande jaren": "Belastingen & heffingen",
+  "Belastingen: Naheffingen LH voorgaande jaren": "Belastingen & heffingen",
+  "Belastingen: Naheffingen IB voorgaande jaren": "Belastingen & heffingen",
+  "Boekhouder & advies": "Boekhouding & advies",
+  "Boodschappen": "Privé",
+  "Brandstof": "Vervoer & auto",
+  "Energie-water": "Huisvesting",
+  "Gemeentelijke kosten": "Huisvesting",
+  "Huur": "Huisvesting",
+  "Hypotheek": "Privé",
+  "Incasso, juridisch & schulden": "Juridisch & incasso",
+  "Inhuur personeel": "Personeel",
+  "Inkomsten": "Zakelijke inkomsten",
+  "Inkomsten/betalingen niet dit jaar": "Zakelijke inkomsten",
+  "Kinderopvang": "Privé",
+  "Lease (operationeel)": "Vervoer & auto",
+  "Lease (financieel)": "Financiering",
+  "Leningen": "Financiering",
+  "Loonadministratie": "Personeel",
+  "Marketing-website": "Marketing & verkoop",
+  "Overboekingen aan personen": "Privé",
+  "Overig": "Nog te beoordelen",
+  "Onderhoud apparatuur/machines": "Apparatuur & inventaris",
+  "Parkeren": "Vervoer & auto",
+  "Betaalautomaat kosten": "Bank & betaalverkeer",
+  "Prive - mobiel/internet": "Privé",
+  "Prive opnames": "Privé",
+  "Prive overige abonnementen": "Privé",
+  "Terugboeking van prive": "Privé",
+  "Reiskosten (OV)": "Vervoer & auto",
+  "Specials": "Overig zakelijk",
+  "Uitbetalen loon": "Personeel",
+  "Uitbetaling aan prive": "Privé",
+  "Prive - vrijetijd-uitgaan-vakantie": "Privé",
+  "Verkoop activa": "Zakelijke inkomsten",
+  "Verzekering: Auto": "Vervoer & auto",
+  "Verzekering: Overig": "Verzekeringen",
+  "Verzekering: Wonen": "Privé",
+  "Verzekering: Zakelijk": "Verzekeringen",
+  "Verzekering: Ziektekosten": "Privé",
+  "Webshops & online aankopen": "Inkoop & zakelijke uitgaven",
+  "Winkels divers": "Inkoop & zakelijke uitgaven",
+  "Zakelijk - apparatuur/machines": "Apparatuur & inventaris",
+  "Zakelijk mobiel/internet": "Telecom & abonnementen",
+  "Zakelijk overige abonnementen": "Telecom & abonnementen",
+  "Zakelijke inkomsten": "Zakelijke inkomsten",
+  "Zakelijke uitgaven": "Inkoop & zakelijke uitgaven",
+};
+
+// Als iemand in de detailtabel of bij "Zakelijke tegenpartijen/uitgaven" een hoofdcategorie kiest
+// (in plaats van een specifiek subtype), moet er toch een concreet subtype worden opgeslagen —
+// dat blijft namelijk het veld waarop BTW-percentage, vast/variabel en voorbelasting draaien. Dit
+// is de meest voor de hand liggende, generieke vertegenwoordiger per hoofdcategorie; direct
+// ernaast staat een subtype-dropdown om het gelijk preciezer te zetten als dat nodig is.
+export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
+  "Zakelijke inkomsten": "Zakelijke inkomsten",
+  "Huisvesting": "Huur",
+  "Vervoer & auto": "Autokosten",
+  "Inkoop & zakelijke uitgaven": "Zakelijke uitgaven",
+  "Apparatuur & inventaris": "Zakelijk - apparatuur/machines",
+  "Personeel": "Inhuur personeel",
+  "Marketing & verkoop": "Marketing-website",
+  "Telecom & abonnementen": "Zakelijk overige abonnementen",
+  "Verzekeringen": "Verzekering: Zakelijk",
+  "Boekhouding & advies": "Boekhouder & advies",
+  "Bank & betaalverkeer": "Bankkosten",
+  "Juridisch & incasso": "Incasso, juridisch & schulden",
+  "Financiering": "Leningen",
+  "Belastingen & heffingen": "Belastingen: OB",
+  "Overig zakelijk": "Specials",
+  "Privé": "Prive - vrijetijd-uitgaan-vakantie",
+  "Nog te beoordelen": "Overig",
+};
+
+// Hoofdcategorie voor een subtype — onbekende/custom subtypes (bijv. een zelf toegevoegde
+// categorie) vallen terug op "Overig zakelijk" zodat ze nooit onzichtbaar worden.
+export function mainCategoryOf(subtype) {
+  return SUBTYPE_TO_MAIN[subtype] || "Overig zakelijk";
+}
+
+// Alle subtypes die onder één hoofdcategorie vallen — voor de subtype-dropdown naast de
+// hoofdcategorie-dropdown, en voor het groeperen van BTW-percentages/vaste-kosten-instellingen.
+export function subtypesForMainCategory(mainCategory) {
+  return CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === mainCategory);
+}

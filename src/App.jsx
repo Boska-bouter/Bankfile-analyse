@@ -4,7 +4,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2,
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
 import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES } from "./classification/categories.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
@@ -23,6 +23,7 @@ import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
+import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
@@ -437,8 +438,9 @@ export default function App() {
   };
   const businessIncomeEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkomsten"), [classified]);
   const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
-  const reclassifyBusinessEntry = (item, newCategory) => {
-    setCounterpartyOverride(item.name, item.amount, { category: newCategory, type: defaultTypeForCategory(newCategory) });
+  const reclassifyBusinessEntry = (item, newMainCategory) => {
+    const newSubtype = MAIN_CATEGORY_DEFAULT_SUBTYPE[newMainCategory] || newMainCategory;
+    requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: defaultTypeForCategory(newSubtype) });
   };
 
   // ---- Factuurperiode vs. boekingskwartaal ----
@@ -537,10 +539,58 @@ export default function App() {
     setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
   };
 
+  // ---- Vraag bij een categorie/type-wijziging: alleen deze transactie, alle jaren, of gekozen
+  // jaren? Alleen gevraagd als er ook echt meerdere transacties van dezelfde tegenpartij zijn —
+  // bij een unieke tegenpartij (of geen bruikbare naam) wordt de wijziging direct doorgevoerd. ----
+  const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
+  const requestCategoryChange = (tx, patch) => {
+    const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    if (!key) {
+      snapshotBeforeAction("Categorie/type aangepast");
+      setRowOverride(tx.id, patch);
+      return;
+    }
+    const matches = classified.filter((t) => !t.isMirror && counterpartyKey(t.counterparty || t.description, t.amount) === key);
+    if (matches.length <= 1) {
+      snapshotBeforeAction("Categorie/type aangepast");
+      if (tx.id != null) setRowOverride(tx.id, patch);
+      else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+      return;
+    }
+    const matchYears = [...new Set(matches.map((t) => t.year))].sort((a, b) => a - b);
+    setPendingCategoryChange({ tx, patch, key, matchCount: matches.length, matchYears });
+  };
+  const applyPendingToRowOnly = () => {
+    const { tx, patch } = pendingCategoryChange;
+    snapshotBeforeAction("Categorie/type aangepast");
+    if (tx.id != null) setRowOverride(tx.id, patch);
+    else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+    setPendingCategoryChange(null);
+  };
+  const applyPendingToAllYears = () => {
+    const { tx, patch } = pendingCategoryChange;
+    setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+    setPendingCategoryChange(null);
+  };
+  const applyPendingToYears = (selectedYears) => {
+    const { key, patch } = pendingCategoryChange;
+    snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
+    const idsToPatch = classified
+      .filter((t) => !t.isMirror && counterpartyKey(t.counterparty || t.description, t.amount) === key && selectedYears.includes(t.year))
+      .map((t) => t.id);
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const id of idsToPatch) next[id] = { ...(next[id] || {}), ...patch };
+      return next;
+    });
+    setPendingCategoryChange(null);
+  };
+
   // ---- Slepen tussen Zakelijk en Prive (Pointer Events — werkt ook op iOS/iPad) ----
   const [dragState, setDragState] = useState(null); // { tx, x, y, overZone }
   const [expandedTable, setExpandedTable] = useState(null); // "Zakelijk" | "Prive" | null
   const [expandedBusinessIncomeList, setExpandedBusinessIncomeList] = useState(false);
+  const [expandedBusinessExpenseList, setExpandedBusinessExpenseList] = useState(false);
   const dragStateRef = useRef(null);
   dragStateRef.current = dragState;
   const startRowDrag = (e, tx) => {
@@ -564,10 +614,7 @@ export default function App() {
     const handleUp = () => {
       const cur = dragStateRef.current;
       if (cur && cur.overZone && cur.overZone !== cur.tx.type) {
-        const patch = { category: cur.tx.category, type: cur.overZone };
-        const key = (cur.tx.counterparty || cur.tx.description || "").trim();
-        if (key) setCounterpartyOverride(key, cur.tx.amount, patch);
-        else setRowOverride(cur.tx.id, patch);
+        requestCategoryChange(cur.tx, { category: cur.tx.category, type: cur.overZone });
       }
       setDragState(null);
     };
@@ -981,6 +1028,16 @@ export default function App() {
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
 
+        {pendingCategoryChange && (
+          <CategoryChangeScopeModal
+            pending={pendingCategoryChange}
+            onApplyRow={applyPendingToRowOnly}
+            onApplyAllYears={applyPendingToAllYears}
+            onApplyYears={applyPendingToYears}
+            onClose={() => setPendingCategoryChange(null)}
+          />
+        )}
+
         <section
           className="rounded-lg border-2 border-dashed border-slate-300 bg-white p-8 text-center"
           onDragOver={(e) => e.preventDefault()}
@@ -1096,26 +1153,28 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <div className={expandedBusinessIncomeList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
-            <section className="rounded-lg border border-slate-200 bg-white p-5">
-              <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
-              <p className="text-xs text-slate-500 mb-3">
-                Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
-              </p>
-              <KeywordManager
-                keywords={businessKeywords}
-                onAdd={addBusinessKeyword}
-                onRemove={removeBusinessKeyword}
-                placeholder="Naam tegenpartij…"
-                chipClass="bg-emerald-100 text-emerald-800"
-                addButtonClass="bg-emerald-600 hover:bg-emerald-700"
-                entries={businessIncomeEntries}
-                entriesLabel="Nu herkend als Zakelijke inkomsten"
-                onReclassify={reclassifyBusinessEntry}
-                isExpanded={expandedBusinessIncomeList}
-                onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
-              />
-            </section>
+          <div className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
+            {!expandedBusinessExpenseList && (
+              <section className="rounded-lg border border-slate-200 bg-white p-5">
+                <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
+                <p className="text-xs text-slate-500 mb-3">
+                  Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
+                </p>
+                <KeywordManager
+                  keywords={businessKeywords}
+                  onAdd={addBusinessKeyword}
+                  onRemove={removeBusinessKeyword}
+                  placeholder="Naam tegenpartij…"
+                  chipClass="bg-emerald-100 text-emerald-800"
+                  addButtonClass="bg-emerald-600 hover:bg-emerald-700"
+                  entries={businessIncomeEntries}
+                  entriesLabel="Nu herkend als Zakelijke inkomsten"
+                  onReclassify={reclassifyBusinessEntry}
+                  isExpanded={expandedBusinessIncomeList}
+                  onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
+                />
+              </section>
+            )}
             {!expandedBusinessIncomeList && (
               <section className="rounded-lg border border-slate-200 bg-white p-5">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke uitgaven (leveranciers)</h2>
@@ -1133,6 +1192,8 @@ export default function App() {
                   entries={businessExpenseEntries}
                   entriesLabel="Nu herkend als Zakelijke uitgaven"
                   onReclassify={reclassifyBusinessEntry}
+                  isExpanded={expandedBusinessExpenseList}
+                  onToggleExpand={() => setExpandedBusinessExpenseList((v) => !v)}
                 />
               </section>
             )}
@@ -1407,8 +1468,7 @@ export default function App() {
                     >
                       <DetailTable
                         group={zakGroupForYear}
-                        onCounterpartyOverride={setCounterpartyOverride}
-                        onRowOverride={setRowOverride}
+                        onRequestChange={requestCategoryChange}
                         enableDrag
                         onRowDragStart={startRowDrag}
                         draggingTxId={dragState ? dragState.tx.id : null}
@@ -1425,8 +1485,7 @@ export default function App() {
                     >
                       <DetailTable
                         group={priGroupForYear}
-                        onCounterpartyOverride={setCounterpartyOverride}
-                        onRowOverride={setRowOverride}
+                        onRequestChange={requestCategoryChange}
                         enableDrag
                         onRowDragStart={startRowDrag}
                         draggingTxId={dragState ? dragState.tx.id : null}

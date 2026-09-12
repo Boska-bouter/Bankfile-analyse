@@ -33,7 +33,8 @@ export default function LeaseInterestPanel({
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
             Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij{" "}
-            <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.
+            <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
+            {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
           <div className="space-y-3">
             {leaseSummary.map((lease) => {

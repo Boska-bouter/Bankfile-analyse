@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
-import { CATEGORY_ORDER } from "../../classification/categories.js";
+import { MAIN_CATEGORY_ORDER, mainCategoryOf } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 
 // Generieke beheerder voor een lijst losse tekst-items (tegenpartijnamen) — gebruikt voor zowel
@@ -78,12 +78,12 @@ export default function KeywordManager({
                   </div>
                   {onReclassify && (
                     <select
-                      value={item.category}
+                      value={mainCategoryOf(item.category)}
                       onChange={(e) => onReclassify(item, e.target.value)}
                       className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
                       title="Naar een andere categorie verplaatsen"
                     >
-                      {CATEGORY_ORDER.map((c) => (
+                      {MAIN_CATEGORY_ORDER.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>

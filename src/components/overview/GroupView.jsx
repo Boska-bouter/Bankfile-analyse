@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { ChevronRight } from "lucide-react";
-import { CATEGORY_ORDER, CATEGORY_COLOR } from "../../classification/categories.js";
+import { useMemo, useState, Fragment } from "react";
+import { ChevronRight, ChevronDown } from "lucide-react";
+import { CATEGORY_ORDER, CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -8,7 +8,8 @@ import HelpHint from "../shared/HelpHint.jsx";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026") — losstaand van de detailtabel zodat
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
-// daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen.
+// daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
+// op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
 export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp }) {
   const totals = useMemo(() => {
     const t = {};
@@ -20,8 +21,19 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
     for (const tx of group.items) t[tx.category] = (t[tx.category] || 0) + computeBtw(tx, categoryBtwRates, btwVerlegd);
     return t;
   }, [group.items, categoryBtwRates, btwVerlegd]);
+  const mainTotals = useMemo(() => {
+    const t = {};
+    for (const [subtype, amount] of Object.entries(totals)) t[mainCategoryOf(subtype)] = (t[mainCategoryOf(subtype)] || 0) + amount;
+    return t;
+  }, [totals]);
+  const mainBtwTotals = useMemo(() => {
+    const t = {};
+    for (const [subtype, amount] of Object.entries(btwByCategory)) t[mainCategoryOf(subtype)] = (t[mainCategoryOf(subtype)] || 0) + amount;
+    return t;
+  }, [btwByCategory]);
   const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
   const grandBtw = Object.values(btwByCategory).reduce((a, b) => a + b, 0);
+  const [expandedMain, setExpandedMain] = useState(null);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -31,15 +43,38 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       </h3>
       <table className="w-full text-sm">
         <tbody>
-          {CATEGORY_ORDER.filter((c) => c in totals).map((c) => (
-            <tr key={c} className="border-b border-slate-50">
-              <td className="py-1">
-                <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
-              </td>
-              <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(totals[c])}</td>
-              <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(btwByCategory[c] || 0)}</td>
-            </tr>
-          ))}
+          {MAIN_CATEGORY_ORDER.filter((c) => c in mainTotals).map((c) => {
+            const subtypesPresent = subtypesForMainCategory(c).filter((s) => s in totals);
+            const canExpand = subtypesPresent.length > 1;
+            const isOpen = expandedMain === c;
+            return (
+              <Fragment key={c}>
+                <tr
+                  className={`border-b border-slate-50 ${canExpand ? "cursor-pointer hover:bg-slate-50" : ""}`}
+                  onClick={() => canExpand && setExpandedMain((v) => (v === c ? null : c))}
+                >
+                  <td className="py-1">
+                    <span className="inline-flex items-center gap-1">
+                      {canExpand && (isOpen ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" /> : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />)}
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                    </span>
+                  </td>
+                  <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
+                  <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(mainBtwTotals[c] || 0)}</td>
+                </tr>
+                {isOpen &&
+                  subtypesPresent.map((s) => (
+                    <tr key={`${c}__${s}`} className="border-b border-slate-50 bg-slate-50/60">
+                      <td className="py-1 pl-6">
+                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
+                      </td>
+                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s])}</td>
+                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(btwByCategory[s] || 0)}</td>
+                    </tr>
+                  ))}
+              </Fragment>
+            );
+          })}
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-200 font-semibold">
@@ -57,7 +92,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
+export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountMin, setAmountMin] = useState("");
@@ -68,19 +103,20 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
   const [dateTo, setDateTo] = useState("");
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
 
-  const applyChange = (tx, patch) => {
-    const key = (tx.counterparty || tx.description || "").trim();
-    if (key) onCounterpartyOverride(key, tx.amount, patch);
-    else onRowOverride(tx.id, patch);
-  };
+  const applyChange = (tx, patch) => onRequestChange(tx, patch);
 
   const filteredItems = useMemo(() => {
     let rows = group.items;
     const q = query.trim().toLowerCase();
     if (q) {
-      const isExactCategoryName = CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
+      const isExactSubtype = CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
+      const isExactMain = MAIN_CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
       rows = rows.filter((t) =>
-        isExactCategoryName ? t.category.toLowerCase() === q : `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(q)
+        isExactSubtype
+          ? t.category.toLowerCase() === q
+          : isExactMain
+          ? mainCategoryOf(t.category).toLowerCase() === q
+          : `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(q)
       );
     }
     const min = amountMin.trim() === "" ? null : Math.abs(parseFloat(amountMin));
@@ -233,12 +269,22 @@ export function DetailTable({ group, onCounterpartyOverride, onRowOverride, enab
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">
                     <select
+                      value={mainCategoryOf(t.category)}
+                      onChange={(e) => applyChange(t, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || t.category, type: t.type })}
+                      className={`block rounded px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+                    >
+                      {MAIN_CATEGORY_ORDER.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <select
                       value={t.category}
                       onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
-                      className={`rounded px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${CATEGORY_COLOR[t.category] || "bg-slate-200 text-slate-700"}`}
+                      className="block mt-1 rounded px-1 py-0 text-[10px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+                      title="Subtype (bepaalt BTW-percentage en vast/variabel)"
                     >
-                      {CATEGORY_ORDER.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                      {subtypesForMainCategory(mainCategoryOf(t.category)).map((s) => (
+                        <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
                   </td>
