@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
@@ -1036,6 +1036,16 @@ export default function App() {
             onApplyYears={applyPendingToYears}
             onClose={() => setPendingCategoryChange(null)}
           />
+        )}
+
+        {parsedFiles.length === 0 && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5">
+            <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+            <p className="text-sm text-emerald-900">
+              <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
+              naar een server gestuurd — alles blijft op dit apparaat, ook wat automatisch wordt bewaard.
+            </p>
+          </div>
         )}
 
         <section

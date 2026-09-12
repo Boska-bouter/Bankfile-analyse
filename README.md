@@ -1,39 +1,57 @@
-# Bankoverzicht — v2 (Vite/React)
+# Bankoverzicht — Zakelijk & Privé (Vite/React)
 
-Migratie van de standalone `index.html` (Claude-artifact + gecompileerde GitHub Pages-build)
-naar een onderhoudbare Vite/React-projectstructuur. Zie `bankoverzicht-audit-migratieplan.md`
-voor het volledige plan.
+Bankbestandanalyse-tool voor Over Rood schuldhulpverlening: verwerkt CSV/Excel/MT940-bankexports
+voor ZZP/eenmanszaak, met automatische classificatie, BTW-berekening, jaaroverzicht en een
+aangiftevoorstel. Volledig lokaal in de browser — er wordt niets naar een server gestuurd.
 
-## Status van deze migratie
+Live: https://boska-bouter.github.io/Bankfile-analyse/
 
-**Klaar en syntax-geverifieerd (esbuild):**
-- `src/utils/` — bedragen, datums, naam-normalisatie
-- `src/importers/` — CSV-, Excel-, MT940-parsing, generieke kolomherkenning, transactie-opbouw,
-  saldo-consistentiecheck. CAMT.053 is een placeholder (`camt053.js`) met een duidelijke
-  foutmelding i.p.v. stil te falen — nog niet geïmplementeerd.
-- `src/classification/` — categorieregels, classificatielogica, en een nieuwe
-  confidence-scoring-module (`confidence.js`, nog niet in de UI gebruikt)
-- `src/tax/` — BTW-berekening, IB-schatting, leningaflossing, factuurperiode-detectie, checklist
-- `src/storage/` — `window.storage`-polyfill, projectbestand-naamgeving
-- `src/components/shared/` — PanelBadge, SearchInput
+Dit is de Vite/React-opvolger van de oorspronkelijke standalone `index.html`
+(https://boska-bouter.github.io/Bankfile-inzicht/). De migratie is voltooid: alle functionaliteit
+van de oorspronkelijke tool is overgezet, plus een aantal nieuwe verbeteringen (zie hieronder).
 
-**Nog te doen — de hoofdcomponent zelf:**
-`src/App.jsx` is op dit moment een **minimale, functionele schil**: upload → parsen → classificeren
-→ categorietotalen, met de volledig gemigreerde logica hierboven. Dit bewijst dat de nieuwe
-module-structuur werkt, maar dekt nog niet de volledige UI van de originele tool.
+## Functionaliteit
 
-Nog over te zetten (stap 4 van het migratieplan), per stuk op dezelfde manier als hierboven —
-overnemen met behoud van exact dezelfde regels, niet herbouwen:
-- Review-stappen: inkomstenbronnen, overboekingen aan personen, "Overig" opruimen, factuurperiode
-- BTW-kwartaaloverzicht, meerjarenoverzicht, aangiftevoorstel, jaaroverzicht-panelen
-- Leningen/lease-invoervensters, instellingen-hub (categorieregels, BTW-tarieven, vaste/variabele
-  kosten), project opslaan/laden, "Werk te doen"-dashboard, importcontrole-scherm (nieuw, zie
-  migratieplan 6a)
+- **Import**: CSV, Excel (.xlsx), MT940. CAMT.053 is nog een placeholder (`src/importers/camt053.js`)
+  — nog niet geïmplementeerd, staat als laatste openstaande punt op de planning.
+- **Classificatie**: automatische indeling op basis van tegenpartij/omschrijving-zoekwoorden,
+  met handmatige correcties die tegenpartij-breed (alle jaren) worden onthouden.
+- **Categorieën**: een laag van ~14 hoofdcategorieën voor het overzicht (Huisvesting, Vervoer & auto,
+  Personeel, Belastingen & heffingen, Privé, ...), met de fijnmazige subtypes (Brandstof, Parkeren,
+  Belastingen: LH, ...) behouden onder de motorkap voor BTW-percentage, vast/variabel-indeling en
+  fiscale precisie. Zie `src/classification/categories.js` (`SUBTYPE_TO_MAIN`).
+- **BTW**: percentage per subtype, kwartaaloverzicht (netto + BTW-uitsplitsing), KOR- en
+  BTW-verlegd-instelling, voorbelasting.
+- **Jaaroverzicht**: winst uit onderneming, geschat IB, tekort/over, meerjarenoverzicht met trend,
+  vaste/variabele kosten.
+- **Reviewstappen**: inkomstenbronnen, overboekingen aan personen, "Overig" opruimen, factuurperiode
+  vs. boekingskwartaal.
+- **Leningen & lease**: rente/aflossing-splitsing per betaling (leningbedrag + startdatum + rente),
+  operationeel vs. financieel.
+- **Aangifte**: checklist, uitleg "wat waar invullen bij OB/IB", aangiftevoorstel met voorvertoning
+  (download/printen).
+- **Overig**: "Werk te doen"-dashboard met voortgang per jaar, ongedaan maken (laatste actie),
+  duplicaatdetectie, saldo-per-bestand-controle, terugkerende betalingen, project opslaan/laden,
+  automatisch bewaren per browser, Help-systeem met per-onderdeel "?"-uitleg.
+
+## Projectstructuur
+
+```
+src/
+├── App.jsx              — hoofdcomponent: state, coördinatie tussen alle panelen
+├── classification/       — categorieregels, classificatie-engine, hoofdcategorie-mapping
+├── importers/             — CSV/Excel/MT940-parsing, kolomherkenning, duplicaatdetectie
+├── tax/                   — BTW, IB-schatting, leningen/lease, checklist, jaaroverzicht
+├── storage/               — browser-opslag, projectbestand-formaat
+├── reports/               — Excel-export, aangiftevoorstel, printen
+├── content/               — Help-teksten (gedeeld tussen het Help-paneel en de "?"-pop-ups)
+└── components/            — UI, per domein (overview, btw, review, loans, settings, dashboard, shared)
+```
+
+`App.jsx` is met opzet nog de centrale coördinator (state + doorgeven aan panelen). Een verdere
+opsplitsing in bijv. React Context/hooks staat op de planning zodra dat nodig wordt.
 
 ## Lokaal draaien
-
-Deze structuur is gebouwd in een omgeving zonder netwerktoegang, dus `npm install` is hier nog
-niet uitgevoerd of getest. Bij jou lokaal:
 
 ```bash
 npm install
@@ -48,11 +66,18 @@ bij elke push naar `main`. Eenmalig nodig: onder repo-instellingen → Pages →
 `gh-pages`-branch (die de workflow aanmaakt bij de eerste run). Controleer ook `base` in
 `vite.config.js` — die moet overeenkomen met je repo-naam.
 
-## Bekende aandachtspunten bij het overzetten van de rest
+## Privacy
 
-- De Tailwind-classes in de originele tool waren een handmatige subset (zie de inline `<style>`
-  in de oude `index.html`); met echte Tailwind (nu geconfigureerd) werken alle gebruikte classes,
-  maar het is de moeite waard om visueel te vergelijken na de eerste volledige build.
-- `lucide-react` icons die in de oude bron gebruikt werden (`ChevronDown`, `ChevronRight`, `X`,
-  `Plus`, `Building2`, `Home`, `Loader2`, `Printer`, ...) staan als dependency klaar, maar zijn
-  nog niet allemaal geïmporteerd in `App.jsx` — komt vanzelf mee bij het overzetten van elk paneel.
+Alle verwerking gebeurt lokaal in de browser. Bankbestanden en projectdata worden alleen in de
+browser-opslag van het apparaat bewaard (`window.storage`-polyfill) — er is geen server
+betrokken bij de financiële verwerking, en er wordt niets extern verstuurd.
+
+## Bekende openstaande punten
+
+- CAMT.053-import (placeholder, geeft een duidelijke foutmelding i.p.v. stil te falen)
+- Een zichtbaar zekerheids-/confidence-systeem in de UI (de module `src/classification/confidence.js`
+  bestaat, maar is nog niet aangesloten)
+- Tegenpartijregels expliciet beheerbaar maken (nu impliciet via correcties) en IBAN-gebaseerd
+  herkennen waar het bankbestand IBAN's bevat
+- Importcontrole-scherm (samenvattend "is dit bestand goed ingelezen"-overzicht vóór classificatie)
+- `App.jsx` verder opsplitsen naarmate de tool groeit
