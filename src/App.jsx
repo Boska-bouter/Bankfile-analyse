@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity } from "./importers/transactions.js";
@@ -115,6 +115,8 @@ export default function App() {
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
   const [personSearch, setPersonSearch] = useState("");
+  const [showPersonReview, setShowPersonReview] = useState(true);
+  const [showOverigReview, setShowOverigReview] = useState(true);
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -417,11 +419,10 @@ export default function App() {
         .map((i) => i.key);
       setReviewedIncomeKeys((prev) => [...new Set([...prev, item.key, ...matchingKeys])]);
       return;
-    } else if (choice === "prive") {
-      setCounterpartyOverride(item.name, 1, { category: "Inkomsten", type: "Prive" });
-    } else if (choice === "overig") {
-      setCounterpartyOverride(item.name, 1, { category: "Overig", type: "Prive" });
     }
+    // "Nee" — niet zakelijk: naar Overig, verder te verfijnen in de "Overig"-review of detailtabel
+    // (in plaats van meteen een specifieke aanname als "Inkomsten" te forceren).
+    setCounterpartyOverride(item.name, 1, { category: "Overig", type: "Prive" });
     setReviewedIncomeKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
@@ -1290,7 +1291,6 @@ export default function App() {
             search={incomeSearch}
             onSearch={setIncomeSearch}
             onMark={markIncomeSource}
-            accountTypeByFile={accountTypeByFile}
           />
         )}
 
@@ -1298,49 +1298,63 @@ export default function App() {
           <>
             {personSummary.length > 0 && (
               <section ref={personReviewSectionRef} className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2">
+                <button
+                  onClick={() => setShowPersonReview((v) => !v)}
+                  className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
+                >
                   <span className="text-sm font-semibold">Overboekingen aan personen controleren</span>
                   {pendingPersonReview.length > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingPersonReview.length}
                     </span>
                   )}
-                </div>
-                <ReviewStep
-                  items={pendingPersonReview.length > 0 ? pendingPersonReview : personSummary}
-                  allDone={pendingPersonReview.length === 0}
-                  search={personSearch}
-                  onSearch={setPersonSearch}
-                  onMark={markPersonSource}
-                  onConfirm={confirmPersonAsIs}
-                  defaultCategory="Overboekingen aan personen"
-                  confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
-                  explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
-                />
+                  <span className="flex-1" />
+                  {showPersonReview ? <ChevronDown className="h-4 w-4 text-fuchsia-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-fuchsia-400 shrink-0" />}
+                </button>
+                {showPersonReview && (
+                  <ReviewStep
+                    items={pendingPersonReview.length > 0 ? pendingPersonReview : personSummary}
+                    allDone={pendingPersonReview.length === 0}
+                    search={personSearch}
+                    onSearch={setPersonSearch}
+                    onMark={markPersonSource}
+                    onConfirm={confirmPersonAsIs}
+                    defaultCategory="Overboekingen aan personen"
+                    confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
+                    explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
+                  />
+                )}
               </section>
             )}
 
             {overigSummary.length > 0 && (
               <section ref={overigReviewSectionRef} className="rounded-lg border border-amber-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2">
+                <button
+                  onClick={() => setShowOverigReview((v) => !v)}
+                  className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
+                >
                   <span className="text-sm font-semibold">"Overig" opruimen</span>
                   {pendingOverigReview.length > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingOverigReview.length}
                     </span>
                   )}
-                </div>
-                <ReviewStep
-                  items={pendingOverigReview.length > 0 ? pendingOverigReview : overigSummary}
-                  allDone={pendingOverigReview.length === 0}
-                  search={overigSearch}
-                  onSearch={setOverigSearch}
-                  onMark={markOverigItem}
-                  onConfirm={confirmOverigAsIs}
-                  defaultCategory="Overig"
-                  confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                  explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
-                />
+                  <span className="flex-1" />
+                  {showOverigReview ? <ChevronDown className="h-4 w-4 text-amber-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />}
+                </button>
+                {showOverigReview && (
+                  <ReviewStep
+                    items={pendingOverigReview.length > 0 ? pendingOverigReview : overigSummary}
+                    allDone={pendingOverigReview.length === 0}
+                    search={overigSearch}
+                    onSearch={setOverigSearch}
+                    onMark={markOverigItem}
+                    onConfirm={confirmOverigAsIs}
+                    defaultCategory="Overig"
+                    confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
+                  />
+                )}
               </section>
             )}
 

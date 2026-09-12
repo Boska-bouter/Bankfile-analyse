@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { Building2, Home } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 
-export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark, accountTypeByFile }) {
+export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark }) {
   const filtered = useMemo(() => {
     if (!search.trim()) return items;
     const q = search.toLowerCase();
@@ -17,8 +17,9 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
           <Building2 className="h-4 w-4 text-emerald-400" /> Wie zijn je zakelijke klanten?
         </h2>
         <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-          Voor elke binnenkomende betaling geef je aan of dit een <span className="text-emerald-400 font-medium">zakelijke klant/opdrachtgever</span> is,
-          of <span className="text-slate-100 font-medium">loondienst / overig privé-inkomen</span>.
+          Voor elke binnenkomende betaling: is dit een{" "}
+          <span className="text-emerald-400 font-medium">zakelijke klant/opdrachtgever</span>? Bij "Nee" komt het bij
+          "Overig" te staan — daar kun je het daarna alsnog aan een specifieke categorie toewijzen.
         </p>
         <div className="mt-3 flex items-center gap-3">
           <div className="flex-1 h-1.5 rounded-full bg-slate-700 overflow-hidden">
@@ -47,30 +48,14 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
                 onClick={() => onMark(item, "zakelijk")}
                 className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-100"
               >
-                <Building2 className="h-3.5 w-3.5" /> Zakelijke klant
+                <Building2 className="h-3.5 w-3.5" /> Ja, zakelijk
               </button>
               <button
-                onClick={() => onMark(item, "prive")}
+                onClick={() => onMark(item, "nee")}
                 className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-slate-50 text-slate-600 px-3 py-1.5 text-xs font-medium hover:bg-slate-100"
               >
-                <Home className="h-3.5 w-3.5" /> Loondienst / privé
+                Nee
               </button>
-              {accountTypeByFile[item.source] === "Beide" ? (
-                <button
-                  onClick={() => onMark(item, "overig")}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 text-slate-400 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 hover:text-slate-600"
-                  title="Nog niet duidelijk of dit zakelijk of privé is — zet in categorie Overig, later te corrigeren"
-                >
-                  Overig
-                </button>
-              ) : (
-                <button
-                  onClick={() => onMark(item, "geen")}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 text-slate-400 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 hover:text-slate-600"
-                >
-                  Geen van beide
-                </button>
-              )}
             </div>
           ))}
           {filtered.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">Geen inkomstenbronnen gevonden voor "{search}"</p>}
