@@ -196,4 +196,24 @@ export const HELP_CHAPTERS = [
       </p>
     ),
   },
+  {
+    key: "classificatiezekerheid",
+    titel: "Classificatiezekerheid",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Elke transactie krijgt een van vier niveaus: <strong>🟢 override</strong> (je hebt 'm zelf al eens bevestigd,
+          op IBAN of tegenpartij), <strong>🟢 keyword</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
+          Brandstof), <strong>🟡 heuristic</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
+          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>🔴 fallback</strong> (geen enkele regel matchte
+          — in "Overig" beland).
+        </p>
+        <p>
+          Dit is geen extra classificatiesysteem naast de echte indeling — het is puur een indicatie van hóe die
+          indeling tot stand kwam, zodat je niet alles hoeft na te lopen: de 🟢-transacties zijn met vertrouwen
+          ingedeeld, de 🟡/🔴-transacties zijn de moeite van het bekijken waard.
+        </p>
+      </div>
+    ),
+  },
 ];

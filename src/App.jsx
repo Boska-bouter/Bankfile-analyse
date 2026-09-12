@@ -5,6 +5,7 @@ import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
+import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
@@ -38,6 +39,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
+import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
@@ -124,6 +126,7 @@ export default function App() {
   const projectFileInputRef = useRef(null);
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
+  const confidenceSectionRef = useRef(null);
   const personReviewSectionRef = useRef(null);
   const overigReviewSectionRef = useRef(null);
   const quarterlyBtwSectionRef = useRef(null);
@@ -361,10 +364,11 @@ export default function App() {
   };
 
   const classified = useMemo(() => {
-    const base = transactions.map((tx) => ({
-      ...tx,
-      ...resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow),
-    }));
+    const base = transactions.map((tx) => {
+      const resolved = resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow);
+      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category);
+      return { ...tx, ...resolved, confidence };
+    });
     // "Prive opnames"/"Uitbetaling aan prive"/"Terugboeking van prive" zijn geld dat tussen
     // zakelijk en privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
@@ -380,6 +384,20 @@ export default function App() {
     }
     return mirrors.length ? [...base, ...mirrors] : base;
   }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow]);
+
+  // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
+  // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
+  // afgeleide van een al beoordeelde boeking, geen eigen bankregel). ----
+  const confidenceSummary = useMemo(() => {
+    let approved = 0, review = 0, unclear = 0;
+    for (const tx of classified) {
+      if (tx.isMirror) continue;
+      if (tx.confidence.level === "override" || tx.confidence.level === "keyword") approved++;
+      else if (tx.confidence.level === "heuristic") review++;
+      else unclear++;
+    }
+    return { approved, review, unclear, needsReview: review + unclear, total: approved + review + unclear };
+  }, [classified]);
 
   // ---- Inkomstenbronnen-review ----
   const incomeSummary = useMemo(() => computeIncomeSummary(transactions, accountTypeByFile), [transactions, accountTypeByFile]);
@@ -786,11 +804,19 @@ export default function App() {
     if (transactions.length > 0 && korRegeling === false && btwVerlegd === null) {
       items.push({ key: "btwVerlegd", text: "BTW-verlegd-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
+    if (confidenceSummary.needsReview > 0) {
+      items.push({
+        key: "confidence",
+        text: `${confidenceSummary.needsReview} transactie(s) met onzekere classificatie — controleren`,
+        ref: confidenceSectionRef,
+      });
+    }
     return items;
   }, [
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
     periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
+    confidenceSummary,
   ]);
 
   // ---- Project opslaan als downloadbaar bestand ----
@@ -1130,6 +1156,18 @@ export default function App() {
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
         <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+
+        {years.length > 0 && (
+          <div ref={checklistSectionRef}>
+            <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+          </div>
+        )}
+
+        {transactions.length > 0 && (
+          <div ref={confidenceSectionRef}>
+            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} />
+          </div>
+        )}
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
           <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50">
@@ -1471,10 +1509,6 @@ export default function App() {
                       onOpenHelp={setHelpPopupChapter}
                     />
                   )}
-                </div>
-
-                <div ref={checklistSectionRef}>
-                  <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                 </div>
 
                 <div ref={obIbSectionRef}>

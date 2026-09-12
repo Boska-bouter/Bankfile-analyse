@@ -10,10 +10,14 @@
 //                  automatisch toekennen van "Zakelijke inkomsten" puur op basis van rekeningtype)
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
+import { counterpartyKey, ibanKey } from "../utils/normalization.js";
+
 export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory) {
   if (overridesByRow[tx.id]) return { level: "override", label: "Handmatig bevestigd (deze transactie)" };
 
-  const key = `${(tx.counterparty || tx.description || "").trim().toLowerCase()}::${tx.amount >= 0 ? "pos" : "neg"}`;
+  const ik = ibanKey(tx.counterpartyIban, tx.amount);
+  if (ik && overridesByCounterparty[ik]) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
+  const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   if (key && overridesByCounterparty[key]) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
 
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };

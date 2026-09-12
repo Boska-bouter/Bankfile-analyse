@@ -99,6 +99,7 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
   const [amountMax, setAmountMax] = useState("");
   const [amountSign, setAmountSign] = useState("beide"); // "beide" | "neg" | "pos"
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [onlyUncertain, setOnlyUncertain] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
@@ -135,10 +136,13 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
         return true;
       });
     }
+    if (onlyUncertain) {
+      rows = rows.filter((t) => t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback"));
+    }
     return rows;
-  }, [group.items, query, amountMin, amountMax, amountSign, dateFrom, dateTo]);
+  }, [group.items, query, amountMin, amountMax, amountSign, dateFrom, dateTo, onlyUncertain]);
 
-  const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo;
+  const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || onlyUncertain;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white">
@@ -219,6 +223,15 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
                 </div>
               )}
             </div>
+            <button
+              onClick={() => setOnlyUncertain((v) => !v)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                onlyUncertain ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-300 bg-white text-slate-600"
+              }`}
+              title="Toon alleen transacties met 🟡/🔴 classificatiezekerheid"
+            >
+              🟡🔴 Onzeker{onlyUncertain ? " ✓" : ""}
+            </button>
           </div>
         </div>
         {hasActiveFilter && (
@@ -259,7 +272,14 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
                       </span>
                     </td>
                   )}
-                  <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">{t.date.toLocaleDateString("nl-NL")}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
+                    {t.confidence && (
+                      <span className="mr-1" title={t.confidence.label}>
+                        {{ override: "🟢", keyword: "🟢", heuristic: "🟡", fallback: "🔴" }[t.confidence.level]}
+                      </span>
+                    )}
+                    {t.date.toLocaleDateString("nl-NL")}
+                  </td>
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">
                     <select
