@@ -56,6 +56,36 @@ export function buildTransactions(parsedFiles) {
   return out;
 }
 
+// Controlepas voor het importcontrolescherm: telt per bestand hoeveel regels zijn overgeslagen
+// (geen leesbare datum/bedrag) — dat gebeurt in buildTransactions() hierboven stilzwijgend, maar
+// hier maken we dat zichtbaar, samen met periode, ontbrekende tegenpartij en de saldo-check.
+export function computeImportDiagnostics(parsedFiles, allTransactions) {
+  return parsedFiles.map((pf) => {
+    const { rows, mapping, sourceLabel } = pf;
+    let skippedNoDate = 0, skippedBadAmount = 0;
+    for (const r of rows) {
+      const dateRaw = mapping.date ? r[mapping.date] : null;
+      const date = parseDate(dateRaw);
+      if (!date) {
+        skippedNoDate++;
+        continue;
+      }
+      const amount = mapping.amount ? parseEuroNumber(r[mapping.amount]) : NaN;
+      if (isNaN(amount)) skippedBadAmount++;
+    }
+    const fileTx = allTransactions.filter((t) => t.source === sourceLabel);
+    const missingCounterparty = fileTx.filter((t) => !t.counterparty && !t.description).length;
+    const dates = fileTx.map((t) => t.date.getTime());
+    const from = dates.length ? new Date(Math.min(...dates)) : null;
+    const to = dates.length ? new Date(Math.max(...dates)) : null;
+    const balanceCheck = checkBalanceConsistency(fileTx);
+    return {
+      fileName: sourceLabel, totalRows: rows.length, importedCount: fileTx.length,
+      skippedNoDate, skippedBadAmount, missingCounterparty, from, to, balanceCheck,
+    };
+  });
+}
+
 // Controleert of het opgetelde bedrag van alle transacties overeenkomt met het verschil tussen
 // het eerste en laatste "saldo na mutatie" — brengt ontbrekende of dubbel ingelezen transacties
 // aan het licht. Retourneert null als er geen saldokolom is.

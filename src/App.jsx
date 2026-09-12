@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, checkBalanceConsistency } from "./importers/transactions.js";
+import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics } from "./importers/transactions.js";
+import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
@@ -259,6 +260,7 @@ export default function App() {
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
+  const importDiagnostics = useMemo(() => computeImportDiagnostics(parsedFiles, allTransactions), [parsedFiles, allTransactions]);
 
   const { fingerprintByTxId, duplicateGroups, duplicateFingerprints } = useMemo(
     () => computeDuplicateInfo(allTransactions),
@@ -1116,6 +1118,8 @@ export default function App() {
             onClose={() => setReviewFileModal(null)}
           />
         )}
+
+        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} />
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
