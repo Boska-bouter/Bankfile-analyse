@@ -1,5 +1,6 @@
 import { parseDate } from "../utils/dates.js";
 import { parseEuroNumber } from "../utils/amounts.js";
+import { normalizeIban } from "../utils/normalization.js";
 
 export function buildTransactions(parsedFiles) {
   const out = [];
@@ -20,6 +21,7 @@ export function buildTransactions(parsedFiles) {
         amount = Math.abs(amount) * (isAf && !isBij ? -1 : 1);
       }
       const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
+      const counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
       const description = mapping.description ? String(r[mapping.description] || "").trim() : "";
       const fullDescription = mapping.fullDescription ? String(r[mapping.fullDescription] || "").trim() : description;
       const balance = mapping.balance ? parseEuroNumber(r[mapping.balance]) : NaN;
@@ -30,6 +32,7 @@ export function buildTransactions(parsedFiles) {
         month: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
         amount,
         counterparty,
+        counterpartyIban,
         description,
         fullDescription,
         source: sourceLabel,

@@ -14,7 +14,7 @@ import { computeLoanSummary, computeLeaseSummary } from "./tax/loanAmortization.
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey } from "./utils/normalization.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
   loadPersistedSettings, persistSettings, clearPersistedSettings,
@@ -40,6 +40,7 @@ import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
+import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
 import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
 import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
@@ -339,6 +340,10 @@ export default function App() {
     snapshotBeforeAction("KOR-instelling aangepast");
     setKorRegeling(value);
   };
+  const setOverridesByCounterpartyWithUndo = (updater) => {
+    snapshotBeforeAction("Tegenpartijregel verwijderd");
+    setOverridesByCounterparty(updater);
+  };
 
   const removeDuplicates = () => {
     snapshotBeforeAction("Duplicaten verwijderen");
@@ -513,18 +518,21 @@ export default function App() {
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
   // — anders zou die voorrang blijven houden boven deze bredere wijziging.
-  const setCounterpartyOverride = (counterparty, amount, patch) => {
+  // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
+  // wanneer het bankbestand een tegenrekening-IBAN bevatte, zowel bij het opslaan van een
+  // correctie als bij het zoeken naar "vergelijkbare transacties van dezelfde tegenpartij".
+  const keyForTx = (tx) => ibanKey(tx.counterpartyIban, tx.amount) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
+
+  const setCounterpartyOverride = (counterparty, amount, patch, iban) => {
     snapshotBeforeAction("Categorie/type aangepast");
-    const key = counterpartyKey(counterparty, amount);
+    const key = (iban && ibanKey(iban, amount)) || counterpartyKey(counterparty, amount);
     if (!key) return;
     setOverridesByCounterparty((prev) => ({
       ...prev,
       [key]: { ...(prev[key] || {}), ...patch, displayName: prev[key]?.displayName || counterparty, sign: amount >= 0 ? "pos" : "neg" },
     }));
     setOverridesByRow((prev) => {
-      const idsToClear = classified
-        .filter((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount) === key)
-        .map((tx) => tx.id);
+      const idsToClear = classified.filter((tx) => keyForTx(tx) === key).map((tx) => tx.id);
       if (idsToClear.length === 0) return prev;
       let changed = false;
       const next = { ...prev };
@@ -547,40 +555,38 @@ export default function App() {
   // bij een unieke tegenpartij (of geen bruikbare naam) wordt de wijziging direct doorgevoerd. ----
   const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
   const requestCategoryChange = (tx, patch) => {
-    const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    const key = keyForTx(tx);
     if (!key) {
       snapshotBeforeAction("Categorie/type aangepast");
       setRowOverride(tx.id, patch);
       return;
     }
-    const matches = classified.filter((t) => !t.isMirror && counterpartyKey(t.counterparty || t.description, t.amount) === key);
+    const matches = classified.filter((t) => !t.isMirror && keyForTx(t) === key);
     if (matches.length <= 1) {
       snapshotBeforeAction("Categorie/type aangepast");
       if (tx.id != null) setRowOverride(tx.id, patch);
-      else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+      else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
       return;
     }
     const matchYears = [...new Set(matches.map((t) => t.year))].sort((a, b) => a - b);
-    setPendingCategoryChange({ tx, patch, key, matchCount: matches.length, matchYears });
+    setPendingCategoryChange({ tx, patch, key, matchCount: matches.length, matchYears, viaIban: key.startsWith("IBAN::") });
   };
   const applyPendingToRowOnly = () => {
     const { tx, patch } = pendingCategoryChange;
     snapshotBeforeAction("Categorie/type aangepast");
     if (tx.id != null) setRowOverride(tx.id, patch);
-    else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+    else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     setPendingCategoryChange(null);
   };
   const applyPendingToAllYears = () => {
     const { tx, patch } = pendingCategoryChange;
-    setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch);
+    setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     setPendingCategoryChange(null);
   };
   const applyPendingToYears = (selectedYears) => {
     const { key, patch } = pendingCategoryChange;
     snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
-    const idsToPatch = classified
-      .filter((t) => !t.isMirror && counterpartyKey(t.counterparty || t.description, t.amount) === key && selectedYears.includes(t.year))
-      .map((t) => t.id);
+    const idsToPatch = classified.filter((t) => !t.isMirror && keyForTx(t) === key && selectedYears.includes(t.year)).map((t) => t.id);
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const id of idsToPatch) next[id] = { ...(next[id] || {}), ...patch };
@@ -1190,6 +1196,14 @@ export default function App() {
 
         {parsedFiles.length > 0 && (
           <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+        )}
+
+        {parsedFiles.length > 0 && (
+          <CounterpartyRulesPanel
+            overridesByCounterparty={overridesByCounterparty}
+            setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
+            onOpenHelp={setHelpPopupChapter}
+          />
         )}
 
         {parsedFiles.length > 0 && (

@@ -52,6 +52,20 @@ export function counterpartyKey(name, amount) {
   return `${base}::${amount >= 0 ? "pos" : "neg"}`;
 }
 
+// IBAN is een stabielere sleutel dan de naam: een bank kan "KPN B.V." de ene keer en "KPN Mobile
+// The Netherlands" de andere keer noemen, terwijl het rekeningnummer gelijk blijft. Alleen
+// beschikbaar als het bankbestand een tegenrekening-IBAN-kolom had (of, bij MT940, een
+// gestructureerd /IBAN/-subveld).
+export function normalizeIban(raw) {
+  return String(raw || "").replace(/\s+/g, "").toUpperCase();
+}
+
+export function ibanKey(iban, amount) {
+  const base = normalizeIban(iban);
+  if (!base || base.length < 8) return ""; // te kort om een echte IBAN te zijn
+  return `IBAN::${base}::${amount >= 0 ? "pos" : "neg"}`;
+}
+
 export function looksLikePerson(text) {
   const t = text.toLowerCase();
   if (COMPANY_HINTS.some((h) => t.includes(h))) return false;

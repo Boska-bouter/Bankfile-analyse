@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onClose }) {
-  const { tx, patch, matchCount, matchYears } = pending;
+  const { tx, patch, matchCount, matchYears, viaIban } = pending;
   const [selectedYears, setSelectedYears] = useState(matchYears);
 
   return (
@@ -16,9 +16,10 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
         </div>
         <div className="p-4 text-sm text-slate-600 space-y-3">
           <p>
-            Er zijn nog {matchCount - 1} andere transacties van <strong>"{tx.counterparty || tx.description}"</strong> met
+            Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met
             hetzelfde teken, naar <strong>{patch.category}</strong> ({patch.type}). Alleen deze ene transactie aanpassen,
             of ook de andere?
+            {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}
           </p>
           <div className="space-y-2">
             <button

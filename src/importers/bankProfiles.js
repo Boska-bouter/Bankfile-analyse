@@ -7,6 +7,10 @@ export const HEADER_ALIASES = {
   amount: ["bedrag (eur)", "bedrag", "amount", "bedrag eur"],
   afbij: ["af/bij", "af bij", "afbij", "creditdebet", "credit debet", "d/c", "mutatiesoort", "debit/credit", "type"],
   counterparty: ["naam tegenpartij", "tegenpartij", "naam / omschrijving", "naam", "tegenrekeninghouder", "naam uiteindelijke partij", "naam initierende partij"],
+  counterpartyIban: [
+    "tegenrekening iban/bban", "tegenrekening iban", "tegenrekening", "iban tegenpartij", "counterparty iban",
+    "iban/bban", "rekening tegenpartij", "iban",
+  ],
   description: ["omschrijving", "mededelingen", "omschrijving-1", "description"],
   fullDescription: ["volledige omschrijving", "omschrijving-1", "mededelingen", "omschrijving-2", "omschrijving-3"],
   balance: [
@@ -35,6 +39,7 @@ export function buildColumnMapping(headers) {
     amount: guessColumn(headers, HEADER_ALIASES.amount),
     afbij: guessColumn(headers, HEADER_ALIASES.afbij),
     counterparty: guessColumn(headers, HEADER_ALIASES.counterparty),
+    counterpartyIban: guessColumn(headers, HEADER_ALIASES.counterpartyIban),
     description: guessColumn(headers, HEADER_ALIASES.description),
     fullDescription: guessColumn(headers, HEADER_ALIASES.fullDescription),
     balance: guessColumn(headers, HEADER_ALIASES.balance),

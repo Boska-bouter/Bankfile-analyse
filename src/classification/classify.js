@@ -1,5 +1,5 @@
 import { SPLIT_CATEGORY_NAMES } from "./categories.js";
-import { looksLikePerson, counterpartyKey } from "../utils/normalization.js";
+import { looksLikePerson, counterpartyKey, ibanKey } from "../utils/normalization.js";
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
@@ -56,6 +56,10 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow) {
   if (overridesByRow[tx.id]) return overridesByRow[tx.id];
+  // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
+  // wanneer het bankbestand een tegenrekening-IBAN bevatte.
+  const ik = ibanKey(tx.counterpartyIban, tx.amount);
+  if (ik && overridesByCounterparty[ik]) return overridesByCounterparty[ik];
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   if (key && overridesByCounterparty[key]) return overridesByCounterparty[key];
   return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType);

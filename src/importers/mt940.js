@@ -18,9 +18,10 @@ export function parseMT940Field86(text) {
   if (found) {
     const counterparty = tags.NAME || tags.EREF || "";
     const description = tags.REMI || tags.RTRN || text;
-    return { counterparty, description };
+    const iban = tags.IBAN || "";
+    return { counterparty, description, iban };
   }
-  return { counterparty: text, description: text };
+  return { counterparty: text, description: text, iban: "" };
 }
 
 export function parseMT940(text) {
@@ -49,7 +50,7 @@ export function parseMT940(text) {
             j++;
           }
         }
-        const { counterparty, description } = parseMT940Field86(field86.trim());
+        const { counterparty, description, iban } = parseMT940Field86(field86.trim());
         const yyyy = "20" + valueDate.slice(0, 2);
         const mm = valueDate.slice(2, 4);
         const dd = valueDate.slice(4, 6);
@@ -59,6 +60,7 @@ export function parseMT940(text) {
           "Af Bij": isCredit ? "C" : "D",
           "Bedrag (EUR)": amountRaw,
           "Omschrijving": description || "",
+          "Tegenrekening IBAN/BBAN": iban || "",
         });
         i = j;
         continue;

@@ -182,4 +182,18 @@ export const HELP_CHAPTERS = [
       </p>
     ),
   },
+  {
+    key: "tegenpartijregels",
+    titel: "Tegenpartijregels",
+    inhoud: (
+      <p>
+        Elke keer dat je in de detailtabel een categorie of type corrigeert, onthoudt de tool dat voortaan voor
+        diezelfde tegenpartij — in alle jaren. Bevat het bankbestand een tegenrekening-IBAN, dan wordt die als sleutel
+        gebruikt in plaats van de naam: dat is stabieler, want een bank kan dezelfde rekening de ene keer "KPN B.V."
+        en de andere keer "KPN Mobile" noemen, terwijl het rekeningnummer gelijk blijft. Zonder IBAN in het
+        bankbestand wordt de (genormaliseerde) naam gebruikt. Een regel verwijderen laat de betrokken transacties
+        terugvallen op de automatische classificatie.
+      </p>
+    ),
+  },
 ];
