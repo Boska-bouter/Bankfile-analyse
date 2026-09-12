@@ -16,7 +16,7 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
-  { name: "Boekhouder & advies", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekantoor", "accountant", "adviesbureau"] },
+  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekantoor", "accountant", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland"] },
   { name: "Boodschappen", color: "bg-lime-100 text-lime-800", keywords: ["jumbo", "albert heijn", " ah ", "ah to go", "dirk", "linders", "jan linders", "nettorama", "aldi", "lidl", "coop", " plus ", "dekamarkt", "deka markt", "ekoplaza", "spar", "kruidvat", "etos", "vomar", "supersam", "supermarkt", "van cranenbroek"] },
   { name: "Brandstof", color: "bg-orange-100 text-orange-800", keywords: ["shell", "esso", "esso express", "total", "lukoil", "avia", " bp ", "argos", "tamoil", "tinq", "haan", "texaco", "agri", "firezone", "tango", "gulf", "autofood", "travelcard", "wasstraat", "wasbox"] },
   { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf"] },
@@ -24,9 +24,10 @@ export const DEFAULT_RULES = [
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: ["flanderijn", "kancelaria adwokacka", "stichting derdengelden", "ggn", "centraal justitieel incass", "pkg tax", "trust krediet beheer", "groenendaal", "dutch finance"] },
   { name: "Inhuur personeel", color: "bg-indigo-200 text-indigo-900", keywords: ["randstad", "adecco", "tempo-team", "tempo team", "yacht", "uitzendbureau", "detachering"] },
+  { name: "Toeslagen", color: "bg-emerald-50 text-emerald-700", keywords: ["kindertoeslag", "huurtoeslag", "zorgtoeslag", "kinderopvangtoeslag", "belastingdienst/toeslagen", "toeslagen"],
+    description: "Ontvangen toeslagen van de Belastingdienst — kindertoeslag, huurtoeslag, zorgtoeslag en overige toeslagen. Persoonlijk inkomen, geen zakelijke omzet." },
   { name: "Leningen", color: "bg-orange-200 text-orange-900", keywords: ["duo", "dienst uitvoering onderwijs", "lening", "geldlening"],
     description: "Leningen van derden — bijv. van familie/privépersonen, DUO (studiefinanciering/lesgeld-lening), of een commerciële lening bij een bank of andere kredietverstrekker. Zowel het opnemen als het aflossen van zo'n lening kan hier terechtkomen." },
-  { name: "Loonadministratie", color: "bg-indigo-100 text-indigo-900", keywords: ["loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland"] },
   { name: "Uitbetalen loon", color: "bg-sky-100 text-sky-800", keywords: ["salaris", "nettoloon", "netto loon", "loonbetaling", "loon"],
     description: "Uitbetaald loon/salaris aan personeel. Het losse woord \"loon\" staat expres pas hier — de meer specifieke regels hierboven (loonheffing, loonadministratie) hebben voorrang." },
   { name: "Betaalautomaat kosten", color: "bg-slate-100 text-slate-700", keywords: ["sumup", "mollie", "ccv", "payleven", "adyen", "pin transactiekosten", "betaalautomaat", "pinautomaat"] },
@@ -58,8 +59,8 @@ export const DEFAULT_RULES = [
     "zorgverzekering", "zorgpremie", "zilveren kruis", " cz zorg", "cz zorgverzekering", "vgz", "menzis",
     "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering",
   ] },
-  { name: "Webshops & online aankopen", color: "bg-violet-100 text-violet-800", keywords: ["bol.com", "jd sports", "shein", "decathlon", "mediamarkt", "mms online", "booking.com", "gadgetsalarm", "crazzy digidz", "moonflash", "epplejeck", "payu", "adyen", "autoverleden", "alipay"] },
-  { name: "Winkels divers", color: "bg-lime-200 text-lime-900", keywords: [] },
+  { name: "Webshops & online aankopen", color: "bg-violet-100 text-violet-800", keywords: ["bol.com", "jd sports", "shein", "decathlon", "mediamarkt", "mms online", "booking.com", "gadgetsalarm", "crazzy digidz", "moonflash", "epplejeck", "payu", "adyen", "autoverleden", "alipay"],
+    description: "Online aankopen en losse winkelaankopen die niet specifiek onder een andere categorie vallen." },
   { name: "Zakelijke uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
     description: "Algemene zakelijke kosten die nergens anders onder vallen." },
 ];
@@ -71,13 +72,13 @@ export const SPLIT_CATEGORY_NAMES = {
 
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
-  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Boekhouder & advies", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Loonadministratie", "Marketing-website", "Overboekingen aan personen",
+  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
+  "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen",
   "Terugboeking van prive",
-  "Reiskosten (OV)", "Specials", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie",
+  "Reiskosten (OV)", "Specials", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
-  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke uitgaven",
+  "Webshops & online aankopen", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
 export const CATEGORY_COLOR = Object.fromEntries([
@@ -103,14 +104,14 @@ export const NEW_CATEGORY_PALETTE = [
 export const DEFAULT_FIXED_CATEGORIES = [
   "Bankkosten", "Belastingen: LH", "Belastingen: MRB", "Belastingen: ZVW",
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
-  "Lease (operationeel)", "Lease (financieel)", "Leningen", "Loonadministratie",
+  "Lease (operationeel)", "Lease (financieel)", "Leningen", "Boekhouder, accountant & administratie",
   "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
   "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
 ];
 
 export const INCOME_TRANSFER_CATEGORIES = [
-  "Zakelijke inkomsten", "Inkomsten", "Verkoop activa",
+  "Zakelijke inkomsten", "Inkomsten", "Verkoop activa", "Toeslagen",
   "Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive",
   "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar",
 ];
@@ -129,6 +130,9 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Prive Hypotheek": "Hypotheek",
   "Lease": "Lease (operationeel)",
   "Belastingen: Naheffingen voorgaande jaren": "Belastingen: Naheffingen OB voorgaande jaren",
+  "Loonadministratie": "Boekhouder, accountant & administratie",
+  "Boekhouder & advies": "Boekhouder, accountant & administratie",
+  "Winkels divers": "Webshops & online aankopen",
 };
 
 export function migrateLegacyCategoryName(name) {
@@ -155,8 +159,14 @@ export function mergeCategoryRules(savedRules) {
   const rawSaved = Array.isArray(savedRules) ? savedRules : [];
   const saved = rawSaved.map((r) => ({ ...r, name: migrateLegacyCategoryName(r.name) }));
   const merged = DEFAULT_RULES.map((defRule) => {
-    const match = saved.find((r) => r.name === defRule.name);
-    return match ? { ...defRule, keywords: match.keywords } : defRule;
+    // Meerdere oudere namen kunnen na hernoemen op dezelfde nieuwe naam uitkomen (bijv. een
+    // eerder losse "Loonadministratie" en "Boekhouder & advies" zijn nu allebei "Boekhouder,
+    // accountant & administratie") — dan combineren we hun keywords, in plaats van dat de een de
+    // ander overschrijft.
+    const matches = saved.filter((r) => r.name === defRule.name);
+    if (matches.length === 0) return defRule;
+    const combinedKeywords = [...new Set(matches.flatMap((m) => m.keywords || []))];
+    return { ...defRule, keywords: combinedKeywords };
   });
   const custom = saved.filter((r) => !DEFAULT_RULES.some((d) => d.name === r.name) && !(r.name in LEGACY_CATEGORY_RENAMES));
   for (const c of custom) registerCategory(c.name, c.color);
@@ -234,7 +244,7 @@ export const SUBTYPE_TO_MAIN = {
   "Belastingen: Naheffingen OB voorgaande jaren": "Belastingen & heffingen",
   "Belastingen: Naheffingen LH voorgaande jaren": "Belastingen & heffingen",
   "Belastingen: Naheffingen IB voorgaande jaren": "Belastingen & heffingen",
-  "Boekhouder & advies": "Boekhouding & advies",
+  "Boekhouder, accountant & administratie": "Boekhouding & advies",
   "Boodschappen": "Privé",
   "Brandstof": "Vervoer & auto",
   "Energie-water": "Huisvesting",
@@ -249,7 +259,6 @@ export const SUBTYPE_TO_MAIN = {
   "Lease (operationeel)": "Vervoer & auto",
   "Lease (financieel)": "Financiering",
   "Leningen": "Financiering",
-  "Loonadministratie": "Personeel",
   "Marketing-website": "Marketing & verkoop",
   "Overboekingen aan personen": "Privé",
   "Overig": "Nog te beoordelen",
@@ -262,6 +271,7 @@ export const SUBTYPE_TO_MAIN = {
   "Terugboeking van prive": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
   "Specials": "Overig zakelijk",
+  "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
   "Uitbetaling aan prive": "Privé",
   "Prive - vrijetijd-uitgaan-vakantie": "Privé",
@@ -272,7 +282,6 @@ export const SUBTYPE_TO_MAIN = {
   "Verzekering: Zakelijk": "Verzekeringen",
   "Verzekering: Ziektekosten": "Privé",
   "Webshops & online aankopen": "Inkoop & zakelijke uitgaven",
-  "Winkels divers": "Inkoop & zakelijke uitgaven",
   "Zakelijk - apparatuur/machines": "Apparatuur & inventaris",
   "Zakelijk mobiel/internet": "Telecom & abonnementen",
   "Zakelijk overige abonnementen": "Telecom & abonnementen",
@@ -295,7 +304,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Marketing & verkoop": "Marketing-website",
   "Telecom & abonnementen": "Zakelijk overige abonnementen",
   "Verzekeringen": "Verzekering: Zakelijk",
-  "Boekhouding & advies": "Boekhouder & advies",
+  "Boekhouding & advies": "Boekhouder, accountant & administratie",
   "Bank & betaalverkeer": "Bankkosten",
   "Juridisch & incasso": "Incasso, juridisch & schulden",
   "Financiering": "Leningen",
