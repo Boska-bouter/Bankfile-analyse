@@ -545,6 +545,16 @@ export default function App() {
   // jaren? Alleen gevraagd als er ook echt meerdere transacties van dezelfde tegenpartij zijn —
   // bij een unieke tegenpartij (of geen bruikbare naam) wordt de wijziging direct doorgevoerd. ----
   const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
+  // Een 🟡/🔴-classificatie die bij nazien gewoon klopt: dit legt 'm vast als bevestigde regel
+  // (net als een echte correctie, alleen zonder iets te wijzigen) — voortaan dus 🟢, en geldt
+  // meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
+  const confirmClassificationCorrect = (tx) => {
+    snapshotBeforeAction("Classificatie bevestigd");
+    const patch = { category: tx.category, type: tx.type };
+    if (keyForTx(tx)) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
+    else setRowOverride(tx.id, patch);
+  };
+
   const requestCategoryChange = (tx, patch) => {
     const key = keyForTx(tx);
     if (!key) {
@@ -1132,7 +1142,7 @@ export default function App() {
 
         {transactions.length > 0 && (
           <div ref={confidenceSectionRef}>
-            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} />
+            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} />
           </div>
         )}
 
@@ -1538,6 +1548,7 @@ export default function App() {
                       <DetailTable
                         group={zakGroupForYear}
                         onRequestChange={requestCategoryChange}
+                        onConfirmCorrect={confirmClassificationCorrect}
                         enableDrag
                         onRowDragStart={startRowDrag}
                         draggingTxId={dragState ? dragState.tx.id : null}
@@ -1555,6 +1566,7 @@ export default function App() {
                       <DetailTable
                         group={priGroupForYear}
                         onRequestChange={requestCategoryChange}
+                        onConfirmCorrect={confirmClassificationCorrect}
                         enableDrag
                         onRowDragStart={startRowDrag}
                         draggingTxId={dragState ? dragState.tx.id : null}

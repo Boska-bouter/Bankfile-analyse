@@ -213,6 +213,11 @@ export const HELP_CHAPTERS = [
           indeling tot stand kwam, zodat je niet alles hoeft na te lopen: de 🟢-transacties zijn met vertrouwen
           ingedeeld, de 🟡/🔴-transacties zijn de moeite van het bekijken waard.
         </p>
+        <p>
+          Klopt een 🟡/🔴-indeling bij nazien gewoon? Dan hoef je 'm niet te wijzigen om 'm te bevestigen — het
+          "✓ Klopt zo"-knopje (in de detailtabel naast het icoontje, of hier in deze lijst) legt de huidige indeling
+          vast als bevestigde regel, zonder iets te veranderen. Vanaf dan is die tegenpartij 🟢.
+        </p>
       </div>
     ),
   },

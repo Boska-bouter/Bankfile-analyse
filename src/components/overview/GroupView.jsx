@@ -92,7 +92,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
+export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountMin, setAmountMin] = useState("");
@@ -273,12 +273,23 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
                     </td>
                   )}
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
-                    {t.confidence && (
-                      <span className="mr-1" title={t.confidence.label}>
-                        {{ override: "🟢", keyword: "🟢", heuristic: "🟡", fallback: "🔴" }[t.confidence.level]}
-                      </span>
-                    )}
-                    {t.date.toLocaleDateString("nl-NL")}
+                    <span className="inline-flex items-center gap-1">
+                      {t.confidence && (
+                        <span title={t.confidence.label}>
+                          {{ override: "🟢", keyword: "🟢", heuristic: "🟡", fallback: "🔴" }[t.confidence.level]}
+                        </span>
+                      )}
+                      {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && onConfirmCorrect && (
+                        <button
+                          onClick={() => onConfirmCorrect(t)}
+                          className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded px-0.5"
+                          title="Klopt zo — markeer deze indeling als bevestigd (wordt voortaan 🟢)"
+                        >
+                          ✓
+                        </button>
+                      )}
+                      {t.date.toLocaleDateString("nl-NL")}
+                    </span>
                   </td>
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">

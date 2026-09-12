@@ -9,7 +9,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, onOpenHelp }) {
+export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -62,6 +62,15 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp }
                   </div>
                   <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[tx.category] || "bg-slate-200 text-slate-700"}`}>{tx.category}</span>
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
+                  {onConfirmCorrect && (
+                    <button
+                      onClick={() => onConfirmCorrect(tx)}
+                      className="shrink-0 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded px-1 py-0.5"
+                      title="Klopt zo — markeer deze indeling als bevestigd (wordt voortaan 🟢)"
+                    >
+                      ✓ Klopt zo
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
