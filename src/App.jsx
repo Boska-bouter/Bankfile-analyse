@@ -546,13 +546,12 @@ export default function App() {
   // bij een unieke tegenpartij (of geen bruikbare naam) wordt de wijziging direct doorgevoerd. ----
   const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
   // Een 🟡/🔴-classificatie die bij nazien gewoon klopt: dit legt 'm vast als bevestigde regel
-  // (net als een echte correctie, alleen zonder iets te wijzigen) — voortaan dus 🟢, en geldt
-  // meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
+  // (net als een echte correctie, alleen met dezelfde categorie/type als nu al gold) — voortaan
+  // dus 🟢. Loopt bewust via dezelfde requestCategoryChange-vraag als een echte wijziging: bij
+  // meerdere vergelijkbare transacties vraagt de tool of dit voor alle jaren moet gelden, of voor
+  // zelf gekozen jaren.
   const confirmClassificationCorrect = (tx) => {
-    snapshotBeforeAction("Classificatie bevestigd");
-    const patch = { category: tx.category, type: tx.type };
-    if (keyForTx(tx)) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
-    else setRowOverride(tx.id, patch);
+    requestCategoryChange(tx, { category: tx.category, type: tx.type });
   };
 
   const requestCategoryChange = (tx, patch) => {

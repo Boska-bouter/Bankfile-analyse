@@ -4,12 +4,15 @@ import { X } from "lucide-react";
 export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onClose }) {
   const { tx, patch, matchCount, matchYears, viaIban } = pending;
   const [selectedYears, setSelectedYears] = useState(matchYears);
+  const isConfirmOnly = patch.category === tx.category && patch.type === tx.type;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
-          <p className="text-sm font-semibold text-slate-800">Wijziging toepassen op meerdere transacties?</p>
+          <p className="text-sm font-semibold text-slate-800">
+            {isConfirmOnly ? "Bevestiging toepassen op meerdere transacties?" : "Wijziging toepassen op meerdere transacties?"}
+          </p>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0">
             <X className="h-4 w-4" />
           </button>
@@ -17,8 +20,13 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
         <div className="p-4 text-sm text-slate-600 space-y-3">
           <p>
             Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met
-            hetzelfde teken, naar <strong>{patch.category}</strong> ({patch.type}). Alleen deze ene transactie aanpassen,
-            of ook de andere?
+            hetzelfde teken.{" "}
+            {isConfirmOnly ? (
+              <>Ook voor die transacties bevestigen dat <strong>{patch.category}</strong> ({patch.type}) klopt?</>
+            ) : (
+              <>Naar <strong>{patch.category}</strong> ({patch.type}).</>
+            )}{" "}
+            Alleen deze ene transactie {isConfirmOnly ? "bevestigen" : "aanpassen"}, of ook de andere?
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}
           </p>
           <div className="space-y-2">
