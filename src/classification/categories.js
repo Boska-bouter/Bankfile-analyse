@@ -52,14 +52,21 @@ export const DEFAULT_RULES = [
     description: "Uitbetaald loon/salaris aan personeel. Het losse woord \"loon\" staat expres pas hier — de meer specifieke regels hierboven (loonheffing, loonadministratie) hebben voorrang." },
   { name: "Betaalautomaat kosten", color: "bg-slate-100 text-slate-700", keywords: ["sumup", "mollie", "ccv", "payleven", "adyen", "pin transactiekosten", "betaalautomaat", "pinautomaat"] },
   { name: "Onderhoud apparatuur/machines", color: "bg-orange-100 text-orange-800", keywords: [] },
-  { name: "Specials", color: "bg-rose-200 text-rose-900", keywords: [],
-    description: "Betalingen aan uiteenlopende, minder gangbare derde partijen die je bewust apart wilt houden van de rest." },
+  { name: "Overige gevoelige uitgaven", color: "bg-slate-700 text-slate-100", keywords: [],
+    description: "Persoonlijke, vertrouwelijke uitgaven die niet specifiek Gokken, Dating, Adult content of Drugs zijn, maar wel bewust apart gehouden worden van de rest." },
+  { name: "Gokken", color: "bg-slate-600 text-slate-100", keywords: [
+    "holland casino", "jack's casino", "jacks casino", "circus casino", "toto.nl", "nederlandse loterij",
+    "staatsloterij", "postcode loterij", "pokerstars", "unibet", "bet365", "betcity", "kansino",
+    "napoleon games", "bingoal",
+  ] },
+  { name: "Dating", color: "bg-slate-600 text-slate-100", keywords: ["tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn"] },
+  { name: "Adult content", color: "bg-slate-600 text-slate-100", keywords: ["onlyfans"] },
+  { name: "Drugs", color: "bg-slate-600 text-slate-100", keywords: ["coffeeshop"],
+    description: "Alleen \"coffeeshop\" (legale cannabisverkoop) wordt automatisch herkend — overige uitgaven in deze categorie zijn handmatig toe te wijzen." },
   { name: "Personeel: overig", color: "bg-indigo-50 text-indigo-800", keywords: [],
     description: "Personeelskosten die niet specifiek Inhuur, Uitbetaald loon of Loonadministratie zijn." },
   { name: "Belastingen: overig", color: "bg-fuchsia-50 text-fuchsia-700", keywords: [],
     description: "Belastingen/heffingen waarvan nog niet duidelijk is om welk specifiek type het gaat (OB, LH, MRB, ZVW, IH) — later te verfijnen." },
-  { name: "Overig zakelijk: overig", color: "bg-rose-100 text-rose-700", keywords: [],
-    description: "Zakelijke kosten die niet onder een van de andere hoofdcategorieën vallen." },
   { name: "Prive: overig", color: "bg-stone-100 text-stone-700", keywords: [],
     description: "Privé-uitgaven/inkomsten die niet specifiek onder een van de andere privé-subtypes vallen." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
@@ -90,10 +97,6 @@ export const DEFAULT_RULES = [
   { name: "Prive - vrijetijd-uitgaan-vakantie", color: "bg-teal-50 text-teal-700", keywords: ["takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "cinema", "restaurant", "cafe"] },
   { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente"] },
   { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
-  { name: "Verzekering: Overig", color: "bg-sky-200 text-sky-900", keywords: [
-    "asr schade", "allianz", "independer", "assuradeur", "anwb", "nationale-nederlanden", "nationale nederlanden",
-    "interpolis", "ohra", "centraal beheer", "aegon", "reaal", "ditzo", "fbto", "univé", "unive",
-  ] },
   { name: "Verzekering: Wonen", color: "bg-sky-300 text-sky-900", keywords: ["opstalverzekering", "inboedelverzekering", "woonverzekering", "woonhuisverzekering"] },
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: ["bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb"] },
   { name: "Verzekering: Ziektekosten", color: "bg-teal-100 text-teal-800", keywords: [
@@ -122,13 +125,13 @@ export const SPLIT_CATEGORY_NAMES = {
 };
 
 export const CATEGORY_ORDER = [
-  "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
-  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
+  "Adult content", "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
+  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Dating", "Drugs", "Energie-water", "Gemeentelijke kosten", "Gokken",
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
-  "Overig", "Overig zakelijk: overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
+  "Overig", "Overige gevoelige uitgaven", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
   "Terugboeking van prive",
-  "Reiskosten (OV)", "Specials", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie",
-  "Verkoop activa", "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
+  "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie",
+  "Verkoop activa", "Verzekering: Auto", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
   "Webshops & online aankopen", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -157,7 +160,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
   "Lease (operationeel)", "Lease (financieel)", "Leningen", "Boekhouder, accountant & administratie",
   "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
-  "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
+  "Verzekering: Auto", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
 ];
 
@@ -173,6 +176,9 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Zakelijke inkoop": "Zakelijke uitgaven",
   "Telecom & abonnementen": "Zakelijk mobiel/internet",
   "Energie": "Energie-water",
+  "Specials": "Overige gevoelige uitgaven",
+  "Overig zakelijk: overig": "Zakelijke uitgaven",
+  "Verzekering: Overig": "Prive: overig",
   "Uitgaan": "Prive - vrijetijd-uitgaan-vakantie",
   "Prive mobiel/internet": "Prive - mobiel/internet",
   "Prive Vakantie - uitstapjes": "Prive - vrijetijd-uitgaan-vakantie",
@@ -261,8 +267,8 @@ export function migrateOverridesMap(map, counterpartyKeyFn) {
 export const MAIN_CATEGORY_ORDER = [
   "Zakelijke inkomsten", "Huisvesting", "Vervoer & auto", "Inkoop & zakelijke uitgaven",
   "Apparatuur & inventaris", "Personeel", "Telecom & abonnementen",
-  "Verzekeringen", "Boekhouding & advies",
-  "Financiering", "Belastingen & heffingen", "Overig zakelijk", "Privé", "Nog te beoordelen",
+  "Boekhouding & advies",
+  "Financiering", "Belastingen & heffingen", "Privé", "Persoonlijk & vertrouwelijk", "Nog te beoordelen",
 ];
 
 export const MAIN_CATEGORY_COLOR = {
@@ -273,12 +279,11 @@ export const MAIN_CATEGORY_COLOR = {
   "Apparatuur & inventaris": "bg-orange-50 text-orange-700",
   "Personeel": "bg-indigo-200 text-indigo-900",
   "Telecom & abonnementen": "bg-indigo-100 text-indigo-800",
-  "Verzekeringen": "bg-sky-100 text-sky-800",
   "Boekhouding & advies": "bg-purple-100 text-purple-800",
   "Financiering": "bg-teal-200 text-teal-900",
   "Belastingen & heffingen": "bg-fuchsia-200 text-fuchsia-900",
-  "Overig zakelijk": "bg-rose-200 text-rose-900",
   "Privé": "bg-stone-200 text-stone-700",
+  "Persoonlijk & vertrouwelijk": "bg-slate-700 text-slate-100",
   "Nog te beoordelen": "bg-slate-200 text-slate-700",
 };
 
@@ -288,7 +293,7 @@ export const MAIN_CATEGORY_COLOR = {
 // motorkap gewoon dat subtype — alleen hun WEERGAVE valt hier onder een bredere hoofdcategorie.
 export const SUBTYPE_TO_MAIN = {
   "Autokosten": "Vervoer & auto",
-  "Bankkosten": "Overig zakelijk",
+  "Bankkosten": "Inkoop & zakelijke uitgaven",
   "Belastingen: IB": "Belastingen & heffingen",
   "Belastingen: IH": "Belastingen & heffingen",
   "Belastingen: LH": "Belastingen & heffingen",
@@ -306,7 +311,7 @@ export const SUBTYPE_TO_MAIN = {
   "Gemeentelijke kosten": "Huisvesting",
   "Huur": "Huisvesting",
   "Hypotheek": "Privé",
-  "Incasso, juridisch & schulden": "Overig zakelijk",
+  "Incasso, juridisch & schulden": "Privé",
   "Inhuur personeel": "Personeel",
   "Personeel: overig": "Personeel",
   "Inkomsten": "Zakelijke inkomsten",
@@ -315,19 +320,22 @@ export const SUBTYPE_TO_MAIN = {
   "Lease (operationeel)": "Vervoer & auto",
   "Lease (financieel)": "Financiering",
   "Leningen": "Financiering",
-  "Marketing-website": "Overig zakelijk",
+  "Marketing-website": "Inkoop & zakelijke uitgaven",
   "Overboekingen aan personen": "Privé",
   "Overig": "Nog te beoordelen",
   "Onderhoud apparatuur/machines": "Apparatuur & inventaris",
   "Parkeren": "Vervoer & auto",
-  "Betaalautomaat kosten": "Overig zakelijk",
+  "Betaalautomaat kosten": "Inkoop & zakelijke uitgaven",
   "Prive - mobiel/internet": "Privé",
   "Prive opnames": "Privé",
   "Prive overige abonnementen": "Privé",
   "Terugboeking van prive": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
-  "Specials": "Privé",
-  "Overig zakelijk: overig": "Overig zakelijk",
+  "Overige gevoelige uitgaven": "Persoonlijk & vertrouwelijk",
+  "Gokken": "Persoonlijk & vertrouwelijk",
+  "Dating": "Persoonlijk & vertrouwelijk",
+  "Adult content": "Persoonlijk & vertrouwelijk",
+  "Drugs": "Persoonlijk & vertrouwelijk",
   "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
   "Uitbetaling aan prive": "Privé",
@@ -335,11 +343,10 @@ export const SUBTYPE_TO_MAIN = {
   "Prive: overig": "Privé",
   "Verkoop activa": "Zakelijke inkomsten",
   "Verzekering: Auto": "Vervoer & auto",
-  "Verzekering: Overig": "Verzekeringen",
   "Verzekering: Wonen": "Privé",
-  "Verzekering: Zakelijk": "Verzekeringen",
+  "Verzekering: Zakelijk": "Inkoop & zakelijke uitgaven",
   "Verzekering: Ziektekosten": "Privé",
-  "Webshops & online aankopen": "Inkoop & zakelijke uitgaven",
+  "Webshops & online aankopen": "Privé",
   "Zakelijk - apparatuur/machines": "Apparatuur & inventaris",
   "Zakelijk mobiel/internet": "Telecom & abonnementen",
   "Zakelijk overige abonnementen": "Telecom & abonnementen",
@@ -360,19 +367,18 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Apparatuur & inventaris": "Zakelijk - apparatuur/machines",
   "Personeel": "Personeel: overig",
   "Telecom & abonnementen": "Zakelijk overige abonnementen",
-  "Verzekeringen": "Verzekering: Zakelijk",
   "Boekhouding & advies": "Boekhouder, accountant & administratie",
   "Financiering": "Leningen",
   "Belastingen & heffingen": "Belastingen: overig",
-  "Overig zakelijk": "Overig zakelijk: overig",
   "Privé": "Prive: overig",
+  "Persoonlijk & vertrouwelijk": "Overige gevoelige uitgaven",
   "Nog te beoordelen": "Overig",
 };
 
 // Hoofdcategorie voor een subtype — onbekende/custom subtypes (bijv. een zelf toegevoegde
-// categorie) vallen terug op "Overig zakelijk" zodat ze nooit onzichtbaar worden.
+// categorie) vallen terug op "Inkoop & zakelijke uitgaven" zodat ze nooit onzichtbaar worden.
 export function mainCategoryOf(subtype) {
-  return SUBTYPE_TO_MAIN[subtype] || "Overig zakelijk";
+  return SUBTYPE_TO_MAIN[subtype] || "Inkoop & zakelijke uitgaven";
 }
 
 // Alle subtypes die onder één hoofdcategorie vallen — voor de subtype-dropdown naast de

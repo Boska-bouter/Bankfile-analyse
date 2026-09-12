@@ -148,7 +148,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
               </button>
             </div>
             {newCategoryError && <p className="mt-1.5 text-xs text-rose-600">{newCategoryError}</p>}
-            <p className="mt-1.5 text-xs text-slate-400">Nieuwe categorieën komen vooralsnog onder "Overig zakelijk" te staan.</p>
+            <p className="mt-1.5 text-xs text-slate-400">Nieuwe categorieën komen vooralsnog onder "Inkoop & zakelijke uitgaven" te staan.</p>
           </div>
         </div>
       )}
