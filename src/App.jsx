@@ -84,6 +84,7 @@ export default function App() {
   const [korRegeling, setKorRegeling] = useState(null); // null = nog niet gevraagd
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
+  const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
   const [excludedManualFingerprints, setExcludedManualFingerprints] = useState([]);
   const [reviewFileModal, setReviewFileModal] = useState(null);
   const [businessKeywords, setBusinessKeywords] = useState([]);
@@ -1121,22 +1122,51 @@ export default function App() {
         <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
-          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-amber-900">
-                <strong>{pendingDuplicateCount} mogelijk dubbele transactie(s)</strong> gevonden (zelfde datum, bedrag
-                én omschrijving) — kan gebeuren als bankexports elkaar overlappen.
-              </p>
-              <div className="mt-2 flex gap-3">
-                <button onClick={removeDuplicates} className="text-xs font-medium text-amber-900 underline hover:no-underline">
-                  Duplicaten verwijderen (bewaar de eerste van elk stel)
-                </button>
-                <button onClick={() => setDismissedDuplicateNotice(true)} className="text-xs text-amber-700 hover:text-amber-900">
-                  Negeren
-                </button>
+          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50">
+            <div className="px-4 py-3 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-amber-900">
+                  <strong>{pendingDuplicateCount} mogelijk dubbele transactie(s)</strong> gevonden (zelfde datum, bedrag
+                  én omschrijving) — kan gebeuren als bankexports elkaar overlappen.
+                </p>
+                <div className="mt-2 flex gap-3">
+                  <button onClick={removeDuplicates} className="text-xs font-medium text-amber-900 underline hover:no-underline">
+                    Duplicaten verwijderen (bewaar de eerste van elk stel)
+                  </button>
+                  <button onClick={() => setShowDuplicateDetails((v) => !v)} className="text-xs font-medium text-amber-900 underline hover:no-underline">
+                    {showDuplicateDetails ? "Verberg details" : "Bekijk welke transacties"}
+                  </button>
+                  <button onClick={() => setDismissedDuplicateNotice(true)} className="text-xs text-amber-700 hover:text-amber-900">
+                    Negeren
+                  </button>
+                </div>
               </div>
             </div>
+            {showDuplicateDetails && (
+              <div className="px-4 pb-3 space-y-2">
+                {duplicateGroups.map((group) => {
+                  const files = [...new Set(group.map((t) => t.source))];
+                  const crossFile = files.length > 1;
+                  const first = group[0];
+                  return (
+                    <div key={group[0].fingerprint} className="rounded-md bg-white border border-amber-200 px-3 py-2 text-xs">
+                      <p className="text-slate-700">
+                        {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
+                        <span className="text-slate-400"> — {group.length}x</span>
+                      </p>
+                      {crossFile ? (
+                        <p className="mt-0.5 text-amber-700">
+                          ⚠ Komt voor in <strong>meerdere bestanden</strong>: {files.join(", ")} — waarschijnlijk overlappende exportperiodes.
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-slate-400">Komt {group.length}x voor binnen hetzelfde bestand ({files[0]}).</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
