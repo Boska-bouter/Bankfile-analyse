@@ -41,6 +41,7 @@ import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
+import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
@@ -117,6 +118,7 @@ export default function App() {
   const [personSearch, setPersonSearch] = useState("");
   const [showPersonReview, setShowPersonReview] = useState(true);
   const [showOverigReview, setShowOverigReview] = useState(true);
+  const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -402,6 +404,28 @@ export default function App() {
     }
     return { approved, review, unclear, needsReview: review + unclear, total: approved + review + unclear };
   }, [classified]);
+
+  // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
+  // bij (die twee categorieën leveren per definitie nooit 🟢 op), dus die tellen we apart en
+  // wijzen we liever naar de daarvoor bedoelde review-vensters dan dat we ze hier dupliceren. ----
+  const uncertainModalData = useMemo(() => {
+    if (!openConfidenceLevel) return null;
+    const all = classified.filter((tx) => !tx.isMirror && tx.confidence.level === openConfidenceLevel);
+    const overigCount = all.filter((tx) => tx.category === "Overig").length;
+    const personenCount = all.filter((tx) => tx.category === "Overboekingen aan personen").length;
+    const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
+    return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
+  }, [classified, openConfidenceLevel]);
+  const jumpToOverigFromModal = () => {
+    setOpenConfidenceLevel(null);
+    setShowOverigReview(true);
+    setTimeout(() => overigReviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+  const jumpToPersonenFromModal = () => {
+    setOpenConfidenceLevel(null);
+    setShowPersonReview(true);
+    setTimeout(() => personReviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   // ---- Inkomstenbronnen-review ----
   const incomeSummary = useMemo(() => computeIncomeSummary(transactions, accountTypeByFile), [transactions, accountTypeByFile]);
@@ -1058,6 +1082,19 @@ export default function App() {
           />
         )}
 
+        {openConfidenceLevel && uncertainModalData && (
+          <UncertainTransactionsModal
+            level={openConfidenceLevel}
+            transactions={uncertainModalData.transactions}
+            bulkCounts={uncertainModalData.bulkCounts}
+            onRequestChange={requestCategoryChange}
+            onConfirmCorrect={confirmClassificationCorrect}
+            onJumpToOverig={jumpToOverigFromModal}
+            onJumpToPersonen={jumpToPersonenFromModal}
+            onClose={() => setOpenConfidenceLevel(null)}
+          />
+        )}
+
         {parsedFiles.length === 0 && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5">
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
@@ -1142,7 +1179,7 @@ export default function App() {
 
         {transactions.length > 0 && (
           <div ref={confidenceSectionRef}>
-            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} />
+            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} onOpenLevel={setOpenConfidenceLevel} />
           </div>
         )}
 

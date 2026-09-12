@@ -9,7 +9,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect }) {
+export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -39,11 +39,23 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
           </div>
           <div className="rounded-md bg-amber-50 border border-amber-200 py-2">
             <p className="text-lg font-semibold text-amber-800">{review.length}</p>
-            <p className="text-[10px] text-amber-700">🟡 controleren ({pct(review.length)}%)</p>
+            {onOpenLevel && review.length > 0 ? (
+              <button onClick={() => onOpenLevel("heuristic")} className="text-[10px] text-amber-700 underline hover:no-underline">
+                🟡 controleren ({pct(review.length)}%)
+              </button>
+            ) : (
+              <p className="text-[10px] text-amber-700">🟡 controleren ({pct(review.length)}%)</p>
+            )}
           </div>
           <div className="rounded-md bg-rose-50 border border-rose-200 py-2">
             <p className="text-lg font-semibold text-rose-800">{unclear.length}</p>
-            <p className="text-[10px] text-rose-700">🔴 onduidelijk ({pct(unclear.length)}%)</p>
+            {onOpenLevel && unclear.length > 0 ? (
+              <button onClick={() => onOpenLevel("fallback")} className="text-[10px] text-rose-700 underline hover:no-underline">
+                🔴 onduidelijk ({pct(unclear.length)}%)
+              </button>
+            ) : (
+              <p className="text-[10px] text-rose-700">🔴 onduidelijk ({pct(unclear.length)}%)</p>
+            )}
           </div>
         </div>
         {open && needsReview.length > 0 && (
