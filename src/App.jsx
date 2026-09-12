@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics } from "./importers/transactions.js";
+import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
@@ -91,6 +91,7 @@ export default function App() {
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
   const [excludedManualFingerprints, setExcludedManualFingerprints] = useState([]);
   const [reviewFileModal, setReviewFileModal] = useState(null);
+  const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
   const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
@@ -165,6 +166,7 @@ export default function App() {
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
     setManualPriveUitgaven(settings.manualPriveUitgaven && typeof settings.manualPriveUitgaven === "object" ? settings.manualPriveUitgaven : {});
+    setOpeningBalanceCorrections(settings.openingBalanceCorrections && typeof settings.openingBalanceCorrections === "object" ? settings.openingBalanceCorrections : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
     snapshotBeforeAction("BTW-kwartaalstatus aangepast");
@@ -230,7 +232,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-        ibStatus, manualPriveUitgaven,
+        ibStatus, manualPriveUitgaven, openingBalanceCorrections,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -240,7 +242,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-    ibStatus, manualPriveUitgaven,
+    ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     loaded,
   ]);
 
@@ -264,7 +266,11 @@ export default function App() {
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
-  const importDiagnostics = useMemo(() => computeImportDiagnostics(parsedFiles, allTransactions), [parsedFiles, allTransactions]);
+  const importDiagnostics = useMemo(
+    () => computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections),
+    [parsedFiles, allTransactions, openingBalanceCorrections]
+  );
+  const fileContinuity = useMemo(() => computeFileContinuity(importDiagnostics, accountTypeByFile), [importDiagnostics, accountTypeByFile]);
 
   const { fingerprintByTxId, duplicateGroups, duplicateFingerprints } = useMemo(
     () => computeDuplicateInfo(allTransactions),
@@ -346,6 +352,17 @@ export default function App() {
   const setOverridesByCounterpartyWithUndo = (updater) => {
     snapshotBeforeAction("Tegenpartijregel verwijderd");
     setOverridesByCounterparty(updater);
+  };
+  const setOpeningBalanceCorrection = (fileName, value) => {
+    snapshotBeforeAction("Beginsaldo gecorrigeerd");
+    setOpeningBalanceCorrections((prev) => {
+      if (value == null) {
+        const next = { ...prev };
+        delete next[fileName];
+        return next;
+      }
+      return { ...prev, [fileName]: value };
+    });
   };
 
   const removeDuplicates = () => {
@@ -828,7 +845,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-      ibStatus, manualPriveUitgaven,
+      ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -876,6 +893,7 @@ export default function App() {
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
       setManualPriveUitgaven(project.manualPriveUitgaven && typeof project.manualPriveUitgaven === "object" ? project.manualPriveUitgaven : {});
+      setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
       setLoadedProjectFileName(file.name);
     } catch (e) {
       setError(e.message || String(e));
@@ -918,6 +936,7 @@ export default function App() {
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setIbStatus({});
     setManualPriveUitgaven({});
+    setOpeningBalanceCorrections({});
     setAangiftevoorstelPreview(null);
     setShowAangifteYearPicker(false);
     setSelectedAangifteYears([]);
@@ -1147,11 +1166,13 @@ export default function App() {
             fingerprintByTxId={fingerprintByTxId}
             excludedManualFingerprints={excludedManualFingerprints}
             setExcludedManualFingerprints={setExcludedManualFingerprints}
+            openingBalanceCorrection={openingBalanceCorrections[reviewFileModal]}
+            onSetOpeningBalanceCorrection={setOpeningBalanceCorrection}
             onClose={() => setReviewFileModal(null)}
           />
         )}
 
-        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} />
+        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} />
 
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 

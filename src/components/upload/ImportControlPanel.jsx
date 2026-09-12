@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle } from "lucide-react";
+import { eur } from "../../utils/amounts.js";
 
 function StatusLine({ ok, warn, children }) {
   return (
@@ -17,13 +18,13 @@ function StatusLine({ ok, warn, children }) {
 // Een korte "APK" per geüpload bestand, vóór je verder gaat met classificeren — geeft vertrouwen
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de tool blijft gewoon meteen bruikbaar.
-export default function ImportControlPanel({ diagnostics, onReviewFile }) {
+export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [] }) {
   const [open, setOpen] = useState(true);
   if (diagnostics.length === 0) return null;
 
-  const anyIssue = diagnostics.some(
-    (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok)
-  );
+  const anyIssue =
+    diagnostics.some((d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok)) ||
+    continuity.some((c) => !c.ok);
 
   return (
     <section className={`rounded-lg border ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
@@ -67,12 +68,15 @@ export default function ImportControlPanel({ diagnostics, onReviewFile }) {
                   {d.balanceCheck ? (
                     <StatusLine ok={d.balanceCheck.ok} warn>
                       {d.balanceCheck.ok ? (
-                        "Saldo sluit aan (begin- en eindsaldo kloppen met de som van de transacties)"
+                        <>
+                          Saldo sluit aan (begin- en eindsaldo kloppen met de som van de transacties)
+                          {d.balanceCheck.isCorrected && " — met een handmatig gecorrigeerd beginsaldo"}
+                        </>
                       ) : (
                         <>
-                          Saldo sluit <strong>niet</strong> aan (verschil {d.balanceCheck.diff}) —{" "}
+                          Saldo sluit <strong>niet</strong> aan (verschil {eur(d.balanceCheck.diff)}) —{" "}
                           <button onClick={() => onReviewFile(d.fileName)} className="underline hover:no-underline">
-                            bekijk waar het misgaat
+                            bekijk waar het misgaat, of corrigeer het beginsaldo
                           </button>
                         </>
                       )}
@@ -84,6 +88,25 @@ export default function ImportControlPanel({ diagnostics, onReviewFile }) {
               </div>
             );
           })}
+          {continuity.length > 0 && (
+            <div className="rounded-md bg-white border border-slate-100 p-3">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Aansluiting tussen bestanden</p>
+              <ul className="space-y-1 text-xs text-slate-600">
+                {continuity.map((c) => (
+                  <StatusLine key={`${c.fileA}__${c.fileB}`} ok={c.ok} warn>
+                    <strong>{c.fileA}</strong> (eindigt {c.aTo.toLocaleDateString("nl-NL")}, saldo {eur(c.aLastBalance)}) →{" "}
+                    <strong>{c.fileB}</strong> (begint {c.bFrom.toLocaleDateString("nl-NL")}, saldo {eur(c.bOpeningBalance)})
+                    {c.ok ? " — sluit aan." : (
+                      <>
+                        {" "}— verschil {eur(c.diff)}. Dat kan een periodegrens zijn die niet exact aansluit (geen
+                        probleem), of het is de moeite waard om na te gaan of er tussenin iets ontbreekt.
+                      </>
+                    )}
+                  </StatusLine>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </section>

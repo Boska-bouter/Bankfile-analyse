@@ -62,7 +62,7 @@ export function buildTransactions(parsedFiles) {
 // Controlepas voor het importcontrolescherm: telt per bestand hoeveel regels zijn overgeslagen
 // (geen leesbare datum/bedrag) — dat gebeurt in buildTransactions() hierboven stilzwijgend, maar
 // hier maken we dat zichtbaar, samen met periode, ontbrekende tegenpartij en de saldo-check.
-export function computeImportDiagnostics(parsedFiles, allTransactions) {
+export function computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections = {}) {
   return parsedFiles.map((pf) => {
     const { rows, mapping, sourceLabel } = pf;
     let skippedNoDate = 0, skippedBadAmount = 0;
@@ -81,7 +81,7 @@ export function computeImportDiagnostics(parsedFiles, allTransactions) {
     const dates = fileTx.map((t) => t.date.getTime());
     const from = dates.length ? new Date(Math.min(...dates)) : null;
     const to = dates.length ? new Date(Math.max(...dates)) : null;
-    const balanceCheck = checkBalanceConsistency(fileTx);
+    const balanceCheck = checkBalanceConsistency(fileTx, openingBalanceCorrections[sourceLabel]);
     return {
       fileName: sourceLabel, totalRows: rows.length, importedCount: fileTx.length,
       skippedNoDate, skippedBadAmount, missingCounterparty, from, to, balanceCheck,
@@ -92,19 +92,32 @@ export function computeImportDiagnostics(parsedFiles, allTransactions) {
 // Controleert of het opgetelde bedrag van alle transacties overeenkomt met het verschil tussen
 // het eerste en laatste "saldo na mutatie" — brengt ontbrekende of dubbel ingelezen transacties
 // aan het licht. Retourneert null als er geen saldokolom is.
-export function checkBalanceConsistency(txForFile) {
-  const withBalance = txForFile.filter((t) => t.balance != null).sort((a, b) => a.date - b.date || a.id - b.id);
+//
+// Gesorteerd op `id` (= exact de volgorde van de regels in het bronbestand), NIET op datum: het
+// "saldo na mutatie" dat de bank in het bestand zet, is opgebouwd in de eigen volgorde van de
+// bank — die is meestal wel chronologisch, maar niet gegarandeerd, en een resort op datum kan dan
+// juist een vals-positieve afwijking laten zien op een andere plek dan waar het echt misgaat.
+// Zo blijft dit ook 1-op-1 vergelijkbaar met het origineel bij het uitzoeken van een afwijking.
+//
+// `openingBalanceOverride` (optioneel): laat het beginsaldo van het bestand handmatig corrigeren
+// — bijvoorbeeld als het beginsaldo op 1 januari net niet exact aansluit bij het eindsaldo van
+// 31 december van het voorgaande jaar (een ander bestand, een andere periode-afsluiting, of een
+// mutatie die buiten dit bestand valt) en je dat bewust als uitgangspunt wilt nemen in plaats van
+// het eerste saldo dat in dít bestand staat.
+export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
+  const withBalance = txForFile.filter((t) => t.balance != null).sort((a, b) => a.id - b.id);
   if (withBalance.length < 2) return null;
   const first = withBalance[0];
   const last = withBalance[withBalance.length - 1];
+  const openingBalance = openingBalanceOverride != null ? openingBalanceOverride : first.balance;
   const sumBetween = withBalance.slice(1).reduce((a, t) => a + t.amount, 0);
-  const expected = first.balance + sumBetween;
+  const expected = openingBalance + sumBetween;
   const diff = Math.round((expected - last.balance) * 100) / 100;
   const ok = Math.abs(diff) < 0.01;
 
   let breakpoints = [];
   if (!ok) {
-    let runningBalance = first.balance;
+    let runningBalance = openingBalance;
     for (let i = 1; i < withBalance.length; i++) {
       const tx = withBalance[i];
       const expectedBalance = Math.round((runningBalance + tx.amount) * 100) / 100;
@@ -116,5 +129,39 @@ export function checkBalanceConsistency(txForFile) {
       runningBalance = tx.balance;
     }
   }
-  return { ok, diff, first: first.balance, last: last.balance, breakpoints: breakpoints.slice(0, 10) };
+  return {
+    ok, diff, first: openingBalance, fileOpeningBalance: first.balance, last: last.balance,
+    isCorrected: openingBalanceOverride != null && openingBalanceOverride !== first.balance,
+    breakpoints: breakpoints.slice(0, 10),
+  };
+}
+
+// Vergelijkt, per rekeningtype (Zakelijk/Prive), het eindsaldo van het ene bestand met het
+// beginsaldo van het eerstvolgende (chronologisch) bestand — bijv. eindsaldo 31-12-2023 tegenover
+// beginsaldo 1-1-2024. Puur informatief: een klein verschil is heel normaal (bank-afronding, een
+// mutatie die net over de jaargrens valt, of simpelweg twee afzonderlijke periode-exports die niet
+// exact op elkaar aansluiten) en betekent niet per se een fout in een van beide bestanden.
+export function computeFileContinuity(diagnostics, accountTypeByFile) {
+  const results = [];
+  const groups = {};
+  for (const d of diagnostics) {
+    const type = accountTypeByFile[d.fileName];
+    if (!type || !d.from || !d.to || !d.balanceCheck) continue;
+    (groups[type] ||= []).push(d);
+  }
+  for (const [type, files] of Object.entries(groups)) {
+    const sorted = files.slice().sort((a, b) => a.from - b.from);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const a = sorted[i];
+      const b = sorted[i + 1];
+      if (b.from <= a.to) continue; // overlappende periodes — geen zinvol aansluitpunt
+      const bOpening = b.balanceCheck.fileOpeningBalance;
+      const diff = Math.round((bOpening - a.balanceCheck.last) * 100) / 100;
+      results.push({
+        type, fileA: a.fileName, fileB: b.fileName, aTo: a.to, bFrom: b.from,
+        aLastBalance: a.balanceCheck.last, bOpeningBalance: bOpening, diff, ok: Math.abs(diff) < 0.01,
+      });
+    }
+  }
+  return results;
 }
