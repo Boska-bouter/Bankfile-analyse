@@ -1,6 +1,6 @@
 import { useMemo, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
-import { CATEGORY_ORDER, CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
+import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -109,14 +109,8 @@ export function DetailTable({ group, onRequestChange, enableDrag, onRowDragStart
     let rows = group.items;
     const q = query.trim().toLowerCase();
     if (q) {
-      const isExactSubtype = CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
-      const isExactMain = MAIN_CATEGORY_ORDER.some((c) => c.toLowerCase() === q);
       rows = rows.filter((t) =>
-        isExactSubtype
-          ? t.category.toLowerCase() === q
-          : isExactMain
-          ? mainCategoryOf(t.category).toLowerCase() === q
-          : `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(q)
+        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${mainCategoryOf(t.category)}`.toLowerCase().includes(q)
       );
     }
     const min = amountMin.trim() === "" ? null : Math.abs(parseFloat(amountMin));
