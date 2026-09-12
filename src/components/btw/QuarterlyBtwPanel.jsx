@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, onOpenHelp }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
     return !s.aangegeven || !s.betaald;

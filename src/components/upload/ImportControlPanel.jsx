@@ -19,7 +19,7 @@ function StatusLine({ ok, warn, children }) {
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de tool blijft gewoon meteen bruikbaar.
 export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [] }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   if (diagnostics.length === 0) return null;
 
   const anyIssue =

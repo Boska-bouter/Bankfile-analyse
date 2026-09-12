@@ -8,7 +8,7 @@ export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus,
   manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp,
 }) {
-  const [open, setOpen] = useState(years.length > 1);
+  const [open, setOpen] = useState(false);
   const [showHiddenCols, setShowHiddenCols] = useState(false);
   if (years.length === 0) return null;
 

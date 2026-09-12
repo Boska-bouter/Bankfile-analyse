@@ -12,8 +12,7 @@ van de oorspronkelijke tool is overgezet, plus een aantal nieuwe verbeteringen (
 
 ## Functionaliteit
 
-- **Import**: CSV, Excel (.xlsx), MT940. CAMT.053 is nog een placeholder (`src/importers/camt053.js`)
-  — nog niet geïmplementeerd, staat als laatste openstaande punt op de planning.
+- **Import**: CSV, Excel (.xlsx), MT940, CAMT.053 (XML).
 - **Classificatie**: automatische indeling op basis van tegenpartij/omschrijving-zoekwoorden,
   met handmatige correcties die tegenpartij-breed (alle jaren) worden onthouden.
 - **Categorieën**: een laag van ~14 hoofdcategorieën voor het overzicht (Huisvesting, Vervoer & auto,
@@ -74,10 +73,10 @@ betrokken bij de financiële verwerking, en er wordt niets extern verstuurd.
 
 ## Bekende openstaande punten
 
-- CAMT.053-import (placeholder, geeft een duidelijke foutmelding i.p.v. stil te falen)
-- Een zichtbaar zekerheids-/confidence-systeem in de UI (de module `src/classification/confidence.js`
-  bestaat, maar is nog niet aangesloten)
-- Tegenpartijregels expliciet beheerbaar maken (nu impliciet via correcties) en IBAN-gebaseerd
-  herkennen waar het bankbestand IBAN's bevat
-- Importcontrole-scherm (samenvattend "is dit bestand goed ingelezen"-overzicht vóór classificatie)
-- `App.jsx` verder opsplitsen naarmate de tool groeit
+- Een zichtbaar zekerheids-/confidence-systeem in de UI is aanwezig (`src/classification/confidence.js`,
+  aangesloten via het paneel "Classificatiezekerheid")
+- Tegenpartijregels zijn expliciet beheerbaar (`CounterpartyRulesPanel`) en werken op IBAN waar het
+  bankbestand die bevat
+- Importcontrole-scherm aanwezig (samenvattend overzicht vóór classificatie, met saldo-aansluiting
+  per bestand en tussen bestanden)
+- `App.jsx` verder opsplitsen naarmate de tool groeit — staat nog open

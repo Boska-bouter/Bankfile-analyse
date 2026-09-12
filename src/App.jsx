@@ -11,11 +11,12 @@ import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, D
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
-import { computeLoanSummary, computeLeaseSummary } from "./tax/loanAmortization.js";
+import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey, ibanKey } from "./utils/normalization.js";
+import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
   loadPersistedSettings, persistSettings, clearPersistedSettings,
@@ -328,31 +329,15 @@ export default function App() {
   };
 
   // Wrappers voor panelen die de raw setState-functie direct doorkrijgen (CategoryRulesPanel,
-  // FixedCategoriesPanel, BtwRatesPanel) — zodat ook die wijzigingen ongedaan te maken zijn.
-  const setCategoryRulesWithUndo = (updater) => {
-    snapshotBeforeAction("Categorieregels aangepast");
-    setCategoryRules(updater);
-  };
-  const setFixedCategoriesWithUndo = (updater) => {
-    snapshotBeforeAction("Vaste/variabele kosten aangepast");
-    setFixedCategories(updater);
-  };
-  const setCategoryBtwRatesWithUndo = (updater) => {
-    snapshotBeforeAction("BTW-percentage aangepast");
-    setCategoryBtwRates(updater);
-  };
-  const setBtwVerlegdWithUndo = (value) => {
-    snapshotBeforeAction("BTW-verlegd aangepast");
-    setBtwVerlegd(value);
-  };
-  const setKorRegelingWithUndo = (value) => {
-    snapshotBeforeAction("KOR-instelling aangepast");
-    setKorRegeling(value);
-  };
-  const setOverridesByCounterpartyWithUndo = (updater) => {
-    snapshotBeforeAction("Tegenpartijregel verwijderd");
-    setOverridesByCounterparty(updater);
-  };
+  // FixedCategoriesPanel, BtwRatesPanel, CounterpartyRulesPanel) — zodat ook die wijzigingen
+  // ongedaan te maken zijn. Zie utils/withUndo.js.
+  const withUndo = makeUndoWrapped(snapshotBeforeAction);
+  const setCategoryRulesWithUndo = withUndo("Categorieregels aangepast", setCategoryRules);
+  const setFixedCategoriesWithUndo = withUndo("Vaste/variabele kosten aangepast", setFixedCategories);
+  const setCategoryBtwRatesWithUndo = withUndo("BTW-percentage aangepast", setCategoryBtwRates);
+  const setBtwVerlegdWithUndo = withUndo("BTW-verlegd aangepast", setBtwVerlegd);
+  const setKorRegelingWithUndo = withUndo("KOR-instelling aangepast", setKorRegeling);
+  const setOverridesByCounterpartyWithUndo = withUndo("Tegenpartijregel verwijderd", setOverridesByCounterparty);
   const setOpeningBalanceCorrection = (fileName, value) => {
     snapshotBeforeAction("Beginsaldo gecorrigeerd");
     setOpeningBalanceCorrections((prev) => {
@@ -500,44 +485,6 @@ export default function App() {
     setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
   };
 
-  // ---- Leningen ----
-  const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
-  const setLoanDetailField = (key, newDetails) => {
-    snapshotBeforeAction("Leninggegevens aangepast");
-    setLoanDetails((prev) => ({ ...prev, [key]: newDetails }));
-  };
-  const markLoanUnknown = (key) => {
-    snapshotBeforeAction("Lening op onbekend gezet");
-    setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
-  };
-  const unmarkLoanUnknown = (key) => {
-    snapshotBeforeAction("Lening op onbekend gezet");
-    setLoanDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
-  };
-
-  // ---- Lease (operationeel/financieel) ----
-  const leaseSummary = useMemo(() => computeLeaseSummary(classified), [classified]);
-  const setLeaseDetailField = (key, newDetails) => {
-    snapshotBeforeAction("Leasegegevens aangepast");
-    setLeaseDetails((prev) => ({ ...prev, [key]: newDetails }));
-  };
-  const markLeaseUnknown = (key) => {
-    snapshotBeforeAction("Lease op onbekend gezet");
-    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
-  };
-  const unmarkLeaseUnknown = (key) => {
-    snapshotBeforeAction("Lease op onbekend gezet");
-    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
-  };
-  const confirmLeaseType = (lease, type) => {
-    setCounterpartyOverride(lease.name, lease.transactions[0].amount, {
-      category: type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)",
-      type: "Zakelijk",
-    });
-    setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
-    if (type === "financieel") setLeaseDetailsModalKey(lease.key);
-  };
-
   const exportAangiftevoorstel = () => {
     if (selectedAangifteYears.length === 0) {
       window.alert("Selecteer minstens één jaar.");
@@ -584,6 +531,15 @@ export default function App() {
     snapshotBeforeAction("Categorie/type aangepast");
     setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
   };
+
+  // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
+  const {
+    loanSummary, leaseSummary, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType,
+  } = useLoansAndLease({
+    classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
+    snapshotBeforeAction, setCounterpartyOverride,
+  });
 
   // ---- Vraag bij een categorie/type-wijziging: alleen deze transactie, alle jaren, of gekozen
   // jaren? Alleen gevraagd als er ook echt meerdere transacties van dezelfde tegenpartij zijn —
@@ -1174,6 +1130,12 @@ export default function App() {
 
         <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} />
 
+        {transactions.length > 0 && (
+          <div ref={confidenceSectionRef}>
+            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} />
+          </div>
+        )}
+
         <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
 
         <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
@@ -1181,12 +1143,6 @@ export default function App() {
         {years.length > 0 && (
           <div ref={checklistSectionRef}>
             <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-          </div>
-        )}
-
-        {transactions.length > 0 && (
-          <div ref={confidenceSectionRef}>
-            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} />
           </div>
         )}
 

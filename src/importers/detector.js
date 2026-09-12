@@ -1,7 +1,7 @@
 import { parseCsvFile } from "./csv.js";
 import { parseExcelFile } from "./excel.js";
 import { parseMT940, looksLikeMT940 } from "./mt940.js";
-import { looksLikeCamt053 } from "./camt053.js";
+import { looksLikeCamt053, parseCamt053 } from "./camt053.js";
 import { buildColumnMapping } from "./bankProfiles.js";
 
 // Bepaalt op basis van extensie (en, als vangnet, bestandsinhoud) welke parser een bestand moet
@@ -18,16 +18,20 @@ export async function parseFile(file) {
   } else if (["940", "sta", "mt940", "swi"].includes(ext)) {
     const text = await file.text();
     rows = parseMT940(text);
+  } else if (ext === "xml") {
+    const text = await file.text();
+    if (!looksLikeCamt053(text)) {
+      throw new Error(`"${file.name}" is een XML-bestand, maar lijkt geen CAMT.053-bankafschrift te zijn.`);
+    }
+    rows = parseCamt053(text);
   } else {
-    // Onbekende extensie: eerst kijken of het toch MT940 (bijv. .txt) of CAMT.053 (.xml) is,
+    // Onbekende extensie: eerst kijken of het toch MT940 (bijv. .txt) of CAMT.053 is,
     // anders als Excel proberen te lezen.
     const text = await file.text();
     if (looksLikeMT940(text)) {
       rows = parseMT940(text);
     } else if (looksLikeCamt053(text)) {
-      throw new Error(
-        `"${file.name}" lijkt een CAMT.053-bestand te zijn — dat formaat wordt nog niet ondersteund (zie src/importers/camt053.js).`
-      );
+      rows = parseCamt053(text);
     } else {
       rows = await parseExcelFile(file);
     }
