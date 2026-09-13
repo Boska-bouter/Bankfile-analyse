@@ -24,7 +24,7 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
-  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekantoor", "accountant", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
+  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
     "sd worx", "loket.nl", "exact online", "afas", "salaris compleet", "salarispro", "employes", "unit4",
     "salarisonline", "payroll totaal", "tentoo", "merces", "flexpedia",
     "rsm nederland", "moore drv", "astrium accountants", "accon avm", "abab accountants", "van oers",
