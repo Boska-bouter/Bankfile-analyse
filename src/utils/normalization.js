@@ -2,7 +2,38 @@
 // tegenpartij ondanks kleine schrijfwijzeverschillen tussen transacties.
 
 const PERSON_TITLES = ["mw ", "hr ", "dhr ", "mevr ", "mevrouw ", "de heer "];
-const COMPANY_HINTS = ["b.v.", "bv", "n.v.", "nv", "stichting", "vof", "gemeente", "bank", "verzekering", "services", "b.v", "n.v"];
+const COMPANY_HINTS = [
+  "b.v", "bv", "n.v.", "nv", "stichting", "vof", "gemeente", "bank", "verzekering", "services",
+  "holding", "limited", "betalingsverkeer", "incasso", "stadsbestuur", "buckaroo", "u.a.",
+];
+
+// Getest tegen een echt zakelijk bankbestand (ING, 1200+ regels): de eerdere, simpelere versie
+// van deze heuristiek (alleen "2-4 woorden, geen cijfers, geen bedrijfswoord") herkende tientallen
+// overduidelijk-geen-persoon pinbetalingen als "persoon" — vooral kaarttransacties met een
+// "CCV*"/"BCK*"-voorvoegsel en/of een plaats+landcode-achtervoegsel ("... NLD"), en volledig in
+// hoofdletters gezette automatische/institutionele omschrijvingen (bijv. "STORTING ING",
+// "STEDIN NETBEH"). Die signalen zijn hieronder toegevoegd — dat halveerde het aantal foute
+// treffers in die test.
+export function looksLikePerson(text) {
+  const raw = String(text || "").trim();
+  const t = raw.toLowerCase();
+  if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
+  if (PERSON_TITLES.some((p) => t.startsWith(p))) return true;
+  // Kaarttransactie-voorvoegsels (CCV*, BCK*, MOL*, ...) en een land-/plaatscode-achtervoegsel
+  // ("... NLD") zijn typerend voor automatisch gegenereerde pin-omschrijvingen, nooit een mens.
+  if (raw.includes("*")) return false;
+  if (/\bnld\b$/i.test(raw)) return false;
+  // Een betaling via een platform (Tikkie, MultiSafepay, Takeaway.com, ...) loopt niet
+  // rechtstreeks naar een persoon, ook al staat er een naam in de omschrijving.
+  if (/\bvia\b/i.test(t)) return false;
+  if (t.startsWith("sepa ")) return false;
+  // Instellings-/automatische omschrijvingen staan vrijwel altijd volledig in hoofdletters; een
+  // SEPA-overschrijving naar een persoon behoudt meestal de eigen schrijfwijze van de afzender.
+  const letters = raw.replace(/[^a-zA-Z]/g, "");
+  if (letters.length > 0 && letters === letters.toUpperCase() && letters !== letters.toLowerCase()) return false;
+  const words = t.split(/\s+/).filter(Boolean);
+  return words.length >= 2 && words.length <= 4 && !/\d/.test(t);
+}
 
 export function normKey(s) {
   // Punten strippen en meervoudige spaties samenvoegen — zorgt dat bijv. "Essent Retail
@@ -64,12 +95,4 @@ export function ibanKey(iban, amount) {
   const base = normalizeIban(iban);
   if (!base || base.length < 8) return ""; // te kort om een echte IBAN te zijn
   return `IBAN::${base}::${amount >= 0 ? "pos" : "neg"}`;
-}
-
-export function looksLikePerson(text) {
-  const t = text.toLowerCase();
-  if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
-  if (PERSON_TITLES.some((p) => t.startsWith(p))) return true;
-  const words = t.split(/\s+/).filter(Boolean);
-  return words.length >= 2 && words.length <= 4 && !/\d/.test(t);
 }
