@@ -1228,6 +1228,7 @@ export default function App() {
             quartersToAsk={wizardQuarters}
             kwartaalStatus={kwartaalStatus}
             setKwartaalStatusField={setKwartaalStatusField}
+            fileContinuity={fileContinuity}
             onClose={() => setShowSetupWizard(false)}
           />
         )}

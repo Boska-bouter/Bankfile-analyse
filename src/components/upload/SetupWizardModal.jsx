@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Building2, Home, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } from "lucide-react";
+import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 3: "BTW-kwartalen" };
 
@@ -8,6 +9,7 @@ export default function SetupWizardModal({
   korRegeling, setKorRegeling,
   btwVerlegd, setBtwVerlegd,
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
+  fileContinuity = [],
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -61,24 +63,42 @@ export default function SetupWizardModal({
           {currentStepId === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
-              {pendingFileNames.map((fileName) => (
-                <div key={fileName} className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 p-3">
-                  <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
-                  <button
-                    onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" })); }}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
-                  >
-                    <Building2 className="h-3.5 w-3.5" /> Zakelijk
-                  </button>
-                  <button
-                    onClick={() => { onAccountTypeChoose(fileName, "Prive"); setTypedNow((p) => ({ ...p, [fileName]: "Prive" })); }}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-                  >
-                    <Home className="h-3.5 w-3.5" /> Privé
-                  </button>
-                </div>
-              ))}
+              {pendingFileNames.map((fileName) => {
+                const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
+                return (
+                  <div key={fileName} className="rounded-md border border-slate-200 p-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
+                      <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
+                      <button
+                        onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" })); }}
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
+                      >
+                        <Building2 className="h-3.5 w-3.5" /> Zakelijk
+                      </button>
+                      <button
+                        onClick={() => { onAccountTypeChoose(fileName, "Prive"); setTypedNow((p) => ({ ...p, [fileName]: "Prive" })); }}
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                      >
+                        <Home className="h-3.5 w-3.5" /> Privé
+                      </button>
+                    </div>
+                    {typedNow[fileName] && continuityMatch && (
+                      <div className={`flex items-start gap-1.5 rounded-md px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+                        {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                        <span>
+                          {continuityMatch.fileA === fileName ? (
+                            <>Dit bestand loopt door in <strong>{continuityMatch.fileB}</strong> — eindsaldo hier {eur(continuityMatch.aLastBalance)}, beginsaldo daar {eur(continuityMatch.bOpeningBalance)}.</>
+                          ) : (
+                            <>Dit lijkt een vervolg op <strong>{continuityMatch.fileA}</strong> — eindsaldo daar {eur(continuityMatch.aLastBalance)}, beginsaldo hier {eur(continuityMatch.bOpeningBalance)}.</>
+                          )}
+                          {!continuityMatch.ok && ` Verschil ${eur(continuityMatch.diff)} — kan een periodegrens zijn, of de moeite waard om na te gaan.`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
