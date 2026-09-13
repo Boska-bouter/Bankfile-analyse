@@ -51,7 +51,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
 
 // title/accentClasses/defaultCategory laten dit component hergebruiken voor zowel "Overboekingen
 // aan personen" als "Overig opruimen" — zelfde werkstroom, andere brontabel en kleuraccent.
-export default function ReviewStep({ items, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation }) {
+export default function ReviewStep({ items, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction }) {
   const filtered = useMemo(() => {
     if (!search.trim()) return items;
     const q = search.toLowerCase();
@@ -66,7 +66,19 @@ export default function ReviewStep({ items, allDone, search, onSearch, onMark, o
           Alles gecontroleerd. Je kunt hier nog steeds wijzigingen maken — die passen direct alle transacties van die tegenpartij aan.
         </p>
       )}
-      <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam of bankomschrijving…" className="mb-3 w-72" />
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam of bankomschrijving…" className="w-72" />
+        {bulkAction && !allDone && (
+          <button
+            onClick={() => {
+              if (window.confirm(bulkAction.confirmText || "Weet je het zeker?")) bulkAction.onApply();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 text-xs font-medium hover:bg-amber-100"
+          >
+            {bulkAction.label}
+          </button>
+        )}
+      </div>
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
         {filtered.map((item) => (
           <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={onMark} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} />

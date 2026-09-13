@@ -1,6 +1,12 @@
 import { SPLIT_CATEGORY_NAMES } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey } from "../utils/normalization.js";
 
+// Categorieën die vrijwel nooit een echte zakelijke aftrekpost zijn, ook niet wanneer ze
+// toevallig vanaf een zakelijke rekening betaald zijn (bijv. een Netflix-abonnement op de
+// zakelijke rekening) — die volgen daarom niet het rekeningtype zoals de meeste andere
+// categorieën, maar blijven altijd Privé.
+const ALWAYS_PRIVE_CATEGORIES = new Set(["Prive overige abonnementen"]);
+
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
   return category === "Zakelijke inkomsten" || category === "Uitbetaling aan prive" || category === "Prive opnames"
@@ -36,6 +42,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // ongeacht rekeningtype of tegenpartijlijst.
   for (const rule of rules) {
     if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()))) {
+      if (ALWAYS_PRIVE_CATEGORIES.has(rule.name)) {
+        return { category: rule.name, type: "Prive" };
+      }
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
       const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       return { category: categoryName, type: isBizExpense ? "Zakelijk" : "Prive" };

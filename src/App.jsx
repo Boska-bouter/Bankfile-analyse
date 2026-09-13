@@ -369,6 +369,22 @@ export default function App() {
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
   };
 
+  const removeFile = (fileName) => {
+    snapshotBeforeAction(`Bestand "${fileName}" verwijderd`);
+    setParsedFiles((prev) => prev.filter((f) => f.fileName !== fileName));
+    setAccountTypeByFile((prev) => {
+      const next = { ...prev };
+      delete next[fileName];
+      return next;
+    });
+    setOpeningBalanceCorrections((prev) => {
+      if (!(fileName in prev)) return prev;
+      const next = { ...prev };
+      delete next[fileName];
+      return next;
+    });
+  };
+
   const classified = useMemo(() => {
     const base = transactions.map((tx) => {
       const resolved = resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow);
@@ -467,6 +483,9 @@ export default function App() {
   const markOverigItem = (item, category, type) => {
     setCounterpartyOverride(item.name, item.amount, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+  };
+  const bulkMarkOverigAsPriveOpname = () => {
+    for (const item of pendingOverigReview) markOverigItem(item, "Prive opnames", "Zakelijk");
   };
   const confirmOverigAsIs = (item) => {
     snapshotBeforeAction('"Klopt zo" bevestigd');
@@ -1175,7 +1194,7 @@ export default function App() {
           />
         )}
 
-        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} />
+        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
 
         {transactions.length > 0 && (
           <div ref={confidenceSectionRef}>
@@ -1390,6 +1409,11 @@ export default function App() {
                     defaultCategory="Overig"
                     confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                     explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
+                    bulkAction={{
+                      label: `Alles wat hier nog staat (${pendingOverigReview.length}) naar "Prive opnames" (zakelijke rekening)`,
+                      confirmText: `${pendingOverigReview.length} tegenpartij(en) in "Overig" allemaal naar "Prive opnames" (Zakelijk) zetten? Dit is bedoeld voor een zakelijke rekening — gebruik dit niet als het om een privérekening gaat.`,
+                      onApply: bulkMarkOverigAsPriveOpname,
+                    }}
                   />
                 )}
               </section>

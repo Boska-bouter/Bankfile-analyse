@@ -45,8 +45,9 @@ export const DEFAULT_RULES = [
     " bp ", "argos", "tamoil", "tinq", "haan", "texaco", "agri", "firezone", "tango", "gulf", "q8",
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
+    "multi tank card", "multi tankcard",
   ] },
-  { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf"] },
+  { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz"] },
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [
@@ -78,17 +79,14 @@ export const DEFAULT_RULES = [
     "lightspeed", "stripe", "cm.com",
   ] },
   { name: "Onderhoud apparatuur/machines", color: "bg-orange-100 text-orange-800", keywords: [] },
-  { name: "Overige gevoelige uitgaven", color: "bg-slate-700 text-slate-100", keywords: [],
-    description: "Persoonlijke, vertrouwelijke uitgaven die niet specifiek Gokken, Dating, Adult content of Drugs zijn, maar wel bewust apart gehouden worden van de rest." },
-  { name: "Gokken", color: "bg-slate-600 text-slate-100", keywords: [
+  { name: "Persoonlijk & vertrouwelijk", color: "bg-slate-700 text-slate-100", keywords: [
     "holland casino", "jack's casino", "jacks casino", "circus casino", "toto.nl", "nederlandse loterij",
     "staatsloterij", "postcode loterij", "pokerstars", "unibet", "bet365", "betcity", "kansino",
     "napoleon games", "bingoal",
-  ] },
-  { name: "Dating", color: "bg-slate-600 text-slate-100", keywords: ["tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn"] },
-  { name: "Adult content", color: "bg-slate-600 text-slate-100", keywords: ["onlyfans"] },
-  { name: "Drugs", color: "bg-slate-600 text-slate-100", keywords: ["coffeeshop"],
-    description: "Alleen \"coffeeshop\" (legale cannabisverkoop) wordt automatisch herkend — overige uitgaven in deze categorie zijn handmatig toe te wijzen." },
+    "tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn",
+    "onlyfans", "coffeeshop",
+  ],
+    description: "Persoonlijke, vertrouwelijke uitgaven die je bewust apart wilt houden van de rest (gokken, dating, adult content, drugs, en overige gevoelige uitgaven) — één subtype, geen verdere onderverdeling." },
   { name: "Personeel: overig", color: "bg-indigo-50 text-indigo-800", keywords: [],
     description: "Personeelskosten die niet specifiek Inhuur, Uitbetaald loon of Loonadministratie zijn." },
   { name: "Belastingen: overig", color: "bg-fuchsia-50 text-fuchsia-700", keywords: ["belastingdienst"],
@@ -115,7 +113,15 @@ export const DEFAULT_RULES = [
   ],
     description: "Fysieke en online winkelaankopen: kleding, schoenen, accessoires/sieraden, kookwinkels en huishoudwinkels." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
-  { name: "Prive overige abonnementen", color: "bg-violet-50 text-violet-700", keywords: [] },
+  { name: "Prive overige abonnementen", color: "bg-violet-50 text-violet-700", keywords: [
+    "netflix", "spotify", "videoland", "disney+", "disney plus", "hbo max", "hbomax", "npo start",
+    "npostart", "npo plus", "amazon prime", "prime video", "youtube premium", "apple music", "apple tv+",
+    "deezer", "tidal", "viaplay", "dazn", "rtl+", "kijk.nl", "ziggo sport",
+    // Kranten-/tijdschriftenabonnementen zijn vrijwel altijd privé, ook als ze vanaf een
+    // zakelijke rekening betaald worden.
+    "nrc", "volkskrant", "telegraaf", "trouw", "ad.nl", "parool", "metro nieuws", "nu.nl premium",
+  ],
+    description: "Streaming- en krantenabonnementen — deze blijven altijd Privé, ook wanneer ze vanaf een zakelijke rekening worden betaald (vrijwel nooit een echte zakelijke aftrekpost)." },
   { name: "Zakelijk - apparatuur/machines", color: "bg-orange-50 text-orange-700", keywords: [] },
   { name: "Kinderopvang", color: "bg-rose-50 text-rose-700", keywords: ["kinderopvang", "gastouder", "peuterspeelzaal", "kinderdagverblijf", " bso "] },
   { name: "Lease (operationeel)", color: "bg-teal-100 text-teal-800", keywords: [
@@ -144,9 +150,7 @@ export const DEFAULT_RULES = [
     "caiway", "glasvezel buitenaf", "routit", "eurofiber", "brightfiber",
   ] },
   { name: "Zakelijk overige abonnementen", color: "bg-violet-100 text-violet-800", keywords: [
-    "netflix", "spotify", "videoland", "disney+", "disney plus", "hbo max", "hbomax", "npo start",
-    "npostart", "npo plus", "amazon prime", "prime video", "youtube premium", "apple music", "apple tv+",
-    "deezer", "tidal", "viaplay", "dazn", "rtl+", "kijk.nl", "ziggo sport", "beveiliging", "alarmcentrale",
+    "beveiliging", "alarmcentrale",
     "securitas", "verisure", "g4s", "trigion", "adt", "ajax systems", "alarm control", "heras", "kiwa",
     "cameranu", "hikvision", "dahua", "axis communications", "bosch security", "hanwha vision",
     "saval", "honeywell", "ansul", "somati", "firesense",
@@ -154,7 +158,6 @@ export const DEFAULT_RULES = [
   { name: "Prive - vrijetijd-uitgaan-vakantie", color: "bg-teal-50 text-teal-700", keywords: ["takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "cinema", "restaurant", "cafe"] },
   { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente"] },
   { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
-  { name: "Verzekering: Wonen", color: "bg-sky-300 text-sky-900", keywords: ["opstalverzekering", "inboedelverzekering", "woonverzekering", "woonhuisverzekering"] },
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
     "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
@@ -168,8 +171,9 @@ export const DEFAULT_RULES = [
     "ohra", "vereniging eigen huis", "lemonade verzekering", "europeesche verzekeringen", "unigarant",
     "achmea rechtsbijstand", "a.s.r.",
     "centraal beheer", "aegon", "reaal", "ditzo", "fbto", "univé", "unive", "inshared",
+    "opstalverzekering", "inboedelverzekering", "woonverzekering", "woonhuisverzekering",
   ],
-    description: "Alle privé-verzekeringen op één subtype: ziektekosten en overige (zoals aansprakelijkheid, rechtsbijstand, reisverzekering) — auto en wonen staan apart." },
+    description: "Alle privé-verzekeringen op één subtype: ziektekosten, wonen en overige (zoals aansprakelijkheid, rechtsbijstand, reisverzekering) — alleen auto staat apart." },
   { name: "Webshops & online aankopen", color: "bg-violet-100 text-violet-800", keywords: [
     "bol.com", "decathlon", "mediamarkt", "mms online", "booking.com",
     "gadgetsalarm", "crazzy digidz", "moonflash", "epplejeck", "payu", "adyen", "autoverleden", "alipay",
@@ -187,13 +191,13 @@ export const SPLIT_CATEGORY_NAMES = {
 };
 
 export const CATEGORY_ORDER = [
-  "Adult content", "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
-  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Dating", "Drugs", "Energie-water", "Gemeentelijke kosten", "Gokken",
+  "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
+  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
-  "Overig", "Overige gevoelige uitgaven", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie",
-  "Verkoop activa", "Verzekering: Auto", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekeringen",
+  "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -222,7 +226,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
   "Lease (operationeel)", "Lease (financieel)", "Leningen", "Boekhouder, accountant & administratie",
   "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
-  "Verzekering: Auto", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekeringen",
+  "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
 ];
 
@@ -242,6 +246,12 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Overig zakelijk: overig": "Zakelijke uitgaven",
   "Verzekering: Overig": "Verzekeringen",
   "Verzekering: Ziektekosten": "Verzekeringen",
+  "Verzekering: Wonen": "Verzekeringen",
+  "Overige gevoelige uitgaven": "Persoonlijk & vertrouwelijk",
+  "Gokken": "Persoonlijk & vertrouwelijk",
+  "Dating": "Persoonlijk & vertrouwelijk",
+  "Adult content": "Persoonlijk & vertrouwelijk",
+  "Drugs": "Persoonlijk & vertrouwelijk",
   "Uitgaan": "Prive - vrijetijd-uitgaan-vakantie",
   "Prive mobiel/internet": "Prive - mobiel/internet",
   "Prive Vakantie - uitstapjes": "Prive - vrijetijd-uitgaan-vakantie",
@@ -399,11 +409,7 @@ export const SUBTYPE_TO_MAIN = {
   "Prive overige abonnementen": "Privé",
   "Terugboeking van prive": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
-  "Overige gevoelige uitgaven": "Persoonlijk & vertrouwelijk",
-  "Gokken": "Persoonlijk & vertrouwelijk",
-  "Dating": "Persoonlijk & vertrouwelijk",
-  "Adult content": "Persoonlijk & vertrouwelijk",
-  "Drugs": "Persoonlijk & vertrouwelijk",
+  "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
   "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
   "Uitbetaling aan prive": "Privé",
@@ -411,7 +417,6 @@ export const SUBTYPE_TO_MAIN = {
   "Prive: overig": "Privé",
   "Verkoop activa": "Zakelijke inkomsten",
   "Verzekering: Auto": "Vervoer & auto",
-  "Verzekering: Wonen": "Privé",
   "Verzekering: Zakelijk": "Inkoop & zakelijke uitgaven",
   "Verzekeringen": "Privé",
   "Winkels divers": "Privé",
@@ -440,7 +445,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Financiering": "Leningen",
   "Belastingen & heffingen": "Belastingen: overig",
   "Privé": "Prive: overig",
-  "Persoonlijk & vertrouwelijk": "Overige gevoelige uitgaven",
+  "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
   "Nog te beoordelen": "Overig",
 };
 
