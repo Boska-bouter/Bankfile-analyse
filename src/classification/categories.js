@@ -37,8 +37,8 @@ export const DEFAULT_RULES = [
     "boni", "hoogvliet", "poiesz", "em-té", "emté", " attent ", "mcd supermarkt", "sligro", "makro",
     "kaufland", "rewe", "edeka", "real,-", "delhaize", "carrefour", "colruyt", " okay ", "intermarché",
     "intermarche", " cora ", "picnic", "crisp", "ekoplaza", "odin", "marqt", "amazing oriental",
-    "boon's markt", "dagwinkel", "supercoop", "aldi süd", "aldi nord", "netto", "penny markt", "dm-drogerie",
-    "rossmann", "müller", "globus", "marktkauf", "trinkgut", "bio-planet",
+    "boon's markt", "dagwinkel", "supercoop", "aldi süd", "aldi nord", "netto markt", "penny markt", "dm-drogerie",
+    "rossmann", "globus", "marktkauf", "trinkgut", "bio-planet",
   ] },
   { name: "Brandstof", color: "bg-orange-100 text-orange-800", keywords: [
     "shell", "esso", "esso express", "total", "totalenergies", "total energies", "lukoil", "avia",
@@ -110,6 +110,7 @@ export const DEFAULT_RULES = [
     "knivesandtools", "le creuset", "kitchenaid", "magimix", "greenpan", "demeyere", "tefal",
     " action ", "hema", "blokker", "xenos", "haco", "leen bakker", "kwantum", " casa ",
     "søstrene grene", "big bazar", "marskramer", "praxis", "gamma", "karwei", "hornbach", "hubo", "homedeco",
+    "bauhaus", " obi ", "trekpleister",
   ],
     description: "Fysieke en online winkelaankopen: kleding, schoenen, accessoires/sieraden, kookwinkels en huishoudwinkels." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
@@ -156,7 +157,7 @@ export const DEFAULT_RULES = [
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
     "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
-    "arag", " das ", "bovemij", "turien & co", "vivat",
+    "arag", " das ", "bovemij", "turien & co", "vivat", "aon",
   ],
     description: "Zakelijke verzekeringen. Let op: grote verzekeraars als Interpolis/Achmea/Allianz/Univé verkopen zowel zakelijke als privé-polissen — die staan daarom bij het privé-subtype \"Verzekeringen\" en moeten hier zo nodig handmatig op Zakelijk gezet worden." },
   { name: "Verzekeringen", color: "bg-teal-100 text-teal-800", keywords: [
@@ -164,6 +165,7 @@ export const DEFAULT_RULES = [
     "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering",
     "achmea", "interpolis", "allianz", "independer", "assuradeur", "anwb", "nationale-nederlanden", "nationale nederlanden",
     "ohra", "vereniging eigen huis", "lemonade verzekering", "europeesche verzekeringen", "unigarant",
+    "achmea rechtsbijstand", "a.s.r.",
     "centraal beheer", "aegon", "reaal", "ditzo", "fbto", "univé", "unive", "inshared",
   ],
     description: "Alle privé-verzekeringen op één subtype: ziektekosten en overige (zoals aansprakelijkheid, rechtsbijstand, reisverzekering) — auto en wonen staan apart." },
