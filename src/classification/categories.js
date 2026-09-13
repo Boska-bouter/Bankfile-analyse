@@ -50,7 +50,7 @@ export const DEFAULT_RULES = [
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [
-    "flanderijn", "kancelaria adwokacka", "stichting derdengelden", "ggn", "centraal justitieel incass", "pkg tax",
+    "flanderijn", "kancelaria adwokacka", "ggn", "centraal justitieel incass", "pkg tax",
     "trust krediet beheer", "groenendaal", "dutch finance", "syncasso", "cannock", "intrum", "vesting finance",
     "alektum", "bierens", "janssen & janssen", "rosmalen gerechtsdeurwaarders", "lavg", "agin",
     "bosveld incasso", "bvcm", "nib group", "coeo", "atradius collections", "coface", "vmp & partners",
@@ -283,7 +283,13 @@ export function mergeCategoryRules(savedRules) {
     // ander overschrijft.
     const matches = saved.filter((r) => r.name === defRule.name);
     if (matches.length === 0) return defRule;
-    const combinedKeywords = [...new Set(matches.flatMap((m) => m.keywords || []))];
+    // Samenvoegen met de HUIDIGE standaardlijst (niet vervangen): een opgeslagen project bevat
+    // een momentopname van de zoekwoorden op het moment van opslaan. Zouden we die snapshot
+    // domweg laten winnen, dan verdwijnen nieuwe standaard-zoekwoorden die nadien zijn toegevoegd
+    // zodra een ouder project weer wordt geladen — precies het "Winkels divers is leeg"-effect.
+    // Eigen, zelf toegevoegde zoekwoorden blijven zo ook behouden.
+    const savedKeywords = matches.flatMap((m) => m.keywords || []);
+    const combinedKeywords = [...new Set([...defRule.keywords, ...savedKeywords])];
     return { ...defRule, keywords: combinedKeywords };
   });
   const custom = saved.filter((r) => !DEFAULT_RULES.some((d) => d.name === r.name) && !(r.name in LEGACY_CATEGORY_RENAMES));
