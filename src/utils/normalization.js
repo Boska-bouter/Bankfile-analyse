@@ -5,6 +5,13 @@ const PERSON_TITLES = ["mw ", "hr ", "dhr ", "mevr ", "mevrouw ", "de heer "];
 const COMPANY_HINTS = [
   "b.v", "bv", "n.v.", "nv", "stichting", "vof", "gemeente", "bank", "verzekering", "services",
   "holding", "limited", "betalingsverkeer", "incasso", "stadsbestuur", "buckaroo", "u.a.",
+  // Internationale rechtsvormen — net zo gangbaar als "B.V." maar ontbraken hier nog, en komen
+  // in een echte test met buitenlandse tegenpartijen (leveranciers, advertentieplatforms) juist
+  // veel voor.
+  "ltd", "inc", "gmbh", "s.a", "s.p.a", "sp. z o.o", "a/s",
+  // Generieke Nederlandse bedrijfswoorden — "bedri" (i.p.v. het volledige "bedrijf") omdat een
+  // bank een lange tegenpartijnaam kan afkappen vóór het einde van het woord.
+  "bedri", "commercial cards", "cjib",
 ];
 
 // Getest tegen een echt zakelijk bankbestand (ING, 1200+ regels): de eerdere, simpelere versie
@@ -22,7 +29,8 @@ export function looksLikePerson(text) {
   // Kaarttransactie-voorvoegsels (CCV*, BCK*, MOL*, ...) en een land-/plaatscode-achtervoegsel
   // ("... NLD") zijn typerend voor automatisch gegenereerde pin-omschrijvingen, nooit een mens.
   if (raw.includes("*")) return false;
-  if (/\bnld\b$/i.test(raw)) return false;
+  if (/\b(nld|deu)\b$/i.test(raw)) return false;
+  if (t === "rente buiten limiet") return false;
   // Een betaling via een platform (Tikkie, MultiSafepay, Takeaway.com, ...) loopt niet
   // rechtstreeks naar een persoon, ook al staat er een naam in de omschrijving.
   if (/\bvia\b/i.test(t)) return false;

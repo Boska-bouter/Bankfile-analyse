@@ -105,8 +105,15 @@ export function computeImportDiagnostics(parsedFiles, allTransactions, openingBa
 // mutatie die buiten dit bestand valt) en je dat bewust als uitgangspunt wilt nemen in plaats van
 // het eerste saldo dat in dít bestand staat.
 export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
-  const withBalance = txForFile.filter((t) => t.balance != null).sort((a, b) => a.id - b.id);
-  if (withBalance.length < 2) return null;
+  const byFileOrder = txForFile.filter((t) => t.balance != null).sort((a, b) => a.id - b.id);
+  if (byFileOrder.length < 2) return null;
+  // Sommige banken exporteren nieuwste-eerst (de meest recente mutatie bovenaan het bestand) —
+  // het "saldo na mutatie" is dan nog steeds chronologisch opgebouwd, alleen in de tegenovergestelde
+  // richting van de bestandsvolgorde. Vergelijk de datum van de eerste met de laatste regel (in
+  // bestandsvolgorde) om dat te herkennen, en reken in dat geval terug in werkelijk-chronologische
+  // volgorde — anders lijkt het saldo systematisch niet te kloppen terwijl er niets mis is.
+  const isNewestFirst = byFileOrder[0].date > byFileOrder[byFileOrder.length - 1].date;
+  const withBalance = isNewestFirst ? [...byFileOrder].reverse() : byFileOrder;
   const first = withBalance[0];
   const last = withBalance[withBalance.length - 1];
   const openingBalance = openingBalanceOverride != null ? openingBalanceOverride : first.balance;

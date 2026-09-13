@@ -50,6 +50,7 @@ export const DEFAULT_RULES = [
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [
+    "cjib",
     "flanderijn", "kancelaria adwokacka", "ggn", "centraal justitieel incass", "pkg tax",
     "trust krediet beheer", "groenendaal", "dutch finance", "syncasso", "cannock", "intrum", "vesting finance",
     "alektum", "bierens", "janssen & janssen", "rosmalen gerechtsdeurwaarders", "lavg", "agin",
@@ -90,7 +91,7 @@ export const DEFAULT_RULES = [
     description: "Alleen \"coffeeshop\" (legale cannabisverkoop) wordt automatisch herkend — overige uitgaven in deze categorie zijn handmatig toe te wijzen." },
   { name: "Personeel: overig", color: "bg-indigo-50 text-indigo-800", keywords: [],
     description: "Personeelskosten die niet specifiek Inhuur, Uitbetaald loon of Loonadministratie zijn." },
-  { name: "Belastingen: overig", color: "bg-fuchsia-50 text-fuchsia-700", keywords: [],
+  { name: "Belastingen: overig", color: "bg-fuchsia-50 text-fuchsia-700", keywords: ["belastingdienst"],
     description: "Belastingen/heffingen waarvan nog niet duidelijk is om welk specifiek type het gaat (OB, LH, MRB, ZVW, IH) — later te verfijnen." },
   { name: "Prive: overig", color: "bg-stone-100 text-stone-700", keywords: [],
     description: "Privé-uitgaven/inkomsten die niet specifiek onder een van de andere privé-subtypes vallen." },
