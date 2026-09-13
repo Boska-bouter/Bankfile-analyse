@@ -119,7 +119,7 @@ export default function App() {
   const [showPersonReview, setShowPersonReview] = useState(true);
   const [showOverigReview, setShowOverigReview] = useState(true);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
-  const [showSetupWizard, setShowSetupWizard] = useState(true);
+  const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -1217,7 +1217,7 @@ export default function App() {
           </div>
         )}
 
-        {showSetupWizard && (pendingAccountFiles.length > 0 || korRegeling === null) && (
+        {showSetupWizard && (
           <SetupWizardModal
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}

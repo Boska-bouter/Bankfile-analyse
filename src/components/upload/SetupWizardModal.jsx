@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight } from "lucide-react";
 
-const STEP_LABELS = ["Rekening", "KOR", "BTW-verlegd", "BTW-kwartalen"];
+const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 3: "BTW-kwartalen" };
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
@@ -10,28 +10,41 @@ export default function SetupWizardModal({
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
   onClose,
 }) {
-  const [step, setStep] = useState(0);
-  const [typedNow, setTypedNow] = useState({}); // lokaal bijgehouden tot de stap wordt verlaten
+  const [typedNow, setTypedNow] = useState({});
 
-  const needsAccountStep = pendingFileNames.length > 0;
-  const needsKorStep = korRegeling === null;
-  const needsBtwVerlegdStep = korRegeling !== true && btwVerlegd === null;
-  const needsKwartaalStep = korRegeling !== true && quartersToAsk.length > 0;
+  // Bevriest bij het openen welke stappen er ÜBERHAUPT relevant zijn — dat mag daarna niet meer
+  // veranderen door het beantwoorden van een vraag zelf (dat veranderde namelijk precies de
+  // voorwaarde die bepaalde of de wizard nog iets te doen had, waardoor die zichzelf verdween of
+  // bleef hangen op een net-beantwoorde stap). Een "wachtrij" van resterende stappen (in plaats
+  // van een index in een krimpende lijst) kan nooit vastlopen: elke voltooide stap wordt expliciet
+  // gemarkeerd, en de KOR=Ja-uitzondering (BTW-verlegd/kwartalen worden dan overbodig) filtert
+  // alleen toekomstige, nog niet getoonde stappen weg.
+  const [initialSteps] = useState(() => {
+    const list = [];
+    if (pendingFileNames.length > 0) list.push(0);
+    if (korRegeling === null) list.push(1);
+    if (korRegeling !== true && btwVerlegd === null) list.push(2);
+    if (korRegeling !== true && quartersToAsk.length > 0) list.push(3);
+    return list;
+  });
+  const [doneIds, setDoneIds] = useState(() => new Set());
 
-  const steps = [
-    needsAccountStep && 0,
-    needsKorStep && 1,
-    needsBtwVerlegdStep && 2,
-    needsKwartaalStep && 3,
-  ].filter((v) => v !== false);
+  const remainingSteps = initialSteps.filter((id) => {
+    if (doneIds.has(id)) return false;
+    if ((id === 2 || id === 3) && korRegeling === true) return false;
+    return true;
+  });
 
-  if (steps.length === 0) return null;
-  const currentStepId = steps[Math.min(step, steps.length - 1)];
-  const isLastStep = step >= steps.length - 1;
+  useEffect(() => {
+    if (remainingSteps.length === 0) onClose();
+  }, [remainingSteps.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (remainingSteps.length === 0) return null;
+  const currentStepId = remainingSteps[0];
+  const isLastStep = remainingSteps.length === 1;
 
   const goNext = () => {
-    if (isLastStep) onClose();
-    else setStep((v) => v + 1);
+    setDoneIds((prev) => new Set([...prev, currentStepId]));
   };
 
   const allTypedNow = pendingFileNames.every((f) => typedNow[f]);
@@ -40,7 +53,7 @@ export default function SetupWizardModal({
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="px-5 py-3 border-b border-slate-200 bg-slate-900 text-white shrink-0">
-          <p className="text-xs text-slate-300">Stap {step + 1} van {steps.length}</p>
+          <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
         </div>
 
