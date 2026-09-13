@@ -42,6 +42,14 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
       </h3>
       <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[10px] text-slate-400 uppercase">
+            <th className="text-left font-medium pb-1.5">Categorie</th>
+            <th className="text-right font-medium pb-1.5 px-2">Bruto</th>
+            <th className="text-right font-medium pb-1.5 px-2">BTW</th>
+            <th className="text-right font-medium pb-1.5">Netto</th>
+          </tr>
+        </thead>
         <tbody>
           {MAIN_CATEGORY_ORDER.filter((c) => c in mainTotals).map((c) => {
             const subtypesPresent = subtypesForMainCategory(c).filter((s) => s in totals);
@@ -60,7 +68,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
-                  <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(mainBtwTotals[c] || 0)}</td>
+                  <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(mainBtwTotals[c] || 0)}</td>
+                  <td className="py-1 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c] - (mainBtwTotals[c] || 0))}</td>
                 </tr>
                 {isOpen &&
                   subtypesPresent.map((s) => (
@@ -69,7 +78,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                         <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
                       <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s])}</td>
-                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(btwByCategory[s] || 0)}</td>
+                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(btwByCategory[s] || 0)}</td>
+                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s] - (btwByCategory[s] || 0))}</td>
                     </tr>
                   ))}
               </Fragment>
@@ -80,7 +90,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
           <tr className="border-t border-slate-200 font-semibold">
             <td className="pt-2">Totaal</td>
             <td className="pt-2 px-2 text-right font-mono">{eur(grandTotal)}</td>
-            <td className="pt-2 text-right font-mono">{eur(grandBtw)}</td>
+            <td className="pt-2 px-2 text-right font-mono">{eur(grandBtw)}</td>
+            <td className="pt-2 text-right font-mono">{eur(grandTotal - grandBtw)}</td>
           </tr>
         </tfoot>
       </table>
@@ -105,6 +116,16 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
 
   const applyChange = (tx, patch) => onRequestChange(tx, patch);
+
+  const searchSuggestions = useMemo(() => {
+    const names = new Set();
+    for (const t of group.items) {
+      if (t.counterparty) names.add(t.counterparty);
+      names.add(mainCategoryOf(t.category));
+      names.add(t.category);
+    }
+    return [...names];
+  }, [group.items]);
 
   const filteredItems = useMemo(() => {
     let rows = group.items;
@@ -162,7 +183,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" />
+            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" suggestions={searchSuggestions} />
             <div className="relative shrink-0">
               <button
                 onClick={() => setShowAmountFilter((v) => !v)}
