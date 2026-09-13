@@ -6,7 +6,7 @@ const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">1.</span>
-      Upload je bank-bestand(en) hieronder (CSV, Excel of MT940). De tool splitst transacties automatisch in Zakelijk en Prive, en deelt ze in categorieën in.
+      Upload je bank-bestand(en) hieronder (CSV, Excel, MT940 of CAMT.053). De tool splitst transacties automatisch in Zakelijk en Prive, en deelt ze in categorieën in.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">2.</span>

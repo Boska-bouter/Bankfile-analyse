@@ -23,7 +23,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
 
-  const text = `${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
   if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
 

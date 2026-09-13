@@ -3,7 +3,7 @@
 export const DEFAULT_RULES = [
   { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto"] },
   { name: "Bankkosten", color: "bg-slate-200 text-slate-800", keywords: [
-    "kosten betaalpakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie",
+    "kosten betaalpakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie", "betalingsverkeer",
     "abn amro bank n.v.", "abn amro", "ing bank n.v.", "ing bank", "rabobank", "sns bank", "asn bank",
     "triodos bank", "bunq", "knab", "regiobank", "van lanschot", "nibc", "nibc direct", "achmea bank",
     "aegon bank", "nn bank", "nationale-nederlanden bank", "moneyou", "revolut", "n26", "openbank",
@@ -32,6 +32,7 @@ export const DEFAULT_RULES = [
     "snelstart", "moneybird", "e-boekhouden.nl", "rompslomp", "yuki boekhouden", "twinfield", "accountancy gemak"] },
   { name: "Boodschappen", color: "bg-lime-100 text-lime-800", keywords: [
     "jumbo", "albert heijn", " ah ", "ah to go", "dirk", "dirk van den broek", "linders", "jan linders",
+    "gall&gall", "gall & gall", "mitra", "drankenhandel", "slijterij",
     "nettorama", "aldi", "lidl", "coop", " plus ", "dekamarkt", "deka markt", "ekoplaza", "spar",
     "kruidvat", "etos", "vomar", "vomar voordeelmarkt", "supersam", "supermarkt", "van cranenbroek",
     "boni", "hoogvliet", "poiesz", "em-té", "emté", " attent ", "mcd supermarkt", "sligro", "makro",
@@ -47,7 +48,7 @@ export const DEFAULT_RULES = [
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
   ] },
-  { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz"] },
+  { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz", "sepa green"] },
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [

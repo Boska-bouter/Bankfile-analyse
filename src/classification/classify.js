@@ -19,8 +19,19 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return { category: "Inkomsten/betalingen niet dit jaar", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
   }
 
-  const text = `${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  // Kopspatie: sommige trefwoorden zijn bewust met spaties omsloten (" bp ", " action ") om te
+  // voorkomen dat ze als stukje van een ander woord matchen — maar zonder deze kopspatie zou zo'n
+  // trefwoord nooit matchen wanneer het merk toevallig het allereerste woord is (bijv. een
+  // tegenpartij "BP Boxtel" of "Action 1234 Boxtel").
+  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const isIncome = tx.amount > 0;
+
+  // "Derdengelden Intersolve" komt in de praktijk voor als inkomen (ook wanneer het incidenteel
+  // als een terugboeking/afschrijving in het bankbestand staat) — altijd als inkomen behandelen,
+  // los van het teken van het bedrag.
+  if (text.includes("derdengelden intersolve")) {
+    return accountType === "Zakelijk" ? { category: "Zakelijke inkomsten", type: "Zakelijk" } : { category: "Inkomsten", type: "Prive" };
+  }
 
   if (isIncome && /factuur(nr|nummer)?/i.test(text)) {
     return { category: "Zakelijke inkomsten", type: "Zakelijk" };

@@ -27,7 +27,7 @@ import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
-import AccountTypeChooser from "./components/upload/AccountTypeChooser.jsx";
+import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
@@ -119,6 +119,7 @@ export default function App() {
   const [showPersonReview, setShowPersonReview] = useState(true);
   const [showOverigReview, setShowOverigReview] = useState(true);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
+  const [showSetupWizard, setShowSetupWizard] = useState(true);
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -267,6 +268,7 @@ export default function App() {
     if (failed.length > 0) setError(failed.join("\n"));
     if (results.length > 0) {
       setParsedFiles((prev) => [...prev.filter((p) => !results.some((r) => r.fileName === p.fileName)), ...results]);
+      setShowSetupWizard(true);
     }
   };
 
@@ -691,6 +693,19 @@ export default function App() {
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
+  // Kwartalen voor de wizard-stap: alleen kwartalen die al voorbij zijn (geen zin om te vragen of
+  // een kwartaal dat nog loopt al is aangegeven/betaald).
+  const wizardQuarters = useMemo(() => {
+    const now = new Date();
+    const list = [];
+    for (const year of years) {
+      for (let kwartaal = 1; kwartaal <= 4; kwartaal++) {
+        const quarterEnd = new Date(year, kwartaal * 3, 0);
+        if (quarterEnd < now) list.push({ year, kwartaal });
+      }
+    }
+    return list;
+  }, [years]);
   useEffect(() => {
     if (!activeYear && years.length) setActiveYear(years[0]);
     if (activeYear && !years.includes(activeYear) && years.length) setActiveYear(years[years.length - 1]);
@@ -1070,23 +1085,23 @@ export default function App() {
 
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {lastActionSnapshot && (
-          <section className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-700">
-              Laatste actie: <strong>{lastActionSnapshot.label}</strong>.
-            </p>
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
-                Ongedaan maken
-              </button>
-              <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </section>
-        )}
+      {lastActionSnapshot && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg border border-slate-300 bg-white shadow-lg px-4 py-3 flex items-center gap-3 max-w-[calc(100vw-2rem)]">
+          <p className="text-sm text-slate-700 truncate">
+            Laatste actie: <strong>{lastActionSnapshot.label}</strong>.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+              Ongedaan maken
+            </button>
+            <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
@@ -1133,7 +1148,7 @@ export default function App() {
           }}
         >
           <Upload className="mx-auto h-8 w-8 text-slate-400 mb-2" />
-          <p className="text-sm text-slate-600 mb-3">Sleep hier je bank-CSV, XLS- of MT940-bestanden naartoe, of</p>
+          <p className="text-sm text-slate-600 mb-3">Sleep hier je bank-CSV, XLS-, MT940- of CAMT.053-bestanden naartoe, of</p>
           <label className="inline-flex items-center gap-2 rounded-md bg-slate-900 text-stone-50 px-4 py-2 text-sm font-medium hover:bg-slate-800 cursor-pointer">
             <FileSpreadsheet className="h-4 w-4" /> Bestanden kiezen
             <input
@@ -1202,7 +1217,20 @@ export default function App() {
           </div>
         )}
 
-        <AccountTypeChooser pendingFileNames={pendingAccountFiles} onChoose={setAccountType} />
+        {showSetupWizard && (pendingAccountFiles.length > 0 || korRegeling === null) && (
+          <SetupWizardModal
+            pendingFileNames={pendingAccountFiles}
+            onAccountTypeChoose={setAccountType}
+            korRegeling={korRegeling}
+            setKorRegeling={setKorRegelingWithUndo}
+            btwVerlegd={btwVerlegd}
+            setBtwVerlegd={setBtwVerlegdWithUndo}
+            quartersToAsk={wizardQuarters}
+            kwartaalStatus={kwartaalStatus}
+            setKwartaalStatusField={setKwartaalStatusField}
+            onClose={() => setShowSetupWizard(false)}
+          />
+        )}
 
         <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
