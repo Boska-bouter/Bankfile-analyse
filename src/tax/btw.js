@@ -6,8 +6,9 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Bankkosten",
   "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB", "Belastingen: ZVW",
   "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
+  "Belastingen: overig", // hoort net als de rest van de belastingen-subtypes bij 0% — stond er per abuis niet bij
   "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
-  "Inhuur personeel",
+  "Verzekeringen", // privé-verzekeringen — net als hun zakelijke tegenhangers vrijgesteld van BTW
   "Uitbetalen loon",
   "Uitbetaling aan prive",
   "Prive opnames",
@@ -20,10 +21,16 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Hypotheek",
   "Lease (financieel)",
   "Leningen",
+  "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
+  "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
+  "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
+  "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
 ]);
+// "Inhuur personeel" stond hier eerder ook bij, maar een ingehuurde freelancer/zzp'er factureert je
+// in de praktijk vrijwel altijd gewoon mét 21% BTW (tenzij die zelf onder de KOR valt) — verwijderd.
 
 export const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
-DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9;
+DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage BTW-tarief
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
@@ -34,7 +41,7 @@ export const DEFAULT_VOORBELASTING_EXCLUDED = [
 export const EMPTY_BTW_RATES = {};
 
 // Ophoging bij elke wijziging in welke categorieën standaard 0% BTW hebben — zie mergeBtwRates.
-export const BTW_RATES_VERSION = 6;
+export const BTW_RATES_VERSION = 7;
 
 export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
   const migratedSaved = {};
@@ -44,6 +51,12 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
   const merged = { ...DEFAULT_BTW_RATES, ...migratedSaved };
   if (!savedVersion || savedVersion < BTW_RATES_VERSION) {
     for (const c of ZERO_BTW_CATEGORIES) merged[c] = 0;
+    // "Inhuur personeel" veranderde in versie 7 van standaard 0% naar standaard 21% — een oudere,
+    // expliciet opgeslagen 0%-waarde voor deze categorie zou anders altijd blijven "winnen" boven
+    // de nieuwe standaard (de merge hierboven overschrijft niet-vrijgestelde categorieën niet).
+    if (savedVersion && savedVersion < 7 && migratedSaved["Inhuur personeel"] === 0) {
+      merged["Inhuur personeel"] = 21;
+    }
   }
   return merged;
 }
