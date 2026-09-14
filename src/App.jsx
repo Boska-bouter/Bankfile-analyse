@@ -15,7 +15,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, extractKeywordCandidate } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -42,6 +42,7 @@ import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
+import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
@@ -119,6 +120,7 @@ export default function App() {
   const [showPersonReview, setShowPersonReview] = useState(true);
   const [showOverigReview, setShowOverigReview] = useState(true);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
+  const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
@@ -609,6 +611,39 @@ export default function App() {
   // dus 🟢. Loopt bewust via dezelfde requestCategoryChange-vraag als een echte wijziging: bij
   // meerdere vergelijkbare transacties vraagt de tool of dit voor alle jaren moet gelden, of voor
   // zelf gekozen jaren.
+  // Zoekt, na een net bevestigde/gecorrigeerde tegenpartij, naar andere 🟡/🔴-transacties die op
+  // dezelfde tegenpartij lijken (bijv. "Coolblue.nl" na het corrigeren van "Coolblue") — zodat je
+  // in één keer een herbruikbaar trefwoord kunt vastleggen in plaats van dezelfde correctie steeds
+  // opnieuw te moeten doen. Geen suggestie bij "Overig"/"Overboekingen aan personen" zelf, want dat
+  // is geen bruikbaar trefwoord om aan andere transacties te koppelen.
+  const suggestSimilarIfAny = (tx, patch) => {
+    if (!patch.category || patch.category === "Overig" || patch.category === "Overboekingen aan personen") return;
+    const keyword = extractKeywordCandidate(tx.counterparty || tx.description);
+    if (!keyword) return;
+    const matches = classified.filter((t) => {
+      if (t.isMirror || t.id === tx.id) return false;
+      if (!t.confidence || (t.confidence.level !== "heuristic" && t.confidence.level !== "fallback")) return false;
+      const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
+      return text.includes(keyword);
+    });
+    if (matches.length > 0) {
+      setKeywordSuggestion({ keyword, category: patch.category, type: patch.type, matches, sourceName: tx.counterparty || tx.description });
+    }
+  };
+
+  // Legt een bevestigde suggestie vast als een echt, herbruikbaar trefwoord bij de categorie —
+  // zelfde plek en mechanisme als een trefwoord dat je zelf toevoegt bij "Categorieregels". Alle
+  // transacties die dat trefwoord matchen (nu en straks) worden er automatisch door herkend.
+  const acceptKeywordSuggestion = () => {
+    if (!keywordSuggestion) return;
+    const { keyword, category } = keywordSuggestion;
+    snapshotBeforeAction(`Trefwoord "${keyword}" toegevoegd`);
+    setCategoryRules((prev) =>
+      prev.map((r) => (r.name === category && !r.keywords.includes(keyword) ? { ...r, keywords: [...r.keywords, keyword] } : r))
+    );
+    setKeywordSuggestion(null);
+  };
+
   const confirmClassificationCorrect = (tx) => {
     requestCategoryChange(tx, { category: tx.category, type: tx.type });
   };
@@ -625,6 +660,7 @@ export default function App() {
       snapshotBeforeAction("Categorie/type aangepast");
       if (tx.id != null) setRowOverride(tx.id, patch);
       else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
+      suggestSimilarIfAny(tx, patch);
       return;
     }
     const matchYears = [...new Set(matches.map((t) => t.year))].sort((a, b) => a - b);
@@ -636,14 +672,16 @@ export default function App() {
     if (tx.id != null) setRowOverride(tx.id, patch);
     else setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     setPendingCategoryChange(null);
+    suggestSimilarIfAny(tx, patch);
   };
   const applyPendingToAllYears = () => {
     const { tx, patch } = pendingCategoryChange;
     setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     setPendingCategoryChange(null);
+    suggestSimilarIfAny(tx, patch);
   };
   const applyPendingToYears = (selectedYears) => {
-    const { key, patch } = pendingCategoryChange;
+    const { tx, key, patch } = pendingCategoryChange;
     snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
     const idsToPatch = classified.filter((t) => !t.isMirror && keyForTx(t) === key && selectedYears.includes(t.year)).map((t) => t.id);
     setOverridesByRow((prev) => {
@@ -652,6 +690,7 @@ export default function App() {
       return next;
     });
     setPendingCategoryChange(null);
+    suggestSimilarIfAny(tx, patch);
   };
 
   // ---- Slepen tussen Zakelijk en Prive (Pointer Events — werkt ook op iOS/iPad) ----
@@ -1142,6 +1181,14 @@ export default function App() {
           />
         )}
 
+        {keywordSuggestion && (
+          <KeywordSuggestionModal
+            suggestion={keywordSuggestion}
+            onAccept={acceptKeywordSuggestion}
+            onDismiss={() => setKeywordSuggestion(null)}
+          />
+        )}
+
         {parsedFiles.length === 0 && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5">
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
@@ -1242,6 +1289,7 @@ export default function App() {
             kwartaalStatus={kwartaalStatus}
             setKwartaalStatusField={setKwartaalStatusField}
             fileContinuity={fileContinuity}
+            onSaveProject={saveProjectFile}
             onClose={() => setShowSetupWizard(false)}
           />
         )}

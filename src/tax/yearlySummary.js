@@ -78,7 +78,7 @@ export function computeVolledigeJaren(classified) {
 // Kwalitatief advies voor het actieve jaar: is het resultaat per saldo positief of negatief,
 // en staan er wel typische privé-uitgaven tussen (anders is het beeld mogelijk vertekend omdat
 // niet alle privé-uitgaven zijn opgegeven).
-const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie"];
+const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
 export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, manualPriveCorrectie) {
   if (!activeYear || !summary) return null;
   const ibBelastingEffectief = ibGedaan ? 0 : ibEstimate.belasting;

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
-const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 3: "BTW-kwartalen" };
+const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 3: "BTW-kwartalen", 4: "Project opslaan" };
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
@@ -10,6 +10,7 @@ export default function SetupWizardModal({
   btwVerlegd, setBtwVerlegd,
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
   fileContinuity = [],
+  onSaveProject,
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -27,6 +28,7 @@ export default function SetupWizardModal({
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) list.push(2);
     if (korRegeling !== true && quartersToAsk.length > 0) list.push(3);
+    list.push(4); // altijd als laatste: herinnering om het project op te slaan
     return list;
   });
   const [doneIds, setDoneIds] = useState(() => new Set());
@@ -181,12 +183,45 @@ export default function SetupWizardModal({
               <p className="text-xs text-slate-400">Dit kan later altijd nog aangepast worden bij "BTW per kwartaal".</p>
             </div>
           )}
+
+          {currentStepId === 4 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-700 font-medium">
+                Niet vergeten: sla je project op, anders gaan je correcties en aanpassingen verloren.
+              </p>
+              <p className="text-sm text-slate-600">
+                Alles wat je in deze tool instelt — rekeningtypes, categorieën, "Klopt zo"-bevestigingen, zelf
+                toegevoegde trefwoorden, KOR/BTW-instellingen — wordt bewaard in het geheugen van déze browser op dit
+                apparaat. Dat overleeft een herstart van je iPad prima, maar gaat verloren zodra je op "Wis alles"
+                klikt, of wanneer je in Safari de geschiedenis en websitegegevens wist (in Safari is dat meestal één
+                en dezelfde knop, ook al lijkt het om alleen je surfgeschiedenis te gaan).
+              </p>
+              <p className="text-sm text-slate-600">
+                Een <strong>project opslaan</strong> maakt hier een apart bestand van, los van de browser — dat
+                bestand overleeft dus ook een cache-wis, een nieuw apparaat, of het overzetten naar iemand anders (bijv.
+                je boekhouder). Sla vooral geregeld op, niet pas aan het eind — bijvoorbeeld na elke sessie waarin je
+                een aantal correcties hebt gedaan.
+              </p>
+              {onSaveProject && (
+                <button
+                  onClick={onSaveProject}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                >
+                  Project nu opslaan
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
-          <button onClick={goNext} className="text-xs text-slate-400 hover:text-slate-600">
-            Later invullen
-          </button>
+          {currentStepId !== 4 ? (
+            <button onClick={goNext} className="text-xs text-slate-400 hover:text-slate-600">
+              Later invullen
+            </button>
+          ) : (
+            <span />
+          )}
           {(currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
