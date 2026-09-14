@@ -91,7 +91,7 @@ export function printReport(groups) {
   if (isStandaloneApp) {
     window.alert(
       "Printen lukt helaas niet vanuit de app-versie op je beginscherm — dit is een bekende beperking van iOS zelf, niet van deze tool.\n\n" +
-        "Open dezelfde link rechtstreeks in Safari (niet via het app-icoon) en print daarvandaan, of gebruik de Excel-knop."
+        "Open dezelfde link rechtstreeks in je browser (niet via het app-icoon) en print daarvandaan, of gebruik de Excel-knop."
     );
     return;
   }
@@ -123,7 +123,7 @@ export function printHtmlDocument(html) {
   if (isStandaloneApp) {
     window.alert(
       "Printen lukt helaas niet vanuit de app-versie op je beginscherm — dit is een bekende beperking van iOS zelf.\n\n" +
-        'Gebruik in plaats daarvan "Downloaden": open het gedownloade bestand daarna in Safari, en gebruik van daaruit het deel-menu om te printen of als PDF op te slaan.'
+        'Gebruik in plaats daarvan "Downloaden": open het gedownloade bestand daarna in je browser, en gebruik van daaruit het deel-menu om te printen of als PDF op te slaan.'
     );
     return;
   }

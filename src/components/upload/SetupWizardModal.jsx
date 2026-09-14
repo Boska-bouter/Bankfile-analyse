@@ -192,9 +192,10 @@ export default function SetupWizardModal({
               <p className="text-sm text-slate-600">
                 Alles wat je in deze tool instelt — rekeningtypes, categorieën, "Klopt zo"-bevestigingen, zelf
                 toegevoegde trefwoorden, KOR/BTW-instellingen — wordt bewaard in het geheugen van déze browser op dit
-                apparaat. Dat overleeft een herstart van je iPad prima, maar gaat verloren zodra je op "Wis alles"
-                klikt, of wanneer je in Safari de geschiedenis en websitegegevens wist (in Safari is dat meestal één
-                en dezelfde knop, ook al lijkt het om alleen je surfgeschiedenis te gaan).
+                apparaat. Dat geldt voor tablets en laptops, en voor de meest gangbare browsers (Safari, Edge, Chrome,
+                Firefox, Opera). Het overleeft een herstart van je apparaat prima, maar gaat verloren zodra je op "Wis
+                alles" klikt, of wanneer je de browsergeschiedenis en websitegegevens wist (in veel browsers is dat
+                één en dezelfde knop, ook al lijkt het om alleen je surfgeschiedenis te gaan).
               </p>
               <p className="text-sm text-slate-600">
                 Een <strong>project opslaan</strong> maakt hier een apart bestand van, los van de browser — dat
