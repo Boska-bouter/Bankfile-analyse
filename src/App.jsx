@@ -1138,22 +1138,22 @@ export default function App() {
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
       {lastActionSnapshot && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg border border-slate-300 bg-white shadow-lg px-4 py-3 flex items-center gap-3 max-w-[calc(100vw-2rem)]">
-          <p className="text-sm text-slate-700 truncate">
-            Laatste actie: <strong>{lastActionSnapshot.label}</strong>.
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
-              Ongedaan maken
-            </button>
-            <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700">
-              <X className="h-4 w-4" />
+        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-lg border border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
+          <div className="flex items-start justify-between gap-1">
+            <p className="text-[11px] text-slate-600 leading-tight">
+              Laatste actie: <strong>{lastActionSnapshot.label}</strong>
+            </p>
+            <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700 shrink-0">
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
+          <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+            Ongedaan maken
+          </button>
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}

@@ -1,28 +1,27 @@
-// Blijft vastgeplakt aan de bovenkant van het scherm tijdens scrollen — zodat je altijd snel
-// van jaar kunt wisselen, ook diep in een lange pagina. Toont dezelfde voortgangspercentages
-// als het "Werk te doen"-paneel.
+// Blijft vast op het scherm staan tijdens scrollen — zodat je altijd snel van jaar kunt wisselen,
+// ook diep in een lange pagina. Verticaal aan de linkerkant (in plaats van een horizontale balk
+// bovenin) omdat een horizontale balk op tablets al snel moet scrollen of te veel ruimte inneemt;
+// verticaal blijft compact en werkt van kleine tablets (vanaf ~8") tot laptopschermen.
 export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyProgress }) {
   if (years.length <= 1) return null;
   return (
-    <nav className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-2 overflow-x-auto">
-        <span className="text-xs text-slate-400 shrink-0">Jaar:</span>
-        {years.map((year) => {
-          const yp = yearlyProgress[year];
-          return (
-            <button
-              key={year}
-              onClick={() => onSelectYear(year)}
-              className={`shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
-                year === activeYear ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              {year}
-              {yp && <span className="tabular-nums opacity-80">{yp.pct}%</span>}
-            </button>
-          );
-        })}
-      </div>
+    <nav className="fixed left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-lg shadow-lg p-1 max-h-[75vh] overflow-y-auto">
+      {years.map((year) => {
+        const yp = yearlyProgress[year];
+        return (
+          <button
+            key={year}
+            onClick={() => onSelectYear(year)}
+            className={`shrink-0 flex flex-col items-center rounded-md px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-xs font-medium leading-tight ${
+              year === activeYear ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            title={`Jaar ${year}${yp ? ` — ${yp.pct}% klaar` : ""}`}
+          >
+            <span>{year}</span>
+            {yp && <span className="tabular-nums opacity-80 text-[9px] sm:text-[10px]">{yp.pct}%</span>}
+          </button>
+        );
+      })}
     </nav>
   );
 }
