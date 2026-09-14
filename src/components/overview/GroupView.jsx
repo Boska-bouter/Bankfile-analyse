@@ -110,7 +110,8 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
   const [amountMax, setAmountMax] = useState("");
   const [amountSign, setAmountSign] = useState("beide"); // "beide" | "neg" | "pos"
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [onlyUncertain, setOnlyUncertain] = useState(false);
+  const [filterHeuristic, setFilterHeuristic] = useState(false); // 🟡 Controleren
+  const [filterFallback, setFilterFallback] = useState(false); // 🔴 Onduidelijk
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
@@ -157,13 +158,18 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
         return true;
       });
     }
-    if (onlyUncertain) {
-      rows = rows.filter((t) => t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback"));
+    if (filterHeuristic || filterFallback) {
+      rows = rows.filter((t) => {
+        if (!t.confidence) return false;
+        if (filterHeuristic && t.confidence.level === "heuristic") return true;
+        if (filterFallback && t.confidence.level === "fallback") return true;
+        return false;
+      });
     }
     return rows;
-  }, [group.items, query, amountMin, amountMax, amountSign, dateFrom, dateTo, onlyUncertain]);
+  }, [group.items, query, amountMin, amountMax, amountSign, dateFrom, dateTo, filterHeuristic, filterFallback]);
 
-  const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || onlyUncertain;
+  const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white">
@@ -245,13 +251,22 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
               )}
             </div>
             <button
-              onClick={() => setOnlyUncertain((v) => !v)}
+              onClick={() => setFilterHeuristic((v) => !v)}
               className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-                onlyUncertain ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-300 bg-white text-slate-600"
+                filterHeuristic ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-300 bg-white text-slate-600"
               }`}
-              title="Toon alleen transacties met 🟡/🔴 classificatiezekerheid"
+              title="Toon alleen transacties met classificatiezekerheid 🟡 Controleren"
             >
-              🟡🔴 Onzeker{onlyUncertain ? " ✓" : ""}
+              🟡 Controleren{filterHeuristic ? " ✓" : ""}
+            </button>
+            <button
+              onClick={() => setFilterFallback((v) => !v)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                filterFallback ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-300 bg-white text-slate-600"
+              }`}
+              title="Toon alleen transacties met classificatiezekerheid 🔴 Onduidelijk"
+            >
+              🔴 Onduidelijk{filterFallback ? " ✓" : ""}
             </button>
           </div>
         </div>
@@ -268,6 +283,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
             <tr>
               {enableDrag && <th className="px-2 py-2 w-8"></th>}
               <th className="text-left font-medium px-4 py-2">Datum</th>
+              <th className="text-center font-medium px-2 py-2" title="Classificatiezekerheid — klik ✓ om een 🟡/🔴-indeling te bevestigen">OK?</th>
               <th className="text-right font-medium px-4 py-2">Bedrag</th>
               <th className="text-left font-medium px-4 py-2">Categorie</th>
               <th className="text-left font-medium px-4 py-2">Type</th>
@@ -294,23 +310,26 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                     </td>
                   )}
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
-                    <span className="inline-flex items-center gap-1">
-                      {t.confidence && (
-                        <span title={t.confidence.label}>
-                          {{ override: "🟢", keyword: "🟢", heuristic: "🟡", fallback: "🔴" }[t.confidence.level]}
-                        </span>
-                      )}
-                      {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && onConfirmCorrect && (
-                        <button
-                          onClick={() => onConfirmCorrect(t)}
-                          className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded px-0.5"
-                          title="Klopt zo — markeer deze indeling als bevestigd (wordt voortaan 🟢)"
-                        >
-                          ✓
-                        </button>
-                      )}
-                      {t.date.toLocaleDateString("nl-NL")}
-                    </span>
+                    {t.date.toLocaleDateString("nl-NL")}
+                  </td>
+                  <td className="px-2 py-2 text-center">
+                    {t.confidence && t.confidence.level !== "heuristic" && t.confidence.level !== "fallback" && (
+                      <span title={t.confidence.label}>🟢</span>
+                    )}
+                    {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && (
+                      <span className="inline-flex items-center gap-1" title={t.confidence.label}>
+                        <span>{t.confidence.level === "heuristic" ? "🟡" : "🔴"}</span>
+                        {onConfirmCorrect && (
+                          <button
+                            onClick={() => onConfirmCorrect(t)}
+                            className="inline-flex items-center gap-0.5 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
+                            title="Categorie en subtype kloppen — bevestigen (wordt voortaan 🟢)"
+                          >
+                            ✓ OK
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">
@@ -362,7 +381,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
               ))}
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan={enableDrag ? 7 : 6} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+                <td colSpan={enableDrag ? 8 : 7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
               </tr>
             )}
           </tbody>

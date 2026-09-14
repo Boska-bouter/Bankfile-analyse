@@ -393,7 +393,7 @@ export const SUBTYPE_TO_MAIN = {
   "Incasso, juridisch & schulden": "Privé",
   "Inhuur personeel": "Personeel",
   "Personeel: overig": "Personeel",
-  "Inkomsten": "Zakelijke inkomsten",
+  "Inkomsten": "Privé",
   "Inkomsten/betalingen niet dit jaar": "Zakelijke inkomsten",
   "Kinderopvang": "Privé",
   "Lease (operationeel)": "Vervoer & auto",
