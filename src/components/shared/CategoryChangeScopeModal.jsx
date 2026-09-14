@@ -7,7 +7,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
   const isConfirmOnly = patch.category === tx.category && patch.type === tx.type;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
           <p className="text-sm font-semibold text-slate-800">
