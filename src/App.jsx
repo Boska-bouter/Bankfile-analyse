@@ -4,7 +4,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2,
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
-import { resolveClassification, defaultTypeForCategory } from "./classification/classify.js";
+import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
@@ -514,7 +514,10 @@ export default function App() {
   const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
   const reclassifyBusinessEntry = (item, newMainCategory) => {
     const newSubtype = MAIN_CATEGORY_DEFAULT_SUBTYPE[newMainCategory] || newMainCategory;
-    requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: defaultTypeForCategory(newSubtype) });
+    // "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke uitgaven (leveranciers)" zijn per definitie
+    // al bevestigd Zakelijk — hier alleen de categorie wijzigen mag dat nooit stilzwijgend naar
+    // Prive omzetten (defaultTypeForCategory zou voor de meeste categorieën "Prive" teruggeven).
+    requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: "Zakelijk" });
   };
 
   // ---- Factuurperiode vs. boekingskwartaal ----
