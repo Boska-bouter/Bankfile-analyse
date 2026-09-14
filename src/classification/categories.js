@@ -145,7 +145,7 @@ export const DEFAULT_RULES = [
     "thalys", "eurostar", "ic direct",
   ] },
   { name: "Zakelijk mobiel/internet", color: "bg-indigo-100 text-indigo-800", keywords: [
-    "t-mobile", "odido", "kpn", "ziggo", "vodafone", "tele2", "simyo", "youfone", "lebara", "lycamobile",
+    "t-mobile", "t.mobile", "odido", "kpn", "ziggo", "vodafone", "tele2", "simyo", "youfone", "lebara", "lycamobile",
     "hollandsnieuwe", "ben.nl", "telfort", "caiw", "belsimpel", "viata", "voiceworks", "aldi talk",
     "family mobile", "online.nl", "solcon", "xs4all", "budget mobiel", "budgetmobiel", "delta fiber",
     "kpn zakelijk", "vodafone business", "odido business", "voys", "speakup", "dean one", "vodafoneziggo",
