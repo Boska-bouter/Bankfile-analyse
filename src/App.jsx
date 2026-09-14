@@ -1157,10 +1157,10 @@ export default function App() {
 
       <button
         onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-1.5 sm:right-2 bottom-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white shadow-lg px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        className="fixed right-1.5 sm:right-2 bottom-4 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         title="Snel opzoeken: alle categorieën en subtypes"
       >
-        <ListTree className="h-4 w-4 shrink-0" />
+        <ListTree className="h-5 w-5 shrink-0" />
         <span className="hidden sm:inline">Categorieën</span>
       </button>
 
