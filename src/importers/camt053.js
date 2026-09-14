@@ -77,6 +77,10 @@ function parseStatement(stmtEl) {
   const openingBalance = findStatementBalance(stmtEl, ["OPBD", "PRCD"]);
   const closingBalance = findStatementBalance(stmtEl, ["CLBD"]);
   let runningBalance = openingBalance;
+  // Het eigen rekeningnummer van dit statement (Stmt/Acct/Id/IBAN) — nodig om overboekingen
+  // tussen je eigen rekeningen te herkennen wanneer je meerdere eigen bestanden tegelijk laadt.
+  const acctEl = nsFirst(stmtEl, "Acct");
+  const ownAccount = acctEl ? nsText(acctEl, "IBAN") : "";
 
   for (const ntryEl of nsAll(stmtEl, "Ntry")) {
     const ntryAmount = parseAmountEl(nsFirst(ntryEl, "Amt"));
@@ -110,6 +114,7 @@ function parseStatement(stmtEl) {
         "Bedrag (EUR)": String(Math.abs(amount)).replace(".", ","),
         "Omschrijving": remittance || "",
         "Tegenrekening IBAN/BBAN": iban || "",
+        "Rekening": ownAccount,
         ...(runningBalance != null ? { "Saldo na mutatie": String(runningBalance).replace(".", ",") } : {}),
       });
     });

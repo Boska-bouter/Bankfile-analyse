@@ -1,5 +1,5 @@
 import { SPLIT_CATEGORY_NAMES } from "./categories.js";
-import { looksLikePerson, counterpartyKey, ibanKey } from "../utils/normalization.js";
+import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
 
 // Categorieën die vrijwel nooit een echte zakelijke aftrekpost zijn, ook niet wanneer ze
 // toevallig vanaf een zakelijke rekening betaald zijn (bijv. een Netflix-abonnement op de
@@ -14,7 +14,7 @@ export function defaultTypeForCategory(category) {
     : "Prive";
 }
 
-export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType) {
+export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = []) {
   if (tx.outOfYearRange) {
     return { category: "Inkomsten/betalingen niet dit jaar", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
   }
@@ -25,6 +25,20 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // tegenpartij "BP Boxtel" of "Action 1234 Boxtel").
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const isIncome = tx.amount > 0;
+
+  // Een overboeking naar/van een van je eigen andere geladen rekeningen — herkend op
+  // rekeningnummer (IBAN), niet op een tekstlabel dat bank tot bank verschilt of soms
+  // ontbreekt. Werkt dus hetzelfde bij CSV, MT940 en CAMT.053, en bij elke bank, zolang je de
+  // betreffende andere rekening ook zelf hebt geladen.
+  if (tx.counterpartyIban && ownAccountsElsewhere.length > 0) {
+    const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
+    if (matchedOwn && matchedOwn.accountType && matchedOwn.accountType !== accountType) {
+      if (accountType === "Zakelijk") {
+        return isIncome ? { category: "Terugboeking van prive", type: "Zakelijk" } : { category: "Prive opnames", type: "Zakelijk" };
+      }
+      return isIncome ? { category: "Uitbetaling aan prive", type: "Prive" } : { category: "Terugboeking van prive", type: "Prive" };
+    }
+  }
 
   // "Derdengelden Intersolve" komt in de praktijk voor als inkomen (ook wanneer het incidenteel
   // als een terugboeking/afschrijving in het bankbestand staat) — altijd als inkomen behandelen,
@@ -106,7 +120,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   return { category: "Overig", type: expenseType };
 }
 
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow) {
+export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = []) {
   if (overridesByRow[tx.id]) return overridesByRow[tx.id];
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
@@ -114,5 +128,5 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   if (ik && overridesByCounterparty[ik]) return overridesByCounterparty[ik];
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   if (key && overridesByCounterparty[key]) return overridesByCounterparty[key];
-  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType);
+  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere);
 }

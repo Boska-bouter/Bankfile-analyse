@@ -33,14 +33,16 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       zakBruto += tx.amount;
       zakBtwTotaal += btw;
     }
-    if (tx.category === "Zakelijke inkomsten") {
+    if (tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%") {
       zakelijkeInkomsten += tx.amount;
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) verschuldigdBtw += btw;
-    } else {
-      if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += Math.abs(btw);
+    } else if (!incomeTransferCategories.includes(tx.category)) {
+      // Een positief bedrag hier is een terugbetaling/creditnota — die verlaagt de kosten
+      // (en de bijbehorende voorbelasting) juist, in plaats van er verkeerd bovenop te komen.
+      if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += -btw;
     }
-    if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += Math.abs(tx.amount);
+    if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -tx.amount;
     if (tx.category === "Belastingen: ZVW" || tx.category === "Belastingen: IH") alBetaaldeZvwIh += Math.abs(tx.amount);
     if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") {
       uitkeringenAanPrive += Math.abs(tx.amount);
@@ -115,11 +117,11 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
     const key = `${y}-Q${kwartaal}`;
     if (!perQuarter[key]) perQuarter[key] = { year: Number(y), verschuldigdBtw: 0, voorbelasting: 0 };
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
-    if (tx.category === "Zakelijke inkomsten") {
+    if (tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%") {
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) perQuarter[key].verschuldigdBtw += btw;
     } else if (!voorbelastingExcluded.includes(tx.category)) {
-      perQuarter[key].voorbelasting += Math.abs(btw);
+      perQuarter[key].voorbelasting += -btw;
     }
   }
   const result = {};

@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER } from "../classification/categories.js";
+import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES } from "../classification/categories.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
 // Standaard 21%, met een vaste lijst uitzonderingen op 0%.
@@ -73,6 +73,19 @@ export function computeBtw(tx, categoryBtwRates, btwVerlegd) {
   return tx.amount - tx.amount / (1 + rate / 100);
 }
 
+// Categorieën die géén BTW-belaste aankoop/kostenpost zijn, maar een heel andere geldstroom
+// (loon, belasting, lening, hypotheek) — die horen nergens op een BTW-aangifte, dus ook niet mee
+// te tellen in de "Uitgaven (netto)"/voorbelasting-kolom van het kwartaaloverzicht. Dit is een
+// andere lijst dan INCOME_TRANSFER_CATEGORIES: die geldt breder (ook voor het jaaroverzicht, waar
+// loon/belasting wél als een echte kostenpost horen te tellen) — hier gaat het puur om wat een
+// BTW-aangifte zelf kent.
+const BTW_AANGIFTE_NIET_RELEVANT = [
+  "Uitbetalen loon",
+  "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
+  "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
+  "Hypotheek", "Leningen",
+];
+
 export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
   const map = {};
   for (const tx of classified) {
@@ -102,21 +115,29 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
       };
     }
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
-    if (tx.category === "Zakelijke inkomsten") {
+    const isIncomeCategory = tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%";
+    if (isIncomeCategory) {
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (effectiefVerlegd) {
         map[key].omzetBrutoVerlegd += tx.amount;
-      } else if (categoryBtwRates["Zakelijke inkomsten"] === 9) {
+      } else if (tx.category === "Zakelijke inkomsten 9%" || (tx.category === "Zakelijke inkomsten" && categoryBtwRates["Zakelijke inkomsten"] === 9)) {
         map[key].omzetBruto9 += tx.amount;
         map[key].verschuldigdBtw9 += btw;
       } else {
         map[key].omzetBruto21 += tx.amount;
         map[key].verschuldigdBtw21 += btw;
       }
+    } else if (INCOME_TRANSFER_CATEGORIES.includes(tx.category) || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) {
+      // Pure geldbeweging (lening-uitkering, verkoop activa, overboeking naar/van prive, ...) of
+      // een geldstroom die de BTW-aangifte helemaal niet kent (loon, belasting, hypotheek/lening)
+      // — geen omzet én geen BTW-kostenpost, telt dus nergens in mee in dit overzicht.
     } else {
-      map[key].kostenBruto += Math.abs(tx.amount);
+      // Een positief bedrag op een kostencategorie is een terugbetaling/creditnota (bijv. een
+      // jaarafrekening energie, of een retour bij een winkel) — die verlaagt de kosten juist,
+      // in plaats van er (met het oude Math.abs()) verkeerd bovenop te komen.
+      map[key].kostenBruto += -tx.amount;
       if (!voorbelastingExcluded.includes(tx.category)) {
-        map[key].voorbelasting += Math.abs(btw);
+        map[key].voorbelasting += -btw;
       }
     }
   }

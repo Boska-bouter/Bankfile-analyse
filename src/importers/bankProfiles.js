@@ -11,6 +11,9 @@ export const HEADER_ALIASES = {
     "tegenrekening iban/bban", "tegenrekening iban", "tegenrekening", "iban tegenpartij", "counterparty iban",
     "iban/bban", "rekening tegenpartij", "iban",
   ],
+  // Het eigen rekeningnummer van dit bestand zelf (niet de tegenpartij) — nodig om overboekingen
+  // tussen je eigen rekeningen te herkennen wanneer je meerdere eigen bestanden tegelijk laadt.
+  ownAccount: ["rekening", "rekeningnummer", "eigen rekening", "iban rekening", "account iban"],
   description: ["omschrijving", "mededelingen", "omschrijving-1", "description"],
   fullDescription: ["volledige omschrijving", "omschrijving-1", "mededelingen", "omschrijving-2", "omschrijving-3"],
   balance: [
@@ -40,6 +43,7 @@ export function buildColumnMapping(headers) {
     afbij: guessColumn(headers, HEADER_ALIASES.afbij),
     counterparty: guessColumn(headers, HEADER_ALIASES.counterparty),
     counterpartyIban: guessColumn(headers, HEADER_ALIASES.counterpartyIban),
+    ownAccount: guessColumn(headers, HEADER_ALIASES.ownAccount),
     description: guessColumn(headers, HEADER_ALIASES.description),
     fullDescription: guessColumn(headers, HEADER_ALIASES.fullDescription),
     balance: guessColumn(headers, HEADER_ALIASES.balance),

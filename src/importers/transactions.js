@@ -22,6 +22,7 @@ export function buildTransactions(parsedFiles) {
       }
       const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
       const counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
+      const ownAccount = mapping.ownAccount ? normalizeIban(r[mapping.ownAccount]) : "";
       const description = mapping.description ? String(r[mapping.description] || "").trim() : "";
       const fullDescription = mapping.fullDescription ? String(r[mapping.fullDescription] || "").trim() : description;
       const balance = mapping.balance ? parseEuroNumber(r[mapping.balance]) : NaN;
@@ -33,6 +34,7 @@ export function buildTransactions(parsedFiles) {
         amount,
         counterparty,
         counterpartyIban,
+        ownAccount,
         description,
         fullDescription,
         source: sourceLabel,
@@ -171,4 +173,17 @@ export function computeFileContinuity(diagnostics, accountTypeByFile) {
     }
   }
   return results;
+}
+
+// Bepaalt per bestand het eigen rekeningnummer (uit de "ownAccount"-kolom, indien aanwezig) —
+// nodig om overboekingen tussen je eigen rekeningen te herkennen wanneer je meerdere eigen
+// bestanden tegelijk laadt. Neemt de eerst-gevonden, niet-lege waarde per bestand (die is per
+// bestand toch steeds hetzelfde rekeningnummer).
+export function computeOwnAccountByFile(allTransactions) {
+  const result = {};
+  for (const tx of allTransactions) {
+    if (result[tx.source]) continue;
+    if (tx.ownAccount) result[tx.source] = tx.ownAccount;
+  }
+  return result;
 }

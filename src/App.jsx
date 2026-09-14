@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity } from "./importers/transactions.js";
+import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
@@ -280,6 +280,21 @@ export default function App() {
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
+  const ownAccountByFile = useMemo(() => computeOwnAccountByFile(allTransactions), [allTransactions]);
+  // Voor elk bestand: de eigen rekeningnummers van al je ándere geladen bestanden (met hun
+  // rekeningtype) — gebruikt om overboekingen tussen je eigen rekeningen te herkennen, ongeacht
+  // bankformaat. Alleen bestanden waarvan het rekeningtype al bekend is tellen mee (anders is niet
+  // te bepalen of het bijv. "Terugboeking van prive" of "Uitbetaling aan prive" zou moeten zijn).
+  const ownAccountsElsewhereByFile = useMemo(() => {
+    const entries = Object.entries(ownAccountByFile)
+      .filter(([fileName]) => accountTypeByFile[fileName])
+      .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName] }));
+    const result = {};
+    for (const pf of parsedFiles) {
+      result[pf.fileName] = entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType }));
+    }
+    return result;
+  }, [ownAccountByFile, accountTypeByFile, parsedFiles]);
   const importDiagnostics = useMemo(
     () => computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections),
     [parsedFiles, allTransactions, openingBalanceCorrections]
@@ -396,7 +411,10 @@ export default function App() {
 
   const classified = useMemo(() => {
     const base = transactions.map((tx) => {
-      const resolved = resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], overridesByCounterparty, overridesByRow);
+      const resolved = resolveClassification(
+        tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
+        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || []
+      );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category);
       return { ...tx, ...resolved, confidence };
     });
@@ -404,17 +422,21 @@ export default function App() {
     // zakelijk en privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
     // zakelijk en privé in beide richtingen klopt, zonder de oorspronkelijke boeking te veranderen.
+    // Alleen als de bijbehorende privérekening niet zelf ook geladen is: staat die er wél bij, dan
+    // heeft die eigen transactie via de eigen-rekening-herkenning hierboven al zijn eigen kant van
+    // dezelfde overboeking gekregen — een spiegel zou die dan dubbel tellen.
     const mirrors = [];
     for (const tx of base) {
+      const otherSideAlsoLoaded = (ownAccountsElsewhereByFile[tx.source] || []).some((o) => o.accountType === "Prive");
       if (
         (tx.category === "Prive opnames" || tx.category === "Uitbetaling aan prive" || tx.category === "Terugboeking van prive") &&
-        tx.type === "Zakelijk"
+        tx.type === "Zakelijk" && !otherSideAlsoLoaded
       ) {
         mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
       }
     }
     return mirrors.length ? [...base, ...mirrors] : base;
-  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow]);
+  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile]);
 
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
@@ -669,6 +691,17 @@ export default function App() {
   };
 
   const requestCategoryChange = (tx, patch) => {
+    // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
+    // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
+    // uit een override teruggelezen. Een wijziging rechtstreeks op de spiegel opslaan komt dus
+    // nergens terecht en verdwijnt bij de volgende herberekening geheid weer. Wijzig in plaats
+    // daarvan de echte, onderliggende boeking — verdwijnt de reden voor een spiegel (categorie is
+    // niet langer een prive/zakelijk-beweging), dan vervalt de spiegel vanzelf.
+    if (tx.isMirror) {
+      const originalId = typeof tx.id === "string" ? Number(tx.id.replace(/-prive-spiegel$/, "")) : tx.id;
+      const original = classified.find((t) => !t.isMirror && t.id === originalId);
+      if (original) return requestCategoryChange(original, patch);
+    }
     const key = keyForTx(tx);
     if (!key) {
       snapshotBeforeAction("Categorie/type aangepast");

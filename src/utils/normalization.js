@@ -138,6 +138,22 @@ export function normalizeIban(raw) {
   return String(raw || "").replace(/\s+/g, "").toUpperCase();
 }
 
+// Vergelijkt twee rekeningnummers waarvan er één een volledig IBAN kan zijn en de ander een kaal
+// rekeningnummer zonder landcode/bankcode (zoals het :25:-veld van sommige MT940-bestanden, bijv.
+// "107975432" i.p.v. "NL13ABNA0107975432") — zodat "is dit dezelfde rekening" ook werkt tussen
+// bestanden van verschillende bankformaten.
+export function ibansMatch(a, b) {
+  const na = normalizeIban(a);
+  const nb = normalizeIban(b);
+  if (!na || !nb || na.length < 6 || nb.length < 6) return false;
+  if (na === nb) return true;
+  const shorter = na.length <= nb.length ? na : nb;
+  const longer = na.length <= nb.length ? nb : na;
+  // Een kaal rekeningnummer staat als staart in het volledige IBAN (na landcode+checkcijfers+
+  // bankcode) — alleen als betrouwbaar signaal gebruiken vanaf een minimale lengte.
+  return shorter.length >= 6 && longer.endsWith(shorter);
+}
+
 export function ibanKey(iban, amount) {
   const base = normalizeIban(iban);
   if (!base || base.length < 8) return ""; // te kort om een echte IBAN te zijn

@@ -65,9 +65,15 @@ export function parseMT940Field86(text) {
 export function parseMT940(text) {
   const lines = text.split(/\r\n|\r|\n/);
   const rows = [];
+  let ownAccount = ""; // uit :25: — geldt voor alle :61:-regels erna, tot een eventuele volgende :25:
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
+    if (line.startsWith(":25:")) {
+      ownAccount = line.slice(4).trim();
+      i++;
+      continue;
+    }
     if (line.startsWith(":61:")) {
       // 6 cijfers waardedatum (YYMMDD), optioneel 4 cijfers boekdatum (MMDD), C/D (evt. met R
       // ervoor bij een storneringsregel — dan is het teken juist omgekeerd), bedrag met komma,
@@ -101,6 +107,7 @@ export function parseMT940(text) {
           "Bedrag (EUR)": amountRaw,
           "Omschrijving": description || "",
           "Tegenrekening IBAN/BBAN": iban || "",
+          "Rekening": ownAccount,
         });
         i = j;
         continue;
