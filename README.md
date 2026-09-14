@@ -65,6 +65,16 @@ bij elke push naar `main`. Eenmalig nodig: onder repo-instellingen → Pages →
 `gh-pages`-branch (die de workflow aanmaakt bij de eerste run). Controleer ook `base` in
 `vite.config.js` — die moet overeenkomen met je repo-naam.
 
+### Bijwerken zonder handmatig cache legen
+
+`index.html` krijgt bij elke build cache-control-meta's mee zodat browsers die niet vasthouden
+(de gehashte JS/CSS-bestanden zelf blijven wél veilig gecachet — hun bestandsnaam verandert
+vanzelf bij elke wijziging). Daarnaast schrijft `vite.config.js` bij elke build een `version.json`
+met een tijdstempel; de draaiende app (`src/hooks/useVersionCheck.js`) vergelijkt die periodiek
+met zijn eigen build-tijdstempel en toont een "Nu bijwerken"-melding met één knop zodra er een
+nieuwere versie beschikbaar is. Gebruikers hoeven dus niets over browsercache te weten — dit werkt
+volledig automatisch bij elke `npm run build`, geen extra stap nodig.
+
 ## Privacy
 
 Alle verwerking gebeurt lokaal in de browser. Bankbestanden en projectdata worden alleen in de

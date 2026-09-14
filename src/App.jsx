@@ -44,6 +44,8 @@ import ClassificationConfidencePanel from "./components/dashboard/Classification
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
 import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
+import UpdateAvailableBanner from "./components/shared/UpdateAvailableBanner.jsx";
+import { useVersionCheck } from "./hooks/useVersionCheck.js";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
@@ -123,6 +125,7 @@ export default function App() {
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
   const [showCategoryOverview, setShowCategoryOverview] = useState(false);
+  const { updateAvailable } = useVersionCheck();
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
@@ -1136,6 +1139,8 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {updateAvailable && <UpdateAvailableBanner />}
 
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
