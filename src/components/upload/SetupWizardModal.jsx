@@ -134,6 +134,11 @@ export default function SetupWizardModal({
           {currentStepId === 2 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Werk je met BTW-verlegd (bijv. onderaannemer in de bouw)?</p>
+              <p className="text-xs text-slate-400">
+                Dit is de standaardinstelling. Werk je met sommige klanten met BTW-verlegd en factureer je anderen
+                gewoon met 21% BTW? Kies hier de situatie die het vaakst voorkomt — per klant is dit later nog aan te
+                passen bij "Zakelijke tegenpartijen (inkomsten)".
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setBtwVerlegd(true); goNext(); }}

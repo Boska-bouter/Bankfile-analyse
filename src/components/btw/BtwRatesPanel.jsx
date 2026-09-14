@@ -53,8 +53,8 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
 
           {!korRegeling && (
             <>
-              <div className="flex items-center gap-3 mb-4 p-3 rounded-md bg-slate-50">
-                <span className="text-xs font-medium text-slate-600">BTW-verlegd op zakelijke inkomsten:</span>
+              <div className="flex items-center gap-3 mb-1.5 p-3 rounded-md bg-slate-50">
+                <span className="text-xs font-medium text-slate-600">BTW-verlegd op zakelijke inkomsten (standaard):</span>
                 <button
                   onClick={() => setBtwVerlegd(true)}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium ${btwVerlegd === true ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
@@ -68,6 +68,10 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                   Nee
                 </button>
               </div>
+              <p className="text-xs text-slate-400 mb-4">
+                Werk je met sommige klanten met BTW-verlegd en factureer je anderen gewoon met 21%? Dit is dan alleen
+                de standaardwaarde — per klant is dit te verfijnen bij "Zakelijke tegenpartijen (inkomsten)".
+              </p>
               <p className="text-xs text-slate-400 mb-2">
                 Percentage per subtype — gegroepeerd per hoofdcategorie. Klik op een hoofdcategorie om de subtypes
                 daarbinnen te tonen.

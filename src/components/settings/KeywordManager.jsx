@@ -10,7 +10,7 @@ import { eur } from "../../utils/amounts.js";
 // omschrijving (klik om de volledige tekst te tonen/verbergen).
 export default function KeywordManager({
   keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass, entries, entriesLabel, onReclassify,
-  isExpanded, onToggleExpand,
+  isExpanded, onToggleExpand, onSetBtwVerlegd, btwVerlegdDefault,
 }) {
   const [value, setValue] = useState("");
   const [showEntries, setShowEntries] = useState(false);
@@ -86,6 +86,18 @@ export default function KeywordManager({
                       {MAIN_CATEGORY_ORDER.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
+                    </select>
+                  )}
+                  {onSetBtwVerlegd && (
+                    <select
+                      value={item.btwVerlegd == null ? "default" : item.btwVerlegd ? "ja" : "nee"}
+                      onChange={(e) => onSetBtwVerlegd(item, e.target.value === "default" ? null : e.target.value === "ja")}
+                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      title={`BTW-verlegd voor deze klant (standaard: ${btwVerlegdDefault ? "ja" : "nee"})`}
+                    >
+                      <option value="default">BTW-verlegd: standaard ({btwVerlegdDefault ? "ja" : "nee"})</option>
+                      <option value="ja">BTW-verlegd: ja</option>
+                      <option value="nee">BTW-verlegd: nee (21% BTW)</option>
                     </select>
                   )}
                 </div>

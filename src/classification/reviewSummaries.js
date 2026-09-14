@@ -32,7 +32,7 @@ export function computeCategorySummary(classified, category) {
     if (!map[key]) {
       map[key] = {
         key, name: tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
-        category: tx.category, type: tx.type, description: "", years: new Set(),
+        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd,
       };
     }
     map[key].total += tx.amount;

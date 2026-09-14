@@ -519,6 +519,16 @@ export default function App() {
     // Prive omzetten (defaultTypeForCategory zou voor de meeste categorieën "Prive" teruggeven).
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: "Zakelijk" });
   };
+  // Sommige zzp'ers hebben tegelijk klanten met BTW-verlegd (bijv. onderaannemer in de bouw) én
+  // klanten waar ze zelf gewoon 21% BTW over factureren — dat is dus geen aan/uit-instelling voor
+  // de hele onderneming, maar iets per klant. De globale BTW-verlegd-instelling (uit de wizard)
+  // blijft de standaardwaarde voor nog niet expliciet ingestelde tegenpartijen; hiermee wijk je
+  // daar per klant van af. category/type expliciet meegeven zodat de override altijd compleet
+  // blijft (anders zou een tegenpartij die nog geen eigen correctie had er ineens zonder categorie
+  // bij kunnen komen te staan).
+  const setCounterpartyBtwVerlegd = (item, value) => {
+    setCounterpartyOverride(item.name, item.amount, { category: item.category, type: item.type, btwVerlegd: value });
+  };
 
   // ---- Factuurperiode vs. boekingskwartaal ----
   const periodeMismatches = useMemo(
@@ -1341,6 +1351,8 @@ export default function App() {
                   entries={businessIncomeEntries}
                   entriesLabel="Nu herkend als Zakelijke inkomsten"
                   onReclassify={reclassifyBusinessEntry}
+                  onSetBtwVerlegd={setCounterpartyBtwVerlegd}
+                  btwVerlegdDefault={btwVerlegd}
                   isExpanded={expandedBusinessIncomeList}
                   onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
                 />
