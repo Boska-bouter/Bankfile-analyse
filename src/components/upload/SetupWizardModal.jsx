@@ -71,13 +71,21 @@ export default function SetupWizardModal({
                       <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
                       <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
                       <button
-                        onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" })); }}
+                        onClick={() => {
+                          onAccountTypeChoose(fileName, "Zakelijk");
+                          setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" }));
+                          if (pendingFileNames.length === 1) goNext(); // dit was de laatste — meteen door naar de volgende vraag
+                        }}
                         className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
                       >
                         <Building2 className="h-3.5 w-3.5" /> Zakelijk
                       </button>
                       <button
-                        onClick={() => { onAccountTypeChoose(fileName, "Prive"); setTypedNow((p) => ({ ...p, [fileName]: "Prive" })); }}
+                        onClick={() => {
+                          onAccountTypeChoose(fileName, "Prive");
+                          setTypedNow((p) => ({ ...p, [fileName]: "Prive" }));
+                          if (pendingFileNames.length === 1) goNext();
+                        }}
                         className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
                       >
                         <Home className="h-3.5 w-3.5" /> Privé
@@ -171,7 +179,7 @@ export default function SetupWizardModal({
         </div>
 
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
-          <button onClick={onClose} className="text-xs text-slate-400 hover:text-slate-600">
+          <button onClick={goNext} className="text-xs text-slate-400 hover:text-slate-600">
             Later invullen
           </button>
           {(currentStepId !== 0 || allTypedNow) && (
