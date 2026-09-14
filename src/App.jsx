@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity } from "./importers/transactions.js";
@@ -43,6 +43,7 @@ import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
+import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
 import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
@@ -121,6 +122,7 @@ export default function App() {
   const [showOverigReview, setShowOverigReview] = useState(true);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
+  const [showCategoryOverview, setShowCategoryOverview] = useState(false);
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
@@ -1152,6 +1154,17 @@ export default function App() {
           </button>
         </div>
       )}
+
+      <button
+        onClick={() => setShowCategoryOverview(true)}
+        className="fixed right-1.5 sm:right-2 bottom-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white shadow-lg px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        title="Snel opzoeken: alle categorieën en subtypes"
+      >
+        <ListTree className="h-4 w-4 shrink-0" />
+        <span className="hidden sm:inline">Categorieën</span>
+      </button>
+
+      {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
