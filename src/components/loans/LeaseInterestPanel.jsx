@@ -1,8 +1,24 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+
+// Financiële lease is compleet zodra er genoeg is ingevuld om het rentepercentage te kunnen
+// berekenen (koopprijs, looptijd, maandbedrag) én een startdatum — zie FinancialLeaseDetailsModal.
+function isCompleteFinancialLeaseDetails(details) {
+  if (!details) return false;
+  return !!(details.koopprijs && details.looptijd && details.maandbedrag && details.startdatum);
+}
+
+function computeFinancialLeaseAmortization(lease, details) {
+  if (!isCompleteFinancialLeaseDetails(details)) return null;
+  const onbetaaldGedeelteKoop = computeOnbetaaldGedeelteKoop(details);
+  const renteJaarlijks = computeFinancialLeaseRate(details);
+  if (renteJaarlijks == null) return null;
+  return computeLoanAmortization(lease.transactions, { leasebedrag: onbetaaldGedeelteKoop, startdatum: details.startdatum, rente: renteJaarlijks });
+}
 
 export default function LeaseInterestPanel({
   leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp,
@@ -13,7 +29,7 @@ export default function LeaseInterestPanel({
   const incompleteCount = leaseSummary.filter((l) => {
     if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
     if (leaseDetails[l.key]?.onbekend) return false;
-    return l.category === "Lease (financieel)" && !(leaseDetails[l.key]?.leasebedrag && leaseDetails[l.key]?.startdatum);
+    return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
   }).length;
 
   return (
@@ -42,7 +58,7 @@ export default function LeaseInterestPanel({
               const isFinancieel = lease.category === "Lease (financieel)";
               const details = leaseDetails[lease.key];
               const isOnbekend = isFinancieel && !!details?.onbekend;
-              const amortization = isFinancieel ? computeLoanAmortization(lease.transactions, details) : null;
+              const amortization = isFinancieel ? computeFinancialLeaseAmortization(lease, details) : null;
               return (
                 <div key={lease.key} className="rounded-md border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
@@ -65,9 +81,9 @@ export default function LeaseInterestPanel({
                       ) : (
                         <>
                           <button onClick={() => onOpenModal(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                            {details?.leasebedrag && details?.startdatum ? "Gegevens bewerken" : "Gegevens invullen"}
+                            {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
                           </button>
-                          {!(details?.leasebedrag && details?.startdatum) && (
+                          {!isCompleteFinancialLeaseDetails(details) && (
                             <button onClick={() => onMarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                               Gegevens onbekend
                             </button>
@@ -86,7 +102,7 @@ export default function LeaseInterestPanel({
                         Gesplitst: rente <strong>{eur(amortization.totaalRente)}</strong> (aftrekbaar) · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> (niet aftrekbaar) · nog openstaand <strong>{eur(amortization.saldoNu)}</strong>
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul leasebedrag, startdatum en rente in.</p>
+                      <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>
                     )
                   )}
                 </div>

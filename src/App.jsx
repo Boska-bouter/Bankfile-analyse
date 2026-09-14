@@ -55,6 +55,7 @@ import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
+import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetailsModal.jsx";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
@@ -939,7 +940,7 @@ export default function App() {
     const incompleteLeases = leaseSummary.filter((l) => {
       if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
       if (leaseDetails[l.key]?.onbekend) return false;
-      return l.category === "Lease (financieel)" && !(leaseDetails[l.key]?.leasebedrag && leaseDetails[l.key]?.startdatum);
+      return l.category === "Lease (financieel)" && !(leaseDetails[l.key]?.koopprijs && leaseDetails[l.key]?.looptijd && leaseDetails[l.key]?.maandbedrag && leaseDetails[l.key]?.startdatum);
     });
     if (incompleteLeases.length > 0) {
       items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });
@@ -1867,9 +1868,8 @@ export default function App() {
       )}
 
       {leaseDetailsModalKey && (
-        <LoanDetailsModal
-          kind="lease"
-          loan={leaseSummary.find((l) => l.key === leaseDetailsModalKey)}
+        <FinancialLeaseDetailsModal
+          lease={leaseSummary.find((l) => l.key === leaseDetailsModalKey)}
           details={leaseDetails[leaseDetailsModalKey]}
           onSave={setLeaseDetailField}
           onClose={() => setLeaseDetailsModalKey(null)}
