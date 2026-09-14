@@ -10,7 +10,7 @@ import { eur } from "../../utils/amounts.js";
 // omschrijving (klik om de volledige tekst te tonen/verbergen).
 export default function KeywordManager({
   keywords, onAdd, onRemove, placeholder, chipClass, addButtonClass, entries, entriesLabel, onReclassify,
-  isExpanded, onToggleExpand, onSetBtwVerlegd, btwVerlegdDefault,
+  isExpanded, onToggleExpand, onSetBtwVerlegd, btwVerlegdDefault, onSetIncomeRate,
 }) {
   const [value, setValue] = useState("");
   const [showEntries, setShowEntries] = useState(false);
@@ -86,6 +86,18 @@ export default function KeywordManager({
                       {MAIN_CATEGORY_ORDER.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
+                    </select>
+                  )}
+                  {onSetIncomeRate && mainCategoryOf(item.category) === "Zakelijke inkomsten" && (
+                    <select
+                      value={item.category === "Zakelijke inkomsten 9%" ? "9" : item.category === "Zakelijke inkomsten 21%" ? "21" : "algemeen"}
+                      onChange={(e) => onSetIncomeRate(item, e.target.value)}
+                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      title="BTW-tarief op de facturen aan deze klant, voor wie zowel laag- als hoogbelast factureert"
+                    >
+                      <option value="algemeen">BTW-tarief: algemeen</option>
+                      <option value="9">BTW-tarief: 9% (laag)</option>
+                      <option value="21">BTW-tarief: 21% (hoog)</option>
                     </select>
                   )}
                   {onSetBtwVerlegd && (

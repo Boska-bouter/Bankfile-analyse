@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
-const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 3: "BTW-kwartalen", 4: "Project opslaan" };
+const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan" };
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
   korRegeling, setKorRegeling,
   btwVerlegd, setBtwVerlegd,
+  onSetIncomeBtwRateChoice,
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
   fileContinuity = [],
   onSaveProject,
@@ -21,12 +22,18 @@ export default function SetupWizardModal({
   // bleef hangen op een net-beantwoorde stap). Een "wachtrij" van resterende stappen (in plaats
   // van een index in een krimpende lijst) kan nooit vastlopen: elke voltooide stap wordt expliciet
   // gemarkeerd, en de KOR=Ja-uitzondering (BTW-verlegd/kwartalen worden dan overbodig) filtert
-  // alleen toekomstige, nog niet getoonde stappen weg.
+  // alleen toekomstige, nog niet getoonde stappen weg. Stap 5 (BTW-tarief) hoort hier om dezelfde
+  // reden al bij vanaf het begin, ook al is pas ná het antwoord op stap 2 bekend of hij relevant
+  // is (alleen bij "nee" op BTW-verlegd) — dat wordt hieronder net als de KOR-uitzondering pas
+  // live bepaald, niet bij het openen.
   const [initialSteps] = useState(() => {
     const list = [];
     if (pendingFileNames.length > 0) list.push(0);
     if (korRegeling === null) list.push(1);
-    if (korRegeling !== true && btwVerlegd === null) list.push(2);
+    if (korRegeling !== true && btwVerlegd === null) {
+      list.push(2);
+      list.push(5);
+    }
     if (korRegeling !== true && quartersToAsk.length > 0) list.push(3);
     list.push(4); // altijd als laatste: herinnering om het project op te slaan
     return list;
@@ -36,6 +43,7 @@ export default function SetupWizardModal({
   const remainingSteps = initialSteps.filter((id) => {
     if (doneIds.has(id)) return false;
     if ((id === 2 || id === 3) && korRegeling === true) return false;
+    if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
     return true;
   });
 
@@ -153,6 +161,37 @@ export default function SetupWizardModal({
                   className={`rounded-md px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStepId === 5 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Onder welk BTW-tarief vallen de diensten die je factureert?</p>
+              <p className="text-xs text-slate-400">
+                De meeste diensten vallen onder het hoge tarief (21%) — het lage tarief (9%) geldt voor een beperkte
+                groep diensten/producten. Lever je aan sommige klanten laag- en aan andere hoogbelast? Kies dan
+                "Allebei" — je kunt dat daarna per klant instellen bij "Zakelijke tegenpartijen (inkomsten)".
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { onSetIncomeBtwRateChoice?.("21"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
+                >
+                  Hoog tarief (21%)
+                </button>
+                <button
+                  onClick={() => { onSetIncomeBtwRateChoice?.("9"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
+                >
+                  Laag tarief (9%)
+                </button>
+                <button
+                  onClick={() => { onSetIncomeBtwRateChoice?.("beide"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
+                >
+                  Allebei, afhankelijk van klant/dienst
                 </button>
               </div>
             </div>

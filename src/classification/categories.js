@@ -205,11 +205,13 @@ export const CATEGORY_ORDER = [
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk",
-  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke uitgaven",
+  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
 export const CATEGORY_COLOR = Object.fromEntries([
   ["Zakelijke inkomsten", "bg-emerald-100 text-emerald-800"],
+  ["Zakelijke inkomsten 9%", "bg-emerald-50 text-emerald-700"],
+  ["Zakelijke inkomsten 21%", "bg-emerald-200 text-emerald-900"],
   ["Inkomsten", "bg-teal-100 text-teal-800"],
   ["Inkomsten/betalingen niet dit jaar", "bg-stone-200 text-stone-700"],
   ["Uitbetalen loon", "bg-sky-100 text-sky-800"],
@@ -238,7 +240,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
 ];
 
 export const INCOME_TRANSFER_CATEGORIES = [
-  "Zakelijke inkomsten", "Inkomsten", "Verkoop activa", "Toeslagen",
+  "Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
   "Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive",
   "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar",
 ];
@@ -433,6 +435,8 @@ export const SUBTYPE_TO_MAIN = {
   "Zakelijk mobiel/internet": "Telecom & abonnementen",
   "Zakelijk overige abonnementen": "Telecom & abonnementen",
   "Zakelijke inkomsten": "Zakelijke inkomsten",
+  "Zakelijke inkomsten 9%": "Zakelijke inkomsten",
+  "Zakelijke inkomsten 21%": "Zakelijke inkomsten",
   "Zakelijke uitgaven": "Inkoop & zakelijke uitgaven",
 };
 

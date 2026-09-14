@@ -526,6 +526,21 @@ export default function App() {
     // Prive omzetten (defaultTypeForCategory zou voor de meeste categorieën "Prive" teruggeven).
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: "Zakelijk" });
   };
+  // Voor wie zowel laag- als hoogbelaste diensten factureert (zie de wizard-vraag na "BTW-verlegd:
+  // nee"): hiermee kies je per klant tussen de generieke "Zakelijke inkomsten" en de twee
+  // tariefspecifieke subtypes.
+  const setIncomeRate = (item, choice) => {
+    const category = choice === "9" ? "Zakelijke inkomsten 9%" : choice === "21" ? "Zakelijke inkomsten 21%" : "Zakelijke inkomsten";
+    requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category, type: "Zakelijk" });
+  };
+  // Wizard-vraag "onder welk BTW-tarief vallen je diensten" — zet het percentage voor de generieke
+  // "Zakelijke inkomsten" op het gekozen tarief. Bij "beide" laten we die op het standaard hoge
+  // tarief staan; de twee specifieke subtypes (9%/21%) staan dan al klaar om per klant te kiezen
+  // via setIncomeRate hierboven.
+  const setIncomeBtwRateChoice = (choice) => {
+    if (choice === "9") setCategoryBtwRatesWithUndo((prev) => ({ ...prev, "Zakelijke inkomsten": 9 }));
+    else if (choice === "21") setCategoryBtwRatesWithUndo((prev) => ({ ...prev, "Zakelijke inkomsten": 21 }));
+  };
   // Sommige zzp'ers hebben tegelijk klanten met BTW-verlegd (bijv. onderaannemer in de bouw) én
   // klanten waar ze zelf gewoon 21% BTW over factureren — dat is dus geen aan/uit-instelling voor
   // de hele onderneming, maar iets per klant. De globale BTW-verlegd-instelling (uit de wizard)
@@ -1303,6 +1318,7 @@ export default function App() {
             setKorRegeling={setKorRegelingWithUndo}
             btwVerlegd={btwVerlegd}
             setBtwVerlegd={setBtwVerlegdWithUndo}
+            onSetIncomeBtwRateChoice={setIncomeBtwRateChoice}
             quartersToAsk={wizardQuarters}
             kwartaalStatus={kwartaalStatus}
             setKwartaalStatusField={setKwartaalStatusField}
@@ -1419,6 +1435,7 @@ export default function App() {
                   onReclassify={reclassifyBusinessEntry}
                   onSetBtwVerlegd={setCounterpartyBtwVerlegd}
                   btwVerlegdDefault={btwVerlegd}
+                  onSetIncomeRate={setIncomeRate}
                   isExpanded={expandedBusinessIncomeList}
                   onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
                 />

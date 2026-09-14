@@ -33,12 +33,44 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return accountType === "Zakelijk" ? { category: "Zakelijke inkomsten", type: "Zakelijk" } : { category: "Inkomsten", type: "Prive" };
   }
 
-  if (isIncome && /factuur(nr|nummer)?/i.test(text)) {
+  // Een tegenpartij die je zelf al expliciet als zakelijke klant hebt bevestigd (via "Zakelijke
+  // tegenpartijen" of de inkomsten-review) blijft altijd zakelijke inkomsten — dat is een
+  // bewuste, eerder gegeven bevestiging en weegt zwaarder dan de hieronder volgende automatische
+  // herkenning van "dit lijkt geen omzet"-bronnen.
+  const isBiz = businessKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+  if (isBiz) {
     return { category: "Zakelijke inkomsten", type: "Zakelijk" };
   }
 
-  const isBiz = businessKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
-  if (isBiz) {
+  // Niet elke bijschrijving op een zakelijke rekening is omzet: een lening-uitkering,
+  // verzekeringsuitkering, belastingteruggave of terugbetaling/storno telt niet mee als omzet en
+  // zou de BTW-aangifte en het omzetcijfer anders onterecht ophogen. Hergebruikt bewust dezelfde
+  // trefwoordenlijsten als de uitgavenkant (Leningen/Verzekeringen), zodat een bekende
+  // geldverstrekker of verzekeraar ook als afzender wordt herkend, niet alleen als ontvanger.
+  if (isIncome) {
+    const findRule = (name) => rules.find((r) => r.name === name);
+    const matchesRule = (name) => {
+      const rule = findRule(name);
+      return !!rule && rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+    };
+    if (matchesRule("Leningen")) {
+      return { category: "Leningen", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+    if (matchesRule("Verzekering: Zakelijk") || matchesRule("Verzekeringen")) {
+      const category = accountType === "Zakelijk" ? "Verzekering: Zakelijk" : "Verzekeringen";
+      return { category, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+    if (text.includes("belastingdienst")) {
+      return { category: "Belastingen: overig", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+    if (/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting)\b/i.test(text)) {
+      // Onduidelijk WAT er precies terugbetaald is — bewust naar "Overig" (controleren) in plaats
+      // van te gokken, in plaats van dit stilzwijgend als omzet te boeken.
+      return { category: "Overig", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+  }
+
+  if (isIncome && /factuur(nr|nummer)?/i.test(text)) {
     return { category: "Zakelijke inkomsten", type: "Zakelijk" };
   }
 

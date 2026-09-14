@@ -31,6 +31,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
 
 export const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
 DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage BTW-tarief
+DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
@@ -41,7 +42,7 @@ export const DEFAULT_VOORBELASTING_EXCLUDED = [
 export const EMPTY_BTW_RATES = {};
 
 // Ophoging bij elke wijziging in welke categorieën standaard 0% BTW hebben — zie mergeBtwRates.
-export const BTW_RATES_VERSION = 7;
+export const BTW_RATES_VERSION = 8;
 
 export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
   const migratedSaved = {};
