@@ -18,7 +18,7 @@ export default function MultiYearOverview({
     const openOB = yearlyOpenOB[year] || 0;
     const ibEstimate = estimateIncomeTax(summary.winst, year);
     const ibGedaan = !!ibStatus[year]?.gedaan;
-    const ibBelastingEffectief = ibGedaan ? 0 : ibEstimate.belasting;
+    const ibBelastingEffectief = ibEstimate.belasting;
     const manualCorrectie = Number(manualPriveUitgaven[year]) || 0;
     const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
     const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
@@ -115,11 +115,8 @@ export default function MultiYearOverview({
                       <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{openOB >= 0 ? "-" : "+"}{eurTight(Math.abs(openOB))}</td>
                     )}
                     <td className="py-2 px-3 text-right whitespace-nowrap">
-                      {ibGedaan ? (
-                        <span className="font-medium text-emerald-700">✓ IB gedaan</span>
-                      ) : (
-                        <span className="font-mono text-slate-500">-{eurTight(ibEstimate.belasting)}{ibEstimate.geëxtrapoleerd ? "*" : ""}</span>
-                      )}
+                      <span className="font-mono text-slate-500">-{eurTight(ibEstimate.belasting)}{ibEstimate.geëxtrapoleerd ? "*" : ""}</span>
+                      {ibGedaan && <span className="ml-1.5 text-emerald-700" title="IB-aangifte is al gedaan">✓</span>}
                     </td>
                     <td className={`py-2 pl-3 text-right font-mono font-medium whitespace-nowrap ${isTekort ? "text-rose-700" : "text-emerald-700"}`}>
                       {isTekort ? "Tekort: " : "Over: "}{eurTight(Math.abs(verschil))}

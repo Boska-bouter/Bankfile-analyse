@@ -83,7 +83,7 @@ export function computeVolledigeJaren(classified) {
 const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
 export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, manualPriveCorrectie) {
   if (!activeYear || !summary) return null;
-  const ibBelastingEffectief = ibGedaan ? 0 : ibEstimate.belasting;
+  const ibBelastingEffectief = ibEstimate.belasting;
   const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
   const effectievePriveUitgegeven = basisPriveUitgegeven + manualPriveCorrectie;
   const verschil = summary.winst - effectievePriveUitgegeven - openOB - ibBelastingEffectief;
@@ -126,9 +126,8 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
   }
   const result = {};
   for (const [key, q] of Object.entries(perQuarter)) {
-    const status = kwartaalStatus[key] || {};
     if (!result[q.year]) result[q.year] = 0;
-    if (!status.betaald) result[q.year] += q.verschuldigdBtw - q.voorbelasting;
+    result[q.year] += q.verschuldigdBtw - q.voorbelasting;
   }
   return result;
 }

@@ -10,7 +10,7 @@ export default function YearSummaryCard({ year, summary, openOB, ibEstimate, kor
   const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
   const effectievePriveUitgegeven = basisPriveUitgegeven + manualCorrectie;
   const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
-  const ibBelastingEffectief = ibGedaan ? 0 : ibEstimate.belasting;
+  const ibBelastingEffectief = ibEstimate.belasting;
   const verschil = summary.winst - effectievePriveUitgegeven - (korRegeling ? 0 : openOB) - ibBelastingEffectief;
   const isTekort = verschil < 0;
   const hasFixedVarData = summary.zakVast > 0 || summary.zakVariabel > 0 || summary.priVast > 0 || summary.priVariabel > 0;
