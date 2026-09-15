@@ -14,7 +14,7 @@ export function defaultTypeForCategory(category) {
     : "Prive";
 }
 
-export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = []) {
+export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = [], eigenNamen = []) {
   if (tx.outOfYearRange) {
     return { category: "Inkomsten/betalingen niet dit jaar", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
   }
@@ -33,6 +33,21 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   if (tx.counterpartyIban && ownAccountsElsewhere.length > 0) {
     const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
     if (matchedOwn && matchedOwn.accountType && matchedOwn.accountType !== accountType) {
+      if (accountType === "Zakelijk") {
+        return isIncome ? { category: "Terugboeking van prive", type: "Zakelijk" } : { category: "Prive opnames", type: "Zakelijk" };
+      }
+      return isIncome ? { category: "Uitbetaling aan prive", type: "Prive" } : { category: "Terugboeking van prive", type: "Prive" };
+    }
+  }
+
+  // Een overboeking naar/van de ondernemer zelf (of fiscaal partner), herkend op naam — voor de
+  // situatie waarin de tegenrekening-IBAN ontbreekt of naar een rekening wijst die je niet zelf
+  // hebt geladen (zie ook de "eigen rekening (niet geladen)"-vraag in de wizard, die hetzelfde
+  // via IBAN afvangt). Minder hard bewijs dan een IBAN-match, maar wel een bewust door de
+  // gebruiker zelf opgegeven naam — geen gok van de tool.
+  if (eigenNamen.length > 0) {
+    const matchedNaam = eigenNamen.find((naam) => naam && text.includes(naam));
+    if (matchedNaam) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type: "Zakelijk" } : { category: "Prive opnames", type: "Zakelijk" };
       }
@@ -120,7 +135,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   return { category: "Overig", type: expenseType };
 }
 
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = []) {
+export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = []) {
   if (overridesByRow[tx.id]) return overridesByRow[tx.id];
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
@@ -128,5 +143,5 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   if (ik && overridesByCounterparty[ik]) return overridesByCounterparty[ik];
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   if (key && overridesByCounterparty[key]) return overridesByCounterparty[key];
-  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere);
+  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen);
 }

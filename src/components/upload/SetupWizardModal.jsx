@@ -3,6 +3,7 @@ import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } fr
 import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
+  10: "Eigen naam", 11: "Andere eigen rekening",
   6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
   0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
@@ -19,6 +20,8 @@ export default function SetupWizardModal({
   verwachteLening, setVerwachteLening,
   verwachteAOV, setVerwachteAOV,
   heeftVoorraad, setHeeftVoorraad,
+  eigenNamen, setEigenNamen,
+  eigenRekeningExtra, setEigenRekeningExtra,
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -42,6 +45,8 @@ export default function SetupWizardModal({
   // opnieuw in de wachtrij te komen zoals stap 0 dat wel doet.
   const [initialSteps] = useState(() => {
     const list = [];
+    if (eigenNamen === null) list.push(10);
+    if (eigenRekeningExtra === null) list.push(11);
     if (verwachteLease === null) list.push(6);
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
@@ -88,6 +93,78 @@ export default function SetupWizardModal({
         </div>
 
         <div className="p-5 overflow-y-auto flex-1">
+          {currentStepId === 10 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">
+                Wat is je eigen naam (en die van je fiscaal partner, indien van toepassing)? Zo herkent de tool een
+                overboeking naar/van jezelf als privé, ook als de tegenrekening niet is geladen.
+              </p>
+              <input
+                type="text"
+                value={typedNow.eigenNaamOndernemer ?? ""}
+                onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamOndernemer: e.target.value }))}
+                placeholder="Eigen naam (bijv. P. Szurgot)"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                value={typedNow.eigenNaamPartner ?? ""}
+                onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamPartner: e.target.value }))}
+                placeholder="Naam fiscaal partner (optioneel)"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-slate-400">Optioneel — je kunt dit ook later nog invullen, of overslaan.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEigenNamen({ ondernemer: typedNow.eigenNaamOndernemer?.trim() || null, partner: typedNow.eigenNaamPartner?.trim() || null }); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
+                >
+                  Doorgaan
+                </button>
+              </div>
+            </div>
+          )}
+          {currentStepId === 11 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">
+                Heb je nog een andere eigen rekening (bijv. een privérekening) die je niet gaat laden? Met het
+                rekeningnummer kan de tool een overboeking daarheen alsnog herkennen als privé.
+              </p>
+              <input
+                type="text"
+                value={typedNow.eigenRekeningIban ?? ""}
+                onChange={(e) => setTypedNow((p) => ({ ...p, eigenRekeningIban: e.target.value }))}
+                placeholder="Rekeningnummer (IBAN)"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Zakelijk" }))}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                >
+                  Zakelijke rekening
+                </button>
+                <button
+                  onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Prive" }))}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                >
+                  Privérekening
+                </button>
+              </div>
+              <p className="text-xs text-slate-400">De gegevens zijn niet verplicht — je kunt dit ook later nog invullen.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEigenRekeningExtra({ status: "ja", iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
+                >
+                  Ja
+                </button>
+                <button onClick={() => { setEigenRekeningExtra({ status: "nee" }); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+                  Nee
+                </button>
+              </div>
+            </div>
+          )}
           {currentStepId === 6 && (
             <VerwachteNaamVraag
               vraag='Is er een leaseauto (financieel) in dit bedrijf?'

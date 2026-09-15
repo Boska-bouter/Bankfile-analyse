@@ -131,6 +131,8 @@ export default function App() {
   const [verwachteLening, setVerwachteLening] = useState(null);
   const [verwachteAOV, setVerwachteAOV] = useState(null);
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
+  const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
+  const [eigenRekeningExtra, setEigenRekeningExtra] = useState(null); // null=nog niet gevraagd | {status:"ja"|"nee", iban, accountType}
   const [verwachteMatchSuggestie, setVerwachteMatchSuggestie] = useState(null); // {type, naam, matches, targetCategory}
   const [verwachteAangeboden, setVerwachteAangeboden] = useState({}); // {lease: aantalTransactiesToenGecontroleerd, ...}
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
@@ -197,6 +199,8 @@ export default function App() {
     setVerwachteLening(settings.verwachteLening ?? null);
     setVerwachteAOV(settings.verwachteAOV ?? null);
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
+    setEigenNamen(settings.eigenNamen ?? null);
+    setEigenRekeningExtra(settings.eigenRekeningExtra ?? null);
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -268,7 +272,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, manualPriveUitgaven, openingBalanceCorrections,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningExtra,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -279,7 +283,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, manualPriveUitgaven, openingBalanceCorrections,
-    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
+    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningExtra,
     loaded,
   ]);
 
@@ -313,12 +317,20 @@ export default function App() {
     const entries = Object.entries(ownAccountByFile)
       .filter(([fileName]) => accountTypeByFile[fileName])
       .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName] }));
+    // Een handmatig opgegeven eigen rekening die je (nog) niet hebt geladen (zie de wizard-vraag)
+    // telt voor élk geladen bestand mee, niet gekoppeld aan een specifiek fileName.
+    const extra = eigenRekeningExtra?.status === "ja" && eigenRekeningExtra.iban
+      ? [{ iban: eigenRekeningExtra.iban, accountType: eigenRekeningExtra.accountType }]
+      : [];
     const result = {};
     for (const pf of parsedFiles) {
-      result[pf.fileName] = entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType }));
+      result[pf.fileName] = [
+        ...entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType })),
+        ...extra,
+      ];
     }
     return result;
-  }, [ownAccountByFile, accountTypeByFile, parsedFiles]);
+  }, [ownAccountByFile, accountTypeByFile, parsedFiles, eigenRekeningExtra]);
   const importDiagnostics = useMemo(
     () => computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections),
     [parsedFiles, allTransactions, openingBalanceCorrections]
@@ -346,7 +358,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningExtra,
       },
     });
   };
@@ -380,6 +392,8 @@ export default function App() {
     setVerwachteLening(s.verwachteLening ?? null);
     setVerwachteAOV(s.verwachteAOV ?? null);
     setHeeftVoorraad(s.heeftVoorraad ?? null);
+    setEigenNamen(s.eigenNamen ?? null);
+    setEigenRekeningExtra(s.eigenRekeningExtra ?? null);
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -440,11 +454,16 @@ export default function App() {
     });
   };
 
+  const eigenNamenKeywords = useMemo(() => {
+    if (!eigenNamen) return [];
+    return [eigenNamen.ondernemer, eigenNamen.partner].map((n) => extractKeywordCandidate(n)).filter(Boolean);
+  }, [eigenNamen]);
+
   const classified = useMemo(() => {
     const base = transactions.map((tx) => {
       const resolved = resolveClassification(
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
-        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || []
+        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category);
       return { ...tx, ...resolved, confidence };
@@ -467,7 +486,7 @@ export default function App() {
       }
     }
     return mirrors.length ? [...base, ...mirrors] : base;
-  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile]);
+  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords]);
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
   // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
@@ -1090,7 +1109,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
+      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningExtra,
       ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1140,6 +1159,8 @@ export default function App() {
       setVerwachteLening(project.verwachteLening ?? null);
       setVerwachteAOV(project.verwachteAOV ?? null);
       setHeeftVoorraad(project.heeftVoorraad ?? null);
+      setEigenNamen(project.eigenNamen ?? null);
+      setEigenRekeningExtra(project.eigenRekeningExtra ?? null);
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1496,6 +1517,10 @@ export default function App() {
             setVerwachteAOV={(v) => { snapshotBeforeAction("AOV-vraag beantwoord"); setVerwachteAOV(v); }}
             heeftVoorraad={heeftVoorraad}
             setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
+            eigenNamen={eigenNamen}
+            setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
+            eigenRekeningExtra={eigenRekeningExtra}
+            setEigenRekeningExtra={(v) => { snapshotBeforeAction("Andere eigen rekening ingevuld"); setEigenRekeningExtra(v); }}
             onClose={() => setShowSetupWizard(false)}
           />
         )}
