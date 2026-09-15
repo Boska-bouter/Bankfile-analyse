@@ -50,6 +50,13 @@ export function computeLoanSummary(classified) {
   return Object.values(map).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 }
 
+// Sommige leasemaatschappijen laten meerdere, volledig aparte contracten (verschillende
+// voertuigen) onder precies dezelfde tegenpartijnaam lopen — puur op naam groeperen zou die dan
+// ten onrechte samenvoegen tot één (onberekenbare) lease. Banken nemen het eigen leasecontract-
+// nummer vaak wél letterlijk op in de omschrijving ("...leasecontract 420224 T-588-TV...") — is
+// dat aanwezig, dan is dat een veel preciezere sleutel dan de tegenpartijnaam.
+const LEASECONTRACT_RE = /leasecontract\s+(\S+)(?:\s+([A-Z0-9-]{5,9}))?/i;
+
 // Lease (operationeel + financieel) — zelfde opzet als computeLoanSummary, maar dan voor beide
 // lease-categorieën samen, met de categorie van de eerste transactie erbij (voor de "is dit al
 // beantwoord als operationeel/financieel?"-weergave).
@@ -57,9 +64,16 @@ export function computeLeaseSummary(classified) {
   const map = {};
   for (const tx of classified) {
     if ((tx.category !== "Lease (operationeel)" && tx.category !== "Lease (financieel)") || tx.isMirror) continue;
-    const key = (tx.counterparty || tx.description || "").trim().toLowerCase();
-    if (!key) continue;
-    if (!map[key]) map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, transactions: [], category: tx.category };
+    const baseName = (tx.counterparty || tx.description || "").trim();
+    if (!baseName) continue;
+    const contractMatch = `${tx.description} ${tx.fullDescription}`.match(LEASECONTRACT_RE);
+    const key = contractMatch ? `contract::${contractMatch[1].toLowerCase()}` : baseName.toLowerCase();
+    if (!map[key]) {
+      const label = contractMatch
+        ? `${baseName} — contract ${contractMatch[1]}${contractMatch[2] ? ` (${contractMatch[2]})` : ""}`
+        : baseName;
+      map[key] = { key, name: label, total: 0, count: 0, transactions: [], category: tx.category };
+    }
     map[key].total += tx.amount;
     map[key].count += 1;
     map[key].transactions.push(tx);

@@ -32,8 +32,13 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
     eindbetaling: details?.eindbetaling ?? "",
     extraBedrag1eTermijn: details?.extraBedrag1eTermijn ?? "",
     startdatum: details?.startdatum ?? "",
+    contractBeeindigd: details?.contractBeeindigd ?? false,
+    einddatumContract: details?.einddatumContract ?? "",
+    verkoopsom: details?.verkoopsom ?? "",
+    restschuld: details?.restschuld ?? "",
   });
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const setChecked = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.checked }));
 
   const onbetaaldGedeelteKoop = useMemo(() => computeOnbetaaldGedeelteKoop(form), [form]);
   const renteJaarlijks = useMemo(() => computeFinancialLeaseRate(form), [form]);
@@ -55,6 +60,10 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
       leaseVergoeding: n(form.leaseVergoeding), looptijd: n(form.looptijd), maandbedrag: n(form.maandbedrag),
       eindbetaling: n(form.eindbetaling), extraBedrag1eTermijn: n(form.extraBedrag1eTermijn),
       startdatum: form.startdatum || null,
+      contractBeeindigd: form.contractBeeindigd,
+      einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
+      verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
+      restschuld: form.contractBeeindigd ? n(form.restschuld) : null,
     });
     onClose();
   };
@@ -135,6 +144,51 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
               </p>
             </div>
           )}
+
+          <div className="border-t border-slate-200 pt-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input type="checkbox" checked={form.contractBeeindigd} onChange={setChecked("contractBeeindigd")} />
+              Contract vroegtijdig beëindigd
+            </label>
+            {form.contractBeeindigd && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum contract</span>
+                    <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Verkoopsom</span>
+                    <input type="number" min="0" step="0.01" value={form.verkoopsom} onChange={set("verkoopsom")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Restschuld</span>
+                    <input type="number" min="0" step="0.01" value={form.restschuld} onChange={set("restschuld")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                  </label>
+                </div>
+                {form.verkoopsom !== "" && form.restschuld !== "" && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700">Resultaat bij beëindiging (verkoopsom − restschuld)</span>
+                    <span className={`text-sm font-mono font-semibold ${Number(form.verkoopsom) - Number(form.restschuld) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                      {eur(Number(form.verkoopsom) - Number(form.restschuld))}
+                    </span>
+                  </div>
+                )}
+                {form.restschuld !== "" && amortization && Math.abs(Number(form.restschuld) - amortization.saldoNu) > 25 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                    ⚠ De opgegeven restschuld ({eur(Number(form.restschuld))}) wijkt meer dan €25 af van het op basis van de
+                    bankbetalingen berekende openstaande saldo ({eur(amortization.saldoNu)}) — controleer de invoer, of dit
+                    verschil kan kloppen (bijv. bij afwijkende voorwaarden bij vroegtijdige beëindiging).
+                  </p>
+                )}
+                <p className="text-xs text-slate-400">
+                  Een positief resultaat is winst bij beëindiging, een negatief resultaat is verlies — beide kunnen van
+                  belang zijn voor de belastingaangifte.
+                </p>
+              </div>
+            )}
+          </div>
+
           {!amortization && renteJaarlijks == null && (form.koopprijs || form.maandbedrag) && (
             <p className="text-xs text-slate-400">
               Nog niet genoeg ingevuld om het rentepercentage te kunnen berekenen (in elk geval koopprijs, looptijd en maandbedrag nodig).

@@ -63,6 +63,9 @@ export default function LeaseInterestPanel({
                 <div key={lease.key} className="rounded-md border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{lease.name}</span>
+                    {details?.contractBeeindigd && (
+                      <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
+                    )}
                     <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
