@@ -4,7 +4,7 @@ import { CATEGORY_COLOR } from "../../classification/categories.js";
 import { KIA_MIN_TOTAAL, KIA_MAX_TOTAAL } from "../../tax/incomeTax.js";
 import { eur } from "../../utils/amounts.js";
 
-export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxMapping, korRegeling, ibGedaan, setIbGedaan, loanSummary, loanDetails }) {
+export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxMapping, korRegeling, ibGedaan, setIbGedaan, loanSummary, loanDetails, loanRenteForYear, leaseRenteForYear }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -80,6 +80,16 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                   <> Mogelijk komt de apparatuur/machines-investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
                 )}
               </p>
+              {leaseRenteForYear && ibBoxMapping.leaseFinancieelTotal > 0 && (
+                <p className="text-amber-900 text-xs mt-1">
+                  Rente op "Lease (financieel)" in {activeYear}: <strong>{eur(leaseRenteForYear.totaalRente)}</strong> (aftrekbaar) · aflossing: {eur(leaseRenteForYear.totaalAflossing)} (niet aftrekbaar, hoort bij het bedrijfsmiddel zelf)
+                  {leaseRenteForYear.onvolledig > 0 && (
+                    <span className="block text-amber-700">
+                      ⚠ {leaseRenteForYear.onvolledig} leasecontract(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet, zie "Lease (financieel)" hieronder.
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           )}
 
@@ -88,6 +98,16 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
               <p className="font-medium text-xs uppercase tracking-wide text-orange-800 mb-1">Leningen — alleen het rentedeel is aftrekbaar</p>
               <p className="text-orange-900 text-xs">
                 "Leningen" ({eur(ibBoxMapping.leningenTotal)}) is geen kostenpost in één keer: de <strong>aflossing</strong> is niet aftrekbaar, alleen de <strong>rente</strong>.
+                {loanRenteForYear && (
+                  <span className="block mt-1">
+                    Rente in {activeYear}: <strong>{eur(loanRenteForYear.totaalRente)}</strong> (aftrekbaar) · aflossing: {eur(loanRenteForYear.totaalAflossing)} (niet aftrekbaar)
+                    {loanRenteForYear.onvolledig > 0 && (
+                      <span className="block text-orange-700">
+                        ⚠ {loanRenteForYear.onvolledig} lening(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet, zie "Leningen" hieronder.
+                      </span>
+                    )}
+                  </span>
+                )}
                 {loanSummary && loanSummary.length > 0 && (
                   <span className="block mt-1">
                     {loanSummary.map((loan) => (

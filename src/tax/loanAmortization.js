@@ -49,6 +49,53 @@ export function groupAmortizationByYear(amortization) {
   return Object.values(byYear).sort((a, b) => a.year - b.year);
 }
 
+// Rente over een specifiek jaar, voor het aangiftevoorstel — dezelfde berekening als in de
+// leningen/lease-detailvensters, maar hier opgeteld over alle leningen resp. financiële leases
+// samen en gefilterd op het actieve jaar. Onvolledig ingevulde of "onbekend"-gemarkeerde
+// leningen/leases tellen niet mee in het bedrag, maar worden wel apart geteld zodat er een
+// duidelijke melding kan komen dat het cijfer daardoor niet compleet is.
+export function computeLoanRenteForYear(loanSummary, loanDetails, year) {
+  let totaalRente = 0;
+  let totaalAflossing = 0;
+  let onvolledig = 0;
+  for (const loan of loanSummary) {
+    const details = loanDetails[loan.key];
+    if (!details || details.onbekend) { onvolledig++; continue; }
+    if (!details.leningbedrag || !details.startdatum || details.rente == null || details.rente === "") { onvolledig++; continue; }
+    const amortization = computeLoanAmortization(loan.transactions, details);
+    if (!amortization) { onvolledig++; continue; }
+    const jaarData = groupAmortizationByYear(amortization).find((j) => j.year === year);
+    if (jaarData) {
+      totaalRente += jaarData.rente;
+      totaalAflossing += jaarData.aflossing;
+    }
+  }
+  return { totaalRente, totaalAflossing, onvolledig };
+}
+
+export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) {
+  let totaalRente = 0;
+  let totaalAflossing = 0;
+  let onvolledig = 0;
+  for (const lease of leaseSummary) {
+    if (lease.category !== "Lease (financieel)") continue;
+    const details = leaseDetails[lease.key];
+    if (!details || details.onbekend) { onvolledig++; continue; }
+    if (!details.koopprijs || !details.looptijd || !details.maandbedrag || !details.startdatum) { onvolledig++; continue; }
+    const hoofdsom = computeOnbetaaldGedeelteKoop(details);
+    const rente = computeFinancialLeaseRate(details);
+    if (rente == null) { onvolledig++; continue; }
+    const amortization = computeLoanAmortization(lease.transactions, { leasebedrag: hoofdsom, startdatum: details.startdatum, rente });
+    if (!amortization) { onvolledig++; continue; }
+    const jaarData = groupAmortizationByYear(amortization).find((j) => j.year === year);
+    if (jaarData) {
+      totaalRente += jaarData.rente;
+      totaalAflossing += jaarData.aflossing;
+    }
+  }
+  return { totaalRente, totaalAflossing, onvolledig };
+}
+
 // Groepeert "Leningen"-transacties per tegenpartij (niet op teken, zoals bij Overig) — een
 // lening kan zowel een opname (positief) als aflossingen (negatief) hebben.
 export function computeLoanSummary(classified) {

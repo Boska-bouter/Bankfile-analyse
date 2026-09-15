@@ -62,11 +62,23 @@ export function generateProjectedLeasePayments(details) {
   const extra = details.extraBedrag1eTermijn === "" || details.extraBedrag1eTermijn == null ? 0 : Number(details.extraBedrag1eTermijn);
   const start = new Date(details.startdatum);
   const einddatumBeeindiging = details.contractBeeindigd && details.einddatumContract ? new Date(details.einddatumContract) : null;
+  // De eerste termijn valt in de praktijk vaak (binnen twee weken) na het afsluiten van het
+  // contract, niet precies een maand erna zoals de vervolgtermijnen — bij een expliciet
+  // opgegeven datum wordt die als anker voor de eerste termijn gebruikt, en lopen de
+  // vervolgtermijnen daar maandelijks vanaf door. Zonder opgave: het oude gedrag (1 maand na
+  // startdatum) als beste gok.
+  const eersteTermijnDatum = details.datumEersteTermijn ? new Date(details.datumEersteTermijn) : null;
 
   const payments = [];
   for (let m = 1; m <= looptijd; m++) {
-    const date = new Date(start);
-    date.setMonth(date.getMonth() + m);
+    let date;
+    if (eersteTermijnDatum) {
+      date = new Date(eersteTermijnDatum);
+      date.setMonth(date.getMonth() + (m - 1));
+    } else {
+      date = new Date(start);
+      date.setMonth(date.getMonth() + m);
+    }
     if (einddatumBeeindiging && date > einddatumBeeindiging) break;
     let amount = maandbedrag;
     if (m === 1) amount += extra;

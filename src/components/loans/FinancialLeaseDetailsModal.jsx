@@ -32,6 +32,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
     eindbetaling: details?.eindbetaling ?? "",
     extraBedrag1eTermijn: details?.extraBedrag1eTermijn ?? "",
     startdatum: details?.startdatum ?? "",
+    datumEersteTermijn: details?.datumEersteTermijn ?? "",
     contractBeeindigd: details?.contractBeeindigd ?? false,
     einddatumContract: details?.einddatumContract ?? "",
     verkoopsom: details?.verkoopsom ?? "",
@@ -68,6 +69,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
       leaseVergoeding: n(form.leaseVergoeding), looptijd: n(form.looptijd), maandbedrag: n(form.maandbedrag),
       eindbetaling: n(form.eindbetaling), extraBedrag1eTermijn: n(form.extraBedrag1eTermijn),
       startdatum: form.startdatum || null,
+      datumEersteTermijn: form.datumEersteTermijn || null,
       contractBeeindigd: form.contractBeeindigd,
       einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
       verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
@@ -124,10 +126,36 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
               ))}
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Startdatum *</span>
-                <input type="date" value={form.startdatum} onChange={set("startdatum")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                <input
+                  type="date"
+                  value={form.startdatum}
+                  onChange={(e) => {
+                    const nieuweStartdatum = e.target.value;
+                    setForm((prev) => {
+                      // Suggestie voor de datum van de eerste termijn: de 1e van de maand ná de
+                      // startdatum — dat klopt lang niet altijd (de eerste termijn valt vaak al
+                      // binnen twee weken na het afsluiten), maar is een redelijk startpunt dat je
+                      // hieronder direct kunt aanpassen. Overschrijft nooit een datum die je zelf
+                      // al hebt ingevuld.
+                      if (prev.datumEersteTermijn || !nieuweStartdatum) return { ...prev, startdatum: nieuweStartdatum };
+                      const suggestie = new Date(nieuweStartdatum);
+                      suggestie.setMonth(suggestie.getMonth() + 1, 1);
+                      return { ...prev, startdatum: nieuweStartdatum, datumEersteTermijn: suggestie.toISOString().slice(0, 10) };
+                    });
+                  }}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="block text-xs font-medium text-slate-600 mb-1">Datum 1e termijn</span>
+                <input type="date" value={form.datumEersteTermijn} onChange={set("datumEersteTermijn")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
               </label>
             </div>
-            <p className="text-xs text-slate-400 mt-1">* Nodig om de betalingen uit de bank aan het schema te koppelen.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              * Startdatum is nodig om de betalingen aan het schema te koppelen. De eerste termijn valt vaak eerder dan
+              de vervolgtermijnen (soms al binnen twee weken) — pas de datum hierboven aan als die afwijkt van de
+              voorgestelde 1e van de volgende maand.
+            </p>
           </div>
 
           {leaseVergoedingWijktAf && (

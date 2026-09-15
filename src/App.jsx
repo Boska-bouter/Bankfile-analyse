@@ -61,6 +61,8 @@ import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeBtwBoxMapping, computeIbBoxMapping } from "./tax/boxMapping.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/financialLease.js";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -859,6 +861,14 @@ export default function App() {
   );
   const btwBoxMapping = useMemo(() => computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded), [effectiveCategoryBtwRates, voorbelastingExcluded]);
   const ibBoxMapping = useMemo(() => computeIbBoxMapping(zakGroupForYear.items), [zakGroupForYear]);
+  const loanRenteForYear = useMemo(
+    () => (activeYear ? computeLoanRenteForYear(loanSummary, loanDetails, activeYear) : null),
+    [loanSummary, loanDetails, activeYear]
+  );
+  const leaseRenteForYear = useMemo(
+    () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
+    [leaseSummary, leaseDetails, activeYear]
+  );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
     const manualCorrectie = Number(manualPriveUitgaven[activeYear]) || 0;
@@ -1745,6 +1755,8 @@ export default function App() {
                     activeYear={activeYear}
                     btwBoxMapping={btwBoxMapping}
                     ibBoxMapping={ibBoxMapping}
+                    loanRenteForYear={loanRenteForYear}
+                    leaseRenteForYear={leaseRenteForYear}
                     korRegeling={korRegeling}
                     ibGedaan={!!ibStatus[activeYear]?.gedaan}
                     setIbGedaan={setIbGedaan}
