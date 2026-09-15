@@ -12,7 +12,7 @@ const FIELDS_AANKOOP = [
   ["inlossingLopendeLening", "Inlossing lopende lening"],
 ];
 const FIELDS_LEASE = [
-  ["leaseVergoeding", "Lease vergoeding"],
+  ["leaseVergoeding", "Lease vergoeding (financieringskosten, bovenop het koopbedrag)"],
   ["looptijd", "Looptijd (maanden)"],
   ["maandbedrag", "Maandbedrag"],
   ["eindbetaling", "Eindbetaling (indien van toepassing)"],
@@ -44,7 +44,8 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
   }, [lease, form, onbetaaldGedeelteKoop, renteJaarlijks]);
 
   const leaseVergoedingWijktAf =
-    form.leaseVergoeding !== "" && totaleLeaseBetalingen != null && Math.abs(Number(form.leaseVergoeding) - totaleLeaseBetalingen) > 25;
+    form.leaseVergoeding !== "" && totaleLeaseBetalingen != null &&
+    Math.abs(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) - totaleLeaseBetalingen) > 25;
 
   const handleSave = () => {
     const n = (v) => (v === "" ? null : Number(v));
@@ -74,6 +75,8 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
           <p className="text-xs text-slate-500">
             Vul de aankoop- en leasestructuur in zoals die op het leasecontract staat — het jaarlijkse
             rentepercentage berekent de tool daaruit vanzelf, in plaats van dat je dat zelf moet opzoeken.
+            De lease vergoeding is de financieringskost bovenop het onbetaalde koopbedrag: samen vormen ze
+            het totaal dat je terugbetaalt via de maandbedragen en de eventuele eindbetaling.
           </p>
 
           <div>
@@ -112,8 +115,8 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
 
           {leaseVergoedingWijktAf && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
-              ⚠ De opgegeven lease vergoeding ({eur(Number(form.leaseVergoeding))}) wijkt meer dan €25 af van
-              maandbedrag × looptijd + eindbetaling + extra ({eur(totaleLeaseBetalingen)}) — controleer de invoer.
+              ⚠ Onbetaald gedeelte koop + lease vergoeding ({eur(onbetaaldGedeelteKoop + Number(form.leaseVergoeding))}) wijkt meer dan
+              €25 af van maandbedrag × looptijd + eindbetaling + extra ({eur(totaleLeaseBetalingen)}) — controleer de invoer.
             </p>
           )}
 

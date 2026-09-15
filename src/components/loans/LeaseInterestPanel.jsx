@@ -21,7 +21,7 @@ function computeFinancialLeaseAmortization(lease, details) {
 }
 
 export default function LeaseInterestPanel({
-  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp,
+  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMergeInto, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
   if (leaseSummary.length === 0) return null;
@@ -94,6 +94,24 @@ export default function LeaseInterestPanel({
                       <span className="text-xs text-emerald-700">✓ Operationeel — geen verdere actie nodig</span>
                     )}
                   </div>
+                  {onMergeInto && leaseSummary.length > 1 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="text-xs text-slate-400">Is dit eigenlijk hetzelfde contract als een andere lease hierboven?</label>
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) onMergeInto(lease.key, e.target.value);
+                          e.target.value = "";
+                        }}
+                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        <option value="">Samenvoegen met…</option>
+                        {leaseSummary.filter((l) => l.key !== lease.key).map((l) => (
+                          <option key={l.key} value={l.key}>{l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {typeConfirmed && isFinancieel && (
                     isOnbekend ? (
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>

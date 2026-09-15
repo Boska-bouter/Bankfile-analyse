@@ -117,6 +117,7 @@ export default function App() {
   const [loanDetails, setLoanDetails] = useState({});
   const [loanDetailsModalKey, setLoanDetailsModalKey] = useState(null);
   const [leaseDetails, setLeaseDetails] = useState({});
+  const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
@@ -177,6 +178,7 @@ export default function App() {
     setReviewedPeriodeKeys(Array.isArray(settings.reviewedPeriodeKeys) ? settings.reviewedPeriodeKeys : []);
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
     setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
+    setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
     setManualPriveUitgaven(settings.manualPriveUitgaven && typeof settings.manualPriveUitgaven === "object" ? settings.manualPriveUitgaven : {});
@@ -245,7 +247,7 @@ export default function App() {
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+        leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, manualPriveUitgaven, openingBalanceCorrections,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
@@ -255,7 +257,7 @@ export default function App() {
     categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+    leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     loaded,
   ]);
@@ -322,7 +324,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
+        leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
       },
     });
   };
@@ -350,6 +352,7 @@ export default function App() {
     setReviewedPeriodeKeys(s.reviewedPeriodeKeys);
     setLoanDetails(s.loanDetails);
     setLeaseDetails(s.leaseDetails);
+    setLeaseMergedInto(s.leaseMergedInto || {});
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -639,10 +642,10 @@ export default function App() {
   // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
   const {
     loanSummary, leaseSummary, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
-    snapshotBeforeAction, setCounterpartyOverride,
+    snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto,
   });
 
   // ---- Vraag bij een categorie/type-wijziging: alleen deze transactie, alle jaren, of gekozen
@@ -974,7 +977,7 @@ export default function App() {
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+      leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1018,6 +1021,7 @@ export default function App() {
         });
       }
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
+      setLeaseMergedInto(project.leaseMergedInto && typeof project.leaseMergedInto === "object" ? project.leaseMergedInto : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1612,6 +1616,9 @@ export default function App() {
                 onOpenModal={setLeaseDetailsModalKey}
                 onMarkUnknown={markLeaseUnknown}
                 onUnmarkUnknown={unmarkLeaseUnknown}
+                onMergeInto={mergeLeaseInto}
+                onUndoMerge={undoMergeLease}
+                leaseMergedInto={leaseMergedInto}
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>
