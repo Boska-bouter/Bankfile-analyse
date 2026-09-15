@@ -4,6 +4,22 @@ import { CATEGORY_COLOR } from "../../classification/categories.js";
 import { KIA_MIN_TOTAAL, KIA_MAX_TOTAAL } from "../../tax/incomeTax.js";
 import { eur } from "../../utils/amounts.js";
 
+// Uitsplitsing per categorie onder een rubriek — dezelfde kleur-badges als elders in de tool, zodat
+// je een bedrag hier direct kunt terugvinden bij "Categorieregels"/de detailtabellen.
+function CategorieBreakdown({ perCategorie }) {
+  if (!perCategorie || perCategorie.length === 0) return null;
+  return (
+    <div className="mt-1.5 space-y-0.5">
+      {perCategorie.map((r) => (
+        <div key={r.categorie} className="flex items-center justify-between gap-2 text-[11px]">
+          <span className={`inline-block rounded px-1.5 py-0.5 font-medium truncate max-w-[13rem] ${CATEGORY_COLOR[r.categorie] || "bg-slate-200 text-slate-700"}`}>{r.categorie}</span>
+          <span className="font-mono text-slate-500 shrink-0">{eur(r.totaal)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxMapping, korRegeling, ibGedaan, setIbGedaan, loanSummary, loanDetails, loanRenteForYear, leaseRenteForYear }) {
   const [open, setOpen] = useState(false);
 
@@ -77,6 +93,7 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
               <span>1. {ibBoxMapping.opbrengsten.naam}</span>
               <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(ibBoxMapping.opbrengsten.totaal)}</span>
             </p>
+            <CategorieBreakdown perCategorie={ibBoxMapping.opbrengsten.perCategorie} />
           </div>
 
           {ibBoxMapping.inkoopkosten.totaal > 0 && (
@@ -86,6 +103,7 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                 <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(ibBoxMapping.inkoopkosten.totaal)}</span>
               </p>
               <p className="text-slate-500 text-xs">{ibBoxMapping.inkoopkosten.toelichting}</p>
+              <CategorieBreakdown perCategorie={ibBoxMapping.inkoopkosten.perCategorie} />
             </div>
           )}
 
@@ -100,6 +118,7 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                   <> Mogelijk komt de apparatuur/machines-investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
                 )}
               </p>
+              <CategorieBreakdown perCategorie={ibBoxMapping.afschrijvingen.perCategorie} />
             </div>
           )}
 
@@ -113,6 +132,7 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                       <span>{r.naam}</span>
                       <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(r.totaal)}</span>
                     </p>
+                    <CategorieBreakdown perCategorie={r.perCategorie} />
                   </div>
                 ))}
               </div>
@@ -132,6 +152,10 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                   ⚠ {ibBoxMapping.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet.
                 </p>
               )}
+              <CategorieBreakdown perCategorie={[
+                { categorie: "Leningen", totaal: ibBoxMapping.leningenTotal },
+                { categorie: "Lease (financieel)", totaal: ibBoxMapping.leaseFinancieelTotal },
+              ].filter((r) => r.totaal > 0)} />
               {loanSummary && loanSummary.length > 0 && (
                 <p className="text-orange-900 text-xs mt-1.5">
                   {loanSummary.map((loan) => (
@@ -148,14 +172,20 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
             <div className="rounded-md bg-slate-50 p-3">
               <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1.5">6. Privéonttrekkingen en -stortingen</p>
               {ibBoxMapping.priveOnttrekkingen.totaal > 0 && (
-                <p className="text-slate-600 text-xs flex items-center justify-between gap-2">
-                  <span>Privéonttrekkingen</span><span className="font-mono">{eur(ibBoxMapping.priveOnttrekkingen.totaal)}</span>
-                </p>
+                <>
+                  <p className="text-slate-600 text-xs flex items-center justify-between gap-2">
+                    <span>Privéonttrekkingen</span><span className="font-mono">{eur(ibBoxMapping.priveOnttrekkingen.totaal)}</span>
+                  </p>
+                  <CategorieBreakdown perCategorie={ibBoxMapping.priveOnttrekkingen.perCategorie} />
+                </>
               )}
               {ibBoxMapping.priveStortingen.totaal > 0 && (
-                <p className="text-slate-600 text-xs flex items-center justify-between gap-2 mt-1">
-                  <span>Privéstortingen</span><span className="font-mono">{eur(ibBoxMapping.priveStortingen.totaal)}</span>
-                </p>
+                <>
+                  <p className="text-slate-600 text-xs flex items-center justify-between gap-2 mt-2">
+                    <span>Privéstortingen</span><span className="font-mono">{eur(ibBoxMapping.priveStortingen.totaal)}</span>
+                  </p>
+                  <CategorieBreakdown perCategorie={ibBoxMapping.priveStortingen.perCategorie} />
+                </>
               )}
             </div>
           )}
@@ -167,6 +197,7 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                 <span className="font-mono normal-case tracking-normal">{eur(ibBoxMapping.belastingenGeenKostenpost.totaal)}</span>
               </p>
               <p className="text-rose-900 text-xs">{ibBoxMapping.belastingenGeenKostenpost.toelichting}</p>
+              <CategorieBreakdown perCategorie={ibBoxMapping.belastingenGeenKostenpost.perCategorie} />
             </div>
           )}
 

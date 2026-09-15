@@ -39,7 +39,11 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 
 export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear) {
   const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount, 0));
-  const rubriek = (naam, cats, toelichting) => ({ naam, categorieen: cats, totaal: sumCat(cats), toelichting });
+  const perCategorieVan = (cats) =>
+    cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
+  const rubriek = (naam, cats, toelichting) => ({
+    naam, categorieen: cats, totaal: sumCat(cats), toelichting, perCategorie: perCategorieVan(cats),
+  });
 
   const overigeBedrijfskosten = [
     rubriek("Auto- en transportkosten", RUBRIEK_AUTO),
@@ -73,6 +77,10 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       naam: "Afschrijvingen",
       apparatuurInvestering,
       leaseFinancieelTotal,
+      perCategorie: [
+        { categorie: "Zakelijk - apparatuur/machines", totaal: apparatuurInvestering },
+        { categorie: "Lease (financieel)", totaal: leaseFinancieelTotal },
+      ].filter((r) => r.totaal > 0),
       toelichting:
         'Zakelijk - apparatuur/machines" mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden. Deze tool berekent geen afschrijvingsschema (aanschafwaarde, restwaarde en afschrijvingstermijn zijn hier niet uit de bankgegevens af te leiden) — het bruto aankoopbedrag staat hier alleen ter herkenning.',
     },

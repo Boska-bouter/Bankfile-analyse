@@ -9,12 +9,21 @@ import { eur } from "../utils/amounts.js";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Eén rij in de winst-en-verliesrekening-stijl weergave — optioneel met toelichting eronder.
-function rubriekBlok(nr, naam, totaal, toelichting) {
+// Eén rij in de winst-en-verliesrekening-stijl weergave — optioneel met toelichting en een
+// uitsplitsing naar categorie eronder (zodat het bedrag terug te vinden is in de tool zelf).
+function rubriekBlok(nr, naam, totaal, toelichting, perCategorie) {
   if (!totaal) return "";
   return `
   <div class="rubriek"><span>${nr ? `${nr}. ` : ""}${esc(naam)}</span><span class="num">${eur(totaal)}</span></div>
-  ${toelichting ? `<p class="toelichting">${toelichting}</p>` : ""}`;
+  ${toelichting ? `<p class="toelichting">${toelichting}</p>` : ""}
+  ${categorieDetailHtml(perCategorie)}`;
+}
+
+// Uitsplitsing per categorie onder een rubriek — zodat een bedrag in dit document direct terug te
+// vinden is bij de gelijknamige categorie in de tool zelf (zie ook het categorieoverzicht onderaan).
+function categorieDetailHtml(perCategorie) {
+  if (!perCategorie || perCategorie.length === 0) return "";
+  return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
 }
 
 function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails) {
@@ -63,7 +72,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ib.overigeBedrijfskosten.length > 0
       ? `
   <div class="rubriek"><span>4. Overige bedrijfskosten</span><span></span></div>
-  ${ib.overigeBedrijfskosten.map((r) => `<div class="subrubriek"><span>${esc(r.naam)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("")}`
+  ${ib.overigeBedrijfskosten
+    .map((r) => `<div class="subrubriek"><span>${esc(r.naam)}</span><span class="num">${eur(r.totaal)}</span></div>${categorieDetailHtml(r.perCategorie)}`)
+    .join("")}`
       : "";
 
   const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + ib.financieleBatenLasten.renteLease;
@@ -74,18 +85,22 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <div class="rubriek"><span>5. Financiële baten en lasten</span><span class="num">${eur(financieelTotaalRente)}</span></div>
   <p class="toelichting">${ib.financieleBatenLasten.toelichting} Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
           ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de tool.` : ""
-        }</p>`
+        }</p>
+  ${categorieDetailHtml([
+    { categorie: "Leningen", totaal: ib.leningenTotal },
+    { categorie: "Lease (financieel)", totaal: ib.leaseFinancieelTotal },
+  ].filter((r) => r.totaal > 0))}`
       : "";
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
       ? `
   <div class="rubriek"><span>6. Privéonttrekkingen en -stortingen</span><span></span></div>
-  ${ib.priveOnttrekkingen.totaal > 0 ? `<div class="subrubriek"><span>Privéonttrekkingen</span><span class="num">${eur(ib.priveOnttrekkingen.totaal)}</span></div>` : ""}
-  ${ib.priveStortingen.totaal > 0 ? `<div class="subrubriek"><span>Privéstortingen</span><span class="num">${eur(ib.priveStortingen.totaal)}</span></div>` : ""}`
+  ${ib.priveOnttrekkingen.totaal > 0 ? `<div class="subrubriek"><span>Privéonttrekkingen</span><span class="num">${eur(ib.priveOnttrekkingen.totaal)}</span></div>${categorieDetailHtml(ib.priveOnttrekkingen.perCategorie)}` : ""}
+  ${ib.priveStortingen.totaal > 0 ? `<div class="subrubriek"><span>Privéstortingen</span><span class="num">${eur(ib.priveStortingen.totaal)}</span></div>${categorieDetailHtml(ib.priveStortingen.perCategorie)}` : ""}`
       : "";
 
-  const belastingenHtml = rubriekBlok(null, ib.belastingenGeenKostenpost.naam, ib.belastingenGeenKostenpost.totaal, ib.belastingenGeenKostenpost.toelichting);
+  const belastingenHtml = rubriekBlok(null, ib.belastingenGeenKostenpost.naam, ib.belastingenGeenKostenpost.totaal, ib.belastingenGeenKostenpost.toelichting, ib.belastingenGeenKostenpost.perCategorie);
   const verkoopActivaHtml = rubriekBlok(
     null, "Verkoop activa", ib.verkoopActivaTotal,
     "Kan een boekwinst of -verlies opleveren — deze tool kent de boekwaarde niet en berekent dat niet automatisch."
@@ -103,9 +118,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
   <div class="wvr">
-    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal)}
-    ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting)}
-    ${rubriekBlok(3, ib.afschrijvingen.naam, ib.afschrijvingen.apparatuurInvestering + ib.afschrijvingen.leaseFinancieelTotal, ib.afschrijvingen.toelichting)}
+    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
+    ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting, ib.inkoopkosten.perCategorie)}
+    ${rubriekBlok(3, ib.afschrijvingen.naam, ib.afschrijvingen.apparatuurInvestering + ib.afschrijvingen.leaseFinancieelTotal, ib.afschrijvingen.toelichting, ib.afschrijvingen.perCategorie)}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, bruto)</span><span class="num">${eur(summary.winst)}</span></div>
@@ -160,6 +175,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .wvr { margin-bottom: 8px; }
   .wvr .rubriek { display: flex; justify-content: space-between; padding: 5px 6px; border-bottom: 1px solid #f1f5f9; font-weight: 600; }
   .wvr .subrubriek { display: flex; justify-content: space-between; padding: 3px 6px 3px 18px; border-bottom: 1px solid #f8fafc; color: #475569; font-weight: 400; }
+  .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
   .controledoel { margin: 0 0 20px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
