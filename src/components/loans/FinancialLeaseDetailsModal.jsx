@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, computeTotaleLeaseBetalingen } from "../../tax/financialLease.js";
-import { computeLoanAmortization } from "../../tax/loanAmortization.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, computeTotaleLeaseBetalingen, generateProjectedLeasePayments, matchLeasePaymentsToSchedule } from "../../tax/financialLease.js";
+import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 
 const FIELDS_AANKOOP = [
@@ -45,8 +45,16 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
   const totaleLeaseBetalingen = useMemo(() => computeTotaleLeaseBetalingen(form), [form]);
   const amortization = useMemo(() => {
     if (renteJaarlijks == null || !form.startdatum) return null;
-    return computeLoanAmortization(lease.transactions, { leasebedrag: onbetaaldGedeelteKoop, startdatum: form.startdatum, rente: renteJaarlijks });
-  }, [lease, form, onbetaaldGedeelteKoop, renteJaarlijks]);
+    const projectedPayments = generateProjectedLeasePayments(form);
+    if (projectedPayments.length === 0) return null;
+    return computeLoanAmortization(projectedPayments, { leasebedrag: onbetaaldGedeelteKoop, startdatum: form.startdatum, rente: renteJaarlijks });
+  }, [form, onbetaaldGedeelteKoop, renteJaarlijks]);
+  const perJaar = useMemo(() => groupAmortizationByYear(amortization), [amortization]);
+  const paymentCheck = useMemo(() => {
+    const projectedPayments = generateProjectedLeasePayments(form);
+    if (projectedPayments.length === 0) return null;
+    return matchLeasePaymentsToSchedule(projectedPayments, lease.transactions, Number(form.maandbedrag) || 0);
+  }, [lease, form]);
 
   const leaseVergoedingWijktAf =
     form.leaseVergoeding !== "" && totaleLeaseBetalingen != null &&
@@ -138,12 +146,80 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
 
           {amortization && (
             <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 mb-1">Berekende splitsing van de bankbetalingen</p>
-              <p className="text-sm text-emerald-900">
-                Rente: <strong>{eur(amortization.totaalRente)}</strong> (aftrekbaar) · Aflossing: <strong>{eur(amortization.totaalAflossing)}</strong> (niet aftrekbaar) · Nog openstaand: <strong>{eur(amortization.saldoNu)}</strong>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 mb-2">
+                Volledig schema over de{form.contractBeeindigd ? " (afgebroken)" : ""} looptijd — voor de belastingaangifte
+                telt per jaar wat er aan rente/aflossing is betaald, niet het totaal ineens
+              </p>
+              <table className="w-full text-sm text-emerald-900">
+                <thead>
+                  <tr className="text-xs text-emerald-700">
+                    <th className="text-left font-medium pb-1">Jaar</th>
+                    <th className="text-right font-medium pb-1">Rente (aftrekbaar)</th>
+                    <th className="text-right font-medium pb-1">Aflossing</th>
+                    <th className="text-right font-medium pb-1">Saldo eind jaar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perJaar.map((j) => (
+                    <tr key={j.year} className="border-t border-emerald-200/60">
+                      <td className="py-1">{j.year}</td>
+                      <td className="text-right font-mono">{eur(j.rente)}</td>
+                      <td className="text-right font-mono">{eur(j.aflossing)}</td>
+                      <td className="text-right font-mono">{eur(j.saldoEindJaar)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-emerald-700 mt-2 pt-2 border-t border-emerald-200">
+                Totaal over de volledige{form.contractBeeindigd ? ", afgebroken" : ""} looptijd ({amortization.rows.length}{" "}
+                termijnen): rente {eur(amortization.totaalRente)}, aflossing {eur(amortization.totaalAflossing)}.
+                {form.contractBeeindigd
+                  ? " Dit schema stopt bij de opgegeven einddatum — de restschuld hieronder is de werkelijke afkoopsom, die kan afwijken van dit theoretische schema."
+                  : " Dit is de volledige looptijd zoals ingevuld, ongeacht hoeveel er al daadwerkelijk via de bank is betaald."}
               </p>
             </div>
           )}
+
+          {paymentCheck && (() => {
+            const counts = { gevonden: 0, "gevonden-afwijkend": 0, "gevonden-samen": 0, ontbrekend: 0, "nog-niet-in-beeld": 0 };
+            for (const r of paymentCheck.results) counts[r.status]++;
+            const aandacht = paymentCheck.results.filter((r) => r.status === "ontbrekend" || r.status === "gevonden-afwijkend");
+            const inBeeldTotaal = paymentCheck.results.length - counts["nog-niet-in-beeld"];
+            return (
+              <div className="rounded-md border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+                  Controle: zijn alle termijnen ook echt betaald?
+                </p>
+                <p className="text-sm text-slate-700">
+                  <strong>{counts.gevonden + counts["gevonden-afwijkend"] + counts["gevonden-samen"]}</strong> van{" "}
+                  <strong>{inBeeldTotaal}</strong> verwachte termijnen gevonden in de geïmporteerde bestanden
+                  {counts.ontbrekend > 0 && <> — <strong className="text-red-700">{counts.ontbrekend} ontbrekend</strong></>}
+                  {counts["gevonden-afwijkend"] > 0 && <> — <strong className="text-amber-700">{counts["gevonden-afwijkend"]} met een afwijkend bedrag</strong></>}
+                  {counts["nog-niet-in-beeld"] > 0 && <span className="text-slate-400"> ({counts["nog-niet-in-beeld"]} termijnen liggen na de laatst geïmporteerde datum, nog niet te controleren)</span>}
+                  .
+                </p>
+                {aandacht.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {aandacht.map((r, i) => (
+                      <li key={i} className={r.status === "ontbrekend" ? "text-red-700" : "text-amber-700"}>
+                        {r.status === "ontbrekend" ? "⚠ Ontbrekend: " : "⚠ Afwijkend bedrag: "}
+                        verwacht {eur(Math.abs(r.projected.amount))} rond {new Date(r.projected.date).toLocaleDateString("nl-NL")}
+                        {r.status === "gevonden-afwijkend" && r.matchedTx && (
+                          <> — gevonden: {eur(Math.abs(r.matchedTx.amount))} op {new Date(r.matchedTx.date).toLocaleDateString("nl-NL")} (verschil {eur(r.bedragVerschil)})</>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {paymentCheck.onverwachteBetalingen.length > 0 && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Daarnaast {paymentCheck.onverwachteBetalingen.length} betaling(en) bij deze lease die niet bij een
+                    verwachte termijn passen — mogelijk een extra aflossing.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="border-t border-slate-200 pt-3">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">

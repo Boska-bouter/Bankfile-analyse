@@ -120,7 +120,7 @@ export default function LeaseInterestPanel({
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>
                     ) : amortization ? (
                       <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
-                        Gesplitst: rente <strong>{eur(amortization.totaalRente)}</strong> (aftrekbaar) · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> (niet aftrekbaar) · nog openstaand <strong>{eur(amortization.saldoNu)}</strong>
+                        Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>

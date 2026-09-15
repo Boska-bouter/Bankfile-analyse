@@ -31,6 +31,24 @@ export function computeLoanAmortization(transactions, details) {
   return { rows, totaalRente, totaalAflossing, saldoNu: balance };
 }
 
+// Voor de belastingaangifte telt niet het totaal over de hele looptijd, maar wat er per jaar aan
+// rente/aflossing is betaald — de aangifte wordt tenslotte per jaar gedaan. Groepeert de rijen uit
+// computeLoanAmortization op het jaar van de betaling, en geeft ook het openstaande saldo aan het
+// eind van elk jaar mee (het saldo van de laatste betaling in dat jaar).
+export function groupAmortizationByYear(amortization) {
+  if (!amortization) return [];
+  const byYear = {};
+  for (const row of amortization.rows) {
+    const year = row.tx.date.getFullYear();
+    if (!byYear[year]) byYear[year] = { year, rente: 0, aflossing: 0, saldoEindJaar: null, aantal: 0 };
+    byYear[year].rente += row.rente;
+    byYear[year].aflossing += row.aflossing;
+    byYear[year].saldoEindJaar = row.saldoNa;
+    byYear[year].aantal += 1;
+  }
+  return Object.values(byYear).sort((a, b) => a.year - b.year);
+}
+
 // Groepeert "Leningen"-transacties per tegenpartij (niet op teken, zoals bij Overig) — een
 // lening kan zowel een opname (positief) als aflossingen (negatief) hebben.
 export function computeLoanSummary(classified) {
