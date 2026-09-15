@@ -96,20 +96,6 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
   return { totaalRente, totaalAflossing, onvolledig };
 }
 
-// Koopprijs van het bedrijfsmiddel bij financiële lease — dit is wat afgeschreven moet worden,
-// niet het totaal van de leasetermijnen (dat is rente + aflossing op de financiering samen, een
-// heel ander bedrag). Niet jaar-specifiek: de koopprijs is een eenmalig bedrag bij aanschaf, de
-// tool berekent geen jaarlijkse afschrijvingsverdeling (restwaarde/gebruiksduur ontbreken).
-export function computeLeaseKoopprijsTotal(leaseSummary, leaseDetails) {
-  let totaal = 0;
-  for (const lease of leaseSummary) {
-    if (lease.category !== "Lease (financieel)") continue;
-    const details = leaseDetails[lease.key];
-    if (details?.koopprijs) totaal += Number(details.koopprijs);
-  }
-  return totaal;
-}
-
 // Groepeert "Leningen"-transacties per tegenpartij (niet op teken, zoals bij Overig) — een
 // lening kan zowel een opname (positief) als aflossingen (negatief) hebben.
 export function computeLoanSummary(classified) {

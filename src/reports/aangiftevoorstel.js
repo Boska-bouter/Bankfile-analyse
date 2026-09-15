@@ -4,7 +4,7 @@ import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
-import { computeLoanRenteForYear, computeLeaseRenteForYear, computeLeaseKoopprijsTotal } from "../tax/loanAmortization.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { eur } from "../utils/amounts.js";
 
@@ -33,10 +33,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const ibEstimate = estimateIncomeTax(summary.winst, year);
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-  const leaseKoopprijsTotal = computeLeaseKoopprijsTotal(leaseSummary || [], leaseDetails || {});
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear);
 
   // Categorieoverzicht (alle categorieën, alfabetisch) blijft als detailbijlage staan — de
   // winst-en-verliesrekening hierboven is wat met de aangifte meeleest, dit blijft handig als
@@ -91,8 +90,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
           ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de tool.` : ""
         }</p>
   ${categorieDetailHtml([
-    { categorie: "Leningen", totaal: ib.leningenTotal },
-    { categorie: "Lease (financieel)", totaal: ib.leaseFinancieelTotal },
+    { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
+    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
   ].filter((r) => r.totaal > 0))}`
       : "";
 
@@ -126,7 +125,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting, ib.inkoopkosten.perCategorie)}
     ${rubriekBlok(
       3, ib.afschrijvingen.naam,
-      (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering) + ib.afschrijvingen.leaseKoopprijsTotal,
+      ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering,
       ib.afschrijvingen.toelichting + (ib.afschrijvingen.activaOnvolledig > 0 ? ` ⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.` : ""),
       ib.afschrijvingen.perCategorie
     )}

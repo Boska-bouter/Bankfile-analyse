@@ -107,20 +107,18 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
             </div>
           )}
 
-          {(ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 || ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0) && (
+          {ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 && (
             <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
               <p className="font-medium text-xs uppercase tracking-wide text-amber-800 mb-1 flex items-center justify-between gap-2">
                 <span>3. {ibBoxMapping.afschrijvingen.naam}</span>
                 <span className="font-mono normal-case tracking-normal">
-                  {eur((ibBoxMapping.afschrijvingen.berekendeApparatuurAfschrijving ?? ibBoxMapping.afschrijvingen.apparatuurInvestering) + ibBoxMapping.afschrijvingen.leaseKoopprijsTotal)}
+                  {eur(ibBoxMapping.afschrijvingen.berekendeApparatuurAfschrijving ?? ibBoxMapping.afschrijvingen.apparatuurInvestering)}
                 </span>
               </p>
               <p className="text-amber-900 text-xs">
-                {ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 && <>"Zakelijk - apparatuur/machines" ({eur(ibBoxMapping.afschrijvingen.apparatuurInvestering)}){ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0 ? " en " : " "}</>}
-                {ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0 && <>de koopprijs van bedrijfsmiddelen bij financiële lease ({eur(ibBoxMapping.afschrijvingen.leaseKoopprijsTotal)})</>}
-                {" "}{ibBoxMapping.afschrijvingen.toelichting}
+                "Zakelijk - apparatuur/machines" ({eur(ibBoxMapping.afschrijvingen.apparatuurInvestering)}) {ibBoxMapping.afschrijvingen.toelichting}
                 {ibBoxMapping.afschrijvingen.apparatuurInvestering >= KIA_MIN_TOTAAL && ibBoxMapping.afschrijvingen.apparatuurInvestering <= KIA_MAX_TOTAAL && (
-                  <> Mogelijk komt de apparatuur/machines-investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
+                  <> Mogelijk komt deze investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
                 )}
               </p>
               {ibBoxMapping.afschrijvingen.activaOnvolledig > 0 && (
@@ -163,8 +161,8 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                 </p>
               )}
               <CategorieBreakdown perCategorie={[
-                { categorie: "Leningen", totaal: ibBoxMapping.leningenTotal },
-                { categorie: "Lease (financieel)", totaal: ibBoxMapping.leaseFinancieelTotal },
+                { categorie: "Rente Leningen", totaal: ibBoxMapping.financieleBatenLasten.renteLeningen },
+                { categorie: "Rente Lease (financieel)", totaal: ibBoxMapping.financieleBatenLasten.renteLease },
               ].filter((r) => r.totaal > 0)} />
               {loanSummary && loanSummary.length > 0 && (
                 <p className="text-orange-900 text-xs mt-1.5">

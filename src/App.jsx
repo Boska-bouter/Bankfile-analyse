@@ -64,7 +64,7 @@ import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeBtwBoxMapping, computeIbBoxMapping } from "./tax/boxMapping.js";
-import { computeLoanRenteForYear, computeLeaseRenteForYear, computeLeaseKoopprijsTotal } from "./tax/loanAmortization.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/financialLease.js";
 
 // ---------------------------------------------------------------------------
@@ -891,14 +891,13 @@ export default function App() {
     () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
     [leaseSummary, leaseDetails, activeYear]
   );
-  const leaseKoopprijsTotal = useMemo(() => computeLeaseKoopprijsTotal(leaseSummary, leaseDetails), [leaseSummary, leaseDetails]);
   const activaAfschrijvingForYear = useMemo(
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
   );
   const ibBoxMapping = useMemo(
-    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear),
-    [zakGroupForYear, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear]
+    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear),
+    [zakGroupForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
