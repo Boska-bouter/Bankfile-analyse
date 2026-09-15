@@ -3,7 +3,7 @@ import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
-import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear, computeLeaseKoopprijsTotal } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { eur } from "../utils/amounts.js";
 
@@ -32,7 +32,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const ibEstimate = estimateIncomeTax(summary.winst, year);
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear);
+  const leaseKoopprijsTotal = computeLeaseKoopprijsTotal(leaseSummary || [], leaseDetails || {});
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal);
 
   // Categorieoverzicht (alle categorieën, alfabetisch) blijft als detailbijlage staan — de
   // winst-en-verliesrekening hierboven is wat met de aangifte meeleest, dit blijft handig als
@@ -120,7 +121,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
     ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting, ib.inkoopkosten.perCategorie)}
-    ${rubriekBlok(3, ib.afschrijvingen.naam, ib.afschrijvingen.apparatuurInvestering + ib.afschrijvingen.leaseFinancieelTotal, ib.afschrijvingen.toelichting, ib.afschrijvingen.perCategorie)}
+    ${rubriekBlok(3, ib.afschrijvingen.naam, ib.afschrijvingen.apparatuurInvestering + ib.afschrijvingen.leaseKoopprijsTotal, ib.afschrijvingen.toelichting, ib.afschrijvingen.perCategorie)}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, bruto)</span><span class="num">${eur(summary.winst)}</span></div>

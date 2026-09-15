@@ -37,7 +37,7 @@ const BELASTINGEN_GEEN_KOSTENPOST = [
 // ingedeeld" terecht zou komen als het toch een keer als Zakelijk voorkomt.
 const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", "Leningen", "Lease (financieel)"];
 
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear) {
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal) {
   const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount, 0));
   const perCategorieVan = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
@@ -76,13 +76,16 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     afschrijvingen: {
       naam: "Afschrijvingen",
       apparatuurInvestering,
-      leaseFinancieelTotal,
+      // Bij financiële lease is niet het totaal van de leasetermijnen (rente + aflossing) de
+      // af te schrijven waarde, maar de koopprijs van het bedrijfsmiddel zelf (zoals ingevuld bij
+      // de leasegegevens) — de rente staat apart bij "Financiële baten en lasten" hieronder.
+      leaseKoopprijsTotal: leaseKoopprijsTotal || 0,
       perCategorie: [
         { categorie: "Zakelijk - apparatuur/machines", totaal: apparatuurInvestering },
-        { categorie: "Lease (financieel)", totaal: leaseFinancieelTotal },
+        { categorie: "Lease (financieel) — koopprijs bedrijfsmiddel", totaal: leaseKoopprijsTotal || 0 },
       ].filter((r) => r.totaal > 0),
       toelichting:
-        'Zakelijk - apparatuur/machines" mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden. Deze tool berekent geen afschrijvingsschema (aanschafwaarde, restwaarde en afschrijvingstermijn zijn hier niet uit de bankgegevens af te leiden) — het bruto aankoopbedrag staat hier alleen ter herkenning.',
+        "Dit mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Deze tool berekent geen afschrijvingsschema (restwaarde en gebruiksduur zijn hier niet uit de bankgegevens af te leiden) — het bruto aanschafbedrag staat hier alleen ter herkenning. Bij financiële lease is dit de koopprijs van het bedrijfsmiddel zelf, niet het totaal van de leasetermijnen.",
     },
     overigeBedrijfskosten,
     financieleBatenLasten: {
@@ -92,7 +95,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       aflossingLeningen: loanRenteForYear?.totaalAflossing || 0,
       aflossingLease: leaseRenteForYear?.totaalAflossing || 0,
       onvolledig: (loanRenteForYear?.onvolledig || 0) + (leaseRenteForYear?.onvolledig || 0),
-      toelichting: "Alleen de rente is een kostenpost — de aflossing op leningen en financiële lease is een balansmutatie, geen bedrijfskosten.",
+      toelichting: "Alleen de rente is een kostenpost — de aflossing op leningen en financiële lease is een balansmutatie, geen bedrijfskosten. De afschrijving van het geleasde bedrijfsmiddel zelf staat hierboven bij \"Afschrijvingen\".",
     },
     priveOnttrekkingen: rubriek("Privéonttrekkingen", RUBRIEK_ONTTREKKINGEN),
     priveStortingen: rubriek("Privéstortingen", RUBRIEK_STORTINGEN),
