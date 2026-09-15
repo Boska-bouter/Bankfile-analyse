@@ -3,6 +3,7 @@ import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear, computeLeaseKoopprijsTotal } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { eur } from "../utils/amounts.js";
@@ -26,14 +27,16 @@ function categorieDetailHtml(perCategorie) {
   return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails) {
   const zakItems = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd);
   const ibEstimate = estimateIncomeTax(summary.winst, year);
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const leaseKoopprijsTotal = computeLeaseKoopprijsTotal(leaseSummary || [], leaseDetails || {});
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal);
+  const activaSummary = computeActivaSummary(classified);
+  const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear);
 
   // Categorieoverzicht (alle categorieën, alfabetisch) blijft als detailbijlage staan — de
   // winst-en-verliesrekening hierboven is wat met de aangifte meeleest, dit blijft handig als
@@ -121,7 +124,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
     ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting, ib.inkoopkosten.perCategorie)}
-    ${rubriekBlok(3, ib.afschrijvingen.naam, ib.afschrijvingen.apparatuurInvestering + ib.afschrijvingen.leaseKoopprijsTotal, ib.afschrijvingen.toelichting, ib.afschrijvingen.perCategorie)}
+    ${rubriekBlok(
+      3, ib.afschrijvingen.naam,
+      (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering) + ib.afschrijvingen.leaseKoopprijsTotal,
+      ib.afschrijvingen.toelichting + (ib.afschrijvingen.activaOnvolledig > 0 ? ` ⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.` : ""),
+      ib.afschrijvingen.perCategorie
+    )}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, bruto)</span><span class="num">${eur(summary.winst)}</span></div>
@@ -155,9 +163,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails) {
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>

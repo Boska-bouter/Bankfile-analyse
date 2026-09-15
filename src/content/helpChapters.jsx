@@ -92,6 +92,37 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "activa-afschrijving",
+    titel: "Activa (bedrijfsmiddelen) — afschrijving",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Een machine, gereedschap of ander bedrijfsmiddel mag je niet in één keer als kosten aftrekken — de aanschaf
+          moet over de gebruiksduur worden <strong>afgeschreven</strong>. Elke transactie in de categorie{" "}
+          "Zakelijk - apparatuur/machines" verschijnt hier automatisch als los item (niet per leverancier gegroepeerd,
+          want dezelfde leverancier kan op verschillende data totaal verschillende bedrijfsmiddelen leveren).
+        </p>
+        <p>
+          Vul per bedrijfsmiddel de <strong>aanschafdatum</strong>, <strong>afschrijvingstermijn</strong> (in jaren)
+          en <strong>restwaarde</strong> in — de aanschafwaarde staat al klaar vanuit de bank, maar is aan te passen
+          als het aankoopbedrag afweek (bijv. bij een deel-aanbetaling). De tool berekent daaruit zelf de{" "}
+          <strong>lineaire afschrijving</strong> per jaar, het gangbare standaardstelsel.
+        </p>
+        <p>
+          In het jaar van aanschaf zelf mag je alleen afschrijven naar rato van de resterende maanden (de{" "}
+          <strong>tijdklem</strong>) — kocht je de machine bijvoorbeeld in oktober, dan telt dat jaar nog maar 3 van de
+          12 maanden. De maanden die daardoor in het eerste jaar "gemist" worden, komen aan het einde van de looptijd
+          terug als een extra, deels jaar — zodat er in totaal precies aanschafwaarde minus restwaarde wordt
+          afgeschreven, niet minder.
+        </p>
+        <p>
+          Zodra een bedrijfsmiddel hier is ingevuld, gebruikt het aangiftevoorstel de daadwerkelijk berekende
+          afschrijving voor het actieve jaar in plaats van het bruto aanschafbedrag met een waarschuwing erbij.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "jaaroverzicht",
     titel: "Jaaroverzicht (WUO, Tekort/Over, trend)",
     inhoud: (

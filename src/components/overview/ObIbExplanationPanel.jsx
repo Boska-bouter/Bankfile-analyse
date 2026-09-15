@@ -109,7 +109,12 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
 
           {(ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 || ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0) && (
             <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
-              <p className="font-medium text-xs uppercase tracking-wide text-amber-800 mb-1">3. {ibBoxMapping.afschrijvingen.naam}</p>
+              <p className="font-medium text-xs uppercase tracking-wide text-amber-800 mb-1 flex items-center justify-between gap-2">
+                <span>3. {ibBoxMapping.afschrijvingen.naam}</span>
+                <span className="font-mono normal-case tracking-normal">
+                  {eur((ibBoxMapping.afschrijvingen.berekendeApparatuurAfschrijving ?? ibBoxMapping.afschrijvingen.apparatuurInvestering) + ibBoxMapping.afschrijvingen.leaseKoopprijsTotal)}
+                </span>
+              </p>
               <p className="text-amber-900 text-xs">
                 {ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 && <>"Zakelijk - apparatuur/machines" ({eur(ibBoxMapping.afschrijvingen.apparatuurInvestering)}){ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0 ? " en " : " "}</>}
                 {ibBoxMapping.afschrijvingen.leaseKoopprijsTotal > 0 && <>de koopprijs van bedrijfsmiddelen bij financiële lease ({eur(ibBoxMapping.afschrijvingen.leaseKoopprijsTotal)})</>}
@@ -118,6 +123,11 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
                   <> Mogelijk komt de apparatuur/machines-investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
                 )}
               </p>
+              {ibBoxMapping.afschrijvingen.activaOnvolledig > 0 && (
+                <p className="text-amber-700 text-xs mt-1">
+                  ⚠ {ibBoxMapping.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld bij "Activa" hieronder — dit bedrag is daardoor nog niet compleet.
+                </p>
+              )}
               <CategorieBreakdown perCategorie={ibBoxMapping.afschrijvingen.perCategorie} />
             </div>
           )}

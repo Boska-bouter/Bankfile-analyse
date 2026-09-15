@@ -37,7 +37,7 @@ const BELASTINGEN_GEEN_KOSTENPOST = [
 // ingedeeld" terecht zou komen als het toch een keer als Zakelijk voorkomt.
 const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", "Leningen", "Lease (financieel)"];
 
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal) {
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear) {
   const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount, 0));
   const perCategorieVan = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
@@ -80,12 +80,19 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       // af te schrijven waarde, maar de koopprijs van het bedrijfsmiddel zelf (zoals ingevuld bij
       // de leasegegevens) — de rente staat apart bij "Financiële baten en lasten" hieronder.
       leaseKoopprijsTotal: leaseKoopprijsTotal || 0,
+      // Zodra bedrijfsmiddelen zijn geregistreerd bij "Activa" (aanschafwaarde, -datum,
+      // afschrijvingstermijn, restwaarde), gebruiken we de daadwerkelijk berekende afschrijving
+      // voor dit jaar in plaats van het bruto aanschafbedrag.
+      berekendeApparatuurAfschrijving: activaAfschrijvingForYear ? activaAfschrijvingForYear.totaalAfschrijving : null,
+      activaOnvolledig: activaAfschrijvingForYear ? activaAfschrijvingForYear.onvolledig : 0,
       perCategorie: [
         { categorie: "Zakelijk - apparatuur/machines", totaal: apparatuurInvestering },
         { categorie: "Lease (financieel) — koopprijs bedrijfsmiddel", totaal: leaseKoopprijsTotal || 0 },
       ].filter((r) => r.totaal > 0),
       toelichting:
-        "Dit mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Deze tool berekent geen afschrijvingsschema (restwaarde en gebruiksduur zijn hier niet uit de bankgegevens af te leiden) — het bruto aanschafbedrag staat hier alleen ter herkenning. Bij financiële lease is dit de koopprijs van het bedrijfsmiddel zelf, niet het totaal van de leasetermijnen.",
+        activaAfschrijvingForYear
+          ? "Voor \"Zakelijk - apparatuur/machines\" is dit de berekende afschrijving voor dit jaar op basis van de ingevulde gegevens bij Activa — niet het bruto aanschafbedrag (dat mag niet in één keer als kosten worden afgetrokken). Bij financiële lease is dit de koopprijs van het bedrijfsmiddel zelf; deze tool berekent daarvoor nog geen jaarlijkse afschrijving."
+          : "Dit mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Deze tool berekent geen afschrijvingsschema (restwaarde en gebruiksduur zijn hier niet uit de bankgegevens af te leiden) — het bruto aanschafbedrag staat hier alleen ter herkenning. Bij financiële lease is dit de koopprijs van het bedrijfsmiddel zelf, niet het totaal van de leasetermijnen.",
     },
     overigeBedrijfskosten,
     financieleBatenLasten: {

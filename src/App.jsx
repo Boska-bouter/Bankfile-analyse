@@ -56,6 +56,9 @@ import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
 import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetailsModal.jsx";
+import ActivaPanel from "./components/loans/ActivaPanel.jsx";
+import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
+import { computeActivaSummary, computeAfschrijvingPerJaar, computeActivaAfschrijvingForYear } from "./tax/activa.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
@@ -121,6 +124,8 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
+  const [activaDetails, setActivaDetails] = useState({});
+  const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
   const [personSearch, setPersonSearch] = useState("");
@@ -180,6 +185,7 @@ export default function App() {
     setReviewedPeriodeKeys(Array.isArray(settings.reviewedPeriodeKeys) ? settings.reviewedPeriodeKeys : []);
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
     setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
+    setActivaDetails(settings.activaDetails && typeof settings.activaDetails === "object" ? settings.activaDetails : {});
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -249,7 +255,7 @@ export default function App() {
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, manualPriveUitgaven, openingBalanceCorrections,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
@@ -259,7 +265,7 @@ export default function App() {
     categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     loaded,
   ]);
@@ -326,7 +332,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
       },
     });
   };
@@ -355,6 +361,7 @@ export default function App() {
     setLoanDetails(s.loanDetails);
     setLeaseDetails(s.leaseDetails);
     setLeaseMergedInto(s.leaseMergedInto || {});
+    setActivaDetails(s.activaDetails || {});
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -599,7 +606,7 @@ export default function App() {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
-    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails);
+    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
   };
@@ -649,6 +656,22 @@ export default function App() {
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto,
   });
+
+  // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
+  // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
+  const activaSummary = useMemo(() => computeActivaSummary(classified), [classified]);
+  const setActivaDetailField = (key, newDetails) => {
+    snapshotBeforeAction("Activagegevens aangepast");
+    setActivaDetails((prev) => ({ ...prev, [key]: newDetails }));
+  };
+  const markActivaUnknown = (key) => {
+    snapshotBeforeAction("Activum op onbekend gezet");
+    setActivaDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: true } }));
+  };
+  const unmarkActivaUnknown = (key) => {
+    snapshotBeforeAction("Activum toch invullen");
+    setActivaDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
+  };
 
   // ---- Vraag bij een categorie/type-wijziging: alleen deze transactie, alle jaren, of gekozen
   // jaren? Alleen gevraagd als er ook echt meerdere transacties van dezelfde tegenpartij zijn —
@@ -869,9 +892,13 @@ export default function App() {
     [leaseSummary, leaseDetails, activeYear]
   );
   const leaseKoopprijsTotal = useMemo(() => computeLeaseKoopprijsTotal(leaseSummary, leaseDetails), [leaseSummary, leaseDetails]);
+  const activaAfschrijvingForYear = useMemo(
+    () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
+    [activaSummary, activaDetails, activeYear]
+  );
   const ibBoxMapping = useMemo(
-    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal),
-    [zakGroupForYear, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal]
+    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear),
+    [zakGroupForYear, loanRenteForYear, leaseRenteForYear, leaseKoopprijsTotal, activaAfschrijvingForYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
@@ -991,7 +1018,7 @@ export default function App() {
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, leaseMergedInto, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+      leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1036,6 +1063,7 @@ export default function App() {
       }
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
       setLeaseMergedInto(project.leaseMergedInto && typeof project.leaseMergedInto === "object" ? project.leaseMergedInto : {});
+      setActivaDetails(project.activaDetails && typeof project.activaDetails === "object" ? project.activaDetails : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1637,6 +1665,16 @@ export default function App() {
               />
             </div>
 
+            <ActivaPanel
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              activeYear={activeYear}
+              onOpenModal={setActivaDetailsModalKey}
+              onMarkUnknown={markActivaUnknown}
+              onUnmarkUnknown={unmarkActivaUnknown}
+              onOpenHelp={setHelpPopupChapter}
+            />
+
             {years.length > 0 && activeYear && (
               <>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1896,6 +1934,15 @@ export default function App() {
           details={leaseDetails[leaseDetailsModalKey]}
           onSave={setLeaseDetailField}
           onClose={() => setLeaseDetailsModalKey(null)}
+        />
+      )}
+
+      {activaDetailsModalKey && (
+        <ActivaDetailsModal
+          activum={activaSummary.find((a) => a.key === activaDetailsModalKey)}
+          details={activaDetails[activaDetailsModalKey]}
+          onSave={setActivaDetailField}
+          onClose={() => setActivaDetailsModalKey(null)}
         />
       )}
 
