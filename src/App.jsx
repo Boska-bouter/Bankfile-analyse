@@ -599,7 +599,7 @@ export default function App() {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
-    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides);
+    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
   };
@@ -860,7 +860,6 @@ export default function App() {
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
   );
   const btwBoxMapping = useMemo(() => computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded), [effectiveCategoryBtwRates, voorbelastingExcluded]);
-  const ibBoxMapping = useMemo(() => computeIbBoxMapping(zakGroupForYear.items), [zakGroupForYear]);
   const loanRenteForYear = useMemo(
     () => (activeYear ? computeLoanRenteForYear(loanSummary, loanDetails, activeYear) : null),
     [loanSummary, loanDetails, activeYear]
@@ -868,6 +867,10 @@ export default function App() {
   const leaseRenteForYear = useMemo(
     () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
     [leaseSummary, leaseDetails, activeYear]
+  );
+  const ibBoxMapping = useMemo(
+    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear),
+    [zakGroupForYear, loanRenteForYear, leaseRenteForYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;

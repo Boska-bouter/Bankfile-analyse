@@ -16,13 +16,23 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
       </button>
       {open && (
         <div className="px-5 pb-5 space-y-3 text-sm">
+          <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
+            <p className="text-xs text-blue-900">
+              <strong>Waar is dit voor?</strong> Deze tool is een <strong>controle-instrument</strong>: de bedragen
+              hieronder laten zien wat er volgens de bankgegevens aangegeven en betaald had moeten worden — niet per
+              se wat er daadwerkelijk bij de Belastingdienst is aangegeven en betaald. Vergelijk deze bedragen dus
+              altijd met de eerder ingediende aangifte(s). Komt dat niet overeen, dan is dát precies waar dit
+              overzicht bij helpt: een mogelijke fout in een eerdere aangifte opsporen.
+            </p>
+          </div>
           <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3">
             <label className="inline-flex items-center gap-2 text-sm text-emerald-900">
               <input type="checkbox" checked={!!ibGedaan} onChange={(e) => setIbGedaan(activeYear, e.target.checked)} />
               IB-aangifte {activeYear} is al gedaan
             </label>
             <p className="mt-1 text-xs text-emerald-700">
-              Vink dit aan zodra je voor dit jaar daadwerkelijk IB-aangifte hebt gedaan. "Geschat IB" telt dan niet meer mee als nog openstaand bedrag bij Tekort/Over.
+              Vink dit aan als herinnering/status voor jezelf — het bedrag bij "Geschat IB" en Tekort/Over blijft
+              gewoon zichtbaar, juist zodat je het kunt vergelijken met wat er daadwerkelijk is aangegeven.
             </p>
           </div>
 
@@ -58,84 +68,130 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
           )}
 
           <p className="text-xs font-semibold text-slate-600 pt-2">Waar vind ik dit bij de aangifte inkomstenbelasting (winst uit onderneming)?</p>
-          <p className="text-xs text-slate-400">De IB-winstaangifte werkt met uitklapbare rubrieken, geen genummerde vakken — hieronder per rubriek welke categorieën daarin horen.</p>
-          {ibBoxMapping.rubrieken.map((r) => (
-            <div key={r.naam} className="rounded-md bg-slate-50 p-3">
-              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between gap-2">
-                <span>{r.naam}</span>
-                <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(r.totaal)}</span>
-              </p>
-              {r.toelichting && <p className="text-slate-500 text-xs">{r.toelichting}</p>}
-            </div>
-          ))}
+          <p className="text-xs text-slate-400">
+            In dezelfde volgorde als de winst-en-verliesrekening op de aangifte zelf — zo kun je één op één meelezen.
+          </p>
 
-          {(ibBoxMapping.apparatuurInvestering > 0 || ibBoxMapping.leaseFinancieelTotal > 0) && (
+          <div className="rounded-md bg-slate-50 p-3">
+            <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between gap-2">
+              <span>1. {ibBoxMapping.opbrengsten.naam}</span>
+              <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(ibBoxMapping.opbrengsten.totaal)}</span>
+            </p>
+          </div>
+
+          {ibBoxMapping.inkoopkosten.totaal > 0 && (
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between gap-2">
+                <span>2. {ibBoxMapping.inkoopkosten.naam}</span>
+                <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(ibBoxMapping.inkoopkosten.totaal)}</span>
+              </p>
+              <p className="text-slate-500 text-xs">{ibBoxMapping.inkoopkosten.toelichting}</p>
+            </div>
+          )}
+
+          {(ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 || ibBoxMapping.afschrijvingen.leaseFinancieelTotal > 0) && (
             <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
-              <p className="font-medium text-xs uppercase tracking-wide text-amber-800 mb-1">Afschrijvingen — geen directe kosten</p>
+              <p className="font-medium text-xs uppercase tracking-wide text-amber-800 mb-1">3. {ibBoxMapping.afschrijvingen.naam}</p>
               <p className="text-amber-900 text-xs">
-                {ibBoxMapping.apparatuurInvestering > 0 && <>"Zakelijk - apparatuur/machines" ({eur(ibBoxMapping.apparatuurInvestering)}){ibBoxMapping.leaseFinancieelTotal > 0 ? " en " : " "}</>}
-                {ibBoxMapping.leaseFinancieelTotal > 0 && <>"Lease (financieel)" ({eur(ibBoxMapping.leaseFinancieelTotal)})</>}
-                {" "}mogen doorgaans niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden.
-                {ibBoxMapping.apparatuurInvestering >= KIA_MIN_TOTAAL && ibBoxMapping.apparatuurInvestering <= KIA_MAX_TOTAAL && (
+                {ibBoxMapping.afschrijvingen.apparatuurInvestering > 0 && <>"Zakelijk - apparatuur/machines" ({eur(ibBoxMapping.afschrijvingen.apparatuurInvestering)}){ibBoxMapping.afschrijvingen.leaseFinancieelTotal > 0 ? " en " : " "}</>}
+                {ibBoxMapping.afschrijvingen.leaseFinancieelTotal > 0 && <>"Lease (financieel)" ({eur(ibBoxMapping.afschrijvingen.leaseFinancieelTotal)})</>}
+                {" "}{ibBoxMapping.afschrijvingen.toelichting}
+                {ibBoxMapping.afschrijvingen.apparatuurInvestering >= KIA_MIN_TOTAAL && ibBoxMapping.afschrijvingen.apparatuurInvestering <= KIA_MAX_TOTAAL && (
                   <> Mogelijk komt de apparatuur/machines-investering ook in aanmerking voor de kleinschaligheidsinvesteringsaftrek (KIA).</>
                 )}
               </p>
-              {leaseRenteForYear && ibBoxMapping.leaseFinancieelTotal > 0 && (
-                <p className="text-amber-900 text-xs mt-1">
-                  Rente op "Lease (financieel)" in {activeYear}: <strong>{eur(leaseRenteForYear.totaalRente)}</strong> (aftrekbaar) · aflossing: {eur(leaseRenteForYear.totaalAflossing)} (niet aftrekbaar, hoort bij het bedrijfsmiddel zelf)
-                  {leaseRenteForYear.onvolledig > 0 && (
-                    <span className="block text-amber-700">
-                      ⚠ {leaseRenteForYear.onvolledig} leasecontract(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet, zie "Lease (financieel)" hieronder.
+            </div>
+          )}
+
+          {ibBoxMapping.overigeBedrijfskosten.length > 0 && (
+            <div>
+              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1.5">4. Overige bedrijfskosten</p>
+              <div className="space-y-1.5">
+                {ibBoxMapping.overigeBedrijfskosten.map((r) => (
+                  <div key={r.naam} className="rounded-md bg-slate-50 p-3">
+                    <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between gap-2">
+                      <span>{r.naam}</span>
+                      <span className="font-mono text-slate-600 normal-case tracking-normal">{eur(r.totaal)}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(ibBoxMapping.financieleBatenLasten.renteLeningen > 0 || ibBoxMapping.financieleBatenLasten.renteLease > 0 || ibBoxMapping.leningenTotal > 0 || ibBoxMapping.leaseFinancieelTotal > 0) && (
+            <div className="rounded-md bg-orange-50 border border-orange-200 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-orange-800 mb-1">5. {ibBoxMapping.financieleBatenLasten.naam}</p>
+              <p className="text-orange-900 text-xs">{ibBoxMapping.financieleBatenLasten.toelichting}</p>
+              <p className="text-orange-900 text-xs mt-1">
+                Rente in {activeYear}: <strong>{eur(ibBoxMapping.financieleBatenLasten.renteLeningen + ibBoxMapping.financieleBatenLasten.renteLease)}</strong> (aftrekbaar)
+                {" "}· aflossing: {eur(ibBoxMapping.financieleBatenLasten.aflossingLeningen + ibBoxMapping.financieleBatenLasten.aflossingLease)} (niet aftrekbaar)
+              </p>
+              {ibBoxMapping.financieleBatenLasten.onvolledig > 0 && (
+                <p className="text-orange-700 text-xs mt-1">
+                  ⚠ {ibBoxMapping.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet.
+                </p>
+              )}
+              {loanSummary && loanSummary.length > 0 && (
+                <p className="text-orange-900 text-xs mt-1.5">
+                  {loanSummary.map((loan) => (
+                    <span key={loan.key} className="block">
+                      {loan.name}: {loanDetails?.[loan.key]?.rente != null && loanDetails[loan.key].rente !== "" ? `${loanDetails[loan.key].rente}%` : "nog niet ingevuld"}
                     </span>
-                  )}
+                  ))}
                 </p>
               )}
             </div>
           )}
 
-          {ibBoxMapping.leningenTotal > 0 && (
-            <div className="rounded-md bg-orange-50 border border-orange-200 p-3">
-              <p className="font-medium text-xs uppercase tracking-wide text-orange-800 mb-1">Leningen — alleen het rentedeel is aftrekbaar</p>
-              <p className="text-orange-900 text-xs">
-                "Leningen" ({eur(ibBoxMapping.leningenTotal)}) is geen kostenpost in één keer: de <strong>aflossing</strong> is niet aftrekbaar, alleen de <strong>rente</strong>.
-                {loanRenteForYear && (
-                  <span className="block mt-1">
-                    Rente in {activeYear}: <strong>{eur(loanRenteForYear.totaalRente)}</strong> (aftrekbaar) · aflossing: {eur(loanRenteForYear.totaalAflossing)} (niet aftrekbaar)
-                    {loanRenteForYear.onvolledig > 0 && (
-                      <span className="block text-orange-700">
-                        ⚠ {loanRenteForYear.onvolledig} lening(en) nog niet (volledig) ingevuld — dit bedrag is daardoor nog niet compleet, zie "Leningen" hieronder.
-                      </span>
-                    )}
-                  </span>
-                )}
-                {loanSummary && loanSummary.length > 0 && (
-                  <span className="block mt-1">
-                    {loanSummary.map((loan) => (
-                      <span key={loan.key} className="block">
-                        {loan.name}: {loanDetails?.[loan.key]?.rente != null && loanDetails[loan.key].rente !== "" ? `${loanDetails[loan.key].rente}%` : "nog niet ingevuld"}
-                      </span>
-                    ))}
-                  </span>
-                )}
+          {(ibBoxMapping.priveOnttrekkingen.totaal > 0 || ibBoxMapping.priveStortingen.totaal > 0) && (
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1.5">6. Privéonttrekkingen en -stortingen</p>
+              {ibBoxMapping.priveOnttrekkingen.totaal > 0 && (
+                <p className="text-slate-600 text-xs flex items-center justify-between gap-2">
+                  <span>Privéonttrekkingen</span><span className="font-mono">{eur(ibBoxMapping.priveOnttrekkingen.totaal)}</span>
+                </p>
+              )}
+              {ibBoxMapping.priveStortingen.totaal > 0 && (
+                <p className="text-slate-600 text-xs flex items-center justify-between gap-2 mt-1">
+                  <span>Privéstortingen</span><span className="font-mono">{eur(ibBoxMapping.priveStortingen.totaal)}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {ibBoxMapping.belastingenGeenKostenpost.totaal > 0 && (
+            <div className="rounded-md bg-rose-50 border border-rose-200 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-rose-800 mb-1 flex items-center justify-between gap-2">
+                <span>{ibBoxMapping.belastingenGeenKostenpost.naam}</span>
+                <span className="font-mono normal-case tracking-normal">{eur(ibBoxMapping.belastingenGeenKostenpost.totaal)}</span>
+              </p>
+              <p className="text-rose-900 text-xs">{ibBoxMapping.belastingenGeenKostenpost.toelichting}</p>
+            </div>
+          )}
+
+          {ibBoxMapping.verkoopActivaTotal > 0 && (
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between gap-2">
+                <span>Verkoop activa</span>
+                <span className="font-mono normal-case tracking-normal">{eur(ibBoxMapping.verkoopActivaTotal)}</span>
+              </p>
+              <p className="text-slate-500 text-xs">
+                Verkoop van een bedrijfsmiddel kan een boekwinst of -verlies opleveren — deze tool kent de boekwaarde
+                niet en berekent dat niet automatisch.
               </p>
             </div>
           )}
 
-          {(ibBoxMapping.naheffingOBTotal > 0 || ibBoxMapping.naheffingLHTotal > 0 || ibBoxMapping.naheffingIBTotal > 0) && (
-            <div className="rounded-md bg-rose-50 border border-rose-200 p-3">
-              <p className="font-medium text-xs uppercase tracking-wide text-rose-800 mb-1">Naheffingen voorgaande jaren — per belastingsoort verschillend</p>
-              <div className="text-rose-900 text-xs space-y-1">
-                {ibBoxMapping.naheffingOBTotal > 0 && (
-                  <p>
-                    <strong>OB</strong> ({eur(ibBoxMapping.naheffingOBTotal)}): de hoofdsom is <strong>geen kostenpost</strong> — het is het aflossen van een schuld aan de Belastingdienst.
+          {ibBoxMapping.nogNietIngedeeld.length > 0 && (
+            <div className="rounded-md bg-slate-50 border border-slate-200 p-3">
+              <p className="font-medium text-xs uppercase tracking-wide text-slate-500 mb-1">Nog niet ingedeeld in deze structuur</p>
+              <div className="text-slate-600 text-xs space-y-0.5">
+                {ibBoxMapping.nogNietIngedeeld.map((r) => (
+                  <p key={r.categorie} className="flex items-center justify-between gap-2">
+                    <span>{r.categorie}</span><span className="font-mono">{eur(r.totaal)}</span>
                   </p>
-                )}
-                {ibBoxMapping.naheffingLHTotal > 0 && (
-                  <p><strong>LH</strong> ({eur(ibBoxMapping.naheffingLHTotal)}): telt gewoon mee als kosten, net als reguliere loonheffing.</p>
-                )}
-                {ibBoxMapping.naheffingIBTotal > 0 && (
-                  <p><strong>IB</strong> ({eur(ibBoxMapping.naheffingIBTotal)}): net als reguliere IB altijd <strong>privé</strong>, nooit een zakelijke kostenpost.</p>
-                )}
+                ))}
               </div>
             </div>
           )}
