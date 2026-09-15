@@ -56,18 +56,18 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                     <td className="py-2 pr-4 font-medium whitespace-nowrap">{q.year} — Q{q.kwartaal}</td>
                     <td className="py-2 px-3 text-right font-mono">
                       {eur(q.omzetBruto21 - q.verschuldigdBtw21)}
-                      <div className="text-[10px] text-slate-400 font-normal">({eur(q.omzetBruto21)} bruto)</div>
+                      <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto21)} bruto)</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw21)}</td>
                     <td className="py-2 px-3 text-right font-mono">
                       {eur(q.omzetBruto9 - q.verschuldigdBtw9)}
-                      <div className="text-[10px] text-slate-400 font-normal">({eur(q.omzetBruto9)} bruto)</div>
+                      <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto9)} bruto)</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw9)}</td>
                     <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">
                       {eur(q.kostenBruto - q.voorbelasting)}
-                      <div className="text-[10px] text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
+                      <div className="text-xs text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">{eur(q.voorbelasting)}</td>
                     <td className={`py-2 pl-3 text-right font-mono font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>

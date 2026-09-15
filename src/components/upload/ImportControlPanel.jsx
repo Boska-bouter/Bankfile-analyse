@@ -38,6 +38,9 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
       </button>
       {open && (
         <div className="px-4 pb-4 space-y-3">
+          {onRemoveFile && (
+            <p className="text-xs text-slate-500">Klik op het prullenbakje bij een bestand om dat bestand en al zijn transacties te verwijderen.</p>
+          )}
           {diagnostics.map((d) => {
             const totalSkipped = d.skippedNoDate + d.skippedBadAmount;
             return (

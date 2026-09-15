@@ -43,7 +43,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       </h3>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-[10px] text-slate-400 uppercase">
+          <tr className="text-xs text-slate-400 uppercase">
             <th className="text-left font-medium pb-1.5">Categorie</th>
             <th className="text-right font-medium pb-1.5 px-2">Bruto</th>
             <th className="text-right font-medium pb-1.5 px-2">BTW</th>
@@ -117,6 +117,16 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
 
   const applyChange = (tx, patch) => onRequestChange(tx, patch);
+
+  const confidenceCounts = useMemo(() => {
+    let heuristic = 0;
+    let fallback = 0;
+    for (const t of group.items) {
+      if (t.confidence?.level === "heuristic") heuristic++;
+      else if (t.confidence?.level === "fallback") fallback++;
+    }
+    return { heuristic, fallback };
+  }, [group.items]);
 
   const searchSuggestions = useMemo(() => {
     const names = new Set();
@@ -257,7 +267,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🟡 Controleren"
             >
-              🟡 Controleren{filterHeuristic ? " ✓" : ""}
+              🟡 Controleren ({confidenceCounts.heuristic}){filterHeuristic ? " ✓" : ""}
             </button>
             <button
               onClick={() => setFilterFallback((v) => !v)}
@@ -266,7 +276,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🔴 Onduidelijk"
             >
-              🔴 Onduidelijk{filterFallback ? " ✓" : ""}
+              🔴 Onduidelijk ({confidenceCounts.fallback}){filterFallback ? " ✓" : ""}
             </button>
           </div>
         </div>

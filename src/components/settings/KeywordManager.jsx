@@ -53,7 +53,7 @@ export default function KeywordManager({
               {entriesLabel || "Nu herkend"} ({entries.length})
             </button>
             {showEntries && onToggleExpand && (
-              <button onClick={onToggleExpand} className="text-[10px] text-slate-400 hover:text-slate-700 flex items-center gap-0.5 shrink-0" title={isExpanded ? "Venster verkleinen" : "Venster over de volle breedte tonen"}>
+              <button onClick={onToggleExpand} className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-0.5 shrink-0" title={isExpanded ? "Venster verkleinen" : "Venster over de volle breedte tonen"}>
                 {isExpanded ? "Verkleinen" : "Uitvergroten"}
                 {isExpanded ? <ChevronRight className="h-3 w-3 rotate-180" /> : <ChevronRight className="h-3 w-3" />}
               </button>

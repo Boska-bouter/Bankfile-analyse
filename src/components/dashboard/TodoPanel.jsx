@@ -9,7 +9,7 @@ export default function TodoPanel({ items, years, activeYear, onSelectYear, year
         <p className="text-sm font-semibold">Werk te doen ({items.length})</p>
         {years.length > 0 && (
           <>
-            <p className="text-[10px] text-slate-400 mt-2 mb-1">
+            <p className="text-xs text-slate-400 mt-2 mb-1">
               {years.length > 1 ? "Voortgang per jaar (los van elkaar, niet gemiddeld) — laagste % heeft het meeste werk nodig:" : "Voortgang dit jaar:"}
             </p>
             <div className="flex flex-wrap gap-2 mt-1">
