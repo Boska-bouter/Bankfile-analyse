@@ -162,7 +162,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad) {
   const sections = yearsToInclude
     .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails))
     .join('\n  <div style="page-break-before: always;"></div>\n');
@@ -187,6 +187,10 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
   .controledoel { margin: 0 0 20px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
+  .onzekerheden { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
+  .onzekerheden ul { margin: 6px 0 6px 16px; padding: 0; }
+  .onzekerheden li { margin-bottom: 3px; }
+  .onzekerheden p { margin: 6px 0; }
   .vergelijk-hint { color: #2563eb; font-size: 9.5px; font-style: italic; margin: -4px 0 8px; }
   .disclaimer { margin-top: 28px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #64748b; font-size: 9.5px; }
   @page { size: A4 portrait; margin: 16mm; }
@@ -194,12 +198,32 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
   <div class="controledoel">
-    <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>controle-instrument</strong>: het laat zien wat er
-    volgens de bankgegevens aangegeven en betaald had moeten worden — niet noodzakelijk wat er daadwerkelijk bij de
-    Belastingdienst is aangegeven en betaald. Vergelijk de bedragen hieronder met de eerder ingediende aangifte(s).
-    Komt dat niet overeen, dan is dát precies waar dit overzicht je bij wil helpen — dan is er mogelijk iets misgegaan
-    in een eerdere aangifte. De winst-en-verliesrekening hieronder staat bewust in dezelfde volgorde als de IB-aangifte
-    zelf.
+    <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>onafhankelijke reconstructie</strong>: het laat
+    zien wat er volgens uitsluitend de bankgegevens aangegeven en betaald had moeten worden. Vergelijk de bedragen
+    hieronder gerust met een eerder ingediende aangifte — maar een verschil betekent niet automatisch dat er iets
+    misging in die eerdere aangifte, en ook niet automatisch dat deze reconstructie klopt. Een eerdere aangifte kan
+    bijvoorbeeld gebaseerd zijn op facturen die niet via deze bankrekening liepen, memoriaalboekingen, correcties of
+    suppleties — dingen die niet uit bankgegevens blijken. Een verschil is dus vooral een signaal om samen na te gaan
+    waar het vandaan komt, niet een oordeel op zichzelf. De winst-en-verliesrekening hieronder staat bewust in
+    dezelfde volgorde als de IB-aangifte zelf.
+  </div>
+  <div class="onzekerheden">
+    <strong>Wat deze tool niet kan weten</strong>
+    <p>Deze reconstructie is gebaseerd op uitsluitend de banktransacties. Een aantal dingen dat voor de aangifte
+    relevant kan zijn, staat niet (of niet volledig) op een bankrekening, en zit dus niet in dit overzicht:</p>
+    <ul>
+      <li>Contante ontvangsten en uitgaven</li>
+      <li>Openstaande facturen — nog te ontvangen bedragen (debiteuren) en nog te betalen bedragen (crediteuren) die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>
+      <li>Voorraad — inkoopwaarde en verkoopwaarde van onverkochte goederen aan het begin/einde van het jaar${
+        heeftVoorraad ? " (je gaf aan dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""
+      }</li>
+      <li>Privégebruik van bedrijfsmiddelen (bijv. een auto) voor zover dat niet als aparte correctie is vastgelegd</li>
+      <li>Inkomsten of kosten die buiten deze bankrekening om liepen (bijv. via een andere rekening, contant, of in natura)</li>
+      <li>Fiscale situaties die niet uit bankgegevens blijken (bijv. specifieke regelingen rond de eigen woning of andere ondernemingen)</li>
+      <li>Correcties, memoriaalboekingen of suppleties uit een eerdere administratie</li>
+    </ul>
+    <p>Dit maakt de reconstructie niet minder waardevol — het is juist onderdeel van een betrouwbare aanpak om
+    zichtbaar te maken wat wél en niet uit de bankgegevens kan worden vastgesteld.</p>
   </div>
   ${sections}
   <div class="disclaimer">

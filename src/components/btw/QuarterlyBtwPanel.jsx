@@ -32,8 +32,10 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             {onOpenHelp && <HelpHint chapter="btw-aangifte-kwartaal" onOpen={onOpenHelp} />}
           </p>
           <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5 mb-3">
-            Vergelijk het saldo per kwartaal met wat er daadwerkelijk is aangegeven en betaald — "aangegeven"/"betaald"
-            hieronder is alleen een statusherinnering voor jezelf en verandert de getoonde bedragen niet.
+            Vergelijk het saldo per kwartaal gerust met wat er daadwerkelijk is aangegeven en betaald — een verschil
+            betekent niet automatisch een fout (een eerdere aangifte kan op andere gegevens gebaseerd zijn); het is
+            vooral een signaal om na te gaan waar het vandaan komt. "Aangegeven"/"betaald" hieronder is alleen een
+            statusherinnering voor jezelf en verandert de getoonde bedragen niet.
           </p>
           <table className="w-full text-sm">
             <thead>

@@ -36,6 +36,7 @@ import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
 import AangifteChecklistPanel from "./components/overview/AangifteChecklistPanel.jsx";
+import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
@@ -688,7 +689,7 @@ export default function App() {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
-    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails);
+    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
   };
@@ -1530,6 +1531,7 @@ export default function App() {
         {years.length > 0 && (
           <div ref={checklistSectionRef}>
             <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
           </div>
         )}
 

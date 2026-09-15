@@ -34,11 +34,12 @@ export default function ObIbExplanationPanel({ activeYear, btwBoxMapping, ibBoxM
         <div className="px-5 pb-5 space-y-3 text-sm">
           <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
             <p className="text-xs text-blue-900">
-              <strong>Waar is dit voor?</strong> Deze tool is een <strong>controle-instrument</strong>: de bedragen
-              hieronder laten zien wat er volgens de bankgegevens aangegeven en betaald had moeten worden — niet per
-              se wat er daadwerkelijk bij de Belastingdienst is aangegeven en betaald. Vergelijk deze bedragen dus
-              altijd met de eerder ingediende aangifte(s). Komt dat niet overeen, dan is dát precies waar dit
-              overzicht bij helpt: een mogelijke fout in een eerdere aangifte opsporen.
+              <strong>Waar is dit voor?</strong> Deze tool maakt een <strong>onafhankelijke reconstructie</strong>: de
+              bedragen hieronder komen uitsluitend uit de bankgegevens. Vergelijk ze gerust met een eerder ingediende
+              aangifte — maar een verschil betekent niet automatisch dat er iets misging in die aangifte, en ook niet
+              automatisch dat deze reconstructie klopt. Een eerdere aangifte kan bijvoorbeeld gebaseerd zijn op
+              facturen die niet via deze rekening liepen, memoriaalboekingen of correcties — dingen die niet uit
+              bankgegevens blijken. Een verschil is vooral een signaal om samen na te gaan waar het vandaan komt.
             </p>
           </div>
           <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3">
