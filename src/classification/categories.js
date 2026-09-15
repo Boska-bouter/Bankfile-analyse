@@ -171,6 +171,10 @@ export const DEFAULT_RULES = [
     "arag", " das ", "bovemij", "turien & co", "vivat", "aon",
   ],
     description: "Zakelijke verzekeringen. Let op: grote verzekeraars als Interpolis/Achmea/Allianz/Univé verkopen zowel zakelijke als privé-polissen — die staan daarom bij het privé-subtype \"Verzekeringen\" en moeten hier zo nodig handmatig op Zakelijk gezet worden." },
+  { name: "AOV (arbeidsongeschiktheidsverzekering)", color: "bg-purple-100 text-purple-800", keywords: [
+    "aov", "arbeidsongeschiktheidsverzekering", "broodfonds", "waarborgfonds", "movir aov",
+  ],
+    description: "Arbeidsongeschiktheidsverzekering — een veelvoorkomende, specifieke aftrekpost bij zzp'ers die anders in de generieke \"Verzekering: Zakelijk\" verdwijnt." },
   { name: "Verzekeringen", color: "bg-teal-100 text-teal-800", keywords: [
     "zorgverzekering", "zorgpremie", "zilveren kruis", " cz zorg", "cz zorgverzekering", "vgz", "menzis",
     "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering",
@@ -204,7 +208,7 @@ export const CATEGORY_ORDER = [
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
-  "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk",
+  "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -428,6 +432,7 @@ export const SUBTYPE_TO_MAIN = {
   "Verkoop activa": "Zakelijke inkomsten",
   "Verzekering: Auto": "Vervoer & auto",
   "Verzekering: Zakelijk": "Inkoop & zakelijke uitgaven",
+  "AOV (arbeidsongeschiktheidsverzekering)": "Inkoop & zakelijke uitgaven",
   "Verzekeringen": "Privé",
   "Winkels divers": "Privé",
   "Webshops & online aankopen": "Privé",

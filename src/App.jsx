@@ -43,6 +43,7 @@ import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
+import VerwachteMatchModal from "./components/shared/VerwachteMatchModal.jsx";
 import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
 import UpdateAvailableBanner from "./components/shared/UpdateAvailableBanner.jsx";
 import { useVersionCheck } from "./hooks/useVersionCheck.js";
@@ -126,6 +127,12 @@ export default function App() {
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
+  const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | {status:"ja"|"nee", naam}
+  const [verwachteLening, setVerwachteLening] = useState(null);
+  const [verwachteAOV, setVerwachteAOV] = useState(null);
+  const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
+  const [verwachteMatchSuggestie, setVerwachteMatchSuggestie] = useState(null); // {type, naam, matches, targetCategory}
+  const [verwachteAangeboden, setVerwachteAangeboden] = useState({}); // {lease: aantalTransactiesToenGecontroleerd, ...}
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
   const [personSearch, setPersonSearch] = useState("");
@@ -186,6 +193,10 @@ export default function App() {
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
     setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
     setActivaDetails(settings.activaDetails && typeof settings.activaDetails === "object" ? settings.activaDetails : {});
+    setVerwachteLease(settings.verwachteLease ?? null);
+    setVerwachteLening(settings.verwachteLening ?? null);
+    setVerwachteAOV(settings.verwachteAOV ?? null);
+    setHeeftVoorraad(settings.heeftVoorraad ?? null);
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -257,6 +268,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, manualPriveUitgaven, openingBalanceCorrections,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -267,6 +279,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, manualPriveUitgaven, openingBalanceCorrections,
+    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
     loaded,
   ]);
 
@@ -333,6 +346,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
       },
     });
   };
@@ -362,6 +376,10 @@ export default function App() {
     setLeaseDetails(s.leaseDetails);
     setLeaseMergedInto(s.leaseMergedInto || {});
     setActivaDetails(s.activaDetails || {});
+    setVerwachteLease(s.verwachteLease ?? null);
+    setVerwachteLening(s.verwachteLening ?? null);
+    setVerwachteAOV(s.verwachteAOV ?? null);
+    setHeeftVoorraad(s.heeftVoorraad ?? null);
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -450,6 +468,51 @@ export default function App() {
     }
     return mirrors.length ? [...base, ...mirrors] : base;
   }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile]);
+
+  // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
+  // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
+  // wanneer er later nog een bestand bijkomt (classified.length verandert dan). Ná een keer
+  // aanbieden/afwijzen voor de HUIDIGE dataset niet opnieuw hetzelfde voorstel doen — pas weer als
+  // er méér transacties bijkomen (een nieuw bestand), niet bij elke herclassificatie op zich.
+  useEffect(() => {
+    if (verwachteMatchSuggestie) return;
+    const proberen = [
+      { type: "lease", verwachte: verwachteLease, targetCategory: "Lease (financieel)" },
+      { type: "lening", verwachte: verwachteLening, targetCategory: "Leningen" },
+      { type: "aov", verwachte: verwachteAOV, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" },
+    ];
+    for (const { type, verwachte, targetCategory } of proberen) {
+      if (verwachte?.status !== "ja" || !verwachte.naam || verwachte.gevonden) continue;
+      if (verwachteAangeboden[type] === classified.length) continue;
+      const keyword = extractKeywordCandidate(verwachte.naam);
+      if (!keyword) continue;
+      const matches = classified.filter((t) => {
+        if (t.isMirror || t.category === targetCategory) return false;
+        const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
+        return text.includes(keyword);
+      });
+      if (matches.length > 0) {
+        setVerwachteMatchSuggestie({ type, naam: verwachte.naam, matches, targetCategory });
+        return;
+      }
+    }
+  }, [classified, verwachteLease, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
+
+  const acceptVerwachteMatch = () => {
+    const { type, matches, targetCategory } = verwachteMatchSuggestie;
+    snapshotBeforeAction("Verwachte lease/lening/AOV ingedeeld");
+    for (const tx of matches) {
+      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: targetCategory, type: "Zakelijk" }, tx.counterpartyIban);
+    }
+    if (type === "lease") setVerwachteLease((prev) => ({ ...prev, gevonden: true }));
+    if (type === "lening") setVerwachteLening((prev) => ({ ...prev, gevonden: true }));
+    if (type === "aov") setVerwachteAOV((prev) => ({ ...prev, gevonden: true }));
+    setVerwachteMatchSuggestie(null);
+  };
+  const dismissVerwachteMatch = () => {
+    setVerwachteAangeboden((prev) => ({ ...prev, [verwachteMatchSuggestie.type]: classified.length }));
+    setVerwachteMatchSuggestie(null);
+  };
 
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
@@ -988,6 +1051,15 @@ export default function App() {
     if (incompleteLeases.length > 0) {
       items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });
     }
+    if (verwachteLease?.status === "ja" && !verwachteLease.gevonden) {
+      items.push({ key: "verwachte-lease", text: `Je gaf aan dat er een leaseauto is${verwachteLease.naam ? ` bij "${verwachteLease.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`, ref: leasesSectionRef });
+    }
+    if (verwachteLening?.status === "ja" && !verwachteLening.gevonden) {
+      items.push({ key: "verwachte-lening", text: `Je gaf aan dat er een zakelijke lening is${verwachteLening.naam ? ` bij "${verwachteLening.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`, ref: loansSectionRef });
+    }
+    if (verwachteAOV?.status === "ja" && !verwachteAOV.gevonden) {
+      items.push({ key: "verwachte-aov", text: `Je gaf aan dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties` });
+    }
     if (transactions.length > 0 && korRegeling === null) {
       items.push({ key: "kor", text: "KOR-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
@@ -1006,7 +1078,7 @@ export default function App() {
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
     periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
-    confidenceSummary,
+    confidenceSummary, verwachteLease, verwachteLening, verwachteAOV,
   ]);
 
   // ---- Project opslaan als downloadbaar bestand ----
@@ -1018,6 +1090,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad,
       ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1063,6 +1136,10 @@ export default function App() {
       setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
       setLeaseMergedInto(project.leaseMergedInto && typeof project.leaseMergedInto === "object" ? project.leaseMergedInto : {});
       setActivaDetails(project.activaDetails && typeof project.activaDetails === "object" ? project.activaDetails : {});
+      setVerwachteLease(project.verwachteLease ?? null);
+      setVerwachteLening(project.verwachteLening ?? null);
+      setVerwachteAOV(project.verwachteAOV ?? null);
+      setHeeftVoorraad(project.heeftVoorraad ?? null);
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1301,6 +1378,14 @@ export default function App() {
           />
         )}
 
+        {verwachteMatchSuggestie && (
+          <VerwachteMatchModal
+            suggestie={verwachteMatchSuggestie}
+            onAccept={acceptVerwachteMatch}
+            onDismiss={dismissVerwachteMatch}
+          />
+        )}
+
         {parsedFiles.length === 0 && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5">
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
@@ -1403,6 +1488,14 @@ export default function App() {
             setKwartaalStatusField={setKwartaalStatusField}
             fileContinuity={fileContinuity}
             onSaveProject={saveProjectFile}
+            verwachteLease={verwachteLease}
+            setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}
+            verwachteLening={verwachteLening}
+            setVerwachteLening={(v) => { snapshotBeforeAction("Leningvraag beantwoord"); setVerwachteLening(v); }}
+            verwachteAOV={verwachteAOV}
+            setVerwachteAOV={(v) => { snapshotBeforeAction("AOV-vraag beantwoord"); setVerwachteAOV(v); }}
+            heeftVoorraad={heeftVoorraad}
+            setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
             onClose={() => setShowSetupWizard(false)}
           />
         )}

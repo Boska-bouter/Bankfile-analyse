@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
-const STEP_LABELS = { 0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan" };
+const STEP_LABELS = {
+  6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
+  0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
+};
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
@@ -12,6 +15,10 @@ export default function SetupWizardModal({
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
   fileContinuity = [],
   onSaveProject,
+  verwachteLease, setVerwachteLease,
+  verwachteLening, setVerwachteLening,
+  verwachteAOV, setVerwachteAOV,
+  heeftVoorraad, setHeeftVoorraad,
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -26,8 +33,19 @@ export default function SetupWizardModal({
   // reden al bij vanaf het begin, ook al is pas ná het antwoord op stap 2 bekend of hij relevant
   // is (alleen bij "nee" op BTW-verlegd) — dat wordt hieronder net als de KOR-uitzondering pas
   // live bepaald, niet bij het openen.
+  //
+  // De vragen over lease/lening/AOV/voorraad (6-9) staan bewust vóór alles — op het moment dat de
+  // wizard opent zijn de net geladen bestanden al ingelezen en geclassificeerd (dat gebeurt vóórdat
+  // de wizard verschijnt), dus een hier ingevulde naam kan meteen gezocht worden in de transacties
+  // die er al liggen. Ze worden alleen ÉÉN keer gevraagd (niet opnieuw bij een volgend bestand) —
+  // dat is waarom ze hier conditioneel zijn op "nog niet beantwoord" (null), in plaats van steeds
+  // opnieuw in de wachtrij te komen zoals stap 0 dat wel doet.
   const [initialSteps] = useState(() => {
     const list = [];
+    if (verwachteLease === null) list.push(6);
+    if (verwachteLening === null) list.push(7);
+    if (verwachteAOV === null) list.push(8);
+    if (heeftVoorraad === null) list.push(9);
     if (pendingFileNames.length > 0) list.push(0);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
@@ -70,6 +88,49 @@ export default function SetupWizardModal({
         </div>
 
         <div className="p-5 overflow-y-auto flex-1">
+          {currentStepId === 6 && (
+            <VerwachteNaamVraag
+              vraag='Is er een leaseauto (financieel) in dit bedrijf?'
+              placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)"
+              value={typedNow.lease ?? ""}
+              onChange={(v) => setTypedNow((p) => ({ ...p, lease: v }))}
+              onJa={(naam) => { setVerwachteLease({ status: "ja", naam: naam || null }); goNext(); }}
+              onNee={() => { setVerwachteLease({ status: "nee" }); goNext(); }}
+            />
+          )}
+          {currentStepId === 7 && (
+            <VerwachteNaamVraag
+              vraag="Is er een zakelijke lening (bank, Qredits, familie, etc.)?"
+              placeholder="Bij wie is de lening (bijv. Qredits)"
+              value={typedNow.lening ?? ""}
+              onChange={(v) => setTypedNow((p) => ({ ...p, lening: v }))}
+              onJa={(naam) => { setVerwachteLening({ status: "ja", naam: naam || null }); goNext(); }}
+              onNee={() => { setVerwachteLening({ status: "nee" }); goNext(); }}
+            />
+          )}
+          {currentStepId === 8 && (
+            <VerwachteNaamVraag
+              vraag="Heb je een AOV (arbeidsongeschiktheidsverzekering)?"
+              placeholder="Naam verzekeraar (bijv. Movir, Achmea)"
+              value={typedNow.aov ?? ""}
+              onChange={(v) => setTypedNow((p) => ({ ...p, aov: v }))}
+              onJa={(naam) => { setVerwachteAOV({ status: "ja", naam: naam || null }); goNext(); }}
+              onNee={() => { setVerwachteAOV({ status: "nee" }); goNext(); }}
+            />
+          )}
+          {currentStepId === 9 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Heb je voorraad in het bedrijf (goederen die je inkoopt om door te verkopen)?</p>
+              <p className="text-xs text-slate-400">
+                Dit werkt fiscaal anders dan afschrijving — de tool gebruikt dit alleen als signaal, er wordt nog niets
+                automatisch berekend.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => { setHeeftVoorraad(true); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Ja</button>
+                <button onClick={() => { setHeeftVoorraad(false); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Nee</button>
+              </div>
+            </div>
+          )}
           {currentStepId === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
@@ -271,6 +332,36 @@ export default function SetupWizardModal({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Gedeelde vraag-vorm voor lease/lening/AOV: een naam (optioneel) plus Ja/Nee. Bij "Ja" mag de
+// naam leeg blijven — de gegevens (en ook de naam zelf) mogen altijd later nog worden ingevuld,
+// dit is puur om meteen te kunnen zoeken in de net geladen transacties als de naam al bekend is.
+function VerwachteNaamVraag({ vraag, placeholder, value, onChange, onJa, onNee }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600">{vraag}</p>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <p className="text-xs text-slate-400">
+        De naam is niet verplicht — je kunt "Ja" ook zonder naam invullen, en de gegevens altijd later aanvullen.
+        Weet je de naam wel? Dan kan de tool meteen zoeken of die al in de geladen bestanden voorkomt.
+      </p>
+      <div className="flex gap-2">
+        <button onClick={() => onJa(value.trim())} className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700">
+          Ja
+        </button>
+        <button onClick={onNee} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+          Nee
+        </button>
       </div>
     </div>
   );
