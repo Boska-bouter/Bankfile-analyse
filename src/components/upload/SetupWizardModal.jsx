@@ -411,6 +411,21 @@ export default function SetupWizardModal({
           {currentStepId === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Welke BTW-kwartalen zijn al aangegeven en/of betaald?</p>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="w-24" />
+                <button
+                  onClick={() => quartersToAsk.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "aangegeven", true))}
+                  className="text-slate-500 underline hover:text-slate-700"
+                >
+                  Alles aangegeven
+                </button>
+                <button
+                  onClick={() => quartersToAsk.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "betaald", true))}
+                  className="text-slate-500 underline hover:text-slate-700"
+                >
+                  Alles betaald
+                </button>
+              </div>
               <div className="divide-y divide-slate-100 border border-slate-100 rounded-md">
                 {quartersToAsk.map((q) => {
                   const key = `${q.year}-Q${q.kwartaal}`;
