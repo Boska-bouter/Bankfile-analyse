@@ -1267,6 +1267,9 @@ export default function App() {
     setOpdrachtgeversGevraagd(null);
     setVerwachteMatchSuggestie(null);
     setVerwachteAangeboden({});
+    setLoanDetailsModalKey(null);
+    setLeaseDetailsModalKey(null);
+    setActivaDetailsModalKey(null);
     setAangiftevoorstelPreview(null);
     setShowAangifteYearPicker(false);
     setSelectedAangifteYears([]);
@@ -2098,7 +2101,7 @@ export default function App() {
         </div>
       )}
 
-      {loanDetailsModalKey && (
+      {loanDetailsModalKey && loanSummary.find((l) => l.key === loanDetailsModalKey) && (
         <LoanDetailsModal
           loan={loanSummary.find((l) => l.key === loanDetailsModalKey)}
           details={loanDetails[loanDetailsModalKey]}
@@ -2107,7 +2110,7 @@ export default function App() {
         />
       )}
 
-      {leaseDetailsModalKey && (
+      {leaseDetailsModalKey && leaseSummary.find((l) => l.key === leaseDetailsModalKey) && (
         <FinancialLeaseDetailsModal
           lease={leaseSummary.find((l) => l.key === leaseDetailsModalKey)}
           details={leaseDetails[leaseDetailsModalKey]}
@@ -2116,7 +2119,7 @@ export default function App() {
         />
       )}
 
-      {activaDetailsModalKey && (
+      {activaDetailsModalKey && activaSummary.find((a) => a.key === activaDetailsModalKey) && (
         <ActivaDetailsModal
           activum={activaSummary.find((a) => a.key === activaDetailsModalKey)}
           details={activaDetails[activaDetailsModalKey]}
