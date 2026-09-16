@@ -13,6 +13,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   const [expandedCards, setExpandedCards] = useState({});
   const [newKeywordByCategory, setNewKeywordByCategory] = useState({});
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryMain, setNewCategoryMain] = useState("Zakelijk");
   const [newCategoryError, setNewCategoryError] = useState("");
 
   const isSearching = search.trim() !== "";
@@ -55,9 +56,11 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
       setNewCategoryError("Deze categorie bestaat al.");
       return;
     }
-    registerCategory(name);
-    setCategoryRules((prev) => [...prev, { name, color: "bg-slate-200 text-slate-700", keywords: [] }]);
+    const mainCategory = newCategoryMain === "Privé" ? "Privé" : "Inkoop & zakelijke uitgaven";
+    registerCategory(name, undefined, mainCategory);
+    setCategoryRules((prev) => [...prev, { name, color: "bg-slate-200 text-slate-700", keywords: [], mainCategory }]);
     setNewCategoryName("");
+    setNewCategoryMain("Zakelijk");
     setNewCategoryError("");
   };
 
@@ -143,12 +146,28 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                 placeholder="Naam van de nieuwe categorie…"
                 className="flex-1 min-w-0 rounded-md border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+              <button
+                onClick={() => setNewCategoryMain("Zakelijk")}
+                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+              >
+                Zakelijk
+              </button>
+              <button
+                onClick={() => setNewCategoryMain("Privé")}
+                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Privé" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+              >
+                Privé
+              </button>
               <button onClick={addCustomCategory} className="shrink-0 inline-flex items-center gap-1 rounded-md bg-emerald-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-emerald-700">
                 <Plus className="h-3.5 w-3.5" /> Toevoegen
               </button>
             </div>
             {newCategoryError && <p className="mt-1.5 text-xs text-rose-600">{newCategoryError}</p>}
-            <p className="mt-1.5 text-xs text-slate-400">Nieuwe categorieën komen vooralsnog onder "Inkoop & zakelijke uitgaven" te staan.</p>
+            <p className="mt-1.5 text-xs text-slate-400">
+              {newCategoryMain === "Zakelijk"
+                ? "Komt onder \"Inkoop & zakelijke uitgaven\" te staan en telt mee als aftrekbare zakelijke kostenpost."
+                : "Komt onder \"Privé\" te staan en telt nooit mee in de zakelijke BTW/winst-berekening, ongeacht op welke rekening de transactie stond."}
+            </p>
           </div>
         </div>
       )}

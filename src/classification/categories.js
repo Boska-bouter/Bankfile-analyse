@@ -257,6 +257,56 @@ export const INCOME_TRANSFER_CATEGORIES = [
   "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar",
 ];
 
+// Route B (zie gesprek): telt een transactie mee als zakelijke omzet/kostenpost in W&V/BTW? Dat
+// bepalen we voortaan op basis van de CATEGORIE, niet op basis van tx.type — een privé-uitgave die
+// betaald is vanaf de zakelijke rekening (tx.type="Zakelijk") is nog steeds geen bedrijfskosten,
+// en een zakelijke uitgave betaald vanaf de privérekening (tx.type="Prive") is dat juist wél.
+// tx.type blijft alleen bepalen in welk overzicht je de transactie ziet en telt mee in de
+// saldocontrole van de rekening zelf — niet meer in de fiscale telling.
+//
+// Dit vervangt de losse, verspreide uitsluitlijsten die voorheen in btw.js/yearlySummary.js/
+// boxMapping.js stonden (ONTTREKKING_CATS, FINANCIERING_CATS, BTW_AANGIFTE_NIET_RELEVANT) — met
+// dit veld op één centrale plek kan een categorie niet meer per ongeluk op de ene lijst wél, en de
+// andere niet, staan (zoals bij "Prive: overig" en "Boodschappen" gebeurde).
+//   "omzet"        - telt mee als zakelijke omzet
+//   "kosten"       - telt volledig mee als aftrekbare zakelijke kostenpost
+//   "financiering" - alleen de rente is aftrekbaar (Leningen/Lease financieel), niet de aflossing
+//                    — de rente zelf wordt apart berekend (zie loanAmortization.js)
+//   "geen"         - telt nooit mee als zakelijke omzet/kostenpost (privé, persoonlijke
+//                    belastingafdracht, transfer, boekwinst, nog-te-beoordelen)
+export const CATEGORY_FISCAL_TREATMENT = {
+  // Omzet
+  "Zakelijke inkomsten": "omzet", "Zakelijke inkomsten 9%": "omzet", "Zakelijke inkomsten 21%": "omzet",
+  // Financiering — alleen de rente is aftrekbaar, niet het volledige termijnbedrag
+  "Leningen": "financiering", "Lease (financieel)": "financiering",
+  // Nooit een kostenpost, ongeacht tx.type: persoonlijke belastingafdrachten (MRB is de
+  // uitzondering, dat is een genuine zakelijke autokostenpost)
+  "Belastingen: IB": "geen", "Belastingen: IH": "geen", "Belastingen: LH": "geen", "Belastingen: OB": "geen",
+  "Belastingen: ZVW": "geen", "Belastingen: overig": "geen",
+  "Belastingen: Naheffingen OB voorgaande jaren": "geen", "Belastingen: Naheffingen LH voorgaande jaren": "geen",
+  "Belastingen: Naheffingen IB voorgaande jaren": "geen",
+  // Transfers/boekwinst/nog-te-beoordelen — geen gewone omzet of kostenpost
+  "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen",
+  // Alles met hoofdcategorie "Privé" of "Persoonlijk & vertrouwelijk": nooit een kostenpost,
+  // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
+  // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
+  "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
+  "Kinderopvang": "geen", "Overboekingen aan personen": "geen", "Prive - mobiel/internet": "geen",
+  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen",
+  "Toeslagen": "geen", "Uitbetaling aan prive": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
+  "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
+  "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
+  // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
+  "Autokosten": "kosten", "Bankkosten": "kosten", "Belastingen: MRB": "kosten",
+  "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten",
+  "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
+  "Marketing-website": "kosten", "Onderhoud apparatuur/machines": "kosten", "Parkeren": "kosten",
+  "Betaalautomaat kosten": "kosten", "Personeel: overig": "kosten", "Reiskosten (OV)": "kosten",
+  "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
+  "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
+  "Zakelijk mobiel/internet": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke uitgaven": "kosten",
+};
+
 // "Zakelijke inkoop" is samengevoegd met "Zakelijke uitgaven" — bestaande, eerder opgeslagen
 // correcties/regels met de oude naam worden bij het laden automatisch omgezet.
 export const LEGACY_CATEGORY_RENAMES = {
@@ -294,13 +344,21 @@ export function migrateLegacyCategoryName(name) {
 // meerdere componenten zonder prop-threading. Een nieuwe custom categorie wordt hier geregistreerd
 // (in place gemuteerd) én tegelijk aan de `categoryRules`-state toegevoegd, waarvan de wijziging
 // dan de re-render triggert die de bijgewerkte lijst oppikt.
-export function registerCategory(name, color) {
+// mainCategory is optioneel: alleen relevant bij een door de gebruiker zelf toegevoegde categorie
+// waarbij Zakelijk/Privé is gekozen (zie CategoryRulesPanel). Zonder expliciete keuze — bijv. bij
+// een oudere, al bestaande custom categorie uit een eerder opgeslagen project — blijft het oude
+// gedrag intact: mainCategoryOf/fiscalTreatmentOf vallen dan terug op hun standaardwaarde.
+export function registerCategory(name, color, mainCategory) {
   if (!CATEGORY_ORDER.includes(name)) {
     CATEGORY_ORDER.push(name);
     CATEGORY_ORDER.sort((a, b) => a.localeCompare(b));
   }
   if (!CATEGORY_COLOR[name]) {
     CATEGORY_COLOR[name] = color || NEW_CATEGORY_PALETTE[CATEGORY_ORDER.length % NEW_CATEGORY_PALETTE.length];
+  }
+  if (mainCategory) {
+    SUBTYPE_TO_MAIN[name] = mainCategory;
+    CATEGORY_FISCAL_TREATMENT[name] = mainCategory === "Privé" ? "geen" : "kosten";
   }
 }
 
@@ -326,7 +384,7 @@ export function mergeCategoryRules(savedRules) {
     return { ...defRule, keywords: combinedKeywords };
   });
   const custom = saved.filter((r) => !DEFAULT_RULES.some((d) => d.name === r.name) && !(r.name in LEGACY_CATEGORY_RENAMES));
-  for (const c of custom) registerCategory(c.name, c.color);
+  for (const c of custom) registerCategory(c.name, c.color, c.mainCategory);
   return [...merged, ...custom];
 }
 
@@ -480,6 +538,14 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
 // categorie) vallen terug op "Inkoop & zakelijke uitgaven" zodat ze nooit onzichtbaar worden.
 export function mainCategoryOf(subtype) {
   return SUBTYPE_TO_MAIN[subtype] || "Inkoop & zakelijke uitgaven";
+}
+
+// Zelfde soort veilige toegang als mainCategoryOf hierboven — een categorie zonder expliciete
+// vermelding (bijv. een oudere, zelf toegevoegde categorie van vóór deze keuze bestond) valt terug
+// op "kosten", exact het gedrag dat hij al had (mainCategoryOf valt ook terug op een zakelijke
+// hoofdcategorie).
+export function fiscalTreatmentOf(subtype) {
+  return CATEGORY_FISCAL_TREATMENT[subtype] || "kosten";
 }
 
 // Alle subtypes die onder één hoofdcategorie vallen — voor de subtype-dropdown naast de
