@@ -61,10 +61,14 @@ export function useLoansAndLease({
     setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
   };
   const confirmLeaseType = (lease, type) => {
-    setCounterpartyOverride(lease.name, lease.transactions[0].amount, {
-      category: type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)",
-      type: "Zakelijk",
-    });
+    snapshotBeforeAction("Lease-type bevestigd");
+    const category = type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)";
+    // Per transactie overriden, niet op lease.name (dat is de opgemaakte weergavenaam mét
+    // "— contract 432633"-achtige toevoeging — die tekst komt in geen enkele bankomschrijving
+    // letterlijk voor, dus een override daarop zou nooit een echte transactie raken).
+    for (const tx of lease.transactions) {
+      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: "Zakelijk" }, tx.counterpartyIban);
+    }
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
     if (type === "financieel") setLeaseDetailsModalKey(lease.key);
   };

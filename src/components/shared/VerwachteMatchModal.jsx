@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
+import ExpandableDescription from "./ExpandableDescription.jsx";
 
 const LABELS = {
   lease: { titel: "Leaseauto gevonden?", werkwoord: "financiële lease" },
@@ -28,7 +29,10 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
           <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
             {matches.slice(0, 10).map((t) => (
               <div key={t.id} className="flex items-center gap-2 p-2 text-xs">
-                <span className="flex-1 truncate">{t.counterparty || t.description || "(geen omschrijving)"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate">{t.counterparty || t.description || "(geen omschrijving)"}</p>
+                  <ExpandableDescription tx={t} className="text-[10px] text-slate-400" />
+                </div>
                 <span className="shrink-0 font-mono text-slate-400">{eur(t.amount)}</span>
               </div>
             ))}

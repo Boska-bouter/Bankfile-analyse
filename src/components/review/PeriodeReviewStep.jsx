@@ -1,5 +1,6 @@
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 export default function PeriodeReviewStep({ items, onConfirm, onMove, onOpenHelp }) {
   if (items.length === 0) return null;
@@ -18,6 +19,7 @@ export default function PeriodeReviewStep({ items, onConfirm, onMove, onOpenHelp
             <div className="flex-1 min-w-[14rem]">
               <p className="text-sm font-medium">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
               <p className="text-xs text-slate-400">{tx.date.toLocaleDateString("nl-NL")} · {eur(tx.amount)}</p>
+              <ExpandableDescription tx={tx} prefix="Omschrijving bank: " className="text-xs text-slate-400" />
               <p className="text-xs text-sky-700 mt-1">
                 Boekingsdatum: <strong>{boekingKwartaal}</strong> — factuurperiode lijkt: <strong>{voorgesteldKwartaal}</strong>
               </p>

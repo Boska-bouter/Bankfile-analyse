@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { CATEGORY_ORDER } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass }) {
   const [category, setCategory] = useState(item.category || defaultCategory);
@@ -24,11 +25,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
           </span>
         </p>
         <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
-        {item.description && (
-          <p className="text-xs text-slate-400 truncate" title={item.description}>
-            Omschrijving bank: {item.description}
-          </p>
-        )}
+        {item.description && <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400" />}
       </div>
       <select value={category} onChange={(e) => apply(e.target.value, type)} className="rounded-md border border-slate-300 px-2 py-1.5 text-xs">
         {CATEGORY_ORDER.map((c) => (

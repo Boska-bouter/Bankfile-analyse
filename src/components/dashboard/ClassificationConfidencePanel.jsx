@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { CATEGORY_COLOR } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallback: "🔴" };
 
@@ -70,6 +71,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                   <span className="shrink-0">{LEVEL_ICON[tx.confidence.level]}</span>
                   <div className="flex-1 min-w-0">
                     <p className="truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
+                    <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
                     <p className="text-[10px] text-slate-400">{tx.confidence.label}</p>
                   </div>
                   <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[tx.category] || "bg-slate-200 text-slate-700"}`}>{tx.category}</span>

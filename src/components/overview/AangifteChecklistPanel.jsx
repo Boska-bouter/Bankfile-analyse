@@ -1,6 +1,7 @@
 import { Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_TEKST = {
@@ -101,9 +102,11 @@ export default function AangifteChecklistPanel({ checklistData, activeYear, korR
               <strong>ander kwartaal</strong> valt dan de betaaldatum zelf. Puur een aanwijzing, niets is automatisch verplaatst.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.inkomstenAndereKwartaal.slice(0, 5).map((it) => (
-                  <span key={it.tx.id} className="block">
-                    {it.tx.date.toLocaleDateString("nl-NL")} ({eur(it.tx.amount)}, Q{it.txQuarter}) — omschrijving noemt {it.descDate.toLocaleDateString("nl-NL")} (Q{it.descQuarter}): {it.tx.counterparty || it.tx.description}
-                  </span>
+                  <ExpandableDescription
+                    key={it.tx.id} tx={it.tx} className="block"
+                    prefix={`${it.tx.date.toLocaleDateString("nl-NL")} (${eur(it.tx.amount)}, Q${it.txQuarter}) — omschrijving noemt ${it.descDate.toLocaleDateString("nl-NL")} (Q${it.descQuarter}): `}
+                    short={it.tx.counterparty || it.tx.description}
+                  />
                 ))}
                 {checklistData.inkomstenAndereKwartaal.length > 5 && <span className="block">en {checklistData.inkomstenAndereKwartaal.length - 5} meer…</span>}
               </span>
@@ -119,7 +122,7 @@ export default function AangifteChecklistPanel({ checklistData, activeYear, korR
               dat vanuit Zakelijk overkomt.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferOrphans.slice(0, 5).map((tx) => (
-                  <span key={tx.id} className="block">{tx.date.toLocaleDateString("nl-NL")} ({eur(tx.amount)}): {tx.counterparty || tx.description}</span>
+                  <ExpandableDescription key={tx.id} tx={tx} className="block" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
                 ))}
                 {checklistData.priveTransferOrphans.length > 5 && <span className="block">en {checklistData.priveTransferOrphans.length - 5} meer…</span>}
               </span>
@@ -134,7 +137,7 @@ export default function AangifteChecklistPanel({ checklistData, activeYear, korR
               zonder spiegelboeking aan de Prive-kant — dit zou eigenlijk nooit mogen voorkomen, dus dit is de moeite van het navragen waard.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferMissingMirrors.slice(0, 5).map((tx) => (
-                  <span key={tx.id} className="block">{tx.date.toLocaleDateString("nl-NL")} ({eur(tx.amount)}): {tx.counterparty || tx.description}</span>
+                  <ExpandableDescription key={tx.id} tx={tx} className="block" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
                 ))}
                 {checklistData.priveTransferMissingMirrors.length > 5 && <span className="block">en {checklistData.priveTransferMissingMirrors.length - 5} meer…</span>}
               </span>

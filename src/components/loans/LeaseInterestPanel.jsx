@@ -96,25 +96,41 @@ export default function LeaseInterestPanel({
                           Financieel
                         </button>
                       </div>
-                    ) : isFinancieel ? (
-                      isOnbekend ? (
-                        <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                          Toch invullen
-                        </button>
-                      ) : (
-                        <>
-                          <button onClick={() => onOpenModal(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                            {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
-                          </button>
-                          {!isCompleteFinancialLeaseDetails(details) && (
-                            <button onClick={() => onMarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
-                              Gegevens onbekend
-                            </button>
-                          )}
-                        </>
-                      )
                     ) : (
-                      <span className="text-xs text-emerald-700">✓ Operationeel — geen verdere actie nodig</span>
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => onConfirmType(lease, "operationeel")}
+                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            Operationeel
+                          </button>
+                          <button
+                            onClick={() => onConfirmType(lease, "financieel")}
+                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            Financieel
+                          </button>
+                        </div>
+                        {isFinancieel && (
+                          isOnbekend ? (
+                            <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              Toch invullen
+                            </button>
+                          ) : (
+                            <>
+                              <button onClick={() => onOpenModal(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
+                              </button>
+                              {!isCompleteFinancialLeaseDetails(details) && (
+                                <button onClick={() => onMarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                                  Gegevens onbekend
+                                </button>
+                              )}
+                            </>
+                          )
+                        )}
+                      </>
                     )}
                   </div>
                   {onMergeInto && leaseSummary.length > 1 && (

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Building2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark }) {
   const filtered = useMemo(() => {
@@ -39,9 +40,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
                 <p className="text-sm font-medium truncate">{item.name}</p>
                 <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
                 {item.description && (
-                  <p className="text-xs text-slate-400 truncate mt-0.5" title={item.description}>
-                    Omschrijving bank: {item.description}
-                  </p>
+                  <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400 mt-0.5" />
                 )}
               </div>
               <button

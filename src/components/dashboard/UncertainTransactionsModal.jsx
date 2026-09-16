@@ -3,6 +3,7 @@ import {
   MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory,
 } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
+import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 const LEVEL_INFO = {
   heuristic: { icon: "🟡", label: "Controleren" },
@@ -62,6 +63,7 @@ export default function UncertainTransactionsModal({
                 <div key={tx.id} className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
                   <div className="flex-1 min-w-[9rem]">
                     <p className="font-medium truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
+                    <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
                     <p className="text-[10px] text-slate-400">
                       {tx.date.toLocaleDateString("nl-NL")} · {tx.confidence.label}
                     </p>
