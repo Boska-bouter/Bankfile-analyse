@@ -103,7 +103,7 @@ export default function SetupWizardModal({
                 type="text"
                 value={typedNow.eigenNaamOndernemer ?? ""}
                 onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamOndernemer: e.target.value }))}
-                placeholder="Eigen naam (bijv. P. Szurgot)"
+                placeholder="Naam rekeninghouder"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
               <input
@@ -155,7 +155,7 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setEigenRekeningExtra({ status: "ja", iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
                   Ja
                 </button>
@@ -433,7 +433,7 @@ function VerwachteNaamVraag({ vraag, placeholder, value, onChange, onJa, onNee }
         Weet je de naam wel? Dan kan de tool meteen zoeken of die al in de geladen bestanden voorkomt.
       </p>
       <div className="flex gap-2">
-        <button onClick={() => onJa(value.trim())} className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700">
+        <button onClick={() => onJa(value.trim())} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
           Ja
         </button>
         <button onClick={onNee} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
