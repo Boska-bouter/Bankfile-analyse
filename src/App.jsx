@@ -128,8 +128,8 @@ export default function App() {
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
-  const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | {status:"ja"|"nee", naam}
-  const [verwachteLening, setVerwachteLening] = useState(null);
+  const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
+  const [verwachteLening, setVerwachteLening] = useState(null); // zelfde vorm als verwachteLease
   const [verwachteAOV, setVerwachteAOV] = useState(null);
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
@@ -500,15 +500,17 @@ export default function App() {
   // er méér transacties bijkomen (een nieuw bestand), niet bij elke herclassificatie op zich.
   useEffect(() => {
     if (verwachteMatchSuggestie) return;
-    const proberen = [
-      { type: "lease", verwachte: verwachteLease, targetCategory: "Lease (financieel)" },
-      { type: "lening", verwachte: verwachteLening, targetCategory: "Leningen" },
-      { type: "aov", verwachte: verwachteAOV, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" },
-    ];
-    for (const { type, verwachte, targetCategory } of proberen) {
-      if (verwachte?.status !== "ja" || !verwachte.naam || verwachte.gevonden) continue;
-      if (verwachteAangeboden[type] === classified.length) continue;
-      const keyword = extractKeywordCandidate(verwachte.naam);
+    const proberen = [];
+    (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    (verwachteLening || []).forEach((item, idx) => proberen.push({ type: "lening", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Leningen" }));
+    if (verwachteAOV?.status === "ja") {
+      proberen.push({ type: "aov", idx: null, naam: verwachteAOV.naam, gevonden: verwachteAOV.gevonden, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" });
+    }
+    for (const { type, idx, naam, gevonden, targetCategory } of proberen) {
+      if (!naam || gevonden) continue;
+      const aangebodenKey = `${type}${idx ?? ""}`;
+      if (verwachteAangeboden[aangebodenKey] === classified.length) continue;
+      const keyword = extractKeywordCandidate(naam);
       if (!keyword) continue;
       const matches = classified.filter((t) => {
         if (t.isMirror || t.category === targetCategory) return false;
@@ -516,7 +518,7 @@ export default function App() {
         return text.includes(keyword);
       });
       if (matches.length > 0) {
-        setVerwachteMatchSuggestie({ type, naam: verwachte.naam, matches, targetCategory });
+        setVerwachteMatchSuggestie({ type, idx, naam, matches, targetCategory });
         return;
       }
     }
@@ -543,18 +545,19 @@ export default function App() {
     }
   };
   const acceptVerwachteMatch = () => {
-    const { type, matches, targetCategory } = verwachteMatchSuggestie;
+    const { type, idx, matches, targetCategory } = verwachteMatchSuggestie;
     snapshotBeforeAction("Verwachte lease/lening/AOV ingedeeld");
     for (const tx of matches) {
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: targetCategory, type: "Zakelijk" }, tx.counterpartyIban);
     }
-    if (type === "lease") setVerwachteLease((prev) => ({ ...prev, gevonden: true }));
-    if (type === "lening") setVerwachteLening((prev) => ({ ...prev, gevonden: true }));
+    if (type === "lease") setVerwachteLease((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
+    if (type === "lening") setVerwachteLening((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
     if (type === "aov") setVerwachteAOV((prev) => ({ ...prev, gevonden: true }));
     setVerwachteMatchSuggestie(null);
   };
   const dismissVerwachteMatch = () => {
-    setVerwachteAangeboden((prev) => ({ ...prev, [verwachteMatchSuggestie.type]: classified.length }));
+    const aangebodenKey = `${verwachteMatchSuggestie.type}${verwachteMatchSuggestie.idx ?? ""}`;
+    setVerwachteAangeboden((prev) => ({ ...prev, [aangebodenKey]: classified.length }));
     setVerwachteMatchSuggestie(null);
   };
 
@@ -1115,12 +1118,24 @@ export default function App() {
     if (incompleteLeases.length > 0) {
       items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });
     }
-    if (verwachteLease?.status === "ja" && !verwachteLease.gevonden) {
-      items.push({ key: "verwachte-lease", text: `Je gaf aan dat er een leaseauto is${verwachteLease.naam ? ` bij "${verwachteLease.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`, ref: leasesSectionRef });
-    }
-    if (verwachteLening?.status === "ja" && !verwachteLening.gevonden) {
-      items.push({ key: "verwachte-lening", text: `Je gaf aan dat er een zakelijke lening is${verwachteLening.naam ? ` bij "${verwachteLening.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`, ref: loansSectionRef });
-    }
+    (verwachteLease || []).forEach((item, idx) => {
+      if (!item.gevonden) {
+        items.push({
+          key: `verwachte-lease-${idx}`,
+          text: `Je gaf aan dat er een leaseauto is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          ref: leasesSectionRef,
+        });
+      }
+    });
+    (verwachteLening || []).forEach((item, idx) => {
+      if (!item.gevonden) {
+        items.push({
+          key: `verwachte-lening-${idx}`,
+          text: `Je gaf aan dat er een zakelijke lening is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          ref: loansSectionRef,
+        });
+      }
+    });
     if (verwachteAOV?.status === "ja" && !verwachteAOV.gevonden) {
       items.push({ key: "verwachte-aov", text: `Je gaf aan dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties` });
     }

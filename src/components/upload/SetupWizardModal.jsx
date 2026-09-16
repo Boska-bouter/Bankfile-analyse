@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } from "lucide-react";
+import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
@@ -64,6 +64,7 @@ export default function SetupWizardModal({
     return list;
   });
   const [doneIds, setDoneIds] = useState(() => new Set());
+  const [history, setHistory] = useState([]);
 
   const remainingSteps = initialSteps.filter((id) => {
     if (doneIds.has(id)) return false;
@@ -81,7 +82,17 @@ export default function SetupWizardModal({
   const isLastStep = remainingSteps.length === 1;
 
   const goNext = () => {
+    setHistory((prev) => [...prev, currentStepId]);
     setDoneIds((prev) => new Set([...prev, currentStepId]));
+  };
+  // Terug naar de vorige vraag — haalt de laatst-voltooide stap uit doneIds, waardoor die
+  // vanzelf weer als eerste in remainingSteps verschijnt (dezelfde volgorde als initialSteps).
+  // Kan tot en met de allerlaatste stap, zolang de wizard nog open is.
+  const goBack = () => {
+    if (history.length === 0) return;
+    const vorige = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setDoneIds((prev) => { const next = new Set(prev); next.delete(vorige); return next; });
   };
 
   const allTypedNow = pendingFileNames.every((f) => typedNow[f]);
@@ -182,6 +193,10 @@ export default function SetupWizardModal({
                   + Toevoegen
                 </button>
               </div>
+              <p className="text-[11px] text-slate-400">
+                Meerdere rekeningen? Klik na elke rekening op <strong>"+ Toevoegen"</strong> om 'm aan de lijst
+                hierboven te zetten, en vul daarna de volgende in.
+              </p>
               <p className="text-xs text-slate-400">De gegevens zijn niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
               <div className="flex gap-2">
                 <button
@@ -189,19 +204,20 @@ export default function SetupWizardModal({
                     let lijst = typedNow.eigenRekeningenLijst || [];
                     if (typedNow.eigenRekeningIban?.trim() || typedNow.eigenRekeningType) {
                       lijst = [...lijst, { iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }];
+                      setTypedNow((p) => ({ ...p, eigenRekeningenLijst: lijst, eigenRekeningIban: "", eigenRekeningType: null }));
                     }
                     setEigenRekeningenExtra(lijst);
                     goNext();
                   }}
                   className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
-                  Klaar
+                  Doorgaan
                 </button>
               </div>
             </div>
           )}
           {currentStepId === 12 && (
-            <NamenLijstVraag
+            <LijstVraag
               vraag="Wat zijn je grootste of vaste opdrachtgevers? (max. 5)"
               toelichting="Zo kan de tool binnenkomende betalingen van deze klanten meteen als omzet herkennen, in plaats van dat je dat achteraf per klant moet bevestigen."
               placeholder="Naam opdrachtgever"
@@ -212,7 +228,7 @@ export default function SetupWizardModal({
             />
           )}
           {currentStepId === 13 && (
-            <NamenLijstVraag
+            <LijstVraag
               vraag="En je grootste of vaste leveranciers? (optioneel)"
               toelichting="Zelfde idee, maar dan voor vaste zakelijke uitgaven."
               placeholder="Naam leverancier"
@@ -223,23 +239,23 @@ export default function SetupWizardModal({
             />
           )}
           {currentStepId === 6 && (
-            <VerwachteNaamVraag
-              vraag='Is er een leaseauto (financieel) in dit bedrijf?'
+            <VerwachteLijstVraag
+              vraag="Is er een leaseauto (financieel) in dit bedrijf?"
+              toelichting="Kunnen er meerdere zijn (bijv. meerdere auto's of machines)? Voeg ze dan allemaal toe."
               placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)"
-              value={typedNow.lease ?? ""}
-              onChange={(v) => setTypedNow((p) => ({ ...p, lease: v }))}
-              onJa={(naam) => { setVerwachteLease({ status: "ja", naam: naam || null }); goNext(); }}
-              onNee={() => { setVerwachteLease({ status: "nee" }); goNext(); }}
+              lijst={typedNow.leaseLijst || []}
+              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseLijst: lijst }))}
+              onKlaar={(lijst) => { setVerwachteLease(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
             />
           )}
           {currentStepId === 7 && (
-            <VerwachteNaamVraag
+            <VerwachteLijstVraag
               vraag="Is er een zakelijke lening (bank, Qredits, familie, etc.)?"
+              toelichting="Kunnen er meerdere zijn? Voeg ze dan allemaal toe."
               placeholder="Bij wie is de lening (bijv. Qredits)"
-              value={typedNow.lening ?? ""}
-              onChange={(v) => setTypedNow((p) => ({ ...p, lening: v }))}
-              onJa={(naam) => { setVerwachteLening({ status: "ja", naam: naam || null }); goNext(); }}
-              onNee={() => { setVerwachteLening({ status: "nee" }); goNext(); }}
+              lijst={typedNow.leningLijst || []}
+              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leningLijst: lijst }))}
+              onKlaar={(lijst) => { setVerwachteLening(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
             />
           )}
           {currentStepId === 8 && (
@@ -449,31 +465,38 @@ export default function SetupWizardModal({
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
-          {currentStepId !== 4 ? (
-            <button
-              onClick={() => {
-                if ((currentStepId === 12 || currentStepId === 13) && opdrachtgeversGevraagd === null) {
-                  onAddBusinessKeywords ? onAddBusinessKeywords([]) : null;
-                }
-                goNext();
-              }}
-              className="text-xs text-slate-400 hover:text-slate-600"
-            >
-              Later invullen
-            </button>
-          ) : (
-            <span />
-          )}
-          {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"/"Klaar"-knop die al opslaat
-              én doorgaat — een extra "Volgende" hieronder zou dubbelop zijn, en erger: die knop
+        <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            {history.length > 0 && (
+              <button onClick={goBack} className="inline-flex items-center gap-0.5 text-xs text-slate-400 hover:text-slate-600">
+                <ChevronLeft className="h-3.5 w-3.5" /> Terug
+              </button>
+            )}
+            {currentStepId !== 4 ? (
+              <button
+                onClick={() => {
+                  if ((currentStepId === 12 || currentStepId === 13) && opdrachtgeversGevraagd === null) {
+                    onAddBusinessKeywords ? onAddBusinessKeywords([]) : null;
+                  }
+                  goNext();
+                }}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                Later invullen
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+          {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
+              én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
               slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
           {![6, 7, 8, 9, 10, 11, 12, 13].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
             >
-              {isLastStep ? "Klaar" : "Volgende"} <ChevronRight className="h-3.5 w-3.5" />
+              {isLastStep ? "Klaar" : "Doorgaan"} <ChevronRight className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -485,12 +508,22 @@ export default function SetupWizardModal({
 // Gedeelde vraag-vorm voor een lijstje namen (opdrachtgevers/leveranciers): typen, op "+
 // Toevoegen" klikken, herhalen, en "Klaar" om door te gaan — dezelfde opzet als bij de extra
 // eigen rekeningen, maar zonder het type-veld.
-function NamenLijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChangeLijst, onKlaar }) {
+function LijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChangeLijst, onKlaar }) {
   const [huidig, setHuidig] = useState("");
+  const vol = maxItems != null && lijst.length >= maxItems;
   const voegToe = () => {
-    if (!huidig.trim() || lijst.length >= maxItems) return;
+    if (!huidig.trim() || vol) return;
     onChangeLijst([...lijst, huidig.trim()]);
     setHuidig("");
+  };
+  const doorgaan = () => {
+    // Vergeet nooit tekst die nog in het invoerveld staat maar niet expliciet is toegevoegd —
+    // anders lijkt het net of "Doorgaan" het gewoon negeert. Ook de lokale lijst zelf bijwerken
+    // (niet alleen wat aan onKlaar wordt doorgegeven), anders is deze tekst weer weg zodra je met
+    // "Terug" naar deze stap terugkeert.
+    const finalLijst = huidig.trim() && !vol ? [...lijst, huidig.trim()] : lijst;
+    if (finalLijst !== lijst) onChangeLijst(finalLijst);
+    onKlaar(finalLijst);
   };
   return (
     <div className="space-y-3">
@@ -508,29 +541,41 @@ function NamenLijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onC
           ))}
         </ul>
       )}
-      {lijst.length < maxItems && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={huidig}
-            onChange={(e) => setHuidig(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voegToe(); } }}
-            placeholder={placeholder}
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
-          <button onClick={voegToe} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-            + Toevoegen
-          </button>
+      {!vol && (
+        <div className="space-y-1.5">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={huidig}
+              onChange={(e) => setHuidig(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voegToe(); } }}
+              placeholder={placeholder}
+              className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+            <button onClick={voegToe} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+              + Toevoegen
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Kan het er meer dan één zijn? Klik na elke naam op <strong>"+ Toevoegen"</strong> om 'm aan de lijst
+            hierboven te zetten, en typ daarna de volgende.
+          </p>
         </div>
       )}
       <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
       <div className="flex gap-2">
-        <button onClick={() => onKlaar(lijst)} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
-          Klaar
+        <button onClick={doorgaan} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+          Doorgaan
         </button>
       </div>
     </div>
   );
+}
+
+// Zelfde lijst-opzet als LijstVraag, specifiek voor lease/lening — het verschil is puur
+// terminologie in de tekst (deze vraag gaat over "is er een X", niet over "wat zijn je grootste Y").
+function VerwachteLijstVraag({ vraag, toelichting, placeholder, lijst, onChangeLijst, onKlaar }) {
+  return <LijstVraag vraag={vraag} toelichting={toelichting} placeholder={placeholder} lijst={lijst} onChangeLijst={onChangeLijst} onKlaar={onKlaar} />;
 }
 
 // Gedeelde vraag-vorm voor lease/lening/AOV: een naam (optioneel) plus Ja/Nee. Bij "Ja" mag de
