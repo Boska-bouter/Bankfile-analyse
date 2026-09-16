@@ -144,3 +144,43 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
   }
   return Object.values(map).sort((a, b) => a.year - b.year || a.kwartaal - b.kwartaal);
 }
+
+// Uitsplitsing naar categorie van "Uitgaven (netto)" per kwartaal — puur voor de pop-up die dit
+// bedrag herleidbaar maakt, geen nieuwe indelingslogica: dezelfde categorieën die hierboven
+// meetellen in kostenBruto/voorbelasting, hier alleen per categorie apart gehouden in plaats van
+// meteen bij elkaar opgeteld. Een categorie met een POSITIEF netto-bedrag is ongewoon (normaal is
+// een kostencategorie negatief) — meestal een terugbetaling/creditnota, soms een verkeerd
+// geclassificeerde transactie; daarom apart gemarkeerd zodat die in de pop-up opvalt.
+export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
+  const map = {}; // "2023-Q2" -> { categorie -> { bruto, btw } }
+  for (const tx of classified) {
+    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    const override = periodeQuarterOverrides[tx.id];
+    let y, kwartaal;
+    if (override) {
+      const [oy, oq] = override.split("-Q");
+      y = oy;
+      kwartaal = Number(oq);
+    } else {
+      const [my, mm] = tx.month.split("-");
+      y = my;
+      kwartaal = Math.ceil(Number(mm) / 3);
+    }
+    if (Number(y) !== year) continue;
+    const isIncomeCategory = tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%";
+    if (isIncomeCategory || INCOME_TRANSFER_CATEGORIES.includes(tx.category) || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
+    const key = `${y}-Q${kwartaal}`;
+    if (!map[key]) map[key] = {};
+    if (!map[key][tx.category]) map[key][tx.category] = { bruto: 0, btw: 0 };
+    const btw = voorbelastingExcluded.includes(tx.category) ? 0 : computeBtw(tx, categoryBtwRates, btwVerlegd);
+    map[key][tx.category].bruto += -tx.amount;
+    map[key][tx.category].btw += -btw;
+  }
+  const result = {};
+  for (const [key, cats] of Object.entries(map)) {
+    result[key] = Object.entries(cats)
+      .map(([categorie, { bruto, btw }]) => ({ categorie, bruto, netto: bruto - btw }))
+      .sort((a, b) => Math.abs(b.netto) - Math.abs(a.netto));
+  }
+  return result;
+}

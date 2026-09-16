@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
 
-export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, onOpenHelp }) {
+export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp }) {
   const [open, setOpen] = useState(false);
+  const [uitgavenModalKey, setUitgavenModalKey] = useState(null);
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
     return !s.aangegeven || !s.betaald;
@@ -72,10 +74,23 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                     <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw9)}</td>
                     <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">
-                      {eur(q.kostenBruto - q.voorbelasting)}
+                      <button
+                        onClick={() => setUitgavenModalKey(statusKey)}
+                        className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
+                        title="Klik voor de uitsplitsing naar categorie"
+                      >
+                        {eur(q.kostenBruto - q.voorbelasting)}
+                      </button>
                       <div className="text-xs text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">{eur(q.voorbelasting)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                      {eur(q.voorbelasting)}
+                      {q.voorbelasting < 0 && (
+                        <div className="flex items-center justify-end gap-1 text-[10px] font-normal text-rose-700 normal-case whitespace-normal max-w-[9rem]">
+                          <AlertCircle className="h-3 w-3 shrink-0" /> Kan niet negatief zijn — controleer de uitgaven hiernaast
+                        </div>
+                      )}
+                    </td>
                     <td className={`py-2 pl-3 text-right font-mono font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
                       {eur(Math.abs(saldo))} {saldo >= 0 ? "te betalen" : "terug"}
                     </td>
@@ -95,6 +110,13 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             </tbody>
           </table>
         </div>
+      )}
+      {uitgavenModalKey && (
+        <KwartaalUitgavenModal
+          kwartaalLabel={uitgavenModalKey.replace("-Q", " — Q")}
+          categorieen={costBreakdownByQuarter?.[uitgavenModalKey] || []}
+          onClose={() => setUitgavenModalKey(null)}
+        />
       )}
     </section>
   );

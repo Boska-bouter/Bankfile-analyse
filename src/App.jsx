@@ -7,7 +7,7 @@ import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
-import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear } from "./tax/btw.js";
+import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
@@ -970,6 +970,13 @@ export default function App() {
     () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides) : []),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
+  // Uitsluitend voor de "Uitgaven (netto)"-pop-up: dezelfde indeling als hierboven, alleen per
+  // categorie apart gehouden — geen nieuwe berekening, puur het al berekende bedrag herleidbaar
+  // maken.
+  const costBreakdownByQuarter = useMemo(
+    () => (activeYear ? computeQuarterlyCostBreakdown(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides) : {}),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
+  );
   // Rente-voor-jaar staat hier vóór yearlySummary/yearlySummaries: de winstberekening trekt alleen
   // de aftrekbare rente op leningen/financiële lease af (niet de volledige termijn), dus die rente
   // moet al bekend zijn vóórdat de winst berekend wordt — zie yearlySummary.js voor de achtergrond.
@@ -1640,6 +1647,9 @@ export default function App() {
                   const files = [...new Set(group.map((t) => t.source))];
                   const crossFile = files.length > 1;
                   const first = group[0];
+                  const saldos = group.map((t) => t.balance);
+                  const heeftSaldos = saldos.every((s) => s != null);
+                  const alleGelijk = heeftSaldos && saldos.every((s) => s === saldos[0]);
                   return (
                     <div key={group[0].fingerprint} className="rounded-md bg-white border border-amber-200 px-3 py-2 text-xs">
                       <p className="text-slate-700">
@@ -1652,6 +1662,17 @@ export default function App() {
                         </p>
                       ) : (
                         <p className="mt-0.5 text-slate-400">Komt {group.length}x voor binnen hetzelfde bestand ({files[0]}).</p>
+                      )}
+                      {heeftSaldos && (
+                        alleGelijk ? (
+                          <p className="mt-0.5 text-amber-700">
+                            Saldo na mutatie bij alle {group.length} gelijk ({eur(saldos[0])}) — dat wijst sterk op een echte dubbeling, geen {group.length} losse betalingen (anders zou het lopende saldo elke keer zijn opgeschoven).
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 text-slate-400">
+                            Saldo na mutatie loopt door ({saldos.map((s) => eur(s)).join(" → ")}) — dat wijst op {group.length} losse, echte transacties.
+                          </p>
+                        )
                       )}
                     </div>
                   );
@@ -1984,6 +2005,7 @@ export default function App() {
                       kwartaalStatus={kwartaalStatus}
                       setKwartaalStatusField={setKwartaalStatusField}
                       activeYear={activeYear}
+                      costBreakdownByQuarter={costBreakdownByQuarter}
                       onOpenHelp={setHelpPopupChapter}
                     />
                   )}
