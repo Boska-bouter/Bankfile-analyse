@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES } from "../classification/categories.js";
+import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES, fiscalTreatmentOf } from "../classification/categories.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
 // Standaard 21%, met een vaste lijst uitzonderingen op 0%.
@@ -65,8 +65,7 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
 
 // Rekent de BTW uit een inclusief-BTW-bedrag: bedrag - bedrag / (1 + tarief).
 export function computeBtw(tx, categoryBtwRates, btwVerlegd) {
-  const isZakelijkLike = tx.type === "Zakelijk" || tx.isMirror;
-  if (!isZakelijkLike) return 0;
+  if (fiscalTreatmentOf(tx.category) === "geen") return 0;
   const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
   if (effectiefVerlegd && tx.category === "Zakelijke inkomsten") return 0;
   const rate = categoryBtwRates[tx.category];
@@ -90,7 +89,8 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
 export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
   const map = {};
   for (const tx of classified) {
-    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    if (tx.isMirror) continue;
+    if (fiscalTreatmentOf(tx.category) === "geen") continue;
     // Standaard: kwartaal op basis van boekingsdatum. Is er een bevestigde periode-verplaatsing
     // (zie periodeMismatches), dan telt die mee in plaats van de boekingsdatum.
     const override = periodeQuarterOverrides[tx.id];
@@ -128,10 +128,11 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
         map[key].omzetBruto21 += tx.amount;
         map[key].verschuldigdBtw21 += btw;
       }
-    } else if (INCOME_TRANSFER_CATEGORIES.includes(tx.category) || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) {
-      // Pure geldbeweging (lening-uitkering, verkoop activa, overboeking naar/van prive, ...) of
-      // een geldstroom die de BTW-aangifte helemaal niet kent (loon, belasting, hypotheek/lening)
-      // — geen omzet én geen BTW-kostenpost, telt dus nergens in mee in dit overzicht.
+    } else if (BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) {
+      // Geldstroom die de BTW-aangifte zelf helemaal niet kent (loon, belasting, hypotheek/lening)
+      // — geen omzet én geen BTW-kostenpost, telt dus nergens in mee in dit overzicht. Dit is een
+      // andere, smallere lijst dan fiscalTreatmentOf hierboven: die bepaalt of iets een
+      // zakelijke W&V-kostenpost is, dit bepaalt puur of iets ooit op een BTW-formulier voorkomt.
     } else {
       // Een positief bedrag op een kostencategorie is een terugbetaling/creditnota (bijv. een
       // jaarafrekening energie, of een retour bij een winkel) — die verlaagt de kosten juist,
@@ -154,7 +155,7 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
 export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
   const map = {}; // "2023-Q2" -> { categorie -> { bruto, btw } }
   for (const tx of classified) {
-    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    if (tx.isMirror) continue;
     const override = periodeQuarterOverrides[tx.id];
     let y, kwartaal;
     if (override) {
@@ -167,8 +168,8 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
       kwartaal = Math.ceil(Number(mm) / 3);
     }
     if (Number(y) !== year) continue;
-    const isIncomeCategory = tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%";
-    if (isIncomeCategory || INCOME_TRANSFER_CATEGORIES.includes(tx.category) || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
+    const behandeling = fiscalTreatmentOf(tx.category);
+    if (behandeling === "omzet" || behandeling === "geen" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
     const key = `${y}-Q${kwartaal}`;
     if (!map[key]) map[key] = {};
     if (!map[key][tx.category]) map[key][tx.category] = { bruto: 0, btw: 0 };

@@ -1,26 +1,13 @@
 import { computeBtw } from "./btw.js";
+import { fiscalTreatmentOf } from "../classification/categories.js";
 import { eur } from "../utils/amounts.js";
 
-// Categorieën die geen omzet of kosten zijn maar onttrekkingen/persoonlijke belastingen — tellen
-// niet mee in de winstberekening (WUO is een BRUTO bedrag, dus deze moeten er expliciet buiten
-// blijven, anders schuift WUO ongemerkt richting een nettobedrag). Zie ook DEFAULT_RULES-comments
-// in categories.js voor de achtergrond bij de naheffingen-volgorde.
-const ONTTREKKING_CATS = [
-  "Uitbetaling aan prive", "Prive opnames", "Terugboeking van prive",
-  "Belastingen: ZVW", "Belastingen: IH",
-  "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
-];
-// Leningen en financiële lease staan hier ook buiten zakBruto: het volledige bruto termijnbedrag
-// (rente + aflossing) is geen kostenpost — alleen de rente is aftrekbaar, en die wordt via
-// renteAftrekbaar (hieronder) apart meegenomen. Zonder deze uitsluiting zou de winst het volledige
-// aflossingsdeel ten onrechte als kosten aftrekken (dezelfde fout die ook bij het Aangiftevoorstel
-// is gecorrigeerd — deze formule moet daarmee in de pas lopen, anders wijkt de hier getoonde winst,
-// en de daarop gebaseerde IB-schatting, af van wat de rubrieken in het Aangiftevoorstel laten zien).
-const FINANCIERING_CATS = ["Leningen", "Lease (financieel)"];
-
 // Winst uit onderneming (bruto) voor één jaar = Zakelijke inkomsten min BTW min de overige
-// zakelijke kosten (na aftrek BTW), zonder de onttrekkingen hierboven, plus alleen de aftrekbare
-// rente op leningen/financiële lease (niet de volledige termijn). `renteAftrekbaar` is de som van
+// zakelijke kosten (na aftrek BTW), plus alleen de aftrekbare rente op leningen/financiële lease
+// (niet de volledige termijn). Welke categorie meetelt als omzet/kosten/financiering/geheel-niet
+// wordt bepaald door fiscalTreatmentOf (zie categories.js) — dus op basis van de CATEGORIE, niet
+// van tx.type: een privé-uitgave betaald vanaf de zakelijke rekening telt hier niet mee, en een
+// zakelijke uitgave betaald vanaf de privérekening telt wél mee. `renteAftrekbaar` is de som van
 // de rente-over-dit-jaar op leningen en financiële lease (positief getal, een kostenpost) — laat
 // je dit weg, dan wordt er conservatief 0 rente afgetrokken (nooit te veel winst wegschrijven).
 // `fixedCategories` en `incomeTransferCategories` zijn optioneel — zonder die twee worden
@@ -38,27 +25,37 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
         else priVariabel += Math.abs(tx.amount);
       }
     }
-    if (tx.type !== "Zakelijk" || tx.isMirror || tx.year !== year) continue;
+    if (tx.isMirror || tx.year !== year) continue;
+
+    // Wat is er al vanaf de zakelijke rekening zelf betaald/opgenomen? Dit is een rekeningvraag
+    // (welke rekening het geld verliet, voor de "Tekort/Over"-vergelijking) — blijft dus bewust
+    // op tx.type gebaseerd, niet op categorie.
+    if (tx.type === "Zakelijk") {
+      if (tx.category === "Belastingen: ZVW" || tx.category === "Belastingen: IH") alBetaaldeZvwIh += Math.abs(tx.amount);
+      if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") uitkeringenAanPrive += Math.abs(tx.amount);
+    }
+
+    // De fiscale zakelijke berekening (winst/BTW) zelf: gebaseerd op de categorie, niet op
+    // tx.type — zie fiscalTreatmentOf hierboven.
+    const behandeling = fiscalTreatmentOf(tx.category);
+    if (behandeling === "geen") continue;
+
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
-    if (!ONTTREKKING_CATS.includes(tx.category) && !FINANCIERING_CATS.includes(tx.category)) {
+    if (behandeling !== "financiering") {
       zakBruto += tx.amount;
       zakBtwTotaal += btw;
     }
-    if (tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%") {
+    if (behandeling === "omzet") {
       zakelijkeInkomsten += tx.amount;
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) verschuldigdBtw += btw;
-    } else if (!incomeTransferCategories.includes(tx.category)) {
+    } else {
       // Een positief bedrag hier is een terugbetaling/creditnota — die verlaagt de kosten
       // (en de bijbehorende voorbelasting) juist, in plaats van er verkeerd bovenop te komen.
       if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += -btw;
     }
     if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -tx.amount;
-    if (tx.category === "Belastingen: ZVW" || tx.category === "Belastingen: IH") alBetaaldeZvwIh += Math.abs(tx.amount);
-    if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") {
-      uitkeringenAanPrive += Math.abs(tx.amount);
-    }
-    if (tx.amount < 0 && !incomeTransferCategories.includes(tx.category)) {
+    if (tx.amount < 0) {
       if (fixedCategories.includes(tx.category)) zakVast += Math.abs(tx.amount);
       else zakVariabel += Math.abs(tx.amount);
     }
@@ -122,7 +119,7 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
 export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus) {
   const perQuarter = {};
   for (const tx of classified) {
-    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    if (tx.isMirror || fiscalTreatmentOf(tx.category) === "geen") continue;
     const [y, m] = tx.month.split("-");
     const kwartaal = Math.ceil(Number(m) / 3);
     const key = `${y}-Q${kwartaal}`;
