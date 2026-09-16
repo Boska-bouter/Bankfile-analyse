@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { computeLoanAmortization } from "../../tax/loanAmortization.js";
+import { computeLoanAmortization, suggestLeaseMerges } from "../../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
@@ -52,6 +52,26 @@ export default function LeaseInterestPanel({
             <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
+          {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
+            <div key={group.map((l) => l.key).join("+")} className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
+              <p>
+                <strong>Horen deze bij elkaar?</strong> {group.map((l) => `"${l.name}"`).join(" en ")} lijken op dezelfde
+                tegenpartij te wijzen — mogelijk hetzelfde leasecontract, bijvoorbeeld met een deel van de betalingen
+                via een losse factuur in plaats van de vaste incasso.
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {group.slice(1).map((l) => (
+                  <button
+                    key={l.key}
+                    onClick={() => onMergeInto(l.key, group[0].key)}
+                    className="rounded-md border border-blue-300 bg-white px-2 py-1 text-[11px] font-medium text-blue-800 hover:bg-blue-100"
+                  >
+                    Ja, "{l.name}" samenvoegen met "{group[0].name}"
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
           <div className="space-y-3">
             {leaseSummary.map((lease) => {
               const typeConfirmed = confirmedLeaseTypeKeys.includes(lease.key);

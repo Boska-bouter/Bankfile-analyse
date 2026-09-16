@@ -245,6 +245,21 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
                     verwachte termijn passen — mogelijk een extra aflossing.
                   </p>
                 )}
+                {(() => {
+                  // Simpele cross-check naast de match-per-termijn hierboven: hoeveel transacties
+                  // staan er in totaal bij deze lease, tegenover hoeveel termijnen er tot nu toe
+                  // verwacht worden? Vooral nuttig als signaal dat er mogelijk transacties bij een
+                  // andere (nog niet samengevoegde) lease-groep horen.
+                  const totaalTransacties = lease.transactions.length + paymentCheck.onverwachteBetalingen.length;
+                  const klopt = totaalTransacties === inBeeldTotaal;
+                  return (
+                    <p className={`mt-2 text-xs ${klopt ? "text-slate-500" : "text-amber-700"}`}>
+                      Totaaltelling: {totaalTransacties} transacties gevonden bij deze lease, tegenover {inBeeldTotaal} verwachte
+                      termijnen tot nu toe.{" "}
+                      {klopt ? "Dat klopt." : "Dat wijkt af — mogelijk hoort een deel van de betalingen bij een andere, nog niet samengevoegde lease-groep (zie de hint bovenaan het Lease-paneel als die er is)."}
+                    </p>
+                  );
+                })()}
               </div>
             );
           })()}

@@ -21,7 +21,7 @@ export default function SetupWizardModal({
   verwachteAOV, setVerwachteAOV,
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
-  eigenRekeningExtra, setEigenRekeningExtra,
+  eigenRekeningenExtra, setEigenRekeningenExtra,
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -46,7 +46,7 @@ export default function SetupWizardModal({
   const [initialSteps] = useState(() => {
     const list = [];
     if (eigenNamen === null) list.push(10);
-    if (eigenRekeningExtra === null) list.push(11);
+    if (eigenRekeningenExtra === null) list.push(11);
     if (verwachteLease === null) list.push(6);
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
@@ -127,9 +127,25 @@ export default function SetupWizardModal({
           {currentStepId === 11 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
-                Heb je nog een andere eigen rekening (bijv. een privérekening) die je niet gaat laden? Met het
-                rekeningnummer kan de tool een overboeking daarheen alsnog herkennen als privé.
+                Heb je nog andere eigen rekeningen (bijv. een privérekening, of nog een zakelijke rekening) die je niet
+                gaat laden? Met het rekeningnummer kan de tool een overboeking daarheen alsnog herkennen als privé.
+                Je kunt er meerdere toevoegen.
               </p>
+              {(typedNow.eigenRekeningenLijst || []).length > 0 && (
+                <ul className="space-y-1">
+                  {typedNow.eigenRekeningenLijst.map((r, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+                      <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {r.accountType === "Zakelijk" ? "Zakelijk" : "Privé"}</span>
+                      <button
+                        onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningenLijst: p.eigenRekeningenLijst.filter((_, j) => j !== i) }))}
+                        className="shrink-0 text-xs text-slate-400 hover:text-slate-700"
+                      >
+                        Verwijderen
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <input
                 type="text"
                 value={typedNow.eigenRekeningIban ?? ""}
@@ -150,17 +166,34 @@ export default function SetupWizardModal({
                 >
                   Privérekening
                 </button>
+                <button
+                  onClick={() => {
+                    if (!typedNow.eigenRekeningIban?.trim() && !typedNow.eigenRekeningType) return;
+                    setTypedNow((p) => ({
+                      ...p,
+                      eigenRekeningenLijst: [...(p.eigenRekeningenLijst || []), { iban: p.eigenRekeningIban?.trim() || null, accountType: p.eigenRekeningType || null }],
+                      eigenRekeningIban: "", eigenRekeningType: null,
+                    }));
+                  }}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  + Toevoegen
+                </button>
               </div>
-              <p className="text-xs text-slate-400">De gegevens zijn niet verplicht — je kunt dit ook later nog invullen.</p>
+              <p className="text-xs text-slate-400">De gegevens zijn niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setEigenRekeningExtra({ status: "ja", iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }); goNext(); }}
+                  onClick={() => {
+                    let lijst = typedNow.eigenRekeningenLijst || [];
+                    if (typedNow.eigenRekeningIban?.trim() || typedNow.eigenRekeningType) {
+                      lijst = [...lijst, { iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }];
+                    }
+                    setEigenRekeningenExtra(lijst);
+                    goNext();
+                  }}
                   className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
-                  Ja
-                </button>
-                <button onClick={() => { setEigenRekeningExtra({ status: "nee" }); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
-                  Nee
+                  Klaar
                 </button>
               </div>
             </div>

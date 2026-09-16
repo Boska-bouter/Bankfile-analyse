@@ -149,3 +149,36 @@ export function computeLeaseSummary(classified) {
   }
   return Object.values(map).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 }
+
+// Signaleert lease-groepen die vermoedelijk bij hetzelfde contract horen maar niet zijn
+// samengevoegd — bijv. omdat een deel van de betalingen via een net iets andere tegenpartijnaam
+// binnenkomt (een reguliere incasso vs. een los verstuurde factuur) waardoor het contractnummer
+// er niet (letterlijk) in staat. Gebaseerd op een gedeeld betekenisvol woord tussen de
+// tegenpartijnamen — extractKeywordCandidate is hier niet geschikt voor, want die pakt bij dit
+// soort langere, generieke bankomschrijvingen vaak een administratief woord ("ontvangsten",
+// "stichting") in plaats van het bedrijfsnaam-deel.
+const LEASE_MERGE_STOPWOORDEN = new Set([
+  "ontvangsten", "stichting", "betaling", "betalingen", "incasso", "lease", "leasing",
+  "financieel", "operationeel", "maatschappij", "leasemaatschappij", "contract",
+]);
+function significanteWoorden(text) {
+  return [...((text || "").toLowerCase().match(/[a-z]{5,}/g) || [])].filter((w) => !LEASE_MERGE_STOPWOORDEN.has(w));
+}
+export function suggestLeaseMerges(leaseSummary) {
+  const items = leaseSummary.map((lease) => ({
+    lease, woorden: new Set(significanteWoorden(lease.transactions[0]?.counterparty || lease.name)),
+  }));
+  const groups = [];
+  const gebruikt = new Set();
+  for (let i = 0; i < items.length; i++) {
+    if (gebruikt.has(i)) continue;
+    const group = [items[i].lease];
+    for (let j = i + 1; j < items.length; j++) {
+      if (gebruikt.has(j)) continue;
+      const gedeeld = [...items[i].woorden].some((w) => items[j].woorden.has(w));
+      if (gedeeld) { group.push(items[j].lease); gebruikt.add(j); }
+    }
+    if (group.length > 1) { groups.push(group); gebruikt.add(i); }
+  }
+  return groups;
+}
