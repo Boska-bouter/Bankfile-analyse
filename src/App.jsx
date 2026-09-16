@@ -689,7 +689,7 @@ export default function App() {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
-    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad);
+    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
   };
@@ -943,9 +943,21 @@ export default function App() {
     () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides) : []),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
+  // Rente-voor-jaar staat hier vóór yearlySummary/yearlySummaries: de winstberekening trekt alleen
+  // de aftrekbare rente op leningen/financiële lease af (niet de volledige termijn), dus die rente
+  // moet al bekend zijn vóórdat de winst berekend wordt — zie yearlySummary.js voor de achtergrond.
+  const loanRenteForYear = useMemo(
+    () => (activeYear ? computeLoanRenteForYear(loanSummary, loanDetails, activeYear) : null),
+    [loanSummary, loanDetails, activeYear]
+  );
+  const leaseRenteForYear = useMemo(
+    () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
+    [leaseSummary, leaseDetails, activeYear]
+  );
+  const renteAftrekbaarActiveYear = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
   const yearlySummary = useMemo(
-    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded) : null),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded]
+    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear) : null),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear]
   );
   const yearlyOpenOB = useMemo(
     () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus),
@@ -957,23 +969,20 @@ export default function App() {
   );
   const yearlySummaries = useMemo(() => {
     const map = {};
-    for (const y of years) map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded);
+    for (const y of years) {
+      const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
+      const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+      const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
+      map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar);
+    }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails]);
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
   );
   const btwBoxMapping = useMemo(() => computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded), [effectiveCategoryBtwRates, voorbelastingExcluded]);
-  const loanRenteForYear = useMemo(
-    () => (activeYear ? computeLoanRenteForYear(loanSummary, loanDetails, activeYear) : null),
-    [loanSummary, loanDetails, activeYear]
-  );
-  const leaseRenteForYear = useMemo(
-    () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
-    [leaseSummary, leaseDetails, activeYear]
-  );
   const activaAfschrijvingForYear = useMemo(
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
@@ -1026,10 +1035,21 @@ export default function App() {
       }
       checks.push({ frac: ibStatus[year]?.gedaan ? 1 : 0 });
       const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
-      map[year] = { pct: Math.round(avgFrac * 100) };
+
+      // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
+      // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
+      // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
+      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic").length;
+      const gatDitJaar = fileContinuity.some((g) => !g.ok && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      let status;
+      if (gatDitJaar) status = "rood";
+      else if (avgFrac >= 0.95 && onzekerDitJaar === 0) status = "groen";
+      else status = "oranje";
+
+      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity]);
 
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useMemo(() => {
@@ -1530,7 +1550,7 @@ export default function App() {
 
         {years.length > 0 && (
           <div ref={checklistSectionRef}>
-            <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+            <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} yearStatus={yearlyProgress[activeYear]?.status} onOpenHelp={setHelpPopupChapter} />
             <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
           </div>
         )}

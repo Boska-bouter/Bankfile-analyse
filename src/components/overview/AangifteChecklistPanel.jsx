@@ -2,13 +2,25 @@ import { Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
-export default function AangifteChecklistPanel({ checklistData, activeYear, korRegeling, btwVerlegd, onOpenHelp }) {
+const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
+const STATUS_TEKST = {
+  groen: "Klaar voor aangiftecontrole — geen belangrijke openstaande punten",
+  oranje: "Controlepunten aanwezig — zie hieronder wat nog beoordeeld moet worden",
+  rood: "Onvoldoende gegevens — bekend gat in de bestandscontinuïteit dit jaar",
+};
+
+export default function AangifteChecklistPanel({ checklistData, activeYear, korRegeling, btwVerlegd, yearStatus, onOpenHelp }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Aangifte-checklist {activeYear}
         {onOpenHelp && <HelpHint chapter="aangifte-checklist" onOpen={onOpenHelp} />}
       </h3>
+      {yearStatus && (
+        <p className="text-sm font-medium mb-3 flex items-center gap-1.5">
+          <span>{STATUS_EMOJI[yearStatus]}</span> <span>{STATUS_TEKST[yearStatus]}</span>
+        </p>
+      )}
       <ul className="space-y-1.5 text-sm">
         <li className="flex items-center gap-2">
           {checklistData.categorizedPct === 100 ? (

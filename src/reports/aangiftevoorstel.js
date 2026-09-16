@@ -27,12 +27,52 @@ function categorieDetailHtml(perCategorie) {
   return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails) {
+const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend");
+
+// "Algemene gegevens" — welke bestanden, welke periode en hoeveel transacties aan dit jaar ten
+// grondslag liggen, en of er bekende gaten in de bestandscontinuïteit zijn rond dit jaar. Puur
+// samengesteld uit data die de tool al had (importdiagnostiek/bestandscontinuïteit) — geen nieuwe
+// administratie, alleen zichtbaar gemaakt.
+function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, fileContinuity, classified) {
+  if (!importDiagnostics || importDiagnostics.length === 0) return "";
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+  const relevanteBestanden = importDiagnostics.filter((d) => d.from && d.to && d.from <= yearEnd && d.to >= yearStart);
+
+  const bestandRows = relevanteBestanden
+    .map((d) => {
+      const type = accountTypeByFile?.[d.fileName] || "onbekend";
+      return `<tr><td>${esc(d.fileName)}</td><td>${esc(type)}</td><td>${fmtDatum(d.from)} — ${fmtDatum(d.to)}</td><td class="num">${d.importedCount}</td></tr>`;
+    })
+    .join("");
+
+  const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
+
+  const gatenDitJaar = (fileContinuity || []).filter(
+    (g) => !g.ok && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
+  );
+  const gatenHtml = gatenDitJaar.length > 0
+    ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk gat in de bestandscontinuïteit: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}) — mogelijk ontbreekt een periode.</p>`
+    : "";
+
+  return `
+  <h2>Algemene gegevens</h2>
+  <table>
+    <thead><tr><th>Bankbestand</th><th>Type</th><th>Periode gedekt</th><th class="num">Transacties</th></tr></thead>
+    <tbody>${bestandRows}</tbody>
+  </table>
+  <p class="toelichting">Aantal zakelijke transacties in ${year}: ${zakTxDitJaar}.</p>
+  ${gatenHtml}`;
+}
+
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity) {
+  const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, fileContinuity, classified);
   const zakItems = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year);
-  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd);
-  const ibEstimate = estimateIncomeTax(summary.winst, year);
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+  const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
+  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
+  const ibEstimate = estimateIncomeTax(summary.winst, year);
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear);
@@ -118,6 +158,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   return `
   <h1>Zakelijke aangifte voorstel — ${year}</h1>
   <p class="subtitle">${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"}</p>
+  ${algemeneGegevensHtml}
 
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
   <div class="wvr">
@@ -162,9 +203,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity) {
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>

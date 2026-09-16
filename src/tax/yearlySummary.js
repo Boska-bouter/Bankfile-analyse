@@ -10,12 +10,23 @@ const ONTTREKKING_CATS = [
   "Belastingen: ZVW", "Belastingen: IH",
   "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
 ];
+// Leningen en financiële lease staan hier ook buiten zakBruto: het volledige bruto termijnbedrag
+// (rente + aflossing) is geen kostenpost — alleen de rente is aftrekbaar, en die wordt via
+// renteAftrekbaar (hieronder) apart meegenomen. Zonder deze uitsluiting zou de winst het volledige
+// aflossingsdeel ten onrechte als kosten aftrekken (dezelfde fout die ook bij het Aangiftevoorstel
+// is gecorrigeerd — deze formule moet daarmee in de pas lopen, anders wijkt de hier getoonde winst,
+// en de daarop gebaseerde IB-schatting, af van wat de rubrieken in het Aangiftevoorstel laten zien).
+const FINANCIERING_CATS = ["Leningen", "Lease (financieel)"];
 
 // Winst uit onderneming (bruto) voor één jaar = Zakelijke inkomsten min BTW min de overige
-// zakelijke kosten (na aftrek BTW), zonder de onttrekkingen hierboven. `fixedCategories` en
-// `incomeTransferCategories` zijn optioneel — zonder die twee worden zakVast/zakVariabel/
-// priVast/priVariabel gewoon op 0 gehouden (bijv. voor code die deze uitsplitsing niet nodig heeft).
-export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = []) {
+// zakelijke kosten (na aftrek BTW), zonder de onttrekkingen hierboven, plus alleen de aftrekbare
+// rente op leningen/financiële lease (niet de volledige termijn). `renteAftrekbaar` is de som van
+// de rente-over-dit-jaar op leningen en financiële lease (positief getal, een kostenpost) — laat
+// je dit weg, dan wordt er conservatief 0 rente afgetrokken (nooit te veel winst wegschrijven).
+// `fixedCategories` en `incomeTransferCategories` zijn optioneel — zonder die twee worden
+// zakVast/zakVariabel/priVast/priVariabel gewoon op 0 gehouden (bijv. voor code die deze
+// uitsplitsing niet nodig heeft).
+export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
   let verschuldigdBtw = 0, voorbelasting = 0;
@@ -29,7 +40,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     }
     if (tx.type !== "Zakelijk" || tx.isMirror || tx.year !== year) continue;
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
-    if (!ONTTREKKING_CATS.includes(tx.category)) {
+    if (!ONTTREKKING_CATS.includes(tx.category) && !FINANCIERING_CATS.includes(tx.category)) {
       zakBruto += tx.amount;
       zakBtwTotaal += btw;
     }
@@ -54,7 +65,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   }
   return {
     zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
-    winst: zakBruto - zakBtwTotaal, zakVast, zakVariabel, priVast, priVariabel,
+    winst: zakBruto - zakBtwTotaal - renteAftrekbaar, zakVast, zakVariabel, priVast, priVariabel,
     zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting,
   };
 }
