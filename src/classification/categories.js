@@ -94,6 +94,14 @@ export const DEFAULT_RULES = [
     description: "Belastingen/heffingen waarvan nog niet duidelijk is om welk specifiek type het gaat (OB, LH, MRB, ZVW, IH) — later te verfijnen." },
   { name: "Prive: overig", color: "bg-stone-100 text-stone-700", keywords: [],
     description: "Privé-uitgaven/inkomsten die niet specifiek onder een van de andere privé-subtypes vallen." },
+  { name: "Partneralimentatie", color: "bg-rose-100 text-rose-800", keywords: [
+    "partneralimentatie", "partneralimentie",
+  ],
+    description: "Fiscaal anders dan de meeste privé-categorieën: bij de betaler is dit een persoonsgebonden aftrekpost (box 1), bij de ontvanger belast inkomen. Deze tool berekent dat niet mee in de IB-schatting (die is alleen op de winst uit onderneming gebaseerd) — betrek dit apart bij de daadwerkelijke aangifte." },
+  { name: "Kinderalimentatie", color: "bg-rose-50 text-rose-700", keywords: [
+    "kinderalimentatie", "lbio", "onderhoudsbijdrage",
+  ],
+    description: "Fiscaal neutraal — niet aftrekbaar bij de betaler, niet belast bij de ontvanger. Gewoon een privé-categorie, geen verdere fiscale behandeling nodig." },
   { name: "Winkels divers", color: "bg-lime-200 text-lime-900", keywords: [
     "jd sports", "shein", "zalando", "h&m", "hm.com", "c&a", "primark", "bershka", "zara", "asos",
     "urban outfitters", "bruna",
@@ -205,7 +213,7 @@ export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
-  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
@@ -429,6 +437,8 @@ export const SUBTYPE_TO_MAIN = {
   "Uitbetaling aan prive": "Privé",
   "Prive - vrijetijd-uitgaan-vakantie & uit eten": "Privé",
   "Prive: overig": "Privé",
+  "Partneralimentatie": "Privé",
+  "Kinderalimentatie": "Privé",
   "Verkoop activa": "Zakelijke inkomsten",
   "Verzekering: Auto": "Vervoer & auto",
   "Verzekering: Zakelijk": "Inkoop & zakelijke uitgaven",
