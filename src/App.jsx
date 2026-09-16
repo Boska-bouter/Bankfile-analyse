@@ -134,6 +134,7 @@ export default function App() {
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
+  const [opdrachtgeversGevraagd, setOpdrachtgeversGevraagd] = useState(null); // null=nog niet gevraagd | true
   const [verwachteMatchSuggestie, setVerwachteMatchSuggestie] = useState(null); // {type, naam, matches, targetCategory}
   const [verwachteAangeboden, setVerwachteAangeboden] = useState({}); // {lease: aantalTransactiesToenGecontroleerd, ...}
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
@@ -202,6 +203,7 @@ export default function App() {
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
     setEigenNamen(settings.eigenNamen ?? null);
     setEigenRekeningenExtra(settings.eigenRekeningenExtra ?? null);
+    setOpdrachtgeversGevraagd(settings.opdrachtgeversGevraagd ?? null);
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -273,7 +275,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, manualPriveUitgaven, openingBalanceCorrections,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -284,7 +286,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, manualPriveUitgaven, openingBalanceCorrections,
-    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra,
+    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
     loaded,
   ]);
 
@@ -360,7 +362,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, manualPriveUitgaven,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
       },
     });
   };
@@ -396,6 +398,7 @@ export default function App() {
     setHeeftVoorraad(s.heeftVoorraad ?? null);
     setEigenNamen(s.eigenNamen ?? null);
     setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
+    setOpdrachtgeversGevraagd(s.opdrachtgeversGevraagd ?? null);
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -519,6 +522,20 @@ export default function App() {
     }
   }, [classified, verwachteLease, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
 
+  const addBusinessKeywords = (namen) => {
+    if (namen.length > 0) {
+      snapshotBeforeAction("Grootste opdrachtgevers ingevuld");
+      setBusinessKeywords((prev) => [...prev, ...namen.filter((n) => !prev.includes(n))]);
+    }
+    setOpdrachtgeversGevraagd(true);
+  };
+  const addBusinessExpenseKeywords = (namen) => {
+    if (namen.length > 0) {
+      snapshotBeforeAction("Grootste leveranciers ingevuld");
+      setBusinessExpenseKeywords((prev) => [...prev, ...namen.filter((n) => !prev.includes(n))]);
+    }
+    setOpdrachtgeversGevraagd(true);
+  };
   const markLoanNotALoan = (loan) => {
     snapshotBeforeAction("Lening op Overig gezet");
     for (const tx of loan.transactions) {
@@ -1137,7 +1154,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra,
+      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
       ibStatus, manualPriveUitgaven, openingBalanceCorrections,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1189,6 +1206,7 @@ export default function App() {
       setHeeftVoorraad(project.heeftVoorraad ?? null);
       setEigenNamen(project.eigenNamen ?? null);
       setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
+      setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1233,11 +1251,22 @@ export default function App() {
     setReviewedPeriodeKeys([]);
     setLoanDetails({});
     setLeaseDetails({});
+    setLeaseMergedInto({});
+    setActivaDetails({});
     setConfirmedLeaseTypeKeys([]);
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setIbStatus({});
     setManualPriveUitgaven({});
     setOpeningBalanceCorrections({});
+    setVerwachteLease(null);
+    setVerwachteLening(null);
+    setVerwachteAOV(null);
+    setHeeftVoorraad(null);
+    setEigenNamen(null);
+    setEigenRekeningenExtra(null);
+    setOpdrachtgeversGevraagd(null);
+    setVerwachteMatchSuggestie(null);
+    setVerwachteAangeboden({});
     setAangiftevoorstelPreview(null);
     setShowAangifteYearPicker(false);
     setSelectedAangifteYears([]);
@@ -1549,6 +1578,9 @@ export default function App() {
             setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
             eigenRekeningenExtra={eigenRekeningenExtra}
             setEigenRekeningenExtra={(v) => { snapshotBeforeAction("Andere eigen rekening ingevuld"); setEigenRekeningenExtra(v); }}
+            opdrachtgeversGevraagd={opdrachtgeversGevraagd}
+            onAddBusinessKeywords={addBusinessKeywords}
+            onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
             onClose={() => setShowSetupWizard(false)}
           />
         )}

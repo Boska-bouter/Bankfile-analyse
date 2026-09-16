@@ -3,7 +3,7 @@ import { Building2, Home, FileSpreadsheet, ChevronRight, Check, AlertCircle } fr
 import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
-  10: "Eigen naam", 11: "Andere eigen rekening",
+  10: "Eigen naam", 11: "Andere eigen rekening", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
   0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
@@ -22,6 +22,7 @@ export default function SetupWizardModal({
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
+  opdrachtgeversGevraagd, onAddBusinessKeywords, onAddBusinessExpenseKeywords,
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
@@ -47,6 +48,7 @@ export default function SetupWizardModal({
     const list = [];
     if (eigenNamen === null) list.push(10);
     if (eigenRekeningenExtra === null) list.push(11);
+    if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
     if (verwachteLease === null) list.push(6);
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
@@ -197,6 +199,28 @@ export default function SetupWizardModal({
                 </button>
               </div>
             </div>
+          )}
+          {currentStepId === 12 && (
+            <NamenLijstVraag
+              vraag="Wat zijn je grootste of vaste opdrachtgevers? (max. 5)"
+              toelichting="Zo kan de tool binnenkomende betalingen van deze klanten meteen als omzet herkennen, in plaats van dat je dat achteraf per klant moet bevestigen."
+              placeholder="Naam opdrachtgever"
+              maxItems={5}
+              lijst={typedNow.opdrachtgeversLijst || []}
+              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, opdrachtgeversLijst: lijst }))}
+              onKlaar={(lijst) => { onAddBusinessKeywords(lijst); goNext(); }}
+            />
+          )}
+          {currentStepId === 13 && (
+            <NamenLijstVraag
+              vraag="En je grootste of vaste leveranciers? (optioneel)"
+              toelichting="Zelfde idee, maar dan voor vaste zakelijke uitgaven."
+              placeholder="Naam leverancier"
+              maxItems={5}
+              lijst={typedNow.leveranciersLijst || []}
+              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leveranciersLijst: lijst }))}
+              onKlaar={(lijst) => { onAddBusinessExpenseKeywords(lijst); goNext(); }}
+            />
           )}
           {currentStepId === 6 && (
             <VerwachteNaamVraag
@@ -427,13 +451,24 @@ export default function SetupWizardModal({
 
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           {currentStepId !== 4 ? (
-            <button onClick={goNext} className="text-xs text-slate-400 hover:text-slate-600">
+            <button
+              onClick={() => {
+                if ((currentStepId === 12 || currentStepId === 13) && opdrachtgeversGevraagd === null) {
+                  onAddBusinessKeywords ? onAddBusinessKeywords([]) : null;
+                }
+                goNext();
+              }}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
               Later invullen
             </button>
           ) : (
             <span />
           )}
-          {(currentStepId !== 0 || allTypedNow) && (
+          {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"/"Klaar"-knop die al opslaat
+              én doorgaat — een extra "Volgende" hieronder zou dubbelop zijn, en erger: die knop
+              slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
+          {![6, 7, 8, 9, 10, 11, 12, 13].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
@@ -442,6 +477,57 @@ export default function SetupWizardModal({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Gedeelde vraag-vorm voor een lijstje namen (opdrachtgevers/leveranciers): typen, op "+
+// Toevoegen" klikken, herhalen, en "Klaar" om door te gaan — dezelfde opzet als bij de extra
+// eigen rekeningen, maar zonder het type-veld.
+function NamenLijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChangeLijst, onKlaar }) {
+  const [huidig, setHuidig] = useState("");
+  const voegToe = () => {
+    if (!huidig.trim() || lijst.length >= maxItems) return;
+    onChangeLijst([...lijst, huidig.trim()]);
+    setHuidig("");
+  };
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600">{vraag}</p>
+      {toelichting && <p className="text-xs text-slate-400">{toelichting}</p>}
+      {lijst.length > 0 && (
+        <ul className="space-y-1">
+          {lijst.map((naam, i) => (
+            <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+              <span className="truncate">{naam}</span>
+              <button onClick={() => onChangeLijst(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">
+                Verwijderen
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {lijst.length < maxItems && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={huidig}
+            onChange={(e) => setHuidig(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voegToe(); } }}
+            placeholder={placeholder}
+            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button onClick={voegToe} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+            + Toevoegen
+          </button>
+        </div>
+      )}
+      <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
+      <div className="flex gap-2">
+        <button onClick={() => onKlaar(lijst)} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+          Klaar
+        </button>
       </div>
     </div>
   );
