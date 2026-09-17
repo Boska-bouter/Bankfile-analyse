@@ -70,7 +70,8 @@ export default function MultiYearOverview({
                 <th className="text-right font-medium py-2 px-3">OB/BTW</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting</th>
                 {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen OB</th>}
-                <th className="text-right font-medium py-2 px-3" title="Vinkje: IB-aangifte voor dat jaar al gedaan?">Geschat IB*</th>
+                <th className="text-right font-medium py-2 px-3">Geschat IB*</th>
+                <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">IB-status</th>
                 <th className="text-right font-medium py-2 pl-3">Tekort / Over</th>
                 <th className="text-right font-medium py-2 pl-3">Trend t.o.v. vorig jaar</th>
               </tr>
@@ -116,13 +117,11 @@ export default function MultiYearOverview({
                     )}
                     <td className="py-2 px-3 text-right whitespace-nowrap">
                       <span className="font-mono text-slate-500">-{eurTight(ibEstimate.belasting)}{ibEstimate.geëxtrapoleerd ? "*" : ""}</span>
-                      <label className="ml-1.5 inline-flex items-center" title="IB-aangifte al gedaan?">
-                        <input
-                          type="checkbox"
-                          checked={ibGedaan}
-                          onChange={(e) => setIbGedaan(year, e.target.checked)}
-                          className="align-middle"
-                        />
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
+                        <input type="checkbox" checked={ibGedaan} onChange={(e) => setIbGedaan(year, e.target.checked)} />
+                        Al gedaan
                       </label>
                     </td>
                     <td className={`py-2 pl-3 text-right font-mono font-medium whitespace-nowrap ${isTekort ? "text-rose-700" : "text-emerald-700"}`}>
