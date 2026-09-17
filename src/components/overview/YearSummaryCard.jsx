@@ -73,6 +73,14 @@ export default function YearSummaryCard({ year, summary, openOB, ibEstimate, kor
         </div>
       </div>
 
+      {summary.zakelijkVanPriveRekening > 0 && (
+        <p className="mt-2 text-xs text-slate-400">
+          Let op: {eur(summary.zakelijkVanPriveRekening)} hiervan zijn zakelijke kosten die vanaf de privérekening
+          zijn betaald — die tellen terecht mee in de winst, maar ook mee als "persoonlijk uitgegeven" hierboven.
+          Tekort/Over kan daardoor iets strenger uitvallen dan strikt nodig.
+        </p>
+      )}
+
       {hasFixedVarData && (
         <>
           <button onClick={() => setShowFixedVar((v) => !v)} className="mt-3 text-xs font-medium text-slate-500 underline hover:no-underline">

@@ -29,6 +29,15 @@ export function exportExcel(groups, categoryBtwRates, btwVerlegd) {
     if (g.type === "Zakelijk") {
       const btwTotal = g.items.reduce((a, t) => a + computeBtw(t, categoryBtwRates, btwVerlegd), 0);
       summaryRows.push({ Categorie: "Waarvan BTW", "Totaal (EUR)": Math.round(btwTotal * 100) / 100 });
+    } else {
+      // Een zakelijke uitgave betaald vanaf de privérekening (bijv. Autokosten) staat wel met het
+      // juiste BTW-bedrag op het detailblad hiernaast, maar telt in geen enkele totaalregel hier
+      // mee — vandaar deze opmerking als dat zich voordoet, in plaats van dat het bedrag stilletjes
+      // nergens in een totaal terug te vinden is.
+      const btwTotal = g.items.reduce((a, t) => a + computeBtw(t, categoryBtwRates, btwVerlegd), 0);
+      if (Math.round(btwTotal * 100) / 100 !== 0) {
+        summaryRows.push({ Categorie: "(zie detailblad voor BTW op eventuele zakelijke uitgaven hier)", "Totaal (EUR)": "" });
+      }
     }
     const ws2 = XLSX.utils.json_to_sheet(summaryRows);
     XLSX.utils.book_append_sheet(wb, ws2, `${g.label} - Samenvatting`.slice(0, 31));

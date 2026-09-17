@@ -252,4 +252,39 @@ export const HELP_CHAPTERS = [
       </div>
     ),
   },
+  {
+    key: "ob-ib-vakken",
+    titel: "Waar vind ik dit op het OB/IB-aangifteformulier",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Deze tool maakt een <strong>onafhankelijke reconstructie</strong>: de bedragen in het Aangiftevoorstel
+          komen uitsluitend uit de bankgegevens. Vergelijk ze gerust met een eerder ingediende aangifte — maar een
+          verschil betekent niet automatisch dat er iets misging in die aangifte, en ook niet automatisch dat deze
+          reconstructie klopt. Een eerdere aangifte kan bijvoorbeeld gebaseerd zijn op facturen die niet via deze
+          rekening liepen, memoriaalboekingen of correcties — dingen die niet uit bankgegevens blijken. Een verschil
+          is vooral een signaal om samen na te gaan waar het vandaan komt.
+        </p>
+        <p className="font-medium text-slate-700">BTW-aangifte</p>
+        <p>
+          <strong>Vak 1a / 1b</strong> — Omzet en BTW hoog/laag tarief: het BTW-percentage dat je bij categorie
+          "Zakelijke inkomsten" hebt ingesteld bepaalt of je omzet bij vak 1a (21%) of 1b (9%) hoort. BTW-verlegde
+          bedragen gaan naar vak 1e in plaats van 1a/1b.
+        </p>
+        <p>
+          <strong>Vak 5b</strong> — Voorbelasting: de BTW over je zakelijke kostencategorieën telt hier mee als
+          aftrekbare voorbelasting, met uitzondering van de categorieën die je zelf hebt uitgesloten bij de
+          BTW-instellingen (te zien onder "BTW-percentages" bij Categorieën).
+        </p>
+        <p className="font-medium text-slate-700 pt-1">Inkomstenbelasting (winst uit onderneming)</p>
+        <p>
+          Het Aangiftevoorstel volgt exact dezelfde volgorde en rubrieken als de winst-en-verliesrekening op de
+          aangifte zelf: Opbrengsten → Inkoopkosten, uitbesteed werk en andere externe kosten → Afschrijvingen →
+          Overige bedrijfskosten (auto/transport, huisvesting, verkoop, andere kosten) → Financiële baten en lasten
+          → Privéonttrekkingen en -stortingen → Belastingafdrachten (geen bedrijfskosten). Zo kun je één op één
+          meelezen met je eigen aangifte.
+        </p>
+      </div>
+    ),
+  },
 ];

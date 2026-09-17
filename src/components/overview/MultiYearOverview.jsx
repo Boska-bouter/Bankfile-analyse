@@ -5,7 +5,7 @@ import { estimateIncomeTax } from "../../tax/incomeTax.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 export default function MultiYearOverview({
-  years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus,
+  years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
   manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
@@ -70,7 +70,7 @@ export default function MultiYearOverview({
                 <th className="text-right font-medium py-2 px-3">OB/BTW</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting</th>
                 {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen OB</th>}
-                <th className="text-right font-medium py-2 px-3">Geschat IB*</th>
+                <th className="text-right font-medium py-2 px-3" title="Vinkje: IB-aangifte voor dat jaar al gedaan?">Geschat IB*</th>
                 <th className="text-right font-medium py-2 pl-3">Tekort / Over</th>
                 <th className="text-right font-medium py-2 pl-3">Trend t.o.v. vorig jaar</th>
               </tr>
@@ -116,7 +116,14 @@ export default function MultiYearOverview({
                     )}
                     <td className="py-2 px-3 text-right whitespace-nowrap">
                       <span className="font-mono text-slate-500">-{eurTight(ibEstimate.belasting)}{ibEstimate.geëxtrapoleerd ? "*" : ""}</span>
-                      {ibGedaan && <span className="ml-1.5 text-emerald-700" title="IB-aangifte is al gedaan">✓</span>}
+                      <label className="ml-1.5 inline-flex items-center" title="IB-aangifte al gedaan?">
+                        <input
+                          type="checkbox"
+                          checked={ibGedaan}
+                          onChange={(e) => setIbGedaan(year, e.target.checked)}
+                          className="align-middle"
+                        />
+                      </label>
                     </td>
                     <td className={`py-2 pl-3 text-right font-mono font-medium whitespace-nowrap ${isTekort ? "text-rose-700" : "text-emerald-700"}`}>
                       {isTekort ? "Tekort: " : "Over: "}{eurTight(Math.abs(verschil))}

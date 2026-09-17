@@ -38,7 +38,6 @@ import YearSummaryCard from "./components/overview/YearSummaryCard.jsx";
 import AangifteChecklistPanel from "./components/overview/AangifteChecklistPanel.jsx";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
-import ObIbExplanationPanel from "./components/overview/ObIbExplanationPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
@@ -65,7 +64,6 @@ import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
-import { computeBtwBoxMapping, computeIbBoxMapping } from "./tax/boxMapping.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/financialLease.js";
 
@@ -964,14 +962,6 @@ export default function App() {
     prevActiveYearRef.current = activeYear;
   }, [activeYear]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
-  // Los van zakGroupForYear (dat op tx.type groepeert, voor het Zakelijk/Privé-tabblad zelf) —
-  // het Aangiftevoorstel moet juist op categorie filteren (fiscalTreatmentOf), niet op tx.type,
-  // zie het gesprek over Route B: een privé-uitgave betaald vanaf de zakelijke rekening hoort hier
-  // niet in, en een zakelijke uitgave betaald vanaf de privérekening juist wél.
-  const fiscalZakItemsForYear = useMemo(
-    () => classified.filter((tx) => !tx.isMirror && tx.year === activeYear && fiscalTreatmentOf(tx.category) !== "geen"),
-    [classified, activeYear]
-  );
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
   const quarterlyBtwData = useMemo(
@@ -1024,14 +1014,9 @@ export default function App() {
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
   );
-  const btwBoxMapping = useMemo(() => computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded), [effectiveCategoryBtwRates, voorbelastingExcluded]);
   const activaAfschrijvingForYear = useMemo(
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
-  );
-  const ibBoxMapping = useMemo(
-    () => computeIbBoxMapping(fiscalZakItemsForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear),
-    [fiscalZakItemsForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
@@ -1998,6 +1983,7 @@ export default function App() {
                     korRegeling={korRegeling}
                     onYearClick={setActiveYear}
                     ibStatus={ibStatus}
+                    setIbGedaan={setIbGedaan}
                     manualPriveUitgaven={manualPriveUitgaven}
                     volledigeJaren={volledigeJaren}
                     businessAdvies={businessAdvies}
@@ -2019,19 +2005,8 @@ export default function App() {
                   )}
                 </div>
 
-                <div ref={obIbSectionRef}>
-                  <ObIbExplanationPanel
-                    activeYear={activeYear}
-                    btwBoxMapping={btwBoxMapping}
-                    ibBoxMapping={ibBoxMapping}
-                    loanRenteForYear={loanRenteForYear}
-                    leaseRenteForYear={leaseRenteForYear}
-                    korRegeling={korRegeling}
-                    ibGedaan={!!ibStatus[activeYear]?.gedaan}
-                    setIbGedaan={setIbGedaan}
-                    loanSummary={loanSummary}
-                    loanDetails={loanDetails}
-                  />
+                <div ref={obIbSectionRef} className="flex items-center justify-end">
+                  <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">

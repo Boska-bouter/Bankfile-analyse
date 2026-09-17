@@ -16,7 +16,7 @@ import { eur } from "../utils/amounts.js";
 export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
-  let verschuldigdBtw = 0, voorbelasting = 0;
+  let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
       priUitgegeven += Math.abs(tx.amount);
@@ -24,6 +24,11 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
         if (fixedCategories.includes(tx.category)) priVast += Math.abs(tx.amount);
         else priVariabel += Math.abs(tx.amount);
       }
+      // Bekend nevenoeffect van Route B (zie het gesprek): deze uitgave telt tegelijk mee als
+      // zakelijke kostenpost (hieronder, via fiscalTreatmentOf) én als persoonlijk uitgegeven
+      // (hierboven) — allebei terecht, maar dat kan de Tekort/Over-indicatie iets strenger maken
+      // bij wie vaak zakelijke kosten van de privérekening betaalt. Puur signalerend, geen fout.
+      if (fiscalTreatmentOf(tx.category) !== "geen") zakelijkVanPriveRekening += Math.abs(tx.amount);
     }
     if (tx.isMirror || tx.year !== year) continue;
 
@@ -63,7 +68,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   return {
     zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
     winst: zakBruto - zakBtwTotaal - renteAftrekbaar, zakVast, zakVariabel, priVast, priVariabel,
-    zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting,
+    zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting, zakelijkVanPriveRekening,
   };
 }
 
