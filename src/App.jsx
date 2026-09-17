@@ -6,7 +6,7 @@ import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, c
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "./classification/categories.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
@@ -964,6 +964,14 @@ export default function App() {
     prevActiveYearRef.current = activeYear;
   }, [activeYear]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
+  // Los van zakGroupForYear (dat op tx.type groepeert, voor het Zakelijk/Privé-tabblad zelf) —
+  // het Aangiftevoorstel moet juist op categorie filteren (fiscalTreatmentOf), niet op tx.type,
+  // zie het gesprek over Route B: een privé-uitgave betaald vanaf de zakelijke rekening hoort hier
+  // niet in, en een zakelijke uitgave betaald vanaf de privérekening juist wél.
+  const fiscalZakItemsForYear = useMemo(
+    () => classified.filter((tx) => !tx.isMirror && tx.year === activeYear && fiscalTreatmentOf(tx.category) !== "geen"),
+    [classified, activeYear]
+  );
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
   const quarterlyBtwData = useMemo(
@@ -1022,8 +1030,8 @@ export default function App() {
     [activaSummary, activaDetails, activeYear]
   );
   const ibBoxMapping = useMemo(
-    () => computeIbBoxMapping(zakGroupForYear.items, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear),
-    [zakGroupForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear]
+    () => computeIbBoxMapping(fiscalZakItemsForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear),
+    [fiscalZakItemsForYear, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;

@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER } from "../classification/categories.js";
+import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
@@ -67,7 +67,10 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, f
 
 function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity) {
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, fileContinuity, classified);
-  const zakItems = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year);
+  // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
+  // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
+  // vanaf de privérekening juist wél.
+  const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
