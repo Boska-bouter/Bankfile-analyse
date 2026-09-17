@@ -3,6 +3,7 @@ import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
@@ -49,10 +50,10 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, f
   const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
 
   const gatenDitJaar = (fileContinuity || []).filter(
-    (g) => !g.ok && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
+    (g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
   );
   const gatenHtml = gatenDitJaar.length > 0
-    ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk gat in de bestandscontinuïteit: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}) — mogelijk ontbreekt een periode.</p>`
+    ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan het gebruikelijke afrondingsverschil) — de moeite waard om na te gaan of daar nog een bestand bij hoort.</p>`
     : "";
 
   return `

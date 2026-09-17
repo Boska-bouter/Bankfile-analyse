@@ -116,6 +116,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                       <>
                         {" "}— verschil {eur(c.diff)}. Dat kan een periodegrens zijn die niet exact aansluit (geen
                         probleem), of het is de moeite waard om na te gaan of er tussenin iets ontbreekt.
+                        {Math.abs(c.diff) < 100 && " Een verschil van een paar euro is meestal gewoon afronding — dit telt daarom nergens elders mee als een gemiste periode."}
                       </>
                     )}
                   </StatusLine>

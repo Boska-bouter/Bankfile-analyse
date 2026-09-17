@@ -6,7 +6,7 @@ const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_LABEL = {
   groen: "Klaar voor aangiftecontrole — geen belangrijke openstaande punten",
   oranje: "Controlepunten aanwezig — nog punten om te beoordelen",
-  rood: "Onvoldoende gegevens — bekend gat in de bestandscontinuïteit dit jaar",
+  rood: "Mogelijk ontbreekt een periode — het saldo tussen twee bestanden van deze rekening sluit dit jaar niet aan, met een verschil groter dan een gewoon afrondingsverschil",
 };
 
 export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyProgress }) {

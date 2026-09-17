@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile } from "./importers/transactions.js";
+import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, CONTINUITY_GAP_THRESHOLD } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
@@ -1073,7 +1073,10 @@ export default function App() {
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
       // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
       const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic").length;
-      const gatDitJaar = fileContinuity.some((g) => !g.ok && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      // Een verschil van een paar cent (of zelfs een paar euro) bij een bestandsovergang is meestal
+      // gewoon een afrondingsverschil, geen teken dat er data ontbreekt — pas boven deze drempel is
+      // het de moeite waard om het als een echt gat te behandelen (zie CONTINUITY_GAP_THRESHOLD).
+      const gatDitJaar = fileContinuity.some((g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
       let status;
       if (gatDitJaar) status = "rood";
       else if (avgFrac >= 0.95 && onzekerDitJaar === 0) status = "groen";

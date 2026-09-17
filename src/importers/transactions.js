@@ -150,6 +150,12 @@ export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
 // beginsaldo 1-1-2024. Puur informatief: een klein verschil is heel normaal (bank-afronding, een
 // mutatie die net over de jaargrens valt, of simpelweg twee afzonderlijke periode-exports die niet
 // exact op elkaar aansluiten) en betekent niet per se een fout in een van beide bestanden.
+// Onder dit bedrag wordt een niet-aansluitend saldo tussen twee opeenvolgende bestanden van
+// dezelfde rekening als verwaarloosbaar behandeld (meestal gewoon een afrondingsverschil, geen
+// teken dat er een periode ontbreekt) — pas erboven is het de moeite waard om als een echt gat te
+// signaleren.
+export const CONTINUITY_GAP_THRESHOLD = 100;
+
 export function computeFileContinuity(diagnostics, accountTypeByFile) {
   const results = [];
   const groups = {};
