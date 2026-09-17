@@ -10,8 +10,14 @@ import path from "path";
 // bijwerken" te zien in plaats van dat ze zelf moeten weten hoe ze hun cache moeten legen.
 const buildId = String(Date.now());
 
-// base: "/Bankfile-analyse/" moet overeenkomen met de repo-naam voor GitHub Pages
-// (https://<user>.github.io/<repo>/) — pas dit aan als de repo ooit hernoemd wordt.
+// base: "/Bankfile-analyse/" is alleen nodig voor GitHub Pages (https://<user>.github.io/<repo>/)
+// — daar draait de tool namelijk onder een submap. Cloudflare draait diezelfde build op de root
+// van een eigen domein (bankfile-analyse.<account>.workers.dev/), waar dat submap-pad juist alle
+// JS/CSS-bestanden onvindbaar zou maken (leidt tot een lege pagina). GitHub Actions zet altijd
+// automatisch de omgevingsvariabele GITHUB_ACTIONS=true — daarmee kan één en dezelfde build-stap
+// het juiste pad kiezen, zonder dat er op Cloudflare iets apart ingesteld moet worden.
+const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
+
 export default defineConfig({
   plugins: [
     react(),
@@ -23,7 +29,7 @@ export default defineConfig({
       },
     },
   ],
-  base: "/Bankfile-analyse/",
+  base: isGitHubPages ? "/Bankfile-analyse/" : "/",
   define: {
     __BUILD_ID__: JSON.stringify(buildId),
   },
