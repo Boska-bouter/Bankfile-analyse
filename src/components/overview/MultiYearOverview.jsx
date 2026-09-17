@@ -8,7 +8,7 @@ import ZakelijkTotaalModal from "./ZakelijkTotaalModal.jsx";
 
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
-  manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
+  volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
 }) {
   const [open, setOpen] = useState(false);
   const [showHiddenCols, setShowHiddenCols] = useState(false);
@@ -23,13 +23,11 @@ export default function MultiYearOverview({
     const ibEstimate = estimateIncomeTax(summary.winst, year);
     const ibGedaan = !!ibStatus[year]?.gedaan;
     const ibBelastingEffectief = ibEstimate.belasting;
-    const manualCorrectie = Number(manualPriveUitgaven[year]) || 0;
     const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
-    const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
-    const effectievePriveUitgegeven = basisPriveUitgegeven + manualCorrectie;
+    const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
     const verschil = summary.winst - effectievePriveUitgegeven - (korRegeling ? 0 : openOB) - ibBelastingEffectief;
     const zakelijkTotaalNetto = summary.winst - effectievePriveUitgegeven;
-    return { summary, openOB, ibEstimate, ibGedaan, manualCorrectie, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto };
+    return { summary, openOB, ibEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto };
   };
 
   return (
@@ -84,7 +82,7 @@ export default function MultiYearOverview({
               {years.map((year) => {
                 const d = effectiefFor(year);
                 if (!d) return null;
-                const { summary, openOB, ibEstimate, ibGedaan, manualCorrectie, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto } = d;
+                const { summary, openOB, ibEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto } = d;
                 const isTekort = verschil < 0;
                 const prev = effectiefFor(year - 1);
                 const beideJarenVolledig = volledigeJaren.has(year) && volledigeJaren.has(year - 1);
@@ -108,10 +106,7 @@ export default function MultiYearOverview({
                       </>
                     )}
                     <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">
-                      {eurTight(effectievePriveUitgegeven)}{priUitgegevenIsAanname ? "*" : ""}{manualCorrectie !== 0 ? "†" : ""}
-                      {manualCorrectie !== 0 && (
-                        <span className="block text-[10px] font-normal text-amber-700 whitespace-normal">⚠ incl. correctie {manualCorrectie >= 0 ? "+" : ""}{eurTight(manualCorrectie)}</span>
-                      )}
+                      {eurTight(effectievePriveUitgegeven)}{priUitgegevenIsAanname ? "*" : ""}
                     </td>
                     <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">
                       <button onClick={() => setZakTotaalModalYear(year)} className="underline decoration-dotted hover:decoration-solid hover:text-slate-700" title="Klik voor de opbouw">
@@ -158,6 +153,11 @@ export default function MultiYearOverview({
             </tbody>
           </table>
           <p className="mt-2 text-xs text-slate-400">Klik op een jaar om ernaartoe te springen.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            * Grove, indicatieve schatting van de inkomstenbelasting over de winst — zonder heffingskortingen,
+            startersaftrek of overig inkomen. Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen,
+            ZVW/IH) bewust uit.
+          </p>
           <button onClick={() => setShowHiddenCols((v) => !v)} className="mt-2 text-xs font-medium text-slate-500 underline hover:no-underline">
             {showHiddenCols ? "Verberg Zak. Uit. / Uitbet/Opn. Prive" : "Toon Zak. Uit. / Uitbet/Opn. Prive"}
           </button>
@@ -171,7 +171,6 @@ export default function MultiYearOverview({
             year={zakTotaalModalYear}
             winst={d.summary.winst}
             priveUitgegeven={d.effectievePriveUitgegeven}
-            manualCorrectie={d.manualCorrectie}
             totaal={d.zakelijkTotaalNetto}
             onClose={() => setZakTotaalModalYear(null)}
           />

@@ -94,11 +94,10 @@ export function computeVolledigeJaren(classified) {
 // en staan er wel typische privé-uitgaven tussen (anders is het beeld mogelijk vertekend omdat
 // niet alle privé-uitgaven zijn opgegeven).
 const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
-export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, manualPriveCorrectie) {
+export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems) {
   if (!activeYear || !summary) return null;
   const ibBelastingEffectief = ibEstimate.belasting;
-  const basisPriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
-  const effectievePriveUitgegeven = basisPriveUitgegeven + manualPriveCorrectie;
+  const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
   const verschil = summary.winst - effectievePriveUitgegeven - openOB - ibBelastingEffectief;
 
   let niveau, tekst;
@@ -109,12 +108,12 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
     niveau = "positief";
     tekst = `Er is in totaal een positief resultaat: winst ${eur(summary.winst)}, en de uitgaven/belastingen worden gedekt (over ${eur(verschil)}).`;
   }
-  if (manualPriveCorrectie !== 0) {
-    tekst += ` ⚠ Let op: dit is inclusief een tijdelijke, handmatig ingevulde correctie van ${eur(manualPriveCorrectie)} op de privé-uitgaven — controleer of dat nog klopt.`;
-  }
   const heeftTypischePriveUitgaven = priItems.some((tx) => !tx.isMirror && TYPISCHE_PRIVE_CATEGORIEEN.includes(tx.category));
   if (summary.uitkeringenAanPrive > 0 && !heeftTypischePriveUitgaven) {
     tekst += ` Let op: er staan geen typische, alledaagse privé-uitgaven tussen (zoals boodschappen, huur/hypotheek, energie-water, vrijetijd-uitgaan/vakantie) — mogelijk zijn niet alle privé-uitgaven opgegeven, waardoor het beeld bij Tekort/Over kan afwijken van de werkelijkheid.`;
+  }
+  if (summary.zakelijkVanPriveRekening > 0) {
+    tekst += ` Let op: ${eur(summary.zakelijkVanPriveRekening)} hiervan zijn zakelijke kosten die vanaf de privérekening zijn betaald — die tellen terecht mee in de winst, maar ook mee als "persoonlijk uitgegeven" hierboven. Tekort/Over kan daardoor iets strenger uitvallen dan strikt nodig.`;
   }
   return { niveau, tekst };
 }
