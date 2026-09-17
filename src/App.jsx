@@ -13,7 +13,7 @@ import { estimateIncomeTax } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
-import { computeIncomeSummary, computeCategorySummary } from "./classification/reviewSummaries.js";
+import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey, ibanKey, extractKeywordCandidate } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -658,7 +658,7 @@ export default function App() {
     snapshotBeforeAction("Zakelijke uitgave verwijderd");
     setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
   };
-  const businessIncomeEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkomsten"), [classified]);
+  const businessIncomeEntries = useMemo(() => computeIncomeCategorySummary(classified), [classified]);
   const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
   const reclassifyBusinessEntry = (item, newMainCategory) => {
     const newSubtype = MAIN_CATEGORY_DEFAULT_SUBTYPE[newMainCategory] || newMainCategory;
@@ -671,7 +671,7 @@ export default function App() {
   // nee"): hiermee kies je per klant tussen de generieke "Zakelijke inkomsten" en de twee
   // tariefspecifieke subtypes.
   const setIncomeRate = (item, choice) => {
-    const category = choice === "9" ? "Zakelijke inkomsten 9%" : choice === "21" ? "Zakelijke inkomsten 21%" : "Zakelijke inkomsten";
+    const category = choice === "0" ? "Zakelijke inkomsten 0%" : choice === "9" ? "Zakelijke inkomsten 9%" : choice === "21" ? "Zakelijke inkomsten 21%" : "Zakelijke inkomsten";
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category, type: "Zakelijk" });
   };
   // Wizard-vraag "onder welk BTW-tarief vallen je diensten" — zet het percentage voor de generieke

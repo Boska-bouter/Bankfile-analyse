@@ -90,14 +90,16 @@ export default function KeywordManager({
                   )}
                   {onSetIncomeRate && mainCategoryOf(item.category) === "Zakelijke inkomsten" && (
                     <select
-                      value={item.category === "Zakelijke inkomsten 9%" ? "9" : item.category === "Zakelijke inkomsten 21%" ? "21" : "algemeen"}
+                      value={item.gemengd ? "gemengd" : item.category === "Zakelijke inkomsten 0%" ? "0" : item.category === "Zakelijke inkomsten 9%" ? "9" : item.category === "Zakelijke inkomsten 21%" ? "21" : "algemeen"}
                       onChange={(e) => onSetIncomeRate(item, e.target.value)}
-                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                      title="BTW-tarief op de facturen aan deze klant, voor wie zowel laag- als hoogbelast factureert"
+                      className={`shrink-0 rounded-md border px-2 py-1 text-xs ${item.gemengd ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300"}`}
+                      title={item.gemengd ? "Deze klant heeft nu meerdere tarieven tegelijk (per losse transactie in te zien/aan te passen bij het hoofdoverzicht) — kies hier een tarief om alles naar één tarief te zetten" : "BTW-tarief op de facturen aan deze klant, voor wie zowel laag- als hoogbelast (of vrijgesteld) factureert"}
                     >
+                      {item.gemengd && <option value="gemengd" disabled>⚠ Gemengd — kies om samen te voegen</option>}
                       <option value="algemeen">BTW-tarief: algemeen</option>
                       <option value="9">BTW-tarief: 9% (laag)</option>
                       <option value="21">BTW-tarief: 21% (hoog)</option>
+                      <option value="0">BTW-tarief: 0% (vrijgesteld)</option>
                     </select>
                   )}
                   {onSetBtwVerlegd && (

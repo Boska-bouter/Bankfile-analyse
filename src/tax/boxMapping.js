@@ -16,7 +16,7 @@ export function computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExc
 // aangifte zelf, zodat je één op één kunt meelezen. Categorieën die geen echte bedrijfskostenpost
 // zijn (belastingafdrachten, aflossing op leningen/lease, geldbewegingen naar/van privé) staan
 // bewust apart van deze winstberekening, net als op de aangifte zelf.
-const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
+const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
 const RUBRIEK_INKOOP = ["Zakelijke uitgaven", "Inhuur personeel"];
 const RUBRIEK_AUTO = ["Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Lease (operationeel)", "Reiskosten (OV)", "Belastingen: MRB"];
 const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten"];

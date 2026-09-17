@@ -33,6 +33,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
 export const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
 DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage BTW-tarief
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
+DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
@@ -111,16 +112,19 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
         year: Number(y), kwartaal,
         omzetBruto21: 0, verschuldigdBtw21: 0,
         omzetBruto9: 0, verschuldigdBtw9: 0,
+        omzetBruto0: 0,
         omzetBrutoVerlegd: 0,
         kostenBruto: 0, voorbelasting: 0,
       };
     }
     const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
-    const isIncomeCategory = tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%";
+    const isIncomeCategory = tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 0%" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%";
     if (isIncomeCategory) {
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (effectiefVerlegd) {
         map[key].omzetBrutoVerlegd += tx.amount;
+      } else if (tx.category === "Zakelijke inkomsten 0%" || (tx.category === "Zakelijke inkomsten" && categoryBtwRates["Zakelijke inkomsten"] === 0)) {
+        map[key].omzetBruto0 += tx.amount;
       } else if (tx.category === "Zakelijke inkomsten 9%" || (tx.category === "Zakelijke inkomsten" && categoryBtwRates["Zakelijke inkomsten"] === 9)) {
         map[key].omzetBruto9 += tx.amount;
         map[key].verschuldigdBtw9 += btw;

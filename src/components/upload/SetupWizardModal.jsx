@@ -382,8 +382,11 @@ export default function SetupWizardModal({
               <p className="text-sm text-slate-600">Onder welk BTW-tarief vallen de diensten die je factureert?</p>
               <p className="text-xs text-slate-400">
                 De meeste diensten vallen onder het hoge tarief (21%) — het lage tarief (9%) geldt voor een beperkte
-                groep diensten/producten. Lever je aan sommige klanten laag- en aan andere hoogbelast? Kies dan
-                "Allebei" — je kunt dat daarna per klant instellen bij "Zakelijke tegenpartijen (inkomsten)".
+                groep diensten/producten, en een klein aantal diensten (bijv. bepaalde zorg-, onderwijs- of
+                financiële diensten) is helemaal vrijgesteld (0%). Lever je aan verschillende klanten verschillende
+                tarieven? Kies dan "Verschillend" — je kunt daarna per klant kiezen uit drie eigen categorieën
+                ("Zakelijke inkomsten 0%/9%/21%") bij "Zakelijke tegenpartijen (inkomsten)", in plaats van steeds de
+                generieke categorie te moeten hergebruiken.
               </p>
               <div className="flex flex-col gap-2">
                 <button
@@ -402,7 +405,7 @@ export default function SetupWizardModal({
                   onClick={() => { onSetIncomeBtwRateChoice?.("beide"); goNext(); }}
                   className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
                 >
-                  Allebei, afhankelijk van klant/dienst
+                  Verschillend, afhankelijk van klant/dienst
                 </button>
               </div>
             </div>

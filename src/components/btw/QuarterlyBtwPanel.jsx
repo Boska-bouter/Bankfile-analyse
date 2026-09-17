@@ -48,6 +48,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                 <th className="text-right font-medium py-2 px-3">Omzet 9%</th>
                 <th className="text-right font-medium py-2 px-3">BTW 9% (1b)</th>
                 <th className="text-right font-medium py-2 px-3">Omzet verlegd (1e)</th>
+                <th className="text-right font-medium py-2 px-3">Omzet 0%/vrijgesteld</th>
                 <th className="text-right font-medium py-2 px-3">Uitgaven (netto)</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting (5b)</th>
                 <th className="text-right font-medium py-2 pl-3">Saldo</th>
@@ -73,6 +74,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                     </td>
                     <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw9)}</td>
                     <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-500">{eur(q.omzetBruto0)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">
                       <button
                         onClick={() => setBreakdownModal({ key: statusKey, veld: "netto" })}

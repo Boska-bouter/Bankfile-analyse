@@ -217,11 +217,12 @@ export const CATEGORY_ORDER = [
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
-  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
+  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
 ].sort((a, b) => a.localeCompare(b));
 
 export const CATEGORY_COLOR = Object.fromEntries([
   ["Zakelijke inkomsten", "bg-emerald-100 text-emerald-800"],
+  ["Zakelijke inkomsten 0%", "bg-emerald-50 text-emerald-600"],
   ["Zakelijke inkomsten 9%", "bg-emerald-50 text-emerald-700"],
   ["Zakelijke inkomsten 21%", "bg-emerald-200 text-emerald-900"],
   ["Inkomsten", "bg-teal-100 text-teal-800"],
@@ -252,7 +253,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
 ];
 
 export const INCOME_TRANSFER_CATEGORIES = [
-  "Zakelijke inkomsten", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
+  "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
   "Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive",
   "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar",
 ];
@@ -276,7 +277,7 @@ export const INCOME_TRANSFER_CATEGORIES = [
 //                    belastingafdracht, transfer, boekwinst, nog-te-beoordelen)
 export const CATEGORY_FISCAL_TREATMENT = {
   // Omzet
-  "Zakelijke inkomsten": "omzet", "Zakelijke inkomsten 9%": "omzet", "Zakelijke inkomsten 21%": "omzet",
+  "Zakelijke inkomsten": "omzet", "Zakelijke inkomsten 0%": "omzet", "Zakelijke inkomsten 9%": "omzet", "Zakelijke inkomsten 21%": "omzet",
   // Financiering — alleen de rente is aftrekbaar, niet het volledige termijnbedrag
   "Leningen": "financiering", "Lease (financieel)": "financiering",
   // Nooit een kostenpost, ongeacht tx.type: persoonlijke belastingafdrachten (MRB is de
@@ -508,6 +509,7 @@ export const SUBTYPE_TO_MAIN = {
   "Zakelijk mobiel/internet": "Telecom & abonnementen",
   "Zakelijk overige abonnementen": "Telecom & abonnementen",
   "Zakelijke inkomsten": "Zakelijke inkomsten",
+  "Zakelijke inkomsten 0%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 9%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 21%": "Zakelijke inkomsten",
   "Zakelijke uitgaven": "Inkoop & zakelijke uitgaven",
