@@ -6,7 +6,7 @@ import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
 
 export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp }) {
   const [open, setOpen] = useState(false);
-  const [uitgavenModalKey, setUitgavenModalKey] = useState(null);
+  const [breakdownModal, setBreakdownModal] = useState(null); // { key: "2023-Q2", veld: "netto" | "btw" }
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
     return !s.aangegeven || !s.betaald;
@@ -75,7 +75,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                     <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">
                       <button
-                        onClick={() => setUitgavenModalKey(statusKey)}
+                        onClick={() => setBreakdownModal({ key: statusKey, veld: "netto" })}
                         className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
                         title="Klik voor de uitsplitsing naar categorie"
                       >
@@ -84,10 +84,16 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                       <div className="text-xs text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500">
-                      {eur(q.voorbelasting)}
+                      <button
+                        onClick={() => setBreakdownModal({ key: statusKey, veld: "btw" })}
+                        className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
+                        title="Klik voor de uitsplitsing naar categorie"
+                      >
+                        {eur(q.voorbelasting)}
+                      </button>
                       {q.voorbelasting < 0 && (
                         <div className="flex items-center justify-end gap-1 text-[10px] font-normal text-rose-700 normal-case whitespace-normal max-w-[9rem]">
-                          <AlertCircle className="h-3 w-3 shrink-0" /> Kan niet negatief zijn — controleer de uitgaven hiernaast
+                          <AlertCircle className="h-3 w-3 shrink-0" /> Kan niet negatief zijn — klik voor de uitsplitsing
                         </div>
                       )}
                     </td>
@@ -111,11 +117,12 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
           </table>
         </div>
       )}
-      {uitgavenModalKey && (
+      {breakdownModal && (
         <KwartaalUitgavenModal
-          kwartaalLabel={uitgavenModalKey.replace("-Q", " — Q")}
-          categorieen={costBreakdownByQuarter?.[uitgavenModalKey] || []}
-          onClose={() => setUitgavenModalKey(null)}
+          titel={`${breakdownModal.veld === "btw" ? "Voorbelasting" : "Uitgaven (netto)"} — ${breakdownModal.key.replace("-Q", " — Q")}`}
+          categorieen={costBreakdownByQuarter?.[breakdownModal.key] || []}
+          veld={breakdownModal.veld}
+          onClose={() => setBreakdownModal(null)}
         />
       )}
     </section>

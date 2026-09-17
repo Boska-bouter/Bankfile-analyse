@@ -7,7 +7,7 @@ import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
-import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown } from "./tax/btw.js";
+import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { estimateIncomeTax } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
@@ -975,6 +975,15 @@ export default function App() {
     () => (activeYear ? computeQuarterlyCostBreakdown(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides) : {}),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]
   );
+  // Zelfde soort uitsplitsing, maar per jaar in één keer — voor de pop-ups bij "Voorbelasting" en
+  // "Zakelijk totaal (netto)" in het meerjarenoverzicht.
+  const costBreakdownByYear = useMemo(() => {
+    const map = {};
+    for (const year of years) {
+      map[year] = computeYearlyCostBreakdown(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides);
+    }
+    return map;
+  }, [classified, years, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides]);
   // Rente-voor-jaar staat hier vóór yearlySummary/yearlySummaries: de winstberekening trekt alleen
   // de aftrekbare rente op leningen/financiële lease af (niet de volledige termijn), dus die rente
   // moet al bekend zijn vóórdat de winst berekend wordt — zie yearlySummary.js voor de achtergrond.
@@ -1984,6 +1993,7 @@ export default function App() {
                     onYearClick={setActiveYear}
                     ibStatus={ibStatus}
                     setIbGedaan={setIbGedaan}
+                    costBreakdownByYear={costBreakdownByYear}
                     manualPriveUitgaven={manualPriveUitgaven}
                     volledigeJaren={volledigeJaren}
                     businessAdvies={businessAdvies}

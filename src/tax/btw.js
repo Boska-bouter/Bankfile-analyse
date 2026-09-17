@@ -180,8 +180,26 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
   const result = {};
   for (const [key, cats] of Object.entries(map)) {
     result[key] = Object.entries(cats)
-      .map(([categorie, { bruto, btw }]) => ({ categorie, bruto, netto: bruto - btw }))
+      .map(([categorie, { bruto, btw }]) => ({ categorie, bruto, netto: bruto - btw, btw }))
       .sort((a, b) => Math.abs(b.netto) - Math.abs(a.netto));
   }
   return result;
+}
+
+// Zelfde uitsplitsing als hierboven, maar voor het hele jaar in één keer (geen kwartaal-sleutel)
+// — voor de pop-ups bij "Voorbelasting" en "Zakelijk totaal (netto)" in het meerjarenoverzicht.
+export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
+  const cats = {};
+  for (const tx of classified) {
+    if (tx.isMirror || tx.year !== year) continue;
+    const behandeling = fiscalTreatmentOf(tx.category);
+    if (behandeling === "omzet" || behandeling === "geen" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
+    if (!cats[tx.category]) cats[tx.category] = { bruto: 0, btw: 0 };
+    const btw = voorbelastingExcluded.includes(tx.category) ? 0 : computeBtw(tx, categoryBtwRates, btwVerlegd);
+    cats[tx.category].bruto += -tx.amount;
+    cats[tx.category].btw += -btw;
+  }
+  return Object.entries(cats)
+    .map(([categorie, { bruto, btw }]) => ({ categorie, bruto, netto: bruto - btw, btw }))
+    .sort((a, b) => Math.abs(b.netto) - Math.abs(a.netto));
 }

@@ -3,13 +3,17 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { eurTight } from "../../utils/amounts.js";
 import { estimateIncomeTax } from "../../tax/incomeTax.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
+import ZakelijkTotaalModal from "./ZakelijkTotaalModal.jsx";
 
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
-  manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp,
+  manualPriveUitgaven, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
 }) {
   const [open, setOpen] = useState(false);
   const [showHiddenCols, setShowHiddenCols] = useState(false);
+  const [voorbelastingModalYear, setVoorbelastingModalYear] = useState(null);
+  const [zakTotaalModalYear, setZakTotaalModalYear] = useState(null);
   if (years.length === 0) return null;
 
   const effectiefFor = (year) => {
@@ -109,9 +113,17 @@ export default function MultiYearOverview({
                         <span className="block text-[10px] font-normal text-amber-700 whitespace-normal">⚠ incl. correctie {manualCorrectie >= 0 ? "+" : ""}{eurTight(manualCorrectie)}</span>
                       )}
                     </td>
-                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{eurTight(zakelijkTotaalNetto)}</td>
+                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">
+                      <button onClick={() => setZakTotaalModalYear(year)} className="underline decoration-dotted hover:decoration-solid hover:text-slate-700" title="Klik voor de opbouw">
+                        {eurTight(zakelijkTotaalNetto)}
+                      </button>
+                    </td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.verschuldigdBtw)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.voorbelasting)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">
+                      <button onClick={() => setVoorbelastingModalYear(year)} className="underline decoration-dotted hover:decoration-solid hover:text-slate-700" title="Klik voor de uitsplitsing naar categorie">
+                        {eurTight(summary.voorbelasting)}
+                      </button>
+                    </td>
                     {!korRegeling && (
                       <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{openOB >= 0 ? "-" : "+"}{eurTight(Math.abs(openOB))}</td>
                     )}
@@ -150,6 +162,28 @@ export default function MultiYearOverview({
             {showHiddenCols ? "Verberg Zak. Uit. / Uitbet/Opn. Prive" : "Toon Zak. Uit. / Uitbet/Opn. Prive"}
           </button>
         </div>
+      )}
+      {zakTotaalModalYear && (() => {
+        const d = effectiefFor(zakTotaalModalYear);
+        if (!d) return null;
+        return (
+          <ZakelijkTotaalModal
+            year={zakTotaalModalYear}
+            winst={d.summary.winst}
+            priveUitgegeven={d.effectievePriveUitgegeven}
+            manualCorrectie={d.manualCorrectie}
+            totaal={d.zakelijkTotaalNetto}
+            onClose={() => setZakTotaalModalYear(null)}
+          />
+        );
+      })()}
+      {voorbelastingModalYear && (
+        <KwartaalUitgavenModal
+          titel={`Voorbelasting — ${voorbelastingModalYear}`}
+          categorieen={costBreakdownByYear?.[voorbelastingModalYear] || []}
+          veld="btw"
+          onClose={() => setVoorbelastingModalYear(null)}
+        />
       )}
     </section>
   );
