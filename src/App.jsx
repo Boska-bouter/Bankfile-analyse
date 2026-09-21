@@ -1131,6 +1131,7 @@ export default function App() {
         checks.push({ frac: kwTotal > 0 ? kwScore / kwTotal : 1 });
       }
       checks.push({ frac: ibStatus[year]?.gedaan ? 1 : 0 });
+      checks.push({ frac: zvwStatus[year]?.gedaan ? 1 : 0 });
       const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
 
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
@@ -1149,7 +1150,7 @@ export default function App() {
       map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus]);
 
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap — dezelfde signalen als de
   // Aangifte-checklist hieronder, alleen samengevat tot losse regels i.p.v. volledige zinnen.
@@ -1171,8 +1172,10 @@ export default function App() {
     if (checklistData.priveTransferMissingMirrors.length > 0) {
       items.push(`${checklistData.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
     }
+    if (!ibStatus[activeYear]?.gedaan) items.push("IB/IH nog niet afgevinkt als gedaan");
+    if (!zvwStatus[activeYear]?.gedaan) items.push("Zvw nog niet afgevinkt als gedaan");
     return items;
-  }, [activeYear, checklistData, yearlyProgress]);
+  }, [activeYear, checklistData, yearlyProgress, ibStatus, zvwStatus]);
 
   // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
   // state (geen nieuwe reliability-engine): Bankbestanden → Transacties → BTW → Jaarcontrole →
@@ -1207,19 +1210,8 @@ export default function App() {
     if (pendingOverigReview.length > 0) {
       items.push({ key: "overigReview", text: `${pendingOverigReview.length} tegenpartij(en) nog te bepalen in "Overig"`, ref: overigReviewSectionRef });
     }
-    if (activeYear && !korRegeling) {
-      const openQuarters = quarterlyBtwData.filter((q) => {
-        const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
-        return !s.aangegeven || !s.betaald;
-      });
-      if (openQuarters.length > 0) {
-        items.push({
-          key: "quarters",
-          text: `${openQuarters.length} kwartaal(en) nog niet aangegeven/betaald (${activeYear})`,
-          ref: quarterlyBtwSectionRef,
-        });
-      }
-    }
+    // BTW-kwartalen nog niet aangegeven/betaald staat niet meer hier — dat is jaar-specifiek en
+    // staat al in "Aangifte {jaar}" (aangifteOpenPunten), geen dubbele melding meer nodig.
     if (periodeMismatches.length > 0) {
       items.push({ key: "periode", text: `${periodeMismatches.length} zakelijke ontvangst(en) met factuurperiode in ander kwartaal`, ref: periodeReviewSectionRef });
     }
@@ -1276,6 +1268,8 @@ export default function App() {
         ref: confidenceSectionRef,
       });
     }
+    // IB/IH- en Zvw-status "nog niet gedaan" staat niet meer hier — dat is jaar-specifiek en staat
+    // al in "Aangifte {jaar}" (aangifteOpenPunten), geen dubbele melding meer nodig.
     return items;
   }, [
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
@@ -1736,13 +1730,13 @@ export default function App() {
           <AangifteStatusBar
             activeYear={activeYear}
             yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
-            openPuntenCount={aangifteOpenPunten.length}
+            openPunten={aangifteOpenPunten}
             workflowSteps={workflowSteps}
             onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
           />
         )}
 
-        <TodoPanel items={todoItems} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+        <TodoPanel items={todoItems} />
 
         {years.length > 0 && (
           <div ref={checklistSectionRef}>

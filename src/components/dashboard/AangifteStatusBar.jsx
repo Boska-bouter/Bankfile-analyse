@@ -18,8 +18,9 @@ function StepIcon({ state }) {
   return <span className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300" />;
 }
 
-export default function AangifteStatusBar({ activeYear, yearStatus, openPuntenCount, workflowSteps, onOpenAangiftevoorstel }) {
+export default function AangifteStatusBar({ activeYear, yearStatus, openPunten, workflowSteps, onOpenAangiftevoorstel }) {
   if (!activeYear) return null;
+  const openPuntenCount = openPunten?.length || 0;
   return (
     <section className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-900 text-stone-50 flex flex-wrap items-center justify-between gap-3">
@@ -49,6 +50,16 @@ export default function AangifteStatusBar({ activeYear, yearStatus, openPuntenCo
           </span>
         ))}
       </div>
+      {openPuntenCount > 0 && (
+        <ul className="px-4 py-2.5 border-t border-slate-100 space-y-1 text-xs text-amber-800 bg-amber-50">
+          {openPunten.map((p, i) => (
+            <li key={i} className="flex items-start gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0 mt-1" />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
