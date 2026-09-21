@@ -13,15 +13,25 @@
 import { counterpartyKey, ibanKey } from "../utils/normalization.js";
 
 export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory) {
-  if (overridesByRow[tx.id]) return { level: "override", label: "Handmatig bevestigd (deze transactie)" };
+  // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
+  // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
+  // isStaleOverigForZakelijkSpaar in classify.js) wijkt resolvedCategory af van de opgeslagen
+  // override — dan is dit dus geen echte, actuele handmatige bevestiging meer, en valt dit verder
+  // terug op de heuristische score hieronder (die "Interne overboeking: zakelijk sparen" al apart
+  // afvangt).
+  const rowOverride = overridesByRow[tx.id];
+  if (rowOverride && rowOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (deze transactie)" };
 
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
-  if (ik && overridesByCounterparty[ik]) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
+  const ibanOverride = ik && overridesByCounterparty[ik];
+  if (ibanOverride && ibanOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-  if (key && overridesByCounterparty[key]) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+  const keyOverride = key && overridesByCounterparty[key];
+  if (keyOverride && keyOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
 
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
+  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));

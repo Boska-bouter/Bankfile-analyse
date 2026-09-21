@@ -14,7 +14,16 @@ export function defaultTypeForCategory(category) {
     : "Prive";
 }
 
-export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = [], eigenNamen = []) {
+// Generieke trefwoorden voor een interne overboeking naar/van de eigen zakelijke spaarrekening
+// (bijv. ING's ingebouwde "Oranje Spaarrekening" gekoppeld aan de zakelijke rekening) — werkt bij
+// vrijwel elke bank, ongeacht hoe de subrekening precies heet, zonder dat de gebruiker deze eerst
+// via de wizard hoeft te bevestigen. Zo'n overboeking is geen zakelijke omzet/uitgave en geen
+// "overboeking aan een persoon" (de naam bevat vaak toevallig 2-3 hoofdlettertermen, waardoor hij
+// anders door looksLikePerson zou worden opgepikt) — het is puur geld dat binnen de eigen
+// zakelijke sfeer verschuift.
+const ZAKELIJK_SPAAR_KEYWORDS = ["spaarrekening", "zakelijk sparen", "vermogenssparen", "flexibel sparen"];
+
+export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   if (tx.outOfYearRange) {
     return { category: "Inkomsten/betalingen niet dit jaar", type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
   }
@@ -38,6 +47,15 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       }
       return isIncome ? { category: "Uitbetaling aan prive", type: "Prive" } : { category: "Terugboeking van prive", type: "Prive" };
     }
+  }
+
+  // Interne overboeking naar/van de eigen zakelijke spaarrekening — vaak binnen dezelfde
+  // MT940-/CSV-export van de zakelijke rekening zelf (de spaarrekening is meestal geen apart te
+  // laden bestand, maar een subrekening bij dezelfde bank), dus hier bewust op tekst herkend in
+  // plaats van op IBAN zoals de "eigen rekening elders"-check hierboven. Alleen relevant vanaf een
+  // zakelijke rekening: beide kanten van deze overboeking horen bij dezelfde onderneming.
+  if (accountType === "Zakelijk" && (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) || zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)))) {
+    return { category: "Interne overboeking: zakelijk sparen", type: "Zakelijk" };
   }
 
   // Een overboeking naar/van de ondernemer zelf (of fiscaal partner), herkend op naam — voor de
@@ -135,13 +153,33 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   return { category: "Overig", type: expenseType };
 }
 
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = []) {
-  if (overridesByRow[tx.id]) return overridesByRow[tx.id];
+// Een eerder toegekende "Overig" is per definitie nooit een bewuste, definitieve keuze — dat is
+// juist de controleer-/restcategorie (zie confidence.js en de checklist-review). Nu er een eigen
+// categorie voor de zakelijke-spaarrekening-overboeking bestaat, mag zo'n oude "Overig"-override
+// daarom alsnog automatisch worden bijgewerkt zodra de tekst overduidelijk een overboeking
+// naar/van de zakelijke spaarrekening is — anders zou een tegenpartij/rij die vóór deze fix al
+// eens (noodgedwongen) op "Overig" is gezet, voor altijd op de controleerlijst blijven staan,
+// terwijl identieke, nog niet eerder aangeraakte transacties automatisch wél goed terechtkomen.
+// Elke andere, bewust gekozen categorie (ook "Zakelijke inkomsten" of "Prive: overig") blijft
+// gewoon onaangetast — alleen "Overig" wordt op deze manier "heropend".
+function isStaleOverigForZakelijkSpaar(override, tx, accountType, zakelijkeSpaarKeywords) {
+  return !!override && override.category === "Overig" && accountType === "Zakelijk" &&
+    (() => {
+      const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+      return ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) || zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw));
+    })();
+}
+
+export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
+  const rowOverride = overridesByRow[tx.id];
+  if (rowOverride && !isStaleOverigForZakelijkSpaar(rowOverride, tx, accountType, zakelijkeSpaarKeywords)) return rowOverride;
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
-  if (ik && overridesByCounterparty[ik]) return overridesByCounterparty[ik];
+  const ibanOverride = ik && overridesByCounterparty[ik];
+  if (ibanOverride && !isStaleOverigForZakelijkSpaar(ibanOverride, tx, accountType, zakelijkeSpaarKeywords)) return ibanOverride;
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-  if (key && overridesByCounterparty[key]) return overridesByCounterparty[key];
-  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen);
+  const keyOverride = key && overridesByCounterparty[key];
+  if (keyOverride && !isStaleOverigForZakelijkSpaar(keyOverride, tx, accountType, zakelijkeSpaarKeywords)) return keyOverride;
+  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
 }

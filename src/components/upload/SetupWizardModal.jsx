@@ -3,7 +3,7 @@ import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, Ale
 import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
-  10: "Eigen naam", 11: "Andere eigen rekening", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
+  10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
   0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
@@ -24,6 +24,7 @@ export default function SetupWizardModal({
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
+  zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
   opdrachtgeversGevraagd, onAddBusinessKeywords, onAddBusinessExpenseKeywords,
   onClose,
 }) {
@@ -55,6 +56,7 @@ export default function SetupWizardModal({
     if (rechtsvorm === null) list.push(14);
     if (heeftHolding === null) list.push(15);
     if (eigenRekeningenExtra === null) list.push(11);
+    if (zakelijkeSpaarRekening === null) list.push(16);
     if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
     if (verwachteLease === null) list.push(6);
     if (verwachteLening === null) list.push(7);
@@ -224,6 +226,16 @@ export default function SetupWizardModal({
                 </button>
               </div>
             </div>
+          )}
+          {currentStepId === 16 && (
+            <VerwachteNaamVraag
+              vraag="Heb je een zakelijke spaarrekening gekoppeld aan je zakelijke rekening (bijv. bij dezelfde bank, om geld opzij te zetten)?"
+              placeholder="Naam zoals in je bankexport (bijv. Zakelijke Oranje Spaarrekening)"
+              value={typedNow.zakelijkeSpaarNaam ?? ""}
+              onChange={(v) => setTypedNow((p) => ({ ...p, zakelijkeSpaarNaam: v }))}
+              onJa={(naam) => { setZakelijkeSpaarRekening({ status: "ja", naam: naam || null }); goNext(); }}
+              onNee={() => { setZakelijkeSpaarRekening({ status: "nee", naam: null }); goNext(); }}
+            />
           )}
           {currentStepId === 12 && (
             <LijstVraag

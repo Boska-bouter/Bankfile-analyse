@@ -190,6 +190,12 @@ export default function App() {
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
+  // null=nog niet gevraagd | {status: "ja"|"nee", naam: string|null} — of er een zakelijke
+  // spaarrekening aan de zakelijke rekening hangt. Herkenning van overboekingen ernaartoe werkt
+  // ook zónder deze vraag te beantwoorden (generieke trefwoorden zoals "spaarrekening"), dit is
+  // vooral bedoeld voor een afwijkende naamgeving bij een andere bank, en kan altijd later nog
+  // via de wizard worden ingevuld/aangevuld als het pas bij het controleren opvalt.
+  const [zakelijkeSpaarRekening, setZakelijkeSpaarRekening] = useState(null);
   const [opdrachtgeversGevraagd, setOpdrachtgeversGevraagd] = useState(null); // null=nog niet gevraagd | true
   // Wizard-vraag "onder welk(e) BTW-tarief/tarieven vallen je diensten" — kan meer dan één zijn
   // aangevinkt. incomeBtwTarieven onthoudt de volledige keuze (bijv. ["9","21"]); het gekozen
@@ -271,6 +277,7 @@ export default function App() {
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
     setEigenNamen(settings.eigenNamen ?? null);
     setEigenRekeningenExtra(settings.eigenRekeningenExtra ?? null);
+    setZakelijkeSpaarRekening(settings.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(settings.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(settings.incomeBtwTarieven ?? null);
     setMeerdereTarievenBevestigd(settings.meerdereTarievenBevestigd ?? false);
@@ -353,7 +360,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, zvwStatus, openingBalanceCorrections,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
@@ -365,7 +372,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, zvwStatus, openingBalanceCorrections,
-    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd,
     loaded,
   ]);
@@ -442,7 +449,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
     });
@@ -482,6 +489,7 @@ export default function App() {
     setHeeftVoorraad(s.heeftVoorraad ?? null);
     setEigenNamen(s.eigenNamen ?? null);
     setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
+    setZakelijkeSpaarRekening(s.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(s.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(s.incomeBtwTarieven ?? null);
     setMeerdereTarievenBevestigd(s.meerdereTarievenBevestigd ?? false);
@@ -552,11 +560,19 @@ export default function App() {
     return [eigenNamen.ondernemer, eigenNamen.partner].map((n) => extractKeywordCandidate(n)).filter(Boolean);
   }, [eigenNamen]);
 
+  // Extra, door de gebruiker zelf opgegeven naam voor de zakelijke spaarrekening (bijv. bij een
+  // bank die niet het generieke woord "spaarrekening" gebruikt) — de generieke herkenning in
+  // autoClassify werkt sowieso al, dit is puur een aanvulling voor een afwijkende naamgeving.
+  const zakelijkeSpaarKeywords = useMemo(() => {
+    const naam = zakelijkeSpaarRekening?.naam;
+    return naam ? [naam.toLowerCase()] : [];
+  }, [zakelijkeSpaarRekening]);
+
   const classified = useMemo(() => {
     const base = transactions.map((tx) => {
       const resolved = resolveClassification(
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
-        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords
+        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category);
       return { ...tx, ...resolved, confidence };
@@ -579,7 +595,7 @@ export default function App() {
       }
     }
     return mirrors.length ? [...base, ...mirrors] : base;
-  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords]);
+  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords]);
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
   // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
@@ -1369,7 +1385,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
@@ -1424,6 +1440,7 @@ export default function App() {
       setHeeftVoorraad(project.heeftVoorraad ?? null);
       setEigenNamen(project.eigenNamen ?? null);
       setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
+      setZakelijkeSpaarRekening(project.zakelijkeSpaarRekening ?? null);
       setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
       setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
       setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
@@ -1487,6 +1504,7 @@ export default function App() {
     setHeeftVoorraad(null);
     setEigenNamen(null);
     setEigenRekeningenExtra(null);
+    setZakelijkeSpaarRekening(null);
     setOpdrachtgeversGevraagd(null);
     setIncomeBtwTarieven(null);
     setMeerdereTarievenBevestigd(false);
@@ -1810,6 +1828,8 @@ export default function App() {
             setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
             eigenRekeningenExtra={eigenRekeningenExtra}
             setEigenRekeningenExtra={(v) => { snapshotBeforeAction("Andere eigen rekening ingevuld"); setEigenRekeningenExtra(v); }}
+            zakelijkeSpaarRekening={zakelijkeSpaarRekening}
+            setZakelijkeSpaarRekening={(v) => { snapshotBeforeAction("Zakelijke spaarrekening ingevuld"); setZakelijkeSpaarRekening(v); }}
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}

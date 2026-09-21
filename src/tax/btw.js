@@ -22,6 +22,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Overig",
   "Inkomsten/betalingen niet dit jaar",
   "Overboekingen aan personen",
+  "Interne overboeking: zakelijk sparen",
   "Huur",
   "Incasso, juridisch & schulden",
   "Hypotheek",
