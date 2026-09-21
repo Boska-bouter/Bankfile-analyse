@@ -338,6 +338,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .samenvatting-kerncijfers .bedrag { font-size: 15px; font-weight: bold; }
   .samenvatting-btw { margin: 0 0 10px; }
   .samenvatting-btw th, .samenvatting-btw td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; }
+  .samenvatting-btw th:not(:first-child), .samenvatting-btw td.num { text-align: right; }
   .samenvatting-status ul { margin: 4px 0 0 16px; padding: 0; font-size: 10px; color: #78350f; }
   .samenvatting-status li { margin-bottom: 2px; }
   .samenvatting-status .toelichting { margin: 4px 0 0; font-size: 10px; color: #15803d; }
