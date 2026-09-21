@@ -37,6 +37,9 @@ import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
+import MultiYearOverviewBV from "./components/overview/MultiYearOverviewBV.jsx";
+import { computeRekeningCourantVerloop, computeEigenVermogenVerloop } from "./tax/bv.js";
+import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
@@ -63,6 +66,7 @@ import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
+import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/financialLease.js";
@@ -764,13 +768,15 @@ export default function App() {
       return;
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
-    const html = buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus);
+    const html = rechtsvorm === "bv"
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus)
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
   };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
-  const downloadAangiftevoorstelPreview = () => downloadAangiftevoorstel(aangiftevoorstelPreview, selectedAangifteYears);
+  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(aangiftevoorstelPreview, selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -1096,6 +1102,26 @@ export default function App() {
     }
     return map;
   }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails]);
+  // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
+  // BV-Aangiftevoorstel), maar hier al altijd bijgehouden — dezelfde Route B-redenering als de rest
+  // van de tool: deze categorieën bestaan niet in een zzp-dossier, dus deze waarden zijn dan gewoon
+  // allemaal 0/leeg en hebben geen enkele invloed op de zzp-weergave.
+  const dgaSalarisByYear = useMemo(() => {
+    const map = {};
+    for (const y of years) {
+      map[y] = Math.abs(classified.filter((tx) => tx.category === "DGA-salaris" && !tx.isMirror && tx.year === y).reduce((a, tx) => a + tx.amount, 0));
+    }
+    return map;
+  }, [classified, years]);
+  const rcVerloop = useMemo(() => computeRekeningCourantVerloop(classified, years), [classified, years]);
+  const evVerloop = useMemo(() => {
+    const resultaatNaVpbPerJaar = {};
+    for (const y of years) {
+      const s = yearlySummaries[y];
+      if (s) resultaatNaVpbPerJaar[y] = s.winst - estimateVpb(s.winst, y).belasting;
+    }
+    return computeEigenVermogenVerloop(classified, years, resultaatNaVpbPerJaar);
+  }, [classified, years, yearlySummaries]);
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
@@ -1543,10 +1569,11 @@ export default function App() {
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5">
           <p className="max-w-7xl mx-auto text-xs text-amber-800">
             <strong>De BV-tak van deze tool is nog in ontwikkeling.</strong> Categorieën als DGA-salaris,
-            dividenduitkering en rekening-courant zijn al beschikbaar om handmatig toe te kennen, maar de
-            Vpb-berekening, het BV-Aangiftevoorstel en het Meerjarenoverzicht voor een BV zijn er nog niet — de
-            IB/Zvw-schattingen elders in de tool gaan niet over de BV. Bevindingen dus nog niet gebruiken voor een
-            echte aangifte.
+            dividenduitkering en rekening-courant, de Vpb-schatting, het BV-Aangiftevoorstel en het Meerjarenoverzicht
+            BV zijn al beschikbaar — maar er is nog geen ondersteuning voor een holdingstructuur (holding +
+            werkmaatschappij), fiscale eenheid of meerdere aandeelhouders, en de balans is beperkt tot
+            rekening-courant en een indicatief eigen vermogen (geen volledige jaarrekening). Gebruik de cijfers dus
+            als hulpmiddel, niet als vervanging van je boekhouder of accountant bij de echte aangifte.
           </p>
         </div>
       )}
@@ -2177,23 +2204,37 @@ export default function App() {
                 )}
 
                 <div ref={multiYearSectionRef}>
-                  <MultiYearOverview
-                    years={years}
-                    yearlySummaries={yearlySummaries}
-                    yearlyOpenOB={yearlyOpenOB}
-                    korRegeling={korRegeling}
-                    onYearClick={setActiveYear}
-                    ibStatus={ibStatus}
-                    setIbGedaan={setIbGedaan}
-                    zvwStatus={zvwStatus}
-                    setZvwGedaan={setZvwGedaan}
-                    costBreakdownByYear={costBreakdownByYear}
-                    kostenTotaalByYear={kostenTotaalByYear}
-                    volledigeJaren={volledigeJaren}
-                    businessAdvies={businessAdvies}
-                    activeYear={activeYear}
-                    onOpenHelp={setHelpPopupChapter}
-                  />
+                  {rechtsvorm === "bv" ? (
+                    <MultiYearOverviewBV
+                      years={years}
+                      yearlySummaries={yearlySummaries}
+                      kostenTotaalByYear={kostenTotaalByYear}
+                      dgaSalarisByYear={dgaSalarisByYear}
+                      rcVerloop={rcVerloop}
+                      evVerloop={evVerloop}
+                      onYearClick={setActiveYear}
+                      activeYear={activeYear}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  ) : (
+                    <MultiYearOverview
+                      years={years}
+                      yearlySummaries={yearlySummaries}
+                      yearlyOpenOB={yearlyOpenOB}
+                      korRegeling={korRegeling}
+                      onYearClick={setActiveYear}
+                      ibStatus={ibStatus}
+                      setIbGedaan={setIbGedaan}
+                      zvwStatus={zvwStatus}
+                      setZvwGedaan={setZvwGedaan}
+                      costBreakdownByYear={costBreakdownByYear}
+                      kostenTotaalByYear={kostenTotaalByYear}
+                      volledigeJaren={volledigeJaren}
+                      businessAdvies={businessAdvies}
+                      activeYear={activeYear}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  )}
                 </div>
 
                 <div ref={quarterlyBtwSectionRef}>
