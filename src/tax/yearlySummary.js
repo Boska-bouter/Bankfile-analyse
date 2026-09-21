@@ -16,7 +16,7 @@ import { eur } from "../utils/amounts.js";
 export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
-  let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0;
+  let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
       priUitgegeven += Math.abs(tx.amount);
@@ -58,6 +58,11 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // Een positief bedrag hier is een terugbetaling/creditnota — die verlaagt de kosten
       // (en de bijbehorende voorbelasting) juist, in plaats van er verkeerd bovenop te komen.
       if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += -btw;
+      // Netto (exclusief BTW) zakelijke kosten — dezelfde "bedrag min BTW"-correctie als bij de
+      // omzet hierboven, en dezelfde definitie als in het Aangiftevoorstel (computeIbBoxMapping) —
+      // exclusief financiering (die telt hier bewust niet mee, alleen de rente daarvan via
+      // renteAftrekbaar, zie "winst" hieronder).
+      if (behandeling === "kosten") zakelijkeKostenNetto += -(tx.amount - btw);
     }
     if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -tx.amount;
     if (tx.amount < 0) {
@@ -69,6 +74,11 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
     winst: zakBruto - zakBtwTotaal - renteAftrekbaar, zakVast, zakVariabel, priVast, priVariabel,
     zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting, zakelijkVanPriveRekening,
+    // Netto omzet = zakelijke inkomsten min de daarover verschuldigde BTW — zelfde bedrag als
+    // "1. Opbrengsten" in het Aangiftevoorstel. zakelijkeKostenNetto is netto zakelijke kosten
+    // (excl. financiering/rente, die apart als renteAftrekbaar wordt afgetrokken in "winst").
+    zakelijkeInkomstenNetto: zakelijkeInkomsten - verschuldigdBtw,
+    zakelijkeKostenNetto,
   };
 }
 

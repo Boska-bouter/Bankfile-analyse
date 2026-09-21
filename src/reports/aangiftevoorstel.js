@@ -167,6 +167,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     (ib.inkoopkosten.totaal || 0) +
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
     ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
+    ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
     renteAftrekbaar;
 
   const samenvattingHtml = `

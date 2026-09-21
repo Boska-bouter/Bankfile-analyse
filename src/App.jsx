@@ -60,6 +60,7 @@ import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetails
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeAfschrijvingPerJaar, computeActivaAfschrijvingForYear } from "./tax/activa.js";
+import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
@@ -113,6 +114,7 @@ export default function App() {
   const [voorbelastingExcluded, setVoorbelastingExcluded] = useState(DEFAULT_VOORBELASTING_EXCLUDED);
   const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
+  const [zvwStatus, setZvwStatus] = useState({}); // { "2025": { gedaan: bool } }
   // "Correctie privé-uitgaven" is verwijderd (overbodig geworden na Route B: de tool signaleert nu
   // zelf al wanneer zakelijke kosten vanaf de privérekening zijn betaald).
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
@@ -218,6 +220,7 @@ export default function App() {
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
+    setZvwStatus(settings.zvwStatus && typeof settings.zvwStatus === "object" ? settings.zvwStatus : {});
     setOpeningBalanceCorrections(settings.openingBalanceCorrections && typeof settings.openingBalanceCorrections === "object" ? settings.openingBalanceCorrections : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
@@ -227,6 +230,10 @@ export default function App() {
   const setIbGedaan = (year, gedaan) => {
     snapshotBeforeAction("IB-status aangepast");
     setIbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
+  };
+  const setZvwGedaan = (year, gedaan) => {
+    snapshotBeforeAction("Zvw-status aangepast");
+    setZvwStatus((prev) => ({ ...prev, [year]: { gedaan } }));
   };
 
   // ---- Eerder opgeslagen project laden bij openen — met keuze i.p.v. automatisch ----
@@ -284,7 +291,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-        ibStatus, openingBalanceCorrections,
+        ibStatus, zvwStatus, openingBalanceCorrections,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       });
@@ -296,7 +303,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-    ibStatus, openingBalanceCorrections,
+    ibStatus, zvwStatus, openingBalanceCorrections,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd,
     loaded,
@@ -373,7 +380,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
@@ -417,6 +424,7 @@ export default function App() {
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
+    setZvwStatus(s.zvwStatus || {});
     setLastActionSnapshot(null);
   };
 
@@ -1049,6 +1057,29 @@ export default function App() {
     }
     return map;
   }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails]);
+  // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
+  // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
+  // afschrijving (berekend als Activa is ingevuld, anders het bruto aanschafbedrag ter herkenning)
+  // + overige bedrijfskosten + aftrekbare rente. Bewust NIET zelf opnieuw berekend vanuit
+  // computeYearlySummary — dat zou de kans op verschil met het Aangiftevoorstel juist vergroten.
+  const kostenTotaalByYear = useMemo(() => {
+    const map = {};
+    for (const y of years) {
+      const zakItemsVoorJaar = classified.filter((tx) => !tx.isMirror && tx.year === y && fiscalTreatmentOf(tx.category) !== "geen");
+      const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
+      const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+      const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
+      const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
+      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd);
+      map[y] =
+        (ib.inkoopkosten.totaal || 0) +
+        (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
+        ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
+        ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
+        renteAftrekbaar;
+    }
+    return map;
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails]);
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
@@ -1264,7 +1295,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
-      ibStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd,
+      ibStatus, zvwStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -1322,6 +1353,7 @@ export default function App() {
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
+      setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
       setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
       setLoadedProjectFileName(file.name);
     } catch (e) {
@@ -1366,6 +1398,7 @@ export default function App() {
     setConfirmedLeaseTypeKeys([]);
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setIbStatus({});
+    setZvwStatus({});
     setOpeningBalanceCorrections({});
     setVerwachteLease(null);
     setVerwachteLening(null);
@@ -2135,7 +2168,10 @@ export default function App() {
                     onYearClick={setActiveYear}
                     ibStatus={ibStatus}
                     setIbGedaan={setIbGedaan}
+                    zvwStatus={zvwStatus}
+                    setZvwGedaan={setZvwGedaan}
                     costBreakdownByYear={costBreakdownByYear}
+                    kostenTotaalByYear={kostenTotaalByYear}
                     volledigeJaren={volledigeJaren}
                     businessAdvies={businessAdvies}
                     activeYear={activeYear}

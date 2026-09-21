@@ -4,16 +4,20 @@ import { eurTight } from "../../utils/amounts.js";
 import { estimateIncomeTax, estimateZvw } from "../../tax/incomeTax.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
-import ZakelijkTotaalModal from "./ZakelijkTotaalModal.jsx";
 
+// Kolomvolgorde volgt bewust dezelfde opbouw/logica als het Aangiftevoorstel (zie
+// src/reports/aangiftevoorstel.js): eerst het bruto zakelijk inkomen, dan de BTW eraf naar netto
+// omzet, dan de zakelijke kosten (ook netto), dan voorbelasting, dan de resulterende winst (WUO,
+// netto) — en pas daarna wat er naar privé is gegaan, wat er nog aan BTW/IB/Zvw openstaat, en het
+// resultaat (Tekort/Over). Zo is elke kolom een stap in dezelfde optelsom terug te vinden in het
+// Aangiftevoorstel, in plaats van een los verzameld cijfer.
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
-  volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
+  zvwStatus, setZvwGedaan, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
+  kostenTotaalByYear,
 }) {
   const [open, setOpen] = useState(false);
-  const [showHiddenCols, setShowHiddenCols] = useState(false);
   const [voorbelastingModalYear, setVoorbelastingModalYear] = useState(null);
-  const [zakTotaalModalYear, setZakTotaalModalYear] = useState(null);
   if (years.length === 0) return null;
 
   const effectiefFor = (year) => {
@@ -23,12 +27,12 @@ export default function MultiYearOverview({
     const ibEstimate = estimateIncomeTax(summary.winst, year);
     const zvwEstimate = estimateZvw(summary.winst, year);
     const ibGedaan = !!ibStatus[year]?.gedaan;
+    const zvwGedaan = !!zvwStatus[year]?.gedaan;
     const ibBelastingEffectief = ibEstimate.belasting + zvwEstimate.bijdrage;
     const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
     const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
     const verschil = summary.winst - effectievePriveUitgegeven - (korRegeling ? 0 : openOB) - ibBelastingEffectief;
-    const zakelijkTotaalNetto = summary.winst - effectievePriveUitgegeven;
-    return { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto };
+    return { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, zvwGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil };
   };
 
   return (
@@ -55,27 +59,20 @@ export default function MultiYearOverview({
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
                 <th className="text-left font-medium py-2 pr-3">Jaar</th>
-                <th className="text-right font-medium py-2 px-3">Zak. Ink.</th>
-                <th className="text-right font-medium py-2 px-3">WUO (bruto)</th>
-                <th className="text-right font-medium py-2 px-3">Al betaald ZVW/IH</th>
-                <th className="text-right font-medium py-2 px-3">Uitbetaald/opgenomen naar prive</th>
-                {showHiddenCols && (
-                  <>
-                    <th className="text-right font-medium py-2 px-3">Zak. Uit.</th>
-                    <th className="text-right font-medium py-2 px-3">Zak. Vast</th>
-                    <th className="text-right font-medium py-2 px-3">Zak. Var.</th>
-                    <th className="text-right font-medium py-2 px-3">Prive Vast</th>
-                    <th className="text-right font-medium py-2 px-3">Prive Var.</th>
-                  </>
-                )}
-                <th className="text-right font-medium py-2 px-3">Totaal prive uitgegeven</th>
-                <th className="text-right font-medium py-2 px-3">Zakelijk totaal (netto)</th>
-                <th className="text-right font-medium py-2 px-3">OB/BTW</th>
+                <th className="text-right font-medium py-2 px-3" title="Bruto, zoals op de bank binnengekomen (incl. BTW)">Zakelijk inkomen</th>
+                <th className="text-right font-medium py-2 px-3">BTW-afdracht</th>
+                <th className="text-right font-medium py-2 px-3" title="Zakelijk inkomen minus BTW-afdracht — zelfde bedrag als 'Opbrengsten' in het Aangiftevoorstel">Netto omzet</th>
+                <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (excl. BTW) — zelfde bedrag als in het Aangiftevoorstel">Zakelijke kosten</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting</th>
-                {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen OB</th>}
-                <th className="text-right font-medium py-2 px-3">Geschat IB*</th>
+                <th className="text-right font-medium py-2 px-3" title="Netto omzet min zakelijke kosten min aftrekbare rente — zelfde bedrag als 'Resultaat uit onderneming' in het Aangiftevoorstel">WUO (netto)</th>
+                <th className="text-right font-medium py-2 px-3">Overboeking naar privé</th>
+                <th className="text-right font-medium py-2 px-3">Privé uitgaven</th>
+                {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen BTW</th>}
+                <th className="text-right font-medium py-2 px-3">Geschat IB/IH*</th>
                 <th className="text-right font-medium py-2 px-3">Geschat Zvw*</th>
-                <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">IB-status</th>
+                <th className="text-right font-medium py-2 px-3" title="Wat daadwerkelijk vanaf de zakelijke rekening is afgedragen aan IB/IH en Zvw dit jaar">Al betaald ZVW/IH</th>
+                <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status IB/IH</th>
+                <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status Zvw</th>
                 <th className="text-right font-medium py-2 pl-3">Tekort / Over</th>
                 <th className="text-right font-medium py-2 pl-3">Trend t.o.v. vorig jaar</th>
               </tr>
@@ -84,7 +81,7 @@ export default function MultiYearOverview({
               {years.map((year) => {
                 const d = effectiefFor(year);
                 if (!d) return null;
-                const { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto } = d;
+                const { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, zvwGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil } = d;
                 const isTekort = verschil < 0;
                 const prev = effectiefFor(year - 1);
                 const beideJarenVolledig = volledigeJaren.has(year) && volledigeJaren.has(year - 1);
@@ -95,31 +92,22 @@ export default function MultiYearOverview({
                   <tr key={year} className="hover:bg-slate-50 cursor-pointer" onClick={() => onYearClick(year)}>
                     <td className="py-2 pr-3 font-medium">{year}</td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap">{eurTight(summary.zakelijkeInkomsten)}</td>
-                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{eurTight(summary.winst)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.alBetaaldeZvwIh)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{eurTight(summary.uitkeringenAanPrive)}</td>
-                    {showHiddenCols && (
-                      <>
-                        <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">{eurTight(summary.zakelijkeUitgaven)}</td>
-                        <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{eurTight(summary.zakVast)}</td>
-                        <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{eurTight(summary.zakVariabel)}</td>
-                        <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{summary.priVast > 0 || summary.priVariabel > 0 ? eurTight(summary.priVast) : "—"}</td>
-                        <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{summary.priVast > 0 || summary.priVariabel > 0 ? eurTight(summary.priVariabel) : "—"}</td>
-                      </>
-                    )}
-                    <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">
-                      {eurTight(effectievePriveUitgegeven)}{priUitgegevenIsAanname ? "*" : ""}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">
-                      <button onClick={() => setZakTotaalModalYear(year)} className="underline decoration-dotted hover:decoration-solid hover:text-slate-700" title="Klik voor de opbouw">
-                        {eurTight(zakelijkTotaalNetto)}
-                      </button>
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.verschuldigdBtw)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">-{eurTight(summary.verschuldigdBtw)}</td>
+                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{eurTight(summary.zakelijkeInkomstenNetto)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">-{eurTight(kostenTotaalByYear?.[year] ?? summary.zakelijkeKostenNetto)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">
-                      <button onClick={() => setVoorbelastingModalYear(year)} className="underline decoration-dotted hover:decoration-solid hover:text-slate-700" title="Klik voor de uitsplitsing naar categorie">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setVoorbelastingModalYear(year); }}
+                        className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
+                        title="Klik voor de uitsplitsing naar categorie"
+                      >
                         {eurTight(summary.voorbelasting)}
                       </button>
+                    </td>
+                    <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{eurTight(summary.winst)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-slate-600 whitespace-nowrap">{eurTight(summary.uitkeringenAanPrive)}</td>
+                    <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">
+                      {eurTight(effectievePriveUitgegeven)}{priUitgegevenIsAanname ? "*" : ""}
                     </td>
                     {!korRegeling && (
                       <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{openOB >= 0 ? "-" : "+"}{eurTight(Math.abs(openOB))}</td>
@@ -132,9 +120,16 @@ export default function MultiYearOverview({
                         -{eurTight(zvwEstimate.bijdrage)}{zvwEstimate.geëxtrapoleerd ? "*" : ""}{zvwEstimate.gemaximeerd ? " (max.)" : ""}
                       </span>
                     </td>
-                    <td className="py-2 px-3 whitespace-nowrap">
+                    <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.alBetaaldeZvwIh)}</td>
+                    <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
                         <input type="checkbox" checked={ibGedaan} onChange={(e) => setIbGedaan(year, e.target.checked)} />
+                        Al gedaan
+                      </label>
+                    </td>
+                    <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
+                        <input type="checkbox" checked={zvwGedaan} onChange={(e) => setZvwGedaan(year, e.target.checked)} />
                         Al gedaan
                       </label>
                     </td>
@@ -163,26 +158,11 @@ export default function MultiYearOverview({
           <p className="mt-1 text-xs text-slate-400">
             * Grove, indicatieve schattingen van de inkomstenbelasting en de inkomensafhankelijke bijdrage
             Zorgverzekeringswet (Zvw) over de winst — zonder heffingskortingen, startersaftrek of overig inkomen.
-            Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit.
+            Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit — vergelijk de
+            geschatte bedragen met de kolom "Al betaald ZVW/IH" hiernaast voor wat daadwerkelijk al is afgedragen.
           </p>
-          <button onClick={() => setShowHiddenCols((v) => !v)} className="mt-2 text-xs font-medium text-slate-500 underline hover:no-underline">
-            {showHiddenCols ? "Verberg Zak. Uit. / Uitbet/Opn. Prive" : "Toon Zak. Uit. / Uitbet/Opn. Prive"}
-          </button>
         </div>
       )}
-      {zakTotaalModalYear && (() => {
-        const d = effectiefFor(zakTotaalModalYear);
-        if (!d) return null;
-        return (
-          <ZakelijkTotaalModal
-            year={zakTotaalModalYear}
-            winst={d.summary.winst}
-            priveUitgegeven={d.effectievePriveUitgegeven}
-            totaal={d.zakelijkTotaalNetto}
-            onClose={() => setZakTotaalModalYear(null)}
-          />
-        );
-      })()}
       {voorbelastingModalYear && (
         <KwartaalUitgavenModal
           titel={`Voorbelasting — ${voorbelastingModalYear}`}
