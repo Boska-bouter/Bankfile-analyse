@@ -3,11 +3,15 @@ import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import { estimateIncomeTax } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { eur } from "../utils/amounts.js";
+
+const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
+const STATUS_TEKST = { groen: "Klaar voor controle", oranje: "Controle nodig", rood: "Mogelijk ontbreekt een periode" };
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -34,7 +38,7 @@ const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend
 // grondslag liggen, en of er bekende gaten in de bestandscontinuïteit zijn rond dit jaar. Puur
 // samengesteld uit data die de tool al had (importdiagnostiek/bestandscontinuïteit) — geen nieuwe
 // administratie, alleen zichtbaar gemaakt.
-function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, fileContinuity, classified) {
+function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar) {
   if (!importDiagnostics || importDiagnostics.length === 0) return "";
   const yearStart = new Date(year, 0, 1);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59);
@@ -49,9 +53,6 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, f
 
   const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
 
-  const gatenDitJaar = (fileContinuity || []).filter(
-    (g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
-  );
   const gatenHtml = gatenDitJaar.length > 0
     ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan het gebruikelijke afrondingsverschil) — de moeite waard om na te gaan of daar nog een bestand bij hoort.</p>`
     : "";
@@ -66,8 +67,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, f
   ${gatenHtml}`;
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity) {
-  const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, fileContinuity, classified);
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -80,6 +80,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear);
+
+  // Gaten in de bestandscontinuïteit die dit jaar raken — eenmalig bepaald, gebruikt voor zowel de
+  // status bovenaan als de "Algemene gegevens"-bijlage verderop.
+  const gatenDitJaar = (fileContinuity || []).filter(
+    (g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
+  );
+  const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar);
 
   // Categorieoverzicht (alle categorieën, alfabetisch) blijft als detailbijlage staan — de
   // winst-en-verliesrekening hierboven is wat met de aangifte meeleest, dit blijft handig als
@@ -114,6 +121,75 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       </tr>`;
     })
     .join("");
+  // Compacte aangiftevorm — dezelfde kwartaalcijfers als hierboven, maar herleid naar de rubrieken
+  // zoals ze in de BTW-aangifte zelf heten (1a/1b/1e/5b/saldo), zodat je eerst de aangifte-vorm ziet
+  // en de uitgebreide bankanalyse-tabel er daarna als onderbouwing bij staat.
+  const kwartaalCompactRows = kwartalen
+    .map((q) => {
+      const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+      return `<tr>
+        <td>Q${q.kwartaal}</td>
+        <td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>
+        <td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>
+        <td class="num">${eur(q.omzetBrutoVerlegd)}</td>
+        <td class="num">${eur(q.voorbelasting)}</td>
+        <td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug te vragen"}</td>
+      </tr>`;
+    })
+    .join("");
+
+  // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
+  // checklist in de tool zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
+  // anders beweert dan wat je in de tool ook al ziet. IB-status (het "afgevinkt"-vinkje) telt
+  // bewust niet mee — dat is een persoonlijke herinnering, geen signaal over de betrouwbaarheid
+  // van deze reconstructie.
+  const zakItemsChecklist = classified.filter((tx) => tx.type === "Zakelijk" && tx.year === year);
+  const priItemsChecklist = classified.filter((tx) => tx.type === "Prive" && tx.year === year);
+  const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {});
+  const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
+    (tx) => !tx.isMirror && tx.confidence?.level !== "override" && tx.confidence?.level !== "keyword" && tx.confidence?.level !== "heuristic"
+  ).length;
+  const yearStatus = gatenDitJaar.length > 0 ? "rood" : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 ? "groen" : "oranje";
+
+  const openPunten = [];
+  if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
+  if (yc.quartersNietAangegeven.length > 0) openPunten.push(`Nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+  if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`Nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+  if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
+  if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);
+  if (yc.priveTransferMissingMirrors.length > 0) openPunten.push(`${yc.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
+  if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
+
+  // Totaal zakelijke kosten (rubrieken 2 t/m 5) — voor de samenvatting, geen nieuwe berekening,
+  // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld.
+  const kostenTotaal =
+    (ib.inkoopkosten.totaal || 0) +
+    (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
+    ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
+    renteAftrekbaar;
+
+  const samenvattingHtml = `
+  <div class="samenvatting">
+    <div class="samenvatting-kerncijfers">
+      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
+      <div><span class="label">Omzet</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span class="label">Zakelijke kosten</span><span class="bedrag">${eur(kostenTotaal)}</span></div>
+      <div><span class="label">Geschatte inkomstenbelasting*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
+    </div>
+    ${kwartalen.length > 0
+      ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+      <tbody><tr><td>Saldo</td>${kwartalen
+        .map((q) => {
+          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+          return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+        })
+        .join("")}</tr></tbody></table>`
+      : ""}
+    <div class="samenvatting-status">
+      <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>
+      ${openPunten.length > 0 ? `<ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
+    </div>
+  </div>`;
 
   const overigeBedrijfskostenHtml =
     ib.overigeBedrijfskosten.length > 0
@@ -160,9 +236,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       : "";
 
   return `
-  <h1>Zakelijke aangifte voorstel — ${year}</h1>
-  <p class="subtitle">${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"}</p>
-  ${algemeneGegevensHtml}
+  <h1>Aangiftevoorstel / fiscale reconstructie — ${year}</h1>
+  <p class="subtitle">
+    Status: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]} ·
+    ${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"} ·
+    op basis van beschikbare bankgegevens
+  </p>
+  ${samenvattingHtml}
 
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
   <div class="wvr">
@@ -183,16 +263,26 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${nogNietIngedeeldHtml}
   </div>
 
-  <h2>Categorieoverzicht — Zakelijk (detail, alle categorieën)</h2>
-  <table>
-    <thead><tr><th>Categorie</th><th class="num">Bruto</th><th class="num">Netto</th><th class="num">BTW</th></tr></thead>
-    <tbody>${catRows}</tbody>
-    <tfoot><tr class="total"><td>Totaal</td><td class="num">${eur(zakGrandTotal)}</td><td class="num">${eur(zakGrandTotal - zakGrandBtw)}</td><td class="num">${eur(zakGrandBtw)}</td></tr></tfoot>
-  </table>
-
   ${!korRegeling && kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
-  <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hieronder met wat er daadwerkelijk is aangegeven en betaald.</p>
+  <table>
+    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <tbody>
+      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}</tr>
+      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}</tr>
+      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}</tr>
+      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}</tr>
+      <tr class="total"><td>Saldo</td>${kwartalen
+        .map((q) => {
+          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+          return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+        })
+        .join("")}</tr>
+    </tbody>
+  </table>
+  <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>
+
+  <h3>Onderliggende bankanalyse</h3>
   <table>
     <thead><tr>
       <th>Kwartaal</th><th class="num">Omzet 21%</th><th class="num">BTW 21% (1a)</th>
@@ -204,22 +294,32 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Indicatieve inkomstenbelasting</h2>
   <p>Geschat: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
-  <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>`;
+  <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>
+
+  <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
+  <table>
+    <thead><tr><th>Categorie</th><th class="num">Bruto</th><th class="num">Netto</th><th class="num">BTW</th></tr></thead>
+    <tbody>${catRows}</tbody>
+    <tfoot><tr class="total"><td>Totaal</td><td class="num">${eur(zakGrandTotal)}</td><td class="num">${eur(zakGrandTotal - zakGrandBtw)}</td><td class="num">${eur(zakGrandBtw)}</td></tr></tfoot>
+  </table>
+
+  ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus) {
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="utf-8"><title>Zakelijke aangifte voorstel ${yearsToInclude.join(", ")}</title>
+<html lang="nl"><head><meta charset="utf-8"><title>Aangiftevoorstel ${yearsToInclude.join(", ")}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 11px; }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .subtitle { color: #64748b; font-size: 11px; margin-bottom: 20px; }
   h2 { font-size: 14px; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin: 24px 0 10px; page-break-after: avoid; }
+  h3 { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; margin: 14px 0 6px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
   th, td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; text-align: left; }
   th { font-size: 9px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #cbd5e1; }
@@ -231,7 +331,17 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
-  .controledoel { margin: 0 0 20px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
+  .samenvatting { margin: 0 0 20px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; }
+  .samenvatting-kerncijfers { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
+  .samenvatting-kerncijfers > div { display: flex; flex-direction: column; }
+  .samenvatting-kerncijfers .label { font-size: 9px; text-transform: uppercase; color: #64748b; }
+  .samenvatting-kerncijfers .bedrag { font-size: 15px; font-weight: bold; }
+  .samenvatting-btw { margin: 0 0 10px; }
+  .samenvatting-btw th, .samenvatting-btw td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; }
+  .samenvatting-status ul { margin: 4px 0 0 16px; padding: 0; font-size: 10px; color: #78350f; }
+  .samenvatting-status li { margin-bottom: 2px; }
+  .samenvatting-status .toelichting { margin: 4px 0 0; font-size: 10px; color: #15803d; }
+  .controledoel { margin: 20px 0; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden ul { margin: 6px 0 6px 16px; padding: 0; }
   .onzekerheden li { margin-bottom: 3px; }
@@ -242,14 +352,17 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 </style></head>
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
+  ${sections}
+  <div style="page-break-before: always;"></div>
+  <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">
     <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>onafhankelijke reconstructie</strong>: het laat
     zien wat er volgens uitsluitend de bankgegevens aangegeven en betaald had moeten worden. Vergelijk de bedragen
-    hieronder gerust met een eerder ingediende aangifte — maar een verschil betekent niet automatisch dat er iets
+    hierboven gerust met een eerder ingediende aangifte — maar een verschil betekent niet automatisch dat er iets
     misging in die eerdere aangifte, en ook niet automatisch dat deze reconstructie klopt. Een eerdere aangifte kan
     bijvoorbeeld gebaseerd zijn op facturen die niet via deze bankrekening liepen, memoriaalboekingen, correcties of
     suppleties — dingen die niet uit bankgegevens blijken. Een verschil is dus vooral een signaal om samen na te gaan
-    waar het vandaan komt, niet een oordeel op zichzelf. De winst-en-verliesrekening hieronder staat bewust in
+    waar het vandaan komt, niet een oordeel op zichzelf. De winst-en-verliesrekening hierboven staat bewust in
     dezelfde volgorde als de IB-aangifte zelf.
   </div>
   <div class="onzekerheden">
@@ -270,7 +383,6 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     <p>Dit maakt de reconstructie niet minder waardevol — het is juist onderdeel van een betrouwbare aanpak om
     zichtbaar te maken wat wél en niet uit de bankgegevens kan worden vastgesteld.</p>
   </div>
-  ${sections}
   <div class="disclaimer">
     Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze tool —
     geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat

@@ -116,6 +116,7 @@ export default function App() {
   // zelf al wanneer zakelijke kosten vanaf de privérekening zijn betaald).
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
+  const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
   const [reviewedPeriodeKeys, setReviewedPeriodeKeys] = useState([]);
@@ -728,14 +729,20 @@ export default function App() {
     setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
   };
 
-  const exportAangiftevoorstel = () => {
-    if (selectedAangifteYears.length === 0) {
+  // yearsOverride: gebruikt door de "Voorstel bekijken"-snelknop voor het actieve jaar, die niet
+  // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
+  // gewoon de bestaande jaren-selectie (uit de checkboxes) gebruikt.
+  const exportAangiftevoorstel = (yearsOverride) => {
+    const targetYears = yearsOverride || selectedAangifteYears;
+    if (targetYears.length === 0) {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
-    const html = buildAangiftevoorstelHtml(selectedAangifteYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity);
+    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+    const html = buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
+    setShowAangifteMeerdereJaren(false);
   };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
   const downloadAangiftevoorstelPreview = () => downloadAangiftevoorstel(aangiftevoorstelPreview, selectedAangifteYears);
@@ -1107,6 +1114,29 @@ export default function App() {
     }
     return map;
   }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity]);
+
+  // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap — dezelfde signalen als de
+  // Aangifte-checklist hieronder, alleen samengevat tot losse regels i.p.v. volledige zinnen.
+  const aangifteOpenPunten = useMemo(() => {
+    if (!activeYear) return [];
+    const items = [];
+    if (checklistData.overigCount > 0) {
+      items.push(`${checklistData.overigCount} transactie${checklistData.overigCount === 1 ? "" : "s"} nog in "Overig"`);
+    }
+    if (checklistData.quartersNietAangegeven.length > 0) {
+      items.push(`Nog niet aangegeven: ${checklistData.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+    }
+    if (checklistData.quartersAangegevenNietBetaald.length > 0) {
+      items.push(`Nog niet betaald: ${checklistData.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+    }
+    if (yearlyProgress[activeYear]?.status === "rood") {
+      items.push("Saldo tussen twee bestanden sluit dit jaar niet aan");
+    }
+    if (checklistData.priveTransferMissingMirrors.length > 0) {
+      items.push(`${checklistData.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
+    }
+    return items;
+  }, [activeYear, checklistData, yearlyProgress]);
 
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useMemo(() => {
@@ -1978,18 +2008,63 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => {
-                        if (!showAangifteYearPicker && selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
+                        setShowAangifteMeerdereJaren(false);
                         setShowAangifteYearPicker((v) => !v);
                       }}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Kies voor welke jaren je een voorstel wilt zien"
+                      title="Bekijk het aangiftevoorstel"
                     >
                       <Download className="h-3.5 w-3.5" /> Aangiftevoorstel
                     </button>
                   </div>
                 </div>
 
-                {showAangifteYearPicker && (
+                {/* Eerste stap: direct het actieve jaar met status en openstaande punten, zodat
+                    iemand niet meteen een jaren-selectie hoeft te maken voor de meest voorkomende
+                    situatie (het jaar waar je toch al in zit). "Ander jaar/meerdere jaren kiezen"
+                    opent pas daarna de bestaande checkbox-lijst. */}
+                {showAangifteYearPicker && !showAangifteMeerdereJaren && (
+                  <div className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
+                    <p className="text-sm font-medium">Aangiftevoorstel voor {activeYear}</p>
+                    {yearlyProgress[activeYear] && (
+                      <p className="text-sm flex items-center gap-1.5">
+                        <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
+                        <span>
+                          {{ groen: "Klaar voor controle", oranje: "Nog controleren", rood: "Mogelijk ontbreekt een periode" }[yearlyProgress[activeYear].status]}
+                        </span>
+                      </p>
+                    )}
+                    {aangifteOpenPunten.length > 0 && (
+                      <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
+                        {aangifteOpenPunten.map((p, i) => (
+                          <li key={i}>{p}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="flex gap-2 flex-wrap pt-1">
+                      <button
+                        onClick={() => exportAangiftevoorstel([activeYear])}
+                        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                      >
+                        Voorstel bekijken
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
+                          setShowAangifteMeerdereJaren(true);
+                        }}
+                        className="text-xs text-slate-400 hover:text-slate-600 underline"
+                      >
+                        Ander jaar/meerdere jaren kiezen
+                      </button>
+                      <button onClick={() => setShowAangifteYearPicker(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                        Annuleren
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showAangifteYearPicker && showAangifteMeerdereJaren && (
                   <div className="rounded-lg border border-slate-300 bg-white p-4">
                     <p className="text-sm font-medium mb-2">Voor welke jaren wil je een aangiftevoorstel?</p>
                     <div className="flex flex-wrap gap-3 mb-3">
@@ -2005,11 +2080,11 @@ export default function App() {
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={exportAangiftevoorstel} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                      <button onClick={() => exportAangiftevoorstel()} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
                         Toon voorbeeld
                       </button>
-                      <button onClick={() => setShowAangifteYearPicker(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                        Annuleren
+                      <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                        Terug
                       </button>
                     </div>
                   </div>
