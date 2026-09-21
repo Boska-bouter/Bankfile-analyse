@@ -19,8 +19,13 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
-      priUitgegeven += Math.abs(tx.amount);
+      // "Terugboeking van prive" (en de andere incomeTransferCategories) zijn geen persoonlijke
+      // uitgave maar een verschuiving tussen rekeningen — geld dat vanaf de privérekening
+      // terugstroomt naar zakelijk telt dus niet mee als "priUitgegeven" (privé-uitgaven), net
+      // zoals het al niet meetelde in priVast/priVariabel hieronder. Zonder deze uitsluiting werd
+      // zo'n terugboeking ten onrechte als privé-consumptie opgeteld in plaats van ervan afgetrokken.
       if (!incomeTransferCategories.includes(tx.category)) {
+        priUitgegeven += Math.abs(tx.amount);
         if (fixedCategories.includes(tx.category)) priVast += Math.abs(tx.amount);
         else priVariabel += Math.abs(tx.amount);
       }
@@ -38,6 +43,12 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     if (tx.type === "Zakelijk") {
       if (tx.category === "Belastingen: ZVW" || tx.category === "Belastingen: IH") alBetaaldeZvwIh += Math.abs(tx.amount);
       if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") uitkeringenAanPrive += Math.abs(tx.amount);
+      // "Terugboeking van prive": geld dat vanuit privé terugkomt op de zakelijke rekening — dit
+      // verlaagt het bedrag dat per saldo naar privé is gegaan (dus aftrekken, niet los laten
+      // staan). Zonder deze aftrek liet "Overboeking naar privé" (en de "Privé uitgaven"-schatting
+      // die hierop terugvalt als de privérekening zelf niet is geladen) het volledige oorspronkelijk
+      // opgenomen bedrag zien, ook als een deel daarvan later is teruggestort.
+      if (tx.category === "Terugboeking van prive") uitkeringenAanPrive -= Math.abs(tx.amount);
     }
 
     // De fiscale zakelijke berekening (winst/BTW) zelf: gebaseerd op de categorie, niet op

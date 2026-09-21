@@ -1291,7 +1291,7 @@ export default function App() {
       { label: "Transacties", state: txDone ? "done" : "oranje" },
       { label: "BTW", state: btwState },
       { label: "Jaarcontrole", state: yearlyProgress[activeYear]?.status || "oranje" },
-      { label: "Indicatieve berekening", state: "todo" },
+      { label: "Indicatieve aangifteberekening", state: "todo" },
     ];
   }, [activeYear, parsedFiles.length, checklistData, korRegeling, btwVerlegd, yearlyProgress]);
 

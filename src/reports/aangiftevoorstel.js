@@ -270,7 +270,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${!korRegeling && kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
   <table>
-    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}</tr></thead>
     <tbody>
       <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}</tr>
       <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}</tr>
