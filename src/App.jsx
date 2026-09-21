@@ -34,7 +34,6 @@ import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
-import AangifteChecklistPanel from "./components/overview/AangifteChecklistPanel.jsx";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
@@ -1716,23 +1715,25 @@ export default function App() {
         )}
 
         {activeYear && (
-          <AangifteStatusBar
-            activeYear={activeYear}
-            yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
-            openPunten={aangifteOpenPunten}
-            workflowSteps={workflowSteps}
-            onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
-          />
+          <div ref={checklistSectionRef}>
+            <AangifteStatusBar
+              activeYear={activeYear}
+              yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
+              workflowSteps={workflowSteps}
+              onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
+              checklistData={checklistData}
+              korRegeling={korRegeling}
+              btwVerlegd={btwVerlegd}
+              ibGedaan={!!ibStatus[activeYear]?.gedaan}
+              zvwGedaan={!!zvwStatus[activeYear]?.gedaan}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
         )}
 
         <TodoPanel items={todoItems} />
 
-        {years.length > 0 && (
-          <div ref={checklistSectionRef}>
-            <AangifteChecklistPanel checklistData={checklistData} activeYear={activeYear} korRegeling={korRegeling} btwVerlegd={btwVerlegd} yearStatus={yearlyProgress[activeYear]?.status} onOpenHelp={setHelpPopupChapter} />
-            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
-          </div>
-        )}
+        {years.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
           <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50">
