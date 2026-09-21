@@ -1539,6 +1539,18 @@ export default function App() {
 
       {updateAvailable && <UpdateAvailableBanner />}
 
+      {rechtsvorm === "bv" && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5">
+          <p className="max-w-7xl mx-auto text-xs text-amber-800">
+            <strong>De BV-tak van deze tool is nog in ontwikkeling.</strong> Categorieën als DGA-salaris,
+            dividenduitkering en rekening-courant zijn al beschikbaar om handmatig toe te kennen, maar de
+            Vpb-berekening, het BV-Aangiftevoorstel en het Meerjarenoverzicht voor een BV zijn er nog niet — de
+            IB/Zvw-schattingen elders in de tool gaan niet over de BV. Bevindingen dus nog niet gebruiken voor een
+            echte aangifte.
+          </p>
+        </div>
+      )}
+
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
       {lastActionSnapshot && (

@@ -202,6 +202,18 @@ export const DEFAULT_RULES = [
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
   { name: "Zakelijke uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
     description: "Algemene zakelijke kosten die nergens anders onder vallen." },
+  // ---- Alleen relevant bij rechtsvorm "bv" (zie App.jsx) — voor zzp/eenmanszaak blijven deze
+  // categorieën altijd leeg, met opzet geen zoekwoorden (nooit automatisch toegekend). ----
+  { name: "DGA-salaris", color: "bg-sky-300 text-sky-950", keywords: [],
+    description: "Loon dat de DGA als werknemer van de eigen BV ontvangt — aftrekbaar voor de BV, belast bij de DGA in box 1. Fiscaal een gewone loonbetaling; de gebruikelijk-loonregeling bepaalt het wettelijk minimum." },
+  { name: "Dividenduitkering", color: "bg-emerald-300 text-emerald-950", keywords: [],
+    description: "Winstuitkering aan de DGA privé, uit al met Vpb belaste winst. Niet aftrekbaar voor de BV, belast bij de DGA in box 2 (aanmerkelijk belang)." },
+  { name: "Rekening-courant DGA", color: "bg-orange-300 text-orange-950", keywords: [],
+    description: "Opname of terugbetaling in rekening-courant tussen de BV en de DGA — een vordering/schuld op de balans, geen omzet of kostenpost. Boven ca. €500.000 gelden aparte regels (excessief lenen bij eigen vennootschap)." },
+  { name: "Kapitaalstorting", color: "bg-violet-300 text-violet-950", keywords: [],
+    description: "Storting van aandelenkapitaal bij oprichting (of later) van de BV — een balansmutatie die het eigen vermogen verhoogt, geen omzet of kostenpost." },
+  { name: "Vergoeding/huur aan holding", color: "bg-amber-300 text-amber-950", keywords: [],
+    description: "Huur van bedrijfspand/activa of een management fee die de werkmaatschappij aan de holding betaalt — aftrekbare kostenpost voor de werkmaatschappij, relevant bij een holdingstructuur waarin de activa in de holding zitten." },
 ];
 
 export const SPLIT_CATEGORY_NAMES = {
@@ -218,6 +230,7 @@ export const CATEGORY_ORDER = [
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
+  "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
 ].sort((a, b) => a.localeCompare(b));
 
 export const CATEGORY_COLOR = Object.fromEntries([
@@ -306,6 +319,9 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
   "Zakelijk mobiel/internet": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke uitgaven": "kosten",
+  // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
+  "DGA-salaris": "kosten", "Vergoeding/huur aan holding": "kosten",
+  "Dividenduitkering": "geen", "Rekening-courant DGA": "geen", "Kapitaalstorting": "geen",
 };
 
 // "Zakelijke inkoop" is samengevoegd met "Zakelijke uitgaven" — bestaande, eerder opgeslagen
@@ -513,6 +529,12 @@ export const SUBTYPE_TO_MAIN = {
   "Zakelijke inkomsten 9%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 21%": "Zakelijke inkomsten",
   "Zakelijke uitgaven": "Inkoop & zakelijke uitgaven",
+  // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
+  "DGA-salaris": "Personeel",
+  "Dividenduitkering": "Financiering",
+  "Rekening-courant DGA": "Financiering",
+  "Kapitaalstorting": "Financiering",
+  "Vergoeding/huur aan holding": "Huisvesting",
 };
 
 // Als iemand in de detailtabel of bij "Zakelijke tegenpartijen/uitgaven" een hoofdcategorie kiest
