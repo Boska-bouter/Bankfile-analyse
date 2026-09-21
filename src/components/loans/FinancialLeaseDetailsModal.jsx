@@ -375,10 +375,18 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         )}
       </div>
 
-      {!amortization && renteJaarlijks == null && (form.koopprijs || form.maandbedrag) && (
+      {!amortization && renteJaarlijks == null && onbetaaldGedeelteKoop > 0 && Number(form.looptijd) > 0 && Number(form.maandbedrag) > 0 ? (
         <p className="text-xs text-slate-400">
-          Nog niet genoeg ingevuld om het rentepercentage te kunnen berekenen (in elk geval koopprijs, looptijd en maandbedrag nodig).
+          Rentepercentage kan niet berekend worden: maandbedrag × looptijd + eindbetaling + extra is niet genoeg om het
+          onbetaalde gedeelte koop terug te betalen, zelfs zonder rente. Controleer koopprijs, looptijd, maandbedrag en
+          eindbetaling hierboven{leaseVergoedingWijktAf ? " (zie ook de waarschuwing hierboven)" : ""}.
         </p>
+      ) : (
+        !amortization && renteJaarlijks == null && (form.koopprijs || form.maandbedrag) && (
+          <p className="text-xs text-slate-400">
+            Nog niet genoeg ingevuld om het rentepercentage te kunnen berekenen (in elk geval koopprijs, looptijd en maandbedrag nodig).
+          </p>
+        )
       )}
     </div>
   );

@@ -39,6 +39,7 @@ export function computeFinancialLeaseRate(details) {
   // geen risico op divergeren).
   let lo = 0;
   let hi = 0.05;
+  if (npv(0) < 0) return null; // zelfs bij 0% rente wordt de hoofdsom niet terugbetaald door de ingevulde betalingen — invoer klopt niet
   if (npv(hi) > 0) return null; // ook bij 5%/maand nog steeds niet passend — onrealistische invoer
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
