@@ -92,15 +92,53 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     return computeLoanAmortization(projectedPayments, { leasebedrag: onbetaaldGedeelteKoop, startdatum: form.startdatum, rente: renteJaarlijks });
   }, [form, onbetaaldGedeelteKoop, renteJaarlijks]);
   const perJaar = useMemo(() => groupAmortizationByYear(amortization), [amortization]);
+  const projectedPayments = useMemo(() => generateProjectedLeasePayments(form), [form]);
   const paymentCheck = useMemo(() => {
-    const projectedPayments = generateProjectedLeasePayments(form);
     if (projectedPayments.length === 0) return null;
     return matchLeasePaymentsToSchedule(projectedPayments, segmentTransactions, Number(form.maandbedrag) || 0);
-  }, [form, segmentTransactions]);
+  }, [projectedPayments, segmentTransactions, form.maandbedrag]);
+
+  // Aanvullende, grovere controle náást de per-termijn vergelijking hierboven: als de datums/
+  // bedragen per termijn niet allemaal exact matchen (bijv. door een net iets verkeerd ingevulde
+  // datum, of een incasso die een paar dagen buiten de marge valt) kan de lijst hierboven onterecht
+  // alarmerend ogen terwijl er financieel niets misgaat. Deze telt daarom gewoon op: is er, in
+  // totaal, ongeveer evenveel aan deze leasemaatschappij betaald als er volgens het schema betaald
+  // had moeten zijn tot de datum van de laatste gevonden transactie? Vervangt de losse meldingen
+  // hierboven niet (die blijven nuttig om te zien WELKE termijn afwijkt), maar is een geruststellend
+  // (of juist waarschuwend) totaalsignaal ernaast.
+  const laatsteTransactieDatum = useMemo(
+    () => segmentTransactions.reduce((max, tx) => (!max || tx.date > max ? tx.date : max), null),
+    [segmentTransactions]
+  );
+  const totaalControle = useMemo(() => {
+    if (!laatsteTransactieDatum || projectedPayments.length === 0) return null;
+    const totaalBetaald = segmentTransactions.reduce((a, tx) => a + Math.abs(tx.amount), 0);
+    const verwachtTotNu = projectedPayments
+      .filter((p) => p.date <= laatsteTransactieDatum)
+      .reduce((a, p) => a + Math.abs(p.amount), 0);
+    if (verwachtTotNu === 0) return null;
+    const verschil = totaalBetaald - verwachtTotNu;
+    const marge = Math.max(Number(form.maandbedrag) || 0, 25);
+    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: segmentTransactions.length };
+  }, [segmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
 
   const leaseVergoedingWijktAf =
     form.leaseVergoeding !== "" && totaleLeaseBetalingen != null &&
     Math.abs(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) - totaleLeaseBetalingen) > 25;
+
+  // "Datum 1e termijn" is alleen ooit bedoeld als een kleine correctie op de startdatum (de eerste
+  // termijn valt weleens iets eerder dan de vervolgtermijnen, zie de toelichting hieronder) — maar
+  // eenmaal ingevuld wordt die nooit meer automatisch bijgewerkt als de startdatum daarna verandert
+  // (zie de onChange van Startdatum hierboven: de suggestie slaat alleen aan als het veld nog leeg
+  // is). Staat er een datum in die meer dan een half jaar van de startdatum afligt — bijvoorbeeld na
+  // een abuis-klik in de datumkiezer — dan schuift het HELE schema daardoor jaren op, zonder dat dat
+  // verder ergens opvalt. Dat is precies wat hier gebeurde: een "Datum 1e termijn" die per ongeluk op
+  // een datum ver in de toekomst kwam te staan, waardoor de vergelijking met de bank niet meer klopte.
+  const datumEersteTermijnWijktAf = (() => {
+    if (!form.startdatum || !form.datumEersteTermijn) return false;
+    const maanden = (new Date(form.datumEersteTermijn) - new Date(form.startdatum)) / (1000 * 60 * 60 * 24 * 30.44);
+    return Math.abs(maanden) > 6;
+  })();
 
   return (
     <div className="rounded-lg border border-slate-200 p-4 space-y-5">
@@ -168,6 +206,14 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           de vervolgtermijnen (soms al binnen twee weken) — pas de datum hierboven aan als die afwijkt van de
           voorgestelde 1e van de volgende maand.
         </p>
+        {datumEersteTermijnWijktAf && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2">
+            ⚠ "Datum 1e termijn" ({new Date(form.datumEersteTermijn).toLocaleDateString("nl-NL")}) ligt meer dan een half jaar
+            van de startdatum ({new Date(form.startdatum).toLocaleDateString("nl-NL")}) af — dit schuift het hele schema hieronder
+            mee, waardoor het niet meer aansluit bij de echte betalingen. Klopt dit niet, pas de datum hierboven aan (meestal
+            dicht bij de startdatum, of leeg laten voor de voorgestelde 1e van de volgende maand).
+          </p>
+        )}
       </div>
 
       {leaseVergoedingWijktAf && (
@@ -238,6 +284,17 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               {counts["nog-niet-in-beeld"] > 0 && <span className="text-slate-400"> ({counts["nog-niet-in-beeld"]} termijnen liggen na de laatst geïmporteerde datum, nog niet te controleren)</span>}
               .
             </p>
+            {totaalControle && (counts.ontbrekend > 0 || counts["gevonden-afwijkend"] > 0) && (
+              <p className={`mt-2 text-xs rounded-md px-2.5 py-1.5 ${totaalControle.klopt ? "bg-emerald-50 border border-emerald-200 text-emerald-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+                {totaalControle.klopt ? "✓ " : "⚠ "}
+                <strong>Totaalcontrole:</strong> in totaal is {eur(totaalControle.totaalBetaald)} betaald in {totaalControle.aantal} betaling(en)
+                aan deze leasemaatschappij, tegenover een verwacht totaal van {eur(totaalControle.verwachtTotNu)} tot en met de laatst
+                gevonden betaling — verschil {eur(Math.abs(totaalControle.verschil))} {totaalControle.verschil >= 0 ? "meer" : "minder"} dan verwacht.
+                {totaalControle.klopt
+                  ? " Dat klopt (binnen de gebruikelijke marge) — de losse meldingen hieronder wijzen dus waarschijnlijk op net iets andere data/bedragen per termijn, niet op geld dat daadwerkelijk mist."
+                  : " Dat wijkt meer af dan de gebruikelijke marge — de losse meldingen hieronder wijzen dan mogelijk wél op een echt gemiste of dubbele betaling."}
+              </p>
+            )}
             {aandacht.length > 0 && (
               <ul className="mt-2 space-y-1 text-xs">
                 {aandacht.map((r, i) => (

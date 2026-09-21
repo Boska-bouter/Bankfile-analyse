@@ -2212,7 +2212,7 @@ export default function App() {
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
                       title="Bekijk de indicatieve aangifteberekening"
                     >
-                      <Download className="h-3.5 w-3.5" /> Indicatieve berekening
+                      <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
                     </button>
                   </div>
                 </div>
