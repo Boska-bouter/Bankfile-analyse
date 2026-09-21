@@ -1152,30 +1152,19 @@ export default function App() {
     return map;
   }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus]);
 
-  // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap — dezelfde signalen als de
-  // Aangifte-checklist hieronder, alleen samengevat tot losse regels i.p.v. volledige zinnen.
+  // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
+  // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
+  // ontbrekende spiegelboeking) — dat stond dubbel. Hier staat alleen wat de checklist niet laat zien.
   const aangifteOpenPunten = useMemo(() => {
     if (!activeYear) return [];
     const items = [];
-    if (checklistData.overigCount > 0) {
-      items.push(`${checklistData.overigCount} transactie${checklistData.overigCount === 1 ? "" : "s"} nog in "Overig"`);
-    }
-    if (checklistData.quartersNietAangegeven.length > 0) {
-      items.push(`Nog niet aangegeven: ${checklistData.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
-    }
-    if (checklistData.quartersAangegevenNietBetaald.length > 0) {
-      items.push(`Nog niet betaald: ${checklistData.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
-    }
     if (yearlyProgress[activeYear]?.status === "rood") {
       items.push("Saldo tussen twee bestanden sluit dit jaar niet aan");
-    }
-    if (checklistData.priveTransferMissingMirrors.length > 0) {
-      items.push(`${checklistData.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
     }
     if (!ibStatus[activeYear]?.gedaan) items.push("IB/IH nog niet afgevinkt als gedaan");
     if (!zvwStatus[activeYear]?.gedaan) items.push("Zvw nog niet afgevinkt als gedaan");
     return items;
-  }, [activeYear, checklistData, yearlyProgress, ibStatus, zvwStatus]);
+  }, [activeYear, yearlyProgress, ibStatus, zvwStatus]);
 
   // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
   // state (geen nieuwe reliability-engine): Bankbestanden → Transacties → BTW → Jaarcontrole →
