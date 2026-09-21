@@ -30,6 +30,7 @@ export default function AangifteStatusBar({
   workflowSteps,
   onOpenAangiftevoorstel,
   checklistData,
+  rechtsvorm,
   korRegeling,
   btwVerlegd,
   ibGedaan,
@@ -81,15 +82,24 @@ export default function AangifteStatusBar({
             {checklistData.overigCount > 0 ? ` — nog ${checklistData.overigCount} transactie${checklistData.overigCount === 1 ? "" : "s"} in "Overig"` : " — alles ingedeeld"}
           </span>
         </li>
-        <li className="flex items-center gap-2">
-          {korRegeling !== null ? <Check className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
-          <span>{korRegeling === null ? "KOR-vraag nog niet beantwoord" : korRegeling ? "Valt onder de KOR (geen BTW-plicht)" : "Geen KOR — gewone BTW-plicht"}</span>
-        </li>
-        {!korRegeling && (
+        {rechtsvorm === "bv" ? (
           <li className="flex items-center gap-2">
-            {btwVerlegd !== null ? <Check className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
-            <span>{btwVerlegd === null ? "BTW-verlegd-vraag nog niet beantwoord" : btwVerlegd ? "BTW-verlegd: ja" : "BTW-verlegd: nee"}</span>
+            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>Gewone BTW-plicht (KOR en BTW-verlegd zijn niet van toepassing voor een BV)</span>
           </li>
+        ) : (
+          <>
+            <li className="flex items-center gap-2">
+              {korRegeling !== null ? <Check className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
+              <span>{korRegeling === null ? "KOR-vraag nog niet beantwoord" : korRegeling ? "Valt onder de KOR (geen BTW-plicht)" : "Geen KOR — gewone BTW-plicht"}</span>
+            </li>
+            {!korRegeling && (
+              <li className="flex items-center gap-2">
+                {btwVerlegd !== null ? <Check className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
+                <span>{btwVerlegd === null ? "BTW-verlegd-vraag nog niet beantwoord" : btwVerlegd ? "BTW-verlegd: ja" : "BTW-verlegd: nee"}</span>
+              </li>
+            )}
+          </>
         )}
         {!korRegeling && checklistData.quartersForYear.length > 0 && (
           <li className="flex items-center gap-2">

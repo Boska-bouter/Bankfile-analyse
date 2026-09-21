@@ -49,6 +49,11 @@ export default function SetupWizardModal({
   const [initialSteps] = useState(() => {
     const list = [];
     if (eigenNamen === null) list.push(10);
+    // Rechtsvorm (en de holding-vraag die daarvan afhangt) komt bewust meteen na de naam van de
+    // rekeninghouder — vóór alle andere vragen — zodat KOR/BTW-verlegd hieronder al weten of ze
+    // relevant zijn (beide zijn niet van toepassing bij een BV, zie de live-filter verderop).
+    if (rechtsvorm === null) list.push(14);
+    if (heeftHolding === null) list.push(15);
     if (eigenRekeningenExtra === null) list.push(11);
     if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
     if (verwachteLease === null) list.push(6);
@@ -56,8 +61,6 @@ export default function SetupWizardModal({
     if (verwachteAOV === null) list.push(8);
     if (heeftVoorraad === null) list.push(9);
     if (pendingFileNames.length > 0) list.push(0);
-    if (rechtsvorm === null) list.push(14);
-    if (heeftHolding === null) list.push(15);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
       list.push(2);
@@ -75,6 +78,7 @@ export default function SetupWizardModal({
     if ((id === 2 || id === 3) && korRegeling === true) return false;
     if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
+    if ((id === 1 || id === 2) && rechtsvorm === "bv") return false; // KOR en BTW-verlegd zijn n.v.t. bij een BV (altijd gewone BTW-plicht, niet verlegd)
     return true;
   });
 
@@ -351,7 +355,16 @@ export default function SetupWizardModal({
                   Eenmanszaak/zzp
                 </button>
                 <button
-                  onClick={() => { setRechtsvorm("bv"); goNext(); }}
+                  onClick={() => {
+                    setRechtsvorm("bv");
+                    // Een BV kent geen KOR en heeft normaliter geen BTW-verlegd-regeling nodig — deze
+                    // vragen worden hierboven al uit de wachtrij gefilterd zodra rechtsvorm "bv" is,
+                    // maar ook de onderliggende waarden zelf op "false" zetten voorkomt dat elders in
+                    // de app (aangifte-overzicht, to-do-lijst) deze nog als "nog niet beantwoord" tonen.
+                    setKorRegeling(false);
+                    setBtwVerlegd(false);
+                    goNext();
+                  }}
                   className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   BV

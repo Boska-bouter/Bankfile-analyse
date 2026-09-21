@@ -1820,6 +1820,7 @@ export default function App() {
               workflowSteps={workflowSteps}
               onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
               checklistData={checklistData}
+              rechtsvorm={rechtsvorm}
               korRegeling={korRegeling}
               btwVerlegd={btwVerlegd}
               ibGedaan={!!ibStatus[activeYear]?.gedaan}
