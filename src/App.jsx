@@ -40,6 +40,7 @@ import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import MultiYearOverviewBV from "./components/overview/MultiYearOverviewBV.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
+import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
@@ -128,6 +129,12 @@ export default function App() {
   const [rechtsvorm, setRechtsvorm] = useState(null);
   // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
   const [heeftHolding, setHeeftHolding] = useState(null);
+  // Handmatig ingevoerde boekingen van de holding zelf — géén los bankbestand/eigen classificatie
+  // (dat vraagt een veel grotere uitbreiding, zie het bouwplan). { "2025": { kapitaalstorting,
+  // dividendOntvangen } }. Alleen gebruikt als heeftHolding === true, puur om te vergelijken met
+  // de al berekende bedragen aan de kant van de werkmaatschappij (Kapitaalstorting/
+  // Dividenduitkering-categorieën) — een simpele controle, geen eigen boekhouding.
+  const [holdingBoekingen, setHoldingBoekingen] = useState({});
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
@@ -224,6 +231,7 @@ export default function App() {
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
     setRechtsvorm(resolveRechtsvorm(settings));
     setHeeftHolding(resolveHeeftHolding(settings));
+    setHoldingBoekingen(settings.holdingBoekingen && typeof settings.holdingBoekingen === "object" ? settings.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
@@ -257,6 +265,10 @@ export default function App() {
   const setKwartaalStatusField = (key, field, value) => {
     snapshotBeforeAction("BTW-kwartaalstatus aangepast");
     setKwartaalStatus((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
+  };
+  const setHoldingBoekingField = (year, field, value) => {
+    snapshotBeforeAction("Holding-boeking aangepast");
+    setHoldingBoekingen((prev) => ({ ...prev, [year]: { ...(prev[year] || {}), [field]: value } }));
   };
   const setIbGedaan = (year, gedaan) => {
     snapshotBeforeAction("IB-status aangepast");
@@ -317,7 +329,7 @@ export default function App() {
       const ok1 = await persistParsedFiles(parsedFiles);
       const ok2 = await persistSettings({
         accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, btwRatesVersion: BTW_RATES_VERSION,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -330,7 +342,7 @@ export default function App() {
     })();
   }, [
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, excludedDuplicateFingerprints,
+    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
@@ -408,7 +420,7 @@ export default function App() {
       label,
       state: {
         parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, excludedDuplicateFingerprints, excludedManualFingerprints,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus,
@@ -430,6 +442,7 @@ export default function App() {
     setKorRegeling(s.korRegeling);
     setRechtsvorm(s.rechtsvorm);
     setHeeftHolding(s.heeftHolding);
+    setHoldingBoekingen(s.holdingBoekingen);
     setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
     setExcludedManualFingerprints(s.excludedManualFingerprints);
     setBusinessKeywords(s.businessKeywords);
@@ -1333,7 +1346,7 @@ export default function App() {
   const saveProjectFile = () => {
     const project = buildProjectFile({
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, btwRatesVersion: BTW_RATES_VERSION,
+      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -1359,6 +1372,7 @@ export default function App() {
       setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
       setRechtsvorm(resolveRechtsvorm(project));
       setHeeftHolding(resolveHeeftHolding(project));
+      setHoldingBoekingen(project.holdingBoekingen && typeof project.holdingBoekingen === "object" ? project.holdingBoekingen : {});
       setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
       setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
       setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
@@ -1426,6 +1440,7 @@ export default function App() {
     setKorRegeling(null);
     setRechtsvorm(null);
     setHeeftHolding(null);
+    setHoldingBoekingen({});
     setExcludedDuplicateFingerprints([]);
     setDismissedDuplicateNotice(false);
     setExcludedManualFingerprints([]);
@@ -2259,6 +2274,12 @@ export default function App() {
                     />
                   )}
                 </div>
+
+                {rechtsvorm === "bv" && heeftHolding === true && (
+                  <div className="mt-4">
+                    <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
+                  </div>
+                )}
 
                 {rechtsvorm === "bv" && bvSignalering && (
                   <div className="mt-4">

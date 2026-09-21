@@ -14,6 +14,11 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Uitbetaling aan prive",
   "Prive opnames",
   "Terugboeking van prive",
+  // BV-specifiek: loon/dividend/kapitaal/rekening-courant zijn nooit met BTW belast — dit stond hier
+  // per abuis niet bij toen deze categorieën zijn toegevoegd, waardoor het toolstandaardtarief van
+  // 21% ten onrechte werd toegepast (zie App.jsx/aangiftevoorstel-bv.js: dit vertekende de netto
+  // winst zodra een echte DGA-salaris-transactie werd geclassificeerd).
+  "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting",
   "Overig",
   "Inkomsten/betalingen niet dit jaar",
   "Overboekingen aan personen",
