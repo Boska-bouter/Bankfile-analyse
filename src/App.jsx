@@ -39,6 +39,7 @@ import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
+import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
@@ -1138,6 +1139,27 @@ export default function App() {
     return items;
   }, [activeYear, checklistData, yearlyProgress]);
 
+  // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
+  // state (geen nieuwe reliability-engine): Bankbestanden → Transacties → BTW → Jaarcontrole →
+  // Aangiftevoorstel. "Jaarcontrole" hergebruikt letterlijk yearlyProgress[activeYear].status.
+  const workflowSteps = useMemo(() => {
+    if (!activeYear) return [];
+    const filesDone = parsedFiles.length > 0;
+    const txDone = checklistData.categorizedPct === 100;
+    let btwState;
+    if (korRegeling === null) btwState = "todo";
+    else if (korRegeling === true) btwState = "done";
+    else if (btwVerlegd === null || checklistData.quartersOpen.length > 0) btwState = "oranje";
+    else btwState = "done";
+    return [
+      { label: "Bankbestanden", state: filesDone ? "done" : "todo" },
+      { label: "Transacties", state: txDone ? "done" : "oranje" },
+      { label: "BTW", state: btwState },
+      { label: "Jaarcontrole", state: yearlyProgress[activeYear]?.status || "oranje" },
+      { label: "Aangiftevoorstel", state: "todo" },
+    ];
+  }, [activeYear, parsedFiles.length, checklistData, korRegeling, btwVerlegd, yearlyProgress]);
+
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useMemo(() => {
     const items = [];
@@ -1670,6 +1692,16 @@ export default function App() {
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
             onClose={() => setShowSetupWizard(false)}
+          />
+        )}
+
+        {activeYear && (
+          <AangifteStatusBar
+            activeYear={activeYear}
+            yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
+            openPuntenCount={aangifteOpenPunten.length}
+            workflowSteps={workflowSteps}
+            onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
           />
         )}
 
