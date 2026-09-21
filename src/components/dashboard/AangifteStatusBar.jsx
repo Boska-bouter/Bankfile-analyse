@@ -36,6 +36,7 @@ export default function AangifteStatusBar({
   ibGedaan,
   zvwGedaan,
   onOpenHelp,
+  onRequestChange,
 }) {
   if (!activeYear) return null;
   return (
@@ -187,7 +188,18 @@ export default function AangifteStatusBar({
               dat vanuit Zakelijk overkomt.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferOrphans.slice(0, 5).map((tx) => (
-                  <ExpandableDescription key={tx.id} tx={tx} className="block" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
+                  <span key={tx.id} className="flex items-center gap-2">
+                    <ExpandableDescription tx={tx} className="flex-1 min-w-0" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
+                    {onRequestChange && (
+                      <button
+                        onClick={() => onRequestChange(tx, { category: tx.category, type: "Zakelijk" })}
+                        className="shrink-0 rounded border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
+                        title="Klopt deze transactie eigenlijk toch bij Zakelijk? Zet 'm dan direct op type Zakelijk (categorie blijft gelijk)."
+                      >
+                        Zet op Zakelijk
+                      </button>
+                    )}
+                  </span>
                 ))}
                 {checklistData.priveTransferOrphans.length > 5 && <span className="block">en {checklistData.priveTransferOrphans.length - 5} meer…</span>}
               </span>

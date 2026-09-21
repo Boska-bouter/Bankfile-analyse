@@ -1831,6 +1831,7 @@ export default function App() {
               ibGedaan={!!ibStatus[activeYear]?.gedaan}
               zvwGedaan={!!zvwStatus[activeYear]?.gedaan}
               onOpenHelp={setHelpPopupChapter}
+              onRequestChange={requestCategoryChange}
             />
           </div>
         )}
