@@ -229,7 +229,7 @@ export default function SetupWizardModal({
           )}
           {currentStepId === 16 && (
             <VerwachteNaamVraag
-              vraag="Heb je een zakelijke spaarrekening gekoppeld aan je zakelijke rekening (bijv. bij dezelfde bank, om geld opzij te zetten)?"
+              vraag="Heb je een zakelijke spaarrekening gekoppeld aan je zakelijke rekening? Dit is meestal een pakketkeuze bij dezelfde bank, dus die overboekingen staan gewoon tussen de transacties van je zakelijke rekening zelf."
               placeholder="Naam zoals in je bankexport (bijv. Zakelijke Oranje Spaarrekening)"
               value={typedNow.zakelijkeSpaarNaam ?? ""}
               onChange={(v) => setTypedNow((p) => ({ ...p, zakelijkeSpaarNaam: v }))}

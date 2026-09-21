@@ -49,10 +49,12 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     }
   }
 
-  // Interne overboeking naar/van de eigen zakelijke spaarrekening — vaak binnen dezelfde
-  // MT940-/CSV-export van de zakelijke rekening zelf (de spaarrekening is meestal geen apart te
-  // laden bestand, maar een subrekening bij dezelfde bank), dus hier bewust op tekst herkend in
-  // plaats van op IBAN zoals de "eigen rekening elders"-check hierboven. Alleen relevant vanaf een
+  // Interne overboeking naar/van de eigen zakelijke spaarrekening. Zo'n spaarrekening is vrijwel
+  // altijd een pakketkeuze bij dezelfde bank als de zakelijke betaalrekening (niet iets wat je bij
+  // een andere bank apart afsluit), dus deze overboekingen staan gewoon als gewone regels tussen
+  // de transacties van de zakelijke rekening zelf, in dezelfde MT940-/CSV-export — er is geen
+  // apart te laden bestand of aparte IBAN voor nodig. Daarom hier bewust op tekst herkend in plaats
+  // van op IBAN zoals de "eigen rekening elders"-check hierboven. Alleen relevant vanaf een
   // zakelijke rekening: beide kanten van deze overboeking horen bij dezelfde onderneming.
   if (accountType === "Zakelijk" && (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) || zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)))) {
     return { category: "Interne overboeking: zakelijk sparen", type: "Zakelijk" };
