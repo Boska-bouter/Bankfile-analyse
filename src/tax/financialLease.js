@@ -186,6 +186,54 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   return { results, onverwachteBetalingen };
 }
 
+// ---- Opeenvolgende contracten (herfinanciering/vervanging halverwege de looptijd) ----
+//
+// Soms wordt een lopend financieel-leasecontract halverwege vervangen door een nieuw contract met
+// een ander bedrag/looptijd (bijv. het oude contract stopt op 1-3-2025, en vanaf dan loopt er een
+// nieuw contract van 16 maanden met een ander maandbedrag) — zonder dat het per se om een
+// verkoop/afkoop gaat zoals bij "contract vroegtijdig beëindigd" hierboven. `leaseDetails[key]`
+// kan dit op twee manieren vastleggen: het oude, simpele formaat (de details zelf zijn het ene,
+// enige contract) blijft gewoon werken, of — als er meerdere opeenvolgende contracten zijn — een
+// `contracts`-array met per contract exact dezelfde velden als voorheen (inclusief een eigen
+// `contractBeeindigd`/`einddatumContract` als dat contract op zijn beurt weer is opgevolgd).
+// getLeaseSegments() maakt dat verschil voor de rest van de tool onzichtbaar: die geeft altijd een
+// array van contracten terug, ook als het er maar één is.
+export function getLeaseSegments(details) {
+  if (!details) return [];
+  if (Array.isArray(details.contracts) && details.contracts.length > 0) return details.contracts;
+  return [details];
+}
+
+export function isCompleteLeaseSegment(segment) {
+  return !!(segment && segment.koopprijs && segment.looptijd && segment.maandbedrag && segment.startdatum);
+}
+
+// Is de (eventueel meerdelige) financiële lease compleet genoeg ingevuld om te kunnen splitsen in
+// rente/aflossing? Bij meerdere contracten moeten ze dat ALLEMAAL zijn — een onvolledig ingevuld
+// vervolgcontract zou anders een deel van de rente/aflossing stilzwijgend laten verdwijnen.
+export function isCompleteFinancialLeaseDetails(details) {
+  const segments = getLeaseSegments(details);
+  return segments.length > 0 && segments.every(isCompleteLeaseSegment);
+}
+
+// Verdeelt de daadwerkelijke banktransacties van een lease over de opeenvolgende contracten, op
+// basis van elk contract zijn eigen startdatum — een transactie hoort bij het LAATSTE contract
+// waarvan de startdatum niet ná de transactiedatum ligt. Contracten moeten hiervoor chronologisch
+// staan (oudste eerst), wat vanzelf zo is omdat een nieuw contract altijd wordt toegevoegd ná het
+// vorige.
+export function assignLeaseTransactionsToSegments(transactions, segments) {
+  return segments.map((segment, idx) => {
+    const segStart = segment.startdatum ? new Date(segment.startdatum) : null;
+    const nextStart = segments[idx + 1]?.startdatum ? new Date(segments[idx + 1].startdatum) : null;
+    const segTx = transactions.filter((tx) => {
+      if (segStart && tx.date < segStart) return false;
+      if (nextStart && tx.date >= nextStart) return false;
+      return true;
+    });
+    return { segment, transactions: segTx };
+  });
+}
+
 // Totaal van alle leasebetalingen (informatief, ter controle tegen het zelf opgegeven "Lease
 // vergoeding"-bedrag).
 export function computeTotaleLeaseBetalingen(details) {

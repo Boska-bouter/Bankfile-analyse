@@ -71,7 +71,7 @@ import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/a
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
 
 // ---------------------------------------------------------------------------
 // Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
@@ -1319,7 +1319,7 @@ export default function App() {
     const incompleteLeases = leaseSummary.filter((l) => {
       if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
       if (leaseDetails[l.key]?.onbekend) return false;
-      return l.category === "Lease (financieel)" && !(leaseDetails[l.key]?.koopprijs && leaseDetails[l.key]?.looptijd && leaseDetails[l.key]?.maandbedrag && leaseDetails[l.key]?.startdatum);
+      return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
     });
     if (incompleteLeases.length > 0) {
       items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });

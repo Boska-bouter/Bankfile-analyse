@@ -1,3 +1,5 @@
+import { getLeaseSegments, assignLeaseTransactionsToSegments } from "./financialLease.js";
+
 // Splitst de betalingen op een lening (of financiële lease) in rente en aflossing, op basis van
 // het oorspronkelijke bedrag, de startdatum en het rentepercentage. Rekent per betaling het
 // aantal verstreken maanden sinds de vorige betaling (of de startdatum, voor de eerste), berekent
@@ -73,6 +75,38 @@ export function computeLoanRenteForYear(loanSummary, loanDetails, year) {
   return { totaalRente, totaalAflossing, onvolledig };
 }
 
+// Combineert het amortisatieschema van een (eventueel meerdelige, zie financialLease.js)
+// financiële lease: elk opeenvolgend contract krijgt zijn eigen banktransacties (gesplitst op
+// startdatum) en wordt onafhankelijk doorgerekend met zijn eigen bedrag/looptijd/rente — daarna
+// worden de rijen simpelweg achter elkaar gezet (ze horen bij niet-overlappende periodes) zodat
+// groupAmortizationByYear er verder geen weet van hoeft te hebben dat het om meerdere contracten
+// gaat. saldoNu is het openstaande saldo van het LAATSTE (huidige) contract — het saldo van een
+// afgesloten, opgevolgd contract is niet meer relevant. onvolledig geeft aan of minstens één van
+// de contracten niet compleet genoeg was ingevuld om mee te rekenen (die telt dan simpelweg niet
+// mee, in plaats van de hele lease te laten mislukken).
+export function computeFinancialLeaseAmortizationMultiSegment(transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) {
+  const segments = getLeaseSegments(details);
+  if (segments.length === 0) return null;
+  const withTx = assignLeaseTransactionsToSegments(transactions, segments);
+  const rows = [];
+  let onvolledig = false;
+  let saldoNu = null;
+  for (const { segment, transactions: segTx } of withTx) {
+    if (!segment.koopprijs || !segment.looptijd || !segment.maandbedrag || !segment.startdatum) { onvolledig = true; continue; }
+    const hoofdsom = computeOnbetaaldGedeelteKoop(segment);
+    const rente = computeFinancialLeaseRate(segment);
+    if (rente == null) { onvolledig = true; continue; }
+    const amortization = computeLoanAmortization(segTx, { leasebedrag: hoofdsom, startdatum: segment.startdatum, rente });
+    if (!amortization) continue;
+    rows.push(...amortization.rows);
+    saldoNu = amortization.saldoNu;
+  }
+  if (rows.length === 0) return null;
+  const totaalRente = rows.reduce((a, r) => a + r.rente, 0);
+  const totaalAflossing = rows.reduce((a, r) => a + r.aflossing, 0);
+  return { rows, totaalRente, totaalAflossing, saldoNu: saldoNu ?? 0, onvolledig };
+}
+
 export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) {
   let totaalRente = 0;
   let totaalAflossing = 0;
@@ -81,12 +115,9 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
     if (lease.category !== "Lease (financieel)") continue;
     const details = leaseDetails[lease.key];
     if (!details || details.onbekend) { onvolledig++; continue; }
-    if (!details.koopprijs || !details.looptijd || !details.maandbedrag || !details.startdatum) { onvolledig++; continue; }
-    const hoofdsom = computeOnbetaaldGedeelteKoop(details);
-    const rente = computeFinancialLeaseRate(details);
-    if (rente == null) { onvolledig++; continue; }
-    const amortization = computeLoanAmortization(lease.transactions, { leasebedrag: hoofdsom, startdatum: details.startdatum, rente });
+    const amortization = computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
     if (!amortization) { onvolledig++; continue; }
+    if (amortization.onvolledig) onvolledig++;
     const jaarData = groupAmortizationByYear(amortization).find((j) => j.year === year);
     if (jaarData) {
       totaalRente += jaarData.rente;

@@ -1,23 +1,13 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { computeLoanAmortization, suggestLeaseMerges } from "../../tax/loanAmortization.js";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../../tax/financialLease.js";
+import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
-// Financiële lease is compleet zodra er genoeg is ingevuld om het rentepercentage te kunnen
-// berekenen (koopprijs, looptijd, maandbedrag) én een startdatum — zie FinancialLeaseDetailsModal.
-function isCompleteFinancialLeaseDetails(details) {
-  if (!details) return false;
-  return !!(details.koopprijs && details.looptijd && details.maandbedrag && details.startdatum);
-}
-
 function computeFinancialLeaseAmortization(lease, details) {
   if (!isCompleteFinancialLeaseDetails(details)) return null;
-  const onbetaaldGedeelteKoop = computeOnbetaaldGedeelteKoop(details);
-  const renteJaarlijks = computeFinancialLeaseRate(details);
-  if (renteJaarlijks == null) return null;
-  return computeLoanAmortization(lease.transactions, { leasebedrag: onbetaaldGedeelteKoop, startdatum: details.startdatum, rente: renteJaarlijks });
+  return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
 }
 
 export default function LeaseInterestPanel({
@@ -79,12 +69,20 @@ export default function LeaseInterestPanel({
               const details = leaseDetails[lease.key];
               const isOnbekend = isFinancieel && !!details?.onbekend;
               const amortization = isFinancieel ? computeFinancialLeaseAmortization(lease, details) : null;
+              // Bij meerdere opeenvolgende contracten (zie financialLease.js) telt alleen of het
+              // LAATSTE (huidige) contract is beëindigd — een eerder, al opgevolgd contract "stopt"
+              // altijd, dat is juist de bedoeling en geen signaal dat de hele lease voorbij is.
+              const segments = isFinancieel ? getLeaseSegments(details) : [];
+              const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
               return (
                 <div key={lease.key} className="rounded-md border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{lease.name}</span>
-                    {details?.contractBeeindigd && (
+                    {isBeeindigd && (
                       <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
+                    )}
+                    {segments.length > 1 && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{segments.length} contracten</span>
                     )}
                     <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     {!typeConfirmed ? (
