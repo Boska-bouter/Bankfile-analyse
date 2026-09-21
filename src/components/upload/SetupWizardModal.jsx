@@ -5,12 +5,13 @@ import { eur } from "../../utils/amounts.js";
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
-  0: "Rekening", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
+  0: "Rekening", 14: "Rechtsvorm", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
   korRegeling, setKorRegeling,
+  rechtsvorm, setRechtsvorm,
   btwVerlegd, setBtwVerlegd,
   onSetIncomeBtwRateChoice,
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
@@ -54,6 +55,7 @@ export default function SetupWizardModal({
     if (verwachteAOV === null) list.push(8);
     if (heeftVoorraad === null) list.push(9);
     if (pendingFileNames.length > 0) list.push(0);
+    if (rechtsvorm === null) list.push(14);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
       list.push(2);
@@ -331,6 +333,30 @@ export default function SetupWizardModal({
             </div>
           )}
 
+          {currentStepId === 14 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Onderneem je als eenmanszaak/zzp of vanuit een BV?</p>
+              <p className="text-xs text-slate-400">
+                Dit bepaalt welke belastingberekening de tool laat zien: inkomstenbelasting (IB) en Zvw voor een
+                eenmanszaak, of vennootschapsbelasting (Vpb) voor een BV. Dit kan later nog aangepast worden.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setRechtsvorm("zzp"); goNext(); }}
+                  className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                >
+                  Eenmanszaak/zzp
+                </button>
+                <button
+                  onClick={() => { setRechtsvorm("bv"); goNext(); }}
+                  className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                >
+                  BV
+                </button>
+              </div>
+            </div>
+          )}
+
           {currentStepId === 1 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Val je onder de kleineondernemersregeling (KOR)?</p>
@@ -483,7 +509,7 @@ export default function SetupWizardModal({
           {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
               én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
               slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
-          {![5, 6, 7, 8, 9, 10, 11, 12, 13].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"

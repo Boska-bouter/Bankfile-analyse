@@ -89,6 +89,15 @@ import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./tax/f
 //     importcontrole-scherm
 // ---------------------------------------------------------------------------
 
+// Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een projectbestand. Ontbreekt
+// het veld helemaal (een bestand/instellingen van vóór deze functie bestond) dan is dat altijd een
+// bestaand zzp-dossier — direct "zzp", nooit de nieuwe vraag. Staat het veld er al wel (ook al is
+// de waarde nog null, dus nog niet beantwoord), dan wordt die waarde gerespecteerd.
+function resolveRechtsvorm(obj) {
+  if (!obj || !Object.prototype.hasOwnProperty.call(obj, "rechtsvorm")) return "zzp";
+  return typeof obj.rechtsvorm === "string" ? obj.rechtsvorm : null;
+}
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -98,6 +107,11 @@ export default function App() {
   const [categoryBtwRates, setCategoryBtwRates] = useState(DEFAULT_BTW_RATES);
   const [btwVerlegd, setBtwVerlegd] = useState(null); // null = nog niet gevraagd
   const [korRegeling, setKorRegeling] = useState(null); // null = nog niet gevraagd
+  // null = nog niet gevraagd (nieuw project); "zzp" | "bv". Bij het laden van bestaande
+  // instellingen/projectbestanden die dit veld nog niet kennen (van vóór deze functie), wordt dit
+  // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
+  // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
+  const [rechtsvorm, setRechtsvorm] = useState(null);
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
@@ -192,6 +206,7 @@ export default function App() {
     setCategoryBtwRates(mergeBtwRates(settings.categoryBtwRates, settings.btwRatesVersion, migrateLegacyCategoryName));
     setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
+    setRechtsvorm(resolveRechtsvorm(settings));
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
@@ -285,7 +300,7 @@ export default function App() {
       const ok1 = await persistParsedFiles(parsedFiles);
       const ok2 = await persistSettings({
         accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, btwRatesVersion: BTW_RATES_VERSION,
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -298,7 +313,7 @@ export default function App() {
     })();
   }, [
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints,
+    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
@@ -376,7 +391,7 @@ export default function App() {
       label,
       state: {
         parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, excludedDuplicateFingerprints, excludedManualFingerprints,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus,
@@ -396,6 +411,7 @@ export default function App() {
     setCategoryBtwRates(s.categoryBtwRates);
     setBtwVerlegd(s.btwVerlegd);
     setKorRegeling(s.korRegeling);
+    setRechtsvorm(s.rechtsvorm);
     setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
     setExcludedManualFingerprints(s.excludedManualFingerprints);
     setBusinessKeywords(s.businessKeywords);
@@ -436,6 +452,7 @@ export default function App() {
   const setCategoryBtwRatesWithUndo = withUndo("BTW-percentage aangepast", setCategoryBtwRates);
   const setBtwVerlegdWithUndo = withUndo("BTW-verlegd aangepast", setBtwVerlegd);
   const setKorRegelingWithUndo = withUndo("KOR-instelling aangepast", setKorRegeling);
+  const setRechtsvormWithUndo = withUndo("Rechtsvorm aangepast", setRechtsvorm);
   const setOverridesByCounterpartyWithUndo = withUndo("Tegenpartijregel verwijderd", setOverridesByCounterparty);
   const setOpeningBalanceCorrection = (fileName, value) => {
     snapshotBeforeAction("Beginsaldo gecorrigeerd");
@@ -1271,7 +1288,7 @@ export default function App() {
   const saveProjectFile = () => {
     const project = buildProjectFile({
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-      categoryBtwRates, btwVerlegd, korRegeling, btwRatesVersion: BTW_RATES_VERSION,
+      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, btwRatesVersion: BTW_RATES_VERSION,
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -1295,6 +1312,7 @@ export default function App() {
       setCategoryBtwRates(mergeBtwRates(project.categoryBtwRates, project.btwRatesVersion, migrateLegacyCategoryName));
       setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
       setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
+      setRechtsvorm(resolveRechtsvorm(project));
       setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
       setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
       setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
@@ -1360,6 +1378,7 @@ export default function App() {
     setCategoryBtwRates(DEFAULT_BTW_RATES);
     setBtwVerlegd(null);
     setKorRegeling(null);
+    setRechtsvorm(null);
     setExcludedDuplicateFingerprints([]);
     setDismissedDuplicateNotice(false);
     setExcludedManualFingerprints([]);
@@ -1687,6 +1706,8 @@ export default function App() {
             onAccountTypeChoose={setAccountType}
             korRegeling={korRegeling}
             setKorRegeling={setKorRegelingWithUndo}
+            rechtsvorm={rechtsvorm}
+            setRechtsvorm={setRechtsvormWithUndo}
             btwVerlegd={btwVerlegd}
             setBtwVerlegd={setBtwVerlegdWithUndo}
             onSetIncomeBtwRateChoice={setIncomeBtwRateChoice}
