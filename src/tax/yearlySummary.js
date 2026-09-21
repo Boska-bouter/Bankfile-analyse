@@ -94,9 +94,9 @@ export function computeVolledigeJaren(classified) {
 // en staan er wel typische privé-uitgaven tussen (anders is het beeld mogelijk vertekend omdat
 // niet alle privé-uitgaven zijn opgegeven).
 const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
-export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems) {
+export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, zvwEstimate) {
   if (!activeYear || !summary) return null;
-  const ibBelastingEffectief = ibEstimate.belasting;
+  const ibBelastingEffectief = ibEstimate.belasting + (zvwEstimate?.bijdrage || 0);
   const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
   const verschil = summary.winst - effectievePriveUitgegeven - openOB - ibBelastingEffectief;
 

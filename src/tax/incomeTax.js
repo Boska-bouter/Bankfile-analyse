@@ -9,12 +9,21 @@ export const IB_TARIEVEN_BY_YEAR = {
   2026: { brackets: [{ tot: 38883, tarief: 0.3575 }, { tot: 78426, tarief: 0.3756 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 1200, mkbPct: 12.7 },
 };
 
+// Winst na zelfstandigenaftrek en mkb-winstvrijstelling — dit is tegelijk de belastbare winst
+// voor box 1 (IB) én de grondslag ("bijdrage-inkomen") voor de inkomensafhankelijke bijdrage
+// Zvw. Eén plek voor deze tussenstap, zodat beide schattingen altijd van hetzelfde bedrag uitgaan.
+function computeBelastbaarWinst(winst, year) {
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
+  const naZelfstandigenaftrek = Math.max(0, winst - t.zelfstandigenaftrek);
+  return naZelfstandigenaftrek * (1 - t.mkbPct / 100);
+}
+
 export function estimateIncomeTax(winst, year) {
   if (!winst || winst <= 0) return { belasting: 0, geëxtrapoleerd: false };
   const clampedYear = Math.max(2023, Math.min(2026, year));
   const t = IB_TARIEVEN_BY_YEAR[clampedYear];
-  const naZelfstandigenaftrek = Math.max(0, winst - t.zelfstandigenaftrek);
-  const belastbaar = naZelfstandigenaftrek * (1 - t.mkbPct / 100);
+  const belastbaar = computeBelastbaarWinst(winst, year);
   let belasting = 0;
   let vorige = 0;
   for (const schijf of t.brackets) {
@@ -24,6 +33,29 @@ export function estimateIncomeTax(winst, year) {
     if (belastbaar <= schijf.tot) break;
   }
   return { belasting, geëxtrapoleerd: clampedYear !== year };
+}
+
+// Grove, indicatieve schatting van de inkomensafhankelijke bijdrage Zorgverzekeringswet (Zvw) die
+// een zelfstandige (eenmanszaak/zzp) via de eigen aanslag IB betaalt — dit is het "lage" tarief
+// (zelfstandigen dragen zelf de volledige bijdrage af, in tegenstelling tot werknemers waarbij de
+// werkgever een deel vergoedt). Grondslag is dezelfde belastbare winst als bij de IB-schatting
+// hierboven, met een wettelijk maximum bijdrage-inkomen per jaar. Bron: gepubliceerde Zvw-
+// percentages en -maxima van de Belastingdienst. Check jaarlijks of deze bedragen nog kloppen.
+export const ZVW_TARIEVEN_BY_YEAR = {
+  2023: { pct: 5.43, maxBijdrageInkomen: 66956 },
+  2024: { pct: 5.32, maxBijdrageInkomen: 71624 },
+  2025: { pct: 5.26, maxBijdrageInkomen: 75864 },
+  2026: { pct: 4.85, maxBijdrageInkomen: 79409 },
+};
+
+export function estimateZvw(winst, year) {
+  if (!winst || winst <= 0) return { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false };
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
+  const belastbaar = computeBelastbaarWinst(winst, year);
+  const gemaximeerd = belastbaar > z.maxBijdrageInkomen;
+  const grondslag = Math.min(belastbaar, z.maxBijdrageInkomen);
+  return { bijdrage: grondslag * (z.pct / 100), geëxtrapoleerd: clampedYear !== year, grondslag, gemaximeerd };
 }
 
 // Kleinschaligheidsinvesteringsaftrek (KIA) 2026 — drempels volgens de Belastingdienst. Check

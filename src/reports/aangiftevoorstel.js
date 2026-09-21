@@ -1,7 +1,7 @@
 import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
-import { estimateIncomeTax } from "../tax/incomeTax.js";
+import { estimateIncomeTax, estimateZvw } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
@@ -77,9 +77,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
   const ibEstimate = estimateIncomeTax(summary.winst, year);
+  const zvwEstimate = estimateZvw(summary.winst, year);
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
 
   // Gaten in de bestandscontinuïteit die dit jaar raken — eenmalig bepaald, gebruikt voor zowel de
   // status bovenaan als de "Algemene gegevens"-bijlage verderop.
@@ -175,6 +176,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <div><span class="label">Omzet</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
       <div><span class="label">Zakelijke kosten</span><span class="bedrag">${eur(kostenTotaal)}</span></div>
       <div><span class="label">Geschatte inkomstenbelasting*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
+      <div><span class="label">Geschatte Zvw-bijdrage*</span><span class="bedrag">${eur(zvwEstimate.bijdrage)}</span></div>
     </div>
     ${kwartalen.length > 0
       ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
@@ -195,6 +197,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ib.overigeBedrijfskosten.length > 0
       ? `
   <div class="rubriek"><span>4. Overige bedrijfskosten</span><span></span></div>
+  <p class="toelichting">Bedragen zijn netto (exclusief BTW).</p>
   ${ib.overigeBedrijfskosten
     .map((r) => `<div class="subrubriek"><span>${esc(r.naam)}</span><span class="num">${eur(r.totaal)}</span></div>${categorieDetailHtml(r.perCategorie)}`)
     .join("")}`
@@ -246,8 +249,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
   <div class="wvr">
-    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
-    ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, ib.inkoopkosten.toelichting, ib.inkoopkosten.perCategorie)}
+    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, "Netto (exclusief BTW) — zoals in de IB-aangifte, niet het bruto bankbedrag.", ib.opbrengsten.perCategorie)}
+    ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, `${ib.inkoopkosten.toelichting} Bedragen zijn netto (exclusief BTW).`, ib.inkoopkosten.perCategorie)}
     ${rubriekBlok(
       3, ib.afschrijvingen.naam,
       ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering,
@@ -256,7 +259,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     )}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
-    <div class="rubriek total"><span>Resultaat uit onderneming (winst, bruto)</span><span class="num">${eur(summary.winst)}</span></div>
+    <div class="rubriek total"><span>Resultaat uit onderneming (winst, netto)</span><span class="num">${eur(summary.winst)}</span></div>
     ${priveHtml}
     ${belastingenHtml}
     ${verkoopActivaHtml}
@@ -292,9 +295,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <tbody>${kwartaalRows}</tbody>
   </table>` : ""}
 
-  <h2>Indicatieve inkomstenbelasting</h2>
-  <p>Geschat: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
-  <p class="vergelijk-hint">Vergelijk dit geschatte bedrag met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting over dit jaar.</p>
+  <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
+  <p>Geschatte inkomstenbelasting: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
+  <p>Geschatte bijdrage Zorgverzekeringswet (Zvw): <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar)" : ""}${zvwEstimate.geëxtrapoleerd ? " (Zvw-percentage van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende percentage)" : ""} — het lage (zelfstandigen-)tarief over dezelfde belastbare winst als hierboven. Geen belastingadvies.</p>
+  <p class="vergelijk-hint">Vergelijk deze geschatte bedragen met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting en Zvw over dit jaar (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht in de tool).</p>
 
   <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
   <table>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eurTight } from "../../utils/amounts.js";
-import { estimateIncomeTax } from "../../tax/incomeTax.js";
+import { estimateIncomeTax, estimateZvw } from "../../tax/incomeTax.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
 import ZakelijkTotaalModal from "./ZakelijkTotaalModal.jsx";
@@ -21,13 +21,14 @@ export default function MultiYearOverview({
     if (!summary) return null;
     const openOB = yearlyOpenOB[year] || 0;
     const ibEstimate = estimateIncomeTax(summary.winst, year);
+    const zvwEstimate = estimateZvw(summary.winst, year);
     const ibGedaan = !!ibStatus[year]?.gedaan;
-    const ibBelastingEffectief = ibEstimate.belasting;
+    const ibBelastingEffectief = ibEstimate.belasting + zvwEstimate.bijdrage;
     const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
     const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
     const verschil = summary.winst - effectievePriveUitgegeven - (korRegeling ? 0 : openOB) - ibBelastingEffectief;
     const zakelijkTotaalNetto = summary.winst - effectievePriveUitgegeven;
-    return { summary, openOB, ibEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto };
+    return { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto };
   };
 
   return (
@@ -73,6 +74,7 @@ export default function MultiYearOverview({
                 <th className="text-right font-medium py-2 px-3">Voorbelasting</th>
                 {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen OB</th>}
                 <th className="text-right font-medium py-2 px-3">Geschat IB*</th>
+                <th className="text-right font-medium py-2 px-3">Geschat Zvw*</th>
                 <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">IB-status</th>
                 <th className="text-right font-medium py-2 pl-3">Tekort / Over</th>
                 <th className="text-right font-medium py-2 pl-3">Trend t.o.v. vorig jaar</th>
@@ -82,7 +84,7 @@ export default function MultiYearOverview({
               {years.map((year) => {
                 const d = effectiefFor(year);
                 if (!d) return null;
-                const { summary, openOB, ibEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto } = d;
+                const { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil, zakelijkTotaalNetto } = d;
                 const isTekort = verschil < 0;
                 const prev = effectiefFor(year - 1);
                 const beideJarenVolledig = volledigeJaren.has(year) && volledigeJaren.has(year - 1);
@@ -125,6 +127,11 @@ export default function MultiYearOverview({
                     <td className="py-2 px-3 text-right whitespace-nowrap">
                       <span className="font-mono text-slate-500">-{eurTight(ibEstimate.belasting)}{ibEstimate.geëxtrapoleerd ? "*" : ""}</span>
                     </td>
+                    <td className="py-2 px-3 text-right whitespace-nowrap">
+                      <span className="font-mono text-slate-500" title={zvwEstimate.gemaximeerd ? "Bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar" : undefined}>
+                        -{eurTight(zvwEstimate.bijdrage)}{zvwEstimate.geëxtrapoleerd ? "*" : ""}{zvwEstimate.gemaximeerd ? " (max.)" : ""}
+                      </span>
+                    </td>
                     <td className="py-2 px-3 whitespace-nowrap">
                       <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
                         <input type="checkbox" checked={ibGedaan} onChange={(e) => setIbGedaan(year, e.target.checked)} />
@@ -154,9 +161,9 @@ export default function MultiYearOverview({
           </table>
           <p className="mt-2 text-xs text-slate-400">Klik op een jaar om ernaartoe te springen.</p>
           <p className="mt-1 text-xs text-slate-400">
-            * Grove, indicatieve schatting van de inkomstenbelasting over de winst — zonder heffingskortingen,
-            startersaftrek of overig inkomen. Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen,
-            ZVW/IH) bewust uit.
+            * Grove, indicatieve schattingen van de inkomstenbelasting en de inkomensafhankelijke bijdrage
+            Zorgverzekeringswet (Zvw) over de winst — zonder heffingskortingen, startersaftrek of overig inkomen.
+            Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit.
           </p>
           <button onClick={() => setShowHiddenCols((v) => !v)} className="mt-2 text-xs font-medium text-slate-500 underline hover:no-underline">
             {showHiddenCols ? "Verberg Zak. Uit. / Uitbet/Opn. Prive" : "Toon Zak. Uit. / Uitbet/Opn. Prive"}

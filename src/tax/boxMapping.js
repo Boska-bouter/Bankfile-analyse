@@ -1,4 +1,5 @@
 import { CATEGORY_ORDER } from "../classification/categories.js";
+import { computeBtw } from "./btw.js";
 
 // Welke categorieën in welk vak van de BTW-aangifte terechtkomen — puur informatief, gebaseerd
 // op de eigen BTW-instellingen (percentages, uitgesloten van voorbelasting).
@@ -37,7 +38,7 @@ const BELASTINGEN_GEEN_KOSTENPOST = [
 // ingedeeld" terecht zou komen als het toch een keer als Zakelijk voorkomt.
 const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", "Leningen", "Lease (financieel)"];
 
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear) {
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd) {
   const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount, 0));
   const perCategorieVan = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
@@ -45,11 +46,24 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     naam, categorieen: cats, totaal: sumCat(cats), toelichting, perCategorie: perCategorieVan(cats),
   });
 
+  // Voor de IB-aangifte moeten omzet en zakelijke kosten NETTO (exclusief BTW) worden opgegeven —
+  // de bank laat altijd het bruto (inclusief-BTW) bedrag zien. Dit is exact dezelfde "bruto - BTW"-
+  // correctie die elders al gebeurt (summary.winst in yearlySummary.js, en de netto-kolom van het
+  // categorieoverzicht in het aangiftevoorstel zelf), nu ook toegepast op de rubrieken hieronder
+  // zodat de losse regels van deze winst-en-verliesrekening optellen tot hetzelfde resultaat.
+  const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
+  const sumCatNetto = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0));
+  const perCategorieVanNetto = (cats) =>
+    cats.map((c) => ({ categorie: c, totaal: sumCatNetto([c]) })).filter((r) => r.totaal > 0);
+  const rubriekNetto = (naam, cats, toelichting) => ({
+    naam, categorieen: cats, totaal: sumCatNetto(cats), toelichting, perCategorie: perCategorieVanNetto(cats),
+  });
+
   const overigeBedrijfskosten = [
-    rubriek("Auto- en transportkosten", RUBRIEK_AUTO),
-    rubriek("Huisvestingskosten", RUBRIEK_HUISVESTING),
-    rubriek("Verkoopkosten", RUBRIEK_VERKOOP),
-    rubriek("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
+    rubriekNetto("Auto- en transportkosten", RUBRIEK_AUTO),
+    rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING),
+    rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
+    rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
   ].filter((r) => r.totaal > 0);
 
   const apparatuurInvestering = sumCat(["Zakelijk - apparatuur/machines"]);
@@ -68,8 +82,8 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     .filter((r) => r.totaal > 0);
 
   return {
-    opbrengsten: rubriek("Opbrengsten", RUBRIEK_OPBRENGSTEN),
-    inkoopkosten: rubriek(
+    opbrengsten: rubriekNetto("Opbrengsten", RUBRIEK_OPBRENGSTEN),
+    inkoopkosten: rubriekNetto(
       "Inkoopkosten, uitbesteed werk en andere externe kosten", RUBRIEK_INKOOP,
       "Inhuur van derden/freelancers staat hier onder \"uitbesteed werk\" — niet bij Personeelskosten."
     ),

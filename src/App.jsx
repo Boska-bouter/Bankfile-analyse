@@ -9,7 +9,7 @@ import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
-import { estimateIncomeTax } from "./tax/incomeTax.js";
+import { estimateIncomeTax, estimateZvw } from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
@@ -1035,6 +1035,10 @@ export default function App() {
     () => (yearlySummary ? estimateIncomeTax(yearlySummary.winst, activeYear) : { belasting: 0, geëxtrapoleerd: false }),
     [yearlySummary, activeYear]
   );
+  const zvwEstimate = useMemo(
+    () => (yearlySummary ? estimateZvw(yearlySummary.winst, activeYear) : { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false }),
+    [yearlySummary, activeYear]
+  );
   const yearlySummaries = useMemo(() => {
     const map = {};
     for (const y of years) {
@@ -1056,8 +1060,8 @@ export default function App() {
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
-    return computeBusinessAdvies(activeYear, yearlySummary, yearlyOpenOB[activeYear] || 0, ibEstimate, !!ibStatus[activeYear]?.gedaan, priGroupForYear.items);
-  }, [activeYear, yearlySummary, yearlyOpenOB, ibEstimate, ibStatus, priGroupForYear]);
+    return computeBusinessAdvies(activeYear, yearlySummary, yearlyOpenOB[activeYear] || 0, ibEstimate, !!ibStatus[activeYear]?.gedaan, priGroupForYear.items, zvwEstimate);
+  }, [activeYear, yearlySummary, yearlyOpenOB, ibEstimate, zvwEstimate, ibStatus, priGroupForYear]);
 
   // ---- Voortgangspercentage per jaar (voor de jaarknoppen in "Werk te doen") ----
   const yearlyProgress = useMemo(() => {
