@@ -1,4 +1,4 @@
-import { useMemo, useState, Fragment } from "react";
+import { useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
@@ -106,10 +106,33 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
+  const [amountFilterAlign, setAmountFilterAlign] = useState("right"); // "right" | "left"
+  const amountFilterBtnRef = useRef(null);
   const [amountMin, setAmountMin] = useState("");
   const [amountMax, setAmountMax] = useState("");
   const [amountSign, setAmountSign] = useState("beide"); // "beide" | "neg" | "pos"
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [dateFilterAlign, setDateFilterAlign] = useState("right"); // "right" | "left"
+  const dateFilterBtnRef = useRef(null);
+
+  // Deze twee filterknoppen openen een klein, absoluut gepositioneerd venstertje eronder. Bij een
+  // rechts-uitgelijnd venster (het gebruikelijke geval — de knop staat meestal niet aan de uiterste
+  // linkerkant) klopt dat prima, maar staat de knop wél dicht tegen de linkerrand (bijv. doordat de
+  // knoppenrij op een smal scherm is afgebroken/gewrapt), dan schiet een rechts-uitgelijnd venster
+  // met een vaste breedte voorbij de linkerrand van het scherm — precies het "niet goed aligned"-
+  // beeld met de invulvakken die er half af vallen. Bij het openen wordt daarom even gemeten of er
+  // vanaf de knop genoeg ruimte naar links is; zo niet, dan lijnt het venster voortaan links uit
+  // (en groeit het dus naar rechts, waar meestal wel ruimte is).
+  const openFilterPopup = (btnRef, popupWidthPx, setAlign, setOpen) => {
+    setOpen((wasOpen) => {
+      const willOpen = !wasOpen;
+      if (willOpen && btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect();
+        setAlign(rect.right - popupWidthPx < 8 ? "left" : "right");
+      }
+      return willOpen;
+    });
+  };
   const [filterHeuristic, setFilterHeuristic] = useState(false); // 🟡 Controleren
   const [filterFallback, setFilterFallback] = useState(false); // 🔴 Onduidelijk
   const [dateFrom, setDateFrom] = useState("");
@@ -202,7 +225,8 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
             <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" suggestions={searchSuggestions} />
             <div className="relative shrink-0">
               <button
-                onClick={() => setShowAmountFilter((v) => !v)}
+                ref={amountFilterBtnRef}
+                onClick={() => openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter)}
                 className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   amountMin || amountMax || amountSign !== "beide" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -210,7 +234,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                 Bedrag{(amountMin || amountMax || amountSign !== "beide") ? " ✓" : ""}
               </button>
               {showAmountFilter && (
-                <div className="absolute right-0 z-10 mt-1 w-60 rounded-md border border-slate-200 bg-white p-3 shadow-lg">
+                <div className={`absolute ${amountFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-60 max-w-[calc(100vw-2rem)] rounded-md border border-slate-200 bg-white p-3 shadow-lg`}>
                   <p className="text-xs text-slate-500 mb-2">Filter op bedrag</p>
                   <div className="flex gap-1 mb-2">
                     <button onClick={() => setAmountSign("beide")} className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${amountSign === "beide" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Beide</button>
@@ -232,7 +256,8 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
             </div>
             <div className="relative shrink-0">
               <button
-                onClick={() => setShowDateFilter((v) => !v)}
+                ref={dateFilterBtnRef}
+                onClick={() => openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter)}
                 className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   dateFrom || dateTo ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -240,7 +265,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                 Datum{(dateFrom || dateTo) ? " ✓" : ""}
               </button>
               {showDateFilter && (
-                <div className="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-3 shadow-lg">
+                <div className={`absolute ${dateFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-slate-200 bg-white p-3 shadow-lg`}>
                   <p className="text-xs text-slate-500 mb-2">Filter op periode</p>
                   <div className="space-y-2">
                     <div>
