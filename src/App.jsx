@@ -1324,12 +1324,22 @@ export default function App() {
     if (incompleteLeases.length > 0) {
       items.push({ key: "leases", text: `${incompleteLeases.length} lease(s) nog niet (volledig) bepaald`, ref: leasesSectionRef });
     }
+    // Deze drie ("verwachte" lease/lening/AOV, uit de wizard) blijven een open punt totdat de
+    // naam wordt teruggevonden in de transacties — maar bij een tikfout in de naam tijdens de
+    // wizard (of als het toch niet relevant blijkt) gebeurt dat natuurlijk nooit. De wizard vraagt
+    // dit maar één keer (zie SetupWizardModal: pas opnieuw als de state weer op null staat), dus
+    // zonder een eigen manier om de naam hier te corrigeren of het punt te verwijderen bleef zo'n
+    // open punt voor altijd hangen, met een "Ga erheen"-knop die nergens heen kan gaan als er
+    // (door de verkeerde naam) sowieso geen lease/lening in de transacties herkend is.
     (verwachteLease || []).forEach((item, idx) => {
       if (!item.gevonden) {
         items.push({
           key: `verwachte-lease-${idx}`,
           text: `Je gaf aan dat er een leaseauto is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
           ref: leasesSectionRef,
+          naam: item.naam,
+          onRename: (nieuweNaam) => setVerwachteLease((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
+          onRemove: () => setVerwachteLease((prev) => (prev || []).filter((_, i) => i !== idx)),
         });
       }
     });
@@ -1339,11 +1349,20 @@ export default function App() {
           key: `verwachte-lening-${idx}`,
           text: `Je gaf aan dat er een zakelijke lening is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
           ref: loansSectionRef,
+          naam: item.naam,
+          onRename: (nieuweNaam) => setVerwachteLening((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
+          onRemove: () => setVerwachteLening((prev) => (prev || []).filter((_, i) => i !== idx)),
         });
       }
     });
     if (verwachteAOV?.status === "ja" && !verwachteAOV.gevonden) {
-      items.push({ key: "verwachte-aov", text: `Je gaf aan dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties` });
+      items.push({
+        key: "verwachte-aov",
+        text: `Je gaf aan dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+        naam: verwachteAOV.naam,
+        onRename: (nieuweNaam) => setVerwachteAOV((prev) => ({ ...prev, naam: nieuweNaam })),
+        onRemove: () => setVerwachteAOV(null),
+      });
     }
     if (transactions.length > 0 && korRegeling === null) {
       items.push({ key: "kor", text: "KOR-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
