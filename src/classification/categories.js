@@ -353,8 +353,21 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Boekhouder & advies": "Boekhouder, accountant & administratie",
 };
 
+// Volgt de hernoem-keten volledig door in plaats van maar één stap: "Specials" is ooit hernoemd naar
+// "Overige gevoelige uitgaven", die op zijn beurt weer is hernoemd naar "Persoonlijk & vertrouwelijk"
+// — een dossier dat nog de allereerste naam bevat (bijv. een oude override) bleef bij één enkele
+// lookup op de tussenliggende naam "Overige gevoelige uitgaven" hangen, die zelf niet meer bestaat
+// in CATEGORY_FISCAL_TREATMENT en dus ten onrechte als (aftrekbare) zakelijke kosten meetelde in
+// plaats van als privé/"geen" te worden uitgesloten. De cyclus-bescherming (seen) is een vangnet;
+// er bestaat momenteel geen kringverwijzing in LEGACY_CATEGORY_RENAMES.
 export function migrateLegacyCategoryName(name) {
-  return LEGACY_CATEGORY_RENAMES[name] || name;
+  let current = name;
+  const seen = new Set();
+  while (LEGACY_CATEGORY_RENAMES[current] && !seen.has(current)) {
+    seen.add(current);
+    current = LEGACY_CATEGORY_RENAMES[current];
+  }
+  return current;
 }
 
 // CATEGORY_ORDER/CATEGORY_COLOR leven bewust buiten React-state: ze worden direct gelezen door

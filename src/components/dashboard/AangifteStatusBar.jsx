@@ -55,7 +55,7 @@ export default function AangifteStatusBar({
           onClick={onOpenAangiftevoorstel}
           className="shrink-0 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-100"
         >
-          Aangiftevoorstel bekijken
+          Indicatieve aangifteberekening bekijken
         </button>
       </div>
       <div className="px-4 py-2.5 flex flex-wrap items-center gap-x-1 gap-y-1.5 text-xs text-slate-600 border-b border-slate-100">

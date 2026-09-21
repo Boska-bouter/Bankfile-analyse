@@ -113,6 +113,24 @@ function resolveHeeftHolding(obj) {
   return typeof obj.heeftHolding === "boolean" ? obj.heeftHolding : null;
 }
 
+// mergeCategoryRules/mergeBtwRates migreren een oude categorienaam (bijv. "Boekhouder & advies" →
+// "Boekhouder, accountant & administratie") al voor de categorieregels en de BTW-tarieven, maar
+// overridesByCounterparty/overridesByRow zijn losse, per-transactie opgeslagen keuzes die dezelfde
+// oude naam net zo goed nog letterlijk kunnen bevatten (bijv. een handmatige override die vóór de
+// hernoeming is gezet). Zonder deze migratie blijven die transacties voor altijd onder de oude,
+// niet meer bestaande naam hangen — ze vallen dan uit de win-en-verliesrekening in "Nog niet
+// ingedeeld", ook al is er geen categorisatieprobleem, alleen een verouderde naam.
+function migrateOverridesCategories(overrides) {
+  if (!overrides || typeof overrides !== "object") return overrides || {};
+  const out = {};
+  for (const [key, val] of Object.entries(overrides)) {
+    out[key] = val && typeof val === "object" && val.category
+      ? { ...val, category: migrateLegacyCategoryName(val.category) }
+      : val;
+  }
+  return out;
+}
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -223,8 +241,8 @@ export default function App() {
 
   const applySettingsToState = (settings) => {
     setAccountTypeByFile(settings.accountTypeByFile || {});
-    setOverridesByCounterparty(settings.overridesByCounterparty || {});
-    setOverridesByRow(settings.overridesByRow || {});
+    setOverridesByCounterparty(migrateOverridesCategories(settings.overridesByCounterparty));
+    setOverridesByRow(migrateOverridesCategories(settings.overridesByRow));
     if (Array.isArray(settings.categoryRules)) setCategoryRules(mergeCategoryRules(settings.categoryRules));
     setCategoryBtwRates(mergeBtwRates(settings.categoryBtwRates, settings.btwRatesVersion, migrateLegacyCategoryName));
     setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
@@ -1257,7 +1275,7 @@ export default function App() {
       { label: "Transacties", state: txDone ? "done" : "oranje" },
       { label: "BTW", state: btwState },
       { label: "Jaarcontrole", state: yearlyProgress[activeYear]?.status || "oranje" },
-      { label: "Aangiftevoorstel", state: "todo" },
+      { label: "Indicatieve berekening", state: "todo" },
     ];
   }, [activeYear, parsedFiles.length, checklistData, korRegeling, btwVerlegd, yearlyProgress]);
 
@@ -1364,8 +1382,8 @@ export default function App() {
       const project = await readProjectFile(file);
       setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
       setAccountTypeByFile(project.accountTypeByFile || {});
-      setOverridesByCounterparty(project.overridesByCounterparty || {});
-      setOverridesByRow(project.overridesByRow || {});
+      setOverridesByCounterparty(migrateOverridesCategories(project.overridesByCounterparty));
+      setOverridesByRow(migrateOverridesCategories(project.overridesByRow));
       if (Array.isArray(project.categoryRules)) setCategoryRules(mergeCategoryRules(project.categoryRules));
       setCategoryBtwRates(mergeBtwRates(project.categoryBtwRates, project.btwRatesVersion, migrateLegacyCategoryName));
       setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
@@ -1600,19 +1618,6 @@ export default function App() {
       </header>
 
       {updateAvailable && <UpdateAvailableBanner />}
-
-      {rechtsvorm === "bv" && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5">
-          <p className="max-w-7xl mx-auto text-xs text-amber-800">
-            <strong>De BV-tak van deze tool is nog in ontwikkeling.</strong> Categorieën als DGA-salaris,
-            dividenduitkering en rekening-courant, de Vpb-schatting, het BV-Aangiftevoorstel en het Meerjarenoverzicht
-            BV zijn al beschikbaar — maar er is nog geen ondersteuning voor een holdingstructuur (holding +
-            werkmaatschappij), fiscale eenheid of meerdere aandeelhouders, en de balans is beperkt tot
-            rekening-courant en een indicatief eigen vermogen (geen volledige jaarrekening). Gebruik de cijfers dus
-            als hulpmiddel, niet als vervanging van je boekhouder of accountant bij de echte aangifte.
-          </p>
-        </div>
-      )}
 
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
@@ -2164,9 +2169,9 @@ export default function App() {
                         setShowAangifteYearPicker((v) => !v);
                       }}
                       className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Bekijk het aangiftevoorstel"
+                      title="Bekijk de indicatieve aangifteberekening"
                     >
-                      <Download className="h-3.5 w-3.5" /> Aangiftevoorstel
+                      <Download className="h-3.5 w-3.5" /> Indicatieve berekening
                     </button>
                   </div>
                 </div>
@@ -2177,7 +2182,7 @@ export default function App() {
                     opent pas daarna de bestaande checkbox-lijst. */}
                 {showAangifteYearPicker && !showAangifteMeerdereJaren && (
                   <div className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
-                    <p className="text-sm font-medium">Aangiftevoorstel voor {activeYear}</p>
+                    <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
                     {yearlyProgress[activeYear] && (
                       <p className="text-sm flex items-center gap-1.5">
                         <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
@@ -2198,7 +2203,7 @@ export default function App() {
                         onClick={() => exportAangiftevoorstel([activeYear])}
                         className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
                       >
-                        Voorstel bekijken
+                        Berekening bekijken
                       </button>
                       <button
                         onClick={() => {
@@ -2218,7 +2223,7 @@ export default function App() {
 
                 {showAangifteYearPicker && showAangifteMeerdereJaren && (
                   <div className="rounded-lg border border-slate-300 bg-white p-4">
-                    <p className="text-sm font-medium mb-2">Voor welke jaren wil je een aangiftevoorstel?</p>
+                    <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
                     <div className="flex flex-wrap gap-3 mb-3">
                       {years.map((year) => (
                         <label key={year} className="inline-flex items-center gap-1.5 text-sm">
@@ -2233,7 +2238,7 @@ export default function App() {
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => exportAangiftevoorstel()} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
-                        Toon voorbeeld
+                        Berekening tonen
                       </button>
                       <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                         Terug
@@ -2379,7 +2384,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={() => setAangiftevoorstelPreview(null)}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
-                <p className="text-sm font-semibold">Voorbeeld: Aangiftevoorstel {selectedAangifteYears.join(", ")}</p>
+                <p className="text-sm font-semibold">Indicatieve aangifteberekening {selectedAangifteYears.join(", ")}</p>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
                     <Download className="h-4 w-4" /> Downloaden

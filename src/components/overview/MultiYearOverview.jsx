@@ -61,10 +61,10 @@ export default function MultiYearOverview({
                 <th className="text-left font-medium py-2 pr-3">Jaar</th>
                 <th className="text-right font-medium py-2 px-3" title="Bruto, zoals op de bank binnengekomen (incl. BTW)">Zakelijk inkomen</th>
                 <th className="text-right font-medium py-2 px-3">BTW-afdracht</th>
-                <th className="text-right font-medium py-2 px-3" title="Zakelijk inkomen minus BTW-afdracht — zelfde bedrag als 'Opbrengsten' in het Aangiftevoorstel">Netto omzet</th>
-                <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (excl. BTW) — zelfde bedrag als in het Aangiftevoorstel">Zakelijke kosten</th>
+                <th className="text-right font-medium py-2 px-3" title="Zakelijk inkomen minus BTW-afdracht — zelfde bedrag als 'Opbrengsten' in de indicatieve aangifteberekening">Netto omzet</th>
+                <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (excl. BTW) — zelfde bedrag als in de indicatieve aangifteberekening">Zakelijke kosten</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting</th>
-                <th className="text-right font-medium py-2 px-3" title="Netto omzet min zakelijke kosten min aftrekbare rente — zelfde bedrag als 'Resultaat uit onderneming' in het Aangiftevoorstel">WUO (netto)</th>
+                <th className="text-right font-medium py-2 px-3" title="Netto omzet min zakelijke kosten min aftrekbare rente — zelfde bedrag als 'Resultaat uit onderneming' in de indicatieve aangifteberekening">WUO (netto)</th>
                 <th className="text-right font-medium py-2 px-3">Overboeking naar privé</th>
                 <th className="text-right font-medium py-2 px-3">Privé uitgaven</th>
                 {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen BTW</th>}

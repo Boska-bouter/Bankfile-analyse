@@ -25,8 +25,8 @@ export default function ZakelijkTotaalModal({ year, winst, priveUitgegeven, tota
             <span className="font-mono text-slate-800">{eur(totaal)}</span>
           </div>
           <p className="text-xs text-slate-400 pt-1">
-            Voor de volledige uitsplitsing van de winst zelf (opbrengsten, kosten, afschrijvingen, etc.) — zie het
-            Aangiftevoorstel voor dit jaar.
+            Voor de volledige uitsplitsing van de winst zelf (opbrengsten, kosten, afschrijvingen, etc.) — zie de
+            indicatieve aangifteberekening voor dit jaar.
           </p>
         </div>
         <div className="px-4 py-3 border-t border-slate-200 flex justify-end">

@@ -36,7 +36,7 @@ export default function MultiYearOverviewBV({
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
                 <th className="text-left font-medium py-2 pr-3">Jaar</th>
                 <th className="text-right font-medium py-2 px-3" title="Netto omzet, exclusief BTW">Omzet</th>
-                <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (incl. DGA-salaris) — zelfde bedrag als in het Aangiftevoorstel BV">Kosten</th>
+                <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (incl. DGA-salaris) — zelfde bedrag als in de indicatieve aangifteberekening BV">Kosten</th>
                 <th className="text-right font-medium py-2 px-3" title="Omzet minus kosten, vóór vennootschapsbelasting">Resultaat vóór Vpb</th>
                 <th className="text-right font-medium py-2 px-3">Geschatte Vpb*</th>
                 <th className="text-right font-medium py-2 px-3" title="Resultaat vóór Vpb minus de geschatte vennootschapsbelasting">Resultaat ná Vpb</th>

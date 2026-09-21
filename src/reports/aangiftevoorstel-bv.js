@@ -230,7 +230,7 @@ function buildYearSectionBv(
   }</p>` : ""}`;
 
   return `
-  <h1>Aangiftevoorstel BV / fiscale reconstructie — ${year}</h1>
+  <h1>Indicatieve aangifteberekening BV / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]} · Gewone BTW-plicht (KOR niet van toepassing voor een BV) ·
     op basis van beschikbare bankgegevens
@@ -325,7 +325,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>
-<html lang="nl"><head><meta charset="utf-8"><title>Aangiftevoorstel BV ${jaren.join(", ")}</title>
+<html lang="nl"><head><meta charset="utf-8"><title>Indicatieve aangifteberekening BV ${jaren.join(", ")}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 11px; }
@@ -409,7 +409,7 @@ export function downloadAangiftevoorstelBv(html, years) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Aangiftevoorstel_BV_${years.join("-")}.html`;
+  a.download = `Indicatieve_aangifteberekening_BV_${years.join("-")}.html`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
