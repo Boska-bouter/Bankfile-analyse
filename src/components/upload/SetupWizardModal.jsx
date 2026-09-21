@@ -5,13 +5,14 @@ import { eur } from "../../utils/amounts.js";
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
-  0: "Rekening", 14: "Rechtsvorm", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
+  0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
 
 export default function SetupWizardModal({
   pendingFileNames, onAccountTypeChoose,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
+  heeftHolding, setHeeftHolding,
   btwVerlegd, setBtwVerlegd,
   onSetIncomeBtwRateChoice,
   quartersToAsk, kwartaalStatus, setKwartaalStatusField,
@@ -56,6 +57,7 @@ export default function SetupWizardModal({
     if (heeftVoorraad === null) list.push(9);
     if (pendingFileNames.length > 0) list.push(0);
     if (rechtsvorm === null) list.push(14);
+    if (heeftHolding === null) list.push(15);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
       list.push(2);
@@ -72,6 +74,7 @@ export default function SetupWizardModal({
     if (doneIds.has(id)) return false;
     if ((id === 2 || id === 3) && korRegeling === true) return false;
     if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
+    if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
     return true;
   });
 
@@ -357,6 +360,33 @@ export default function SetupWizardModal({
             </div>
           )}
 
+          {currentStepId === 15 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Staat er een holding boven deze BV (een holding-werkmaatschappijstructuur)?</p>
+              <p className="text-xs text-slate-400">
+                Bij zo'n structuur zit het ondernemersrisico in de werkmaatschappij, en worden activa en opgebouwde
+                reserves meestal in de holding ondergebracht (zekerstelling bij een eventueel faillissement van de
+                werkmaatschappij). Dit dossier blijft de bankrekening van de werkmaatschappij volgen — een eigen
+                holding-dossier met eigen bankbestanden is nog in ontwikkeling. Dit antwoord bepaalt nu alleen welke
+                toelichting de tool laat zien (bijv. bij een winstuitkering en de liquidatieverliesregeling).
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setHeeftHolding(true); goNext(); }}
+                  className={`rounded-md px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                >
+                  Ja, holding + werkmaatschappij
+                </button>
+                <button
+                  onClick={() => { setHeeftHolding(false); goNext(); }}
+                  className={`rounded-md px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                >
+                  Nee, alleen deze BV
+                </button>
+              </div>
+            </div>
+          )}
+
           {currentStepId === 1 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Val je onder de kleineondernemersregeling (KOR)?</p>
@@ -509,7 +539,7 @@ export default function SetupWizardModal({
           {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
               én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
               slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
-          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"

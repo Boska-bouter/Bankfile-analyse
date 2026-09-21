@@ -66,7 +66,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
 function buildYearSectionBv(
   year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides,
   loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile,
-  fileContinuity, kwartaalStatus, rcVerloop, evVerloop
+  fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding
 ) {
   const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
@@ -223,7 +223,11 @@ function buildYearSectionBv(
     boven ca. €500.000 kent aparte regels (excessief lenen bij eigen vennootschap) die deze tool niet toetst.
   </p>
   ${dgaSalarisDitJaar > 0 ? `<p class="toelichting">Gebruikelijk-loonregeling: DGA-salaris ${eur(dgaSalarisDitJaar)} ${gebruikelijkLoon.voldoetVermoedelijk ? "voldoet vermoedelijk aan" : `lijkt ónder`} het wettelijk minimum van ${eur(gebruikelijkLoon.minimum)} voor ${year}${gebruikelijkLoon.geëxtrapoleerd ? " (minimum van dit jaar nog niet bekend, benaderd met het meest recente bekende bedrag)" : ""} — puur een signaal, geen definitieve toets.</p>` : ""}
-  ${dividendDitJaar > 0 ? `<p class="toelichting">Geschatte box 2-belasting van de DGA over deze dividenduitkering: <strong>${eur(box2Estimate.belasting)}</strong>${box2Estimate.geëxtrapoleerd ? " (box 2-tarief van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende tarief)" : ""} — geen belastingadvies. Alleen relevant als het dividend rechtstreeks naar de DGA privé gaat, niet bij een uitkering naar een holding (deelnemingsvrijstelling).</p>` : ""}`;
+  ${dividendDitJaar > 0 ? `<p class="toelichting">${
+    heeftHolding
+      ? `Je gaf aan dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze tool niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
+      : `Geschatte box 2-belasting van de DGA over deze dividenduitkering: <strong>${eur(box2Estimate.belasting)}</strong>${box2Estimate.geëxtrapoleerd ? " (box 2-tarief van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende tarief)" : ""} — geen belastingadvies.`
+  }</p>` : ""}`;
 
   return `
   <h1>Aangiftevoorstel BV / fiscale reconstructie — ${year}</h1>
@@ -292,7 +296,7 @@ function buildYearSectionBv(
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus) {
+export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding) {
   // Rekening-courant en eigen vermogen zijn cumulatief — over de jaren in dít rapport (zie de
   // toelichting die bij elk jaar wordt getoond). Winst per jaar wordt hier apart bepaald (los van
   // buildYearSectionBv) omdat resultaatNaVpbPerJaar voor ALLE jaren in dit rapport bekend moet zijn
@@ -315,7 +319,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
       buildYearSectionBv(
         year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides,
         loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile,
-        fileContinuity, kwartaalStatus, rcVerloop, evVerloop
+        fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding
       )
     )
     .join('\n  <div style="page-break-before: always;"></div>\n');
@@ -387,7 +391,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
       <li>Contante ontvangsten en uitgaven</li>
       <li>Openstaande facturen — debiteuren en crediteuren die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>
       <li>Voorraad — inkoop- en verkoopwaarde van onverkochte goederen${heeftVoorraad ? " (je gaf aan dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""}</li>
-      <li>Een eventuele holdingstructuur — bankmutaties van een holding boven deze werkmaatschappij worden hier niet meegenomen</li>
+      <li>${heeftHolding ? "De holdingstructuur die je hebt aangegeven — bankmutaties van de holding zelf (kapitaalstorting bij oprichting, doorbetaalde dividenden, eventuele activa) worden hier niet meegenomen, alleen die van de werkmaatschappij hierboven" : "Een eventuele holdingstructuur — bankmutaties van een holding boven deze werkmaatschappij worden hier niet meegenomen"}</li>
       <li>Voorzieningen, langlopende schulden en overige balansposten van een volledige jaarrekening</li>
       <li>Correcties, memoriaalboekingen of suppleties uit een eerdere administratie</li>
     </ul>

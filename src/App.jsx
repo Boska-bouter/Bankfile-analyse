@@ -38,7 +38,8 @@ import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
 import MultiYearOverviewBV from "./components/overview/MultiYearOverviewBV.jsx";
-import { computeRekeningCourantVerloop, computeEigenVermogenVerloop } from "./tax/bv.js";
+import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
+import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
@@ -102,6 +103,15 @@ function resolveRechtsvorm(obj) {
   return typeof obj.rechtsvorm === "string" ? obj.rechtsvorm : null;
 }
 
+// Zelfde migratie-redenering als resolveRechtsvorm hierboven: ontbreekt het veld helemaal (een
+// bestand van vóór deze vraag bestond), dan is er nooit een holding-vraag gesteld — behandel dat
+// als "nee" (nooit meer vragen). Staat het veld er al wel (ook al is de waarde nog null, dus nog
+// niet beantwoord), dan wordt die waarde gerespecteerd.
+function resolveHeeftHolding(obj) {
+  if (!obj || !Object.prototype.hasOwnProperty.call(obj, "heeftHolding")) return false;
+  return typeof obj.heeftHolding === "boolean" ? obj.heeftHolding : null;
+}
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -116,6 +126,8 @@ export default function App() {
   // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
   // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
   const [rechtsvorm, setRechtsvorm] = useState(null);
+  // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
+  const [heeftHolding, setHeeftHolding] = useState(null);
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
@@ -211,6 +223,7 @@ export default function App() {
     setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
     setRechtsvorm(resolveRechtsvorm(settings));
+    setHeeftHolding(resolveHeeftHolding(settings));
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
@@ -304,7 +317,7 @@ export default function App() {
       const ok1 = await persistParsedFiles(parsedFiles);
       const ok2 = await persistSettings({
         accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, btwRatesVersion: BTW_RATES_VERSION,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, btwRatesVersion: BTW_RATES_VERSION,
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -317,7 +330,7 @@ export default function App() {
     })();
   }, [
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, excludedDuplicateFingerprints,
+    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
@@ -395,7 +408,7 @@ export default function App() {
       label,
       state: {
         parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, excludedDuplicateFingerprints, excludedManualFingerprints,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, excludedDuplicateFingerprints, excludedManualFingerprints,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus,
@@ -416,6 +429,7 @@ export default function App() {
     setBtwVerlegd(s.btwVerlegd);
     setKorRegeling(s.korRegeling);
     setRechtsvorm(s.rechtsvorm);
+    setHeeftHolding(s.heeftHolding);
     setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
     setExcludedManualFingerprints(s.excludedManualFingerprints);
     setBusinessKeywords(s.businessKeywords);
@@ -457,6 +471,7 @@ export default function App() {
   const setBtwVerlegdWithUndo = withUndo("BTW-verlegd aangepast", setBtwVerlegd);
   const setKorRegelingWithUndo = withUndo("KOR-instelling aangepast", setKorRegeling);
   const setRechtsvormWithUndo = withUndo("Rechtsvorm aangepast", setRechtsvorm);
+  const setHeeftHoldingWithUndo = withUndo("Holdingstructuur aangepast", setHeeftHolding);
   const setOverridesByCounterpartyWithUndo = withUndo("Tegenpartijregel verwijderd", setOverridesByCounterparty);
   const setOpeningBalanceCorrection = (fileName, value) => {
     snapshotBeforeAction("Beginsaldo gecorrigeerd");
@@ -769,7 +784,7 @@ export default function App() {
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus)
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding)
       : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
@@ -1122,6 +1137,10 @@ export default function App() {
     }
     return computeEigenVermogenVerloop(classified, years, resultaatNaVpbPerJaar);
   }, [classified, years, yearlySummaries]);
+  const bvSignalering = useMemo(
+    () => (rechtsvorm === "bv" ? computeBvSignalering(activeYear, yearlySummaries, evVerloop, yearlyOpenOB, years) : null),
+    [rechtsvorm, activeYear, yearlySummaries, evVerloop, yearlyOpenOB, years]
+  );
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
@@ -1314,7 +1333,7 @@ export default function App() {
   const saveProjectFile = () => {
     const project = buildProjectFile({
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, btwRatesVersion: BTW_RATES_VERSION,
+      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, btwRatesVersion: BTW_RATES_VERSION,
       excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -1339,6 +1358,7 @@ export default function App() {
       setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
       setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
       setRechtsvorm(resolveRechtsvorm(project));
+      setHeeftHolding(resolveHeeftHolding(project));
       setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
       setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
       setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
@@ -1405,6 +1425,7 @@ export default function App() {
     setBtwVerlegd(null);
     setKorRegeling(null);
     setRechtsvorm(null);
+    setHeeftHolding(null);
     setExcludedDuplicateFingerprints([]);
     setDismissedDuplicateNotice(false);
     setExcludedManualFingerprints([]);
@@ -1747,6 +1768,8 @@ export default function App() {
             setKorRegeling={setKorRegelingWithUndo}
             rechtsvorm={rechtsvorm}
             setRechtsvorm={setRechtsvormWithUndo}
+            heeftHolding={heeftHolding}
+            setHeeftHolding={setHeeftHoldingWithUndo}
             btwVerlegd={btwVerlegd}
             setBtwVerlegd={setBtwVerlegdWithUndo}
             onSetIncomeBtwRateChoice={setIncomeBtwRateChoice}
@@ -2236,6 +2259,12 @@ export default function App() {
                     />
                   )}
                 </div>
+
+                {rechtsvorm === "bv" && bvSignalering && (
+                  <div className="mt-4">
+                    <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
+                  </div>
+                )}
 
                 <div ref={quarterlyBtwSectionRef}>
                   {!korRegeling && (
