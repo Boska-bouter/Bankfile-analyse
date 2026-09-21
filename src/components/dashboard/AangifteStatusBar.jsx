@@ -37,6 +37,7 @@ export default function AangifteStatusBar({
   zvwGedaan,
   onOpenHelp,
   onRequestChange,
+  onConfirmCorrect,
 }) {
   if (!activeYear) return null;
   return (
@@ -217,6 +218,43 @@ export default function AangifteStatusBar({
                   <ExpandableDescription key={tx.id} tx={tx} className="block" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
                 ))}
                 {checklistData.priveTransferMissingMirrors.length > 5 && <span className="block">en {checklistData.priveTransferMissingMirrors.length - 5} meer…</span>}
+              </span>
+            </span>
+          </li>
+        )}
+        {checklistData.inkomstenZonderOmschrijving.length > 0 && (
+          <li className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <span>
+              {checklistData.inkomstenZonderOmschrijving.length} bijschrijving{checklistData.inkomstenZonderOmschrijving.length === 1 ? "" : "en"} op de zakelijke rekening
+              <strong> zonder omschrijving of tegenpartijnaam</strong> — de aanname is dat dit gewoon zakelijke omzet is (zoals elke bijschrijving op deze
+              rekening), maar zonder omschrijving is dat niet te toetsen. Allemaal zakelijk?
+              <span className="block mt-1.5">
+                {onConfirmCorrect && (
+                  <button
+                    onClick={() => checklistData.inkomstenZonderOmschrijving.forEach((tx) => onConfirmCorrect(tx))}
+                    className="rounded border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:bg-emerald-50"
+                  >
+                    Ja, allemaal zakelijk
+                  </button>
+                )}
+              </span>
+              <span className="block mt-1.5 text-xs text-slate-500">
+                {checklistData.inkomstenZonderOmschrijving.slice(0, 5).map((tx) => (
+                  <span key={tx.id} className="flex items-center gap-2">
+                    <span className="flex-1 min-w-0">{tx.date.toLocaleDateString("nl-NL")} ({eur(tx.amount)})</span>
+                    {onRequestChange && (
+                      <button
+                        onClick={() => onRequestChange(tx, { category: "Overig", type: tx.type })}
+                        className="shrink-0 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100"
+                        title="Toch niet zakelijk? Zet 'm op Overig, voor verdere beoordeling."
+                      >
+                        Toch niet zakelijk
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {checklistData.inkomstenZonderOmschrijving.length > 5 && <span className="block">en {checklistData.inkomstenZonderOmschrijving.length - 5} meer…</span>}
               </span>
             </span>
           </li>

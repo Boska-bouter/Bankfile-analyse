@@ -76,10 +76,26 @@ export function computeChecklistLikeDataForYear(zakItems, priItems, quartersForY
       !priveMirrorIds.has(`${tx.id}-prive-spiegel`)
   );
 
+  // Een bijschrijving op de zakelijke rekening zonder enige omschrijving of tegenpartijnaam (leeg
+  // MT940 ":86:"-veld, of een CSV-rij zonder naam/mededeling) wordt door de classificatie sowieso
+  // als "Zakelijke inkomsten" aangenomen (elke bijschrijving op een zakelijke rekening telt als
+  // omzet, tenzij er een reden is om dat niet te doen — zie autoClassify). Bij een lege omschrijving
+  // is er alleen niets om die aanname aan te toetsen, dus is het de moeite waard om expliciet te
+  // laten bevestigen in plaats van dat stilzwijgend te laten staan.
+  const inkomstenZonderOmschrijving = zakItems.filter(
+    (tx) =>
+      !tx.isMirror &&
+      tx.amount > 0 &&
+      tx.category.startsWith("Zakelijke inkomsten") &&
+      !(tx.counterparty || "").trim() &&
+      !(tx.description || "").trim() &&
+      !(tx.fullDescription || "").trim()
+  );
+
   return {
     overigCount, totalCount, categorizedPct, quartersForYear, quartersOpen, quartersNietAangegeven, quartersAangegevenNietBetaald, apparatuurInvestering, leaseFinancieelTotal,
     monthsMissingLH, loonheffingBoetes, totaalNettoLoon, totaalLH, loonheffingPct, loonheffingInVerwachteBereik,
-    inkomstenAndereKwartaal, priveTransferOrphans, priveTransferMissingMirrors,
+    inkomstenAndereKwartaal, priveTransferOrphans, priveTransferMissingMirrors, inkomstenZonderOmschrijving,
   };
 }
 

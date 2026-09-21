@@ -1832,6 +1832,7 @@ export default function App() {
               zvwGedaan={!!zvwStatus[activeYear]?.gedaan}
               onOpenHelp={setHelpPopupChapter}
               onRequestChange={requestCategoryChange}
+              onConfirmCorrect={confirmClassificationCorrect}
             />
           </div>
         )}
