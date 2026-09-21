@@ -378,37 +378,11 @@ export default function SetupWizardModal({
           )}
 
           {currentStepId === 5 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Onder welk BTW-tarief vallen de diensten die je factureert?</p>
-              <p className="text-xs text-slate-400">
-                De meeste diensten vallen onder het hoge tarief (21%) — het lage tarief (9%) geldt voor een beperkte
-                groep diensten/producten, en een klein aantal diensten (bijv. bepaalde zorg-, onderwijs- of
-                financiële diensten) is helemaal vrijgesteld (0%). Lever je aan verschillende klanten verschillende
-                tarieven? Kies dan "Verschillend" — je kunt daarna per klant kiezen uit drie eigen categorieën
-                ("Zakelijke inkomsten 0%/9%/21%") bij "Zakelijke tegenpartijen (inkomsten)", in plaats van steeds de
-                generieke categorie te moeten hergebruiken.
-              </p>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => { onSetIncomeBtwRateChoice?.("21"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
-                >
-                  Hoog tarief (21%)
-                </button>
-                <button
-                  onClick={() => { onSetIncomeBtwRateChoice?.("9"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
-                >
-                  Laag tarief (9%)
-                </button>
-                <button
-                  onClick={() => { onSetIncomeBtwRateChoice?.("beide"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
-                >
-                  Verschillend, afhankelijk van klant/dienst
-                </button>
-              </div>
-            </div>
+            <TarievenVraag
+              gekozen={typedNow.btwTarieven || []}
+              onChangeGekozen={(lijst) => setTypedNow((p) => ({ ...p, btwTarieven: lijst }))}
+              onKlaar={(tarieven, standaard) => { onSetIncomeBtwRateChoice?.(tarieven, standaard); goNext(); }}
+            />
           )}
 
           {currentStepId === 3 && (
@@ -509,7 +483,7 @@ export default function SetupWizardModal({
           {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
               én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
               slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
-          {![6, 7, 8, 9, 10, 11, 12, 13].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![5, 6, 7, 8, 9, 10, 11, 12, 13].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
@@ -518,6 +492,82 @@ export default function SetupWizardModal({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// BTW-tarief-op-omzet-vraag: een aanvinklijst van de drie mogelijke tarieven (kan er meer dan één
+// zijn — sommige zzp'ers factureren zowel 21% als 9%, of hebben daarnaast nog een vrijgestelde
+// dienst). Bij precies één aangevinkt tarief gaat de wizard meteen door; bij meerdere volgt een
+// tweede fase die vraagt welk tarief het meeste voorkomt — dat wordt het standaardtarief voor de
+// generieke "Zakelijke inkomsten"-categorie, de rest blijft als eigen categorie beschikbaar om per
+// klant/transactie te kiezen (met een latere "Werk te doen"-herinnering om dat na te lopen).
+const TARIEF_OPTIES = [
+  { waarde: "21", label: "Hoog tarief (21%)" },
+  { waarde: "9", label: "Laag tarief (9%)" },
+  { waarde: "0", label: "Vrijgesteld (0%) — bijv. bepaalde zorg-, onderwijs- of financiële diensten" },
+];
+function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
+  const [fase, setFase] = useState("kiezen"); // "kiezen" | "meestVoorkomend"
+  const toggle = (waarde) => {
+    onChangeGekozen(gekozen.includes(waarde) ? gekozen.filter((w) => w !== waarde) : [...gekozen, waarde]);
+  };
+  const doorgaan = () => {
+    if (gekozen.length === 0) return;
+    if (gekozen.length === 1) { onKlaar(gekozen, gekozen[0]); return; }
+    setFase("meestVoorkomend");
+  };
+  if (fase === "meestVoorkomend") {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-slate-600">Welk tarief komt het meeste voor?</p>
+        <p className="text-xs text-slate-400">
+          Dat wordt het standaardtarief. De minder vaak voorkomende tarieven blijven gewoon beschikbaar als eigen
+          categorie ("Zakelijke inkomsten 0%/9%/21%") om per klant of transactie te kiezen bij "Zakelijke
+          tegenpartijen (inkomsten)" — de tool herinnert je er straks aan om dat na te lopen.
+        </p>
+        <div className="flex flex-col gap-2">
+          {TARIEF_OPTIES.filter((o) => gekozen.includes(o.waarde)).map((o) => (
+            <button
+              key={o.waarde}
+              onClick={() => onKlaar(gekozen, o.waarde)}
+              className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setFase("kiezen")} className="text-xs text-slate-400 hover:text-slate-600">
+          ← Tarieven aanpassen
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de diensten die je factureert?</p>
+      <p className="text-xs text-slate-400">
+        Vink aan wat van toepassing is — kan er meer dan één zijn. De meeste diensten vallen onder het hoge tarief
+        (21%) — het lage tarief (9%) geldt voor een beperkte groep diensten/producten, en een klein aantal diensten
+        (bijv. bepaalde zorg-, onderwijs- of financiële diensten) is helemaal vrijgesteld (0%).
+      </p>
+      <div className="flex flex-col gap-2">
+        {TARIEF_OPTIES.map((o) => (
+          <label key={o.waarde} className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" checked={gekozen.includes(o.waarde)} onChange={() => toggle(o.waarde)} />
+            {o.label}
+          </label>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={doorgaan}
+          disabled={gekozen.length === 0}
+          className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          Doorgaan
+        </button>
       </div>
     </div>
   );

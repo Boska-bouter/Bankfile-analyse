@@ -133,6 +133,14 @@ export default function App() {
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
   const [opdrachtgeversGevraagd, setOpdrachtgeversGevraagd] = useState(null); // null=nog niet gevraagd | true
+  // Wizard-vraag "onder welk(e) BTW-tarief/tarieven vallen je diensten" — kan meer dan één zijn
+  // aangevinkt. incomeBtwTarieven onthoudt de volledige keuze (bijv. ["9","21"]); het gekozen
+  // "meest voorkomende" tarief wordt los als standaard op de generieke "Zakelijke inkomsten"-
+  // categorie gezet (zie setIncomeBtwRateChoice). meerdereTarievenBevestigd houdt bij of de
+  // "Werk te doen"-herinnering om de minder vaak voorkomende tarieven per klant na te lopen al is
+  // afgevinkt.
+  const [incomeBtwTarieven, setIncomeBtwTarieven] = useState(null); // null=nog niet gevraagd | ["9","21"] e.d.
+  const [meerdereTarievenBevestigd, setMeerdereTarievenBevestigd] = useState(false);
   const [verwachteMatchSuggestie, setVerwachteMatchSuggestie] = useState(null); // {type, naam, matches, targetCategory}
   const [verwachteAangeboden, setVerwachteAangeboden] = useState({}); // {lease: aantalTransactiesToenGecontroleerd, ...}
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
@@ -169,6 +177,7 @@ export default function App() {
   const periodeReviewSectionRef = useRef(null);
   const loansSectionRef = useRef(null);
   const leasesSectionRef = useRef(null);
+  const incomeRatesSectionRef = useRef(null);
 
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
@@ -202,6 +211,8 @@ export default function App() {
     setEigenNamen(settings.eigenNamen ?? null);
     setEigenRekeningenExtra(settings.eigenRekeningenExtra ?? null);
     setOpdrachtgeversGevraagd(settings.opdrachtgeversGevraagd ?? null);
+    setIncomeBtwTarieven(settings.incomeBtwTarieven ?? null);
+    setMeerdereTarievenBevestigd(settings.meerdereTarievenBevestigd ?? false);
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -273,6 +284,7 @@ export default function App() {
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, openingBalanceCorrections,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+        incomeBtwTarieven, meerdereTarievenBevestigd,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -284,6 +296,7 @@ export default function App() {
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, openingBalanceCorrections,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+    incomeBtwTarieven, meerdereTarievenBevestigd,
     loaded,
   ]);
 
@@ -360,6 +373,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
+        incomeBtwTarieven, meerdereTarievenBevestigd,
       },
     });
   };
@@ -396,6 +410,8 @@ export default function App() {
     setEigenNamen(s.eigenNamen ?? null);
     setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
     setOpdrachtgeversGevraagd(s.opdrachtgeversGevraagd ?? null);
+    setIncomeBtwTarieven(s.incomeBtwTarieven ?? null);
+    setMeerdereTarievenBevestigd(s.meerdereTarievenBevestigd ?? false);
     setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
@@ -674,13 +690,18 @@ export default function App() {
     const category = choice === "0" ? "Zakelijke inkomsten 0%" : choice === "9" ? "Zakelijke inkomsten 9%" : choice === "21" ? "Zakelijke inkomsten 21%" : "Zakelijke inkomsten";
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category, type: "Zakelijk" });
   };
-  // Wizard-vraag "onder welk BTW-tarief vallen je diensten" — zet het percentage voor de generieke
-  // "Zakelijke inkomsten" op het gekozen tarief. Bij "beide" laten we die op het standaard hoge
-  // tarief staan; de twee specifieke subtypes (9%/21%) staan dan al klaar om per klant te kiezen
-  // via setIncomeRate hierboven.
-  const setIncomeBtwRateChoice = (choice) => {
-    if (choice === "9") setCategoryBtwRatesWithUndo((prev) => ({ ...prev, "Zakelijke inkomsten": 9 }));
-    else if (choice === "21") setCategoryBtwRatesWithUndo((prev) => ({ ...prev, "Zakelijke inkomsten": 21 }));
+  // Wizard-vraag "onder welk(e) BTW-tarief(ven) vallen je diensten" — nu een aanvinklijst (kan meer
+  // dan één tarief zijn). Bij precies één gekozen tarief is dat meteen het standaardtarief voor de
+  // generieke "Zakelijke inkomsten"-categorie. Bij meerdere is "standaard" het tarief dat het meeste
+  // voorkomt (apart gevraagd in de wizard, zie TarievenVraag) — de overige tarieven blijven gewoon
+  // beschikbaar als eigen categorie ("Zakelijke inkomsten 0%/9%/21%") om per klant/transactie te
+  // kiezen via setIncomeRate hierboven. incomeBtwTarieven onthoudt de hele keuze zodat de "Werk te
+  // doen"-herinnering hieronder weet dat er meerdere tarieven zijn en het dus de moeite waard is om
+  // dat na te lopen.
+  const setIncomeBtwRateChoice = (tarieven, standaard) => {
+    setCategoryBtwRatesWithUndo((prev) => ({ ...prev, "Zakelijke inkomsten": Number(standaard) }));
+    setIncomeBtwTarieven(tarieven);
+    if (tarieven.length > 1) setMeerdereTarievenBevestigd(false);
   };
   // Sommige zzp'ers hebben tegelijk klanten met BTW-verlegd (bijv. onderaannemer in de bouw) én
   // klanten waar ze zelf gewoon 21% BTW over factureren — dat is dus geen aan/uit-instelling voor
@@ -1154,6 +1175,13 @@ export default function App() {
     if (transactions.length > 0 && korRegeling === false && btwVerlegd === null) {
       items.push({ key: "btwVerlegd", text: "BTW-verlegd-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
+    if ((incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd) {
+      items.push({
+        key: "meerdereTarieven",
+        text: `Je gaf aan dat je omzet onder ${incomeBtwTarieven.length} verschillende BTW-tarieven valt — controleer welke klanten bij welk tarief horen`,
+        ref: incomeRatesSectionRef,
+      });
+    }
     if (confidenceSummary.needsReview > 0) {
       items.push({
         key: "confidence",
@@ -1167,6 +1195,7 @@ export default function App() {
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
     periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
     confidenceSummary, verwachteLease, verwachteLening, verwachteAOV,
+    incomeBtwTarieven, meerdereTarievenBevestigd,
   ]);
 
   // ---- Project opslaan als downloadbaar bestand ----
@@ -1179,7 +1208,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, opdrachtgeversGevraagd,
-      ibStatus, openingBalanceCorrections,
+      ibStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -1231,6 +1260,8 @@ export default function App() {
       setEigenNamen(project.eigenNamen ?? null);
       setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
       setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
+      setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
+      setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -1287,6 +1318,8 @@ export default function App() {
     setEigenNamen(null);
     setEigenRekeningenExtra(null);
     setOpdrachtgeversGevraagd(null);
+    setIncomeBtwTarieven(null);
+    setMeerdereTarievenBevestigd(false);
     setVerwachteMatchSuggestie(null);
     setVerwachteAangeboden({});
     setLoanDetailsModalKey(null);
@@ -1713,13 +1746,28 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <div className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
+          <div ref={incomeRatesSectionRef} className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
             {!expandedBusinessExpenseList && (
               <section className="rounded-lg border border-slate-200 bg-white p-5">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
                 </p>
+                {(incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd && (
+                  <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                    <p>
+                      Je gaf in de wizard aan dat je omzet onder meerdere BTW-tarieven valt ({incomeBtwTarieven.map((t) => `${t}%`).join(", ")}).
+                      Ken hieronder per klant het juiste tarief toe (kolom "BTW-tarief") — klanten die je nog niet apart hebt ingesteld
+                      vallen op het standaardtarief.
+                    </p>
+                    <button
+                      onClick={() => setMeerdereTarievenBevestigd(true)}
+                      className="mt-2 rounded border border-amber-400 bg-white px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
+                    >
+                      Nagelopen, verberg deze melding
+                    </button>
+                  </div>
+                )}
                 <KeywordManager
                   keywords={businessKeywords}
                   onAdd={addBusinessKeyword}
