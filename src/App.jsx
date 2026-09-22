@@ -222,7 +222,6 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
-  const [lastSavedAt, setLastSavedAt] = useState(null); // Date — wanneer de automatische browseropslag voor het laatst is gelukt
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
@@ -367,7 +366,6 @@ export default function App() {
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
-      if (ok1 && ok2) setLastSavedAt(new Date());
     })();
   }, [
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
@@ -1574,9 +1572,7 @@ export default function App() {
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-4">
-            "Leeg beginnen" verwijdert niets: het eerder opgeslagen project blijft in deze browser bewaard en dit
-            keuzescherm verschijnt de volgende keer weer, totdat je zelf een nieuw bestand uploadt of een nieuw
-            project instelt — pas dán wordt het oude project in deze browser overschreven.
+            Het eerder opgeslagen project blijft bewaard totdat je zelf iets nieuws uploadt of instelt.
           </p>
         </div>
       </div>
@@ -1601,24 +1597,20 @@ export default function App() {
             <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé</h1>
           </div>
           <div className="flex items-center gap-3">
-            <span
-              className="text-xs text-slate-400 flex items-center gap-1.5"
-              title="Automatisch opgeslagen in déze browser — geen bestand. Verdwijnt als je browsergegevens wist. Gebruik 'Project opslaan' voor een bestand dat je kunt bewaren of meenemen."
-            >
+            <span className="text-xs text-slate-400 flex items-center gap-1.5">
               {saveState === "saving" && (
                 <>
-                  <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
+                  <Loader2 className="h-3 w-3 animate-spin" /> Opslaan…
                 </>
               )}
               {saveState === "saved" && (
                 <>
-                  <Check className="h-3 w-3 text-emerald-400" />
-                  Automatisch opgeslagen in browser{lastSavedAt ? `: ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                  <Check className="h-3 w-3 text-emerald-400" /> Opgeslagen
                 </>
               )}
               {saveState === "error" && (
                 <>
-                  <AlertCircle className="h-3 w-3 text-rose-400" /> Opslaan in browser mislukt
+                  <AlertCircle className="h-3 w-3 text-rose-400" /> Opslaan mislukt
                 </>
               )}
             </span>
@@ -1626,7 +1618,7 @@ export default function App() {
               <button
                 onClick={saveProjectFile}
                 className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-md px-2.5 py-1.5 flex items-center gap-1"
-                title="Download een projectbestand (.json) met alle transacties en instellingen — dit is het bestand om te bewaren, te delen of op een andere computer verder te werken. Anders dan de automatische opslag hierboven blijft dit bestand ook bewaard als je browsergegevens wist."
+                title="Download een projectbestand met alle transacties"
               >
                 <Download className="h-3.5 w-3.5" /> Project opslaan
               </button>
