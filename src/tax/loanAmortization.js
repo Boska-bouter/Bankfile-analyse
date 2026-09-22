@@ -21,6 +21,19 @@ export function computeLoanAmortization(transactions, details) {
         (tx.date.getDate() - lastDate.getDate()) / 30,
       0
     );
+    // Een bijschrijving (positief bedrag) op deze lening/lease is geen betaling maar een
+    // terugboeking/correctie van de leasemaatschappij (bijv. "Terugboeking op verzoek klant") — die
+    // maakt een eerdere aflossing ongedaan, dus het openstaande saldo gaat weer OMHOOG, en er is
+    // geen rente aan toe te rekenen. Vóór deze aanpassing werd Math.abs() genomen, waardoor zo'n
+    // terugboeking juist als extra aflossing werd meegeteld — een reële bug bij een gedeeltelijk
+    // teruggeboekte/gecorrigeerde leasetermijn.
+    if (tx.amount >= 0) {
+      const aflossing = -tx.amount;
+      balance = balance - aflossing;
+      rows.push({ tx, rente: 0, aflossing, saldoNa: balance });
+      lastDate = tx.date;
+      continue;
+    }
     const rente = balance * monthlyRate * maandenVerstreken;
     const betaling = Math.abs(tx.amount);
     const aflossing = Math.max(betaling - rente, 0);

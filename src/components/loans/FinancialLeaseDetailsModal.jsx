@@ -112,14 +112,17 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   );
   const totaalControle = useMemo(() => {
     if (!laatsteTransactieDatum || projectedPayments.length === 0) return null;
-    const totaalBetaald = segmentTransactions.reduce((a, tx) => a + Math.abs(tx.amount), 0);
+    // Netto optellen (mét teken) en pas dan absoluut nemen — een bijschrijving (terugboeking/
+    // correctie van de leasemaatschappij) moet een eerdere betaling verrekenen, niet als extra
+    // betaling erbovenop tellen (dat gaf voorheen een te hoog "totaal betaald").
+    const totaalBetaald = Math.abs(segmentTransactions.reduce((a, tx) => a + tx.amount, 0));
     const verwachtTotNu = projectedPayments
       .filter((p) => p.date <= laatsteTransactieDatum)
       .reduce((a, p) => a + Math.abs(p.amount), 0);
     if (verwachtTotNu === 0) return null;
     const verschil = totaalBetaald - verwachtTotNu;
     const marge = Math.max(Number(form.maandbedrag) || 0, 25);
-    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: segmentTransactions.length };
+    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: segmentTransactions.filter((tx) => tx.amount < 0).length };
   }, [segmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
 
   const leaseVergoedingWijktAf =

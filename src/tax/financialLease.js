@@ -123,6 +123,10 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
     let bestDiff = Infinity;
     for (const a of available) {
       if (a.claimed) continue;
+      // Een bijschrijving (positief bedrag) is nooit een leasetermijn — dat is een terugboeking/
+      // correctie van de leasemaatschappij, geen betaling. Laat 'm ongebruikt liggen zodat hij
+      // hieronder bij "onverwachteBetalingen" opduikt, in plaats van een echte termijn te maskeren.
+      if (a.tx.amount >= 0) continue;
       if (a.tx.date < windowStart || a.tx.date > windowEnd) continue;
       // Een duidelijk veelvoud van het maandbedrag (2x, 3x, ...) is vermoedelijk een gecombineerde
       // betaling van meerdere termijnen tegelijk — die hoort bij ronde 2 hieronder, niet hier
@@ -152,6 +156,7 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   if (maandbedrag > 0) {
     for (const a of available) {
       if (a.claimed) continue;
+      if (a.tx.amount >= 0) continue; // zie toelichting bij ronde 1 — nooit een termijn
       const veelvoud = Math.round(Math.abs(a.tx.amount) / maandbedrag);
       if (veelvoud < 2) continue;
       if (Math.abs(Math.abs(a.tx.amount) - veelvoud * maandbedrag) > AMOUNT_MARGIN) continue;
