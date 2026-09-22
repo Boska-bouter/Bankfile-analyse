@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
 
-export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp }) {
+export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp, obIbSectionRef }) {
   const [open, setOpen] = useState(false);
   const [breakdownModal, setBreakdownModal] = useState(null); // { key: "2023-Q2", veld: "netto" | "btw" }
   const openCount = quarters.filter((q) => {
@@ -16,7 +16,18 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold">
+      {/* Een <div role="button"> in plaats van een <button> voor de hele balk, omdat de
+          "Waar vind ik dit op het aangifteformulier?"-link daarbinnen zelf ook een button is —
+          een button-in-button is ongeldige HTML en laat een klik op de link per ongeluk ook de
+          balk in-/uitklappen. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        ref={obIbSectionRef}
+        className="w-full flex items-center gap-2 p-5 text-sm font-semibold cursor-pointer"
+      >
         <span>BTW-aangifte per kwartaal (OB) {activeYear}</span>
         {openCount > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -24,8 +35,13 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
           </span>
         )}
         <span className="flex-1" />
+        {onOpenHelp && (
+          <span onClick={(e) => e.stopPropagation()}>
+            <HelpHint chapter="ob-ib-vakken" onOpen={onOpenHelp} label="Waar vind ik dit op het aangifteformulier?" />
+          </span>
+        )}
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+      </div>
       {open && (
         <div className="px-5 pb-5 overflow-x-auto">
           <p className="text-xs text-slate-500 mb-3">

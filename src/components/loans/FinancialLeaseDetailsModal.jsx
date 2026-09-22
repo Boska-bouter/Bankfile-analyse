@@ -575,7 +575,12 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           Contract vroegtijdig beëindigd / vervangen door een nieuw contract
         </label>
         {form.contractBeeindigd && (
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-3" style={{ transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }}>
+            {/* transform: translateZ(0) dwingt een eigen, schone compositing-laag af voor dit
+                nieuw-toegevoegde blok — zonder dit blijft Safari/iPadOS op sommige iPads soms
+                pixels van de onderliggende pagina "doorschijnen" in dit net-toegevoegde stukje van
+                een al scrollend, fixed-position venster (een bekende WebKit-rendertekortkoming),
+                en dat effect verdwijnt niet vanzelf door te scrollen of het venster te verlaten. */}
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum contract</span>

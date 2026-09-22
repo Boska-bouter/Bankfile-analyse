@@ -24,10 +24,26 @@ export function buildProjectFile(state) {
 // Downloadt het projectbestand als .json — hergebruikt dezelfde blob-downloadmethode als de
 // rest van de tool (Excel-export, rapporten), die betrouwbaar werkt zonder browser-specifieke
 // "Opslaan als"-API's nodig te hebben.
-export function downloadProjectFile(project, previousFileName) {
+// Maakt een naam geschikt als (deel van een) bestandsnaam — verwijdert tekens die op Windows/
+// macOS/iOS niet in bestandsnamen mogen, en houdt spaties/liggende streepjes leesbaar.
+function sanitizeForFilename(naam) {
+  return (naam || "").trim().replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
+}
+
+export function downloadProjectFile(project, previousFileName, rekeninghouderNaam) {
   const json = JSON.stringify(project, null, 2);
   const stamp = new Date().toISOString().slice(0, 10);
-  const filename = previousFileName ? nextVersionedFilename(previousFileName) : `Bankoverzicht_project_${stamp}.json`;
+  // De naam van de rekeninghouder (uit de wizard) komt, indien bekend, in de bestandsnaam bij de
+  // EERSTE keer opslaan — zo is bij het laden (bijv. in de Bestanden-app) al aan de bestandsnaam
+  // te zien van wie het project is, zonder het eerst te hoeven openen. Bij een vervolgopslag
+  // (previousFileName gezet) blijft de bestaande naam + "_vN"-teller intact, zoals al het geval
+  // was — die verandert dus niet met terugwerkende kracht als de naam later pas wordt ingevuld.
+  const schoneNaam = sanitizeForFilename(rekeninghouderNaam);
+  const filename = previousFileName
+    ? nextVersionedFilename(previousFileName)
+    : schoneNaam
+      ? `Bankoverzicht_project_${schoneNaam}_${stamp}.json`
+      : `Bankoverzicht_project_${stamp}.json`;
 
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);

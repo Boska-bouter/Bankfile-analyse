@@ -1475,7 +1475,7 @@ export default function App() {
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
-    const filename = downloadProjectFile(project, loadedProjectFileName);
+    const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
   };
 
@@ -1624,7 +1624,9 @@ export default function App() {
         <div className="max-w-md w-full rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">Vorig project gevonden</h1>
           <p className="text-sm text-slate-500 mb-5">
-            Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}). Wil je daarmee verdergaan, of leeg beginnen?
+            Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}
+            {pending?.settings?.eigenNamen?.ondernemer ? <> — rekeninghouder: <strong>{pending.settings.eigenNamen.ondernemer}</strong></> : null}
+            ). Wil je daarmee verdergaan, of leeg beginnen?
           </p>
           <div className="space-y-2">
             <button
@@ -1666,6 +1668,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé</h1>
+            {eigenNamen?.ondernemer && (
+              <p className="text-xs text-slate-400 mt-0.5">Rekeninghouder: {eigenNamen.ondernemer}</p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <span
@@ -2430,7 +2435,7 @@ export default function App() {
                 )}
 
                 <div ref={quarterlyBtwSectionRef}>
-                  {!korRegeling && (
+                  {!korRegeling ? (
                     <QuarterlyBtwPanel
                       quarters={quarterlyBtwData}
                       kwartaalStatus={kwartaalStatus}
@@ -2438,12 +2443,16 @@ export default function App() {
                       activeYear={activeYear}
                       costBreakdownByQuarter={costBreakdownByQuarter}
                       onOpenHelp={setHelpPopupChapter}
+                      obIbSectionRef={obIbSectionRef}
                     />
+                  ) : (
+                    // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
+                    // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
+                    // dus die blijft hier los staan, net als voorheen.
+                    <div ref={obIbSectionRef} className="flex items-center justify-end">
+                      <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
+                    </div>
                   )}
-                </div>
-
-                <div ref={obIbSectionRef} className="flex items-center justify-end">
-                  <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
