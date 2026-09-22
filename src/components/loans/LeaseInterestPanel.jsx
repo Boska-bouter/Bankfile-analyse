@@ -1,0 +1,178 @@
+import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
+import { eur } from "../../utils/amounts.js";
+import HelpHint from "../shared/HelpHint.jsx";
+
+function computeFinancialLeaseAmortization(lease, details) {
+  if (!isCompleteFinancialLeaseDetails(details)) return null;
+  return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+}
+
+export default function LeaseInterestPanel({
+  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMergeInto, onOpenHelp,
+}) {
+  const [open, setOpen] = useState(false);
+  if (leaseSummary.length === 0) return null;
+
+  const incompleteCount = leaseSummary.filter((l) => {
+    if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+    if (leaseDetails[l.key]?.onbekend) return false;
+    return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
+  }).length;
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
+        <span>Lease (operationeel/financieel)</span>
+        <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
+        {incompleteCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {incompleteCount}
+          </span>
+        )}
+        <span className="flex-1" />
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div className="px-5 pb-5">
+          <p className="text-xs text-slate-500 mb-3">
+            Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij{" "}
+            <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
+            {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
+          </p>
+          {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
+            <div key={group.map((l) => l.key).join("+")} className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
+              <p>
+                <strong>Horen deze bij elkaar?</strong> {group.map((l) => `"${l.name}"`).join(" en ")} lijken op dezelfde
+                tegenpartij te wijzen — mogelijk hetzelfde leasecontract, bijvoorbeeld met een deel van de betalingen
+                via een losse factuur in plaats van de vaste incasso.
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {group.slice(1).map((l) => (
+                  <button
+                    key={l.key}
+                    onClick={() => onMergeInto(l.key, group[0].key)}
+                    className="rounded-md border border-blue-300 bg-white px-2 py-1 text-[11px] font-medium text-blue-800 hover:bg-blue-100"
+                  >
+                    Ja, "{l.name}" samenvoegen met "{group[0].name}"
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="space-y-3">
+            {leaseSummary.map((lease) => {
+              const typeConfirmed = confirmedLeaseTypeKeys.includes(lease.key);
+              const isFinancieel = lease.category === "Lease (financieel)";
+              const details = leaseDetails[lease.key];
+              const isOnbekend = isFinancieel && !!details?.onbekend;
+              const amortization = isFinancieel ? computeFinancialLeaseAmortization(lease, details) : null;
+              // Bij meerdere opeenvolgende contracten (zie financialLease.js) telt alleen of het
+              // LAATSTE (huidige) contract is beëindigd — een eerder, al opgevolgd contract "stopt"
+              // altijd, dat is juist de bedoeling en geen signaal dat de hele lease voorbij is.
+              const segments = isFinancieel ? getLeaseSegments(details) : [];
+              const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
+              return (
+                <div key={lease.key} className="rounded-md border border-slate-100 p-3">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    <span className="flex-1 min-w-[8rem] truncate font-medium">{lease.name}</span>
+                    {isBeeindigd && (
+                      <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
+                    )}
+                    {segments.length > 1 && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{segments.length} contracten</span>
+                    )}
+                    <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
+                    {!typeConfirmed ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                          Operationeel
+                        </button>
+                        <button onClick={() => onConfirmType(lease, "financieel")} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                          Financieel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => onConfirmType(lease, "operationeel")}
+                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            Operationeel
+                          </button>
+                          <button
+                            onClick={() => onConfirmType(lease, "financieel")}
+                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            Financieel
+                          </button>
+                        </div>
+                        {isFinancieel && (
+                          isOnbekend ? (
+                            <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              Toch invullen
+                            </button>
+                          ) : (
+                            <>
+                              <button onClick={() => onOpenModal(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
+                              </button>
+                              {!isCompleteFinancialLeaseDetails(details) && (
+                                <button onClick={() => onMarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                                  Gegevens onbekend
+                                </button>
+                              )}
+                            </>
+                          )
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {onMergeInto && leaseSummary.length > 1 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="text-xs text-slate-400">Is dit eigenlijk hetzelfde contract als een andere lease hierboven?</label>
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) onMergeInto(lease.key, e.target.value);
+                          e.target.value = "";
+                        }}
+                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        <option value="">Samenvoegen met…</option>
+                        {leaseSummary.filter((l) => l.key !== lease.key).map((l) => (
+                          <option key={l.key} value={l.key}>{l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {typeConfirmed && isFinancieel && (
+                    isOnbekend ? (
+                      <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>
+                    ) : amortization ? (
+                      <>
+                        <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                          Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
+                        </p>
+                        {amortization.renteNietBerekenbaar && (
+                          <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                            ⚠ Voor (een deel van) dit contract kon het rentepercentage niet berekend worden — de ingevulde bedragen sluiten niet op elkaar aan. Het totaal hierboven is hierdoor onvolledig. Controleer de invoer bij "Gegevens bewerken".
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>
+                    )
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

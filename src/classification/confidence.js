@@ -1,0 +1,49 @@
+// Confidence-scoring voor een classificatie — nieuw in v2 (zie migratieplan, sectie 6). Dit
+// VERVANGT classify.js niet: resolveClassification blijft de bron van waarheid voor de
+// daadwerkelijke categorie. Deze module scoort achteraf hoe zeker die uitkomst is, zodat de UI
+// (bijv. het importcontrole-scherm) kan tonen welke transacties extra aandacht verdienen.
+//
+// Score-niveaus, van hoog naar laag vertrouwen:
+// - "override"  — een eerder door de gebruiker bevestigde tegenpartij- of rij-correctie
+// - "keyword"    — een match op een specifieke categorieregel (DEFAULT_RULES-keyword)
+// - "heuristic"  — een generieke regel zonder keyword-match (bijv. "looksLikePerson", of het
+//                  automatisch toekennen van "Zakelijke inkomsten" puur op basis van rekeningtype)
+// - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
+
+import { counterpartyKey, ibanKey } from "../utils/normalization.js";
+
+export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory) {
+  // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
+  // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
+  // isStaleOverigForZakelijkSpaar in classify.js) wijkt resolvedCategory af van de opgeslagen
+  // override — dan is dit dus geen echte, actuele handmatige bevestiging meer, en valt dit verder
+  // terug op de heuristische score hieronder (die "Interne overboeking: zakelijk sparen" al apart
+  // afvangt).
+  const rowOverride = overridesByRow[tx.id];
+  if (rowOverride && rowOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (deze transactie)" };
+
+  const ik = ibanKey(tx.counterpartyIban, tx.amount);
+  const ibanOverride = ik && overridesByCounterparty[ik];
+  if (ibanOverride && ibanOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
+  const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+  const keyOverride = key && overridesByCounterparty[key];
+  if (keyOverride && keyOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+
+  if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
+  if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
+  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
+
+  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
+  if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
+
+  return { level: "heuristic", label: "Automatisch bepaald (geen specifiek zoekwoord)" };
+}
+
+// Handig voor UI-statusiconen (bijv. het importcontrole-scherm, zie migratieplan 6a).
+export const CONFIDENCE_ICON = {
+  override: "🟢",
+  keyword: "🟢",
+  heuristic: "🟡",
+  fallback: "🔴",
+};
