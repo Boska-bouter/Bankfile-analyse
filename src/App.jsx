@@ -29,6 +29,7 @@ import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
@@ -199,6 +200,7 @@ export default function App() {
   const [verwachteAOV, setVerwachteAOV] = useState(null);
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
+  const [showRekeninghouderModal, setShowRekeninghouderModal] = useState(false);
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
   // null=nog niet gevraagd | {status: "ja"|"nee", naam: string|null} — of er een zakelijke
   // spaarrekening aan de zakelijke rekening hangt. Herkenning van overboekingen ernaartoe werkt
@@ -1674,8 +1676,20 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé</h1>
-            {eigenNamen?.ondernemer && (
-              <p className="text-xs text-slate-400 mt-0.5">Rekeninghouder: {eigenNamen.ondernemer}</p>
+            {eigenNamen?.ondernemer ? (
+              <p className="text-xs text-slate-400 mt-0.5">
+                Rekeninghouder: {eigenNamen.ondernemer}{" "}
+                <button onClick={() => setShowRekeninghouderModal(true)} className="underline decoration-dotted hover:text-slate-200">
+                  wijzigen
+                </button>
+              </p>
+            ) : (
+              <button
+                onClick={() => setShowRekeninghouderModal(true)}
+                className="text-xs text-slate-400 underline decoration-dotted hover:text-slate-200 mt-0.5"
+              >
+                + Rekeninghouder invullen
+              </button>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -1905,6 +1919,14 @@ export default function App() {
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} onOpenLevel={setOpenConfidenceLevel} />
           </div>
+        )}
+
+        {showRekeninghouderModal && (
+          <RekeninghouderModal
+            eigenNamen={eigenNamen}
+            onSave={(v) => { snapshotBeforeAction("Rekeninghouder aangepast"); setEigenNamen(v); }}
+            onClose={() => setShowRekeninghouderModal(false)}
+          />
         )}
 
         {showSetupWizard && (
