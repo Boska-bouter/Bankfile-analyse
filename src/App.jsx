@@ -257,6 +257,7 @@ export default function App() {
     setHeeftHolding(resolveHeeftHolding(settings));
     setHoldingBoekingen(settings.holdingBoekingen && typeof settings.holdingBoekingen === "object" ? settings.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
+    setDismissedDuplicateNotice(!!settings.dismissedDuplicateNotice);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
     setBusinessExpenseKeywords(Array.isArray(settings.businessExpenseKeywords) ? settings.businessExpenseKeywords : []);
@@ -281,6 +282,7 @@ export default function App() {
     setOpdrachtgeversGevraagd(settings.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(settings.incomeBtwTarieven ?? null);
     setMeerdereTarievenBevestigd(settings.meerdereTarievenBevestigd ?? false);
+    setVerwachteAangeboden(settings.verwachteAangeboden && typeof settings.verwachteAangeboden === "object" ? settings.verwachteAangeboden : {});
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -359,9 +361,9 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-        ibStatus, zvwStatus, openingBalanceCorrections,
+        ibStatus, zvwStatus, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-        incomeBtwTarieven, meerdereTarievenBevestigd,
+        incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
     })();
@@ -371,9 +373,9 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-    ibStatus, zvwStatus, openingBalanceCorrections,
+    ibStatus, zvwStatus, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-    incomeBtwTarieven, meerdereTarievenBevestigd,
+    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     loaded,
   ]);
 
@@ -1400,12 +1402,12 @@ export default function App() {
     const project = buildProjectFile({
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
       categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
-      excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
+      excludedDuplicateFingerprints, dismissedDuplicateNotice, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd,
+      ibStatus, zvwStatus, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName);
     setLoadedProjectFileName(filename);
@@ -1427,6 +1429,7 @@ export default function App() {
       setHeeftHolding(resolveHeeftHolding(project));
       setHoldingBoekingen(project.holdingBoekingen && typeof project.holdingBoekingen === "object" ? project.holdingBoekingen : {});
       setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
+      setDismissedDuplicateNotice(!!project.dismissedDuplicateNotice);
       setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
       setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
       setReviewedIncomeKeys(Array.isArray(project.reviewedIncomeKeys) ? project.reviewedIncomeKeys : []);
@@ -1463,6 +1466,7 @@ export default function App() {
       setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
       setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
       setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
+      setVerwachteAangeboden(project.verwachteAangeboden && typeof project.verwachteAangeboden === "object" ? project.verwachteAangeboden : {});
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);

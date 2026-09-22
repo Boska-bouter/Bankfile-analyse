@@ -103,7 +103,7 @@ export default function RawFileReviewModal({
           </label>
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto overflow-x-auto flex-1">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-white border-b border-slate-200">
               <tr className="text-left text-slate-500">

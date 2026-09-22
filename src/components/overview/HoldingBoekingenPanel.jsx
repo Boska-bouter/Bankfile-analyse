@@ -27,6 +27,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
             berekend zijn uit de banktransacties van de werkmaatschappij hierboven. Geen bankimport voor de
             holding zelf — dat is nog niet beschikbaar in deze tool.
           </p>
+          <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="text-slate-500 uppercase border-b border-slate-100">
@@ -82,6 +83,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </section>
