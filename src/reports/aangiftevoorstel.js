@@ -262,42 +262,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const leaseAutoKostenHtml = (() => {
     const lak = ib.leaseAutoKosten;
     if (!lak) return "";
-    const contractRows = lak.contracten
-      .map((c) => {
-        const soortLabel = c.soort === "auto" ? "Auto" : "Machine/overig";
-        const privegebruikLabel = c.soort === "auto" ? (c.privegebruikMeerDan500km ? "Ja (>500 km/jaar)" : "Nee / niet van toepassing") : "—";
-        // Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op
-        // gelijk kenteken, zie tax/autoBijtelling.js) worden de gekoppelde contractsegmenten hier als
-        // ÉÉN rij getoond (niet apart per segment) — anders zou de afschrijving/bijtelling dubbel
-        // lijken. De toelichting hieronder maakt zichtbaar dat het om een gecombineerde rij gaat.
-        const contractLabel = c.aantalGekoppeldeSegmenten > 1
-          ? `${esc(c.leaseName)} (${soortLabel}) — gekoppeld: kenteken ${esc(c.kenteken || "?")}, ${c.aantalGekoppeldeSegmenten} contractperiodes samen als één auto`
-          : `${esc(c.leaseName)} (${soortLabel})`;
-        return `<tr><td>${contractLabel}</td><td class="num">${eur(c.afschrijving)}</td><td class="num">${c.soort === "auto" ? eur(c.leaseRente) : "—"}</td><td>${privegebruikLabel}</td></tr>`;
-      })
-      .join("");
+    // Vanaf v154 bewust géén per-contract tabel meer in het rapport (incl. de kenteken-koppeling-
+    // annotatie) — alleen het eindbedrag, zodat het jaaroverzicht compact naast een ingediende
+    // aangifte gelegd kan worden. De volledige, per-contract uitsplitsing (incl. welke contracten
+    // op kenteken gekoppeld zijn) staat in de tool zelf (Financiële lease-detailvenster).
     return `
-  <div class="rubriek"><span>Toelichting: financiële lease auto/machine — kapitalisatie en (bij privégebruik) onttrekking</span><span></span></div>
-  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme (kapitalisatie, afschrijving en onttrekking).${
-    lak.contracten.some((c) => c.aantalGekoppeldeSegmenten > 1)
-      ? ` ⚠ Dit jaar bevat een gekoppelde kentekengroep (tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto) — zie de bijlage voor hoe de afschrijvingsbasis daarbij is bepaald.`
-      : ""
-  }</p>
-  <table>
-    <thead><tr><th>Contract</th><th class="num">Afschrijving</th><th class="num">Lease-rente</th><th>Privégebruik &gt;500 km/jaar</th></tr></thead>
-    <tbody>${contractRows}</tbody>
-  </table>
-  <table>
-    <tbody>
-      <tr><td>Afschrijving (alle contracten)</td><td class="num">${eur(lak.afschrijvingTotaal)}</td></tr>
-      <tr><td>Lease-rente (auto-contracten)</td><td class="num">${eur(lak.leaseRenteTotaal)}</td></tr>
-      <tr><td>Gecategoriseerde autokosten (${AUTOKOSTEN_CATEGORIEN.join(", ")})</td><td class="num">${eur(lak.autokostenTransactieTotaal)}</td></tr>
-      <tr class="total"><td>Totale autokosten</td><td class="num">${eur(lak.totaleAutokosten)}</td></tr>
-      <tr><td>Normale bijtelling (bijtellingspercentage × cataloguswaarde)</td><td class="num">${eur(lak.normaleBijtellingTotaal)}</td></tr>
-      <tr><td>Onttrekking (afgetopt op werkelijke autokosten)</td><td class="num">${eur(lak.onttrekking)}</td></tr>
-      <tr class="total"><td>Netto aftrekbare autokosten</td><td class="num">${eur(lak.nettoAftrekbareAutokosten)}</td></tr>
-    </tbody>
-  </table>`;
+  <div class="rubriek"><span>Financiële lease auto/machine — netto aftrekbare autokosten (na onttrekking bij privégebruik)</span><span class="num">${eur(lak.nettoAftrekbareAutokosten)}</span></div>
+  <p class="toelichting">${lak.onttrekking > 0 ? `Waarvan onttrekking (bijtelling privégebruik, afgetopt op werkelijke autokosten): ${eur(lak.onttrekking)}. ` : ""}Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
   })();
 
   // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
@@ -306,22 +277,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const gedeeldeHuurHtml = (() => {
     const gh = gedeeldeHuurForYear;
     if (!gh) return "";
+    // Vanaf v154 ook hier alleen de eindbedragen, geen volledige tabel meer — zelfde reden als bij
+    // de financiële-lease-auto hierboven. Volledige uitsplitsing staat in de tool zelf.
     return `
-  <div class="rubriek"><span>Toelichting: Huur (deels zakelijk) — percentage zakelijk gebruik</span><span></span></div>
-  <p class="toelichting">Percentage zakelijk gebruik is hier ingesteld op ${gh.percentage}% voor ${year}. <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span></p>
-  <table>
-    <tbody>
-      <tr><td>Totale huur (bruto, incl. BTW)</td><td class="num">${eur(gh.totaalHuurBruto)}</td></tr>
-      ${gh.totaalBtwOpHuur > 0 ? `<tr><td>Waarvan BTW</td><td class="num">${eur(gh.totaalBtwOpHuur)}</td></tr>` : ""}
-      <tr><td>Totale huur (netto, excl. BTW)</td><td class="num">${eur(gh.totaalHuurNetto)}</td></tr>
-      <tr><td>Percentage zakelijk gebruik</td><td class="num">${gh.percentage}%</td></tr>
-      <tr class="total"><td>Aftrekbaar (zakelijk deel)</td><td class="num">${eur(gh.aftrekbaarBedrag)}</td></tr>
-      <tr><td>Niet aftrekbaar (privédeel)</td><td class="num">${eur(gh.nietAftrekbaarBedrag)}</td></tr>
-      ${gh.totaalBtwOpHuur > 0 ? `
-      <tr><td>Aftrekbare voorbelasting</td><td class="num">${eur(gh.aftrekbareVoorbelasting)}</td></tr>
-      <tr><td>Niet-aftrekbare voorbelasting (privédeel)</td><td class="num">${eur(gh.nietAftrekbareVoorbelasting)}</td></tr>` : ""}
-    </tbody>
-  </table>`;
+  <div class="rubriek"><span>Huur (deels zakelijk) — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
+  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de tool zelf.</p>`;
   })();
 
   const priveHtml =
@@ -401,38 +361,33 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
   ${zaScenarios ? `
-  <p><strong>Voldaan aan het urencriterium voor de zelfstandigenaftrek: onbekend</strong> — daarom twee scenario's:</p>
-  <p>1. Mét zelfstandigenaftrek: geschatte inkomstenbelasting <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong></p>
-  <p>2. Zonder zelfstandigenaftrek: geschatte inkomstenbelasting <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong></p>
-  <p class="toelichting">Dit is een persoonlijke voorwaarde (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) die niet uit bankgegevens is af te leiden — geef dit aan in de tool ("Persoonlijke aannames voor IB") zodra dit bekend is.</p>
+  <p>Urencriterium onbekend — twee scenario's: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong>.</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen of overig inkomen. Geen belastingadvies.</p>
-  ${!zaStatus ? '<p class="toelichting">⚠ Ervan uitgegaan dat aan het urencriterium voor de zelfstandigenaftrek is voldaan (nog niet expliciet aangegeven in de tool) — geef dit aan bij "Persoonlijke aannames voor IB" als dit niet (zeker) het geval is.</p>' : ""}
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool." : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
-  <p class="toelichting">Toegepaste ondernemersaftrek dit jaar: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
+  <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
-        ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend vanuit niet-gerealiseerde zelfstandigenaftrek van eerdere jaren in dit rapport)`
+        ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend uit eerdere jaren)`
         : ""
     }${startersaftrekToegepast ? ` + startersaftrek <strong>${eur(ondernemersaftrekVoorJaar.startersaftrekBedrag)}</strong>` : ""}.${
       ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0
-        ? ` ⚠ Dit jaar kon ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} van de zelfstandigenaftrek niet worden benut (winst te laag).`
+        ? ` ⚠ ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} niet benut (winst te laag), gereserveerd voor later.`
         : ""
-    } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene regels rond startersaftrek en de 9-jaars-reserve.</span></p>
+    }</p>
   ` : ""}
   `}
-  <p>Geschatte bijdrage Zorgverzekeringswet (Zvw): <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar)" : ""}${zvwEstimate.geëxtrapoleerd ? " (Zvw-percentage van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende percentage)" : ""} — het lage (zelfstandigen-)tarief over dezelfde belastbare winst als hierboven. Geen belastingadvies.</p>
-  <p class="vergelijk-hint">Vergelijk deze geschatte bedragen met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting en Zvw over dit jaar (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht in de tool).</p>
+  <p>Geschatte bijdrage Zvw: <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (gemaximeerd)" : ""}.</p>
+  <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
+  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
 
   <h3>Geschatte heffingskortingen (indicatief)</h3>
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
-  <p>Indicatieve IB ná deze heffingskortingen${zaScenarios ? " (bij zelfstandigenaftrek)" : ""}: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
-  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames achter deze heffingskortingen-schatting.</p>
+  <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong> <span class="toelichting">Zie Bijlage.</span></p>
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
   ${investeringenForYear.totaalInvestering > 0 ? `
-  <p>Investeringen in bedrijfsmiddelen in ${year} (Activa-paneel): <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong></p>
-  <p class="toelichting">${investeringenForYear.onvolledig > 0 ? `⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld in het Activa-paneel — dit bedrag is daardoor mogelijk te laag. ` : ""}Zie Bijlage: Toelichtingen voor de algemene regels rond de KIA.</p>
-  ` : `<p class="toelichting">KIA niet betrouwbaar vast te stellen op basis van beschikbare bankgegevens — geen (volledig ingevulde) investeringen in bedrijfsmiddelen gevonden voor ${year} in het Activa-paneel.</p>`}
+  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
+  ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel.</p>`}
 
   ${algemeneGegevensHtml}`;
 }
@@ -639,6 +594,18 @@ function buildBijlageToelichtingenHtml() {
     gereserveerd om tot 9 jaar later alsnog te verrekenen, mits in dit rapport ook een later jaar met
     voldoende winst wordt meegenomen (deze tool verrekent dit automatisch tussen de jaren die samen in
     één rapport zijn opgenomen).
+  </p>
+
+  <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — algemeen</h2>
+  <p class="toelichting">
+    Deze schatting gaat uit van het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de
+    onderneming besteed) voor de zelfstandigenaftrek — geef in de tool aan ("Persoonlijke aannames
+    voor IB") of daaraan is voldaan zodra dat bekend is; zonder die aangave rekent de tool voorlopig
+    mét zelfstandigenaftrek. De IB-schatting is exclusief heffingskortingen en overig inkomen (die
+    volgen apart hieronder in de jaarsectie). Zijn de belastingschijven of het Zvw-percentage van een
+    jaar nog niet officieel bekend, dan benadert de tool die met de dichtstbijzijnde bekende
+    schijven/het dichtstbijzijnde bekende percentage. Dit is in alle gevallen een indicatie, geen
+    belastingadvies — vergelijk het altijd met wat daadwerkelijk is aangegeven/betaald.
   </p>
 
   <h2>Heffingskortingen — aannames</h2>
