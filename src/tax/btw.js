@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES, fiscalTreatmentOf } from "../classification/categories.js";
+import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
 // Standaard 21%, met een vaste lijst uitzonderingen op 0%.
@@ -24,6 +24,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Overboekingen aan personen",
   "Interne overboeking: zakelijk sparen",
   "Huur",
+  "Huur (deels zakelijk)", // net als "Huur" standaard vrijgesteld — override desgewenst per dossier bij "belaste verhuur"
   "Incasso, juridisch & schulden",
   "Hypotheek",
   "Lease (financieel)",
@@ -93,7 +94,11 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
   "Hypotheek", "Leningen",
 ];
 
-export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}) {
+// `huurZakelijkPercentageStatus` is optioneel — een { jaar: percentage }-map (zie
+// tax/gedeeldeHuur.js). Weggelaten (of geen entry voor dit jaar), dan telt de BTW op
+// "Huur (deels zakelijk)" hier voor 100% mee als voorbelasting, exact zoals voorheen (dus 100%
+// backwards compatible voor elke aanroep die dit argument niet meegeeft).
+export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null) {
   const map = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -149,7 +154,13 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
       // in plaats van er (met het oude Math.abs()) verkeerd bovenop te komen.
       map[key].kostenBruto += -tx.amount;
       if (!voorbelastingExcluded.includes(tx.category)) {
-        map[key].voorbelasting += -btw;
+        // Bij "Huur (deels zakelijk)" is maar een deel van de BTW aftrekbaar als voorbelasting —
+        // het percentage-zakelijk-gebruik voor dit jaar (ontbrekend/geen status = 100%, dus
+        // volledig aftrekbaar, hetzelfde gedrag als vóór deze correctie bestond).
+        const huurPercentage = tx.category === GEDEELDE_HUUR_CATEGORIE
+          ? (huurZakelijkPercentageStatus?.[year] ?? 100)
+          : 100;
+        map[key].voorbelasting += -btw * (huurPercentage / 100);
       }
     }
   }

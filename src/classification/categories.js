@@ -51,6 +51,13 @@ export const DEFAULT_RULES = [
   { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz", "sepa green"] },
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
+  // Bewust GEEN zoekwoorden: dit subtype wordt nooit automatisch toegekend. Een deels-zakelijk
+  // verhuurde schuur/loods matcht anders via de "huur "-zoekwoorden hierboven gewoon bij het
+  // reguliere (100% zakelijke) "Huur" — de gebruiker moet zo'n transactie zelf, bewust, hierheen
+  // verplaatsen via de categorie-dropdown, want alleen dan is er een percentage-zakelijk-gebruik
+  // van toepassing (zie tax/gedeeldeHuur.js).
+  { name: "Huur (deels zakelijk)", color: "bg-amber-100 text-amber-800", keywords: [],
+    description: "Huur van een pand/ruimte (bijv. een schuur/loods) waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Huur\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [
     "cjib",
     "flanderijn", "kancelaria adwokacka", "ggn", "centraal justitieel incass", "pkg tax",
@@ -216,6 +223,12 @@ export const DEFAULT_RULES = [
     description: "Huur van bedrijfspand/activa of een management fee die de werkmaatschappij aan de holding betaalt — aftrekbare kostenpost voor de werkmaatschappij, relevant bij een holdingstructuur waarin de activa in de holding zitten." },
 ];
 
+// Categorienaam van "Huur (deels zakelijk)" op één centrale plek — gebruikt door tax/gedeeldeHuur.js
+// en door btw.js/yearlySummary.js voor de partiële-voorbelasting-correctie, zonder dat die modules
+// een circulaire import op elkaar nodig hebben (gedeeldeHuur.js importeert zelf weer computeBtw uit
+// btw.js).
+export const GEDEELDE_HUUR_CATEGORIE = "Huur (deels zakelijk)";
+
 export const SPLIT_CATEGORY_NAMES = {
   "Zakelijk mobiel/internet": "Prive - mobiel/internet",
   "Zakelijk overige abonnementen": "Prive overige abonnementen",
@@ -224,7 +237,7 @@ export const SPLIT_CATEGORY_NAMES = {
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -315,7 +328,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
   "Autokosten": "kosten", "Bankkosten": "kosten", "Belastingen: MRB": "kosten",
   "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten",
-  "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
+  "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Huur (deels zakelijk)": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
   "Marketing-website": "kosten", "Onderhoud apparatuur/machines": "kosten", "Parkeren": "kosten",
   "Betaalautomaat kosten": "kosten", "Personeel: overig": "kosten", "Reiskosten (OV)": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
@@ -501,6 +514,7 @@ export const SUBTYPE_TO_MAIN = {
   "Energie-water": "Huisvesting",
   "Gemeentelijke kosten": "Huisvesting",
   "Huur": "Huisvesting",
+  "Huur (deels zakelijk)": "Huisvesting",
   "Hypotheek": "Privé",
   "Incasso, juridisch & schulden": "Privé",
   "Inhuur personeel": "Personeel",

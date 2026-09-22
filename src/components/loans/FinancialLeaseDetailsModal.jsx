@@ -5,6 +5,7 @@ import {
   generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
 } from "../../tax/financialLease.js";
 import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
+import { computeLeaseAfschrijvingVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 
 const FIELDS_AANKOOP = [
@@ -43,6 +44,14 @@ function formFromSegment(segment) {
     einddatumContract: s.einddatumContract ?? "",
     verkoopsom: s.verkoopsom ?? "",
     restschuld: s.restschuld ?? "",
+    // Kapitalisatie/afschrijving + bijtelling (financiële lease auto/machine, zie
+    // tax/autoBijtelling.js) — allemaal optioneel en standaard leeg, zodat een bestaand contract
+    // (zonder deze velden) exact hetzelfde blijft rekenen als voorheen.
+    soort: s.soort ?? "",
+    afschrijvingstermijnJaren: s.afschrijvingstermijnJaren ?? "",
+    cataloguswaarde: s.cataloguswaarde ?? "",
+    bijtellingspercentage: s.bijtellingspercentage ?? "",
+    privegebruikMeerDan500kmPerJaar: s.privegebruikMeerDan500kmPerJaar ?? {},
   };
 }
 
@@ -72,6 +81,11 @@ function cleanSegment(form) {
     einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
     restschuld: form.contractBeeindigd ? n(form.restschuld) : null,
+    soort: form.soort || null,
+    afschrijvingstermijnJaren: form.soort ? n(form.afschrijvingstermijnJaren) : null,
+    cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
+    bijtellingspercentage: form.soort === "auto" ? n(form.bijtellingspercentage) : null,
+    privegebruikMeerDan500kmPerJaar: form.soort === "auto" ? form.privegebruikMeerDan500kmPerJaar || {} : null,
   };
 }
 
@@ -124,6 +138,34 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     const marge = Math.max(Number(form.maandbedrag) || 0, 25);
     return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: segmentTransactions.filter((tx) => tx.amount < 0).length };
   }, [segmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
+
+  // Berekende afschrijving per jaar voor dit contract als "Soort" is ingevuld — puur ter controle/
+  // preview in dit venster, dezelfde berekening (computeLeaseAfschrijvingVoorJaar) als het
+  // aangiftevoorstel gebruikt.
+  const leaseActivumAfschrijvingPerJaar = useMemo(() => {
+    if (!form.soort || !form.startdatum) return [];
+    const segment = cleanSegment(form);
+    const startYear = new Date(segment.startdatum).getFullYear();
+    const termijn = segment.afschrijvingstermijnJaren || (segment.soort === "auto" ? MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN : 0);
+    if (!(termijn > 0)) return [];
+    const rows = [];
+    for (let j = startYear; j <= startYear + Math.ceil(termijn); j++) {
+      const afschrijving = computeLeaseAfschrijvingVoorJaar(segment, j);
+      if (rows.length > 0 && afschrijving <= 0) break;
+      rows.push({ jaar: j, afschrijving });
+    }
+    return rows;
+  }, [form]);
+
+  // Welke jaren zijn relevant om de privégebruik-toggle voor te tonen: alle jaren waarin er
+  // daadwerkelijk banktransacties voor dit contract zijn, plus het huidige kalenderjaar en het
+  // startjaar van het contract (ook als daar nog geen transacties over zijn geïmporteerd).
+  const jarenVoorPrivegebruik = useMemo(() => {
+    const jarenSet = new Set(segmentTransactions.map((tx) => tx.date.getFullYear()));
+    jarenSet.add(new Date().getFullYear());
+    if (form.startdatum) jarenSet.add(new Date(form.startdatum).getFullYear());
+    return [...jarenSet].sort((a, b) => a - b);
+  }, [segmentTransactions, form.startdatum]);
 
   const leaseVergoedingWijktAf =
     form.leaseVergoeding !== "" && totaleLeaseBetalingen != null &&
@@ -216,6 +258,104 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             mee, waardoor het niet meer aansluit bij de echte betalingen. Klopt dit niet, pas de datum hierboven aan (meestal
             dicht bij de startdatum, of leeg laten voor de voorgestelde 1e van de volgende maand).
           </p>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          Kapitalisatie &amp; afschrijving (optioneel)
+        </p>
+        <p className="text-xs text-slate-400 mb-2">
+          Vul dit in als dit leasecontract een auto of machine betreft — het geleasde object is dan een
+          eigen bedrijfsmiddel dat gekapitaliseerd en afgeschreven wordt. Laat "Soort" op "Niet ingevuld"
+          staan om de bestaande berekening (alleen rente aftrekbaar) ongewijzigd te laten.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">
+            <span className="block text-xs font-medium text-slate-600 mb-1">Soort</span>
+            <select
+              value={form.soort || ""}
+              onChange={(e) => onChange({ ...form, soort: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+            >
+              <option value="">Niet ingevuld (geen kapitalisatie)</option>
+              <option value="auto">Auto</option>
+              <option value="machine">Machine/overig</option>
+            </select>
+          </label>
+          {form.soort && (
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-slate-600 mb-1">
+                Afschrijvingstermijn (jaren){form.soort === "auto" ? ` — minimaal ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN}` : ""}
+              </span>
+              <input
+                type="number" min="1" step="1" value={form.afschrijvingstermijnJaren} onChange={set("afschrijvingstermijnJaren")}
+                placeholder={form.soort === "auto" ? String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN) : ""}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+              />
+            </label>
+          )}
+          {form.soort === "auto" && (
+            <>
+              <label className="text-sm">
+                <span className="block text-xs font-medium text-slate-600 mb-1">Cataloguswaarde (voor bijtelling)</span>
+                <input type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              </label>
+              <label className="text-sm">
+                <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage (%)</span>
+                <input type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              </label>
+            </>
+          )}
+        </div>
+
+        {form.soort && leaseActivumAfschrijvingPerJaar.length > 0 && (
+          <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Berekende afschrijving per jaar</p>
+            <table className="w-full text-sm text-slate-800">
+              <thead>
+                <tr className="text-xs text-slate-500">
+                  <th className="text-left font-medium pb-1">Jaar</th>
+                  <th className="text-right font-medium pb-1">Afschrijving</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaseActivumAfschrijvingPerJaar.map(({ jaar, afschrijving }) => (
+                  <tr key={jaar} className="border-t border-slate-200/60">
+                    <td className="py-1">{jaar}</td>
+                    <td className="text-right font-mono">{eur(afschrijving)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {form.soort === "auto" && jarenVoorPrivegebruik.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-medium text-slate-600 mb-1">Privégebruik meer dan 500 km per jaar?</p>
+            <div className="flex flex-wrap gap-3">
+              {jarenVoorPrivegebruik.map((jaar) => (
+                <label key={jaar} className="flex items-center gap-1.5 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={!!form.privegebruikMeerDan500kmPerJaar?.[jaar]}
+                    onChange={(e) =>
+                      onChange({
+                        ...form,
+                        privegebruikMeerDan500kmPerJaar: { ...(form.privegebruikMeerDan500kmPerJaar || {}), [jaar]: e.target.checked },
+                      })
+                    }
+                  />
+                  {jaar}
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Alleen bij meer dan 500 km privégebruik per jaar geldt de bijtelling/onttrekking (afgetopt op de
+              werkelijke totale autokosten) — anders blijven de volledige autokosten gewoon aftrekbaar.
+            </p>
+          </div>
         )}
       </div>
 

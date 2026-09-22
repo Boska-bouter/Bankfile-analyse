@@ -1,5 +1,5 @@
 import { computeBtw } from "./btw.js";
-import { fiscalTreatmentOf } from "../classification/categories.js";
+import { fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
 import { eur } from "../utils/amounts.js";
 
 // Winst uit onderneming (bruto) voor één jaar = Zakelijke inkomsten min BTW min de overige
@@ -12,8 +12,21 @@ import { eur } from "../utils/amounts.js";
 // je dit weg, dan wordt er conservatief 0 rente afgetrokken (nooit te veel winst wegschrijven).
 // `fixedCategories` en `incomeTransferCategories` zijn optioneel — zonder die twee worden
 // zakVast/zakVariabel/priVast/priVariabel gewoon op 0 gehouden (bijv. voor code die deze
-// uitsplitsing niet nodig heeft).
-export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0) {
+// uitsplitsing niet nodig heeft). `leaseAutoWinstCorrectie` is optioneel en standaard 0 (dus
+// bestaande aanroepen zonder dit argument rekenen exact als voorheen): het is de per saldo
+// bijkomende correctie op de winst van gekapitaliseerde financiële-lease-auto's/machines — de
+// nieuwe afschrijving (verlaagt de winst) minus de onttrekking bij privégebruik van een leaseauto
+// (verhoogt de winst weer) — zie tax/autoBijtelling.js. 0 zolang geen enkel leasecontract een
+// `soort` heeft ingevuld, dus 100% backwards compatible.
+// Sinds "Huur (deels zakelijk)" (zie tax/gedeeldeHuur.js) is dit param bewust een algemene "extra
+// winst-correctie"-optelsom geworden in plaats van puur lease: de aanroeper (App.jsx/
+// aangiftevoorstel.js) telt de lease-winstcorrectie en `-nietAftrekbaarBedrag` van de gedeelde-huur-
+// berekening bij elkaar op vóórdat die hier binnenkomt (het niet-aftrekbare deel moet de winst juist
+// verhogen — het was hierboven via zakBruto/zakBtwTotaal al ten onrechte voor 100% afgetrokken, dus
+// gaat er hier als NEGATIEVE bijdrage in zodat de aftrek van "- leaseAutoWinstCorrectie" de winst per
+// saldo verhoogt). Geen enkele bestaande aanroep verandert hierdoor: zonder "Huur (deels zakelijk)"-
+// transacties blijft deze correctie exact wat hij al was (de lease-correctie, of 0).
+export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0, leaseAutoWinstCorrectie = 0) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
   let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
@@ -83,7 +96,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   }
   return {
     zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
-    winst: zakBruto - zakBtwTotaal - renteAftrekbaar, zakVast, zakVariabel, priVast, priVariabel,
+    winst: zakBruto - zakBtwTotaal - renteAftrekbaar - leaseAutoWinstCorrectie, zakVast, zakVariabel, priVast, priVariabel,
     zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting, zakelijkVanPriveRekening,
     // Netto omzet = zakelijke inkomsten min de daarover verschuldigde BTW — zelfde bedrag als
     // "1. Opbrengsten" in het Aangiftevoorstel. zakelijkeKostenNetto is netto zakelijke kosten
@@ -141,7 +154,10 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
 
 // Nog te betalen/terug te vragen OB per jaar — alleen de kwartalen die nog NIET als "betaald"
 // zijn aangevinkt tellen mee (een al betaald kwartaal hoort niet meer als openstaand).
-export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus) {
+// `huurZakelijkPercentageStatus` is optioneel — zie computeQuarterlyBtwForYear in btw.js voor
+// dezelfde correctie/achtergrond. Weggelaten, dan telt de BTW op "Huur (deels zakelijk)" hier voor
+// 100% mee als voorbelasting, exact zoals voorheen.
+export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null) {
   const perQuarter = {};
   for (const tx of classified) {
     if (tx.isMirror || fiscalTreatmentOf(tx.category) === "geen") continue;
@@ -154,7 +170,10 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) perQuarter[key].verschuldigdBtw += btw;
     } else if (!voorbelastingExcluded.includes(tx.category)) {
-      perQuarter[key].voorbelasting += -btw;
+      const huurPercentage = tx.category === GEDEELDE_HUUR_CATEGORIE
+        ? (huurZakelijkPercentageStatus?.[Number(y)] ?? 100)
+        : 100;
+      perQuarter[key].voorbelasting += -btw * (huurPercentage / 100);
     }
   }
   const result = {};

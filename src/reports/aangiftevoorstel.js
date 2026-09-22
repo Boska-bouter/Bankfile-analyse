@@ -12,6 +12,8 @@ import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
+import { computeLeaseAutoKostenVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN, AUTOKOSTEN_CATEGORIEN } from "../tax/autoBijtelling.js";
+import { computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
@@ -74,14 +76,17 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
 // Alleen de winst voor een jaar — gebruikt in een pre-pass over alle te rapporteren jaren om de
 // verrekening van niet-gerealiseerde zelfstandigenaftrek (die de jaren chronologisch aan elkaar
 // koppelt) te kunnen berekenen vóórdat de eigenlijke jaarsecties worden opgebouwd.
-function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails) {
+function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus) {
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar).winst;
+  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified);
+  const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0);
+  return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie).winst;
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -89,7 +94,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
+  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified);
+  const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0);
+  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie);
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's,
   // niets aangegeven (of "ja") houdt het bestaande gedrag aan (mét zelfstandigenaftrek) zodat
   // eerder opgeslagen projecten dezelfde cijfers blijven tonen totdat dit expliciet wordt gezet.
@@ -117,7 +125,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear);
 
   // Gaten in de bestandscontinuïteit die dit jaar raken — eenmalig bepaald, gebruikt voor zowel de
   // status bovenaan als de "Algemene gegevens"-bijlage verderop.
@@ -145,7 +153,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     })
     .join("");
 
-  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides);
+  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus);
   const kwartaalRows = kwartalen
     .map((q) => {
       const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
@@ -203,9 +211,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const kostenTotaal =
     (ib.inkoopkosten.totaal || 0) +
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
+    (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) +
     ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
-    renteAftrekbaar;
+    renteAftrekbaar -
+    (ib.leaseAutoKosten?.onttrekking || 0);
 
   const samenvattingHtml = `
   <div class="samenvatting">
@@ -261,6 +271,89 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ])}`
       : "";
 
+  // Volledige uitsplitsing van de gekapitaliseerde financiële-lease-auto's/machines (afschrijving +
+  // lease-rente + gecategoriseerde autokosten, en bij privégebruik >500 km/jaar de bijtelling/
+  // onttrekking) — alleen zichtbaar zodra minstens één leasecontract een "soort" heeft ingevuld.
+  const leaseAutoKostenHtml = (() => {
+    const lak = ib.leaseAutoKosten;
+    if (!lak) return "";
+    const contractRows = lak.contracten
+      .map((c) => {
+        const soortLabel = c.soort === "auto" ? "Auto" : "Machine/overig";
+        const privegebruikLabel = c.soort === "auto" ? (c.privegebruikMeerDan500km ? "Ja (>500 km/jaar)" : "Nee / niet van toepassing") : "—";
+        return `<tr><td>${esc(c.leaseName)} (${soortLabel})</td><td class="num">${eur(c.afschrijving)}</td><td class="num">${c.soort === "auto" ? eur(c.leaseRente) : "—"}</td><td>${privegebruikLabel}</td></tr>`;
+      })
+      .join("");
+    return `
+  <div class="rubriek"><span>Toelichting: financiële lease auto/machine — kapitalisatie en (bij privégebruik) onttrekking</span><span></span></div>
+  <p class="toelichting">
+    Bij financiële lease is het geleasde object (auto of machine) een eigen bedrijfsmiddel van de
+    zzp'er, dat gekapitaliseerd en afgeschreven wordt (aanschafwaarde = het gefinancierde bedrag bij
+    aanvang van het contract, niet de cataloguswaarde; bij een auto geldt een fiscale minimale
+    afschrijvingstermijn van ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN} jaar). Bij een geleasede auto
+    met meer dan 500 km privégebruik per jaar geldt daarnaast een "onttrekking": de normale bijtelling
+    (bijtellingspercentage × cataloguswaarde) wordt afgetopt op de werkelijke totale autokosten van
+    dat jaar — dit is geen gewone bijtelling zoals bij een werknemer, maar een correctie op de
+    aftrekbare kosten van de zzp'er zelf.
+  </p>
+  <table>
+    <thead><tr><th>Contract</th><th class="num">Afschrijving</th><th class="num">Lease-rente</th><th>Privégebruik &gt;500 km/jaar</th></tr></thead>
+    <tbody>${contractRows}</tbody>
+  </table>
+  <table>
+    <tbody>
+      <tr><td>Afschrijving (alle contracten)</td><td class="num">${eur(lak.afschrijvingTotaal)}</td></tr>
+      <tr><td>Lease-rente (auto-contracten)</td><td class="num">${eur(lak.leaseRenteTotaal)}</td></tr>
+      <tr><td>Gecategoriseerde autokosten (${AUTOKOSTEN_CATEGORIEN.join(", ")})</td><td class="num">${eur(lak.autokostenTransactieTotaal)}</td></tr>
+      <tr class="total"><td>Totale autokosten</td><td class="num">${eur(lak.totaleAutokosten)}</td></tr>
+      <tr><td>Normale bijtelling (bijtellingspercentage × cataloguswaarde)</td><td class="num">${eur(lak.normaleBijtellingTotaal)}</td></tr>
+      <tr><td>Onttrekking (afgetopt op werkelijke autokosten)</td><td class="num">${eur(lak.onttrekking)}</td></tr>
+      <tr class="total"><td>Netto aftrekbare autokosten</td><td class="num">${eur(lak.nettoAftrekbareAutokosten)}</td></tr>
+    </tbody>
+  </table>
+  <p class="toelichting">
+    De lease-rente en de gecategoriseerde autokosten hierboven stromen al mee in de winst via de
+    bestaande berekening (rente bij "Financiële baten en lasten", de rest via de normale categorie-
+    gedreven kosten) — deze tabel is puur een transparante uitsplitsing. Wat de winst per saldo
+    verandert is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (verhoogt de winst
+    weer bij privégebruik).
+  </p>`;
+  })();
+
+  // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
+  // daadwerkelijk transacties in die categorie zijn (computeGedeeldeHuurVoorJaar geeft anders null
+  // terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
+  const gedeeldeHuurHtml = (() => {
+    const gh = gedeeldeHuurForYear;
+    if (!gh) return "";
+    return `
+  <div class="rubriek"><span>Toelichting: Huur (deels zakelijk) — percentage zakelijk gebruik</span><span></span></div>
+  <p class="toelichting">
+    Van deze huur is maar een deel zakelijk (bijv. een deels verhuurd/gebruikt pand of schuur) — het
+    privédeel mag de winst niet verlagen, en is bij een belaste huur ook niet aftrekbaar als
+    voorbelasting. Het percentage zakelijk gebruik is hier ingesteld op ${gh.percentage}% voor ${year}.
+  </p>
+  <table>
+    <tbody>
+      <tr><td>Totale huur (bruto, incl. BTW)</td><td class="num">${eur(gh.totaalHuurBruto)}</td></tr>
+      ${gh.totaalBtwOpHuur > 0 ? `<tr><td>Waarvan BTW</td><td class="num">${eur(gh.totaalBtwOpHuur)}</td></tr>` : ""}
+      <tr><td>Totale huur (netto, excl. BTW)</td><td class="num">${eur(gh.totaalHuurNetto)}</td></tr>
+      <tr><td>Percentage zakelijk gebruik</td><td class="num">${gh.percentage}%</td></tr>
+      <tr class="total"><td>Aftrekbaar (zakelijk deel)</td><td class="num">${eur(gh.aftrekbaarBedrag)}</td></tr>
+      <tr><td>Niet aftrekbaar (privédeel)</td><td class="num">${eur(gh.nietAftrekbaarBedrag)}</td></tr>
+      ${gh.totaalBtwOpHuur > 0 ? `
+      <tr><td>Aftrekbare voorbelasting</td><td class="num">${eur(gh.aftrekbareVoorbelasting)}</td></tr>
+      <tr><td>Niet-aftrekbare voorbelasting (privédeel)</td><td class="num">${eur(gh.nietAftrekbareVoorbelasting)}</td></tr>` : ""}
+    </tbody>
+  </table>
+  <p class="toelichting">
+    Het volledige brutobedrag stroomt via de gewone categorie-indeling mee in "2. Inkoopkosten..."/
+    "Overige bedrijfskosten" hierboven (net als "Huur") — het niet-aftrekbare deel wordt hier apart
+    weer bij de winst opgeteld, zodat "Resultaat uit onderneming" hieronder al de juiste, gecorrigeerde
+    winst toont.
+  </p>`;
+  })();
+
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
       ? `
@@ -296,12 +389,16 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, `${ib.inkoopkosten.toelichting} Bedragen zijn netto (exclusief BTW).`, ib.inkoopkosten.perCategorie)}
     ${rubriekBlok(
       3, ib.afschrijvingen.naam,
-      ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering,
-      ib.afschrijvingen.toelichting + (ib.afschrijvingen.activaOnvolledig > 0 ? ` ⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.` : ""),
+      (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering) + (ib.afschrijvingen.berekendeLeaseAfschrijving || 0),
+      ib.afschrijvingen.toelichting +
+        (ib.afschrijvingen.activaOnvolledig > 0 ? ` ⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.` : "") +
+        (ib.afschrijvingen.berekendeLeaseAfschrijving ? ` Waarvan ${eur(ib.afschrijvingen.berekendeLeaseAfschrijving)} afschrijving op financieel-geleasede auto('s)/machine(s) — zie de uitsplitsing hieronder bij "Financiële baten en lasten".` : ""),
       ib.afschrijvingen.perCategorie
     )}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
+    ${leaseAutoKostenHtml}
+    ${gedeeldeHuurHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, netto)</span><span class="num">${eur(summary.winst)}</span></div>
     ${priveHtml}
     ${belastingenHtml}
@@ -383,7 +480,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus) {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren met
@@ -393,7 +490,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     .filter((year) => zelfstandigenaftrekStatus?.[year] !== "onbekend")
     .map((year) => ({
       year,
-      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails),
+      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus),
       zelfstandigenaftrekStatus: zelfstandigenaftrekStatus?.[year],
       startersaftrekToegepast: startersaftrekStatus?.[year] === "ja",
     }));
@@ -407,7 +504,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
       : "";
 
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>

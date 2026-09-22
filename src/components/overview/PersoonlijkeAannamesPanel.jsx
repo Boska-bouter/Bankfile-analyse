@@ -15,9 +15,14 @@ export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus,
   startersaftrekStatus, onSetStartersaftrekStatus,
   activaSummary, activaDetails, onOpenHelp,
+  gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
   const [open, setOpen] = useState(false);
-  if (!activeYear || !winst || winst <= 0) return null;
+  // "Huur (deels zakelijk)" mag ook zichtbaar zijn in een jaar met winst €0 of negatief (bijv. een
+  // verlieslatend jaar) — het paneel zelf blijft verder verborgen (net als voorheen) zolang er geen
+  // enkele aanleiding is om het te tonen: gedeeldeHuur is null voor elk dossier dat deze nieuwe
+  // categorie niet gebruikt, dus dit verandert niets aan bestaande dossiers.
+  if (!activeYear || ((!winst || winst <= 0) && !gedeeldeHuur)) return null;
 
   const status = zelfstandigenaftrekStatus?.[activeYear] || "onbekend_default";
   const zelfstandigenaftrekToegepast = status !== "nee";
@@ -28,6 +33,10 @@ export default function PersoonlijkeAannamesPanel({
 
   const { totaalInvestering, onvolledig: activaOnvolledig } = computeInvesteringenForYear(activaSummary || [], activaDetails || {}, activeYear);
   const mogelijkeKia = totaalInvestering > 0 ? computeMogelijkeKia(totaalInvestering, activeYear) : 0;
+  const heeftWinst = winst > 0;
+
+  const huurPercentageRaw = huurZakelijkPercentageStatus?.[activeYear];
+  const huurBtwTarief = categoryBtwRates?.["Huur (deels zakelijk)"] || 0;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
@@ -39,6 +48,8 @@ export default function PersoonlijkeAannamesPanel({
       </button>
       {open && (
         <div className="px-5 pb-5 space-y-4">
+          {heeftWinst && (
+          <>
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Voldaan aan het urencriterium voor de zelfstandigenaftrek in {activeYear}?
@@ -121,6 +132,54 @@ export default function PersoonlijkeAannamesPanel({
               Indicatieve aangifteberekening-rapport (met alle jaren erin) voor die volledige berekening.
             </p>
           </div>
+          </>
+          )}
+
+          {gedeeldeHuur && (
+            <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>
+              <label className="text-sm font-medium text-slate-700 block mb-1">
+                Percentage zakelijk gebruik "Huur (deels zakelijk)" in {activeYear}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={huurPercentageRaw ?? ""}
+                  placeholder="100"
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") { onSetHuurZakelijkPercentageStatus(activeYear, null); return; }
+                    const n = Math.max(0, Math.min(100, Number(v)));
+                    onSetHuurZakelijkPercentageStatus(activeYear, n);
+                  }}
+                  className="w-24 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                />
+                <span className="text-sm text-slate-500">%</span>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                Er zijn dit jaar transacties in de categorie "Huur (deels zakelijk)" — alleen dit percentage
+                daarvan telt mee als aftrekbare zakelijke kosten (en, als er BTW op zit, als voorbelasting); de
+                rest is privé en telt niet mee in de winst. Leeg/niet ingevuld = 100% (volledig aftrekbaar,
+                hetzelfde als gewone "Huur").
+              </p>
+
+              <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3 space-y-1 text-xs">
+                <p><span className="text-slate-500">Totale huur (bruto, incl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurBruto)}</strong></p>
+                <p><span className="text-slate-500">Totale huur (netto, excl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurNetto)}</strong></p>
+                <p><span className="text-slate-500">Percentage zakelijk:</span> <strong>{gedeeldeHuur.percentage}%</strong></p>
+                <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbaar bedrag:</span> <strong>{eur(gedeeldeHuur.aftrekbaarBedrag)}</strong></p>
+                <p><span className="text-slate-500">Niet-aftrekbaar (privé)deel:</span> <strong>{eur(gedeeldeHuur.nietAftrekbaarBedrag)}</strong></p>
+                {huurBtwTarief > 0 && (
+                  <>
+                    <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbare voorbelasting:</span> <strong>{eur(gedeeldeHuur.aftrekbareVoorbelasting)}</strong></p>
+                    <p><span className="text-slate-500">Niet-aftrekbare voorbelasting (privé):</span> <strong>{eur(gedeeldeHuur.nietAftrekbareVoorbelasting)}</strong></p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>
