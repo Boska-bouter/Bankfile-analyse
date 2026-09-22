@@ -257,6 +257,12 @@ export default function App() {
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
   const applySettingsToState = (settings) => {
+    // De bestandsnaam van het laatst opgeslagen/geladen projectbestand hoort hier ook bij hersteld
+    // te worden — anders "vergeet" de tool die naam zodra de sessie hervat wordt vanuit de
+    // automatische browseropslag (bijv. na een tool-update of het herstarten van de browser), en
+    // valt "Project opslaan" onterecht terug op de standaardnaam in plaats van door te tellen op de
+    // bestandsnaam die al in gebruik was.
+    setLoadedProjectFileName(settings.loadedProjectFileName ?? null);
     setAccountTypeByFile(settings.accountTypeByFile || {});
     setOverridesByCounterparty(migrateOverridesCategories(settings.overridesByCounterparty));
     setOverridesByRow(migrateOverridesCategories(settings.overridesByRow));
@@ -404,7 +410,7 @@ export default function App() {
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
         ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-        incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+        incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
       if (ok1 && ok2) setLastSavedAt(new Date());
@@ -417,7 +423,7 @@ export default function App() {
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
     ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
   ]);
 
