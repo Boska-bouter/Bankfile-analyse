@@ -1,11 +1,11 @@
 import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
-import { estimateIncomeTax, estimateZvw } from "../tax/incomeTax.js";
+import { estimateIncomeTax, estimateZvw, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
-import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { eur } from "../utils/amounts.js";
@@ -67,7 +67,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
   ${gatenHtml}`;
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -76,10 +76,19 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
-  const ibEstimate = estimateIncomeTax(summary.winst, year);
-  const zvwEstimate = estimateZvw(summary.winst, year);
+  // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's,
+  // niets aangegeven (of "ja") houdt het bestaande gedrag aan (mét zelfstandigenaftrek) zodat
+  // eerder opgeslagen projecten dezelfde cijfers blijven tonen totdat dit expliciet wordt gezet.
+  const zaStatus = zelfstandigenaftrekStatus?.[year];
+  const zelfstandigenaftrekToegepast = zaStatus !== "nee";
+  const ibEstimate = estimateIncomeTax(summary.winst, year, zelfstandigenaftrekToegepast);
+  const zvwEstimate = estimateZvw(summary.winst, year, zelfstandigenaftrekToegepast);
+  const zaScenarios = zaStatus === "onbekend" ? estimateIncomeTaxScenarios(summary.winst, year) : null;
+  const heffingskortingen = estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
+  const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
+  const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
 
   // Gaten in de bestandscontinuïteit die dit jaar raken — eenmalig bepaald, gebruikt voor zowel de
@@ -302,9 +311,28 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   </table>` : ""}
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
-  <p>Geschatte inkomstenbelasting: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
+  ${zaScenarios ? `
+  <p><strong>Voldaan aan het urencriterium voor de zelfstandigenaftrek: onbekend</strong> — daarom twee scenario's:</p>
+  <p>1. Mét zelfstandigenaftrek: geschatte inkomstenbelasting <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong></p>
+  <p>2. Zonder zelfstandigenaftrek: geschatte inkomstenbelasting <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong></p>
+  <p class="toelichting">Dit is een persoonlijke voorwaarde (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) die niet uit bankgegevens is af te leiden — geef dit aan in de tool ("Persoonlijke aannames voor IB") zodra dit bekend is.</p>
+  ` : `
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
+  ${!zaStatus ? '<p class="toelichting">⚠ Ervan uitgegaan dat aan het urencriterium voor de zelfstandigenaftrek is voldaan (nog niet expliciet aangegeven in de tool) — geef dit aan bij "Persoonlijke aannames voor IB" als dit niet (zeker) het geval is.</p>' : ""}
+  `}
   <p>Geschatte bijdrage Zorgverzekeringswet (Zvw): <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar)" : ""}${zvwEstimate.geëxtrapoleerd ? " (Zvw-percentage van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende percentage)" : ""} — het lage (zelfstandigen-)tarief over dezelfde belastbare winst als hierboven. Geen belastingadvies.</p>
   <p class="vergelijk-hint">Vergelijk deze geschatte bedragen met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting en Zvw over dit jaar (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht in de tool).</p>
+
+  <h3>Geschatte heffingskortingen (indicatief)</h3>
+  <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
+  <p>Indicatieve IB ná deze heffingskortingen${zaScenarios ? " (bij zelfstandigenaftrek)" : ""}: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
+  <p class="toelichting">⚠ Persoonlijke heffingskortingen zijn niet volledig meegenomen: deze schatting gaat ervan uit dat de winst uit onderneming je enige inkomen is, dat je nog geen AOW-leeftijd hebt bereikt, en dat er geen fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is deze indicatie minder betrouwbaar. Geen belastingadvies.</p>
+
+  <h3>Mogelijke investeringsaftrek (KIA)</h3>
+  ${investeringenForYear.totaalInvestering > 0 ? `
+  <p>Investeringen in bedrijfsmiddelen in ${year} (Activa-paneel): <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong></p>
+  <p class="toelichting">Dit is een mógelijke, geen definitieve aftrek — niet elk bedrijfsmiddel telt mee voor de KIA (bijv. personenauto's en grond meestal niet, en elk bedrijfsmiddel moet minimaal circa €450 hebben gekost). Controleer dit zelf per aanschaf.${investeringenForYear.onvolledig > 0 ? ` ⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld in het Activa-paneel — dit bedrag is daardoor mogelijk te laag.` : ""}</p>
+  ` : `<p class="toelichting">KIA niet betrouwbaar vast te stellen op basis van beschikbare bankgegevens — geen (volledig ingevulde) investeringen in bedrijfsmiddelen gevonden voor ${year} in het Activa-paneel.</p>`}
 
   <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
   <table>
@@ -316,9 +344,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus) {
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>

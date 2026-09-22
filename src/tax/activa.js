@@ -88,3 +88,23 @@ export function computeActivaAfschrijvingForYear(activaSummary, activaDetails, y
   }
   return { totaalAfschrijving, onvolledig };
 }
+
+// Som van de aanschafwaarde van bedrijfsmiddelen die dit specifieke jaar zijn aangeschaft — de
+// grondslag voor een indicatie van de kleinschaligheidsinvesteringsaftrek (KIA). Anders dan bij
+// afschrijving (die over meerdere jaren loopt) telt voor KIA het jaar van aanschaf, niet de jaren
+// erna. Activa zonder volledig ingevulde gegevens tellen niet mee in het bedrag, maar wel in de
+// "onvolledig"-teller, zodat een KIA-indicatie niet stilzwijgend een te laag investeringsbedrag
+// toont.
+export function computeInvesteringenForYear(activaSummary, activaDetails, year) {
+  let totaalInvestering = 0;
+  let onvolledig = 0;
+  for (const activum of activaSummary) {
+    const details = activaDetails[activum.key];
+    if (!details || details.onbekend) { onvolledig++; continue; }
+    if (!details.aanschafwaarde || !details.aanschafdatum) { onvolledig++; continue; }
+    if (new Date(details.aanschafdatum).getFullYear() === year) {
+      totaalInvestering += Number(details.aanschafwaarde);
+    }
+  }
+  return { totaalInvestering, onvolledig };
+}
