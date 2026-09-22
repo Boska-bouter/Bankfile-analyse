@@ -153,9 +153,16 @@ export default function LeaseInterestPanel({
                     isOnbekend ? (
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>
                     ) : amortization ? (
-                      <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
-                        Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
-                      </p>
+                      <>
+                        <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                          Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
+                        </p>
+                        {amortization.renteNietBerekenbaar && (
+                          <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                            ⚠ Voor (een deel van) dit contract kon het rentepercentage niet berekend worden — de ingevulde bedragen sluiten niet op elkaar aan. Het totaal hierboven is hierdoor onvolledig. Controleer de invoer bij "Gegevens bewerken".
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>
                     )

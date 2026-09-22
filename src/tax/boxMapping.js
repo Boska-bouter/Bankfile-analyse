@@ -114,6 +114,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       aflossingLeningen: loanRenteForYear?.totaalAflossing || 0,
       aflossingLease: leaseRenteForYear?.totaalAflossing || 0,
       onvolledig: (loanRenteForYear?.onvolledig || 0) + (leaseRenteForYear?.onvolledig || 0),
+      renteNietBerekenbaar: leaseRenteForYear?.renteNietBerekenbaar || 0,
       toelichting:
         "Alleen de rente is een kostenpost — de rest van elke termijn is aflossing op de financiering, een balansmutatie, geen bedrijfskosten. Bij financiële lease van bijvoorbeeld een auto is er bij een zzp'er (eenmanszaak) meestal geen eigen bedrijfsmiddel om af te schrijven (dat blijft eigendom van de leasemaatschappij) — vandaar dat hier alleen de rente staat, en niets bij \"Afschrijvingen\".",
     },

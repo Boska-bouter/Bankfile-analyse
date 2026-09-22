@@ -90,27 +90,43 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
   const withTx = assignLeaseTransactionsToSegments(transactions, segments);
   const rows = [];
   let onvolledig = false;
+  // Apart van "nog niet (volledig) ingevuld": een segment kan wél helemaal ingevuld zijn, maar met
+  // bedragen die niet bij elkaar passen (bijv. de opgetelde termijnen zijn lager dan de hoofdsom die
+  // gefinancierd wordt) — dan levert computeFinancialLeaseRate bewust null op (zie financialLease.js)
+  // in plaats van een misleidend percentage. Dat verdient in de aangifte een ANDERE melding dan "nog
+  // niet ingevuld", want de gebruiker heeft hier al wél iets ingevuld — het klopt alleen niet.
+  let renteNietBerekenbaar = false;
+  // Welke kalenderjaren precies een niet-berekenbaar segment hebben — anders zou de waarschuwing
+  // óók verschijnen bij jaren die alleen te maken hebben met een eerder, prima werkend contract
+  // (bijv. 2020 t/m 2024 bij een lease die pas in 2025 een kapot vervolgcontract kreeg).
+  const renteNietBerekenbaarJaren = new Set();
   let saldoNu = null;
   for (const { segment, transactions: segTx } of withTx) {
     if (!segment.koopprijs || !segment.looptijd || !segment.maandbedrag || !segment.startdatum) { onvolledig = true; continue; }
     const hoofdsom = computeOnbetaaldGedeelteKoop(segment);
     const rente = computeFinancialLeaseRate(segment);
-    if (rente == null) { onvolledig = true; continue; }
+    if (rente == null) {
+      renteNietBerekenbaar = true;
+      for (const tx of segTx) renteNietBerekenbaarJaren.add(tx.date.getFullYear());
+      renteNietBerekenbaarJaren.add(new Date(segment.startdatum).getFullYear());
+      continue;
+    }
     const amortization = computeLoanAmortization(segTx, { leasebedrag: hoofdsom, startdatum: segment.startdatum, rente });
     if (!amortization) continue;
     rows.push(...amortization.rows);
     saldoNu = amortization.saldoNu;
   }
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return renteNietBerekenbaar ? { rows: [], totaalRente: 0, totaalAflossing: 0, saldoNu: 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren } : null;
   const totaalRente = rows.reduce((a, r) => a + r.rente, 0);
   const totaalAflossing = rows.reduce((a, r) => a + r.aflossing, 0);
-  return { rows, totaalRente, totaalAflossing, saldoNu: saldoNu ?? 0, onvolledig };
+  return { rows, totaalRente, totaalAflossing, saldoNu: saldoNu ?? 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren };
 }
 
 export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) {
   let totaalRente = 0;
   let totaalAflossing = 0;
   let onvolledig = 0;
+  let renteNietBerekenbaar = 0;
   for (const lease of leaseSummary) {
     if (lease.category !== "Lease (financieel)") continue;
     const details = leaseDetails[lease.key];
@@ -118,13 +134,14 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
     const amortization = computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
     if (!amortization) { onvolledig++; continue; }
     if (amortization.onvolledig) onvolledig++;
+    if (amortization.renteNietBerekenbaarJaren?.has(year)) renteNietBerekenbaar++;
     const jaarData = groupAmortizationByYear(amortization).find((j) => j.year === year);
     if (jaarData) {
       totaalRente += jaarData.rente;
       totaalAflossing += jaarData.aflossing;
     }
   }
-  return { totaalRente, totaalAflossing, onvolledig };
+  return { totaalRente, totaalAflossing, onvolledig, renteNietBerekenbaar };
 }
 
 // Groepeert "Leningen"-transacties per tegenpartij (niet op teken, zoals bij Overig) — een
