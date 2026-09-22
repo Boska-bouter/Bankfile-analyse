@@ -1,5 +1,5 @@
-import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
-import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
+import { fiscalTreatmentOf } from "../classification/categories.js";
+import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
   estimateIncomeTax, estimateZvw, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
@@ -27,6 +27,16 @@ function rubriekBlok(nr, naam, totaal, toelichting, perCategorie) {
   if (!totaal) return "";
   return `
   <div class="rubriek"><span>${nr ? `${nr}. ` : ""}${esc(naam)}</span><span class="num">${eur(totaal)}</span></div>
+  ${toelichting ? `<p class="toelichting">${toelichting}</p>` : ""}
+  ${categorieDetailHtml(perCategorie)}`;
+}
+
+// Zelfde als rubriekBlok, maar toont de rij ALTIJD (ook bij € 0,00) — voor rubrieken die expliciet
+// als € 0,00 zichtbaar moeten blijven in plaats van stilzwijgend te verdwijnen (bijv. de nieuwe
+// "Afschrijving auto's"/"Afschrijving machines" en de 3-voudige inkoopkosten-uitsplitsing).
+function rubriekBlokAltijd(nr, naam, totaal, toelichting, perCategorie) {
+  return `
+  <div class="rubriek"><span>${nr ? `${nr}. ` : ""}${esc(naam)}</span><span class="num">${eur(totaal || 0)}</span></div>
   ${toelichting ? `<p class="toelichting">${toelichting}</p>` : ""}
   ${categorieDetailHtml(perCategorie)}`;
 }
@@ -127,6 +137,29 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear);
 
+  // "Inkoopkosten, uitbesteed werk en andere externe kosten" (v150: één gecombineerde rubriek) hier
+  // uitgesplitst in 3 losse regels, rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
+  // (netto, exclusief BTW, zelfde sumCatNetto-conventie als de rest van boxMapping.js) — geen nieuwe
+  // berekening, puur een andere weergave van precies dezelfde bedragen. "Andere externe kosten" heeft
+  // in deze tool (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
+  const inkoopkostenBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Zakelijke uitgaven")?.totaal || 0;
+  const uitbesteedWerkBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Inhuur personeel")?.totaal || 0;
+  const andereExterneKostenBedrag = 0;
+
+  // "Afschrijvingen" (v150: één gecombineerde rubriek van Activa-register + financiële-lease-
+  // afschrijving) hier uitgesplitst naar "Afschrijving auto's" en "Afschrijving machines", op basis
+  // van het `soort`-veld dat elk leasecontract in ib.leaseAutoKosten.contracten al heeft (zie
+  // computeLeaseAutoKostenVoorJaar in tax/autoBijtelling.js) — het Activa-register zelf bevat per
+  // definitie geen auto's (dat is uitsluitend "apparatuur/machines"), dus die afschrijving telt
+  // volledig mee bij "machines". Sommeert weer op tot exact hetzelfde totaal als v150's ene rubriek.
+  const leaseAfschrijvingAuto = ib.leaseAutoKosten
+    ? ib.leaseAutoKosten.contracten.filter((c) => c.soort === "auto").reduce((a, c) => a + c.afschrijving, 0)
+    : 0;
+  const leaseAfschrijvingMachine = ib.leaseAutoKosten
+    ? ib.leaseAutoKosten.contracten.filter((c) => c.soort === "machine").reduce((a, c) => a + c.afschrijving, 0)
+    : 0;
+  const apparatuurAfschrijving = ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0;
+
   // Gaten in de bestandscontinuïteit die dit jaar raken — eenmalig bepaald, gebruikt voor zowel de
   // status bovenaan als de "Algemene gegevens"-bijlage verderop.
   const gatenDitJaar = (fileContinuity || []).filter(
@@ -134,55 +167,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   );
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar);
 
-  // Categorieoverzicht (alle categorieën, alfabetisch) blijft als detailbijlage staan — de
-  // winst-en-verliesrekening hierboven is wat met de aangifte meeleest, dit blijft handig als
-  // volledig, doorzoekbaar overzicht van elke bank-categorie apart.
-  const zakTotals = {};
-  const zakBtwByCat = {};
-  for (const tx of zakItems) {
-    zakTotals[tx.category] = (zakTotals[tx.category] || 0) + tx.amount;
-    zakBtwByCat[tx.category] = (zakBtwByCat[tx.category] || 0) + computeBtw(tx, categoryBtwRates, btwVerlegd);
-  }
-  const zakGrandTotal = Object.values(zakTotals).reduce((a, b) => a + b, 0);
-  const zakGrandBtw = Object.values(zakBtwByCat).reduce((a, b) => a + b, 0);
-  const catRows = CATEGORY_ORDER.filter((c) => c in zakTotals)
-    .map((c) => {
-      const bruto = zakTotals[c];
-      const btw = zakBtwByCat[c] || 0;
-      return `<tr><td>${esc(c)}</td><td class="num">${eur(bruto)}</td><td class="num">${eur(bruto - btw)}</td><td class="num">${eur(btw)}</td></tr>`;
-    })
-    .join("");
-
   const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus);
-  const kwartaalRows = kwartalen
-    .map((q) => {
-      const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-      return `<tr>
-        <td>Q${q.kwartaal}</td>
-        <td class="num">${eur(q.omzetBruto21)}</td><td class="num">${eur(q.verschuldigdBtw21)}</td>
-        <td class="num">${eur(q.omzetBruto9)}</td><td class="num">${eur(q.verschuldigdBtw9)}</td>
-        <td class="num">${eur(q.omzetBrutoVerlegd)}</td>
-        <td class="num">${eur(q.kostenBruto)}</td><td class="num">${eur(q.voorbelasting)}</td>
-        <td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug te vragen"}</td>
-      </tr>`;
-    })
-    .join("");
-  // Compacte aangiftevorm — dezelfde kwartaalcijfers als hierboven, maar herleid naar de rubrieken
-  // zoals ze in de BTW-aangifte zelf heten (1a/1b/1e/5b/saldo), zodat je eerst de aangifte-vorm ziet
-  // en de uitgebreide bankanalyse-tabel er daarna als onderbouwing bij staat.
-  const kwartaalCompactRows = kwartalen
-    .map((q) => {
-      const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-      return `<tr>
-        <td>Q${q.kwartaal}</td>
-        <td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>
-        <td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>
-        <td class="num">${eur(q.omzetBrutoVerlegd)}</td>
-        <td class="num">${eur(q.voorbelasting)}</td>
-        <td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug te vragen"}</td>
-      </tr>`;
-    })
-    .join("");
 
   // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
   // checklist in de tool zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
@@ -258,13 +243,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     financieelTotaalRente > 0 || ib.leningenTotal > 0 || ib.leaseFinancieelTotal > 0
       ? `
   <div class="rubriek"><span>5. Financiële baten en lasten</span><span class="num">${eur(financieelTotaalRente)}</span></div>
-  <p class="toelichting">${ib.financieleBatenLasten.toelichting} Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
+  <p class="toelichting">Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
           ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de tool.` : ""
         }${
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
-        }</p>
+        } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
     { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
@@ -293,28 +278,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       .join("");
     return `
   <div class="rubriek"><span>Toelichting: financiële lease auto/machine — kapitalisatie en (bij privégebruik) onttrekking</span><span></span></div>
-  <p class="toelichting">
-    Bij financiële lease is het geleasde object (auto of machine) een eigen bedrijfsmiddel van de
-    zzp'er, dat gekapitaliseerd en afgeschreven wordt (aanschafwaarde = het gefinancierde bedrag bij
-    aanvang van het contract, niet de cataloguswaarde; bij een auto geldt een fiscale minimale
-    afschrijvingstermijn van ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN} jaar). Bij een geleasede auto
-    met meer dan 500 km privégebruik per jaar geldt daarnaast een "onttrekking": de normale bijtelling
-    (bijtellingspercentage × cataloguswaarde) wordt afgetopt op de werkelijke totale autokosten van
-    dat jaar — dit is geen gewone bijtelling zoals bij een werknemer, maar een correctie op de
-    aftrekbare kosten van de zzp'er zelf.
-  </p>
-  ${lak.contracten.some((c) => c.aantalGekoppeldeSegmenten > 1) ? `
-  <p class="toelichting" style="color:#b45309;">
-    ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
-    gelijk kenteken) telt de afschrijving hierboven maar één keer mee, doorlopend vanaf de
-    OORSPRONKELIJKE aanschaf/financiering — het bedrag van een later, gekoppeld contract wordt bewust
-    NIET nogmaals als afschrijvingsbasis meegeteld (dat zou dubbel tellen), ook al kan het financieel
-    om een nieuw, hoger bedrag gaan. Dit is een gangbare, maar door de gebruiker te controleren
-    aanname: klopt het niet dat de herfinanciering puur het openstaande saldo van dezelfde auto
-    oversluit (bijv. omdat er feitelijk extra in de auto is geïnvesteerd), controleer dan handmatig of
-    de afschrijvingsbasis hier nog aansluit. De rente van elk gekoppeld contract blijft wel gewoon apart
-    doorlopen over zijn eigen bedrag/periode.
-  </p>` : ""}
+  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme (kapitalisatie, afschrijving en onttrekking).${
+    lak.contracten.some((c) => c.aantalGekoppeldeSegmenten > 1)
+      ? ` ⚠ Dit jaar bevat een gekoppelde kentekengroep (tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto) — zie de bijlage voor hoe de afschrijvingsbasis daarbij is bepaald.`
+      : ""
+  }</p>
   <table>
     <thead><tr><th>Contract</th><th class="num">Afschrijving</th><th class="num">Lease-rente</th><th>Privégebruik &gt;500 km/jaar</th></tr></thead>
     <tbody>${contractRows}</tbody>
@@ -329,14 +297,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr><td>Onttrekking (afgetopt op werkelijke autokosten)</td><td class="num">${eur(lak.onttrekking)}</td></tr>
       <tr class="total"><td>Netto aftrekbare autokosten</td><td class="num">${eur(lak.nettoAftrekbareAutokosten)}</td></tr>
     </tbody>
-  </table>
-  <p class="toelichting">
-    De lease-rente en de gecategoriseerde autokosten hierboven stromen al mee in de winst via de
-    bestaande berekening (rente bij "Financiële baten en lasten", de rest via de normale categorie-
-    gedreven kosten) — deze tabel is puur een transparante uitsplitsing. Wat de winst per saldo
-    verandert is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (verhoogt de winst
-    weer bij privégebruik).
-  </p>`;
+  </table>`;
   })();
 
   // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
@@ -347,11 +308,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     if (!gh) return "";
     return `
   <div class="rubriek"><span>Toelichting: Huur (deels zakelijk) — percentage zakelijk gebruik</span><span></span></div>
-  <p class="toelichting">
-    Van deze huur is maar een deel zakelijk (bijv. een deels verhuurd/gebruikt pand of schuur) — het
-    privédeel mag de winst niet verlagen, en is bij een belaste huur ook niet aftrekbaar als
-    voorbelasting. Het percentage zakelijk gebruik is hier ingesteld op ${gh.percentage}% voor ${year}.
-  </p>
+  <p class="toelichting">Percentage zakelijk gebruik is hier ingesteld op ${gh.percentage}% voor ${year}. <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span></p>
   <table>
     <tbody>
       <tr><td>Totale huur (bruto, incl. BTW)</td><td class="num">${eur(gh.totaalHuurBruto)}</td></tr>
@@ -364,13 +321,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr><td>Aftrekbare voorbelasting</td><td class="num">${eur(gh.aftrekbareVoorbelasting)}</td></tr>
       <tr><td>Niet-aftrekbare voorbelasting (privédeel)</td><td class="num">${eur(gh.nietAftrekbareVoorbelasting)}</td></tr>` : ""}
     </tbody>
-  </table>
-  <p class="toelichting">
-    Het volledige brutobedrag stroomt via de gewone categorie-indeling mee in "2. Inkoopkosten..."/
-    "Overige bedrijfskosten" hierboven (net als "Huur") — het niet-aftrekbare deel wordt hier apart
-    weer bij de winst opgeteld, zodat "Resultaat uit onderneming" hieronder al de juiste, gecorrigeerde
-    winst toont.
-  </p>`;
+  </table>`;
   })();
 
   const priveHtml =
@@ -405,13 +356,16 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, "Netto (exclusief BTW) — zoals in de IB-aangifte, niet het bruto bankbedrag.", ib.opbrengsten.perCategorie)}
-    ${rubriekBlok(2, ib.inkoopkosten.naam, ib.inkoopkosten.totaal, `${ib.inkoopkosten.toelichting} Bedragen zijn netto (exclusief BTW).`, ib.inkoopkosten.perCategorie)}
-    ${rubriekBlok(
-      3, ib.afschrijvingen.naam,
-      (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering) + (ib.afschrijvingen.berekendeLeaseAfschrijving || 0),
-      ib.afschrijvingen.toelichting +
-        (ib.afschrijvingen.activaOnvolledig > 0 ? ` ⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.` : "") +
-        (ib.afschrijvingen.berekendeLeaseAfschrijving ? ` Waarvan ${eur(ib.afschrijvingen.berekendeLeaseAfschrijving)} afschrijving op financieel-geleasede auto('s)/machine(s) — zie de uitsplitsing hieronder bij "Financiële baten en lasten".` : ""),
+    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, "Bedragen zijn netto (exclusief BTW).")}
+    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers. Bedragen zijn netto (exclusief BTW).")}
+    ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
+    ${rubriekBlokAltijd(
+      3, "Afschrijving auto's", leaseAfschrijvingAuto,
+      `Afschrijving op financieel-geleasede auto('s) — zie de contract-uitsplitsing verderop bij "Financiële baten en lasten". <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span>`
+    )}
+    ${rubriekBlokAltijd(
+      null, "Afschrijving machines", apparatuurAfschrijving + leaseAfschrijvingMachine,
+      `${ib.afschrijvingen.activaOnvolledig > 0 ? `⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa. ` : ""}<span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span>`,
       ib.afschrijvingen.perCategorie
     )}
     ${overigeBedrijfskostenHtml}
@@ -442,17 +396,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         .join("")}</tr>
     </tbody>
   </table>
-  <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>
-
-  <h3>Onderliggende bankanalyse</h3>
-  <table>
-    <thead><tr>
-      <th>Kwartaal</th><th class="num">Omzet 21%</th><th class="num">BTW 21% (1a)</th>
-      <th class="num">Omzet 9%</th><th class="num">BTW 9% (1b)</th><th class="num">Omzet verlegd (1e)</th>
-      <th class="num">Uitgaven</th><th class="num">Voorbelasting (5b)</th><th class="num">Saldo</th>
-    </tr></thead>
-    <tbody>${kwartaalRows}</tbody>
-  </table>` : ""}
+  <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}
+  <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de tool zelf terugvinden.</p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
   ${zaScenarios ? `
@@ -468,11 +413,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
         ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend vanuit niet-gerealiseerde zelfstandigenaftrek van eerdere jaren in dit rapport)`
         : ""
-    }${startersaftrekToegepast ? ` + startersaftrek <strong>${eur(ondernemersaftrekVoorJaar.startersaftrekBedrag)}</strong> (max. 3x in de eerste 5 jaar van ondernemerschap — controleer zelf of dit hier van toepassing is)` : ""}.${
+    }${startersaftrekToegepast ? ` + startersaftrek <strong>${eur(ondernemersaftrekVoorJaar.startersaftrekBedrag)}</strong>` : ""}.${
       ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0
-        ? ` ⚠ Dit jaar kon ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} van de zelfstandigenaftrek niet worden benut (winst te laag) — dit is gereserveerd om tot 9 jaar later alsnog te verrekenen, als in dit rapport ook een later jaar met voldoende winst wordt meegenomen.`
+        ? ` ⚠ Dit jaar kon ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} van de zelfstandigenaftrek niet worden benut (winst te laag).`
         : ""
-    }</p>
+    } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene regels rond startersaftrek en de 9-jaars-reserve.</span></p>
   ` : ""}
   `}
   <p>Geschatte bijdrage Zorgverzekeringswet (Zvw): <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar)" : ""}${zvwEstimate.geëxtrapoleerd ? " (Zvw-percentage van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende percentage)" : ""} — het lage (zelfstandigen-)tarief over dezelfde belastbare winst als hierboven. Geen belastingadvies.</p>
@@ -481,20 +426,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <h3>Geschatte heffingskortingen (indicatief)</h3>
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
   <p>Indicatieve IB ná deze heffingskortingen${zaScenarios ? " (bij zelfstandigenaftrek)" : ""}: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
-  <p class="toelichting">⚠ Persoonlijke heffingskortingen zijn niet volledig meegenomen: deze schatting gaat ervan uit dat de winst uit onderneming je enige inkomen is, dat je nog geen AOW-leeftijd hebt bereikt, en dat er geen fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is deze indicatie minder betrouwbaar. Geen belastingadvies.</p>
+  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames achter deze heffingskortingen-schatting.</p>
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
   ${investeringenForYear.totaalInvestering > 0 ? `
   <p>Investeringen in bedrijfsmiddelen in ${year} (Activa-paneel): <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong></p>
-  <p class="toelichting">Dit is een mógelijke, geen definitieve aftrek — niet elk bedrijfsmiddel telt mee voor de KIA (bijv. personenauto's en grond meestal niet, en elk bedrijfsmiddel moet minimaal circa €450 hebben gekost). Controleer dit zelf per aanschaf.${investeringenForYear.onvolledig > 0 ? ` ⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld in het Activa-paneel — dit bedrag is daardoor mogelijk te laag.` : ""}</p>
+  <p class="toelichting">${investeringenForYear.onvolledig > 0 ? `⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld in het Activa-paneel — dit bedrag is daardoor mogelijk te laag. ` : ""}Zie Bijlage: Toelichtingen voor de algemene regels rond de KIA.</p>
   ` : `<p class="toelichting">KIA niet betrouwbaar vast te stellen op basis van beschikbare bankgegevens — geen (volledig ingevulde) investeringen in bedrijfsmiddelen gevonden voor ${year} in het Activa-paneel.</p>`}
-
-  <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
-  <table>
-    <thead><tr><th>Categorie</th><th class="num">Bruto</th><th class="num">Netto</th><th class="num">BTW</th></tr></thead>
-    <tbody>${catRows}</tbody>
-    <tfoot><tr class="total"><td>Totaal</td><td class="num">${eur(zakGrandTotal)}</td><td class="num">${eur(zakGrandTotal - zakGrandBtw)}</td><td class="num">${eur(zakGrandBtw)}</td></tr></tfoot>
-  </table>
 
   ${algemeneGegevensHtml}`;
 }
@@ -522,9 +460,14 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
       ? `<p class="toelichting">⚠ Dit rapport begint bij ${vroegsteJaarInRapport}, terwijl er ook bankgegevens zijn van vóór dat jaar — een eventuele niet-gerealiseerde zelfstandigenaftrek van vóór ${vroegsteJaarInRapport} is hierin niet meegenomen. Neem alle jaren mee in één rapport voor een volledige verrekening.</p>`
       : "";
 
+  // Paginascheiding tussen jaarsecties (en vóór de bijlage) — zowel de oudere `page-break-before`
+  // als de moderne `break-before` (browsers/PDF-generators op bijv. iPad/tablet ondersteunen niet
+  // altijd dezelfde variant, dus beide staan op hetzelfde element).
+  const PAGE_BREAK_DIVIDER = '\n  <div style="page-break-before: always; break-before: page;"></div>\n';
+
   const sections = yearsToInclude
     .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus))
-    .join('\n  <div style="page-break-before: always;"></div>\n');
+    .join(PAGE_BREAK_DIVIDER);
 
   return `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8"><title>Indicatieve aangifteberekening ${yearsToInclude.join(", ")}</title>
@@ -546,7 +489,12 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
-  .samenvatting { margin: 0 0 20px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; }
+  /* Belangrijke blokken niet halverwege laten afbreken over een paginagrens (zowel de moderne
+     break-inside als de oudere page-break-inside — browsers/PDF-generators gebruiken wat ze
+     kennen; vooral bij printen/opslaan-als-PDF op tablets is dit niet altijd betrouwbaar zonder
+     beide varianten). */
+  .rubriek, .wvr .rubriek { break-inside: avoid; page-break-inside: avoid; }
+  .samenvatting { margin: 0 0 20px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .samenvatting-kerncijfers { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
   .samenvatting-kerncijfers > div { display: flex; flex-direction: column; }
   .samenvatting-kerncijfers .label { font-size: 9px; text-transform: uppercase; color: #64748b; }
@@ -570,7 +518,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
   ${reserveWaarschuwingHtml}
   ${sections}
-  <div style="page-break-before: always;"></div>
+  ${PAGE_BREAK_DIVIDER}
   <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">
     <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>onafhankelijke reconstructie</strong>: het laat
@@ -605,7 +553,108 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat
     je aangifte doet.
   </div>
+  ${PAGE_BREAK_DIVIDER}
+  ${buildBijlageToelichtingenHtml()}
 </body></html>`;
+}
+
+// Bijlage met de algemene, niet-jaargebonden toelichtingen die tot v150 per jaar herhaald werden in
+// buildYearSection — nu één keer, aan het eind van het hele (meerjaren-)rapport. In elke jaarsectie
+// staat op de plek waar zo'n toelichting stond nu alleen nog het jaarspecifieke bedrag/de
+// jaarspecifieke waarschuwing (indien van toepassing) plus een verwijzing hierheen. Puur tekst,
+// géén bedragen die uit een jaarsectie zijn weggehaald — elk bedrag blijft in de jaarsectie zelf
+// staan.
+function buildBijlageToelichtingenHtml() {
+  return `
+  <h1>Bijlage: Toelichtingen</h1>
+  <p class="subtitle">Algemene uitleg bij een aantal rubrieken hierboven — hier maar één keer uitgeschreven in plaats van per jaar.</p>
+
+  <h2>Financiële baten en lasten — rente versus aflossing</h2>
+  <p class="toelichting">
+    Alleen de rente is een kostenpost — de rest van elke termijn is aflossing op de financiering, een
+    balansmutatie, geen bedrijfskosten. Is bij een leasecontract de "soort" (auto/machine) ingevuld,
+    dan is het geleasde object wél een eigen bedrijfsmiddel van de zzp'er dat gekapitaliseerd en
+    afgeschreven wordt — zie dan "Afschrijving auto's"/"Afschrijving machines" in de jaarsectie (en
+    bij een auto met privégebruik &gt;500 km/jaar ook de onttrekking, zie hieronder). Zonder ingevulde
+    "soort" (het gebruikelijke geval tot nu toe) staat bij "Financiële baten en lasten" alleen de
+    rente, zoals voorheen.
+  </p>
+
+  <h2>Afschrijvingen — algemeen</h2>
+  <p class="toelichting">
+    Een bedrijfsmiddel (auto, apparatuur of machine) mag niet in één keer als kosten worden
+    afgetrokken — dit zijn bedrijfsmiddelen (activa) die over de gebruiksduur afgeschreven moeten
+    worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Zodra bedrijfsmiddelen zijn
+    geregistreerd bij "Activa" (aanschafwaarde, -datum, afschrijvingstermijn, restwaarde) gebruikt
+    deze tool de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
+    ingevuld, dan berekent deze tool geen afschrijvingsschema en staat het bruto aanschafbedrag in de
+    jaarsectie alleen ter herkenning.
+  </p>
+
+  <h2>Financiële lease auto/machine — kapitalisatie en (bij privégebruik) onttrekking</h2>
+  <p class="toelichting">
+    Bij financiële lease is het geleasde object (auto of machine) een eigen bedrijfsmiddel van de
+    zzp'er, dat gekapitaliseerd en afgeschreven wordt (aanschafwaarde = het gefinancierde bedrag bij
+    aanvang van het contract, niet de cataloguswaarde; bij een auto geldt een fiscale minimale
+    afschrijvingstermijn van ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN} jaar). Bij een geleasede auto
+    met meer dan 500 km privégebruik per jaar geldt daarnaast een "onttrekking": de normale bijtelling
+    (bijtellingspercentage × cataloguswaarde) wordt afgetopt op de werkelijke totale autokosten van
+    dat jaar — dit is geen gewone bijtelling zoals bij een werknemer, maar een correctie op de
+    aftrekbare kosten van de zzp'er zelf.
+  </p>
+  <p class="toelichting">
+    De lease-rente en de gecategoriseerde autokosten stromen al mee in de winst via de bestaande
+    berekening (rente bij "Financiële baten en lasten", de rest via de normale categorie-gedreven
+    kosten) — de contracttabel in de jaarsectie is puur een transparante uitsplitsing. Wat de winst
+    per saldo verandert is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (verhoogt
+    de winst weer bij privégebruik).
+  </p>
+  <p class="toelichting" style="color:#b45309;">
+    ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
+    gelijk kenteken) telt de afschrijving maar één keer mee, doorlopend vanaf de OORSPRONKELIJKE
+    aanschaf/financiering — het bedrag van een later, gekoppeld contract wordt bewust NIET nogmaals
+    als afschrijvingsbasis meegeteld (dat zou dubbel tellen), ook al kan het financieel om een nieuw,
+    hoger bedrag gaan. Dit is een gangbare, maar door de gebruiker te controleren aanname: klopt het
+    niet dat de herfinanciering puur het openstaande saldo van dezelfde auto oversluit (bijv. omdat er
+    feitelijk extra in de auto is geïnvesteerd), controleer dan handmatig of de afschrijvingsbasis nog
+    aansluit. De rente van elk gekoppeld contract blijft wel gewoon apart doorlopen over zijn eigen
+    bedrag/periode.
+  </p>
+
+  <h2>Huur (deels zakelijk) — percentage zakelijk gebruik</h2>
+  <p class="toelichting">
+    Van deze huur is maar een deel zakelijk (bijv. een deels verhuurd/gebruikt pand of schuur) — het
+    privédeel mag de winst niet verlagen, en is bij een belaste huur ook niet aftrekbaar als
+    voorbelasting. Het volledige brutobedrag stroomt via de gewone categorie-indeling mee in
+    "Inkoopkosten"/"Overige bedrijfskosten" in de jaarsectie (net als "Huur") — het niet-aftrekbare
+    deel wordt daar apart weer bij de winst opgeteld, zodat "Resultaat uit onderneming" al de juiste,
+    gecorrigeerde winst toont.
+  </p>
+
+  <h2>Zelfstandigenaftrek, startersaftrek en de 9-jaars-reserve</h2>
+  <p class="toelichting">
+    Startersaftrek mag maximaal 3 keer worden toegepast in de eerste 5 jaar van het ondernemerschap —
+    controleer zelf of dat hier van toepassing is. Kan de zelfstandigenaftrek in een jaar niet (of niet
+    volledig) worden benut omdat de winst te laag is, dan wordt het niet-gerealiseerde deel
+    gereserveerd om tot 9 jaar later alsnog te verrekenen, mits in dit rapport ook een later jaar met
+    voldoende winst wordt meegenomen (deze tool verrekent dit automatisch tussen de jaren die samen in
+    één rapport zijn opgenomen).
+  </p>
+
+  <h2>Heffingskortingen — aannames</h2>
+  <p class="toelichting">
+    ⚠ Persoonlijke heffingskortingen zijn niet volledig meegenomen: deze schatting gaat ervan uit dat
+    de winst uit onderneming je enige inkomen is, dat je nog geen AOW-leeftijd hebt bereikt, en dat er
+    geen fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is deze
+    indicatie minder betrouwbaar. Geen belastingadvies.
+  </p>
+
+  <h2>Investeringsaftrek (KIA) — algemene regels</h2>
+  <p class="toelichting">
+    De getoonde mogelijke KIA is een mógelijke, geen definitieve aftrek — niet elk bedrijfsmiddel telt
+    mee voor de KIA (bijv. personenauto's en grond meestal niet, en elk bedrijfsmiddel moet minimaal
+    circa €450 hebben gekost). Controleer dit zelf per aanschaf.
+  </p>`;
 }
 
 export function downloadAangiftevoorstel(html, years) {
