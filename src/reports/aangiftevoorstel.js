@@ -179,6 +179,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <div><span class="label">Geschatte inkomstenbelasting*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
       <div><span class="label">Geschatte Zvw-bijdrage*</span><span class="bedrag">${eur(zvwEstimate.bijdrage)}</span></div>
     </div>
+    <p class="toelichting">* Zonder heffingskortingen, startersaftrek of overig inkomen — zie "Indicatieve inkomstenbelasting en Zvw-bijdrage" hieronder.</p>
     ${kwartalen.length > 0
       ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
       <tbody><tr><td>Saldo</td>${kwartalen
