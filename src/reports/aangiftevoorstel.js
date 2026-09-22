@@ -281,7 +281,14 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       .map((c) => {
         const soortLabel = c.soort === "auto" ? "Auto" : "Machine/overig";
         const privegebruikLabel = c.soort === "auto" ? (c.privegebruikMeerDan500km ? "Ja (>500 km/jaar)" : "Nee / niet van toepassing") : "—";
-        return `<tr><td>${esc(c.leaseName)} (${soortLabel})</td><td class="num">${eur(c.afschrijving)}</td><td class="num">${c.soort === "auto" ? eur(c.leaseRente) : "—"}</td><td>${privegebruikLabel}</td></tr>`;
+        // Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op
+        // gelijk kenteken, zie tax/autoBijtelling.js) worden de gekoppelde contractsegmenten hier als
+        // ÉÉN rij getoond (niet apart per segment) — anders zou de afschrijving/bijtelling dubbel
+        // lijken. De toelichting hieronder maakt zichtbaar dat het om een gecombineerde rij gaat.
+        const contractLabel = c.aantalGekoppeldeSegmenten > 1
+          ? `${esc(c.leaseName)} (${soortLabel}) — gekoppeld: kenteken ${esc(c.kenteken || "?")}, ${c.aantalGekoppeldeSegmenten} contractperiodes samen als één auto`
+          : `${esc(c.leaseName)} (${soortLabel})`;
+        return `<tr><td>${contractLabel}</td><td class="num">${eur(c.afschrijving)}</td><td class="num">${c.soort === "auto" ? eur(c.leaseRente) : "—"}</td><td>${privegebruikLabel}</td></tr>`;
       })
       .join("");
     return `
@@ -296,6 +303,18 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     dat jaar — dit is geen gewone bijtelling zoals bij een werknemer, maar een correctie op de
     aftrekbare kosten van de zzp'er zelf.
   </p>
+  ${lak.contracten.some((c) => c.aantalGekoppeldeSegmenten > 1) ? `
+  <p class="toelichting" style="color:#b45309;">
+    ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
+    gelijk kenteken) telt de afschrijving hierboven maar één keer mee, doorlopend vanaf de
+    OORSPRONKELIJKE aanschaf/financiering — het bedrag van een later, gekoppeld contract wordt bewust
+    NIET nogmaals als afschrijvingsbasis meegeteld (dat zou dubbel tellen), ook al kan het financieel
+    om een nieuw, hoger bedrag gaan. Dit is een gangbare, maar door de gebruiker te controleren
+    aanname: klopt het niet dat de herfinanciering puur het openstaande saldo van dezelfde auto
+    oversluit (bijv. omdat er feitelijk extra in de auto is geïnvesteerd), controleer dan handmatig of
+    de afschrijvingsbasis hier nog aansluit. De rente van elk gekoppeld contract blijft wel gewoon apart
+    doorlopen over zijn eigen bedrag/periode.
+  </p>` : ""}
   <table>
     <thead><tr><th>Contract</th><th class="num">Afschrijving</th><th class="num">Lease-rente</th><th>Privégebruik &gt;500 km/jaar</th></tr></thead>
     <tbody>${contractRows}</tbody>

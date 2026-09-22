@@ -9,7 +9,7 @@
 // Volledig opt-in en 100% backwards compatible: alles hier draait om het (nieuwe, optionele)
 // `soort`-veld op een leasecontract-segment ("auto" | "machine"). Een segment zonder `soort` — dus
 // ieder bestaand dossier — telt nergens in mee; de bestaande berekening verandert dan totaal niet.
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "./financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, normalizeKenteken } from "./financialLease.js";
 import { computeAfschrijvingPerJaar } from "./activa.js";
 import { computeFinancialLeaseAmortizationMultiSegment, groupAmortizationByYear } from "./loanAmortization.js";
 
@@ -93,6 +93,41 @@ function computeLeaseRenteVoorJaarVoorEenLease(lease, details, year) {
   return jaarData ? jaarData.rente : 0;
 }
 
+// Groepeert de contractsegmenten van ÉÉN lease (dus alleen binnen `details.contracts` van dat ene
+// leasecontract — NIET tussen verschillende leases) op genormaliseerd kenteken. Dit is de kern van
+// de v150-fix voor een tussentijds vervangen/geherfinancierd leasecontract van DEZELFDE auto (zie
+// het "nieuw vervolgcontract"-mechanisme in financialLease.js/FinancialLeaseDetailsModal.jsx): zo'n
+// 2e (of latere) segment heeft vaak hetzelfde kenteken als het vorige, en moet dan als DEZELFDE
+// fiscale auto behandeld worden (één doorlopende afschrijving, één bijtelling/onttrekking per jaar),
+// in plaats van als een tweede, apart bedrijfsmiddel.
+//
+// Een segment zonder (of met leeg) kenteken vormt altijd zijn eigen, aparte groep van precies 1 —
+// dat geldt voor IEDER bestaand dossier (het kenteken-veld is nieuw in v150 en staat nergens al
+// ingevuld), dus voor die dossiers is elke groep hieronder per definitie een singleton en verandert
+// er ten opzichte van v148/v149 helemaal niets: dezelfde segmenten, in dezelfde volgorde, elk
+// onafhankelijk doorgerekend zoals voorheen. Groepen ontstaan alleen als er daadwerkelijk 2+
+// segmenten met hetzelfde (genormaliseerde) kenteken zijn.
+function groupSegmentenOpKenteken(segments) {
+  const groups = [];
+  const byKenteken = new Map();
+  for (const segment of segments) {
+    if (!segment.soort) continue; // niet ingevuld — telt nergens in mee, zoals voorheen
+    const norm = normalizeKenteken(segment.kenteken);
+    if (!norm) {
+      groups.push([segment]);
+      continue;
+    }
+    let group = byKenteken.get(norm);
+    if (!group) {
+      group = [];
+      byKenteken.set(norm, group);
+      groups.push(group);
+    }
+    group.push(segment);
+  }
+  return groups;
+}
+
 // Volledige uitsplitsing, voor het aangiftevoorstel, van alle financiële-lease-contracten die als
 // auto of machine zijn gekapitaliseerd (soort ingevuld), voor één specifiek jaar. Geeft `null`
 // terug als er dat jaar helemaal geen enkel contract met `soort` ingevuld is — dus voor de
@@ -119,30 +154,75 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
     const details = leaseDetails?.[lease.key];
     if (!details || details.onbekend) continue;
     const segments = Array.isArray(details.contracts) && details.contracts.length > 0 ? details.contracts : [details];
-    for (const segment of segments) {
-      if (!segment.soort) continue; // niet ingevuld voor dit contract — geen kapitalisatie, oud gedrag blijft gelden
-      const afschrijving = computeLeaseAfschrijvingVoorJaar(segment, year);
+
+    for (const group of groupSegmentenOpKenteken(segments)) {
+      // De EERSTE (oudste) segment van de groep — bij een singleton-groep (geen/leeg kenteken, dus
+      // ieder bestaand dossier) is dit gewoon het segment zelf en verandert er niets. Bij een echte
+      // kenteken-groep (2+ segmenten, dezelfde auto) is dit het segment van de OORSPRONKELIJKE
+      // aanschaf/financiering.
+      const primary = group[0];
+      const isGroep = group.length > 1;
+
+      // --- Afschrijving: ÉÉN doorlopende tijdlijn per (kenteken-)groep, geankerd op het EERSTE
+      // segment. Bewuste, door de gebruiker (accountant) te controleren vereenvoudiging: een 2e/
+      // latere segment binnen dezelfde kentekengroep wordt fiscaal gezien als een HERFINANCIERING
+      // van dezelfde auto (bijv. het openstaande bedrag wordt overgesloten in een nieuw
+      // leasecontract), niet als een nieuwe aanschaf — het eigen `koopprijs`/aanschafwaarde-bedrag
+      // van zo'n later segment telt daarom NIET nogmaals mee in de afschrijvingsbasis (dat zou de
+      // afschrijving dubbel/te hoog maken). Alleen de RENTE van elk segment blijft apart doorlopen
+      // (zie hieronder) — dat is onafhankelijk van welk bedrag als afschrijvingsbasis geldt. Wijkt
+      // de werkelijkheid af (bijv. is er bij de herfinanciering daadwerkelijk extra geïnvesteerd in
+      // de auto, niet alleen het openstaande saldo overgesloten), dan is dit een bewuste,
+      // documenteerde aanname die per geval gecontroleerd moet worden — geen automatisch afgeleid
+      // fiscaal feit.
+      const afschrijving = computeLeaseAfschrijvingVoorJaar(primary, year);
+      afschrijvingTotaal += afschrijving;
+
       let leaseRente = 0;
       let privegebruikMeerDan500km = false;
       let cataloguswaarde = null;
       let bijtellingspercentage = null;
       let normaleBijtelling = 0;
-      if (segment.soort === "auto") {
+
+      if (primary.soort === "auto") {
+        // Lease-rente: computeLeaseRenteVoorJaarVoorEenLease geeft altijd het GECOMBINEERDE
+        // rentetotaal van de HELE lease (alle segmenten samen, elk over zijn eigen periode/bedrag —
+        // zie computeFinancialLeaseAmortizationMultiSegment) voor dit jaar terug, nooit een bedrag
+        // per los segment. Bij een singleton-groep is dat exact hetzelfde als voorheen (per
+        // "auto"-segment één keer opgeteld). Bij een echte meerdere-segmenten-kenteken-groep mag dit
+        // totaal daarom maar ÉÉN keer voor de hele groep worden opgeteld, niet nogmaals per segment
+        // in de groep (dat zou de rente van de lease als geheel N keer meetellen).
         leaseRente = computeLeaseRenteVoorJaarVoorEenLease(lease, details, year);
         leaseRenteTotaal += leaseRente;
-        privegebruikMeerDan500km = !!segment.privegebruikMeerDan500kmPerJaar?.[year];
-        cataloguswaarde = segment.cataloguswaarde || null;
-        bijtellingspercentage = segment.bijtellingspercentage || null;
+
+        // Privégebruik >500km: als DEZELFDE auto ooit (in een van de gekoppelde segmenten) voor dit
+        // jaar is aangevinkt, geldt dat voor de hele groep — het is per definitie hetzelfde
+        // voertuig, ongeacht onder welk segment het vinkje precies staat.
+        privegebruikMeerDan500km = group.some((s) => !!s.privegebruikMeerDan500kmPerJaar?.[year]);
+
+        // Cataloguswaarde/bijtellingspercentage: bij een kenteken-groep horen deze — het is immers
+        // dezelfde auto — in de praktijk aan elkaar gelijk te zijn (de UI vult ze bij een 2e/latere
+        // gekoppelde segment automatisch over, zie FinancialLeaseDetailsModal.jsx). Vult de
+        // gebruiker toch bewust een afwijkende waarde in bij een later segment (met een
+        // waarschuwing in de UI), dan geldt hier — als expliciete, gedocumenteerde keuze — de
+        // waarde van het EERSTE (oudste) segment als leidend voor de berekening, dezelfde logica als
+        // bij de afschrijvingsbasis hierboven.
+        cataloguswaarde = primary.cataloguswaarde || null;
+        bijtellingspercentage = primary.bijtellingspercentage || null;
         if (privegebruikMeerDan500km && cataloguswaarde && bijtellingspercentage) {
           heeftAutoMetPrivegebruik = true;
           normaleBijtelling = (Number(bijtellingspercentage) / 100) * Number(cataloguswaarde);
           normaleBijtellingTotaal += normaleBijtelling;
         }
       }
-      afschrijvingTotaal += afschrijving;
+
       contracten.push({
-        leaseKey: lease.key, leaseName: lease.name, soort: segment.soort,
+        leaseKey: lease.key, leaseName: lease.name, soort: primary.soort,
         afschrijving, leaseRente, cataloguswaarde, bijtellingspercentage, privegebruikMeerDan500km, normaleBijtelling,
+        // Alleen relevant voor weergave/toelichting in het aangiftevoorstel: is dit een gecombineerde
+        // rij van meerdere aan elkaar gekoppelde contractsegmenten (zelfde kenteken)?
+        kenteken: isGroep ? (primary.kenteken || null) : null,
+        aantalGekoppeldeSegmenten: group.length,
       });
     }
   }

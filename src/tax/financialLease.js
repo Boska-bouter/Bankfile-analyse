@@ -204,6 +204,16 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
 // `contractBeeindigd`/`einddatumContract` als dat contract op zijn beurt weer is opgevolgd).
 // getLeaseSegments() maakt dat verschil voor de rest van de tool onzichtbaar: die geeft altijd een
 // array van contracten terug, ook als het er maar één is.
+// Normaliseert een kenteken voor vergelijking tussen contractsegmenten (zie autoBijtelling.js en
+// FinancialLeaseDetailsModal.jsx): hoofdletterongevoelig en zonder spaties/streepjes, zodat
+// "12-ABC-3", "12 abc 3" en "12ABC3" allemaal als hetzelfde kenteken herkend worden. Een leeg/
+// ontbrekend kenteken normaliseert naar "" — die telt bewust nergens als "match" (elk segment zonder
+// kenteken blijft een volledig op zichzelf staand, onafhankelijk gerekend contract, exact zoals vóór
+// dit veld bestond).
+export function normalizeKenteken(kenteken) {
+  return (kenteken || "").toString().trim().toUpperCase().replace(/[\s-]/g, "");
+}
+
 export function getLeaseSegments(details) {
   if (!details) return [];
   if (Array.isArray(details.contracts) && details.contracts.length > 0) return details.contracts;

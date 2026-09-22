@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
   computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
   generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
+  normalizeKenteken,
 } from "../../tax/financialLease.js";
 import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
 import { computeLeaseAfschrijvingVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
@@ -52,19 +53,32 @@ function formFromSegment(segment) {
     cataloguswaarde: s.cataloguswaarde ?? "",
     bijtellingspercentage: s.bijtellingspercentage ?? "",
     privegebruikMeerDan500kmPerJaar: s.privegebruikMeerDan500kmPerJaar ?? {},
+    // Kenteken (v150): koppelt contractsegmenten van DEZELFDE auto aan elkaar bij een tussentijds
+    // vervangen/geherfinancierd leasecontract — zie tax/autoBijtelling.js. Alleen relevant/getoond
+    // bij soort "auto". Optioneel en standaard leeg, dus geen enkel bestaand contract heeft dit al
+    // ingevuld.
+    kenteken: s.kenteken ?? "",
   };
 }
 
 // Een nieuw vervolgcontract begint logischerwijs de dag na het einde van het vorige — die datum
 // hoeft niet exact te kloppen (net als bij de "startdatum → suggestie 1e termijn" hierboven, mag
 // altijd nog aangepast worden), maar is een zinniger startpunt dan een leeg veld.
-function blankVervolgContract(vorigeEinddatum) {
+// Bij een "nieuw vervolgcontract" is het overgrote deel van de gevallen een herfinanciering van
+// PRECIES DEZELFDE auto (zie de toelichting bij groupSegmentenOpKenteken in tax/autoBijtelling.js) —
+// daarom wordt hier, als suggestie, ook "Soort" en (bij een auto) het kenteken van het vorige
+// contract alvast overgenomen. Dit is puur een startpunt: net als de startdatum-suggestie hierboven
+// blijft dit veld gewoon aanpasbaar (of leeg te maken) als het vervolgcontract toch een ander
+// bedrijfsmiddel betreft.
+function blankVervolgContract(vorigeSegment) {
   const form = formFromSegment(null);
-  if (vorigeEinddatum) {
-    const d = new Date(vorigeEinddatum);
+  if (vorigeSegment?.einddatumContract) {
+    const d = new Date(vorigeSegment.einddatumContract);
     d.setDate(d.getDate() + 1);
     form.startdatum = d.toISOString().slice(0, 10);
   }
+  if (vorigeSegment?.soort) form.soort = vorigeSegment.soort;
+  if (vorigeSegment?.soort === "auto" && vorigeSegment.kenteken) form.kenteken = vorigeSegment.kenteken;
   return form;
 }
 
@@ -86,15 +100,56 @@ function cleanSegment(form) {
     cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
     bijtellingspercentage: form.soort === "auto" ? n(form.bijtellingspercentage) : null,
     privegebruikMeerDan500kmPerJaar: form.soort === "auto" ? form.privegebruikMeerDan500kmPerJaar || {} : null,
+    kenteken: form.soort === "auto" ? (form.kenteken || null) : null,
   };
 }
 
 // Eén contractsegment — precies dezelfde velden/previews die dit venster altijd al toonde, nu
 // herbruikbaar per segment. `segmentTransactions` zijn alleen de banktransacties die (op basis van
 // de startdatum van dit én het eventuele volgende segment) bij dít contract horen.
-function LeaseContractSection({ form, onChange, segmentTransactions, title, canRemove, onRemove, canAddNext, onAddNext }) {
+function LeaseContractSection({ form, onChange, segmentTransactions, title, canRemove, onRemove, canAddNext, onAddNext, precedingSegments }) {
   const set = (field) => (e) => onChange({ ...form, [field]: e.target.value });
   const setChecked = (field) => (e) => onChange({ ...form, [field]: e.target.checked });
+
+  // v150: is het ingevulde kenteken (genormaliseerd) hetzelfde als bij een EERDER contractsegment
+  // van deze zelfde lease? Zo ja, dan gaat het (zie tax/autoBijtelling.js) fiscaal om dezelfde auto —
+  // cataloguswaarde/bijtellingspercentage worden dan overgenomen van dat eerdere segment, in plaats
+  // van opnieuw ingevuld te moeten worden. Bij meerdere eerdere matches (zou niet moeten voorkomen,
+  // maar voor de zekerheid) telt de EERSTE (oudste) — dezelfde "eerste segment is leidend"-regel als
+  // in de berekening zelf.
+  const matchedPreceding = useMemo(() => {
+    const norm = normalizeKenteken(form.kenteken);
+    if (!norm || form.soort !== "auto") return null;
+    return (precedingSegments || []).find((s) => s.soort === "auto" && normalizeKenteken(s.kenteken) === norm) || null;
+  }, [form.kenteken, form.soort, precedingSegments]);
+
+  const [overrideCapitalisatie, setOverrideCapitalisatie] = useState(false);
+  // Zodra het kenteken niet (meer) matcht, vervalt een eventuele eerdere "toch los invullen" — een
+  // nieuw, ander kenteken is een andere situatie.
+  useEffect(() => {
+    if (!matchedPreceding) setOverrideCapitalisatie(false);
+  }, [!!matchedPreceding]);
+
+  const capitalisatieOvergenomen = !!matchedPreceding && !overrideCapitalisatie;
+
+  // Zolang de waarden zijn overgenomen (niet losgemaakt), automatisch synchroon houden met het
+  // gekoppelde eerdere segment — zodat een latere wijziging daar (bijv. de accountant corrigeert de
+  // cataloguswaarde) hier vanzelf meekomt. De waarde-vergelijking hieronder voorkomt een oneindige
+  // onChange-lus: er wordt alleen bijgewerkt als er daadwerkelijk iets afwijkt.
+  useEffect(() => {
+    if (!capitalisatieOvergenomen) return;
+    if (form.cataloguswaarde === matchedPreceding.cataloguswaarde && form.bijtellingspercentage === matchedPreceding.bijtellingspercentage) return;
+    onChange({ ...form, cataloguswaarde: matchedPreceding.cataloguswaarde, bijtellingspercentage: matchedPreceding.bijtellingspercentage });
+  });
+
+  // Waarschuwing (niet blokkerend, zie toelichting bij "toch los invullen" hieronder): hetzelfde
+  // kenteken, maar toch een andere cataloguswaarde/bijtellingspercentage dan het gekoppelde eerdere
+  // segment — dat is normaal gesproken een eigenschap van dezelfde auto, dus vermoedelijk een
+  // vergissing (kan ook een bewuste correctie zijn).
+  const capitalisatieWijktAf =
+    !!matchedPreceding && overrideCapitalisatie &&
+    (Number(form.cataloguswaarde || 0) !== Number(matchedPreceding.cataloguswaarde || 0) ||
+      Number(form.bijtellingspercentage || 0) !== Number(matchedPreceding.bijtellingspercentage || 0));
 
   const onbetaaldGedeelteKoop = useMemo(() => computeOnbetaaldGedeelteKoop(form), [form]);
   const renteJaarlijks = useMemo(() => computeFinancialLeaseRate(form), [form]);
@@ -298,20 +353,71 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           {form.soort === "auto" && (
             <>
               <label className="text-sm">
+                <span className="block text-xs font-medium text-slate-600 mb-1">Kenteken</span>
+                <input
+                  type="text" value={form.kenteken} onChange={set("kenteken")}
+                  placeholder="bijv. 12-ABC-3"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 uppercase"
+                />
+              </label>
+              <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Cataloguswaarde (voor bijtelling)</span>
-                <input type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                <input
+                  type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")}
+                  disabled={capitalisatieOvergenomen}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
+                />
               </label>
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage (%)</span>
-                <input type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                <input
+                  type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")}
+                  disabled={capitalisatieOvergenomen}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
+                />
               </label>
             </>
           )}
         </div>
+        {capitalisatieOvergenomen && (
+          <p className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 mt-2">
+            Overgenomen van eerdere contractperiode (kenteken {form.kenteken}) — dezelfde auto heeft
+            fiscaal maar één cataloguswaarde en bijtellingspercentage, ook al is het leasecontract
+            ervoor tussentijds vervangen/geherfinancierd. Ook de afschrijving loopt in dat geval door
+            vanaf de oorspronkelijke aanschaf, niet opnieuw vanaf dit vervolgcontract.{" "}
+            <button type="button" onClick={() => setOverrideCapitalisatie(true)} className="underline font-medium text-slate-700 hover:text-slate-900">
+              Toch los invullen
+            </button>
+          </p>
+        )}
+        {matchedPreceding && overrideCapitalisatie && (
+          <p className="text-xs text-slate-400 mt-2">
+            Cataloguswaarde/bijtellingspercentage van dit segment worden nu los ingevuld (niet meer
+            automatisch overgenomen van het gekoppelde eerdere contract met kenteken {form.kenteken}).{" "}
+            <button type="button" onClick={() => setOverrideCapitalisatie(false)} className="underline font-medium text-slate-600 hover:text-slate-800">
+              Weer koppelen
+            </button>
+          </p>
+        )}
+        {capitalisatieWijktAf && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2">
+            ⚠ Dit kenteken is ook gebruikt bij een eerdere contractperiode met een andere
+            cataloguswaarde/bijtellingspercentage — normaal gesproken zijn dit eigenschappen van
+            dezelfde auto. Weet je zeker dat dit klopt?
+          </p>
+        )}
 
         {form.soort && leaseActivumAfschrijvingPerJaar.length > 0 && (
           <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Berekende afschrijving per jaar</p>
+            {matchedPreceding && (
+              <p className="text-xs text-slate-400 mb-2">
+                Ter info: dit is de afschrijving als dít segment op zichzelf zou staan. Omdat het
+                kenteken gekoppeld is aan een eerdere contractperiode, telt in het aangiftevoorstel de
+                afschrijving mee vanaf die OORSPRONKELIJKE aanschaf/financiering (één doorlopende
+                tijdlijn per auto), niet nogmaals vanaf dit vervolgcontract.
+              </p>
+            )}
             <table className="w-full text-sm text-slate-800">
               <thead>
                 <tr className="text-xs text-slate-500">
@@ -552,7 +658,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
     setContracts((prev) => prev.filter((_, i) => i !== idx));
   };
   const addNextContract = (afterIdx) => {
-    setContracts((prev) => [...prev, blankVervolgContract(prev[afterIdx].einddatumContract)]);
+    setContracts((prev) => [...prev, blankVervolgContract(prev[afterIdx])]);
   };
 
   const handleSave = () => {
@@ -596,6 +702,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
               onRemove={() => removeContract(idx)}
               canAddNext={idx === contracts.length - 1}
               onAddNext={() => addNextContract(idx)}
+              precedingSegments={contracts.slice(0, idx)}
             />
           ))}
         </div>
