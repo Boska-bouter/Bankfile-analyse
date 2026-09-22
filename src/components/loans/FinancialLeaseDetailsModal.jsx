@@ -227,7 +227,9 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       )}
 
       <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-700">Berekend rentepercentage per jaar</span>
+        <span className="text-sm font-medium text-slate-700" title="Nominaal jaarpercentage (maandrente × 12), niet samengesteld/effectief">
+          Nominale rente per jaar
+        </span>
         <span className="text-sm font-mono font-semibold text-slate-900">
           {renteJaarlijks != null ? `${renteJaarlijks.toFixed(2)}%` : "—"}
         </span>
