@@ -197,7 +197,7 @@ function buildYearSectionBv(
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
     { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
-  ].filter((r) => r.totaal > 0))}`
+  ])}`
       : "";
 
   const nogNietIngedeeldHtml =
