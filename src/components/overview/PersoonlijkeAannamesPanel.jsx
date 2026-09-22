@@ -13,6 +13,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // expliciet paneel — de tool mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
 export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus,
+  startersaftrekStatus, onSetStartersaftrekStatus,
   activaSummary, activaDetails, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
@@ -20,6 +21,7 @@ export default function PersoonlijkeAannamesPanel({
 
   const status = zelfstandigenaftrekStatus?.[activeYear] || "onbekend_default";
   const zelfstandigenaftrekToegepast = status !== "nee";
+  const startersaftrekAan = startersaftrekStatus?.[activeYear] === "ja";
 
   const heffingskortingen = estimateHeffingskortingen(winst, activeYear, zelfstandigenaftrekToegepast);
   const scenarios = status === "onbekend" ? estimateIncomeTaxScenarios(winst, activeYear) : null;
@@ -58,6 +60,25 @@ export default function PersoonlijkeAannamesPanel({
             </p>
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">
+              Startersaftrek toepassen in {activeYear}?
+            </label>
+            <select
+              value={startersaftrekAan ? "ja" : ""}
+              onChange={(e) => onSetStartersaftrekStatus(activeYear, e.target.value || null)}
+              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+            >
+              <option value="">Nee / niet van toepassing</option>
+              <option value="ja">Ja</option>
+            </select>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Alleen mogelijk als je ook zelfstandigenaftrek krijgt, in minstens 1 van de 5 voorgaande jaren nog
+              geen ondernemer was, en dit in die periode niet vaker dan 2x eerder hebt toegepast (max. 3x in de
+              eerste 5 jaar). Vast bedrag van € 2.123 (2023 t/m 2026 ongewijzigd) — controleer dit zelf.
+            </p>
+          </div>
+
           <div className="rounded-md bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
             {scenarios ? (
               <>
@@ -93,6 +114,11 @@ export default function PersoonlijkeAannamesPanel({
                   Niet elk bedrijfsmiddel telt mee voor KIA (bijv. personenauto's en grond meestal niet) — controleer dit zelf per aanschaf. Dit is een mogelijke, geen definitieve aftrek.
                 </span>
               )}
+            </p>
+            <p className="pt-1.5 border-t border-slate-200 text-slate-400">
+              Dit is een snelle indicatie voor {activeYear} alleen — startersaftrek en verrekening van
+              niet-gerealiseerde zelfstandigenaftrek uit andere jaren tellen hier nog niet mee. Genereer het
+              Indicatieve aangifteberekening-rapport (met alle jaren erin) voor die volledige berekening.
             </p>
           </div>
         </div>

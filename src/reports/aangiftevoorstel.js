@@ -1,7 +1,11 @@
 import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
-import { estimateIncomeTax, estimateZvw, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia } from "../tax/incomeTax.js";
+import {
+  estimateIncomeTax, estimateZvw, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
+  IB_TARIEVEN_BY_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
+  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek,
+} from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
@@ -67,7 +71,17 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
   ${gatenHtml}`;
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus) {
+// Alleen de winst voor een jaar — gebruikt in een pre-pass over alle te rapporteren jaren om de
+// verrekening van niet-gerealiseerde zelfstandigenaftrek (die de jaren chronologisch aan elkaar
+// koppelt) te kunnen berekenen vóórdat de eigenlijke jaarsecties worden opgebouwd.
+function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails) {
+  const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
+  const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+  const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
+  return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar).winst;
+}
+
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -81,10 +95,24 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // eerder opgeslagen projecten dezelfde cijfers blijven tonen totdat dit expliciet wordt gezet.
   const zaStatus = zelfstandigenaftrekStatus?.[year];
   const zelfstandigenaftrekToegepast = zaStatus !== "nee";
-  const ibEstimate = estimateIncomeTax(summary.winst, year, zelfstandigenaftrekToegepast);
-  const zvwEstimate = estimateZvw(summary.winst, year, zelfstandigenaftrekToegepast);
   const zaScenarios = zaStatus === "onbekend" ? estimateIncomeTaxScenarios(summary.winst, year) : null;
-  const heffingskortingen = estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
+  const startersaftrekToegepast = startersaftrekStatus?.[year] === "ja";
+  // ondernemersaftrekVoorJaar komt uit de pre-pass (computeOndernemersaftrekMetReserve) en houdt
+  // rekening met verrekening van niet-gerealiseerde zelfstandigenaftrek uit eerdere jaren in dit
+  // rapport, en met startersaftrek. Voor "onbekend"-jaren wordt dit bewust niet gebruikt (zie
+  // hieronder bij zaScenarios) — die jaren doen niet mee in de reserveketen.
+  const ondernemersaftrekBedrag = ondernemersaftrekVoorJaar
+    ? ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag + ondernemersaftrekVoorJaar.startersaftrekBedrag
+    : (zelfstandigenaftrekToegepast ? IB_TARIEVEN_BY_YEAR[Math.max(2023, Math.min(2026, year))].zelfstandigenaftrek : 0);
+  const ibEstimate = ondernemersaftrekVoorJaar
+    ? estimateIncomeTaxMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateIncomeTax(summary.winst, year, zelfstandigenaftrekToegepast);
+  const zvwEstimate = ondernemersaftrekVoorJaar
+    ? estimateZvwMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateZvw(summary.winst, year, zelfstandigenaftrekToegepast);
+  const heffingskortingen = ondernemersaftrekVoorJaar
+    ? estimateHeffingskortingenMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
@@ -317,8 +345,19 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>2. Zonder zelfstandigenaftrek: geschatte inkomstenbelasting <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong></p>
   <p class="toelichting">Dit is een persoonlijke voorwaarde (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) die niet uit bankgegevens is af te leiden — geef dit aan in de tool ("Persoonlijke aannames voor IB") zodra dit bekend is.</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen, startersaftrek of overig inkomen. Geen belastingadvies.</p>
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>${ibEstimate.geëxtrapoleerd ? " (belastingschijven van dit jaar nog niet bekend, benaderd met de dichtstbijzijnde bekende schijven)" : ""} — zonder heffingskortingen of overig inkomen. Geen belastingadvies.</p>
   ${!zaStatus ? '<p class="toelichting">⚠ Ervan uitgegaan dat aan het urencriterium voor de zelfstandigenaftrek is voldaan (nog niet expliciet aangegeven in de tool) — geef dit aan bij "Persoonlijke aannames voor IB" als dit niet (zeker) het geval is.</p>' : ""}
+  ${ondernemersaftrekVoorJaar ? `
+  <p class="toelichting">Toegepaste ondernemersaftrek dit jaar: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
+      ondernemersaftrekVoorJaar.verrekendUitReserve > 0
+        ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend vanuit niet-gerealiseerde zelfstandigenaftrek van eerdere jaren in dit rapport)`
+        : ""
+    }${startersaftrekToegepast ? ` + startersaftrek <strong>${eur(ondernemersaftrekVoorJaar.startersaftrekBedrag)}</strong> (max. 3x in de eerste 5 jaar van ondernemerschap — controleer zelf of dit hier van toepassing is)` : ""}.${
+      ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0
+        ? ` ⚠ Dit jaar kon ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} van de zelfstandigenaftrek niet worden benut (winst te laag) — dit is gereserveerd om tot 9 jaar later alsnog te verrekenen, als in dit rapport ook een later jaar met voldoende winst wordt meegenomen.`
+        : ""
+    }</p>
+  ` : ""}
   `}
   <p>Geschatte bijdrage Zorgverzekeringswet (Zvw): <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (bijdrage-inkomen is gemaximeerd op het wettelijk maximum voor dit jaar)" : ""}${zvwEstimate.geëxtrapoleerd ? " (Zvw-percentage van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende percentage)" : ""} — het lage (zelfstandigen-)tarief over dezelfde belastbare winst als hierboven. Geen belastingadvies.</p>
   <p class="vergelijk-hint">Vergelijk deze geschatte bedragen met wat er daadwerkelijk is aangegeven en betaald aan inkomstenbelasting en Zvw over dit jaar (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht in de tool).</p>
@@ -344,9 +383,31 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus) {
+  // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
+  // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
+  // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren met
+  // zelfstandigenaftrekStatus "onbekend" doen bewust niet mee in deze keten (die tonen hun eigen
+  // twee scenario's, los van reserveverrekening).
+  const jarenVoorReserve = yearsToInclude
+    .filter((year) => zelfstandigenaftrekStatus?.[year] !== "onbekend")
+    .map((year) => ({
+      year,
+      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails),
+      zelfstandigenaftrekStatus: zelfstandigenaftrekStatus?.[year],
+      startersaftrekToegepast: startersaftrekStatus?.[year] === "ja",
+    }));
+  const ondernemersaftrekPerJaar = computeOndernemersaftrekMetReserve(jarenVoorReserve);
+  const alleJarenMetData = [...new Set(classified.filter((tx) => !tx.isMirror).map((tx) => tx.year))];
+  const vroegsteJaarMetData = alleJarenMetData.length > 0 ? Math.min(...alleJarenMetData) : null;
+  const vroegsteJaarInRapport = jarenVoorReserve.length > 0 ? Math.min(...jarenVoorReserve.map((j) => j.year)) : null;
+  const reserveWaarschuwingHtml =
+    vroegsteJaarMetData != null && vroegsteJaarInRapport != null && vroegsteJaarMetData < vroegsteJaarInRapport
+      ? `<p class="toelichting">⚠ Dit rapport begint bij ${vroegsteJaarInRapport}, terwijl er ook bankgegevens zijn van vóór dat jaar — een eventuele niet-gerealiseerde zelfstandigenaftrek van vóór ${vroegsteJaarInRapport} is hierin niet meegenomen. Neem alle jaren mee in één rapport voor een volledige verrekening.</p>`
+      : "";
+
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus))
     .join('\n  <div style="page-break-before: always;"></div>\n');
 
   return `<!DOCTYPE html>
@@ -391,6 +452,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 </style></head>
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
+  ${reserveWaarschuwingHtml}
   ${sections}
   <div style="page-break-before: always;"></div>
   <h2>Lees dit voordat je de cijfers gebruikt</h2>

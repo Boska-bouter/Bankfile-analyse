@@ -75,6 +75,135 @@ export function estimateZvw(winst, year, zelfstandigenaftrekToegepast = true) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Startersaftrek en verrekening niet-gerealiseerde zelfstandigenaftrek — GROVE INDICATIE.
+// ---------------------------------------------------------------------------------------------
+// Bron: gepubliceerde regels van de Belastingdienst over ondernemersaftrek/zelfstandigenaftrek en
+// startersaftrek. Check jaarlijks op belastingdienst.nl of dit nog klopt (de startersaftrek
+// verdwijnt naar verwachting per 2027).
+//
+// Startersaftrek: alleen voor wie zelfstandigenaftrek krijgt, in minstens 1 van de 5 voorgaande
+// kalenderjaren nog geen ondernemer was, en in die 5 jaar niet vaker dan 2x eerder
+// zelfstandigenaftrek toepaste (dus maximaal 3x in de eerste 5 jaar). Vast bedrag, sinds 2023
+// ongewijzigd. Mét startersaftrek mag de gecombineerde ondernemersaftrek de winst wél volledig
+// wegstrepen (zelfs tot een negatief bedrag); zónder startersaftrek kan zelfstandigenaftrek de
+// winst nooit verder verlagen dan € 0.
+export const STARTERSAFTREK_BEDRAG = 2123;
+
+// Niet-gerealiseerde zelfstandigenaftrek: het deel van de zelfstandigenaftrek dat in een jaar niet
+// kon worden benut omdat de winst te laag was. Mag tot 9 jaar later alsnog worden verrekend, in een
+// jaar waarin (a) wél aan het urencriterium is voldaan (zelfstandigenaftrekStatus !== "nee") én
+// (b) de winst hoger is dan de normale zelfstandigenaftrek van dat jaar (er dus "ruimte" is). Deze
+// tool houdt dit zelf bij (in plaats van de aanslagbiljetten van eerdere jaren) — reken dit na als
+// er al eerdere jaren buiten dit rapport vielen.
+//
+// jarenData: array van { year, winst, zelfstandigenaftrekStatus: "ja"|"nee"|undefined,
+// startersaftrekToegepast: boolean }, in willekeurige volgorde (wordt hier chronologisch gesorteerd).
+// Retourneert per jaar het werkelijk toe te passen bedrag, uitgesplitst.
+export function computeOndernemersaftrekMetReserve(jarenData) {
+  const resultaat = {};
+  let reserves = []; // [{ jaar, bedrag }], oudste eerst
+  const sorted = [...jarenData].sort((a, b) => a.year - b.year);
+  for (const { year, winst, zelfstandigenaftrekStatus, startersaftrekToegepast } of sorted) {
+    // Reserves ouder dan 9 jaar zijn vervallen — verwijderen vóórdat dit jaar er weer uit put.
+    reserves = reserves.filter((r) => year - r.jaar <= 9);
+
+    if (zelfstandigenaftrekStatus === "nee") {
+      resultaat[year] = {
+        zelfstandigenaftrekBedrag: 0,
+        startersaftrekBedrag: 0,
+        verrekendUitReserve: 0,
+        nietGerealiseerdNieuw: 0,
+        reserveresterend: reserves.reduce((a, r) => a + r.bedrag, 0),
+      };
+      continue;
+    }
+
+    const clampedYear = Math.max(2023, Math.min(2026, year));
+    const basisBedrag = IB_TARIEVEN_BY_YEAR[clampedYear].zelfstandigenaftrek;
+    const winstPositief = Math.max(0, winst || 0);
+
+    const gerealiseerdBasis = Math.min(winstPositief, basisBedrag);
+    const nietGerealiseerdNieuw = Math.max(0, basisBedrag - gerealiseerdBasis);
+    const extraRuimte = Math.max(0, winstPositief - basisBedrag);
+
+    let verrekendUitReserve = 0;
+    let resterendeRuimte = extraRuimte;
+    const nieuweReserves = [];
+    for (const r of reserves) {
+      if (resterendeRuimte <= 0) { nieuweReserves.push(r); continue; }
+      const gebruik = Math.min(r.bedrag, resterendeRuimte);
+      verrekendUitReserve += gebruik;
+      resterendeRuimte -= gebruik;
+      if (r.bedrag - gebruik > 0) nieuweReserves.push({ jaar: r.jaar, bedrag: r.bedrag - gebruik });
+    }
+    reserves = nieuweReserves;
+    if (nietGerealiseerdNieuw > 0) reserves.push({ jaar: year, bedrag: nietGerealiseerdNieuw });
+
+    resultaat[year] = {
+      zelfstandigenaftrekBedrag: gerealiseerdBasis + verrekendUitReserve,
+      startersaftrekBedrag: startersaftrekToegepast ? STARTERSAFTREK_BEDRAG : 0,
+      verrekendUitReserve,
+      nietGerealiseerdNieuw,
+      reserveresterend: reserves.reduce((a, r) => a + r.bedrag, 0),
+    };
+  }
+  return resultaat;
+}
+
+// Gedeelde grondslagberekening voor de "...MetOndernemersaftrek"-varianten hieronder: winst minus
+// een expliciet meegegeven ondernemersaftrek-bedrag (zelfstandigenaftrek + eventuele reserve +
+// eventuele startersaftrek), met de MKB-winstvrijstelling erover. staatNegatiefToe: alleen waar
+// (bij toepassing van startersaftrek) mag dit tot onder € 0 komen.
+function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
+  let naAftrek = (winst || 0) - (ondernemersaftrekBedrag || 0);
+  if (!staatNegatiefToe) naAftrek = Math.max(0, naAftrek);
+  return naAftrek * (1 - t.mkbPct / 100);
+}
+
+function berekenBelastingOverSchijven(belastbaar, year) {
+  if (!(belastbaar > 0)) return 0;
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
+  let belasting = 0;
+  let vorige = 0;
+  for (const schijf of t.brackets) {
+    const inDezeSchijf = Math.min(belastbaar, schijf.tot) - vorige;
+    if (inDezeSchijf > 0) belasting += inDezeSchijf * schijf.tarief;
+    vorige = schijf.tot;
+    if (belastbaar <= schijf.tot) break;
+  }
+  return belasting;
+}
+
+// IB-schatting met een expliciet ondernemersaftrek-bedrag (voor gebruik samen met
+// computeOndernemersaftrekMetReserve, dat rekening houdt met verrekening van niet-gerealiseerde
+// zelfstandigenaftrek en met startersaftrek).
+export function estimateIncomeTaxMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const belastbaar = computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe);
+  return { belasting: berekenBelastingOverSchijven(belastbaar, year), geëxtrapoleerd: clampedYear !== year, belastbaar };
+}
+
+export function estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
+  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
+  const belastbaar = Math.max(0, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe));
+  const gemaximeerd = belastbaar > z.maxBijdrageInkomen;
+  const grondslag = Math.min(belastbaar, z.maxBijdrageInkomen);
+  return { bijdrage: grondslag * (z.pct / 100), geëxtrapoleerd: clampedYear !== year, grondslag, gemaximeerd };
+}
+
+export function estimateHeffingskortingenMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
+  if (!winst || winst <= 0) return { algemeneHeffingskorting: 0, arbeidskorting: 0, totaal: 0 };
+  const belastbaarInkomen = Math.max(0, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe));
+  const algemeneHeffingskorting = computeAlgemeneHeffingskorting(belastbaarInkomen, year);
+  const arbeidskorting = computeArbeidskorting(winst, year);
+  return { algemeneHeffingskorting, arbeidskorting, totaal: algemeneHeffingskorting + arbeidskorting };
+}
+
+// ---------------------------------------------------------------------------------------------
 // Heffingskortingen (algemene heffingskorting + arbeidskorting) — GROVE INDICATIE.
 // ---------------------------------------------------------------------------------------------
 // Beide kortingen zijn wettelijk afhankelijk van meer dan alleen de winst uit onderneming: de
