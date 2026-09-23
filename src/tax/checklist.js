@@ -1,4 +1,11 @@
 import { extractDescriptionDate } from "../utils/normalization.js";
+import { fiscalTreatmentOf, mainCategoryOf } from "../classification/categories.js";
+
+// Categorieën die een bewuste geldbeweging tussen de zakelijke en de privésfeer zijn (drawings/
+// stortingen) — die horen qua hoofdcategorie bij "Privé", maar zijn geen "verkeerde rekening": het
+// IS precies de bedoeling dat deze op de zakelijke rekening staan met type "Zakelijk" (en op de
+// privérekening met type "Prive"). Die moeten hier dus worden uitgesloten van het rekening-signaal.
+const PRIVE_TRANSFER_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive"];
 
 // Bouwt de aangifte-checklist-data voor één jaar — hergebruikt voor zowel het actieve jaar in de
 // hoofdweergave als voor het meerjarige Aangiftevoorstel.
@@ -92,10 +99,35 @@ export function computeChecklistLikeDataForYear(zakItems, priItems, quartersForY
       !(tx.fullDescription || "").trim()
   );
 
+  // "Verkeerde rekening gebruikt" — puur signalerend/educatief richting de cliënt (fiscaal is dit
+  // al correct verwerkt, zie Route B / fiscalTreatmentOf in categories.js: de winst/BTW-berekening
+  // rekent op basis van de categorie, niet van tx.type). `type` volgt sinds de fix altijd het
+  // geregistreerde rekeningtype (zie classify.js) — dus een mismatch tussen `type` en de fiscale
+  // aard van de categorie betekent nu betrouwbaar: hier is van de verkeerde rekening betaald/
+  // ontvangen. Twee kanten:
+  //  - een overduidelijk privé-categorie (hoofdcategorie "Privé"/"Persoonlijk & vertrouwelijk",
+  //    behalve de drawings/stortingen-categorieën hierboven) die tóch op de ZAKELIJKE rekening
+  //    terechtkwam;
+  //  - een categorie met een echte fiscale zakelijke aard (omzet/kosten/financiering) die tóch op
+  //    de PRIVÉrekening terechtkwam.
+  // "Overig" (nog te beoordelen) en de neutrale/transfer-categorieën (belastingafdrachten, interne
+  // overboeking zakelijk sparen, verkoop activa, "Overig") tellen bewust niet mee in beide kanten —
+  // die zijn niet duidelijk genoeg zakelijk óf privé om als "verkeerde rekening" te bestempelen.
+  const priveCategorieOpZakelijkeRekening = zakItems.filter(
+    (tx) =>
+      !tx.isMirror &&
+      !PRIVE_TRANSFER_CATEGORIES.includes(tx.category) &&
+      ["Privé", "Persoonlijk & vertrouwelijk"].includes(mainCategoryOf(tx.category))
+  );
+  const zakelijkeCategorieOpPriveRekening = priItems.filter(
+    (tx) => !tx.isMirror && ["omzet", "kosten", "financiering"].includes(fiscalTreatmentOf(tx.category))
+  );
+
   return {
     overigCount, totalCount, categorizedPct, quartersForYear, quartersOpen, quartersNietAangegeven, quartersAangegevenNietBetaald, apparatuurInvestering, leaseFinancieelTotal,
     monthsMissingLH, loonheffingBoetes, totaalNettoLoon, totaalLH, loonheffingPct, loonheffingInVerwachteBereik,
     inkomstenAndereKwartaal, priveTransferOrphans, priveTransferMissingMirrors, inkomstenZonderOmschrijving,
+    priveCategorieOpZakelijkeRekening, zakelijkeCategorieOpPriveRekening,
   };
 }
 

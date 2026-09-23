@@ -222,6 +222,46 @@ export default function AangifteStatusBar({
             </span>
           </li>
         )}
+        {checklistData.priveCategorieOpZakelijkeRekening.length > 0 && (
+          <li className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <span>
+              {checklistData.priveCategorieOpZakelijkeRekening.length} duidelijk privé-uitgave
+              {checklistData.priveCategorieOpZakelijkeRekening.length === 1 ? "" : "n"} betaald vanaf de <strong>zakelijke</strong> rekening — fiscaal al correct verwerkt (telt niet mee
+              als bedrijfskosten), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de privérekening had gemoeten.
+              <span className="block mt-1 text-xs text-slate-500">
+                {checklistData.priveCategorieOpZakelijkeRekening.slice(0, 5).map((tx) => (
+                  <ExpandableDescription
+                    key={tx.id} tx={tx} className="block"
+                    prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}, ${tx.category}): `}
+                    short={tx.counterparty || tx.description}
+                  />
+                ))}
+                {checklistData.priveCategorieOpZakelijkeRekening.length > 5 && <span className="block">en {checklistData.priveCategorieOpZakelijkeRekening.length - 5} meer…</span>}
+              </span>
+            </span>
+          </li>
+        )}
+        {checklistData.zakelijkeCategorieOpPriveRekening.length > 0 && (
+          <li className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <span>
+              {checklistData.zakelijkeCategorieOpPriveRekening.length} duidelijk zakelijke uitgave/omzet
+              {checklistData.zakelijkeCategorieOpPriveRekening.length === 1 ? "" : "n"} betaald/ontvangen op de <strong>privé</strong>rekening — fiscaal al correct verwerkt (telt gewoon mee
+              in de winst/BTW), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de zakelijke rekening had gemoeten.
+              <span className="block mt-1 text-xs text-slate-500">
+                {checklistData.zakelijkeCategorieOpPriveRekening.slice(0, 5).map((tx) => (
+                  <ExpandableDescription
+                    key={tx.id} tx={tx} className="block"
+                    prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}, ${tx.category}): `}
+                    short={tx.counterparty || tx.description}
+                  />
+                ))}
+                {checklistData.zakelijkeCategorieOpPriveRekening.length > 5 && <span className="block">en {checklistData.zakelijkeCategorieOpPriveRekening.length - 5} meer…</span>}
+              </span>
+            </span>
+          </li>
+        )}
         {checklistData.inkomstenZonderOmschrijving.length > 0 && (
           <li className="flex items-start gap-2">
             <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
