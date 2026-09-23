@@ -137,8 +137,9 @@ export default function PersoonlijkeAannamesPanel({
 
           {gedeeldeHuur && (
             <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>
-              <label className="text-sm font-medium text-slate-700 block mb-1">
+              <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1">
                 Percentage zakelijk gebruik "Huur (deels zakelijk)" in {activeYear}
+                {onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
               </label>
               <div className="flex items-center gap-2">
                 <input

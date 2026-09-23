@@ -81,14 +81,41 @@ export const HELP_CHAPTERS = [
     key: "lease-financieel",
     titel: "Lease (financieel)",
     inhoud: (
-      <p>
-        Bij <strong>operationele</strong> lease is de hele termijn gewoon aftrekbaar — in feite huur, geen verdere
-        actie nodig. Bij <strong>financiële</strong> lease werkt het fiscaal hetzelfde als een lening: alleen de{" "}
-        <strong>rente</strong> in de termijn is aftrekbaar, de rest is aflossing (het object zelf wordt apart
-        afgeschreven). Uit de bank-omschrijving is dat onderscheid vaak niet te zien, dus bevestig je per lease
-        expliciet: operationeel of financieel? Kies je financieel, dan werkt de rente/aflossing-splitsing precies
-        zoals bij leningen.
-      </p>
+      <div className="space-y-2">
+        <p>
+          Bij <strong>operationele</strong> lease is de hele termijn gewoon aftrekbaar — in feite huur, geen verdere
+          actie nodig. Bij <strong>financiële</strong> lease werkt het fiscaal hetzelfde als een lening: alleen de{" "}
+          <strong>rente</strong> in de termijn is aftrekbaar, de rest is aflossing (het object zelf wordt apart
+          afgeschreven). Uit de bank-omschrijving is dat onderscheid vaak niet te zien, dus bevestig je per lease
+          expliciet: operationeel of financieel? Kies je financieel, dan werkt de rente/aflossing-splitsing precies
+          zoals bij leningen.
+        </p>
+        <p className="font-medium text-slate-700 pt-1">Kapitalisatie &amp; afschrijving (optioneel)</p>
+        <p>
+          Betreft het financiële leasecontract een <strong>auto of machine</strong>, dan is het geleasde object
+          fiscaal een eigen bedrijfsmiddel — net als bij een gewone aanschaf (zie ook "Activa (bedrijfsmiddelen) —
+          afschrijving") wordt dat gekapitaliseerd en afgeschreven, los van de rente/aflossing-splitsing hierboven.
+          Vul daarvoor bij het contract "Soort" (Auto of Machine/overig) in, met de afschrijvingstermijn (voor een
+          auto minimaal 5 jaar) — de aanschafwaarde wordt automatisch het gefinancierde bedrag bij aanvang van dít
+          contract. Laat "Soort" op "Niet ingevuld" staan om de oude berekening (alleen rente aftrekbaar,
+          geen afschrijving) ongewijzigd te laten — dat blijft de standaard voor elk bestaand contract.
+        </p>
+        <p>
+          Bij "Soort: Auto" komt daar de <strong>bijtelling/onttrekking</strong> bovenop bij privégebruik van meer
+          dan 500 km per jaar: cataloguswaarde en bijtellingspercentage invullen, en per jaar aanvinken of dat
+          privégebruik van toepassing was. Anders dan de standaard werknemers-bijtelling wordt hier de bijtelling
+          afgetopt op de werkelijke totale autokosten dat jaar — je onttrekt nooit meer dan er daadwerkelijk aan
+          autokosten is geboekt.
+        </p>
+        <p>
+          <strong>Kenteken</strong> is alleen relevant als hetzelfde leasecontract halverwege de looptijd is
+          vervangen of geherfinancierd (bijv. een nieuw contract na een tussentijdse aanpassing), terwijl het nog
+          om dezelfde auto/machine gaat. Vul dan bij elk vervolgcontract hetzelfde kenteken in als bij het vorige —
+          de tool herkent dat en telt de afschrijving en bijtelling dan maar één keer, in plaats van dubbel (eenmaal
+          per contract). Bij een afwijkende cataloguswaarde/bijtellingspercentage tussen gekoppelde contracten
+          verschijnt een niet-blokkerende waarschuwing, zodat je dat zelf kunt controleren.
+        </p>
+      </div>
     ),
   },
   {
@@ -118,6 +145,11 @@ export const HELP_CHAPTERS = [
         <p>
           Zodra een bedrijfsmiddel hier is ingevuld, gebruikt het aangiftevoorstel de daadwerkelijk berekende
           afschrijving voor het actieve jaar in plaats van het bruto aanschafbedrag met een waarschuwing erbij.
+        </p>
+        <p className="text-xs text-slate-400">
+          Is een bedrijfsmiddel (auto of machine) via een financieel leasecontract gefinancierd in plaats van
+          rechtstreeks aangeschaft, dan vul je de kapitalisatie/afschrijving daarvoor in bij dat leasecontract zelf
+          — zie "Lease (financieel)" — niet hier in het Activa-paneel.
         </p>
       </div>
     ),
@@ -283,6 +315,81 @@ export const HELP_CHAPTERS = [
           Overige bedrijfskosten (auto/transport, huisvesting, verkoop, andere kosten) → Financiële baten en lasten
           → Privéonttrekkingen en -stortingen → Belastingafdrachten (geen bedrijfskosten). Zo kun je één op één
           meelezen met je eigen aangifte.
+        </p>
+        <p>
+          <strong>Afschrijvingen</strong> staat hierbij onderverdeeld in "Auto's" en "Machines" (elk apart getoond,
+          ook als het bedrag €0 is) — dat sluit aan bij hoe veel aangifteformulieren deze twee al gescheiden
+          uitvragen. <strong>"Huur (deels zakelijk)"</strong> valt onder Overige bedrijfskosten → Huisvesting, maar
+          dan met alleen het zelf ingestelde zakelijke percentage — zie ook "Huur (deels zakelijk)".
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: "huur-deels-zakelijk",
+    titel: "Huur (deels zakelijk)",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Voor de situatie dat je maar een déél van een gehuurde ruimte zakelijk gebruikt — bijvoorbeeld een deel van
+          een schuur, magazijn of woning die je ook privé gebruikt. Ken transacties hiervoor toe aan de aparte
+          categorie <strong>"Huur (deels zakelijk)"</strong> (in plaats van de gewone categorie "Huur", die er
+          vanuit gaat dat alles zakelijk is).
+        </p>
+        <p>
+          Bij "Persoonlijke aannames voor IB" vul je vervolgens per jaar het <strong>percentage zakelijk gebruik</strong>{" "}
+          in. Alleen dat percentage van de huur telt mee als aftrekbare zakelijke kosten in de winstberekening; de
+          rest is privé en telt niet mee. Zit er BTW op de huur, dan geldt hetzelfde percentage voor de aftrekbare
+          voorbelasting — de rest van de BTW is niet aftrekbaar. Leeg/niet ingevuld betekent 100% (volledig
+          aftrekbaar, hetzelfde resultaat als bij gewone "Huur"), en het percentage is per jaar apart instelbaar,
+          voor als de verhouding zakelijk/privé in de loop van de tijd verandert.
+        </p>
+        <p className="text-xs text-slate-400">
+          Deze categorie bestaat naast de gewone "Huur"-categorie — gebruik "Huur" gewoon zolang een ruimte volledig
+          zakelijk is, en alleen "Huur (deels zakelijk)" voor het gedeeltelijke geval.
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: "persoonlijke-aannames",
+    titel: "Persoonlijke aannames voor IB",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Dit paneel verzamelt de fiscale keuzes en persoonlijke omstandigheden die de tool <strong>niet</strong> uit
+          bankgegevens kan afleiden, maar die wel invloed hebben op de indicatieve inkomstenbelasting. De tool neemt
+          hier bewust niets stilzwijgend aan zonder dat zichtbaar te maken.
+        </p>
+        <p>
+          <strong>Urencriterium / zelfstandigenaftrek</strong> — heb je dat jaar minimaal het gebruikelijke aantal
+          uren (doorgaans 1.225) aan de onderneming besteed? Zolang je hier niets aangeeft, rekent de tool zoals
+          voorheen mét zelfstandigenaftrek; kies "Onbekend" om beide scenario's (met/zonder) naast elkaar te zien.
+        </p>
+        <p>
+          <strong>Startersaftrek</strong> — alleen mogelijk als je ook zelfstandigenaftrek krijgt, in minstens 1 van
+          de 5 voorgaande jaren nog geen ondernemer was, en dit niet vaker dan 2x eerder hebt toegepast (max. 3x in
+          de eerste 5 jaar). Vast bedrag, controleer dit zelf.
+        </p>
+        <p>
+          <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan
+          uitgaande dat de winst je enige inkomen is, je de AOW-leeftijd nog niet hebt bereikt, en er geen fiscale
+          partner is om mee te verrekenen — klopt een van die aannames niet, dan is de schatting minder betrouwbaar.
+        </p>
+        <p>
+          <strong>Investeringsaftrek (KIA)</strong> wordt hier automatisch voorgesteld op basis van wat er in het
+          Activa-paneel aan bedrijfsmiddel-investeringen dat jaar is ingevuld — niet elk bedrijfsmiddel telt mee
+          (personenauto's en grond meestal niet), dus dit is een mogelijke, geen definitieve aftrek.
+        </p>
+        <p>
+          Zijn er dat jaar transacties in de categorie "Huur (deels zakelijk)", dan staat hier ook het{" "}
+          <strong>percentage zakelijk gebruik</strong> van die huur — zie "Huur (deels zakelijk)" voor de uitleg
+          daarvan.
+        </p>
+        <p className="text-xs text-slate-400">
+          Dit paneel toont een snelle indicatie voor het actieve jaar alleen. Genereer het Indicatieve
+          aangifteberekening-rapport (met alle jaren erin) voor de volledige, samenhangende berekening — inclusief
+          verrekening van startersaftrek en niet-gerealiseerde zelfstandigenaftrek uit andere jaren.
         </p>
       </div>
     ),
