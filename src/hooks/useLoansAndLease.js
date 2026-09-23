@@ -34,6 +34,12 @@ export function useLoansAndLease({
   snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto,
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
+  // Leningen die eerder expliciet als privé zijn aangemerkt ("Leningen (privé)") — apart
+  // bijgehouden zodat LoanInterestPanel.jsx ook voor déze leningen nog een "toch zakelijk"-knop kan
+  // tonen. Zonder dit zou zo'n lening, eenmaal op "Leningen (privé)" gezet, volledig uit het
+  // leningenoverzicht verdwijnen en alleen nog via de algemene categorie-editor terug te zetten
+  // zijn — dat kan nog steeds, maar dit maakt het ook rechtstreeks vanuit dit paneel mogelijk.
+  const privateLoanSummary = useMemo(() => computeLoanSummary(classified, "Leningen (privé)"), [classified]);
   // Ongesamenvoegde (ruwe) lijst apart bewaard — nodig om bij "Loskoppelen" nog te weten hoe een
   // eerder samengevoegde bron-lease heette (die is in leaseSummary hieronder niet meer zichtbaar,
   // want die lijst toont juist het resultaat NA samenvoeging).
@@ -111,7 +117,7 @@ export function useLoansAndLease({
   };
 
   return {
-    loanSummary, leaseSummary, leaseMerges,
+    loanSummary, privateLoanSummary, leaseSummary, leaseMerges,
     setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   };

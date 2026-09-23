@@ -710,6 +710,16 @@ export default function App() {
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Leningen (privé)", type: tx.type }, tx.counterpartyIban);
     }
   };
+  // Omgekeerde correctie: een eerder als privé gemarkeerde lening blijkt (bijv. na een gesprek met
+  // de cliënt) toch een zakelijke lening te zijn — terug naar "Leningen", zodat de rente weer
+  // meetelt als aftrekbare bedrijfskosten. Kan net zo goed via de algemene categorie-editor, maar
+  // dit maakt het ook rechtstreeks vanuit het leningenpaneel mogelijk (zie privateLoanSummary).
+  const markLoanAsZakelijk = (loan) => {
+    snapshotBeforeAction("Lening op Leningen (zakelijk) gezet");
+    for (const tx of loan.transactions) {
+      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Leningen", type: tx.type }, tx.counterpartyIban);
+    }
+  };
   const acceptVerwachteMatch = () => {
     const { type, idx, matches, targetCategory } = verwachteMatchSuggestie;
     snapshotBeforeAction("Verwachte lease/lening/AOV ingedeeld");
@@ -939,7 +949,7 @@ export default function App() {
 
   // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
   const {
-    loanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
+    loanSummary, privateLoanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
@@ -2257,12 +2267,14 @@ export default function App() {
             <div ref={loansSectionRef}>
               <LoanInterestPanel
                 loanSummary={loanSummary}
+                privateLoanSummary={privateLoanSummary}
                 loanDetails={loanDetails}
                 onOpenModal={setLoanDetailsModalKey}
                 onMarkUnknown={markLoanUnknown}
                 onUnmarkUnknown={unmarkLoanUnknown}
                 onMarkNotALoan={markLoanNotALoan}
                 onMarkAsPrive={markLoanAsPrive}
+                onMarkAsZakelijk={markLoanAsZakelijk}
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>

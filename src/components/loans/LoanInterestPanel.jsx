@@ -4,15 +4,15 @@ import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
-export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onOpenHelp }) {
+export default function LoanInterestPanel({ loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
   const [open, setOpen] = useState(false);
-  if (loanSummary.length === 0) return null;
+  if (loanSummary.length === 0 && privateLoanSummary.length === 0) return null;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Rentepercentage per lening</span>
-        <span className="text-xs font-normal text-slate-400">({loanSummary.length})</span>
+        <span className="text-xs font-normal text-slate-400">({loanSummary.length + privateLoanSummary.length})</span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
@@ -85,6 +85,33 @@ export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModa
               );
             })}
           </div>
+          {privateLoanSummary.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-xs font-medium text-slate-500 mb-2">
+                Eerder als privé aangemerkt ({privateLoanSummary.length}) — rente hierop telt niet mee als aftrekbare
+                bedrijfskosten. Blijkt een lening toch zakelijk te zijn, dan kan dat hier worden teruggezet.
+              </p>
+              <div className="space-y-3">
+                {privateLoanSummary.map((loan) => (
+                  <div key={loan.key} className="rounded-md border border-slate-100 p-3">
+                    <div className="flex items-center gap-3 text-sm flex-wrap">
+                      <span className="flex-1 min-w-[8rem] truncate font-medium">{loan.name}</span>
+                      <span className="text-xs text-slate-400 font-mono">{loan.count}x, totaal {eur(loan.total)}</span>
+                      {onMarkAsZakelijk && (
+                        <button
+                          onClick={() => onMarkAsZakelijk(loan)}
+                          className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
+                          title="Zet deze transactie(s) terug op 'Leningen' — de rente telt dan weer mee als aftrekbare bedrijfskosten"
+                        >
+                          Toch zakelijk (Leningen)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

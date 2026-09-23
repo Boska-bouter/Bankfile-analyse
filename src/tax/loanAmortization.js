@@ -157,12 +157,16 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
   return { totaalRente, totaalAflossing, onvolledig, renteNietBerekenbaar };
 }
 
-// Groepeert "Leningen"-transacties per tegenpartij (niet op teken, zoals bij Overig) — een
-// lening kan zowel een opname (positief) als aflossingen (negatief) hebben.
-export function computeLoanSummary(classified) {
+// Groepeert leningtransacties van één categorie per tegenpartij (niet op teken, zoals bij Overig)
+// — een lening kan zowel een opname (positief) als aflossingen (negatief) hebben. `category` is
+// standaard "Leningen" (zakelijk, ongewijzigd gedrag voor bestaande aanroepen); geef "Leningen
+// (privé)" mee om precies dezelfde groepering te krijgen voor de leningen die als privé zijn
+// gemarkeerd (zie LoanInterestPanel.jsx, waar dit gebruikt wordt om een "toch zakelijk"-knop terug
+// te kunnen tonen voor een eerder als privé aangemerkte lening).
+export function computeLoanSummary(classified, category = "Leningen") {
   const map = {};
   for (const tx of classified) {
-    if (tx.category !== "Leningen" || tx.isMirror) continue;
+    if (tx.category !== category || tx.isMirror) continue;
     const key = (tx.counterparty || tx.description || "").trim().toLowerCase();
     if (!key) continue;
     if (!map[key]) map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, transactions: [] };
