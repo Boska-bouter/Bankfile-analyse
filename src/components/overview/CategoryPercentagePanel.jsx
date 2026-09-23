@@ -58,11 +58,14 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  activeYear, categorieTotalen, categoryZakelijkPercentage, onSetCategoryZakelijkPercentage, onOpenHelp,
+  activeYear, categorieTotalen, categoryZakelijkPercentage, onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
   const categorieen = Object.keys(categorieTotalen || {}).sort((a, b) => a.localeCompare(b));
-  if (!activeYear || categorieen.length === 0) return null;
+  // Blijft ook zichtbaar zonder splitsbare categorieën als er dit jaar "auto op de zaak" is
+  // aangegeven — anders verdwijnt het paneel stilletjes zodra Brandstof/Parkeren (vaak de enige
+  // splitsbare categorieën in zo'n jaar) daardoor zijn uitgesloten, zonder dat duidelijk is waarom.
+  if (!activeYear || (categorieen.length === 0 && !autoOpDeZaakDitJaar)) return null;
 
   const aangepast = categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
 
@@ -86,6 +89,13 @@ export default function CategoryPercentagePanel({
             gedrag. De wijziging wordt doorgevoerd zodra je het veld verlaat of op Enter drukt.
             {onOpenHelp && <HelpHint chapter="categorie-percentage-zakelijk" onOpen={onOpenHelp} />}
           </p>
+          {autoOpDeZaakDitJaar && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mb-3">
+              Je hebt voor {activeYear} "Auto op de zaak" aangegeven — Brandstof en Parkeren staan daarom
+              niet (meer) in de lijst hieronder. Het privégebruik daarvan loopt voor dit jaar via de
+              bijtelling/onttrekkings-correctie bij de leaseauto-gegevens, niet via dit percentage.
+            </p>
+          )}
           <div className="space-y-2">
             {categorieen.map((categorie) => (
               <CategoryPercentageRow

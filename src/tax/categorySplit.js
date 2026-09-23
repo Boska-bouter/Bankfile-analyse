@@ -35,11 +35,10 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 // niet juist: vrijwel elke zzp'er/BV heeft een auto, en zonder deze twee categorieën moet een
 // gemengd-gebruikte brandstof-/parkeertransactie per stuk naar een privé-categorie verplaatst
 // worden in plaats van gewoon één percentage per jaar in te stellen — voor een dossier zonder
-// (financial-lease-)auto-op-de-zaak is dat een onnodige verslechtering. Vanaf v173 daarom weer
-// terug in de lijst; vanaf v174 worden ze alleen nog uitgesloten in het jaar/dossier waar de
-// gebruiker expliciet "Auto op de zaak" heeft aangegeven (zie autoStatus in App.jsx) — bij
-// "Privéauto zakelijk gebruikt", "Beide" of "Onbekend" blijft deze generieke %-splitsing gewoon
-// bruikbaar.
+// auto-op-de-zaak is dat een onnodige verslechtering. Vanaf v173 daarom weer terug in de lijst;
+// vanaf v175 worden ze alleen nog uitgesloten in het jaar waar de gebruiker expliciet "Auto op de
+// zaak" heeft aangegeven (zie AUTO_SPLIT_UITSLUITING/autoStatus hieronder) — bij "Onbekend" blijft
+// deze generieke %-splitsing gewoon bruikbaar.
 export const SPLITSBARE_CATEGORIEEN = [
   "Brandstof",
   "Zakelijk mobiel/internet",
@@ -58,11 +57,35 @@ export function defaultZakelijkPercentage(category) {
   return fiscalTreatmentOf(category) === "kosten" ? 100 : 0;
 }
 
+// Vanaf v175: Brandstof/Parkeren zijn WEL splitsbaar (zie SPLITSBARE_CATEGORIEEN), behalve in een
+// jaar waarin de gebruiker heeft aangegeven dat de auto op de zaak staat (autoStatus "zaak" of
+// "beide" — zie autoStatus in App.jsx, ingesteld via de wizard of "Persoonlijke aannames"). In dat
+// geval hoort het privégebruik via de aparte bijtelling/onttrekkings-correctie te lopen (zie
+// autoBijtelling.js) — een generiek %-zakelijk op dezelfde transacties zou daar in tegenspraak mee
+// zijn (dubbele/tegenstrijdige correctie op dezelfde kosten). Bij "Privéauto zakelijk gebruikt",
+// "Beide" (de PRIVÉAUTO-transacties, zie hieronder) of "Onbekend" blijft de generieke splitsing
+// gewoon bruikbaar — "Beide" sluit hier alleen uit omdat de tool niet uit banktransacties kan
+// afleiden welke brandstof/parkeer-transactie bij de zaaks-auto hoort en welke bij de privéauto
+// (zie ook de toelichting bij "Beide" in het stappenplan) — tot dat onderscheid er is (v177) is
+// volledig uitsluiten de veiligere kant (voorkomt dat een deel van de zaaks-auto-kosten alsnog via
+// de generieke %-splitsing wordt teruggedraaid).
+const AUTO_SPLIT_UITSLUITING = ["Brandstof", "Parkeren"];
+
+function autoOpDeZaak(year, autoStatus) {
+  const status = autoStatus?.[year];
+  return status === "zaak" || status === "beide";
+}
+
 // Negeert een eventueel opgeslagen percentage voor een categorie die niet (meer) op
-// SPLITSBARE_CATEGORIEEN staat — zo blijft elke andere categorie altijd op zijn standaardgedrag,
-// ook als er ooit ergens per ongeluk toch een percentage voor is opgeslagen.
-export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage) {
+// SPLITSBARE_CATEGORIEEN staat, of voor Brandstof/Parkeren in een jaar met "auto op de zaak" — zo
+// blijft die situatie altijd op het standaardgedrag (100%, gewone aftrekbare kosten; de eventuele
+// bijtelling-correctie loopt apart via autoBijtelling.js), ook als er nog een percentage opgeslagen
+// staat van vóór dat autoStatus werd ingesteld.
+export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus) {
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
+  if (AUTO_SPLIT_UITSLUITING.includes(category) && autoOpDeZaak(year, autoStatus)) {
+    return defaultZakelijkPercentage(category);
+  }
   const override = categoryZakelijkPercentage?.[category]?.[year];
   return override != null ? override : defaultZakelijkPercentage(category);
 }
@@ -91,11 +114,15 @@ export function rawBtw(tx, categoryBtwRates, btwVerlegd) {
 // categorie) geeft dit hetzelfde bedrag als voorheen. Dit is alleen het getoonde totaal op het
 // instellingenscherm — de fiscale berekening zelf (rawBtw/effectiveZakelijkPercentage) werkt al met
 // het teken van elke transactie en is hier niet van afhankelijk.
-export function computeSplitsbareCategorieTotalenVoorJaar(classified, year) {
+// `autoStatus` optioneel — laat Brandstof/Parkeren weg voor een jaar met "auto op de zaak" (zie
+// effectiveZakelijkPercentage hierboven), zodat het instelpaneel geen percentage-veld toont dat
+// voor dat jaar toch genegeerd wordt.
+export function computeSplitsbareCategorieTotalenVoorJaar(classified, year, autoStatus) {
   const netto = {};
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     if (!isSplitsbareCategorie(tx.category)) continue;
+    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && autoOpDeZaak(year, autoStatus)) continue;
     netto[tx.category] = (netto[tx.category] || 0) + tx.amount;
   }
   const totalen = {};

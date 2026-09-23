@@ -102,7 +102,7 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
 // backwards compatible voor elke aanroep die dit argument niet meegeeft). `categoryZakelijkPercentage`
 // is de generieke tegenhanger (zie tax/categorySplit.js): dezelfde soort optionele correctie, maar
 // dan voor élke "kosten"/"geen"-categorie met een ingesteld percentage, niet alleen Huur.
-export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null) {
+export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null) {
   const map = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -111,7 +111,7 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
     // "geen" geldt effectiveZakelijkPercentage — zonder ingesteld percentage 100 resp. 0, dus
     // ongewijzigd gedrag zolang niemand een percentage instelt.
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     // Standaard: kwartaal op basis van boekingsdatum. Is er een bevestigde periode-verplaatsing
@@ -195,7 +195,7 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
 // percentage <100 toont hier ook alleen het zakelijke deel, en een "geen"-categorie met een
 // ingesteld percentage >0 komt er hier ook bij (in plaats van, zoals voorheen, altijd volledig
 // buiten deze pop-up-uitsplitsing te blijven).
-export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, categoryZakelijkPercentage = null) {
+export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, categoryZakelijkPercentage = null, autoStatus = null) {
   const map = {}; // "2023-Q2" -> { categorie -> { bruto, btw } }
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -214,7 +214,7 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
     const behandeling = fiscalTreatmentOf(tx.category);
     if (behandeling === "omzet" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const factor = percentage / 100;
@@ -236,14 +236,14 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
 
 // Zelfde uitsplitsing als hierboven, maar voor het hele jaar in één keer (geen kwartaal-sleutel)
 // — voor de pop-ups bij "Voorbelasting" en "Zakelijk totaal (netto)" in het meerjarenoverzicht.
-export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, categoryZakelijkPercentage = null) {
+export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, categoryZakelijkPercentage = null, autoStatus = null) {
   const cats = {};
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     const behandeling = fiscalTreatmentOf(tx.category);
     if (behandeling === "omzet" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const factor = percentage / 100;

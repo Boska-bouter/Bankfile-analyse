@@ -32,7 +32,7 @@ import { eur } from "../utils/amounts.js";
 // wisselen. Weggelaten (of geen entry voor categorie+jaar), dan rekent elke "kosten"-categorie voor
 // 100% en elke "geen"-categorie voor 0% mee, exact het gedrag van vóór dit mechanisme bestond — dus
 // 100% backwards compatible voor elke aanroep die dit argument niet meegeeft.
-export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0, leaseAutoWinstCorrectie = 0, categoryZakelijkPercentage = null) {
+export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0, leaseAutoWinstCorrectie = 0, categoryZakelijkPercentage = null, autoStatus = null) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
   let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
@@ -78,7 +78,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // zakelijk-percentage >0 hebben (bijv. 30% van Boodschappen blijkt toch zakelijk) — dan
       // telt dat deel hieronder alsnog mee als kostenpost. Zonder ingesteld percentage (verreweg
       // de meeste dossiers/categorieën) is dit exact 0, dus identiek aan de oude "continue" hierboven.
-      const percentage = effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage);
+      const percentage = effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus);
       if (percentage <= 0) continue;
       const factor = percentage / 100;
       const btw = rawBtw(tx, categoryBtwRates, btwVerlegd) * factor;
@@ -98,7 +98,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     // maar 70% van Brandstof is zakelijk) — ontbreekt dat, dan is percentage/factor exact 100/1 en
     // verandert er niets aan de berekening hieronder (100% backwards compatible). "omzet" en
     // "financiering" doen bewust niet mee aan dit mechanisme (percentage blijft dan altijd 100).
-    const percentage = behandeling === "kosten" ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage) : 100;
+    const percentage = behandeling === "kosten" ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus) : 100;
     const factor = percentage / 100;
     const btwVol = rawBtw(tx, categoryBtwRates, btwVerlegd);
     const btw = btwVol * factor;
@@ -192,7 +192,7 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
 // 100% mee als voorbelasting, exact zoals voorheen. `categoryZakelijkPercentage` is de generieke
 // tegenhanger daarvan (zie categorySplit.js) — zelfde soort optionele correctie, maar dan voor élke
 // "kosten"/"geen"-categorie met een ingesteld percentage in plaats van alleen "Huur (deels zakelijk)".
-export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null) {
+export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null) {
   const perQuarter = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -203,7 +203,7 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
     // "geen" geldt effectiveZakelijkPercentage (100/0 zonder ingesteld percentage, dus ongewijzigd
     // gedrag zolang niemand een percentage instelt).
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const kwartaal = Math.ceil(Number(m) / 3);

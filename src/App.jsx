@@ -991,7 +991,7 @@ export default function App() {
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding)
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage);
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
@@ -1243,30 +1243,30 @@ export default function App() {
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
   const quarterlyBtwData = useMemo(
-    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage) : []),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage]
+    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus) : []),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus]
   );
   // Uitsluitend voor de "Uitgaven (netto)"-pop-up: dezelfde indeling als hierboven, alleen per
   // categorie apart gehouden — geen nieuwe berekening, puur het al berekende bedrag herleidbaar
   // maken.
   const costBreakdownByQuarter = useMemo(
-    () => (activeYear ? computeQuarterlyCostBreakdown(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage) : {}),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage]
+    () => (activeYear ? computeQuarterlyCostBreakdown(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage, autoStatus) : {}),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage, autoStatus]
   );
   // Zelfde soort uitsplitsing, maar per jaar in één keer — voor de pop-ups bij "Voorbelasting" en
   // "Zakelijk totaal (netto)" in het meerjarenoverzicht.
   const costBreakdownByYear = useMemo(() => {
     const map = {};
     for (const year of years) {
-      map[year] = computeYearlyCostBreakdown(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage);
+      map[year] = computeYearlyCostBreakdown(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage, autoStatus);
     }
     return map;
-  }, [classified, years, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage]);
+  }, [classified, years, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, categoryZakelijkPercentage, autoStatus]);
   // Totalen per (splitsbare) categorie voor het actieve jaar — voor CategoryPercentagePanel, zodat
   // die alleen categorieën toont die dit jaar daadwerkelijk transacties hebben.
   const categorieTotalenActiveYear = useMemo(
-    () => (activeYear ? computeSplitsbareCategorieTotalenVoorJaar(classified, activeYear) : {}),
-    [classified, activeYear]
+    () => (activeYear ? computeSplitsbareCategorieTotalenVoorJaar(classified, activeYear, autoStatus) : {}),
+    [classified, activeYear, autoStatus]
   );
   // Rente-voor-jaar staat hier vóór yearlySummary/yearlySummaries: de winstberekening trekt alleen
   // de aftrekbare rente op leningen/financiële lease af (niet de volledige termijn), dus die rente
@@ -1299,12 +1299,12 @@ export default function App() {
   );
   const winstCorrectieActiveYear = (leaseAutoKostenForActiveYear?.winstCorrectie || 0) - (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0);
   const yearlySummary = useMemo(
-    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage) : null),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage]
+    () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage, autoStatus) : null),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage, autoStatus]
   );
   const yearlyOpenOB = useMemo(
-    () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage),
-    [classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage]
+    () => computeYearlyOpenOB(classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus),
+    [classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus]
   );
   const ibEstimate = useMemo(
     () => (yearlySummary ? estimateIncomeTax(yearlySummary.winst, activeYear) : { belasting: 0, geëxtrapoleerd: false }),
@@ -1323,10 +1323,10 @@ export default function App() {
       const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd) : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       const winstCorrectie = (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0);
-      map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage);
+      map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, categoryZakelijkPercentage]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus]);
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
   // afschrijving (berekend als Activa is ingevuld, anders het bruto aanschafbedrag ter herkenning)
@@ -1341,7 +1341,7 @@ export default function App() {
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
       const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd) : null;
-      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentage);
+      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentage, autoStatus);
       map[y] =
         (ib.inkoopkosten.totaal || 0) +
         (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
@@ -1353,7 +1353,7 @@ export default function App() {
         (ib.leaseAutoKosten?.onttrekking || 0);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentage]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentage, autoStatus]);
   // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
   // BV-Aangiftevoorstel), maar hier al altijd bijgehouden — dezelfde Route B-redenering als de rest
   // van de tool: deze categorieën bestaan niet in een zzp-dossier, dus deze waarden zijn dan gewoon
@@ -1399,7 +1399,7 @@ export default function App() {
       const zakItems = (groups.find((g) => g.year === year && g.type === "Zakelijk") || { items: [] }).items;
       const priItems = (groups.find((g) => g.year === year && g.type === "Prive") || { items: [] }).items;
       const allYearItems = [...zakItems, ...priItems];
-      const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage);
+      const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus);
       const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus);
       const checks = [{ frac: yc.categorizedPct / 100 }];
 
@@ -1448,7 +1448,7 @@ export default function App() {
       map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus]);
 
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
@@ -2441,6 +2441,7 @@ export default function App() {
               categorieTotalen={categorieTotalenActiveYear}
               categoryZakelijkPercentage={categoryZakelijkPercentage}
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
+              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
               onOpenHelp={setHelpPopupChapter}
             />
 
