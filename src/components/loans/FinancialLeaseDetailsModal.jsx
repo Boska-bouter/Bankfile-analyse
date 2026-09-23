@@ -222,9 +222,16 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     return [...jarenSet].sort((a, b) => a - b);
   }, [segmentTransactions, form.startdatum]);
 
+  // "Extra bedrag 1e termijn" (bijv. eenmalige administratiekosten) zit al in totaleLeaseBetalingen
+  // (dat telt alle daadwerkelijke betalingen op, incl. deze extra), maar zat tot nu toe niet aan de
+  // andere kant van de vergelijking (gefinancierd bedrag + leasevergoeding) — waardoor elk ingevuld
+  // extra bedrag hier ten onrechte als "klopt niet" werd gezien, ook als alles verder klopte. Door
+  // hetzelfde bedrag ook links mee te tellen, valt het aan beide kanten tegen elkaar weg zodra het
+  // klopt, en blijft de waarschuwing alleen over bij een echt verschil.
+  const extraBedrag1eTermijnNum = form.extraBedrag1eTermijn === "" ? 0 : Number(form.extraBedrag1eTermijn);
   const leaseVergoedingWijktAf =
     form.leaseVergoeding !== "" && totaleLeaseBetalingen != null &&
-    Math.abs(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) - totaleLeaseBetalingen) > 25;
+    Math.abs(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) + extraBedrag1eTermijnNum - totaleLeaseBetalingen) > 25;
 
   // "Datum 1e termijn" is alleen ooit bedoeld als een kleine correctie op de startdatum (de eerste
   // termijn valt weleens iets eerder dan de vervolgtermijnen, zie de toelichting hieronder) — maar
@@ -467,7 +474,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
 
       {leaseVergoedingWijktAf && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
-          ⚠ Onbetaald gedeelte koop + lease vergoeding ({eur(onbetaaldGedeelteKoop + Number(form.leaseVergoeding))}) wijkt meer dan
+          ⚠ Onbetaald gedeelte koop + lease vergoeding + extra bedrag 1e termijn ({eur(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) + extraBedrag1eTermijnNum)}) wijkt meer dan
           €25 af van maandbedrag × looptijd + eindbetaling + extra ({eur(totaleLeaseBetalingen)}) — controleer de invoer.
         </p>
       )}
