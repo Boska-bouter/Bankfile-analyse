@@ -238,11 +238,17 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
 
   if (contracten.length === 0) return null;
 
-  // "Totale autokosten" = afschrijving + lease-rente + de 5 gecategoriseerde kostenposten — precies
-  // zoals bevestigd. De lease-rente en de gecategoriseerde kosten stromen AL mee in de winst via de
-  // bestaande mechanismes (renteAftrekbaar resp. de normale categorie-gedreven kostenberekening) —
-  // dit totaal is puur voor de onttrekkingsberekening en de transparante weergave hieronder.
-  const totaleAutokosten = afschrijvingTotaal + leaseRenteTotaal + autokostenTransactieTotaal;
+  // "Totale autokosten" (het plafond waarop de bijtelling wordt afgetopt) = afschrijving + de 5
+  // gecategoriseerde kostenposten. De rente van een financiële lease hoort hier NIET bij — dat is een
+  // aparte financieringskost (bij "Financiële baten en lasten"), geen autokostenpost, en blijft altijd
+  // volledig en ongewijzigd aftrekbaar, ongeacht de bijtelling (zie winstCorrectie hieronder, die ook
+  // al vóór deze correctie nooit de rente aanraakte). Tot v161 werd leaseRenteTotaal hier per abuis wél
+  // meegeteld in het plafond zelf — dat kon de bijtelling ten onrechte hoger toestaan dan gerechtvaardigd
+  // (de rente werd namelijk zelf nooit teruggedraaid, dus meetellen in het plafond verruimde alleen de
+  // ruimte voor de onttrekking, zonder dat er iets tegenover stond). Vanaf nu telt alleen afschrijving +
+  // de gecategoriseerde autokosten mee voor het plafond; leaseRenteTotaal blijft wel apart beschikbaar
+  // (voor weergave) via het veld hieronder.
+  const totaleAutokosten = afschrijvingTotaal + autokostenTransactieTotaal;
   const onttrekking = heeftAutoMetPrivegebruik ? Math.min(normaleBijtellingTotaal, totaleAutokosten) : 0;
   const nettoAftrekbareAutokosten = totaleAutokosten - onttrekking;
 

@@ -241,14 +241,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     .join("")}`
       : "";
 
-  // Vanaf v161: de lease-rente van een AUTO-contract wordt niet meer hier getoond, maar verhuisd
-  // naar de nieuwe "Auto's en machines"-rubriek (als onderdeel van "totale autokosten") — hij blijft
-  // wel exact hetzelfde bedrag, gewoon op een andere plek in het rapport (renteAftrekbaar, waar dit
-  // al meetelt in de winst, verandert niet). Rente van een MACHINE-lease (of een lease zonder
-  // ingevulde "soort") blijft hier gewoon staan, zoals voorheen.
-  const renteLeaseAuto = ib.leaseAutoKosten ? ib.leaseAutoKosten.leaseRenteTotaal : 0;
-  const renteLeaseOverig = Math.max(0, (ib.financieleBatenLasten.renteLease || 0) - renteLeaseAuto);
-  const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + renteLeaseOverig;
+  // De rente van een financiële lease (auto of machine) is een aparte financieringskost, geen
+  // "autokostenpost" — die blijft daarom altijd hier staan, volledig en ongewijzigd aftrekbaar, en
+  // wordt (net als vóór v161) nooit meegeteld in de bijtelling-aftopping bij "Auto's en machines"
+  // hieronder.
+  const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + ib.financieleBatenLasten.renteLease;
   const financieelTotaalAflossing = ib.financieleBatenLasten.aflossingLeningen + ib.financieleBatenLasten.aflossingLease;
   const financieelHtml =
     financieelTotaalRente > 0 || ib.leningenTotal > 0 || ib.leaseFinancieelTotal > 0
@@ -260,27 +257,27 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
-        }${renteLeaseAuto > 0 ? ` Rente op de auto-lease(s) (${eur(renteLeaseAuto)}) staat bij "Auto's en machines" hierboven, niet hier.` : ""} <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
+        } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
-    { categorie: "Rente Lease (financieel, niet-auto)", totaal: renteLeaseOverig },
+    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
   ])}`
       : "";
 
   // Vanaf v161: "Auto's en machines" als ÉÉN samengevoegde bedrijfskostenpost, in dezelfde stijl als
   // de officiële Belastingdienst-voorbeelden (bevestigd door de gebruiker) — één "totale autokosten"-
-  // bedrag voor de auto (afschrijving + lease-rente + de 5 gecategoriseerde autokosten), waar bij
+  // bedrag voor de auto (afschrijving + de 5 gecategoriseerde autokosten — NIET de lease-rente, die
+  // blijft een aparte financieringskost bij "Financiële baten en lasten" hierboven), waar bij
   // privégebruik de bijtelling in zijn GEHEEL van wordt afgetrokken (afgetopt op nul, nooit een
   // negatief bedrag), in plaats van de vóór v161 gebruikte weergave met losse volledige aftrekposten
-  // (afschrijving/rente/autokosten) plus een aparte optelregel. Machines hebben geen bijtelling en
-  // blijven daarom een gewone, volledige aftrekpost; ook een auto zonder bijtellingssituatie (geen
-  // privégebruik >500km, of geen lease) blijft een gewone volledige aftrekpost — zie de
-  // "Overige autokosten"-regel hieronder, die dan gewoon gelijk is aan "totale autokosten".
-  const leaseRenteAuto = ib.leaseAutoKosten ? ib.leaseAutoKosten.leaseRenteTotaal : 0;
+  // plus een aparte optelregel. Machines hebben geen bijtelling en blijven daarom een gewone, volledige
+  // aftrekpost; ook een auto zonder bijtellingssituatie (geen privégebruik >500km, of geen lease)
+  // blijft een gewone volledige aftrekpost — zie de "Auto — autokosten"-regel hieronder, die dan
+  // gewoon gelijk is aan "totale autokosten".
   const autokostenOverigBedrag = ib.autokostenOverig.totaal || 0;
   const onttrekking = ib.leaseAutoKosten?.onttrekking || 0;
   const heeftBijtelling = onttrekking > 0;
-  const totaleAutokosten = leaseAfschrijvingAuto + leaseRenteAuto + autokostenOverigBedrag;
+  const totaleAutokosten = leaseAfschrijvingAuto + autokostenOverigBedrag;
   const aftrekbareAutokosten = Math.max(0, totaleAutokosten - onttrekking);
   // Zeldzame edge case: als in hetzelfde jaar zowel een auto ALS een machine financieel geleased is
   // én er bijtelling van toepassing is, wordt de aftopping intern (computeLeaseAutoKostenVoorJaar,
@@ -300,16 +297,19 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
     const autoCategorieDetail = categorieDetailHtml([
       { categorie: "Afschrijving", totaal: leaseAfschrijvingAuto },
-      { categorie: "Rente (financiële lease)", totaal: leaseRenteAuto },
       { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag },
     ]);
+    const renteVerwijzing =
+      ib.leaseAutoKosten && ib.leaseAutoKosten.leaseRenteTotaal > 0
+        ? ` Rente op de auto-lease (${eur(ib.leaseAutoKosten.leaseRenteTotaal)}) staat bij "Financiële baten en lasten", niet hier — dat is een financieringskost, geen autokostenpost, en telt niet mee in deze aftopping.`
+        : "";
     const autoDetailHtml = !heeftBijtelling
       ? `
-  <div class="subrubriek"><span>Auto — autokosten (afschrijving + rente + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
+  <div class="subrubriek"><span>Auto — autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
-  ${totaleAutokosten > 0 ? `<p class="toelichting">Volledig aftrekbaar — er is dit jaar geen bijtelling wegens privégebruik van toepassing. Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
+  ${totaleAutokosten > 0 ? `<p class="toelichting">Volledig aftrekbaar — er is dit jaar geen bijtelling wegens privégebruik van toepassing.${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
       : `
-  <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + rente + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
+  <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
   <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten)</span><span class="num">- ${eur(onttrekking)}</span></div>
   <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
@@ -317,7 +317,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         gemengdLeaseWaarschuwing
           ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de tool berekent deze nu tegen de afschrijving van auto én machine samen. "
           : ""
-      }Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
+      }${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
 
     const totaalAutoMachine = machineBedrag + (heeftBijtelling ? aftrekbareAutokosten : totaleAutokosten);
     return `
@@ -605,17 +605,19 @@ function buildBijlageToelichtingenHtml() {
     aftrekbare kosten van de zzp'er zelf.
   </p>
   <p class="toelichting">
-    De lease-rente en de gecategoriseerde autokosten stromen al mee in de winst via de bestaande
-    berekening (rente bij "Financiële baten en lasten", de rest via de normale categorie-gedreven
-    kosten) — de vermelding in de jaarsectie is puur een transparante uitsplitsing. Wat de winst per
-    saldo verandert, is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (telt bij de
-    winst op). Is de onttrekking hoger dan de afschrijving alleen, dan draait die het verschil ook
-    terug op de al aftrekbare lease-rente en gecategoriseerde autokosten van diezelfde auto — in
-    lijn met de aftopping op de WERKELIJKE TOTALE autokosten (afschrijving + rente + gecategoriseerde
-    kosten samen), niet alleen op de afschrijving. Bij een volledige aftopping is dus per saldo niets
-    van de kosten van die auto dat jaar aftrekbaar, ook al staan afschrijving/rente/autokosten
-    afzonderlijk nog gewoon (voluit) in de rubrieken hierboven — de aparte optel-regel bij "Bijtelling/
-    onttrekking privégebruik auto" in de jaarsectie corrigeert dat weer naar het juiste eindresultaat.
+    "Totale autokosten" voor deze aftopping bestaat uit de afschrijving plus de 5 gecategoriseerde
+    autokosten (MRB, verzekering, brandstof, parkeren, onderhoud) — dezelfde bedragen die bij
+    "Auto's en machines" in de jaarsectie staan. De rente van de financiële lease telt hier bewust
+    NIET in mee: dat is een aparte financieringskost, geen autokostenpost, en blijft daarom altijd
+    volledig en ongewijzigd aftrekbaar bij "Financiële baten en lasten" — ook als de bijtelling de
+    overige autokosten volledig wegstreept.
+  </p>
+  <p class="toelichting">
+    Bij "Auto's en machines" in de jaarsectie staat daarom één samengevoegd bedrag: de "totale
+    autokosten" (afschrijving + gecategoriseerde kosten) minus de bijtelling, afgetopt op nul — nooit
+    een negatieve aftrekpost. Is de bijtelling hoger dan of gelijk aan de totale autokosten, dan is er
+    per saldo niets van die kosten dat jaar aftrekbaar (de lease-rente blijft daarbuiten, zoals
+    hierboven beschreven).
   </p>
   <p class="toelichting" style="color:#b45309;">
     ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
