@@ -34,6 +34,9 @@ const RUBRIEK_ANDERE_KOSTEN = [
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Personeel: overig", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
+  // Vanaf v172: de twee nieuwe "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) —
+  // zelfde rubriek als de andere abonnementen/kosten hierboven.
+  "Streaming diensten", "Software & Online diensten",
 ];
 const RUBRIEK_ONTTREKKINGEN = ["Prive opnames", "Uitbetaling aan prive"];
 const RUBRIEK_STORTINGEN = ["Terugboeking van prive"];

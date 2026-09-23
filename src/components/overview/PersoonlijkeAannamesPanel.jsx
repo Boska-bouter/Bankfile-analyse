@@ -14,15 +14,17 @@ import HelpHint from "../shared/HelpHint.jsx";
 export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus,
   startersaftrekStatus, onSetStartersaftrekStatus,
+  autoStatus, onSetAutoStatus,
   activaSummary, activaDetails, onOpenHelp,
   gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
   const [open, setOpen] = useState(false);
-  // "Huur (deels zakelijk)" mag ook zichtbaar zijn in een jaar met winst €0 of negatief (bijv. een
-  // verlieslatend jaar) — het paneel zelf blijft verder verborgen (net als voorheen) zolang er geen
-  // enkele aanleiding is om het te tonen: gedeeldeHuur is null voor elk dossier dat deze nieuwe
-  // categorie niet gebruikt, dus dit verandert niets aan bestaande dossiers.
-  if (!activeYear || ((!winst || winst <= 0) && !gedeeldeHuur)) return null;
+  // Vanaf v173 blijft dit paneel altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag
+  // hieronder is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht
+  // of er dit jaar winst is. Vóór v173 bleef het paneel verborgen bij winst €0/negatief zonder
+  // "Huur (deels zakelijk)" — de zelfstandigenaftrek/heffingskortingen/KIA-blok hieronder blijft dat
+  // gedrag houden (heeftWinst), alleen het paneel zelf niet meer.
+  if (!activeYear) return null;
 
   const status = zelfstandigenaftrekStatus?.[activeYear] || "onbekend_default";
   const zelfstandigenaftrekToegepast = status !== "nee";
@@ -134,6 +136,30 @@ export default function PersoonlijkeAannamesPanel({
           </div>
           </>
           )}
+
+          <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>
+            <label className="text-sm font-medium text-slate-700 block mb-1">
+              Auto-status in {activeYear}
+            </label>
+            <select
+              value={autoStatus?.[activeYear] || ""}
+              onChange={(e) => onSetAutoStatus(activeYear, e.target.value || null)}
+              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+            >
+              <option value="">Onbekend/niet aangegeven — huidige percentage-splitsing op Brandstof/Parkeren blijft bruikbaar</option>
+              <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
+              <option value="prive">Privéauto zakelijk gebruikt (kilometervergoeding)</option>
+              <option value="beide">Beide — zowel een auto op de zaak als een privéauto zakelijk gebruikt</option>
+            </select>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Bepaalt op termijn welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen
+              werkelijke autokosten (brandstof, parkeren, verzekering, MRB) mee met een
+              bijtellingscorrectie voor privégebruik; bij "privéauto zakelijk gebruikt" geldt in plaats
+              daarvan een kilometervergoeding en tellen brandstof/parkeren niet apart mee. Deze versie
+              van de tool slaat je keuze al op, maar de berekening gebruikt dit nog niet — dat volgt in
+              een volgende versie.
+            </p>
+          </div>
 
           {gedeeldeHuur && (
             <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>

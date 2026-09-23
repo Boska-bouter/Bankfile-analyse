@@ -211,6 +211,17 @@ export const DEFAULT_RULES = [
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
   { name: "Zakelijke uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
     description: "Algemene zakelijke kosten die nergens anders onder vallen." },
+  // Bewust GEEN zoekwoorden: net als "Huur (deels zakelijk)" wordt dit subtype nooit automatisch
+  // toegekend. Streaming-/softwareabonnementen matchen anders via de zoekwoorden bij "Prive overige
+  // abonnementen" gewoon bij die (100% privé) categorie — de gebruiker moet een abonnement dat
+  // aantoonbaar ook zakelijk gebruikt wordt zelf, bewust, hierheen verplaatsen via de
+  // categorie-dropdown, want alleen dan is er een percentage-zakelijk-gebruik van toepassing (zie
+  // tax/categorySplit.js). Bij "Inkoop & zakelijke uitgaven" ingedeeld (zelfde groep als "Zakelijke
+  // uitgaven"), niet bij "Telecom & abonnementen" — dat zijn de vaste telefonie/internet-kosten.
+  { name: "Streaming diensten", color: "bg-violet-100 text-violet-800", keywords: [],
+    description: "Streaming-abonnement (bijv. video/muziek) dat aantoonbaar deels zakelijk gebruikt wordt — in tegenstelling tot \"Prive overige abonnementen\" (altijd 100% privé) is hier een handmatig ingesteld percentage zakelijk gebruik van toepassing. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
+  { name: "Software & Online diensten", color: "bg-sky-100 text-sky-800", keywords: [],
+    description: "Software-/onlinedienst-abonnement dat deels zakelijk en deels privé gebruikt wordt (bijv. thuis én zakelijk). Net als \"Streaming diensten\" een handmatig ingesteld percentage zakelijk gebruik, nooit automatisch toegekend." },
   // ---- Alleen relevant bij rechtsvorm "bv" (zie App.jsx) — voor zzp/eenmanszaak blijven deze
   // categorieën altijd leeg, met opzet geen zoekwoorden (nooit automatisch toegekend). ----
   { name: "DGA-salaris", color: "bg-sky-300 text-sky-950", keywords: [],
@@ -243,7 +254,7 @@ export const CATEGORY_ORDER = [
   "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive",
-  "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
+  "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -337,6 +348,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
   "Zakelijk mobiel/internet": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke uitgaven": "kosten",
+  "Streaming diensten": "kosten", "Software & Online diensten": "kosten",
   // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
   "DGA-salaris": "kosten", "Vergoeding/huur aan holding": "kosten",
   "Dividenduitkering": "geen", "Rekening-courant DGA": "geen", "Kapitaalstorting": "geen",

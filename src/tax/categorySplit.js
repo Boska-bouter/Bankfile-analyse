@@ -27,12 +27,27 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 // alleen maar voor verwarring zorgen, dus die blijven hier bewust buiten beeld. "Huur (deels
 // zakelijk)" staat er ook niet bij: die heeft al zijn eigen, aparte percentage-mechanisme (zie
 // gedeeldeHuur.js) — dit is voor de gewone "Huur"-categorie.
+//
+// "Brandstof" en "Parkeren" zaten in v172 kortstondig NIET in deze lijst: bij een financial-lease-
+// auto met bijtelling gebruikt computeLeaseAutoKostenVoorJaar (zie autoBijtelling.js) altijd 100%
+// van deze autokosten voor de bijtelling-aftopping/onttrekking — een generiek %-zakelijk op
+// dezelfde transacties zou daar in tegenspraak mee zijn. Maar "altijd uitsluiten" bleek zelf ook
+// niet juist: vrijwel elke zzp'er/BV heeft een auto, en zonder deze twee categorieën moet een
+// gemengd-gebruikte brandstof-/parkeertransactie per stuk naar een privé-categorie verplaatst
+// worden in plaats van gewoon één percentage per jaar in te stellen — voor een dossier zonder
+// (financial-lease-)auto-op-de-zaak is dat een onnodige verslechtering. Vanaf v173 daarom weer
+// terug in de lijst; vanaf v174 worden ze alleen nog uitgesloten in het jaar/dossier waar de
+// gebruiker expliciet "Auto op de zaak" heeft aangegeven (zie autoStatus in App.jsx) — bij
+// "Privéauto zakelijk gebruikt", "Beide" of "Onbekend" blijft deze generieke %-splitsing gewoon
+// bruikbaar.
 export const SPLITSBARE_CATEGORIEEN = [
   "Brandstof",
   "Zakelijk mobiel/internet",
   "Reiskosten (OV)",
   "Parkeren",
   "Huur",
+  "Streaming diensten",
+  "Software & Online diensten",
 ];
 
 export function isSplitsbareCategorie(category) {
