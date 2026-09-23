@@ -29,6 +29,7 @@ import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
+import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
@@ -375,6 +376,30 @@ export default function App() {
       else delete next[category];
       return next;
     });
+  };
+  // "Voor welke jaren geldt dit percentage?" — alleen relevant zodra het dossier meer dan 1 jaar
+  // heeft (anders is er toch maar 1 mogelijk antwoord) én er een percentage wordt INgevuld (leeg
+  // maken/wissen blijft altijd meteen alleen voor het actieve jaar, geen vraag nodig).
+  const [pendingCategoryPercentage, setPendingCategoryPercentage] = useState(null); // { category, percentage, activeYear, years } | null
+  const requestSetCategoryZakelijkPercentage = (category, year, percentage) => {
+    if (percentage == null || percentage === "" || years.length <= 1) {
+      setCategoryZakelijkPercentage(category, year, percentage);
+      return;
+    }
+    setPendingCategoryPercentage({ category, percentage: Number(percentage), activeYear: year, years });
+  };
+  const applyCategoryPercentageToYears = (yearsToApply) => {
+    if (!pendingCategoryPercentage || yearsToApply.length === 0) return;
+    const { category, percentage } = pendingCategoryPercentage;
+    snapshotBeforeAction("Percentage zakelijk per categorie aangepast (meerdere jaren)");
+    setCategoryZakelijkPercentageState((prev) => {
+      const next = { ...prev };
+      const forCategory = { ...(next[category] || {}) };
+      for (const y of yearsToApply) forCategory[y] = percentage;
+      next[category] = forCategory;
+      return next;
+    });
+    setPendingCategoryPercentage(null);
   };
 
   // ---- Eerder opgeslagen project laden bij openen — met keuze i.p.v. automatisch ----
@@ -1854,6 +1879,19 @@ export default function App() {
           />
         )}
 
+        {pendingCategoryPercentage && (
+          <CategoryPercentageScopeModal
+            pending={pendingCategoryPercentage}
+            onApplyActiveYear={() => {
+              setCategoryZakelijkPercentage(pendingCategoryPercentage.category, pendingCategoryPercentage.activeYear, pendingCategoryPercentage.percentage);
+              setPendingCategoryPercentage(null);
+            }}
+            onApplyAllYears={() => applyCategoryPercentageToYears(pendingCategoryPercentage.years)}
+            onApplyYears={(selectedYears) => applyCategoryPercentageToYears(selectedYears)}
+            onClose={() => setPendingCategoryPercentage(null)}
+          />
+        )}
+
         {openConfidenceLevel && uncertainModalData && (
           <UncertainTransactionsModal
             level={openConfidenceLevel}
@@ -2354,7 +2392,7 @@ export default function App() {
               activeYear={activeYear}
               categorieTotalen={categorieTotalenActiveYear}
               categoryZakelijkPercentage={categoryZakelijkPercentage}
-              onSetCategoryZakelijkPercentage={setCategoryZakelijkPercentage}
+              onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
               onOpenHelp={setHelpPopupChapter}
             />
 
