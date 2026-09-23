@@ -29,6 +29,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Hypotheek",
   "Lease (financieel)",
   "Leningen",
+  "Leningen (privé)",
   "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
@@ -91,7 +92,7 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
   "Uitbetalen loon",
   "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
   "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
-  "Hypotheek", "Leningen",
+  "Hypotheek", "Leningen", "Leningen (privé)",
 ];
 
 // `huurZakelijkPercentageStatus` is optioneel — een { jaar: percentage }-map (zie

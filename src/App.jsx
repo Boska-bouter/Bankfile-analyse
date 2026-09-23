@@ -700,6 +700,16 @@ export default function App() {
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Overig", type: tx.type }, tx.counterpartyIban);
     }
   };
+  // De lening zelf is feitelijk PRIVÉ (bijv. een DUO-studieschuld of een privélening van familie) —
+  // ongeacht van/naar welke rekening betaald wordt. "Leningen (privé)" heeft geen fiscale
+  // aftrekbaarheid (fiscalTreatmentOf "geen"), in tegenstelling tot "Leningen" waar de rente wél
+  // aftrekbaar is — zie categories.js/autoBijtelling.js-achtige toelichting bij SPLIT_CATEGORY_NAMES.
+  const markLoanAsPrive = (loan) => {
+    snapshotBeforeAction("Lening op Leningen (privé) gezet");
+    for (const tx of loan.transactions) {
+      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Leningen (privé)", type: tx.type }, tx.counterpartyIban);
+    }
+  };
   const acceptVerwachteMatch = () => {
     const { type, idx, matches, targetCategory } = verwachteMatchSuggestie;
     snapshotBeforeAction("Verwachte lease/lening/AOV ingedeeld");
@@ -2252,6 +2262,7 @@ export default function App() {
                 onMarkUnknown={markLoanUnknown}
                 onUnmarkUnknown={unmarkLoanUnknown}
                 onMarkNotALoan={markLoanNotALoan}
+                onMarkAsPrive={markLoanAsPrive}
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>

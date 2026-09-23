@@ -115,7 +115,12 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       return !!rule && rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()));
     };
     if (matchesRule("Leningen")) {
-      return { category: "Leningen", type };
+      // Zelfde account-gebaseerde standaardgok als bij de uitgavenkant hieronder (SPLIT_CATEGORY_NAMES)
+      // — een lening-uitkering op de zakelijke rekening wordt standaard "Leningen" (zakelijk), op de
+      // privérekening standaard "Leningen (privé)". Is de lening zelf feitelijk privé (bijv. DUO) maar
+      // toevallig op de zakelijke rekening ontvangen, dan kan de categorie hierna nog gewoon handmatig
+      // op "Leningen (privé)" gezet worden — net als bij elke andere categorie.
+      return { category: accountType === "Zakelijk" ? "Leningen" : "Leningen (privé)", type };
     }
     if (matchesRule("Verzekering: Zakelijk") || matchesRule("Verzekeringen")) {
       const category = accountType === "Zakelijk" ? "Verzekering: Zakelijk" : "Verzekeringen";

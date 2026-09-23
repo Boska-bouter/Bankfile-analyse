@@ -4,7 +4,7 @@ import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
-export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onOpenHelp }) {
+export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onOpenHelp }) {
   const [open, setOpen] = useState(false);
   if (loanSummary.length === 0) return null;
 
@@ -22,7 +22,9 @@ export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModa
             Categorie "Leningen" is altijd 0% BTW; de rente is aftrekbaar, de aflossing niet. Vul de volledige gegevens
             in om de rente/aflossing-splitsing per betaling te laten berekenen. Klopt de indeling niet (bijv. een
             verzekeraar die toevallig op "lening" trefwoorden matcht, maar het hier feitelijk geen lening betreft)? Zet
-             'm dan op "Overig" om zelf een andere categorie te kiezen.{" "}
+             'm dan op "Overig" om zelf een andere categorie te kiezen. Is de lening zelf feitelijk PRIVÉ (bijv. een
+            DUO-studieschuld of een privélening van familie), ongeacht van/naar welke rekening betaald wordt? Zet 'm
+            dan op "Leningen (privé)" — de rente telt dan niet meer mee als aftrekbare bedrijfskosten.{" "}
             {onOpenHelp && <HelpHint chapter="rente-per-lening" onOpen={onOpenHelp} />}
           </p>
           <div className="space-y-3">
@@ -50,6 +52,15 @@ export default function LoanInterestPanel({ loanSummary, loanDetails, onOpenModa
                           </button>
                         )}
                       </>
+                    )}
+                    {onMarkAsPrive && (
+                      <button
+                        onClick={() => onMarkAsPrive(loan)}
+                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
+                        title="Zet deze transactie(s) op 'Leningen (privé)' — de rente telt dan niet meer mee als aftrekbare bedrijfskosten"
+                      >
+                        Dit is een privélening
+                      </button>
                     )}
                     {onMarkNotALoan && (
                       <button

@@ -78,7 +78,9 @@ export const DEFAULT_RULES = [
     "freelancefactoring", "o2 factoring", "bibby financial services", "svea finans", "factris",
     "atlantis financiers", "trefi", "collin crowdfund", "geldvoorelkaar.nl", "kapitaal op maat",
   ],
-    description: "Leningen van derden — bijv. van familie/privépersonen, DUO (studiefinanciering/lesgeld-lening), of een commerciële lening bij een bank of andere kredietverstrekker. Zowel het opnemen als het aflossen van zo'n lening kan hier terechtkomen." },
+    description: "Leningen van derden — bijv. van familie/privépersonen, DUO (studiefinanciering/lesgeld-lening), of een commerciële lening bij een bank of andere kredietverstrekker. Zowel het opnemen als het aflossen van zo'n lening kan hier terechtkomen. Is de lening zelf feitelijk PRIVÉ (bijv. een DUO-studieschuld of een lening van familie voor privédoeleinden) — kies dan \"Leningen (privé)\" in plaats van deze categorie, ook als de rekening waarop de lening loopt toevallig zakelijk is: alleen dan telt de rente niet ten onrechte mee als aftrekbare bedrijfskosten." },
+  { name: "Leningen (privé)", color: "bg-orange-50 text-orange-700", keywords: [],
+    description: "Een lening die zelf privé is (bijv. een DUO-studieschuld, een privélening van familie, of een persoonlijke lening/hypotheek bij een bank) — ongeacht van/naar welke rekening betaald wordt. In tegenstelling tot \"Leningen\" telt de rente hierop NIET mee als aftrekbare bedrijfskosten." },
   { name: "Uitbetalen loon", color: "bg-sky-100 text-sky-800", keywords: ["salaris", "nettoloon", "netto loon", "loonbetaling", "loon"],
     description: "Uitbetaald loon/salaris aan personeel. Het losse woord \"loon\" staat expres pas hier — de meer specifieke regels hierboven (loonheffing, loonadministratie) hebben voorrang." },
   { name: "Betaalautomaat kosten", color: "bg-slate-100 text-slate-700", keywords: [
@@ -232,12 +234,13 @@ export const GEDEELDE_HUUR_CATEGORIE = "Huur (deels zakelijk)";
 export const SPLIT_CATEGORY_NAMES = {
   "Zakelijk mobiel/internet": "Prive - mobiel/internet",
   "Zakelijk overige abonnementen": "Prive overige abonnementen",
+  "Leningen": "Leningen (privé)",
 };
 
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Marketing-website", "Overboekingen aan personen",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -273,7 +276,7 @@ export const NEW_CATEGORY_PALETTE = [
 export const DEFAULT_FIXED_CATEGORIES = [
   "Bankkosten", "Belastingen: LH", "Belastingen: MRB", "Belastingen: ZVW",
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
-  "Lease (operationeel)", "Lease (financieel)", "Leningen", "Boekhouder, accountant & administratie",
+  "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Boekhouder, accountant & administratie",
   "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
   "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
@@ -321,7 +324,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
   "Kinderopvang": "geen", "Overboekingen aan personen": "geen", "Prive - mobiel/internet": "geen",
-  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen",
+  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Uitbetaling aan prive": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
@@ -526,6 +529,7 @@ export const SUBTYPE_TO_MAIN = {
   "Lease (operationeel)": "Vervoer & auto",
   "Lease (financieel)": "Financiering",
   "Leningen": "Financiering",
+  "Leningen (privé)": "Privé",
   "Marketing-website": "Inkoop & zakelijke uitgaven",
   "Overboekingen aan personen": "Privé",
   "Overig": "Nog te beoordelen",
