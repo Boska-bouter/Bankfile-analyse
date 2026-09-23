@@ -1,6 +1,7 @@
-import { CATEGORY_ORDER } from "../classification/categories.js";
+import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw } from "./btw.js";
 import { AUTOKOSTEN_CATEGORIEN } from "./autoBijtelling.js";
+import { effectiveZakelijkPercentage } from "./categorySplit.js";
 
 // Welke categorieën in welk vak van de BTW-aangifte terechtkomen — puur informatief, gebaseerd
 // op de eigen BTW-instellingen (percentages, uitgesloten van voorbelasting).
@@ -44,8 +45,18 @@ const BELASTINGEN_GEEN_KOSTENPOST = [
 // ingedeeld" terecht zou komen als het toch een keer als Zakelijk voorkomt.
 const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", "Leningen", "Lease (financieel)"];
 
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null) {
-  const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount, 0));
+// `year`/`categoryZakelijkPercentage` zijn optioneel (zie tax/categorySplit.js): een generieke
+// percentage-zakelijk-splitsing per categorie, die hier alleen op "kosten"-categorieën wordt
+// toegepast (bijv. maar 70% van Brandstof is zakelijk) — omzet/financiering/privé-categorieën in
+// deze rubrieken (Opbrengsten, Privéonttrekkingen/-stortingen, Belastingafdrachten, Leningen/Lease
+// financieel) blijven hier altijd ongewijzigd. Weggelaten (`year` null, het gedrag van vóór dit
+// mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null) {
+  const factorFor = (category) => {
+    if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
+    return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage) / 100;
+  };
+  const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount * factorFor(tx.category), 0));
   const perCategorieVan = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
   const rubriek = (naam, cats, toelichting) => ({
@@ -57,7 +68,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // correctie die elders al gebeurt (summary.winst in yearlySummary.js, en de netto-kolom van het
   // categorieoverzicht in het aangiftevoorstel zelf), nu ook toegepast op de rubrieken hieronder
   // zodat de losse regels van deze winst-en-verliesrekening optellen tot hetzelfde resultaat.
-  const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
+  const nettoOf = (tx) => (tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd)) * factorFor(tx.category);
   const sumCatNetto = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0));
   const perCategorieVanNetto = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCatNetto([c]) })).filter((r) => r.totaal > 0);

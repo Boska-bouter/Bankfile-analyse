@@ -1,5 +1,5 @@
-import { computeBtw } from "./btw.js";
 import { fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
+import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 import { eur } from "../utils/amounts.js";
 
 // Winst uit onderneming (bruto) voor één jaar = Zakelijke inkomsten min BTW min de overige
@@ -26,7 +26,13 @@ import { eur } from "../utils/amounts.js";
 // gaat er hier als NEGATIEVE bijdrage in zodat de aftrek van "- leaseAutoWinstCorrectie" de winst per
 // saldo verhoogt). Geen enkele bestaande aanroep verandert hierdoor: zonder "Huur (deels zakelijk)"-
 // transacties blijft deze correctie exact wat hij al was (de lease-correctie, of 0).
-export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0, leaseAutoWinstCorrectie = 0) {
+// `categoryZakelijkPercentage` is optioneel — een generieke { categorie: { jaar: percentage } }-map
+// (zie tax/categorySplit.js) waarmee voor élke bestaande "kosten"/"geen"-categorie een percentage
+// zakelijk gebruik kan worden ingesteld, zonder dat de transactie zelf van categorie hoeft te
+// wisselen. Weggelaten (of geen entry voor categorie+jaar), dan rekent elke "kosten"-categorie voor
+// 100% en elke "geen"-categorie voor 0% mee, exact het gedrag van vóór dit mechanisme bestond — dus
+// 100% backwards compatible voor elke aanroep die dit argument niet meegeeft.
+export function computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, fixedCategories = [], incomeTransferCategories = [], voorbelastingExcluded = [], renteAftrekbaar = 0, leaseAutoWinstCorrectie = 0, categoryZakelijkPercentage = null) {
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
   let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
@@ -67,15 +73,42 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     // De fiscale zakelijke berekening (winst/BTW) zelf: gebaseerd op de categorie, niet op
     // tx.type — zie fiscalTreatmentOf hierboven.
     const behandeling = fiscalTreatmentOf(tx.category);
-    if (behandeling === "geen") continue;
+    if (behandeling === "geen") {
+      // Generieke %-splitsing (zie categorySplit.js): een privé-categorie kan een ingesteld
+      // zakelijk-percentage >0 hebben (bijv. 30% van Boodschappen blijkt toch zakelijk) — dan
+      // telt dat deel hieronder alsnog mee als kostenpost. Zonder ingesteld percentage (verreweg
+      // de meeste dossiers/categorieën) is dit exact 0, dus identiek aan de oude "continue" hierboven.
+      const percentage = effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage);
+      if (percentage <= 0) continue;
+      const factor = percentage / 100;
+      const btw = rawBtw(tx, categoryBtwRates, btwVerlegd) * factor;
+      const bedrag = tx.amount * factor;
+      zakBruto += bedrag;
+      zakBtwTotaal += btw;
+      if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += -btw;
+      zakelijkeKostenNetto += -(bedrag - btw);
+      if (bedrag < 0) {
+        if (fixedCategories.includes(tx.category)) zakVast += Math.abs(bedrag);
+        else zakVariabel += Math.abs(bedrag);
+      }
+      continue;
+    }
 
-    const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
+    // Ook een normale "kosten"-categorie kan een ingesteld zakelijk-percentage <100 hebben (bijv.
+    // maar 70% van Brandstof is zakelijk) — ontbreekt dat, dan is percentage/factor exact 100/1 en
+    // verandert er niets aan de berekening hieronder (100% backwards compatible). "omzet" en
+    // "financiering" doen bewust niet mee aan dit mechanisme (percentage blijft dan altijd 100).
+    const percentage = behandeling === "kosten" ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage) : 100;
+    const factor = percentage / 100;
+    const btwVol = rawBtw(tx, categoryBtwRates, btwVerlegd);
+    const btw = btwVol * factor;
+    const bedrag = tx.amount * factor;
     if (behandeling !== "financiering") {
-      zakBruto += tx.amount;
+      zakBruto += bedrag;
       zakBtwTotaal += btw;
     }
     if (behandeling === "omzet") {
-      zakelijkeInkomsten += tx.amount;
+      zakelijkeInkomsten += bedrag;
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) verschuldigdBtw += btw;
     } else {
@@ -86,12 +119,12 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // omzet hierboven, en dezelfde definitie als in het Aangiftevoorstel (computeIbBoxMapping) —
       // exclusief financiering (die telt hier bewust niet mee, alleen de rente daarvan via
       // renteAftrekbaar, zie "winst" hieronder).
-      if (behandeling === "kosten") zakelijkeKostenNetto += -(tx.amount - btw);
+      if (behandeling === "kosten") zakelijkeKostenNetto += -(bedrag - btw);
     }
-    if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -tx.amount;
-    if (tx.amount < 0) {
-      if (fixedCategories.includes(tx.category)) zakVast += Math.abs(tx.amount);
-      else zakVariabel += Math.abs(tx.amount);
+    if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -bedrag;
+    if (bedrag < 0) {
+      if (fixedCategories.includes(tx.category)) zakVast += Math.abs(bedrag);
+      else zakVariabel += Math.abs(bedrag);
     }
   }
   return {
@@ -156,22 +189,34 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
 // zijn aangevinkt tellen mee (een al betaald kwartaal hoort niet meer als openstaand).
 // `huurZakelijkPercentageStatus` is optioneel — zie computeQuarterlyBtwForYear in btw.js voor
 // dezelfde correctie/achtergrond. Weggelaten, dan telt de BTW op "Huur (deels zakelijk)" hier voor
-// 100% mee als voorbelasting, exact zoals voorheen.
-export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null) {
+// 100% mee als voorbelasting, exact zoals voorheen. `categoryZakelijkPercentage` is de generieke
+// tegenhanger daarvan (zie categorySplit.js) — zelfde soort optionele correctie, maar dan voor élke
+// "kosten"/"geen"-categorie met een ingesteld percentage in plaats van alleen "Huur (deels zakelijk)".
+export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null) {
   const perQuarter = {};
   for (const tx of classified) {
-    if (tx.isMirror || fiscalTreatmentOf(tx.category) === "geen") continue;
+    if (tx.isMirror) continue;
     const [y, m] = tx.month.split("-");
+    const year = Number(y);
+    const behandeling = fiscalTreatmentOf(tx.category);
+    // Standaard 100 voor "omzet"/"financiering" (dit mechanisme raakt die niet) — voor "kosten"/
+    // "geen" geldt effectiveZakelijkPercentage (100/0 zonder ingesteld percentage, dus ongewijzigd
+    // gedrag zolang niemand een percentage instelt).
+    const percentage = (behandeling === "kosten" || behandeling === "geen")
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage)
+      : 100;
+    if (behandeling === "geen" && percentage <= 0) continue;
     const kwartaal = Math.ceil(Number(m) / 3);
     const key = `${y}-Q${kwartaal}`;
-    if (!perQuarter[key]) perQuarter[key] = { year: Number(y), verschuldigdBtw: 0, voorbelasting: 0 };
-    const btw = computeBtw(tx, categoryBtwRates, btwVerlegd);
+    if (!perQuarter[key]) perQuarter[key] = { year, verschuldigdBtw: 0, voorbelasting: 0 };
+    const factor = percentage / 100;
+    const btw = rawBtw(tx, categoryBtwRates, btwVerlegd) * factor;
     if (tx.category === "Zakelijke inkomsten" || tx.category === "Zakelijke inkomsten 9%" || tx.category === "Zakelijke inkomsten 21%") {
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) perQuarter[key].verschuldigdBtw += btw;
     } else if (!voorbelastingExcluded.includes(tx.category)) {
       const huurPercentage = tx.category === GEDEELDE_HUUR_CATEGORIE
-        ? (huurZakelijkPercentageStatus?.[Number(y)] ?? 100)
+        ? (huurZakelijkPercentageStatus?.[year] ?? 100)
         : 100;
       perQuarter[key].voorbelasting += -btw * (huurPercentage / 100);
     }

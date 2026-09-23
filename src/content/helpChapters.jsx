@@ -352,6 +352,32 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "categorie-percentage-zakelijk",
+    titel: "Percentage zakelijk per categorie",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Voor kosten die deels zakelijk en deels privé zijn, ongeacht van welke rekening ze betaald zijn — bijv.
+          brandstof, telefonie/internet, reiskosten OV of parkeren die je ook privé gebruikt. In tegenstelling tot
+          "Huur (deels zakelijk)" hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
+          blijven gewoon in hun eigen categorie (bijv. "Brandstof") staan.
+        </p>
+        <p>
+          Vul bij <strong>"Percentage zakelijk per categorie"</strong> een percentage in voor een categorie in het
+          actieve jaar. Alleen dat percentage van het totaalbedrag telt mee in de winstberekening (bij een normaal
+          zakelijke categorie is de rest dan privé; bij een normaal privé-categorie telt juist dat percentage er
+          extra bij als zakelijke kostenpost). Zit er BTW op, dan geldt hetzelfde percentage voor de aftrekbare
+          voorbelasting. Leeg/niet ingevuld betekent het standaardgedrag — 100% voor een zakelijke kostenpost, 0%
+          voor een privé-categorie — en het percentage is per jaar apart instelbaar.
+        </p>
+        <p className="text-xs text-slate-400">
+          Alleen van toepassing op gewone kosten- en privé-categorieën, niet op omzet of financiering (Leningen/
+          Lease financieel) — daar is alleen de rente aftrekbaar, wat al apart wordt berekend.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "persoonlijke-aannames",
     titel: "Persoonlijke aannames voor IB",
     inhoud: (
