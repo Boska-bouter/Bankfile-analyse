@@ -929,7 +929,7 @@ export default function App() {
 
   // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
   const {
-    loanSummary, leaseSummary, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
+    loanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
@@ -2266,7 +2266,7 @@ export default function App() {
                 onUnmarkUnknown={unmarkLeaseUnknown}
                 onMergeInto={mergeLeaseInto}
                 onUndoMerge={undoMergeLease}
-                leaseMergedInto={leaseMergedInto}
+                leaseMerges={leaseMerges}
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>

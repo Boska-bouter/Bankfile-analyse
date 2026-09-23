@@ -6,9 +6,13 @@ import { computeLoanSummary, computeLeaseSummary } from "../tax/loanAmortization
 // samenvoegen op basis van gelijkenis is te riskant (kan onterecht twee verschillende leases
 // samenvoegen), dus dit blijft een bewuste, handmatige keuze (zie mergeLeaseInto in App.jsx).
 // "bron" verdwijnt uit de lijst; zijn transacties en totaal gaan over naar "doel".
+// Werkt op een KOPIE van elk item (nooit de meegegeven leaseSummary zelf muteren) — anders zou een
+// hergebruikte/gecachte "ruwe" (nog niet samengevoegde) lijst per ongeluk mee-muteren, met een
+// dubbeltelling tot gevolg zodra dezelfde ruwe lijst een volgende keer weer als basis dient (zie
+// rawLeaseSummary hieronder, die nodig is om een samenvoeging weer ongedaan te kunnen maken).
 function applyLeaseMerges(leaseSummary, leaseMergedInto) {
   if (!leaseMergedInto || Object.keys(leaseMergedInto).length === 0) return leaseSummary;
-  const byKey = Object.fromEntries(leaseSummary.map((l) => [l.key, l]));
+  const byKey = Object.fromEntries(leaseSummary.map((l) => [l.key, { ...l, transactions: [...l.transactions] }]));
   const merged = new Set();
   for (const [sourceKey, targetKey] of Object.entries(leaseMergedInto)) {
     const source = byKey[sourceKey];
@@ -19,7 +23,7 @@ function applyLeaseMerges(leaseSummary, leaseMergedInto) {
     target.count += source.count;
     merged.add(sourceKey);
   }
-  return leaseSummary.filter((l) => !merged.has(l.key));
+  return leaseSummary.filter((l) => !merged.has(l.key)).map((l) => byKey[l.key]);
 }
 
 // Bundelt de leningen/lease-logica (samenvattingen + correctie-handlers) die verder los staat
@@ -30,10 +34,27 @@ export function useLoansAndLease({
   snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto,
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
+  // Ongesamenvoegde (ruwe) lijst apart bewaard — nodig om bij "Loskoppelen" nog te weten hoe een
+  // eerder samengevoegde bron-lease heette (die is in leaseSummary hieronder niet meer zichtbaar,
+  // want die lijst toont juist het resultaat NA samenvoeging).
+  const rawLeaseSummary = useMemo(() => computeLeaseSummary(classified), [classified]);
   const leaseSummary = useMemo(
-    () => applyLeaseMerges(computeLeaseSummary(classified), leaseMergedInto),
-    [classified, leaseMergedInto]
+    () => applyLeaseMerges(rawLeaseSummary, leaseMergedInto),
+    [rawLeaseSummary, leaseMergedInto]
   );
+  // Overzicht van actieve samenvoegingen, met de namen erbij (voor de "Loskoppelen"-knop in de
+  // UI) — filtert automatisch samenvoegingen weg waarvan bron of doel niet meer bestaat (bijv. na
+  // het wijzigen van classificatieregels, waardoor een lease-groep is opgesplitst of verdwenen).
+  const leaseMerges = useMemo(() => {
+    const rawByKey = Object.fromEntries(rawLeaseSummary.map((l) => [l.key, l]));
+    return Object.entries(leaseMergedInto || {})
+      .filter(([sourceKey, targetKey]) => rawByKey[sourceKey] && rawByKey[targetKey])
+      .map(([sourceKey, targetKey]) => ({
+        sourceKey, targetKey,
+        sourceName: rawByKey[sourceKey].name,
+        targetName: rawByKey[targetKey].name,
+      }));
+  }, [rawLeaseSummary, leaseMergedInto]);
 
   const setLoanDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leninggegevens aangepast");
@@ -90,7 +111,7 @@ export function useLoansAndLease({
   };
 
   return {
-    loanSummary, leaseSummary,
+    loanSummary, leaseSummary, leaseMerges,
     setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   };

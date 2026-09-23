@@ -11,7 +11,8 @@ function computeFinancialLeaseAmortization(lease, details) {
 }
 
 export default function LeaseInterestPanel({
-  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMergeInto, onOpenHelp,
+  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
 }) {
   const [open, setOpen] = useState(false);
   if (leaseSummary.length === 0) return null;
@@ -42,6 +43,26 @@ export default function LeaseInterestPanel({
             <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
+          {onUndoMerge && leaseMerges?.length > 0 && (
+            <div className="rounded-md bg-slate-50 border border-slate-200 p-3 mb-3 text-xs text-slate-600 space-y-1.5">
+              <p className="font-semibold text-slate-700">Samengevoegde leases</p>
+              {leaseMerges.map((m) => (
+                <div key={m.sourceKey} className="flex items-center justify-between gap-2 flex-wrap">
+                  <span>"{m.sourceName}" is samengevoegd met "{m.targetName}"</span>
+                  <button
+                    onClick={() => onUndoMerge(m.sourceKey)}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    Loskoppelen
+                  </button>
+                </div>
+              ))}
+              <p className="text-slate-400">
+                Loskoppelen zet de samengevoegde lease weer terug als losse, eigen lease in de lijst hieronder —
+                eventueel al ingevulde leasegegevens bij de doel-lease blijven daarbij ongewijzigd staan.
+              </p>
+            </div>
+          )}
           {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
             <div key={group.map((l) => l.key).join("+")} className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
               <p>
