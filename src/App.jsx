@@ -1174,8 +1174,8 @@ export default function App() {
   // onttrekkingsberekening hier is de IB-regel voor een eenmanszaak; een BV/DGA heeft een heel
   // andere bijtellingssystematiek (via de loonheffing), die deze tool niet nabootst.
   const leaseAutoKostenForActiveYear = useMemo(
-    () => (activeYear && rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified) : null),
-    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm]
+    () => (activeYear && rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd) : null),
+    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd]
   );
   // "Huur (deels zakelijk)" — null zolang er dit jaar geen enkele transactie in deze categorie
   // voorkomt (verreweg de meeste dossiers), dus zonder enige invloed op de winst/voorbelasting
@@ -1207,7 +1207,7 @@ export default function App() {
       const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
       const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
-      const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified) : null;
+      const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd) : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       const winstCorrectie = (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0);
       map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie);
@@ -1227,12 +1227,13 @@ export default function App() {
       const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
-      const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified) : null;
+      const leaseAutoKosten = rechtsvorm !== "bv" ? computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd) : null;
       const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten);
       map[y] =
         (ib.inkoopkosten.totaal || 0) +
         (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
         (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) +
+        (ib.autokostenOverig.totaal || 0) +
         ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
         ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
         renteAftrekbaar -

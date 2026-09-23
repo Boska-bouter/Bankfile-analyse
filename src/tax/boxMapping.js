@@ -1,5 +1,6 @@
 import { CATEGORY_ORDER } from "../classification/categories.js";
 import { computeBtw } from "./btw.js";
+import { AUTOKOSTEN_CATEGORIEN } from "./autoBijtelling.js";
 
 // Welke categorieën in welk vak van de BTW-aangifte terechtkomen — puur informatief, gebaseerd
 // op de eigen BTW-instellingen (percentages, uitgesloten van voorbelasting).
@@ -19,7 +20,12 @@ export function computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExc
 // bewust apart van deze winstberekening, net als op de aangifte zelf.
 const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
 const RUBRIEK_INKOOP = ["Zakelijke uitgaven", "Inhuur personeel"];
-const RUBRIEK_AUTO = ["Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Lease (operationeel)", "Reiskosten (OV)", "Belastingen: MRB"];
+// Vanaf v161 gesplitst in twee: de categorieën die meetellen voor de bijtelling/onttrekking-
+// aftopping bij een geleasede auto (exact AUTOKOSTEN_CATEGORIEN uit autoBijtelling.js — deze horen
+// nu bij de samengevoegde "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die
+// dat niet doen ("Lease (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en
+// daarom een eigen, ongewijzigde plek onder Overige bedrijfskosten houden.
+const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)"];
 const RUBRIEK_HUISVESTING = ["Huur", "Huur (deels zakelijk)", "Energie-water", "Gemeentelijke kosten"];
 const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
@@ -60,11 +66,18 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   });
 
   const overigeBedrijfskosten = [
-    rubriekNetto("Auto- en transportkosten", RUBRIEK_AUTO),
+    rubriekNetto("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
     rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING),
     rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
     rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
   ].filter((r) => r.totaal > 0);
+
+  // De 5 autokosten-categorieën (MRB, verzekering, brandstof, parkeren, onderhoud) horen vanaf v161
+  // niet meer bij "Overige bedrijfskosten" maar bij de samengevoegde "Auto's en machines"-post (zie
+  // aangiftevoorstel.js) — ook als er (nog) geen enkel leasecontract met "soort" is ingevuld (dan is
+  // dit gewoon de volledige, onveranderde aftrekpost, zonder bijtellingscorrectie). Netto, exact
+  // dezelfde sumCatNetto-conventie als de rest van deze functie.
+  const autokostenOverig = rubriekNetto("Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", AUTOKOSTEN_CATEGORIEN);
 
   const apparatuurInvestering = sumCat(["Zakelijk - apparatuur/machines"]);
   const leaseFinancieelTotal = sumCat(["Lease (financieel)"]);
@@ -72,7 +85,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   const verkoopActivaTotal = sumCat(["Verkoop activa"]);
 
   const alleGenoemdeCategorieen = [
-    ...RUBRIEK_OPBRENGSTEN, ...RUBRIEK_INKOOP, ...RUBRIEK_AUTO, ...RUBRIEK_HUISVESTING, ...RUBRIEK_VERKOOP,
+    ...RUBRIEK_OPBRENGSTEN, ...RUBRIEK_INKOOP, ...RUBRIEK_OVERIG_VERVOER, ...AUTOKOSTEN_CATEGORIEN, ...RUBRIEK_HUISVESTING, ...RUBRIEK_VERKOOP,
     ...RUBRIEK_ANDERE_KOSTEN, ...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST,
     ...AL_APART_BEHANDELD,
   ];
@@ -111,6 +124,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     // lease-rente, gecategoriseerde autokosten, en bij een auto met privégebruik >500km/jaar ook de
     // bijtelling/onttrekking) — null zolang geen enkel contract een "soort" heeft ingevuld.
     leaseAutoKosten: leaseAutoKostenForYear,
+    autokostenOverig,
     overigeBedrijfskosten,
     financieleBatenLasten: {
       naam: "Financiële baten en lasten",

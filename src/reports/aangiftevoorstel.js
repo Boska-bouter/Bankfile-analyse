@@ -90,7 +90,7 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified);
+  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified, categoryBtwRates, btwVerlegd);
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0);
   return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie).winst;
@@ -104,7 +104,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified);
+  const leaseAutoKostenForYear = computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified, categoryBtwRates, btwVerlegd);
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie);
@@ -192,11 +192,15 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
 
   // Totaal zakelijke kosten (rubrieken 2 t/m 5) — voor de samenvatting, geen nieuwe berekening,
-  // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld.
+  // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld. Vanaf v161 ook de 5
+  // gecategoriseerde autokosten (ib.autokostenOverig) meegeteld — die zaten tot v160 in
+  // "overigeBedrijfskosten" (destijds "Auto- en transportkosten"), maar zijn sindsdien een eigen
+  // veld (zie boxMapping.js) omdat ze nu in de "Auto's en machines"-rubriek getoond worden.
   const kostenTotaal =
     (ib.inkoopkosten.totaal || 0) +
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
     (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) +
+    (ib.autokostenOverig.totaal || 0) +
     ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
     renteAftrekbaar -
@@ -237,7 +241,14 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     .join("")}`
       : "";
 
-  const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + ib.financieleBatenLasten.renteLease;
+  // Vanaf v161: de lease-rente van een AUTO-contract wordt niet meer hier getoond, maar verhuisd
+  // naar de nieuwe "Auto's en machines"-rubriek (als onderdeel van "totale autokosten") — hij blijft
+  // wel exact hetzelfde bedrag, gewoon op een andere plek in het rapport (renteAftrekbaar, waar dit
+  // al meetelt in de winst, verandert niet). Rente van een MACHINE-lease (of een lease zonder
+  // ingevulde "soort") blijft hier gewoon staan, zoals voorheen.
+  const renteLeaseAuto = ib.leaseAutoKosten ? ib.leaseAutoKosten.leaseRenteTotaal : 0;
+  const renteLeaseOverig = Math.max(0, (ib.financieleBatenLasten.renteLease || 0) - renteLeaseAuto);
+  const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + renteLeaseOverig;
   const financieelTotaalAflossing = ib.financieleBatenLasten.aflossingLeningen + ib.financieleBatenLasten.aflossingLease;
   const financieelHtml =
     financieelTotaalRente > 0 || ib.leningenTotal > 0 || ib.leaseFinancieelTotal > 0
@@ -249,35 +260,71 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
-        } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
+        }${renteLeaseAuto > 0 ? ` Rente op de auto-lease(s) (${eur(renteLeaseAuto)}) staat bij "Auto's en machines" hierboven, niet hier.` : ""} <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
-    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
+    { categorie: "Rente Lease (financieel, niet-auto)", totaal: renteLeaseOverig },
   ])}`
       : "";
 
-  // Volledige uitsplitsing van de gekapitaliseerde financiële-lease-auto's/machines (afschrijving +
-  // lease-rente + gecategoriseerde autokosten, en bij privégebruik >500 km/jaar de bijtelling/
-  // onttrekking) — alleen zichtbaar zodra minstens één leasecontract een "soort" heeft ingevuld.
-  // Vóór v160 stond hier een regel "netto aftrekbare autokosten" die het totaal ná onttrekking
-  // toonde als los rubriekbedrag — maar de afschrijving (rubriek 3), lease-rente (rubriek 5) en
-  // gecategoriseerde autokosten (rubriek 4, "Auto- en transportkosten") staan DAARNAAST ook al
-  // gewoon voluit in het rapport. Bij elkaar opgeteld leek het daardoor of beide golden: de volle
-  // kosten mee-aftrekken ÉN nog eens een "netto"-regel — terwijl in de werkelijke winstberekening de
-  // onttrekking niet nogmaals wordt afgetrokken, maar juist bij de winst wordt OPGETELD (het draait
-  // een deel van de al afgetrokken afschrijving/rente/autokosten terug). Handmatig alle rubrieken
-  // optellen kwam daardoor lager uit dan het echte "Resultaat uit onderneming" hieronder. Vanaf v160
-  // daarom een expliciete, apart herkenbare OPTEL-regel — alleen zichtbaar als er ook echt een
-  // onttrekking is — zodat het rapport zelf, regel voor regel, weer optelt tot hetzelfde eindcijfer.
-  const leaseAutoKostenHtml = (() => {
-    const lak = ib.leaseAutoKosten;
-    if (!lak || !(lak.onttrekking > 0)) return "";
-    const volledigAfgetopt = lak.nettoAftrekbareAutokosten <= 0;
+  // Vanaf v161: "Auto's en machines" als ÉÉN samengevoegde bedrijfskostenpost, in dezelfde stijl als
+  // de officiële Belastingdienst-voorbeelden (bevestigd door de gebruiker) — één "totale autokosten"-
+  // bedrag voor de auto (afschrijving + lease-rente + de 5 gecategoriseerde autokosten), waar bij
+  // privégebruik de bijtelling in zijn GEHEEL van wordt afgetrokken (afgetopt op nul, nooit een
+  // negatief bedrag), in plaats van de vóór v161 gebruikte weergave met losse volledige aftrekposten
+  // (afschrijving/rente/autokosten) plus een aparte optelregel. Machines hebben geen bijtelling en
+  // blijven daarom een gewone, volledige aftrekpost; ook een auto zonder bijtellingssituatie (geen
+  // privégebruik >500km, of geen lease) blijft een gewone volledige aftrekpost — zie de
+  // "Overige autokosten"-regel hieronder, die dan gewoon gelijk is aan "totale autokosten".
+  const leaseRenteAuto = ib.leaseAutoKosten ? ib.leaseAutoKosten.leaseRenteTotaal : 0;
+  const autokostenOverigBedrag = ib.autokostenOverig.totaal || 0;
+  const onttrekking = ib.leaseAutoKosten?.onttrekking || 0;
+  const heeftBijtelling = onttrekking > 0;
+  const totaleAutokosten = leaseAfschrijvingAuto + leaseRenteAuto + autokostenOverigBedrag;
+  const aftrekbareAutokosten = Math.max(0, totaleAutokosten - onttrekking);
+  // Zeldzame edge case: als in hetzelfde jaar zowel een auto ALS een machine financieel geleased is
+  // én er bijtelling van toepassing is, wordt de aftopping intern (computeLeaseAutoKostenVoorJaar,
+  // bestaand en ongewijzigd gedrag) berekend tegen de afschrijving van auto ÉN machine samen — terwijl
+  // de bijtelling zelf uitsluitend een auto-mechanisme is. Dit rapport waarschuwt in dat zeldzame
+  // geval dat dit met de hand gecontroleerd moet worden; de bedragen hierboven/hieronder tellen in dat
+  // geval nog steeds correct op tot het echte "Resultaat uit onderneming", alleen de verdeling tussen
+  // de "Auto"- en "Machines"-subregels kan er in dat geval technisch iets anders uitzien.
+  const gemengdLeaseWaarschuwing = heeftBijtelling && leaseAfschrijvingMachine > 0;
+
+  const autoMachineKostenHtml = (() => {
+    const machineBedrag = leaseAfschrijvingMachine + apparatuurAfschrijving;
+    const machineRegel = `
+  <div class="subrubriek"><span>Afschrijving machines</span><span class="num">${eur(machineBedrag)}</span></div>
+  ${ib.afschrijvingen.activaOnvolledig > 0 ? `<p class="toelichting">⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa.</p>` : ""}
+  ${categorieDetailHtml(ib.afschrijvingen.perCategorie)}`;
+
+    const autoCategorieDetail = categorieDetailHtml([
+      { categorie: "Afschrijving", totaal: leaseAfschrijvingAuto },
+      { categorie: "Rente (financiële lease)", totaal: leaseRenteAuto },
+      { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag },
+    ]);
+    const autoDetailHtml = !heeftBijtelling
+      ? `
+  <div class="subrubriek"><span>Auto — autokosten (afschrijving + rente + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
+  ${autoCategorieDetail}
+  ${totaleAutokosten > 0 ? `<p class="toelichting">Volledig aftrekbaar — er is dit jaar geen bijtelling wegens privégebruik van toepassing. Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
+      : `
+  <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + rente + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
+  ${autoCategorieDetail}
+  <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten)</span><span class="num">- ${eur(onttrekking)}</span></div>
+  <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
+  <p class="toelichting">${aftrekbareAutokosten <= 0 ? "Bij deze aftopping is per saldo niets van de autokosten dit jaar aftrekbaar. " : ""}${
+        gemengdLeaseWaarschuwing
+          ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de tool berekent deze nu tegen de afschrijving van auto én machine samen. "
+          : ""
+      }Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
+
+    const totaalAutoMachine = machineBedrag + (heeftBijtelling ? aftrekbareAutokosten : totaleAutokosten);
     return `
-  <div class="rubriek"><span>Bijtelling/onttrekking privégebruik auto — telt op bij de winst (draait een deel van de afschrijving/rente/autokosten hierboven terug)</span><span class="num">+ ${eur(lak.onttrekking)}</span></div>
-  <p class="toelichting">Afgetopt op de werkelijke totale autokosten van dat jaar (afschrijving + lease-rente + gecategoriseerde autokosten samen: ${eur(lak.totaleAutokosten)})${
-    volledigAfgetopt ? " — bij deze aftopping is per saldo niets van die autokosten dit jaar aftrekbaar" : ""
-  }. Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
+  <div class="rubriek"><span>3. Auto's en machines</span><span class="num">${eur(totaalAutoMachine)}</span></div>
+  <p class="toelichting">Bedragen zijn netto (exclusief BTW).</p>
+  ${machineRegel}
+  ${autoDetailHtml}`;
   })();
 
   // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
@@ -328,18 +375,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, "Bedragen zijn netto (exclusief BTW).")}
     ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers. Bedragen zijn netto (exclusief BTW).")}
     ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
-    ${rubriekBlokAltijd(
-      3, "Afschrijving auto's", leaseAfschrijvingAuto,
-      `Afschrijving op financieel-geleasede auto('s) — zie de contract-uitsplitsing verderop bij "Financiële baten en lasten". <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span>`
-    )}
-    ${rubriekBlokAltijd(
-      null, "Afschrijving machines", apparatuurAfschrijving + leaseAfschrijvingMachine,
-      `${ib.afschrijvingen.activaOnvolledig > 0 ? `⚠ ${ib.afschrijvingen.activaOnvolledig} bedrijfsmiddel(en) nog niet volledig ingevuld bij Activa. ` : ""}<span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg.</span>`,
-      ib.afschrijvingen.perCategorie
-    )}
+    ${autoMachineKostenHtml}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
-    ${leaseAutoKostenHtml}
     ${gedeeldeHuurHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, netto)</span><span class="num">${eur(summary.winst)}</span></div>
     ${priveHtml}

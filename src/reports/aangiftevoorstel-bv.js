@@ -140,10 +140,19 @@ function buildYearSectionBv(
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);
   if (dgaSalarisDitJaar > 0 && !gebruikelijkLoon.voldoetVermoedelijk) openPunten.push(`DGA-salaris (${eur(dgaSalarisDitJaar)}) lijkt onder het gebruikelijk loon van ${eur(gebruikelijkLoon.minimum)} te liggen`);
 
+  // v161: "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat sinds die
+  // versie niet meer standaard in ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de
+  // nieuwe "Auto's en machines"-post, zie aangiftevoorstel.js) — de BV-aangifte heeft die post niet
+  // (geen bijtellingsmechanisme voor een BV/DGA-auto in deze tool), dus hier gewoon weer meetellen
+  // als vanouds, ongewijzigd gedrag voor bestaande BV-dossiers.
+  const overigeBedrijfskostenMetAuto = ib.autokostenOverig.totaal > 0
+    ? [ib.autokostenOverig, ...ib.overigeBedrijfskosten]
+    : ib.overigeBedrijfskosten;
+
   const kostenTotaal =
     (ib.inkoopkosten.totaal || 0) +
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
-    ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
+    overigeBedrijfskostenMetAuto.reduce((a, r) => a + (r.totaal || 0), 0) +
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
     renteAftrekbaar;
 
@@ -172,11 +181,11 @@ function buildYearSectionBv(
   </div>`;
 
   const overigeBedrijfskostenHtml =
-    ib.overigeBedrijfskosten.length > 0
+    overigeBedrijfskostenMetAuto.length > 0
       ? `
   <div class="rubriek"><span>4. Overige bedrijfskosten</span><span></span></div>
   <p class="toelichting">Bedragen zijn netto (exclusief BTW).</p>
-  ${ib.overigeBedrijfskosten
+  ${overigeBedrijfskostenMetAuto
     .map((r) => `<div class="subrubriek"><span>${esc(r.naam)}</span><span class="num">${eur(r.totaal)}</span></div>${categorieDetailHtml(r.perCategorie)}`)
     .join("")}`
       : "";

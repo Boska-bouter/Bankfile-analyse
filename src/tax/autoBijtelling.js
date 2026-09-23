@@ -12,6 +12,7 @@
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, normalizeKenteken } from "./financialLease.js";
 import { computeAfschrijvingPerJaar } from "./activa.js";
 import { computeFinancialLeaseAmortizationMultiSegment, groupAmortizationByYear } from "./loanAmortization.js";
+import { computeBtw } from "./btw.js";
 
 // Fiscale ondergrens voor de afschrijvingstermijn van een auto (ook bij financiële lease) — een
 // kortere termijn dan dit mag niet, ook al zou de leaselooptijd zelf korter zijn.
@@ -72,11 +73,19 @@ export function computeAutoPrivegebruikOnttrekking(totaleAutokosten, cataloguswa
 // het alleen apart opgeteld om de "totale autokosten" (voor de onttrekkingsberekening en de
 // weergave in het aangiftevoorstel) te kunnen tonen — NIET om het nogmaals van de winst af te
 // trekken.
-export function sumAutokostenTransactiesVoorJaar(classified, year) {
+//
+// NETTO (exclusief BTW), niet het bruto bankbedrag — tot v161 werd hier per ongeluk het bruto
+// bedrag gebruikt, terwijl afschrijving en lease-rente (waarmee dit wordt opgeteld tot "totale
+// autokosten") altijd al netto zijn, en de rest van het rapport ook overal netto rekent. Bij
+// categorieën met 0% BTW (het gebruikelijke geval voor bijv. Belastingen: MRB) maakt dit niets uit;
+// bij een categorie mét BTW (bijv. Brandstof, Onderhoud) telde de aftopping op "totale autokosten"
+// tot nu toe een te hoog bedrag mee.
+export function sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd) {
+  const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
   return Math.abs(
     (classified || [])
       .filter((tx) => !tx.isMirror && tx.year === year && AUTOKOSTEN_CATEGORIEN.includes(tx.category))
-      .reduce((a, tx) => a + tx.amount, 0)
+      .reduce((a, tx) => a + nettoOf(tx), 0)
   );
 }
 
@@ -141,8 +150,8 @@ function groupSegmentenOpKenteken(segments) {
 // totaal (niet dubbel per contract), en wordt ook de onttrekking op het GECOMBINEERDE totaal
 // afgetopt, in plaats van per auto apart. Bij één geleasede auto (het gebruikelijke geval) maakt dit
 // geen verschil met een per-contract-berekening.
-export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified) {
-  const autokostenTransactieTotaal = sumAutokostenTransactiesVoorJaar(classified, year);
+export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd) {
+  const autokostenTransactieTotaal = sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd);
   const contracten = [];
   let afschrijvingTotaal = 0;
   let leaseRenteTotaal = 0;
