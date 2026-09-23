@@ -122,8 +122,13 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
     const basisBedrag = IB_TARIEVEN_BY_YEAR[clampedYear].zelfstandigenaftrek;
     const winstPositief = Math.max(0, winst || 0);
 
-    const gerealiseerdBasis = Math.min(winstPositief, basisBedrag);
-    const nietGerealiseerdNieuw = Math.max(0, basisBedrag - gerealiseerdBasis);
+    // Winstbeperking op de zelfstandigenaftrek ("niet-gerealiseerd, reserveren voor later") geldt
+    // alleen wanneer er GEEN startersaftrek wordt toegepast. Mét startersaftrek mag de gecombineerde
+    // ondernemersaftrek de winst immers al volledig (tot onder € 0) wegstrepen (zie toelichting
+    // hierboven) — dan is er dus niets "niet-gerealiseerd": de volledige zelfstandigenaftrek is dit
+    // jaar zelf al verwerkt, en hoeft niet als reserve voor een later jaar bewaard te worden.
+    const gerealiseerdBasis = startersaftrekToegepast ? basisBedrag : Math.min(winstPositief, basisBedrag);
+    const nietGerealiseerdNieuw = startersaftrekToegepast ? 0 : Math.max(0, basisBedrag - gerealiseerdBasis);
     const extraRuimte = Math.max(0, winstPositief - basisBedrag);
 
     let verrekendUitReserve = 0;

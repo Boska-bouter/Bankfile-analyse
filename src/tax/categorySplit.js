@@ -66,14 +66,24 @@ export function rawBtw(tx, categoryBtwRates, btwVerlegd) {
 }
 
 // Voor de instelpaneel-UI: van alle splitsbare (kosten/geen) categorieën met minstens 1 transactie
-// in `classified` voor `year`, het totaalbedrag (bruto, som van Math.abs(amount)) — zodat de UI
-// alleen categorieën toont die er dit jaar daadwerkelijk toe doen, in plaats van alle categorieën.
+// in `classified` voor `year`, het totaalbedrag — zodat de UI alleen categorieën toont die er dit
+// jaar daadwerkelijk toe doen, in plaats van alle categorieën.
+//
+// Eerst het NETTO bedrag optellen (met teken) en pas daarna Math.abs nemen — niet Math.abs per
+// transactie optellen. Anders telt een terugboeking/correctie niet als correctie mee, maar wordt hij
+// bovenop de uitgave opgeteld: -€100 Brandstof + €100 terugboeking zou dan als €200 getoond worden
+// in plaats van het werkelijke netto bedrag van €0. Voor het normale geval (alleen uitgaven in een
+// categorie) geeft dit hetzelfde bedrag als voorheen. Dit is alleen het getoonde totaal op het
+// instellingenscherm — de fiscale berekening zelf (rawBtw/effectiveZakelijkPercentage) werkt al met
+// het teken van elke transactie en is hier niet van afhankelijk.
 export function computeSplitsbareCategorieTotalenVoorJaar(classified, year) {
-  const totalen = {};
+  const netto = {};
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     if (!isSplitsbareCategorie(tx.category)) continue;
-    totalen[tx.category] = (totalen[tx.category] || 0) + Math.abs(tx.amount);
+    netto[tx.category] = (netto[tx.category] || 0) + tx.amount;
   }
+  const totalen = {};
+  for (const categorie of Object.keys(netto)) totalen[categorie] = Math.abs(netto[categorie]);
   return totalen;
 }
