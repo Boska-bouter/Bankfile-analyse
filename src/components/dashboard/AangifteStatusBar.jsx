@@ -228,17 +228,7 @@ export default function AangifteStatusBar({
             <span>
               {checklistData.priveCategorieOpZakelijkeRekening.length} duidelijk privé-uitgave
               {checklistData.priveCategorieOpZakelijkeRekening.length === 1 ? "" : "n"} betaald vanaf de <strong>zakelijke</strong> rekening — fiscaal al correct verwerkt (telt niet mee
-              als bedrijfskosten), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de privérekening had gemoeten.
-              <span className="block mt-1 text-xs text-slate-500">
-                {checklistData.priveCategorieOpZakelijkeRekening.slice(0, 5).map((tx) => (
-                  <ExpandableDescription
-                    key={tx.id} tx={tx} className="block"
-                    prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}, ${tx.category}): `}
-                    short={tx.counterparty || tx.description}
-                  />
-                ))}
-                {checklistData.priveCategorieOpZakelijkeRekening.length > 5 && <span className="block">en {checklistData.priveCategorieOpZakelijkeRekening.length - 5} meer…</span>}
-              </span>
+              als bedrijfskosten), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de privérekening had gemoeten. Terug te vinden in het detailoverzicht.
             </span>
           </li>
         )}
@@ -248,17 +238,7 @@ export default function AangifteStatusBar({
             <span>
               {checklistData.zakelijkeCategorieOpPriveRekening.length} duidelijk zakelijke uitgave/omzet
               {checklistData.zakelijkeCategorieOpPriveRekening.length === 1 ? "" : "n"} betaald/ontvangen op de <strong>privé</strong>rekening — fiscaal al correct verwerkt (telt gewoon mee
-              in de winst/BTW), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de zakelijke rekening had gemoeten.
-              <span className="block mt-1 text-xs text-slate-500">
-                {checklistData.zakelijkeCategorieOpPriveRekening.slice(0, 5).map((tx) => (
-                  <ExpandableDescription
-                    key={tx.id} tx={tx} className="block"
-                    prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}, ${tx.category}): `}
-                    short={tx.counterparty || tx.description}
-                  />
-                ))}
-                {checklistData.zakelijkeCategorieOpPriveRekening.length > 5 && <span className="block">en {checklistData.zakelijkeCategorieOpPriveRekening.length - 5} meer…</span>}
-              </span>
+              in de winst/BTW), maar de moeite waard om de cliënt te laten weten dat dit eigenlijk vanaf de zakelijke rekening had gemoeten. Terug te vinden in het detailoverzicht.
             </span>
           </li>
         )}
