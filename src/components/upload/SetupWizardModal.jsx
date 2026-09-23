@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
-  6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
+  17: "Auto", 6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
   0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
 
@@ -21,6 +21,8 @@ export default function SetupWizardModal({
   verwachteLease, setVerwachteLease,
   verwachteLening, setVerwachteLening,
   verwachteAOV, setVerwachteAOV,
+  autoWizardStatus, setAutoWizardStatus,
+  years, onSeedAutoStatus,
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
@@ -58,6 +60,10 @@ export default function SetupWizardModal({
     if (eigenRekeningenExtra === null) list.push(11);
     if (zakelijkeSpaarRekening === null) list.push(16);
     if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
+    // Auto-vraag staat bewust vóór de leaseauto-vraag: bij "financial lease" als antwoord schakelt
+    // die vraag door naar stap 6 hieronder (die dan al in de wachtrij staat) voor de
+    // contractdetails, in plaats van twee keer los naar een auto/lease te vragen.
+    if (autoWizardStatus === null) list.push(17);
     if (verwachteLease === null) list.push(6);
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
@@ -259,10 +265,83 @@ export default function SetupWizardModal({
               onKlaar={(lijst) => { onAddBusinessExpenseKeywords(lijst); goNext(); }}
             />
           )}
+          {currentStepId === 17 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Heeft de zaak een auto?</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: "geen", label: "Nee" },
+                  { key: "zaak", label: "Auto op de zaak" },
+                  { key: "prive", label: "Privéauto zakelijk gebruikt" },
+                  { key: "beide", label: "Beide" },
+                ].map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setTypedNow((p) => ({ ...p, autoKeuze: opt.key, autoSoort: opt.key === "prive" ? null : p.autoSoort }))}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {(typedNow.autoKeuze === "zaak" || typedNow.autoKeuze === "beide") && (
+                <div className="pt-1">
+                  <p className="text-sm text-slate-600 mb-2">Is die auto (van de zaak) gekocht, operational lease, of financial lease?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "koop", label: "Gekocht (eigendom)" },
+                      { key: "operational", label: "Operational lease" },
+                      { key: "financial", label: "Financial lease" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setTypedNow((p) => ({ ...p, autoSoort: opt.key }))}
+                        className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {typedNow.autoSoort === "koop" && (
+                    <p className="mt-2 text-xs text-slate-400">
+                      Een gekochte auto is een bedrijfsmiddel — geef 'm zo op in het Activa-paneel verderop (voor afschrijving en mogelijke KIA).
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-slate-400">
+                Bepaalt op termijn welk fiscaal model voor autokosten geldt (bijtelling bij een auto op de zaak,
+                kilometervergoeding bij een privéauto). Per jaar nog te corrigeren in "Persoonlijke aannames"
+                als de situatie halverwege het dossier verandert.
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  disabled={!typedNow.autoKeuze || ((typedNow.autoKeuze === "zaak" || typedNow.autoKeuze === "beide") && !typedNow.autoSoort)}
+                  onClick={() => {
+                    const status = typedNow.autoKeuze === "geen" ? null : typedNow.autoKeuze;
+                    const soort = typedNow.autoKeuze === "prive" ? null : (typedNow.autoSoort || null);
+                    setAutoWizardStatus({ status: typedNow.autoKeuze, soort });
+                    onSeedAutoStatus(years, status);
+                    goNext();
+                  }}
+                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
+                >
+                  Doorgaan
+                </button>
+              </div>
+            </div>
+          )}
           {currentStepId === 6 && (
             <VerwachteLijstVraag
               vraag="Is er een leaseauto (financieel) in dit bedrijf?"
-              toelichting="Kunnen er meerdere zijn (bijv. meerdere auto's of machines)? Voeg ze dan allemaal toe."
+              toelichting={
+                typedNow.autoSoort === "financial"
+                  ? "Je gaf net aan dat de auto van de zaak financial lease is — vul hieronder de gegevens in. Kunnen er meerdere zijn (bijv. nog een auto of machine)? Voeg ze dan allemaal toe."
+                  : "Kunnen er meerdere zijn (bijv. meerdere auto's of machines)? Voeg ze dan allemaal toe."
+              }
               placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)"
               lijst={typedNow.leaseLijst || []}
               onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseLijst: lijst }))}

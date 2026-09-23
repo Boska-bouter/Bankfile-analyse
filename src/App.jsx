@@ -216,6 +216,13 @@ export default function App() {
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
   const [verwachteLening, setVerwachteLening] = useState(null); // zelfde vorm als verwachteLease
   const [verwachteAOV, setVerwachteAOV] = useState(null);
+  // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive"|"beide",
+  // soort: "koop"|"operational"|"financial"|null }. Eén keer gevraagd bij het opstarten van een
+  // dossier (net als verwachteLease/verwachteAOV hierboven), zet bij "zaak"/"prive"/"beide" de
+  // standaardwaarde van autoStatus (zie hieronder) voor alle jaren in het dossier — per jaar is dat
+  // daarna nog te corrigeren in "Persoonlijke aannames". Bij `soort: "financial"` verschijnt
+  // aansluitend gewoon de bestaande leaseauto-vraag (stap 6) voor de contractdetails.
+  const [autoWizardStatus, setAutoWizardStatus] = useState(null);
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [showRekeninghouderModal, setShowRekeninghouderModal] = useState(false);
@@ -312,6 +319,7 @@ export default function App() {
     setVerwachteLease(settings.verwachteLease ?? null);
     setVerwachteLening(settings.verwachteLening ?? null);
     setVerwachteAOV(settings.verwachteAOV ?? null);
+    setAutoWizardStatus(settings.autoWizardStatus ?? null);
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
     setEigenNamen(settings.eigenNamen ?? null);
     setEigenRekeningenExtra(settings.eigenRekeningenExtra ?? null);
@@ -371,6 +379,19 @@ export default function App() {
       const next = { ...prev };
       if (status) next[year] = status;
       else delete next[year];
+      return next;
+    });
+  };
+  // Zet de standaardwaarde van autoStatus in één keer voor alle jaren in het dossier — gebruikt door
+  // de wizard-vraag (zie SetupWizardModal), die maar één keer per dossier wordt gesteld terwijl
+  // autoStatus zelf een per-jaar instelling is. status=null (bijv. "geen auto"/"onbekend") wist
+  // eventueel eerder gezette jaren niet weer terug naar onbekend — er is dan gewoon niets te zetten.
+  const seedAutoStatusForAllYears = (yearsList, status) => {
+    if (!status || !yearsList || yearsList.length === 0) return;
+    snapshotBeforeAction("Auto-status ingesteld (wizard)");
+    setAutoStatusState((prev) => {
+      const next = { ...prev };
+      for (const y of yearsList) next[y] = status;
       return next;
     });
   };
@@ -475,7 +496,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-        ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+        ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
       });
@@ -488,7 +509,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-    ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
@@ -566,7 +587,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLening, verwachteAOV, autoWizardStatus, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
     });
@@ -603,6 +624,7 @@ export default function App() {
     setVerwachteLease(s.verwachteLease ?? null);
     setVerwachteLening(s.verwachteLening ?? null);
     setVerwachteAOV(s.verwachteAOV ?? null);
+    setAutoWizardStatus(s.autoWizardStatus ?? null);
     setHeeftVoorraad(s.heeftVoorraad ?? null);
     setEigenNamen(s.eigenNamen ?? null);
     setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
@@ -1573,7 +1595,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -1625,6 +1647,7 @@ export default function App() {
       setVerwachteLease(project.verwachteLease ?? null);
       setVerwachteLening(project.verwachteLening ?? null);
       setVerwachteAOV(project.verwachteAOV ?? null);
+      setAutoWizardStatus(project.autoWizardStatus ?? null);
       setHeeftVoorraad(project.heeftVoorraad ?? null);
       setEigenNamen(project.eigenNamen ?? null);
       setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
@@ -2060,6 +2083,10 @@ export default function App() {
             setVerwachteLening={(v) => { snapshotBeforeAction("Leningvraag beantwoord"); setVerwachteLening(v); }}
             verwachteAOV={verwachteAOV}
             setVerwachteAOV={(v) => { snapshotBeforeAction("AOV-vraag beantwoord"); setVerwachteAOV(v); }}
+            autoWizardStatus={autoWizardStatus}
+            setAutoWizardStatus={(v) => { snapshotBeforeAction("Auto-vraag beantwoord"); setAutoWizardStatus(v); }}
+            years={years}
+            onSeedAutoStatus={seedAutoStatusForAllYears}
             heeftVoorraad={heeftVoorraad}
             setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
             eigenNamen={eigenNamen}
