@@ -259,16 +259,25 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // Volledige uitsplitsing van de gekapitaliseerde financiële-lease-auto's/machines (afschrijving +
   // lease-rente + gecategoriseerde autokosten, en bij privégebruik >500 km/jaar de bijtelling/
   // onttrekking) — alleen zichtbaar zodra minstens één leasecontract een "soort" heeft ingevuld.
+  // Vóór v160 stond hier een regel "netto aftrekbare autokosten" die het totaal ná onttrekking
+  // toonde als los rubriekbedrag — maar de afschrijving (rubriek 3), lease-rente (rubriek 5) en
+  // gecategoriseerde autokosten (rubriek 4, "Auto- en transportkosten") staan DAARNAAST ook al
+  // gewoon voluit in het rapport. Bij elkaar opgeteld leek het daardoor of beide golden: de volle
+  // kosten mee-aftrekken ÉN nog eens een "netto"-regel — terwijl in de werkelijke winstberekening de
+  // onttrekking niet nogmaals wordt afgetrokken, maar juist bij de winst wordt OPGETELD (het draait
+  // een deel van de al afgetrokken afschrijving/rente/autokosten terug). Handmatig alle rubrieken
+  // optellen kwam daardoor lager uit dan het echte "Resultaat uit onderneming" hieronder. Vanaf v160
+  // daarom een expliciete, apart herkenbare OPTEL-regel — alleen zichtbaar als er ook echt een
+  // onttrekking is — zodat het rapport zelf, regel voor regel, weer optelt tot hetzelfde eindcijfer.
   const leaseAutoKostenHtml = (() => {
     const lak = ib.leaseAutoKosten;
-    if (!lak) return "";
-    // Vanaf v154 bewust géén per-contract tabel meer in het rapport (incl. de kenteken-koppeling-
-    // annotatie) — alleen het eindbedrag, zodat het jaaroverzicht compact naast een ingediende
-    // aangifte gelegd kan worden. De volledige, per-contract uitsplitsing (incl. welke contracten
-    // op kenteken gekoppeld zijn) staat in de tool zelf (Financiële lease-detailvenster).
+    if (!lak || !(lak.onttrekking > 0)) return "";
+    const volledigAfgetopt = lak.nettoAftrekbareAutokosten <= 0;
     return `
-  <div class="rubriek"><span>Financiële lease auto/machine — netto aftrekbare autokosten (na onttrekking bij privégebruik)</span><span class="num">${eur(lak.nettoAftrekbareAutokosten)}</span></div>
-  <p class="toelichting">${lak.onttrekking > 0 ? `Waarvan onttrekking (bijtelling privégebruik, afgetopt op werkelijke autokosten): ${eur(lak.onttrekking)}. ` : ""}Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
+  <div class="rubriek"><span>Bijtelling/onttrekking privégebruik auto — telt op bij de winst (draait een deel van de afschrijving/rente/autokosten hierboven terug)</span><span class="num">+ ${eur(lak.onttrekking)}</span></div>
+  <p class="toelichting">Afgetopt op de werkelijke totale autokosten van dat jaar (afschrijving + lease-rente + gecategoriseerde autokosten samen: ${eur(lak.totaleAutokosten)})${
+    volledigAfgetopt ? " — bij deze aftopping is per saldo niets van die autokosten dit jaar aftrekbaar" : ""
+  }. Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
   })();
 
   // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
@@ -560,9 +569,15 @@ function buildBijlageToelichtingenHtml() {
   <p class="toelichting">
     De lease-rente en de gecategoriseerde autokosten stromen al mee in de winst via de bestaande
     berekening (rente bij "Financiële baten en lasten", de rest via de normale categorie-gedreven
-    kosten) — de contracttabel in de jaarsectie is puur een transparante uitsplitsing. Wat de winst
-    per saldo verandert is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (verhoogt
-    de winst weer bij privégebruik).
+    kosten) — de vermelding in de jaarsectie is puur een transparante uitsplitsing. Wat de winst per
+    saldo verandert, is: de afschrijving (nieuw, verlaagt de winst) minus de onttrekking (telt bij de
+    winst op). Is de onttrekking hoger dan de afschrijving alleen, dan draait die het verschil ook
+    terug op de al aftrekbare lease-rente en gecategoriseerde autokosten van diezelfde auto — in
+    lijn met de aftopping op de WERKELIJKE TOTALE autokosten (afschrijving + rente + gecategoriseerde
+    kosten samen), niet alleen op de afschrijving. Bij een volledige aftopping is dus per saldo niets
+    van de kosten van die auto dat jaar aftrekbaar, ook al staan afschrijving/rente/autokosten
+    afzonderlijk nog gewoon (voluit) in de rubrieken hierboven — de aparte optel-regel bij "Bijtelling/
+    onttrekking privégebruik auto" in de jaarsectie corrigeert dat weer naar het juiste eindresultaat.
   </p>
   <p class="toelichting" style="color:#b45309;">
     ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
