@@ -12,21 +12,42 @@
 // (volledig privé, zoals nu) — dus 100% backwards compatible zolang niemand voor een categorie/jaar
 // bewust een percentage instelt.
 //
-// Bewust beperkt tot "kosten"/"geen": een "omzet"-categorie blijft altijd voor 100% omzet, en
+// Bewust beperkt tot "kosten"/"geen" ÉN een expliciete, korte lijst categorieën (zie
+// SPLITSBARE_CATEGORIEEN hieronder) — een "omzet"-categorie blijft altijd voor 100% omzet, en
 // "financiering" (Leningen/Lease financieel) blijft hier altijd buiten — daar is alleen de rente
 // aftrekbaar (niet het termijnbedrag), en dat wordt al apart berekend (zie loanAmortization.js).
 import { fiscalTreatmentOf } from "../classification/categories.js";
 
+// Alleen deze categorieën komen in aanmerking voor de %-splitsing (in overleg bevestigd) — dit zijn
+// kosten die in de praktijk vaak deels zakelijk/deels privé zijn, ongeacht welke rekening betaalt.
+// Andere kosten-/privé-categorieën (Zakelijke uitgaven, Uitbetalen loon, Verkoop activa, Boekhouder
+// accountant & administratie, Belastingen (incl. naheffingen), Onderhoud apparatuur/machines,
+// Betaalautomaat kosten, Uitbetaling aan prive, Prive opnames, Lease (operationeel/financieel),
+// etc.) zijn typisch volledig van het ene of het andere type — daar zou een percentage-instelling
+// alleen maar voor verwarring zorgen, dus die blijven hier bewust buiten beeld. "Huur (deels
+// zakelijk)" staat er ook niet bij: die heeft al zijn eigen, aparte percentage-mechanisme (zie
+// gedeeldeHuur.js) — dit is voor de gewone "Huur"-categorie.
+export const SPLITSBARE_CATEGORIEEN = [
+  "Brandstof",
+  "Zakelijk mobiel/internet",
+  "Reiskosten (OV)",
+  "Parkeren",
+  "Huur",
+];
+
 export function isSplitsbareCategorie(category) {
-  const behandeling = fiscalTreatmentOf(category);
-  return behandeling === "kosten" || behandeling === "geen";
+  return SPLITSBARE_CATEGORIEEN.includes(category);
 }
 
 export function defaultZakelijkPercentage(category) {
   return fiscalTreatmentOf(category) === "kosten" ? 100 : 0;
 }
 
+// Negeert een eventueel opgeslagen percentage voor een categorie die niet (meer) op
+// SPLITSBARE_CATEGORIEEN staat — zo blijft elke andere categorie altijd op zijn standaardgedrag,
+// ook als er ooit ergens per ongeluk toch een percentage voor is opgeslagen.
 export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage) {
+  if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
   const override = categoryZakelijkPercentage?.[category]?.[year];
   return override != null ? override : defaultZakelijkPercentage(category);
 }
