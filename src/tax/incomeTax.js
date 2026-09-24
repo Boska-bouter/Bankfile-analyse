@@ -203,11 +203,20 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
 // eventuele startersaftrek), met de MKB-winstvrijstelling erover. staatNegatiefToe: alleen waar
 // (bij toepassing van startersaftrek) mag dit tot onder € 0 komen.
 function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
+  return computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe).belastbaar;
+}
+
+// v195 — punt 8 uit het reviewdocument: uitsplitsing van winst → ondernemersaftrek →
+// MKB-winstvrijstelling → belastbare winst als aparte, herbruikbare stappen (i.p.v. alleen het
+// eindresultaat, zoals computeBelastbaarInkomenGeneriek hierboven al deed) — voor het compacte
+// dashboard bovenaan de Indicatieve aangifteberekening, dat elke stap los toont.
+export function computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
   const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
-  let naAftrek = (winst || 0) - (ondernemersaftrekBedrag || 0);
-  if (!staatNegatiefToe) naAftrek = Math.max(0, naAftrek);
-  return naAftrek * (1 - t.mkbPct / 100);
+  const mkbPct = IB_TARIEVEN_BY_YEAR[clampedYear].mkbPct;
+  let naOndernemersaftrek = (winst || 0) - (ondernemersaftrekBedrag || 0);
+  if (!staatNegatiefToe) naOndernemersaftrek = Math.max(0, naOndernemersaftrek);
+  const mkbVrijstellingBedrag = naOndernemersaftrek * (mkbPct / 100);
+  return { naOndernemersaftrek, mkbPct, mkbVrijstellingBedrag, belastbaar: naOndernemersaftrek - mkbVrijstellingBedrag };
 }
 
 function berekenBelastingOverSchijven(belastbaar, year) {

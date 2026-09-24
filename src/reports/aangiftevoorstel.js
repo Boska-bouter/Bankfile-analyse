@@ -5,7 +5,7 @@ import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
   IB_TARIEVEN_BY_YEAR, IB_MIN_YEAR, IB_MAX_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
-  resolveZelfstandigenaftrekStatusForYear,
+  resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
@@ -19,8 +19,16 @@ import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
+// v195 — punt 9 uit het reviewdocument: de statustekst is voortaan een functie van het aantal
+// openstaande punten (in plaats van een vaste tekst per kleur) — "groen" betekent hier altijd
+// alléén dat de gegevenscontrole voldoende compleet is, NIET dat de aangifte fiscaal correct is
+// (zie ook de vaste toelichting die overal waar deze tekst verschijnt naast staat).
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
-const STATUS_TEKST = { groen: "Klaar voor controle", oranje: "Controle nodig", rood: "Mogelijk ontbreekt een periode" };
+function statusTekst(status, aantalPunten) {
+  if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
+  if (status === "oranje") return `Berekening beschikbaar — ${aantalPunten} punt${aantalPunten === 1 ? "" : "en"} controleren`;
+  return "Berekening kan worden opgesteld";
+}
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -122,6 +130,8 @@ function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftr
   const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? STARTERSAFTREK_BEDRAG : 0) : 0;
   return {
     startersaftrekToegepast: staToegepast,
+    ondernemersaftrekBedrag,
+    winstUitsplitsing: computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staToegepast),
     ib: estimateIncomeTaxMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
     zvw: estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
     heffingskortingen: estimateHeffingskortingenMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
@@ -180,6 +190,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const heffingskortingen = ondernemersaftrekVoorJaar
     ? estimateHeffingskortingenMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
+  // v195 — punt 8: uitsplitsing winst → ondernemersaftrek → MKB-winstvrijstelling → belastbare winst
+  // voor het compacte dashboard bovenaan (samenvattingHtml hieronder). staatNegatiefToe volgt exact
+  // dezelfde regel als hierboven bij ibEstimate: alleen relevant (en dus "aan") in het
+  // ondernemersaftrekVoorJaar-pad, mét startersaftrek — anders altijd "uit" (nooit onder € 0).
+  const winstUitsplitsing = computeBelastbareWinstUitsplitsing(summary.winst, year, ondernemersaftrekBedrag, ondernemersaftrekVoorJaar ? startersaftrekToegepast : false);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
   // v184 — punt 2 uit het reviewdocument: de "mogelijke KIA" hierboven werd tot nu toe alleen
@@ -251,12 +266,19 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ).length;
   const yearStatus = gatenDitJaar.length > 0 ? "rood" : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 ? "groen" : "oranje";
 
+  // v195 — punt 8 uit het reviewdocument: "Aannames/onzekerheden" bundelt voortaan ook de
+  // persoonlijke-aannames-signalen (urencriterium/KIA/kilometervergoeding) die voorheen alleen als
+  // losse zin verderop in het rapport stonden — als korte fragmenten, niet als volledige zinnen
+  // (de uitleg zelf staat één keer in de Bijlage: Toelichtingen, hier alleen het signaal).
   const openPunten = [];
+  if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven (zie Bijlage)`);
+  if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
+  if (kmVergoedingForYear) openPunten.push(`Kilometervergoeding: ${kmVergoedingForYear.zakelijkeKilometers} km ingevoerd`);
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
-  if (yc.quartersNietAangegeven.length > 0) openPunten.push(`Nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
-  if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`Nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+  if (yc.quartersNietAangegeven.length > 0) openPunten.push(`BTW nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
+  if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`BTW nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
-  if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);
+  if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} nog onzeker geclassificeerd`);
   if (yc.priveTransferMissingMirrors.length > 0) openPunten.push(`${yc.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
   if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
 
@@ -275,16 +297,43 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     renteAftrekbaar -
     (ib.leaseAutoKosten?.onttrekking || 0);
 
+  // v195 — punt 7 uit het reviewdocument: compact fiscaal dashboard bovenaan, met élke stap van
+  // winst → belastbare winst → IB/Zvw als eigen regel (in plaats van alleen het eindresultaat) —
+  // zodat in één oogopslag duidelijk is wat de tool ongeveer als aangifte verwacht. Bij "onbekend"
+  // urencriterium (zaScenarios) vervangen de losse regels een compacte twee-scenario-tabel: dat
+  // verving de eerdere twee losse prose-paragrafen verderop (zie "Indicatieve inkomstenbelasting en
+  // Zvw-bijdrage" hieronder, nu ingekort tot alleen de aanvullende details).
+  const kerncijfersHtml = zaScenarios
+    ? `
+    <div class="samenvatting-kerncijfers">
+      <div><span class="label">Omzet excl. BTW</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span class="label">Zakelijke kosten</span><span class="bedrag">${eur(kostenTotaal)}</span></div>
+      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
+    </div>
+    <table class="samenvatting-scenarios">
+      <thead><tr><th>Urencriterium onbekend</th><th>Ondernemersaftrek</th><th>Belastbare winst</th><th>Indicatieve IB*</th><th>Indicatieve Zvw</th></tr></thead>
+      <tbody>
+        <tr><td>Mét zelfstandigenaftrek</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.ondernemersaftrekBedrag)}</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.metZelfstandigenaftrek.ib.belasting - zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
+        <tr><td>Zonder zelfstandigenaftrek</td><td class="num">€ 0</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
+      </tbody>
+    </table>
+    <p class="toelichting">* Ná heffingskortingen, exclusief overig inkomen. Urencriterium niet bekend — zie "Aannames/onzekerheden" hieronder en de Bijlage.</p>`
+    : `
+    <div class="samenvatting-kerncijfers">
+      <div><span class="label">Omzet excl. BTW</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span class="label">Zakelijke kosten</span><span class="bedrag">- ${eur(kostenTotaal)}</span></div>
+      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
+      <div><span class="label">Mogelijke ondernemersaftrek</span><span class="bedrag">- ${eur(ondernemersaftrekBedrag)}</span></div>
+      <div><span class="label">MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span class="bedrag">- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
+      <div><span class="label">Indicatieve belastbare winst</span><span class="bedrag">${eur(winstUitsplitsing.belastbaar)}</span></div>
+      <div><span class="label">Indicatieve IB*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
+      <div><span class="label">Indicatieve Zvw</span><span class="bedrag">${eur(zvwEstimate.bijdrage)}</span></div>
+    </div>
+    <p class="toelichting">* Vóór heffingskortingen — zie "Geschatte heffingskortingen" hieronder.</p>`;
+
   const samenvattingHtml = `
   <div class="samenvatting">
-    <div class="samenvatting-kerncijfers">
-      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
-      <div><span class="label">Omzet</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
-      <div><span class="label">Zakelijke kosten</span><span class="bedrag">${eur(kostenTotaal)}</span></div>
-      <div><span class="label">Geschatte inkomstenbelasting*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
-      <div><span class="label">Geschatte Zvw-bijdrage*</span><span class="bedrag">${eur(zvwEstimate.bijdrage)}</span></div>
-    </div>
-    <p class="toelichting">* Indicatie o.b.v. de geselecteerde ondernemersaftrek (zelfstandigenaftrek/startersaftrek), exclusief heffingskortingen en overig inkomen — zie "Indicatieve inkomstenbelasting en Zvw-bijdrage" hieronder.</p>
+    ${kerncijfersHtml}
     ${kwartalen.length > 0
       ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
       <tbody><tr><td>Saldo</td>${kwartalen
@@ -295,8 +344,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         .join("")}</tr></tbody></table>`
       : ""}
     <div class="samenvatting-status">
-      <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>
-      ${openPunten.length > 0 ? `<ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
+      <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}</strong> <span class="toelichting">(gegevenscontrole, geen fiscale beoordeling)</span></p>
+      ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
     </div>
   </div>`;
 
@@ -304,7 +353,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ib.overigeBedrijfskosten.length > 0
       ? `
   <div class="rubriek"><span>4. Overige bedrijfskosten</span><span></span></div>
-  <p class="toelichting">Bedragen zijn netto (exclusief BTW).</p>
   ${ib.overigeBedrijfskosten
     .map(
       (r) =>
@@ -396,7 +444,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const totaalAutoMachine = machineBedrag + (heeftBijtelling ? aftrekbareAutokosten : totaleAutokosten);
     return `
   <div class="rubriek"><span>3. Auto's en machines</span><span class="num">${eur(totaalAutoMachine)}</span></div>
-  <p class="toelichting">Bedragen zijn netto (exclusief BTW).</p>
   ${machineRegel}
   ${autoDetailHtml}`;
   })();
@@ -437,17 +484,18 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   return `
   <h1>Indicatieve aangifteberekening / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
-    Status: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]} ·
+    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} ·
     ${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"} ·
     op basis van beschikbare bankgegevens
   </p>
   ${samenvattingHtml}
 
   <h2>Winst-en-verliesrekening — in de volgorde van de IB-aangifte</h2>
+  <p class="toelichting">Alle bedragen hieronder zijn netto, exclusief BTW (niet het bruto bankbedrag), tenzij anders vermeld.</p>
   <div class="wvr">
-    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, "Netto (exclusief BTW) — zoals in de IB-aangifte, niet het bruto bankbedrag.", ib.opbrengsten.perCategorie)}
-    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, "Bedragen zijn netto (exclusief BTW).")}
-    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers. Bedragen zijn netto (exclusief BTW).")}
+    ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
+    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null)}
+    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.")}
     ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
     ${autoMachineKostenHtml}
     ${overigeBedrijfskostenHtml}
@@ -480,17 +528,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}
   <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de tool zelf terugvinden.</p>
 
-  <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
+  <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
+  <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw. Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.</p>
   ${zaScenarios ? `
-  <p><strong>Urencriterium onbekend — hieronder twee volledige, losse scenario's, elk met eigen heffingskortingen:</strong></p>
-  <p><strong>Scenario A — mét zelfstandigenaftrek${zaScenarios.metZelfstandigenaftrek.startersaftrekToegepast ? " + startersaftrek" : ""}:</strong><br/>
-  IB vóór heffingskorting: ${eur(zaScenarios.metZelfstandigenaftrek.ib.belasting)}. Heffingskortingen: ${eur(zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal)}. IB ná heffingskorting: <strong>${eur(Math.max(0, zaScenarios.metZelfstandigenaftrek.ib.belasting - zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong>. Zvw: ${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}${zaScenarios.metZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: IB ná heffingskorting <strong>${eur(Math.max(0, zaScenariosNaKia.metZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong>.` : ""}</p>
-  <p><strong>Scenario B — zonder zelfstandigenaftrek:</strong><br/>
-  IB vóór heffingskorting: ${eur(zaScenarios.zonderZelfstandigenaftrek.ib.belasting)}. Heffingskortingen: ${eur(zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal)}. IB ná heffingskorting: <strong>${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong>. Zvw: ${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}${zaScenarios.zonderZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: IB ná heffingskorting <strong>${eur(Math.max(0, zaScenariosNaKia.zonderZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong>.` : ""}</p>
+  ${mogelijkeKia > 0 ? `<p>Ná mogelijke KIA*: mét zelfstandigenaftrek → <strong>${eur(Math.max(0, zaScenariosNaKia.metZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong>, zonder → <strong>${eur(Math.max(0, zaScenariosNaKia.zonderZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong> (IB ná heffingskorting).</p>` : ""}
+  <p>Heffingskortingen mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal)}</strong> · zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal)}</strong></p>
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
-  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? (zaStatusRaw === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : " (mét zelfstandigenaftrek — niet aangegeven, rekent voorlopig met \"Ja\")") : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${zaStatusRaw == null ? " ⚠ Urencriterium nog niet aangegeven in de tool — zet dit op \"Onbekend\" bij Persoonlijke aannames voor beide scenario's (mét/zonder) naast elkaar." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
   <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
@@ -502,13 +546,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         : ""
     }</p>
   ` : ""}
-  <p>Geschatte bijdrage Zvw: <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(zvwEstimateNaKia.bijdrage)}</strong>${zvwEstimateNaKia.gemaximeerd ? " (gemaximeerd)" : ""}.` : ""}</p>
+  ${mogelijkeKia > 0 ? `<p>Ná mogelijke KIA*: IB <strong>${eur(ibEstimateNaKia.belasting)}</strong>, Zvw <strong>${eur(zvwEstimateNaKia.bijdrage)}</strong>${zvwEstimateNaKia.gemaximeerd ? " (gemaximeerd)" : ""}.</p>` : ""}
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
-  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
 
   <h3>Geschatte heffingskortingen (indicatief)</h3>
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
-  <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong> <span class="toelichting">Zie Bijlage.</span></p>
+  <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
   `}
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
@@ -592,6 +635,10 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .samenvatting-status ul { margin: 4px 0 0 16px; padding: 0; font-size: 10px; color: #78350f; }
   .samenvatting-status li { margin-bottom: 2px; }
   .samenvatting-status .toelichting { margin: 4px 0 0; font-size: 10px; color: #15803d; }
+  .samenvatting-status .aannames-kop { margin: 6px 0 0; font-size: 10px; font-weight: bold; color: #78350f; }
+  .samenvatting-scenarios { width: 100%; margin: 0 0 8px; font-size: 10px; }
+  .samenvatting-scenarios th, .samenvatting-scenarios td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; text-align: left; }
+  .samenvatting-scenarios th:not(:first-child), .samenvatting-scenarios td.num { text-align: right; }
   .controledoel { margin: 20px 0; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden ul { margin: 6px 0 6px 16px; padding: 0; }

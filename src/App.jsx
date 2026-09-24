@@ -141,6 +141,17 @@ function migrateOverridesCategories(overrides) {
   return out;
 }
 
+// v195 — punt 9 uit het reviewdocument: dezelfde statustekst als in het gegenereerde rapport
+// (reports/aangiftevoorstel.js, functie statusTekst) — géén nieuw statussysteem, alleen dezelfde
+// bestaande yearlyProgress-status (afgeleid uit categorisatie/onzekere transacties/bestandsgaten)
+// nu ook zichtbaar vóórdat je het rapport genereert. "Groen" betekent hier uitdrukkelijk alleen dat
+// de gegevenscontrole voldoende compleet is — niet dat de aangifte fiscaal correct is.
+function aangifteStatusTekst(status, aantalPunten) {
+  if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
+  if (status === "oranje") return `Berekening beschikbaar — ${aantalPunten} punt${aantalPunten === 1 ? "" : "en"} controleren`;
+  return "Berekening kan worden opgesteld";
+}
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -2639,12 +2650,15 @@ export default function App() {
                   <div className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
                     <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
                     {yearlyProgress[activeYear] && (
-                      <p className="text-sm flex items-center gap-1.5">
-                        <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
-                        <span>
-                          {{ groen: "Klaar voor controle", oranje: "Nog controleren", rood: "Mogelijk ontbreekt een periode" }[yearlyProgress[activeYear].status]}
-                        </span>
-                      </p>
+                      <div>
+                        <p className="text-sm flex items-center gap-1.5">
+                          <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
+                          <span className="font-medium">
+                            {aangifteStatusTekst(yearlyProgress[activeYear].status, aangifteOpenPunten.length)}
+                          </span>
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">Gegevenscontrole, geen fiscale beoordeling.</p>
+                      </div>
                     )}
                     {aangifteOpenPunten.length > 0 && (
                       <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
