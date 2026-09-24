@@ -23,9 +23,17 @@ export default function PersoonlijkeAannamesPanel({
   const [open, setOpen] = useState(false);
   // Vanaf v173 blijft dit paneel altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag
   // hieronder is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht
-  // of er dit jaar winst is. Vóór v173 bleef het paneel verborgen bij winst €0/negatief zonder
-  // "Huur (deels zakelijk)" — de zelfstandigenaftrek/heffingskortingen/KIA-blok hieronder blijft dat
-  // gedrag houden (heeftWinst), alleen het paneel zelf niet meer.
+  // of er dit jaar winst is.
+  //
+  // v186: het zelfstandigenaftrek/startersaftrek/heffingskortingen/KIA-blok hieronder werd tot nu toe
+  // nóg verborgen bij winst € 0 of negatief ("heeftWinst"-gate, een restant van vóór v173, toen het
+  // hele paneel op die voorwaarde verborgen bleef). Dat verborg ook de vraag zelf ("voldaan aan het
+  // urencriterium?") in een verliesjaar — terwijl juist in een verliesjaar belangrijk is om dit vast
+  // te leggen: computeOndernemersaftrekMetReserve (tax/incomeTax.js) gebruikt de status van dit jaar
+  // om te bepalen hoeveel niet-gerealiseerde zelfstandigenaftrek als reserve meegaat naar een later
+  // jaar. Zonder deze invoer kon die keuze voor een verliesjaar niet gemaakt of gecontroleerd worden.
+  // De bedragen zelf (IB, heffingskortingen) zijn bij winst ≤ € 0 gewoon € 0,00 — dat blijft kloppen,
+  // dus alleen de zichtbaarheid van het blok is aangepast, niet de onderliggende berekeningen.
   if (!activeYear) return null;
 
   const status = zelfstandigenaftrekStatus?.[activeYear] || "onbekend_default";
@@ -37,7 +45,6 @@ export default function PersoonlijkeAannamesPanel({
 
   const { totaalInvestering, onvolledig: activaOnvolledig } = computeInvesteringenForYear(activaSummary || [], activaDetails || {}, activeYear);
   const mogelijkeKia = totaalInvestering > 0 ? computeMogelijkeKia(totaalInvestering, activeYear) : 0;
-  const heeftWinst = winst > 0;
 
   const huurPercentageRaw = huurZakelijkPercentageStatus?.[activeYear];
   const huurBtwTarief = categoryBtwRates?.["Huur (deels zakelijk)"] || 0;
@@ -52,8 +59,6 @@ export default function PersoonlijkeAannamesPanel({
       </button>
       {open && (
         <div className="px-5 pb-5 space-y-4">
-          {heeftWinst && (
-          <>
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Voldaan aan het urencriterium voor de zelfstandigenaftrek in {activeYear}?
@@ -136,10 +141,8 @@ export default function PersoonlijkeAannamesPanel({
               Indicatieve aangifteberekening-rapport (met alle jaren erin) voor die volledige berekening.
             </p>
           </div>
-          </>
-          )}
 
-          <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>
+          <div className="pt-2 border-t border-slate-200">
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Auto-status in {activeYear}
             </label>
@@ -219,7 +222,7 @@ export default function PersoonlijkeAannamesPanel({
           </div>
 
           {gedeeldeHuur && (
-            <div className={heeftWinst ? "pt-2 border-t border-slate-200" : ""}>
+            <div className="pt-2 border-t border-slate-200">
               <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1">
                 Percentage zakelijk gebruik "Huur (deels zakelijk)" in {activeYear}
                 {onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
