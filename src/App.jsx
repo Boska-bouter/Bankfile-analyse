@@ -2193,6 +2193,58 @@ export default function App() {
           </div>
         )}
 
+        {/* v198-fix: jaar-wisselaar + export/print/aangifte-knoppen stonden pas ver onderaan de
+            pagina (na alle review-panelen), terwijl ze horen bij "welk jaar bekijk ik nu" — dat
+            bepaalt namelijk ook wat classificatiezekerheid en de checklist hierboven/hieronder
+            laten zien. Nu direct hier, tussen classificatiezekerheid en de aangifte-checklist. */}
+        {years.length > 0 && activeYear && (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {years.length > 1 ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-400">Jaar:</span>
+                {years.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => setActiveYear(year)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
+                      year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+              >
+                <Download className="h-3.5 w-3.5" /> Excel exporteren
+              </button>
+              <button
+                onClick={() => printReport(groups)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                title="Opent direct het printvenster van je browser — kies daar een printer, of 'Opslaan als PDF'"
+              >
+                <Printer className="h-3.5 w-3.5" /> Print
+              </button>
+              <button
+                onClick={() => {
+                  setShowAangifteMeerdereJaren(false);
+                  setShowAangifteYearPicker((v) => !v);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                title="Bekijk de indicatieve aangifteberekening"
+              >
+                <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
+              </button>
+            </div>
+          </div>
+        )}
+
         {showRekeninghouderModal && (
           <RekeninghouderModal
             eigenNamen={eigenNamen}
@@ -2606,52 +2658,6 @@ export default function App() {
 
             {years.length > 0 && activeYear && (
               <>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  {years.length > 1 ? (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-slate-400">Jaar:</span>
-                      {years.map((year) => (
-                        <button
-                          key={year}
-                          onClick={() => setActiveYear(year)}
-                          className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
-                            year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                          }`}
-                        >
-                          {year}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <span />
-                  )}
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                    >
-                      <Download className="h-3.5 w-3.5" /> Excel exporteren
-                    </button>
-                    <button
-                      onClick={() => printReport(groups)}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Opent direct het printvenster van je browser — kies daar een printer, of 'Opslaan als PDF'"
-                    >
-                      <Printer className="h-3.5 w-3.5" /> Print
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAangifteMeerdereJaren(false);
-                        setShowAangifteYearPicker((v) => !v);
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                      title="Bekijk de indicatieve aangifteberekening"
-                    >
-                      <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
-                    </button>
-                  </div>
-                </div>
-
                 {/* v195-fix / v197-fix: de jaren-kiezer verscheen eerst als een blok ver onderaan
                     de pagina, met een scroll-naar-beneden bij het klikken op het knopje bovenaan —
                     dat voelde onrustig/onverwacht. Nu een centraal modal-venster, direct zichtbaar
