@@ -14,8 +14,13 @@ import { computeAfschrijvingPerJaar } from "./activa.js";
 import { computeFinancialLeaseAmortizationMultiSegment, groupAmortizationByYear } from "./loanAmortization.js";
 import { computeBtw } from "./btw.js";
 
-// Fiscale ondergrens voor de afschrijvingstermijn van een auto (ook bij financiële lease) — een
-// kortere termijn dan dit mag niet, ook al zou de leaselooptijd zelf korter zijn.
+// Fiscale ondergrens voor de afschrijvingstermijn van een bedrijfsmiddel: de Belastingdienst staat
+// voor de normale fiscale afschrijving maximaal 20% van de aanschafwaarde per jaar toe, dus nooit
+// een kortere termijn dan 5 jaar — dit gold in deze tool tot v179 alleen voor een auto (via
+// MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN hieronder), maar geldt net zo goed voor een financieel-
+// geleased(e) machine/overig bedrijfsmiddel met een kortere ingevulde termijn. De naam van de
+// constante blijft ongewijzigd (elders al gebruikt, o.a. tax/autoActiva.js) — alleen waar hij wordt
+// toegepast is vanaf v179 verbreed van "alleen auto" naar "elk leaseobject met een soort ingevuld".
 export const MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN = 5;
 
 // Exact de 5 categorieën die de gebruiker heeft bevestigd voor "totale autokosten" — bewust NIET
@@ -37,8 +42,10 @@ export function buildLeaseActivumFromSegment(segment) {
   if (!segment || !segment.soort) return null;
   const aanschafwaarde = computeOnbetaaldGedeelteKoop(segment);
   const ingevoerdTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
-  const afschrijvingstermijnJaren =
-    segment.soort === "auto" ? Math.max(ingevoerdTermijn, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN) : ingevoerdTermijn;
+  // Vanaf v179: de fiscale 5-jaars-ondergrens (20%-afschrijvingscap) geldt voor ELK leaseobject met
+  // een "soort" ingevuld, niet meer alleen voor een auto — een financieel-geleasede machine met een
+  // kortere ingevulde termijn schreef daarvoor ten onrechte sneller af dan fiscaal is toegestaan.
+  const afschrijvingstermijnJaren = Math.max(ingevoerdTermijn, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN);
   return {
     aanschafwaarde,
     restwaarde: segment.restwaarde ?? 0,

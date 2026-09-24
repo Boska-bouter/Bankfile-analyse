@@ -247,6 +247,32 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     return Math.abs(maanden) > 6;
   })();
 
+  // Vanaf v179: één samenvattende validatiestatus (groen/oranje/rood) bovenop de losse
+  // waarschuwingen hierboven/hieronder — zodat in één oogopslag duidelijk is hoe betrouwbaar de
+  // berekende rente is, in plaats van dat de gebruiker zelf de losse meldingen moet doorlezen.
+  // Rood: er is genoeg ingevuld om een rentepercentage te willen berekenen, maar dat lukt niet — de
+  // ingevulde betalingsstructuur (maandbedrag × looptijd + eindbetaling + extra) is onvoldoende om
+  // het gefinancierde bedrag terug te betalen, zelfs zonder rente (of extreem hoge rente nodig).
+  // Oranje: rente is wél berekend, maar er is een kleinere afwijking die het waard is om te
+  // controleren (leasevergoeding sluit niet aan, of "datum 1e termijn" wijkt sterk af). Groen: geen
+  // van beide, en er is genoeg ingevuld om iets te kunnen concluderen.
+  const genoegIngevuldOmTeValideren = onbetaaldGedeelteKoop > 0 && Number(form.looptijd) > 0 && Number(form.maandbedrag) > 0;
+  const renteTekort = genoegIngevuldOmTeValideren && renteJaarlijks == null
+    ? Math.max(0, onbetaaldGedeelteKoop - (totaleLeaseBetalingen ?? 0))
+    : 0;
+  const validatieStatus = !genoegIngevuldOmTeValideren
+    ? null
+    : renteJaarlijks == null
+      ? "rood"
+      : leaseVergoedingWijktAf || datumEersteTermijnWijktAf
+        ? "oranje"
+        : "groen";
+  const VALIDATIE_LABEL = {
+    groen: { tekst: "Groen — berekening sluit aan", klasse: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+    oranje: { tekst: "Oranje — kleine/verklaarbare afwijking, controleer de invoer", klasse: "bg-amber-50 border-amber-200 text-amber-800" },
+    rood: { tekst: "Rood — rente niet betrouwbaar berekenbaar", klasse: "bg-red-50 border-red-200 text-red-800" },
+  };
+
   return (
     <div className="rounded-lg border border-slate-200 p-4 space-y-5">
       <div className="flex items-center justify-between gap-2">
@@ -257,6 +283,19 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </button>
         )}
       </div>
+
+      {validatieStatus && (
+        <div className={`text-xs font-medium rounded-md border px-2.5 py-1.5 ${VALIDATIE_LABEL[validatieStatus].klasse}`}>
+          {VALIDATIE_LABEL[validatieStatus].tekst}
+          {validatieStatus === "rood" && (
+            <p className="mt-1 font-normal">
+              De ingevulde betalingsstructuur (maandbedrag × looptijd + eindbetaling + extra, {eur(totaleLeaseBetalingen ?? 0)}) betaalt{" "}
+              {eur(renteTekort)} minder terug dan de gefinancierde hoofdsom ({eur(onbetaaldGedeelteKoop)}). Daarom kan geen
+              positieve rente betrouwbaar worden berekend — controleer koopprijs, looptijd, maandbedrag en eindbetaling.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Aankoop</p>
@@ -348,11 +387,11 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           {form.soort && (
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">
-                Afschrijvingstermijn (jaren){form.soort === "auto" ? ` — minimaal ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN}` : ""}
+                Afschrijvingstermijn (jaren) — minimaal {MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN} (fiscale 20%-cap)
               </span>
               <input
                 type="number" min="1" step="1" value={form.afschrijvingstermijnJaren} onChange={set("afschrijvingstermijnJaren")}
-                placeholder={form.soort === "auto" ? String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN) : ""}
+                placeholder={String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5"
               />
             </label>
@@ -376,7 +415,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 />
               </label>
               <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage (%)</span>
+                <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage voor dit contract (%)</span>
                 <input
                   type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")}
                   disabled={capitalisatieOvergenomen}
@@ -386,6 +425,14 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             </>
           )}
         </div>
+        {form.soort === "auto" && (
+          <p className="text-xs text-slate-400 -mt-1">
+            Het bijtellingspercentage hangt af van CO₂-uitstoot/brandstofsoort en datum eerste toelating, en kan
+            per jaar verschillen — deze tool vult dat niet automatisch in. Geldt hier voor de hele looptijd van dit
+            contract-segment; wijzigt het percentage tussentijds (bijv. door een ander bijtellingsregime), voeg dan
+            een nieuw contract toe vanaf die datum (zie "Contract vroegtijdig beëindigd/vervangen" hieronder).
+          </p>
+        )}
         {capitalisatieOvergenomen && (
           <p className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 mt-2">
             Overgenomen van eerdere contractperiode (kenteken {form.kenteken}) — dezelfde auto heeft

@@ -16,6 +16,7 @@ export default function PersoonlijkeAannamesPanel({
   startersaftrekStatus, onSetStartersaftrekStatus,
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
+  kmVergoedingDetails, onSetKmVergoedingField,
   activaSummary, activaDetails, onOpenHelp,
   gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
@@ -156,8 +157,8 @@ export default function PersoonlijkeAannamesPanel({
               Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" (of "beide") tellen
               werkelijke autokosten (brandstof, parkeren, verzekering, MRB) mee met een
               bijtellingscorrectie voor privégebruik, en vervalt de generieke %-splitsing op
-              Brandstof/Parkeren voor dit jaar; bij "privéauto zakelijk gebruikt" geldt in plaats daarvan
-              een kilometervergoeding (nog niet in deze versie).
+              Brandstof/Parkeren voor dit jaar; bij "privéauto zakelijk gebruikt" (of "beide") geldt in
+              plaats daarvan een kilometervergoeding voor het zakelijke gebruik.
             </p>
             {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
@@ -175,6 +176,46 @@ export default function PersoonlijkeAannamesPanel({
                   het leningen/lease-overzicht), niet hier.
                 </p>
               )}
+            {(autoStatus?.[activeYear] === "prive" || autoStatus?.[activeYear] === "beide") && (
+              <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-medium text-slate-600 mb-2">
+                  Kilometervergoeding privéauto zakelijk gebruik in {activeYear}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <label className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Zakelijke kilometers</span>
+                    <input
+                      type="number" min={0} step={1}
+                      value={kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers ?? ""}
+                      onChange={(e) => onSetKmVergoedingField(activeYear, "zakelijkeKilometers", e.target.value)}
+                      className="w-32 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Vergoeding per km (€)</span>
+                    <input
+                      type="number" min={0} step={0.01}
+                      value={kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? ""}
+                      placeholder="bijv. 0,23"
+                      onChange={(e) => onSetKmVergoedingField(activeYear, "vergoedingPerKm", e.target.value)}
+                      className="w-32 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                    />
+                  </label>
+                  {kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers > 0 && kmVergoedingDetails?.[activeYear]?.vergoedingPerKm > 0 && (
+                    <div className="text-xs text-slate-500">
+                      Aftrekbaar: <strong className="text-slate-800">
+                        {eur(kmVergoedingDetails[activeYear].zakelijkeKilometers * kmVergoedingDetails[activeYear].vergoedingPerKm)}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-slate-400">
+                  Controleer zelf het voor {activeYear} geldende fiscale maximum onbelast per kilometer — dit
+                  veld vult niets automatisch in. Deze vergoeding komt niet uit banktransacties; ze is volledig
+                  aftrekbaar naast (niet in plaats van) een eventuele daadwerkelijke overboeking naar privé.
+                </p>
+              </div>
+            )}
           </div>
 
           {gedeeldeHuur && (

@@ -145,10 +145,17 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
                 <input type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage (%)</span>
+                <span className="block text-xs font-medium text-slate-600 mb-1">Bijtellingspercentage voor dit dossier (%)</span>
                 <input type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
               </label>
             </div>
+            <p className="text-xs text-slate-400">
+              Het bijtellingspercentage hangt af van CO₂-uitstoot/brandstofsoort en datum eerste toelating, en kan
+              per jaar verschillen — deze tool vult dat niet automatisch in. Geldt hier voor alle jaren tot je dit
+              veld aanpast; wijzigt het percentage tussentijds, pas het dan hier aan (dit werkt met terugwerkende
+              kracht op alle jaren van dit dossier, niet alleen vanaf het moment van wijzigen — controleer dit zelf
+              per jaar als het bijtellingsregime van deze auto is gewijzigd).
+            </p>
             {jarenVoorPrivegebruik.length > 0 && (
               <div className="mt-3">
                 <p className="text-xs font-medium text-slate-600 mb-1">Privégebruik meer dan 500 km per jaar?</p>

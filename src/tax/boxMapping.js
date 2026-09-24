@@ -54,7 +54,7 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 // deze rubrieken (Opbrengsten, Privéonttrekkingen/-stortingen, Belastingafdrachten, Leningen/Lease
 // financieel) blijven hier altijd ongewijzigd. Weggelaten (`year` null, het gedrag van vóór dit
 // mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null) {
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null) {
   const factorFor = (category) => {
     if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
     return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus) / 100;
@@ -79,11 +79,24 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     naam, categorieen: cats, totaal: sumCatNetto(cats), toelichting, perCategorie: perCategorieVanNetto(cats),
   });
 
+  // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive"/"beide",
+  // zie tax/kmVergoeding.js) — komt NIET uit een categorie/banktransactie (het is een notionele
+  // aftrekpost), dus geen rubriekNetto maar een los samengesteld object in dezelfde vorm. Alleen
+  // aanwezig (en dus alleen zichtbaar) zodra er daadwerkelijk een bedrag > 0 is.
+  const kmVergoedingRubriek = kmVergoedingForYear
+    ? {
+        naam: "Kilometervergoeding privéauto zakelijk gebruik", categorieen: [], totaal: kmVergoedingForYear.bedrag,
+        toelichting: `${kmVergoedingForYear.zakelijkeKilometers} km × ${kmVergoedingForYear.vergoedingPerKm.toFixed(2).replace(".", ",")} per km — controleer zelf het voor dit jaar geldende fiscale maximum onbelast per km.`,
+        perCategorie: [],
+      }
+    : null;
+
   const overigeBedrijfskosten = [
     rubriekNetto("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
     rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING),
     rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
     rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
+    ...(kmVergoedingRubriek ? [kmVergoedingRubriek] : []),
   ].filter((r) => r.totaal > 0);
 
   // De 5 autokosten-categorieën (MRB, verzekering, brandstof, parkeren, onderhoud) horen vanaf v161
@@ -138,6 +151,9 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     // lease-rente, gecategoriseerde autokosten, en bij een auto met privégebruik >500km/jaar ook de
     // bijtelling/onttrekking) — null zolang geen enkel contract een "soort" heeft ingevuld.
     leaseAutoKosten: leaseAutoKostenForYear,
+    // Zie kmVergoedingRubriek hierboven — dit bedrag zit al in overigeBedrijfskosten (dus al
+    // meegeteld in elke som die overigeBedrijfskosten optelt); dit veld is puur voor losse weergave.
+    kmVergoeding: kmVergoedingForYear,
     autokostenOverig,
     overigeBedrijfskosten,
     financieleBatenLasten: {
