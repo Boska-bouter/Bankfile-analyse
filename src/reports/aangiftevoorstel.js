@@ -2,9 +2,9 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
-  estimateIncomeTax, estimateZvw, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
+  estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
   IB_TARIEVEN_BY_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
-  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek,
+  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
@@ -109,6 +109,24 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus).winst;
 }
 
+// v185 — punt 3 uit het reviewdocument: bij "onbekend" urencriterium moeten beide scenario's (mét/
+// zonder zelfstandigenaftrek) volledig los van elkaar worden doorgerekend, inclusief hun eigen
+// heffingskortingen — niet, zoals voorheen, één gedeelde heffingskortingen-figuur die stilzwijgend
+// uitgaat van (in dit geval altijd) het "mét"-scenario. Startersaftrek is alleen relevant in het
+// "mét zelfstandigenaftrek"-scenario: het is een aanvulling óp de zelfstandigenaftrek, niet een los
+// toe te passen aftrekpost (zie ook de toelichting bij STARTERSAFTREK_BEDRAG in tax/incomeTax.js).
+function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftrekToegepast) {
+  const basisBedrag = IB_TARIEVEN_BY_YEAR[Math.max(2023, Math.min(2026, year))].zelfstandigenaftrek;
+  const staToegepast = metZelfstandigenaftrek && startersaftrekToegepast;
+  const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? STARTERSAFTREK_BEDRAG : 0) : 0;
+  return {
+    startersaftrekToegepast: staToegepast,
+    ib: estimateIncomeTaxMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
+    zvw: estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
+    heffingskortingen: estimateHeffingskortingenMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staToegepast),
+  };
+}
+
 function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
@@ -138,8 +156,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // eerder opgeslagen projecten dezelfde cijfers blijven tonen totdat dit expliciet wordt gezet.
   const zaStatus = zelfstandigenaftrekStatus?.[year];
   const zelfstandigenaftrekToegepast = zaStatus !== "nee";
-  const zaScenarios = zaStatus === "onbekend" ? estimateIncomeTaxScenarios(summary.winst, year) : null;
   const startersaftrekToegepast = startersaftrekStatus?.[year] === "ja";
+  const zaScenarios = zaStatus === "onbekend" ? {
+    metZelfstandigenaftrek: buildOnbekendScenario(summary.winst, year, true, startersaftrekToegepast),
+    zonderZelfstandigenaftrek: buildOnbekendScenario(summary.winst, year, false, startersaftrekToegepast),
+  } : null;
   // ondernemersaftrekVoorJaar komt uit de pre-pass (computeOndernemersaftrekMetReserve) en houdt
   // rekening met verrekening van niet-gerealiseerde zelfstandigenaftrek uit eerdere jaren in dit
   // rapport, en met startersaftrek. Voor "onbekend"-jaren wordt dit bewust niet gebruikt (zie
@@ -176,7 +197,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const heffingskortingenNaKia = ondernemersaftrekVoorJaar
     ? estimateHeffingskortingenMetOndernemersaftrek(winstNaKia, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateHeffingskortingen(winstNaKia, year, zelfstandigenaftrekToegepast);
-  const zaScenariosNaKia = zaScenarios ? estimateIncomeTaxScenarios(winstNaKia, year) : null;
+  const zaScenariosNaKia = zaScenarios ? {
+    metZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, true, startersaftrekToegepast),
+    zonderZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, false, startersaftrekToegepast),
+  } : null;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
 
   // "Inkoopkosten, uitbesteed werk en andere externe kosten" (v150: één gecombineerde rubriek) hier
@@ -455,7 +479,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
   ${zaScenarios ? `
-  <p>Urencriterium onbekend — twee scenario's: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong>.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenariosNaKia.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenariosNaKia.zonderZelfstandigenaftrek.belasting)}</strong>.` : ""}</p>
+  <p><strong>Urencriterium onbekend — hieronder twee volledige, losse scenario's, elk met eigen heffingskortingen:</strong></p>
+  <p><strong>Scenario A — mét zelfstandigenaftrek${zaScenarios.metZelfstandigenaftrek.startersaftrekToegepast ? " + startersaftrek" : ""}:</strong><br/>
+  IB vóór heffingskorting: ${eur(zaScenarios.metZelfstandigenaftrek.ib.belasting)}. Heffingskortingen: ${eur(zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal)}. IB ná heffingskorting: <strong>${eur(Math.max(0, zaScenarios.metZelfstandigenaftrek.ib.belasting - zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong>. Zvw: ${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}${zaScenarios.metZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: IB ná heffingskorting <strong>${eur(Math.max(0, zaScenariosNaKia.metZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong>.` : ""}</p>
+  <p><strong>Scenario B — zonder zelfstandigenaftrek:</strong><br/>
+  IB vóór heffingskorting: ${eur(zaScenarios.zonderZelfstandigenaftrek.ib.belasting)}. Heffingskortingen: ${eur(zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal)}. IB ná heffingskorting: <strong>${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong>. Zvw: ${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}${zaScenarios.zonderZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: IB ná heffingskorting <strong>${eur(Math.max(0, zaScenariosNaKia.zonderZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong>.` : ""}</p>
+  <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
+  <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
   ` : `
   <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
@@ -469,7 +499,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         : ""
     }</p>
   ` : ""}
-  `}
   <p>Geschatte bijdrage Zvw: <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(zvwEstimateNaKia.bijdrage)}</strong>${zvwEstimateNaKia.gemaximeerd ? " (gemaximeerd)" : ""}.` : ""}</p>
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
   <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
@@ -477,6 +506,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <h3>Geschatte heffingskortingen (indicatief)</h3>
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
   <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong> <span class="toelichting">Zie Bijlage.</span></p>
+  `}
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
   ${investeringenForYear.totaalInvestering > 0 ? `
