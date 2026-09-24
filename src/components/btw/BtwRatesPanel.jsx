@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory } from "../../classification/categories.js";
+import { FIXED_BTW_RATE_CATEGORIES } from "../../tax/btw.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 // BTW-instellingen: KOR (kleineondernemersregeling), BTW-verlegd, en het percentage per
@@ -94,20 +95,32 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                       </button>
                       {isOpen && (
                         <div className="grid sm:grid-cols-2 gap-2 px-3 pb-3">
-                          {subtypes.map((c) => (
-                            <div key={c} className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-3 py-2">
-                              <span className={`rounded px-2 py-0.5 text-xs font-medium truncate ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
-                              <select
-                                value={categoryBtwRates[c] ?? 21}
-                                onChange={(e) => setCategoryBtwRates((prev) => ({ ...prev, [c]: Number(e.target.value) }))}
-                                className="rounded-md border border-slate-300 px-2 py-1 text-xs shrink-0"
-                              >
-                                <option value={21}>21%</option>
-                                <option value={9}>9%</option>
-                                <option value={0}>0%</option>
-                              </select>
-                            </div>
-                          ))}
+                          {subtypes.map((c) => {
+                            const vastTarief = FIXED_BTW_RATE_CATEGORIES[c];
+                            return (
+                              <div key={c} className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-3 py-2">
+                                <span className={`rounded px-2 py-0.5 text-xs font-medium truncate ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                                {vastTarief != null ? (
+                                  <span
+                                    className="text-xs text-slate-400 shrink-0 cursor-help"
+                                    title="Deze categorie bestaat specifiek voor dit tarief — de naam is het tarief, dus niet apart instelbaar."
+                                  >
+                                    {vastTarief}% (vast)
+                                  </span>
+                                ) : (
+                                  <select
+                                    value={categoryBtwRates[c] ?? 21}
+                                    onChange={(e) => setCategoryBtwRates((prev) => ({ ...prev, [c]: Number(e.target.value) }))}
+                                    className="rounded-md border border-slate-300 px-2 py-1 text-xs shrink-0"
+                                  >
+                                    <option value={21}>21%</option>
+                                    <option value={9}>9%</option>
+                                    <option value={0}>0%</option>
+                                  </select>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

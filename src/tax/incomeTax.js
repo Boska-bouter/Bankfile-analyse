@@ -2,12 +2,34 @@
 // — bewust vereenvoudigd: geen heffingskortingen, geen overig inkomen, geen startersaftrek.
 // Bron: gepubliceerde belastingschijven, zelfstandigenaftrek en mkb-winstvrijstelling per jaar.
 // Check jaarlijks op belastingdienst.nl of deze bedragen nog kloppen — ze wijzigen per jaar.
+//
+// v191 — 2020/2021/2022 toegevoegd: dit ontbrak, waardoor computeBelastbaarWinst (hieronder) een
+// jaar vóór 2023 stilzwijgend met de 2023-cijfers doorrekende (via de clamp op
+// IB_MIN_YEAR/IB_MAX_YEAR hieronder). Voor de mkb-winstvrijstelling maakte dat niet uit (ongewijzigd
+// 14% van 2020 t/m 2023), maar de zelfstandigenaftrek verschilde wél fors (2020: € 7.030, 2021:
+// € 6.670, 2022: € 6.310, tegenover € 5.030 in 2023) — bij een winst boven de aftrek werd de
+// belastbare winst voor die jaren daardoor te hoog ingeschat, en de geschatte IB/Zvw dus ook.
+// Gevonden bij het doorrekenen van een dossier met 2021/2022-jaren als regressietest. Bronnen
+// (Belastingdienst-cijfers, meerdere malen kruisgecontroleerd): zelfstandigenaftrek en
+// belastingschijven 2020-2022 volgens gepubliceerde overzichten; mkb-winstvrijstelling ongewijzigd
+// op 14%.
 export const IB_TARIEVEN_BY_YEAR = {
+  2020: { brackets: [{ tot: 68508, tarief: 0.3735 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 7030, mkbPct: 14 },
+  2021: { brackets: [{ tot: 68508, tarief: 0.371 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6670, mkbPct: 14 },
+  2022: { brackets: [{ tot: 69398, tarief: 0.3707 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6310, mkbPct: 14 },
   2023: { brackets: [{ tot: 73031, tarief: 0.3693 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 5030, mkbPct: 14 },
   2024: { brackets: [{ tot: 75518, tarief: 0.3697 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 3750, mkbPct: 13.31 },
   2025: { brackets: [{ tot: 38441, tarief: 0.3582 }, { tot: 76817, tarief: 0.3748 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 2470, mkbPct: 12.7 },
   2026: { brackets: [{ tot: 38883, tarief: 0.3575 }, { tot: 78426, tarief: 0.3756 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 1200, mkbPct: 12.7 },
 };
+// Ondergrens/bovengrens van de hierboven daadwerkelijk ingevulde jaren — computeBelastbaarWinst,
+// estimateIncomeTax en estimateZvw klemmen een jaar buiten dit bereik naar het dichtstbijzijnde
+// bekende jaar (zie IB_TARIEVEN_BY_YEAR/ZVW_TARIEVEN_BY_YEAR hierboven/hieronder) en zetten dan
+// `geëxtrapoleerd: true`. De heffingskortingen/arbeidskorting/KIA-tabellen verderop in dit bestand
+// beginnen nog bij 2023 (voor 2020-2022 kon geen betrouwbare, onderling consistente bron voor die
+// tabellen worden bevestigd) — die klemmen dus nog altijd naar 2023, ook voor 2020-2022.
+export const IB_MIN_YEAR = 2020;
+export const IB_MAX_YEAR = 2026;
 
 // Winst na zelfstandigenaftrek en mkb-winstvrijstelling — dit is tegelijk de belastbare winst
 // voor box 1 (IB) én de grondslag ("bijdrage-inkomen") voor de inkomensafhankelijke bijdrage
@@ -19,7 +41,7 @@ export const IB_TARIEVEN_BY_YEAR = {
 // dat weet deze tool niet uit bankgegevens. Zet dit expliciet op false om het scenario "geen
 // zelfstandigenaftrek" te berekenen (bijv. omdat niet aan het urencriterium is voldaan).
 function computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast = true) {
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const t = IB_TARIEVEN_BY_YEAR[clampedYear];
   const naZelfstandigenaftrek = zelfstandigenaftrekToegepast ? Math.max(0, winst - t.zelfstandigenaftrek) : Math.max(0, winst);
   return naZelfstandigenaftrek * (1 - t.mkbPct / 100);
@@ -27,7 +49,7 @@ function computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast = true
 
 export function estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast = true) {
   if (!winst || winst <= 0) return { belasting: 0, geëxtrapoleerd: false };
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const t = IB_TARIEVEN_BY_YEAR[clampedYear];
   const belastbaar = computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast);
   let belasting = 0;
@@ -58,6 +80,9 @@ export function estimateIncomeTaxScenarios(winst, year) {
 // hierboven, met een wettelijk maximum bijdrage-inkomen per jaar. Bron: gepubliceerde Zvw-
 // percentages en -maxima van de Belastingdienst. Check jaarlijks of deze bedragen nog kloppen.
 export const ZVW_TARIEVEN_BY_YEAR = {
+  2020: { pct: 5.45, maxBijdrageInkomen: 57232 },
+  2021: { pct: 5.75, maxBijdrageInkomen: 58311 },
+  2022: { pct: 5.5, maxBijdrageInkomen: 59706 },
   2023: { pct: 5.43, maxBijdrageInkomen: 66956 },
   2024: { pct: 5.32, maxBijdrageInkomen: 71624 },
   2025: { pct: 5.26, maxBijdrageInkomen: 75864 },
@@ -66,7 +91,7 @@ export const ZVW_TARIEVEN_BY_YEAR = {
 
 export function estimateZvw(winst, year, zelfstandigenaftrekToegepast = true) {
   if (!winst || winst <= 0) return { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false };
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
   const belastbaar = computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast);
   const gemaximeerd = belastbaar > z.maxBijdrageInkomen;
@@ -118,7 +143,7 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
       continue;
     }
 
-    const clampedYear = Math.max(2023, Math.min(2026, year));
+    const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
     const basisBedrag = IB_TARIEVEN_BY_YEAR[clampedYear].zelfstandigenaftrek;
     const winstPositief = Math.max(0, winst || 0);
 
@@ -160,7 +185,7 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
 // eventuele startersaftrek), met de MKB-winstvrijstelling erover. staatNegatiefToe: alleen waar
 // (bij toepassing van startersaftrek) mag dit tot onder € 0 komen.
 function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const t = IB_TARIEVEN_BY_YEAR[clampedYear];
   let naAftrek = (winst || 0) - (ondernemersaftrekBedrag || 0);
   if (!staatNegatiefToe) naAftrek = Math.max(0, naAftrek);
@@ -169,7 +194,7 @@ function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, 
 
 function berekenBelastingOverSchijven(belastbaar, year) {
   if (!(belastbaar > 0)) return 0;
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const t = IB_TARIEVEN_BY_YEAR[clampedYear];
   let belasting = 0;
   let vorige = 0;
@@ -186,13 +211,13 @@ function berekenBelastingOverSchijven(belastbaar, year) {
 // computeOndernemersaftrekMetReserve, dat rekening houdt met verrekening van niet-gerealiseerde
 // zelfstandigenaftrek en met startersaftrek).
 export function estimateIncomeTaxMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const belastbaar = computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe);
   return { belasting: berekenBelastingOverSchijven(belastbaar, year), geëxtrapoleerd: clampedYear !== year, belastbaar };
 }
 
 export function estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
   const belastbaar = Math.max(0, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe));
   const gemaximeerd = belastbaar > z.maxBijdrageInkomen;

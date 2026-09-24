@@ -45,6 +45,23 @@ DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
+// v191 — deze drie categorieën bestaan uitsluitend om omzet met een AFWIJKEND tarief dan het
+// dossierbrede standaardtarief apart te kunnen zetten (zie SUBTYPE_TO_MAIN in categories.js: alle
+// drie vallen onder hoofdcategorie "Zakelijke inkomsten", dus het BTW-instelscherm liet vóór v191
+// ook voor déze drie gewoon een vrij te kiezen percentage zien). Hun naam IS het tarief — een
+// transactie in "Zakelijke inkomsten 21%" wordt in computeQuarterlyBtwForYear (zie hieronder)
+// altijd als 1a-omzet (21%) meegeteld, ongeacht wat hier zou staan, dus een afwijkend opgeslagen
+// percentage voor deze categorie levert een intern tegenstrijdige berekening op: de omzet wordt op
+// de "verkeerde" aangifterubriek geteld terwijl de BTW zelf tegen het (foutieve) opgeslagen tarief
+// wordt uitgerekend — precies dit werd aangetroffen in een regressie-testdossier ("Zakelijke
+// inkomsten 21%" stond op 9%, vermoedelijk per ongeluk via ditzelfde instelscherm gewijzigd). Vast
+// op hun eigen tarief, zie ook de forcerings-stap onderaan mergeBtwRates hieronder.
+export const FIXED_BTW_RATE_CATEGORIES = {
+  "Zakelijke inkomsten 0%": 0,
+  "Zakelijke inkomsten 9%": 9,
+  "Zakelijke inkomsten 21%": 21,
+};
+
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
   "Kinderopvang", "Prive - mobiel/internet", "Prive overige abonnementen", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -71,6 +88,11 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
       merged["Inhuur personeel"] = 21;
     }
   }
+  // v191 — onvoorwaardelijk (niet alleen bij een versie-ophoging): zie FIXED_BTW_RATE_CATEGORIES
+  // hierboven. Zelfheelt elke keer dat een project geladen/opgeslagen wordt, dus ook als een
+  // afwijkende waarde ooit via het instelscherm is binnengeslopen (in plaats van alleen bij een
+  // eenmalige versiemigratie, zoals bij ZERO_BTW_CATEGORIES hierboven).
+  for (const [c, rate] of Object.entries(FIXED_BTW_RATE_CATEGORIES)) merged[c] = rate;
   return merged;
 }
 

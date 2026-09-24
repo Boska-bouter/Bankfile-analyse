@@ -3,7 +3,7 @@ import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
-  IB_TARIEVEN_BY_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
+  IB_TARIEVEN_BY_YEAR, IB_MIN_YEAR, IB_MAX_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
@@ -116,7 +116,7 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
 // "mét zelfstandigenaftrek"-scenario: het is een aanvulling óp de zelfstandigenaftrek, niet een los
 // toe te passen aftrekpost (zie ook de toelichting bij STARTERSAFTREK_BEDRAG in tax/incomeTax.js).
 function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftrekToegepast) {
-  const basisBedrag = IB_TARIEVEN_BY_YEAR[Math.max(2023, Math.min(2026, year))].zelfstandigenaftrek;
+  const basisBedrag = IB_TARIEVEN_BY_YEAR[Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year))].zelfstandigenaftrek;
   const staToegepast = metZelfstandigenaftrek && startersaftrekToegepast;
   const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? STARTERSAFTREK_BEDRAG : 0) : 0;
   return {
@@ -167,7 +167,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // hieronder bij zaScenarios) — die jaren doen niet mee in de reserveketen.
   const ondernemersaftrekBedrag = ondernemersaftrekVoorJaar
     ? ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag + ondernemersaftrekVoorJaar.startersaftrekBedrag
-    : (zelfstandigenaftrekToegepast ? IB_TARIEVEN_BY_YEAR[Math.max(2023, Math.min(2026, year))].zelfstandigenaftrek : 0);
+    : (zelfstandigenaftrekToegepast ? IB_TARIEVEN_BY_YEAR[Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year))].zelfstandigenaftrek : 0);
   const ibEstimate = ondernemersaftrekVoorJaar
     ? estimateIncomeTaxMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateIncomeTax(summary.winst, year, zelfstandigenaftrekToegepast);
@@ -487,7 +487,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
   <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : " (mét zelfstandigenaftrek — niet aangegeven, rekent voorlopig met \"Ja\")"}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool — zet dit op \"Onbekend\" bij Persoonlijke aannames voor beide scenario's (mét/zonder) naast elkaar." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
   <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
