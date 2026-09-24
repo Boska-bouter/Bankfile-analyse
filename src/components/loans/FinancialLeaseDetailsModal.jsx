@@ -587,6 +587,20 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               ? " Dit schema stopt bij de opgegeven einddatum — de restschuld hieronder is de werkelijke afkoopsom/overname, die kan afwijken van dit theoretische schema."
               : " Dit is de volledige looptijd zoals ingevuld, ongeacht hoeveel er al daadwerkelijk via de bank is betaald."}
           </p>
+          {amortization.ongekoppeldeTerugboekingen?.length > 0 && (
+            <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              {amortization.ongekoppeldeTerugboekingen.length} bijschrijving(en)/terugboeking(en) kon(den) niet
+              betrouwbaar aan een eerdere termijn gekoppeld worden en zijn daarom NIET in de rente/aflossing
+              hierboven verwerkt (ook niet als saldoverhoging) — controleer deze zelf:{" "}
+              {amortization.ongekoppeldeTerugboekingen.map((tx, i) => (
+                <span key={i}>
+                  {i > 0 && ", "}
+                  {new Date(tx.date).toLocaleDateString("nl-NL")} ({eur(tx.amount)})
+                </span>
+              ))}
+              .
+            </p>
+          )}
         </div>
       )}
 

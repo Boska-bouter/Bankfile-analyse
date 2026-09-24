@@ -1,5 +1,75 @@
 import { getLeaseSegments, assignLeaseTransactionsToSegments } from "./financialLease.js";
 
+// v181 — punt 3 uit de leasereview: een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek
+// klant") corrigeert vrijwel altijd een eerdere betaling (een deel van een eerder geïncasseerde
+// termijn wordt teruggestort, bijv. na een foutieve incasso of een klacht) — de rente/aflossing-
+// verdeling van DIE eerdere betaling moet dan mee gecorrigeerd worden, niet alleen het openstaande
+// saldo. In plaats van een aparte, foutgevoelige "achteraf terugdraaien"-berekening bovenop de
+// bestaande rente/aflossing-splitsing te bouwen, wordt een gematchte terugboeking hier AL vóór die
+// splitsing verrekend met het bedrag van de betaling die hij corrigeert — de bestaande, al geteste
+// berekening hieronder rekent daardoor vanzelf met het per saldo daadwerkelijk (netto) betaalde
+// bedrag, en de terugboeking zelf verdwijnt als aparte transactie (hij zit al verwerkt in de
+// gecorrigeerde betaling).
+//
+// Is er geen betrouwbare match, dan wordt de terugboeking bewust NIET meegenomen in de rente/
+// aflossing-berekening — niet als (foutieve) extra aflossing, en ook niet als saldoverhoging zoals
+// vóór v181 — maar apart teruggegeven (`ongekoppeldeTerugboekingen`) zodat hij zichtbaar blijft als
+// een door de accountant zelf te beoordelen, ongekoppelde correctie, in plaats van een gok te wagen
+// die het saldo/de rente stilzwijgend verkeerd zou kunnen maken.
+//
+// "Betrouwbare match" = de dichtstbijzijnde EERDERE (negatieve) betaling binnen
+// TERUGBOEKING_MAX_DAGEN_TERUG dagen die nog genoeg "niet-teruggedraaid" bedrag over heeft om het
+// teruggeboekte bedrag te dekken (met een kleine marge voor centenverschillen). Een terugboeking die
+// een veel oudere betaling zou corrigeren is zeldzaam genoeg en onzeker genoeg om liever ongekoppeld
+// te laten zien dan verkeerd te koppelen — 6 maanden is hierin een bewuste, redelijke aanname.
+const TERUGBOEKING_MAX_DAGEN_TERUG = 182;
+const TERUGBOEKING_BEDRAG_MARGE = 5;
+
+function netTerugboekingenTegenBetalingen(transactions) {
+  const sorted = [...transactions].sort((a, b) => a.date - b.date);
+  // Per betaling (index in `sorted`): hoeveel van het oorspronkelijke, betaalde bedrag nog niet is
+  // teruggedraaid door een (eerder verwerkte, in tijdsvolgorde) terugboeking.
+  const resterend = sorted.map((tx) => (tx.amount < 0 ? Math.abs(tx.amount) : 0));
+  const gecorrigeerdBedrag = sorted.map((tx) => tx.amount);
+  const ongekoppeldeTerugboekingen = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    const tx = sorted[i];
+    if (tx.amount < 0) continue; // alleen bijschrijvingen (terugboekingen) zoeken een match
+    const terugboekingBedrag = tx.amount;
+    let bestIdx = -1;
+    let bestDagenTussen = Infinity;
+    for (let j = i - 1; j >= 0; j--) {
+      const kandidaat = sorted[j];
+      if (kandidaat.amount >= 0) continue; // alleen echte betalingen zijn een correctiedoel
+      const dagenTussen = (tx.date - kandidaat.date) / (1000 * 60 * 60 * 24);
+      if (dagenTussen > TERUGBOEKING_MAX_DAGEN_TERUG) break; // sorted op datum: verder terug wordt alleen groter
+      if (resterend[j] < terugboekingBedrag - TERUGBOEKING_BEDRAG_MARGE) continue;
+      if (dagenTussen < bestDagenTussen) {
+        bestDagenTussen = dagenTussen;
+        bestIdx = j;
+      }
+    }
+    if (bestIdx === -1) {
+      ongekoppeldeTerugboekingen.push(tx);
+      continue;
+    }
+    // Marge kan de correctie net iets groter maken dan wat er nog resteerde — geklemd op 0 zodat de
+    // gecorrigeerde betaling nooit (per abuis) in een bijschrijving verandert.
+    resterend[bestIdx] = Math.max(0, resterend[bestIdx] - terugboekingBedrag);
+    gecorrigeerdBedrag[bestIdx] = Math.min(0, gecorrigeerdBedrag[bestIdx] + terugboekingBedrag);
+  }
+
+  const transactiesNaVerrekening = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const tx = sorted[i];
+    if (tx.amount >= 0) continue; // terugboeking: gekoppeld = al verwerkt hierboven, ongekoppeld = apart teruggegeven
+    if (gecorrigeerdBedrag[i] === 0) continue; // volledig teruggedraaid: geen echte betaling meer over
+    transactiesNaVerrekening.push({ ...tx, amount: gecorrigeerdBedrag[i] });
+  }
+  return { transactions: transactiesNaVerrekening, ongekoppeldeTerugboekingen };
+}
+
 // Splitst de betalingen op een lening (of financiële lease) in rente en aflossing, op basis van
 // het oorspronkelijke bedrag, de startdatum en het rentepercentage. Rekent per betaling het
 // aantal verstreken maanden sinds de vorige betaling (of de startdatum, voor de eerste), berekent
@@ -12,28 +82,19 @@ export function computeLoanAmortization(transactions, details) {
   const startBalance = Number(hoofdsom);
   const monthlyRate = Number(details.rente) / 100 / 12;
   if (!(startBalance > 0) || isNaN(monthlyRate)) return null;
+  const { transactions: genetteTransacties, ongekoppeldeTerugboekingen } = netTerugboekingenTegenBetalingen(transactions);
   let balance = startBalance;
   let lastDate = new Date(details.startdatum);
   const rows = [];
-  for (const tx of transactions) {
+  for (const tx of genetteTransacties) {
     const maandenVerstreken = Math.max(
       (tx.date.getFullYear() - lastDate.getFullYear()) * 12 + (tx.date.getMonth() - lastDate.getMonth()) +
         (tx.date.getDate() - lastDate.getDate()) / 30,
       0
     );
-    // Een bijschrijving (positief bedrag) op deze lening/lease is geen betaling maar een
-    // terugboeking/correctie van de leasemaatschappij (bijv. "Terugboeking op verzoek klant") — die
-    // maakt een eerdere aflossing ongedaan, dus het openstaande saldo gaat weer OMHOOG, en er is
-    // geen rente aan toe te rekenen. Vóór deze aanpassing werd Math.abs() genomen, waardoor zo'n
-    // terugboeking juist als extra aflossing werd meegeteld — een reële bug bij een gedeeltelijk
-    // teruggeboekte/gecorrigeerde leasetermijn.
-    if (tx.amount >= 0) {
-      const aflossing = -tx.amount;
-      balance = balance - aflossing;
-      rows.push({ tx, rente: 0, aflossing, saldoNa: balance });
-      lastDate = tx.date;
-      continue;
-    }
+    // Na de verrekening hierboven is elke overgebleven transactie een echte (negatieve) betaling —
+    // een niet-gekoppelde terugboeking is al uitgefilterd (zie ongekoppeldeTerugboekingen) en raakt
+    // dus bewust noch de rente/aflossing-berekening, noch het saldo.
     const rente = balance * monthlyRate * maandenVerstreken;
     const betaling = Math.abs(tx.amount);
     const aflossing = Math.max(betaling - rente, 0);
@@ -43,7 +104,7 @@ export function computeLoanAmortization(transactions, details) {
   }
   const totaalRente = rows.reduce((a, r) => a + r.rente, 0);
   const totaalAflossing = rows.reduce((a, r) => a + r.aflossing, 0);
-  return { rows, totaalRente, totaalAflossing, saldoNu: balance };
+  return { rows, totaalRente, totaalAflossing, saldoNu: balance, ongekoppeldeTerugboekingen };
 }
 
 // Voor de belastingaangifte telt niet het totaal over de hele looptijd, maar wat er per jaar aan
@@ -114,6 +175,9 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
   // (bijv. 2020 t/m 2024 bij een lease die pas in 2025 een kapot vervolgcontract kreeg).
   const renteNietBerekenbaarJaren = new Set();
   let saldoNu = null;
+  // v181: ongekoppelde terugboekingen (zie netTerugboekingenTegenBetalingen) van alle segmenten
+  // samen — puur ter informatie/weergave, ze zijn al buiten de rente/aflossing-berekening gehouden.
+  const ongekoppeldeTerugboekingen = [];
   for (const { segment, transactions: segTx } of withTx) {
     if (!segment.koopprijs || !segment.looptijd || !segment.maandbedrag || !segment.startdatum) { onvolledig = true; continue; }
     const hoofdsom = computeOnbetaaldGedeelteKoop(segment);
@@ -128,11 +192,12 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
     if (!amortization) continue;
     rows.push(...amortization.rows);
     saldoNu = amortization.saldoNu;
+    ongekoppeldeTerugboekingen.push(...(amortization.ongekoppeldeTerugboekingen || []));
   }
-  if (rows.length === 0) return renteNietBerekenbaar ? { rows: [], totaalRente: 0, totaalAflossing: 0, saldoNu: 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren } : null;
+  if (rows.length === 0) return renteNietBerekenbaar ? { rows: [], totaalRente: 0, totaalAflossing: 0, saldoNu: 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren, ongekoppeldeTerugboekingen } : null;
   const totaalRente = rows.reduce((a, r) => a + r.rente, 0);
   const totaalAflossing = rows.reduce((a, r) => a + r.aflossing, 0);
-  return { rows, totaalRente, totaalAflossing, saldoNu: saldoNu ?? 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren };
+  return { rows, totaalRente, totaalAflossing, saldoNu: saldoNu ?? 0, onvolledig, renteNietBerekenbaar, renteNietBerekenbaarJaren, ongekoppeldeTerugboekingen };
 }
 
 export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) {
