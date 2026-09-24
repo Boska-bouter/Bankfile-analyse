@@ -1156,7 +1156,12 @@ export default function App() {
     if (tx.isMirror) {
       const originalId = typeof tx.id === "string" ? Number(tx.id.replace(/-prive-spiegel$/, "")) : tx.id;
       const original = classified.find((t) => !t.isMirror && t.id === originalId);
-      if (original) return requestCategoryChange(original, patch);
+      // Het type van een spiegel staat vast (die is per definitie de privékant) — neem daarom
+      // alleen de categorie over en behoud het type van de originele boeking. Anders zou een
+      // categoriewijziging op de spiegel (die type "Prive" meestuurt) de zakelijke originele
+      // boeking ongemerkt naar Prive omzetten.
+      if (original) return requestCategoryChange(original, { ...patch, type: original.type });
+      return;
     }
     const key = keyForTx(tx);
     if (!key) {
@@ -1229,7 +1234,7 @@ export default function App() {
     };
     const handleUp = () => {
       const cur = dragStateRef.current;
-      if (cur && cur.overZone && cur.overZone !== cur.tx.type) {
+      if (cur && !cur.tx.isMirror && cur.overZone && cur.overZone !== cur.tx.type) {
         requestCategoryChange(cur.tx, { category: cur.tx.category, type: cur.overZone });
       }
       setDragState(null);

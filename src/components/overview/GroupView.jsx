@@ -334,14 +334,14 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                 <tr key={t.id} className={`hover:bg-slate-50 ${draggingTxId === t.id ? "opacity-30" : ""}`}>
                   {enableDrag && (
                     <td className="px-1 py-1 text-center">
-                      <span
+                      {!t.isMirror && <span
                         onPointerDown={(e) => onRowDragStart(e, t)}
                         className="inline-flex items-center justify-center cursor-grab text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md"
                         style={{ fontSize: "1.1rem", lineHeight: 1, width: "2.25rem", height: "2.25rem", touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
                         title="Sleep naar de andere tabel om Zakelijk/Prive te wijzigen"
                       >
                         ⠿
-                      </span>
+                      </span>}
                     </td>
                   )}
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
@@ -389,6 +389,18 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                     </select>
                   </td>
                   <td className="px-4 py-2">
+                    {t.isMirror ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
+                        title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
+                          `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
+                          "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Prive. " +
+                          "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
+                          "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
+                      >
+                        Prive <span className="text-[10px] font-normal">↔ spiegel</span>
+                      </span>
+                    ) : (
                     <select
                       value={t.type}
                       onChange={(e) => applyChange(t, { category: t.category, type: e.target.value })}
@@ -397,6 +409,7 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                       <option value="Prive">Prive</option>
                       <option value="Zakelijk">Zakelijk</option>
                     </select>
+                    )}
                   </td>
                   <td
                     className={`px-4 py-2 cursor-pointer ${expandedCell === `${t.id}:cp` ? "whitespace-normal break-words max-w-xs" : "max-w-[10rem] truncate"}`}
