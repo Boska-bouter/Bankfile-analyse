@@ -9,7 +9,7 @@
 // Volledig opt-in en 100% backwards compatible: alles hier draait om het (nieuwe, optionele)
 // `soort`-veld op een leasecontract-segment ("auto" | "machine"). Een segment zonder `soort` — dus
 // ieder bestaand dossier — telt nergens in mee; de bestaande berekening verandert dan totaal niet.
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, normalizeKenteken } from "./financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeAanschafwaardeBedrijfsmiddel, computeFinancialLeaseRate, normalizeKenteken } from "./financialLease.js";
 import { computeAfschrijvingPerJaar } from "./activa.js";
 import { computeFinancialLeaseAmortizationMultiSegment, groupAmortizationByYear } from "./loanAmortization.js";
 import { computeBtw } from "./btw.js";
@@ -33,14 +33,19 @@ export const AUTOKOSTEN_CATEGORIEN = ["Autokosten", "Brandstof", "Parkeren", "Ve
 // van een aparte berekening te bouwen. Geeft `null` als er niets te kapitaliseren valt (`soort` niet
 // gezet — het overgrote deel van bestaande dossiers).
 //
-// Aanschafwaarde = het gefinancierde bedrag bij aanvang van dít contract (computeOnbetaaldGedeelteKoop),
-// NIET de cataloguswaarde (die is alleen relevant voor de bijtelling hieronder). Restwaarde: bij een
-// financiële lease is er, anders dan bij een los aangeschaft bedrijfsmiddel, meestal geen apart
+// Aanschafwaarde = de volledige aanschafwaarde van het bedrijfsmiddel (koopprijs + BTW,
+// computeAanschafwaardeBedrijfsmiddel), NIET het gefinancierde bedrag (computeOnbetaaldGedeelteKoop)
+// — vóór v180 werd hier per abuis het GEFINANCIERDE bedrag gebruikt als afschrijvingsbasis, waardoor
+// een aanbetaling, inruilwaarde of het aflossen van een lopende lening de afschrijving ten onrechte
+// verlaagde. Wat het bedrijfsmiddel zelf heeft gekost verandert niet door de manier waarop het is
+// gefinancierd — zie de toelichting bij computeAanschafwaardeBedrijfsmiddel in financialLease.js.
+// Ook NIET de cataloguswaarde (die is alleen relevant voor de bijtelling hieronder). Restwaarde: bij
+// een financiële lease is er, anders dan bij een los aangeschaft bedrijfsmiddel, meestal geen apart
 // ingevulde restwaarde-verwachting — 0 is hier de behoudende, gebruikelijke aanname (zie ook hoe
 // activa.js zelf restwaarde behandelt: leeg/ontbrekend = 0).
 export function buildLeaseActivumFromSegment(segment) {
   if (!segment || !segment.soort) return null;
-  const aanschafwaarde = computeOnbetaaldGedeelteKoop(segment);
+  const aanschafwaarde = computeAanschafwaardeBedrijfsmiddel(segment);
   const ingevoerdTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
   // Vanaf v179: de fiscale 5-jaars-ondergrens (20%-afschrijvingscap) geldt voor ELK leaseobject met
   // een "soort" ingevuld, niet meer alleen voor een auto — een financieel-geleasede machine met een

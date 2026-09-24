@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
-  computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
+  computeOnbetaaldGedeelteKoop, computeAanschafwaardeBedrijfsmiddel, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
   generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
   normalizeKenteken,
 } from "../../tax/financialLease.js";
@@ -10,7 +10,7 @@ import { computeLeaseAfschrijvingVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JA
 import { eur } from "../../utils/amounts.js";
 
 const FIELDS_AANKOOP = [
-  ["koopprijs", "Koopprijs"],
+  ["koopprijs", "Koopprijs (excl. BTW)"],
   ["teBetalenBtw", "Te betalen BTW"],
   ["aanbetaling", "Aanbetaling"],
   ["inruilwaarde", "Inruilwaarde"],
@@ -152,6 +152,10 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       Number(form.bijtellingspercentage || 0) !== Number(matchedPreceding.bijtellingspercentage || 0));
 
   const onbetaaldGedeelteKoop = useMemo(() => computeOnbetaaldGedeelteKoop(form), [form]);
+  // v180 — apart van "onbetaald gedeelte koop" (de leaseschuld-basis hierboven): dit is de volledige
+  // aanschafwaarde van het bedrijfsmiddel (koopprijs + BTW), ongeacht aanbetaling/inruil/aflossing —
+  // zie tax/financialLease.js en de toelichting bij buildLeaseActivumFromSegment in autoBijtelling.js.
+  const aanschafwaardeBedrijfsmiddel = useMemo(() => computeAanschafwaardeBedrijfsmiddel(form), [form]);
   const renteJaarlijks = useMemo(() => computeFinancialLeaseRate(form), [form]);
   const totaleLeaseBetalingen = useMemo(() => computeTotaleLeaseBetalingen(form), [form]);
   const amortization = useMemo(() => {
@@ -309,9 +313,24 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         </div>
       </div>
 
-      <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-700">Onbetaald gedeelte koop</span>
-        <span className="text-sm font-mono font-semibold text-slate-900">{eur(onbetaaldGedeelteKoop)}</span>
+      <div className="border-t border-slate-200 pt-3 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">Onbetaald gedeelte koop (leaseschuld/rente-basis)</span>
+          <span className="text-sm font-mono font-semibold text-slate-900">{eur(onbetaaldGedeelteKoop)}</span>
+        </div>
+        {form.soort && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">Aanschafwaarde bedrijfsmiddel (afschrijvingsbasis)</span>
+            <span className="text-sm font-mono font-semibold text-slate-900">{eur(aanschafwaardeBedrijfsmiddel)}</span>
+          </div>
+        )}
+        {form.soort && aanschafwaardeBedrijfsmiddel !== onbetaaldGedeelteKoop && (
+          <p className="text-xs text-slate-400">
+            Deze twee bedragen wijken hier af doordat aanbetaling/inruilwaarde/inlossing lopende lening wél de
+            leaseschuld verlagen maar niet wat het bedrijfsmiddel zelf heeft gekost — de afschrijving rekent met
+            de aanschafwaarde, de lease-rente met het onbetaalde gedeelte koop.
+          </p>
+        )}
       </div>
 
       <div>

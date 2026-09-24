@@ -9,6 +9,28 @@ export function computeOnbetaaldGedeelteKoop(details) {
   return n(details.koopprijs) + n(details.teBetalenBtw) - n(details.aanbetaling) - n(details.inruilwaarde) + n(details.inlossingLopendeLening);
 }
 
+// v180 — twee verschillende bedragen die tot nu toe (per ongeluk) door elkaar liepen:
+//   - "Gefinancierd bedrag" (computeOnbetaaldGedeelteKoop hierboven) is wat er via DEZE lease nog
+//     openstaat/terugbetaald moet worden — koopprijs+BTW, verminderd met wat al op een andere manier
+//     is voldaan (aanbetaling, inruilwaarde, aflossing van een lopende lening). Dat is de juiste basis
+//     voor de leaseschuld/rente-amortisatie (computeFinancialLeaseRate/computeLoanAmortization) — die
+//     rekent immers alleen over het bedrag waarover daadwerkelijk rente wordt betaald.
+//   - "Aanschafwaarde bedrijfsmiddel" is wat het bedrijfsmiddel zelf waard is/heeft gekost — koopprijs
+//     + de daarover verschuldigde BTW, ZONDER de financieringswijze te verrekenen. Een aanbetaling,
+//     een ingeruild ander bedrijfsmiddel of het aflossen van een oude lening veranderen niets aan wat
+//     de auto/machine zelf heeft gekost, en horen dus niet in de afschrijvingsbasis te worden
+//     afgetrokken — dat drukt anders de afschrijving ten onrechte omlaag. Dit is de juiste basis voor
+//     de afschrijving (zie buildLeaseActivumFromSegment in tax/autoBijtelling.js).
+//
+// `koopprijs` is in deze tool altijd EXCLUSIEF BTW en `teBetalenBtw` is de daar afzonderlijk over
+// verschuldigde/betaalde BTW (vandaar dat het twee losse velden zijn in plaats van één "koopprijs
+// incl. BTW") — koopprijs + teBetalenBtw dubbelt dus niet, dat is precies de BTW-inclusieve
+// aanschafwaarde van het bedrijfsmiddel.
+export function computeAanschafwaardeBedrijfsmiddel(details) {
+  const n = (v) => (v === "" || v == null ? 0 : Number(v));
+  return n(details?.koopprijs) + n(details?.teBetalenBtw);
+}
+
 // Sectie 2 — de leasestructuur zelf. Lost de kasstromen (aanbetaling van de hoofdsom, dan de
 // betalingen) op naar het maandelijkse rentepercentage waarvoor de netto contante waarde van alle
 // betalingen precies gelijk is aan het gefinancierde bedrag (dezelfde soort berekening als IRR/
