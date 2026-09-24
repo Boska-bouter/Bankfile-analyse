@@ -158,6 +158,25 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     : estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
+  // v184 — punt 2 uit het reviewdocument: de "mogelijke KIA" hierboven werd tot nu toe alleen
+  // getoond, nooit verwerkt in de IB-schatting. KIA is een aftrekpost op de winst zelf (vóór
+  // zelfstandigenaftrek/mkb-winstvrijstelling), dus wordt hier een VOLLEDIG los, tweede scenario
+  // doorgerekend op (winst − mogelijke KIA) — de bestaande ibEstimate/zvwEstimate/heffingskortingen
+  // hierboven (op de winst ZONDER KIA) blijven het hoofdcijfer, ongewijzigd: niet elk bedrijfsmiddel
+  // kwalificeert voor KIA (personenauto's, grond, een drempel per bedrijfsmiddel — deze tool kent dat
+  // onderscheid niet uit bankgegevens), dus "ná KIA" is expliciet een scenario, geen vaststaand
+  // bedrag. Bij mogelijkeKia === 0 zijn beide scenario's vanzelf aan elkaar gelijk.
+  const winstNaKia = summary.winst - mogelijkeKia;
+  const ibEstimateNaKia = ondernemersaftrekVoorJaar
+    ? estimateIncomeTaxMetOndernemersaftrek(winstNaKia, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateIncomeTax(winstNaKia, year, zelfstandigenaftrekToegepast);
+  const zvwEstimateNaKia = ondernemersaftrekVoorJaar
+    ? estimateZvwMetOndernemersaftrek(winstNaKia, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateZvw(winstNaKia, year, zelfstandigenaftrekToegepast);
+  const heffingskortingenNaKia = ondernemersaftrekVoorJaar
+    ? estimateHeffingskortingenMetOndernemersaftrek(winstNaKia, year, ondernemersaftrekBedrag, startersaftrekToegepast)
+    : estimateHeffingskortingen(winstNaKia, year, zelfstandigenaftrekToegepast);
+  const zaScenariosNaKia = zaScenarios ? estimateIncomeTaxScenarios(winstNaKia, year) : null;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
 
   // "Inkoopkosten, uitbesteed werk en andere externe kosten" (v150: één gecombineerde rubriek) hier
@@ -436,9 +455,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage</h2>
   ${zaScenarios ? `
-  <p>Urencriterium onbekend — twee scenario's: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong>.</p>
+  <p>Urencriterium onbekend — twee scenario's: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.belasting)}</strong>.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: 1. Mét zelfstandigenaftrek: <strong>${eur(zaScenariosNaKia.metZelfstandigenaftrek.belasting)}</strong>. 2. Zonder: <strong>${eur(zaScenariosNaKia.zonderZelfstandigenaftrek.belasting)}</strong>.` : ""}</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool." : ""}</p>
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
   <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
@@ -451,7 +470,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     }</p>
   ` : ""}
   `}
-  <p>Geschatte bijdrage Zvw: <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (gemaximeerd)" : ""}.</p>
+  <p>Geschatte bijdrage Zvw: <strong>${eur(zvwEstimate.bijdrage)}</strong>${zvwEstimate.gemaximeerd ? " (gemaximeerd)" : ""}.${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(zvwEstimateNaKia.bijdrage)}</strong>${zvwEstimateNaKia.gemaximeerd ? " (gemaximeerd)" : ""}.` : ""}</p>
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
   <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
 
@@ -462,6 +481,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
   ${investeringenForYear.totaalInvestering > 0 ? `
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
+  ${mogelijkeKia > 0 ? `
+  <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. personenauto's, grond en woningen meestal niet, en elk bedrijfsmiddel moet minimaal ca. €450 kosten) — deze tool kent dat onderscheid niet uit bankgegevens. Controleer zelf welke investeringen hierboven daadwerkelijk kwalificeren voordat je de KIA toepast.</p>
+  ` : ""}
   ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel.</p>`}
 
   ${algemeneGegevensHtml}`;
