@@ -967,10 +967,10 @@ export default function App() {
     setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
   };
   const businessIncomeEntries = useMemo(() => computeIncomeCategorySummary(classified), [classified]);
-  const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke uitgaven"), [classified]);
+  const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkoop/uitgaven"), [classified]);
   const reclassifyBusinessEntry = (item, newMainCategory) => {
     const newSubtype = MAIN_CATEGORY_DEFAULT_SUBTYPE[newMainCategory] || newMainCategory;
-    // "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke uitgaven (leveranciers)" zijn per definitie
+    // "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop/uitgaven (leveranciers)" zijn per definitie
     // al bevestigd Zakelijk — hier alleen de categorie wijzigen mag dat nooit stilzwijgend naar
     // Prive omzetten (defaultTypeForCategory zou voor de meeste categorieën "Prive" teruggeven).
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: "Zakelijk" });
@@ -2342,7 +2342,7 @@ export default function App() {
             )}
             {!expandedBusinessIncomeList && (
               <section className="rounded-lg border border-slate-200 bg-white p-5">
-                <h2 className="text-sm font-semibold mb-1">Zakelijke uitgaven (leveranciers)</h2>
+                <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
                   automatisch het label Zakelijk.
@@ -2355,7 +2355,7 @@ export default function App() {
                   chipClass="bg-teal-100 text-teal-800"
                   addButtonClass="bg-teal-600 hover:bg-teal-700"
                   entries={businessExpenseEntries}
-                  entriesLabel="Nu herkend als Zakelijke uitgaven"
+                  entriesLabel="Nu herkend als Zakelijke inkoop/uitgaven"
                   onReclassify={reclassifyBusinessEntry}
                   isExpanded={expandedBusinessExpenseList}
                   onToggleExpand={() => setExpandedBusinessExpenseList((v) => !v)}

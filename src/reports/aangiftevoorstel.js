@@ -208,7 +208,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // (netto, exclusief BTW, zelfde sumCatNetto-conventie als de rest van boxMapping.js) — geen nieuwe
   // berekening, puur een andere weergave van precies dezelfde bedragen. "Andere externe kosten" heeft
   // in deze tool (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
-  const inkoopkostenBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Zakelijke uitgaven")?.totaal || 0;
+  const inkoopkostenBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Zakelijke inkoop/uitgaven")?.totaal || 0;
   const uitbesteedWerkBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Inhuur personeel")?.totaal || 0;
   const andereExterneKostenBedrag = 0;
 

@@ -140,7 +140,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // niet mee, alleen hun rente resp. afschrijving via renteAftrekbaar/winstCorrectie hieronder).
       if (behandeling === "kosten" && !isApparatuurActivum) zakelijkeKostenNetto += -(bedrag - btw);
     }
-    if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -bedrag;
+    if (tx.category === "Zakelijke inkoop/uitgaven") zakelijkeUitgaven += -bedrag;
     if (bedrag < 0) {
       if (fixedCategories.includes(tx.category)) zakVast += Math.abs(bedrag);
       else zakVariabel += Math.abs(bedrag);

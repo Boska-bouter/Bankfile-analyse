@@ -209,7 +209,7 @@ export const DEFAULT_RULES = [
     "temu", "otto.nl", "de bijenkorf", "bijenkorf", "fonq", "alternate",
   ],
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
-  { name: "Zakelijke uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
+  { name: "Zakelijke inkoop/uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
     description: "Algemene zakelijke kosten die nergens anders onder vallen." },
   // Bewust GEEN zoekwoorden: net als "Huur (deels zakelijk)" wordt dit subtype nooit automatisch
   // toegekend. Streaming-/softwareabonnementen matchen anders via de zoekwoorden bij "Prive overige
@@ -217,7 +217,7 @@ export const DEFAULT_RULES = [
   // aantoonbaar ook zakelijk gebruikt wordt zelf, bewust, hierheen verplaatsen via de
   // categorie-dropdown, want alleen dan is er een percentage-zakelijk-gebruik van toepassing (zie
   // tax/categorySplit.js). Bij "Inkoop & zakelijke uitgaven" ingedeeld (zelfde groep als "Zakelijke
-  // uitgaven"), niet bij "Telecom & abonnementen" — dat zijn de vaste telefonie/internet-kosten.
+  // inkoop/uitgaven"), niet bij "Telecom & abonnementen" — dat zijn de vaste telefonie/internet-kosten.
   { name: "Streaming diensten", color: "bg-violet-100 text-violet-800", keywords: [],
     description: "Streaming-abonnement (bijv. video/muziek) dat aantoonbaar deels zakelijk gebruikt wordt — in tegenstelling tot \"Prive overige abonnementen\" (altijd 100% privé) is hier een handmatig ingesteld percentage zakelijk gebruik van toepassing. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Software & Online diensten", color: "bg-sky-100 text-sky-800", keywords: [],
@@ -256,7 +256,7 @@ export const CATEGORY_ORDER = [
   "Terugboeking van prive",
   "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
-  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke uitgaven",
+  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -347,7 +347,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Betaalautomaat kosten": "kosten", "Personeel: overig": "kosten", "Reiskosten (OV)": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
-  "Zakelijk mobiel/internet": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke uitgaven": "kosten",
+  "Zakelijk mobiel/internet": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke inkoop/uitgaven": "kosten",
   "Streaming diensten": "kosten", "Software & Online diensten": "kosten",
   // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
   "DGA-salaris": "kosten", "Vergoeding/huur aan holding": "kosten",
@@ -355,9 +355,14 @@ export const CATEGORY_FISCAL_TREATMENT = {
 };
 
 // "Zakelijke inkoop" is samengevoegd met "Zakelijke uitgaven" — bestaande, eerder opgeslagen
-// correcties/regels met de oude naam worden bij het laden automatisch omgezet.
+// correcties/regels met de oude naam worden bij het laden automatisch omgezet. "Zakelijke uitgaven"
+// zelf is later (v187) hernoemd naar "Zakelijke inkoop/uitgaven" — de subcategorie heette daarvoor
+// hetzelfde als haar hoofdcategorie "Inkoop & zakelijke uitgaven", wat verwarrend zocht. De
+// migratieketen loopt door (zie migrateLegacyCategoryName): "Zakelijke inkoop" en "Overig zakelijk:
+// overig" komen hierdoor via "Zakelijke uitgaven" alsnog op de nieuwe naam uit.
 export const LEGACY_CATEGORY_RENAMES = {
   "Zakelijke inkoop": "Zakelijke uitgaven",
+  "Zakelijke uitgaven": "Zakelijke inkoop/uitgaven",
   "Telecom & abonnementen": "Zakelijk mobiel/internet",
   "Energie": "Energie-water",
   "Prive - vrijetijd-uitgaan-vakantie": "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -575,7 +580,7 @@ export const SUBTYPE_TO_MAIN = {
   "Zakelijke inkomsten 0%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 9%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 21%": "Zakelijke inkomsten",
-  "Zakelijke uitgaven": "Inkoop & zakelijke uitgaven",
+  "Zakelijke inkoop/uitgaven": "Inkoop & zakelijke uitgaven",
   // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
   "DGA-salaris": "Personeel",
   "Dividenduitkering": "Financiering",
@@ -593,7 +598,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Zakelijke inkomsten": "Zakelijke inkomsten",
   "Huisvesting": "Huur",
   "Vervoer & auto": "Autokosten",
-  "Inkoop & zakelijke uitgaven": "Zakelijke uitgaven",
+  "Inkoop & zakelijke uitgaven": "Zakelijke inkoop/uitgaven",
   "Apparatuur & inventaris": "Zakelijk - apparatuur/machines",
   "Personeel": "Personeel: overig",
   "Telecom & abonnementen": "Zakelijk overige abonnementen",

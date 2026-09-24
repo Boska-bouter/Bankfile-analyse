@@ -20,7 +20,7 @@ export function computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExc
 // zijn (belastingafdrachten, aflossing op leningen/lease, geldbewegingen naar/van privé) staan
 // bewust apart van deze winstberekening, net als op de aangifte zelf.
 const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
-const RUBRIEK_INKOOP = ["Zakelijke uitgaven", "Inhuur personeel"];
+const RUBRIEK_INKOOP = ["Zakelijke inkoop/uitgaven", "Inhuur personeel"];
 // Vanaf v161 gesplitst in twee: de categorieën die meetellen voor de bijtelling/onttrekking-
 // aftopping bij een geleasede auto (exact AUTOKOSTEN_CATEGORIEN uit autoBijtelling.js — deze horen
 // nu bij de samengevoegde "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die

@@ -20,7 +20,7 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 
 // Alleen deze categorieën komen in aanmerking voor de %-splitsing (in overleg bevestigd) — dit zijn
 // kosten die in de praktijk vaak deels zakelijk/deels privé zijn, ongeacht welke rekening betaalt.
-// Andere kosten-/privé-categorieën (Zakelijke uitgaven, Uitbetalen loon, Verkoop activa, Boekhouder
+// Andere kosten-/privé-categorieën (Zakelijke inkoop/uitgaven, Uitbetalen loon, Verkoop activa, Boekhouder
 // accountant & administratie, Belastingen (incl. naheffingen), Onderhoud apparatuur/machines,
 // Betaalautomaat kosten, Uitbetaling aan prive, Prive opnames, Lease (operationeel/financieel),
 // etc.) zijn typisch volledig van het ene of het andere type — daar zou een percentage-instelling

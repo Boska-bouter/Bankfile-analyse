@@ -164,7 +164,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
   const explicitBizExpense = businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
   if (explicitBizExpense) {
-    return { category: "Zakelijke uitgaven", type };
+    return { category: "Zakelijke inkoop/uitgaven", type };
   }
 
   if (looksLikePerson(tx.counterparty || tx.description)) {

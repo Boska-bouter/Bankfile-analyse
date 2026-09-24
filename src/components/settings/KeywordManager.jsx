@@ -4,7 +4,7 @@ import { MAIN_CATEGORY_ORDER, mainCategoryOf } from "../../classification/catego
 import { eur } from "../../utils/amounts.js";
 
 // Generieke beheerder voor een lijst losse tekst-items (tegenpartijnamen) — gebruikt voor zowel
-// "Zakelijke tegenpartijen (inkomsten)" als "Zakelijke uitgaven (leveranciers)". `entries`
+// "Zakelijke tegenpartijen (inkomsten)" als "Zakelijke inkoop/uitgaven (leveranciers)". `entries`
 // (optioneel) toont daaronder een uitklapbaar overzicht van wat er nu al op basis hiervan is
 // herkend — met een dropdown per tegenpartij om de categorie alsnog aan te passen, en de bank-
 // omschrijving (klik om de volledige tekst te tonen/verbergen).
