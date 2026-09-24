@@ -310,7 +310,6 @@ export default function App() {
   const overigReviewSectionRef = useRef(null);
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
-  const aangiftePickerRef = useRef(null); // v195-fix: scroll-doel voor het "Indicatieve aangifteberekening bekijken"-knopje bovenaan de pagina
   const btwSettingsSectionRef = useRef(null);
   const checklistSectionRef = useRef(null);
   const obIbSectionRef = useRef(null);
@@ -2257,15 +2256,12 @@ export default function App() {
               // aangifteberekening voor alléén het actieve jaar, zonder mogelijkheid om andere/
               // meerdere jaren te kiezen — terwijl de andere knop met exact dezelfde tekst (verderop
               // op de pagina) wél eerst de jaren-picker opent. Nu doen beide knoppen hetzelfde: de
-              // picker openen (die zelf al "Berekening bekijken" voor het actieve jaar als
-              // snelkoppeling aanbiedt, plus "Ander jaar/meerdere jaren kiezen").
+              // picker openen. v197-fix: de picker is nu een centraal modal-venster (in plaats van
+              // een blok verderop op de pagina + scroll-naar-beneden), dus die verschijnt meteen
+              // zichtbaar, ongeacht scrollpositie.
               onOpenAangiftevoorstel={() => {
                 setShowAangifteMeerdereJaren(false);
                 setShowAangifteYearPicker(true);
-                // v195-fix: dit knopje staat bovenaan de pagina, ver boven het picker-paneel
-                // dat hierdoor verschijnt — zonder scroll zou het net lijken alsof er niets
-                // gebeurt. Kleine timeout zodat het paneel eerst gerenderd is.
-                setTimeout(() => aangiftePickerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
               checklistData={checklistData}
               rechtsvorm={rechtsvorm}
@@ -2656,76 +2652,87 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Eerste stap: direct het actieve jaar met status en openstaande punten, zodat
-                    iemand niet meteen een jaren-selectie hoeft te maken voor de meest voorkomende
-                    situatie (het jaar waar je toch al in zit). "Ander jaar/meerdere jaren kiezen"
-                    opent pas daarna de bestaande checkbox-lijst. */}
-                {showAangifteYearPicker && !showAangifteMeerdereJaren && (
-                  <div ref={aangiftePickerRef} className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
-                    <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
-                    {yearlyProgress[activeYear] && (
-                      <div>
-                        <p className="text-sm flex items-center gap-1.5">
-                          <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
-                          <span className="font-medium">
-                            {aangifteStatusTekst(yearlyProgress[activeYear].status, aangifteOpenPunten.length)}
-                          </span>
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">Gegevenscontrole, geen fiscale beoordeling.</p>
-                      </div>
-                    )}
-                    {aangifteOpenPunten.length > 0 && (
-                      <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
-                        {aangifteOpenPunten.map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className="flex gap-2 flex-wrap pt-1">
-                      <button
-                        onClick={() => exportAangiftevoorstel([activeYear])}
-                        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-                      >
-                        Berekening bekijken
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
-                          setShowAangifteMeerdereJaren(true);
-                        }}
-                        className="text-xs text-slate-400 hover:text-slate-600 underline"
-                      >
-                        Ander jaar/meerdere jaren kiezen
-                      </button>
-                      <button onClick={() => setShowAangifteYearPicker(false)} className="text-xs text-slate-400 hover:text-slate-600">
-                        Annuleren
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {showAangifteYearPicker && showAangifteMeerdereJaren && (
-                  <div ref={aangiftePickerRef} className="rounded-lg border border-slate-300 bg-white p-4">
-                    <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
-                    <div className="flex flex-wrap gap-3 mb-3">
-                      {years.map((year) => (
-                        <label key={year} className="inline-flex items-center gap-1.5 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={selectedAangifteYears.includes(year)}
-                            onChange={(e) => setSelectedAangifteYears((prev) => (e.target.checked ? [...prev, year].sort() : prev.filter((y) => y !== year)))}
-                          />
-                          {year}
-                        </label>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => exportAangiftevoorstel()} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
-                        Berekening tonen
-                      </button>
-                      <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                        Terug
-                      </button>
+                {/* v195-fix / v197-fix: de jaren-kiezer verscheen eerst als een blok ver onderaan
+                    de pagina, met een scroll-naar-beneden bij het klikken op het knopje bovenaan —
+                    dat voelde onrustig/onverwacht. Nu een centraal modal-venster, direct zichtbaar
+                    op de plek waar je al kijkt, ongeacht scrollpositie. Eerste stap: direct het
+                    actieve jaar met status en openstaande punten, zodat iemand niet meteen een
+                    jaren-selectie hoeft te maken voor de meest voorkomende situatie (het jaar waar
+                    je toch al in zit). "Ander jaar/meerdere jaren kiezen" schakelt binnen hetzelfde
+                    venster door naar de checkbox-lijst. */}
+                {showAangifteYearPicker && (
+                  <div
+                    className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2"
+                    onClick={() => setShowAangifteYearPicker(false)}
+                  >
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                      {!showAangifteMeerdereJaren ? (
+                        <>
+                          <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
+                          {yearlyProgress[activeYear] && (
+                            <div>
+                              <p className="text-sm flex items-center gap-1.5">
+                                <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
+                                <span className="font-medium">
+                                  {aangifteStatusTekst(yearlyProgress[activeYear].status, aangifteOpenPunten.length)}
+                                </span>
+                              </p>
+                              <p className="text-xs text-slate-400 mt-0.5">Gegevenscontrole, geen fiscale beoordeling.</p>
+                            </div>
+                          )}
+                          {aangifteOpenPunten.length > 0 && (
+                            <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
+                              {aangifteOpenPunten.map((p, i) => (
+                                <li key={i}>{p}</li>
+                              ))}
+                            </ul>
+                          )}
+                          <div className="flex gap-2 flex-wrap pt-1">
+                            <button
+                              onClick={() => exportAangiftevoorstel([activeYear])}
+                              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                            >
+                              Berekening bekijken
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
+                                setShowAangifteMeerdereJaren(true);
+                              }}
+                              className="text-xs text-slate-400 hover:text-slate-600 underline"
+                            >
+                              Ander jaar/meerdere jaren kiezen
+                            </button>
+                            <button onClick={() => setShowAangifteYearPicker(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                              Annuleren
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
+                          <div className="flex flex-wrap gap-3 mb-3">
+                            {years.map((year) => (
+                              <label key={year} className="inline-flex items-center gap-1.5 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedAangifteYears.includes(year)}
+                                  onChange={(e) => setSelectedAangifteYears((prev) => (e.target.checked ? [...prev, year].sort() : prev.filter((y) => y !== year)))}
+                                />
+                                {year}
+                              </label>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => exportAangiftevoorstel()} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                              Berekening tonen
+                            </button>
+                            <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                              Terug
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
