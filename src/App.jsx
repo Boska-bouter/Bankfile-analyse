@@ -310,6 +310,7 @@ export default function App() {
   const overigReviewSectionRef = useRef(null);
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
+  const aangiftePickerRef = useRef(null); // v195-fix: scroll-doel voor het "Indicatieve aangifteberekening bekijken"-knopje bovenaan de pagina
   const btwSettingsSectionRef = useRef(null);
   const checklistSectionRef = useRef(null);
   const obIbSectionRef = useRef(null);
@@ -2252,7 +2253,20 @@ export default function App() {
               activeYear={activeYear}
               yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
               workflowSteps={workflowSteps}
-              onOpenAangiftevoorstel={() => exportAangiftevoorstel([activeYear])}
+              // v195-fix: dit knopje ging tot nu toe altijd rechtstreeks naar de Indicatieve
+              // aangifteberekening voor alléén het actieve jaar, zonder mogelijkheid om andere/
+              // meerdere jaren te kiezen — terwijl de andere knop met exact dezelfde tekst (verderop
+              // op de pagina) wél eerst de jaren-picker opent. Nu doen beide knoppen hetzelfde: de
+              // picker openen (die zelf al "Berekening bekijken" voor het actieve jaar als
+              // snelkoppeling aanbiedt, plus "Ander jaar/meerdere jaren kiezen").
+              onOpenAangiftevoorstel={() => {
+                setShowAangifteMeerdereJaren(false);
+                setShowAangifteYearPicker(true);
+                // v195-fix: dit knopje staat bovenaan de pagina, ver boven het picker-paneel
+                // dat hierdoor verschijnt — zonder scroll zou het net lijken alsof er niets
+                // gebeurt. Kleine timeout zodat het paneel eerst gerenderd is.
+                setTimeout(() => aangiftePickerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+              }}
               checklistData={checklistData}
               rechtsvorm={rechtsvorm}
               korRegeling={korRegeling}
@@ -2647,7 +2661,7 @@ export default function App() {
                     situatie (het jaar waar je toch al in zit). "Ander jaar/meerdere jaren kiezen"
                     opent pas daarna de bestaande checkbox-lijst. */}
                 {showAangifteYearPicker && !showAangifteMeerdereJaren && (
-                  <div className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
+                  <div ref={aangiftePickerRef} className="rounded-lg border border-slate-300 bg-white p-4 space-y-3">
                     <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
                     {yearlyProgress[activeYear] && (
                       <div>
@@ -2691,7 +2705,7 @@ export default function App() {
                 )}
 
                 {showAangifteYearPicker && showAangifteMeerdereJaren && (
-                  <div className="rounded-lg border border-slate-300 bg-white p-4">
+                  <div ref={aangiftePickerRef} className="rounded-lg border border-slate-300 bg-white p-4">
                     <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
                     <div className="flex flex-wrap gap-3 mb-3">
                       {years.map((year) => (
