@@ -72,10 +72,15 @@ function buildYearSectionBv(
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
-  const vpbEstimate = estimateVpb(summary.winst, year);
+  // v183: "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee in
+  // yearlySummary.js (zie de toelichting daar) — vóór deze aanpassing werd hier daarom niets meer
+  // teruggegeven voor de aanschaf van een bedrijfsmiddel. activaSummary/activaAfschrijvingForYear
+  // moeten daarom vóór computeYearlySummary worden bepaald, zodat de daadwerkelijk berekende
+  // afschrijving alsnog wordt meegeteld — exact dezelfde constructie als bij de zzp-variant.
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
+  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, activaAfschrijvingForYear?.totaalAfschrijving || 0);
+  const vpbEstimate = estimateVpb(summary.winst, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
 
   // DGA-salaris en dividend van dit jaar — voor de gebruikelijk-looncheck en de box 2-schatting.
@@ -316,11 +321,15 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   // vóórdat de cumulatieve reeks kan worden opgebouwd.
   const jaren = [...yearsToInclude].sort((a, b) => a - b);
   const resultaatNaVpbPerJaar = {};
+  // v183: apart bepaald zodat computeActivaAfschrijvingForYear elk jaar dezelfde afschrijving
+  // meetelt als buildYearSectionBv verderop (zie de toelichting daar).
+  const activaSummaryVoorReserve = computeActivaSummary(classified);
   for (const year of jaren) {
     const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
     const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
     const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-    const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar);
+    const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummaryVoorReserve, activaDetails || {}, year);
+    const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, activaAfschrijvingForYear?.totaalAfschrijving || 0);
     const vpbEstimate = estimateVpb(summary.winst, year);
     resultaatNaVpbPerJaar[year] = summary.winst - vpbEstimate.belasting;
   }

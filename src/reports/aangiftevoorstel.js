@@ -88,7 +88,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
 // Alleen de winst voor een jaar — gebruikt in een pre-pass over alle te rapporteren jaren om de
 // verrekening van niet-gerealiseerde zelfstandigenaftrek (die de jaren chronologisch aan elkaar
 // koppelt) te kunnen berekenen vóórdat de eigenlijke jaarsecties worden opgebouwd.
-function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails) {
+function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails) {
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
@@ -98,7 +98,14 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
-  const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) + (kmVergoedingForYear?.bedrag || 0);
+  // v183: "Zakelijk - apparatuur/machines" telt niet meer als volledige kosten mee (zie
+  // yearlySummary.js) — in plaats daarvan telt hier de daadwerkelijk berekende afschrijving mee,
+  // exact dezelfde constructie als de financiële-lease-afschrijving hierboven.
+  const activaSummary = computeActivaSummary(classified);
+  const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
+  const winstCorrectie =
+    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) +
+    (kmVergoedingForYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus).winst;
 }
 
@@ -116,7 +123,15 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
-  const winstCorrectie = (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) + (kmVergoedingForYear?.bedrag || 0);
+  // v183: activaSummary/activaAfschrijvingForYear vóór de winstCorrectie berekend (was ná summary
+  // hieronder) — "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee
+  // in yearlySummary.js, dus de daadwerkelijk berekende afschrijving moet hier alsnog worden
+  // meegeteld, exact dezelfde constructie als de financiële-lease-afschrijving hierboven.
+  const activaSummary = computeActivaSummary(classified);
+  const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
+  const winstCorrectie =
+    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) +
+    (kmVergoedingForYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's,
   // niets aangegeven (of "ja") houdt het bestaande gedrag aan (mét zelfstandigenaftrek) zodat
@@ -141,8 +156,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const heffingskortingen = ondernemersaftrekVoorJaar
     ? estimateHeffingskortingenMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
-  const activaSummary = computeActivaSummary(classified);
-  const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
@@ -464,7 +477,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     .filter((year) => zelfstandigenaftrekStatus?.[year] !== "onbekend")
     .map((year) => ({
       year,
-      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails),
+      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails),
       zelfstandigenaftrekStatus: zelfstandigenaftrekStatus?.[year],
       startersaftrekToegepast: startersaftrekStatus?.[year] === "ja",
     }));

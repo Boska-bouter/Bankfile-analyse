@@ -103,7 +103,23 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     const btwVol = rawBtw(tx, categoryBtwRates, btwVerlegd);
     const btw = btwVol * factor;
     const bedrag = tx.amount * factor;
-    if (behandeling !== "financiering") {
+    // v183 — "Zakelijk - apparatuur/machines" is een bedrijfsmiddel (zie tax/activa.js): de aanschaf
+    // zelf mag fiscaal niet in één keer als kosten worden afgetrokken, alleen de jaarlijkse
+    // afschrijving. Vóór v183 werd hier toch het VOLLEDIGE aanschafbedrag als normale "kosten"-
+    // categorie meegeteld in zakBruto/zakBtwTotaal/zakelijkeKostenNetto — tegelijk toonde het
+    // Aangiftevoorstel (boxMapping.js) er al wél de correct berekende afschrijving voor, zodra een
+    // activum was geregistreerd bij "Activa". Dat gaf twee verschillende bedragen voor dezelfde
+    // aanschaf: de getoonde "Zakelijke kosten" gebruikte de afschrijving, maar de onderliggende
+    // "winst" (en dus de IB/Zvw-schatting) gebruikte nog de volledige aanschaf. Vanaf nu telt de
+    // aanschaftransactie zelf hier NIET meer mee (net als "financiering" hieronder) — de aanroeper
+    // (App.jsx/aangiftevoorstel(-bv).js) telt in plaats daarvan de daadwerkelijk berekende
+    // afschrijving (computeActivaAfschrijvingForYear, tax/activa.js) op bij de winstCorrectie die
+    // hier binnenkomt, exact dezelfde constructie als bij de financiële-lease-afschrijving hierboven.
+    // Zonder geregistreerd activum (nog niets ingevuld bij "Activa") is die afschrijving € 0 — dan
+    // telt de aanschaf dit jaar terecht nergens in de winst mee, precies zoals het Aangiftevoorstel
+    // dat al liet zien ("dit mag niet in één keer als kosten worden afgetrokken").
+    const isApparatuurActivum = tx.category === "Zakelijk - apparatuur/machines";
+    if (behandeling !== "financiering" && !isApparatuurActivum) {
       zakBruto += bedrag;
       zakBtwTotaal += btw;
     }
@@ -114,12 +130,15 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     } else {
       // Een positief bedrag hier is een terugbetaling/creditnota — die verlaagt de kosten
       // (en de bijbehorende voorbelasting) juist, in plaats van er verkeerd bovenop te komen.
+      // De voorbelasting (BTW-aangifte) blijft hier ONVERANDERD ook voor een apparatuur/machine-
+      // aanschaf — dat is een apart mechanisme (BTW-teruggave in het kwartaal van aanschaf) dat los
+      // staat van de afschrijving over meerdere jaren voor de IB (zie hierboven).
       if (!voorbelastingExcluded.includes(tx.category)) voorbelasting += -btw;
       // Netto (exclusief BTW) zakelijke kosten — dezelfde "bedrag min BTW"-correctie als bij de
       // omzet hierboven, en dezelfde definitie als in het Aangiftevoorstel (computeIbBoxMapping) —
-      // exclusief financiering (die telt hier bewust niet mee, alleen de rente daarvan via
-      // renteAftrekbaar, zie "winst" hieronder).
-      if (behandeling === "kosten") zakelijkeKostenNetto += -(bedrag - btw);
+      // exclusief financiering én exclusief een apparatuur/machine-aanschaf (die tellen hier bewust
+      // niet mee, alleen hun rente resp. afschrijving via renteAftrekbaar/winstCorrectie hieronder).
+      if (behandeling === "kosten" && !isApparatuurActivum) zakelijkeKostenNetto += -(bedrag - btw);
     }
     if (tx.category === "Zakelijke uitgaven") zakelijkeUitgaven += -bedrag;
     if (bedrag < 0) {

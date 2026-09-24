@@ -1351,8 +1351,17 @@ export default function App() {
     () => (activeYear && rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, activeYear) : null),
     [kmVergoedingDetails, autoStatus, activeYear, rechtsvorm]
   );
+  // v183: hier naartoe verplaatst (was verderop) — "Zakelijk - apparatuur/machines" telt sinds v183
+  // niet meer als volledige kosten mee in yearlySummary.js (zie de toelichting daar), dus de
+  // daadwerkelijk berekende afschrijving moet worden meegeteld in winstCorrectieActiveYear hieronder,
+  // exact dezelfde constructie als de financiële-lease-afschrijving.
+  const activaAfschrijvingForYear = useMemo(
+    () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
+    [activaSummary, activaDetails, activeYear]
+  );
   const winstCorrectieActiveYear =
-    (leaseAutoKostenForActiveYear?.winstCorrectie || 0) - (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) + (kmVergoedingForActiveYear?.bedrag || 0);
+    (leaseAutoKostenForActiveYear?.winstCorrectie || 0) - (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) +
+    (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   const yearlySummary = useMemo(
     () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage, autoStatus) : null),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentage, autoStatus]
@@ -1383,11 +1392,17 @@ export default function App() {
         : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
-      const winstCorrectie = (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) + (kmVergoeding?.bedrag || 0);
+      // v183: "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee in
+      // yearlySummary.js — de daadwerkelijk berekende afschrijving moet daarom hier worden meegeteld,
+      // exact dezelfde constructie als de financiële-lease-afschrijving.
+      const activaAfschrijving = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
+      const winstCorrectie =
+        (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) +
+        (kmVergoeding?.bedrag || 0) + (activaAfschrijving?.totaalAfschrijving || 0);
       map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaSummary, activaDetails]);
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
   // afschrijving (berekend als Activa is ingevuld, anders het bruto aanschafbedrag ter herkenning)
@@ -1449,10 +1464,6 @@ export default function App() {
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
-  );
-  const activaAfschrijvingForYear = useMemo(
-    () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
-    [activaSummary, activaDetails, activeYear]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
