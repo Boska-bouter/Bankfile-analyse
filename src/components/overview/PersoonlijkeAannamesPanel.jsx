@@ -15,6 +15,7 @@ export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus,
   startersaftrekStatus, onSetStartersaftrekStatus,
   autoStatus, onSetAutoStatus,
+  autoWizardStatus, onOpenAutoActivaModal,
   activaSummary, activaDetails, onOpenHelp,
   gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
@@ -152,13 +153,28 @@ export default function PersoonlijkeAannamesPanel({
               <option value="beide">Beide — zowel een auto op de zaak als een privéauto zakelijk gebruikt</option>
             </select>
             <p className="mt-1.5 text-xs text-slate-400">
-              Bepaalt op termijn welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen
+              Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" (of "beide") tellen
               werkelijke autokosten (brandstof, parkeren, verzekering, MRB) mee met een
-              bijtellingscorrectie voor privégebruik; bij "privéauto zakelijk gebruikt" geldt in plaats
-              daarvan een kilometervergoeding en tellen brandstof/parkeren niet apart mee. Deze versie
-              van de tool slaat je keuze al op, maar de berekening gebruikt dit nog niet — dat volgt in
-              een volgende versie.
+              bijtellingscorrectie voor privégebruik, en vervalt de generieke %-splitsing op
+              Brandstof/Parkeren voor dit jaar; bij "privéauto zakelijk gebruikt" geldt in plaats daarvan
+              een kilometervergoeding (nog niet in deze versie).
             </p>
+            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
+              (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
+                <button
+                  onClick={onOpenAutoActivaModal}
+                  className="mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""} auto op de zaak instellen →
+                </button>
+              )}
+            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
+              autoWizardStatus?.soort === "financial" && (
+                <p className="mt-2 text-xs text-slate-400">
+                  Bij financial lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
+                  het leningen/lease-overzicht), niet hier.
+                </p>
+              )}
           </div>
 
           {gedeeldeHuur && (
