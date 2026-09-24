@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   estimateIncomeTax, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
+  resolveZelfstandigenaftrekStatusForYear,
 } from "../../tax/incomeTax.js";
 import { computeInvesteringenForYear } from "../../tax/activa.js";
 import { eur } from "../../utils/amounts.js";
@@ -12,7 +13,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // KIA die daarvan (en van eigen bedrijfsmiddel-investeringen) afhangen. Dit is bewust een apart,
 // expliciet paneel — de tool mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
 export default function PersoonlijkeAannamesPanel({
-  activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus,
+  activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
@@ -36,7 +37,16 @@ export default function PersoonlijkeAannamesPanel({
   // dus alleen de zichtbaarheid van het blok is aangepast, niet de onderliggende berekeningen.
   if (!activeYear) return null;
 
-  const status = zelfstandigenaftrekStatus?.[activeYear] || "onbekend_default";
+  // v194 — punt 13 uit het reviewdocument: een onbeantwoord jaar liet dit paneel altijd stilzwijgend
+  // op "Ja" rekenen (via het "onbekend_default"-sentinel hieronder) — dat gaf een gebruiker het idee
+  // dat de tool het al ongeveer goed had, terwijl het urencriterium juist niet uit bankgegevens is af
+  // te leiden. Voor een nieuw dossier (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar nu naar
+  // "onbekend" (beide scenario's) in plaats van stilzwijgend "ja" — zie resolveZelfstandigenaftrekStatusForYear.
+  // Voor een dossier van vóór deze wijziging blijft het oude gedrag ("ja") behouden. rawStatus (i.p.v.
+  // het geresolveerde status) bepaalt of de dropdown de placeholder toont — het onderscheid tussen
+  // "nog niet gekozen" en "expliciet gekozen" blijft zo zichtbaar, ook al is het gedrag al bepaald.
+  const rawStatus = zelfstandigenaftrekStatus?.[activeYear];
+  const status = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, activeYear, zaLegacyJaDefault);
   const zelfstandigenaftrekToegepast = status !== "nee";
   const startersaftrekAan = startersaftrekStatus?.[activeYear] === "ja";
 
@@ -64,19 +74,23 @@ export default function PersoonlijkeAannamesPanel({
               Voldaan aan het urencriterium voor de zelfstandigenaftrek in {activeYear}?
             </label>
             <select
-              value={status === "onbekend_default" ? "" : status}
+              value={rawStatus == null ? "" : rawStatus}
               onChange={(e) => onSetZelfstandigenaftrekStatus(activeYear, e.target.value || null)}
               className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
             >
-              <option value="">Niet aangegeven (rekent voorlopig met "Ja")</option>
+              <option value="">
+                {zaLegacyJaDefault ? "Niet aangegeven (rekent voorlopig met \"Ja\")" : "Niet aangegeven (toont voorlopig beide scenario's)"}
+              </option>
               <option value="ja">Ja</option>
               <option value="nee">Nee</option>
               <option value="onbekend">Onbekend — toon beide scenario's</option>
             </select>
             <p className="mt-1.5 text-xs text-slate-400">
               Het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) is een
-              persoonlijke voorwaarde die deze tool niet uit bankgegevens kan afleiden. Zolang je hier niets
-              aangeeft, rekent de tool zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet.
+              persoonlijke voorwaarde die deze tool niet uit bankgegevens kan afleiden.{" "}
+              {zaLegacyJaDefault
+                ? "Zolang je hier niets aangeeft, rekent de tool zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
+                : "Zolang je hier niets aangeeft, toont de tool voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
             </p>
           </div>
 

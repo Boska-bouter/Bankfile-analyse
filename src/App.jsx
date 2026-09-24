@@ -179,8 +179,18 @@ export default function App() {
   const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [zvwStatus, setZvwStatus] = useState({}); // { "2025": { gedaan: bool } }
-  // { "2025": "ja" | "nee" | "onbekend" } — ontbrekend jaar = niet aangegeven, rekent (zoals altijd) met "ja".
+  // { "2025": "ja" | "nee" | "onbekend" } — ontbrekend jaar = niet aangegeven; wat dat dan betekent
+  // hangt af van zaLegacyJaDefault hieronder (v194).
   const [zelfstandigenaftrekStatus, setZelfstandigenaftrekStatusState] = useState({});
+  // v194 — punt 13 uit het reviewdocument: een onbeantwoord urencriterium-jaar rekende altijd
+  // stilzwijgend met "ja" (zelfstandigenaftrek toegepast) — veilig voor bestaande dossiers wier
+  // cijfers daarmee niet met terugwerkende kracht veranderen, maar een verkeerde indruk voor een
+  // gebruiker die nog niets heeft ingevuld. true = dit gedrag behouden (default bij het LADEN van
+  // een projectbestand van vóór deze wijziging, zie loadProjectFile hieronder); false = een
+  // onbeantwoord jaar toont voortaan beide scenario's naast elkaar, net als een expliciete
+  // "Onbekend"-keuze — de default voor een gloednieuw dossier (nog nooit een project geladen).
+  // Zie resolveZelfstandigenaftrekStatusForYear in tax/incomeTax.js.
+  const [zaLegacyJaDefault, setZaLegacyJaDefault] = useState(false);
   // { "2025": "ja" | "nee" } — ontbrekend jaar = niet aangegeven, geen startersaftrek toegepast.
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
   // { "2025": "zaak" | "prive" | "beide" } — of de auto van de zaak is (koop/operational/financial
@@ -351,6 +361,10 @@ export default function App() {
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
     setZvwStatus(settings.zvwStatus && typeof settings.zvwStatus === "object" ? settings.zvwStatus : {});
     setZelfstandigenaftrekStatusState(settings.zelfstandigenaftrekStatus && typeof settings.zelfstandigenaftrekStatus === "object" ? settings.zelfstandigenaftrekStatus : {});
+    // v194: ontbreekt deze vlag (browseropslag van vóór deze wijziging), dan is dit een dossier dat
+    // al bestond vóór het urencriterium-standaardgedrag veranderde — behoud dan het oude gedrag
+    // (onbeantwoord jaar = "ja") in plaats van de nieuwe, veiligere default ("onbekend").
+    setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
     setAutoStatusState(settings.autoStatus && typeof settings.autoStatus === "object" ? settings.autoStatus : {});
     setHuurZakelijkPercentageStatusState(settings.huurZakelijkPercentageStatus && typeof settings.huurZakelijkPercentageStatus === "object" ? settings.huurZakelijkPercentageStatus : {});
@@ -551,7 +565,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-        ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+        ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
       });
@@ -564,7 +578,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
-    ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
@@ -1048,7 +1062,7 @@ export default function App() {
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding)
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails);
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
@@ -1705,7 +1719,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -1774,6 +1788,11 @@ export default function App() {
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
       setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
       setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
+      // v194: een projectbestand zonder deze vlag is opgeslagen vóór deze wijziging — behoud dan het
+      // oude gedrag (onbeantwoord urencriterium-jaar = "ja") zodat een eerder gedeeld/afgedrukt cijfer
+      // niet met terugwerkende kracht verandert. Alleen een bestand dat de vlag al draagt (opgeslagen
+      // door v194 of later) volgt de nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
+      setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
       setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
       setAutoStatusState(project.autoStatus && typeof project.autoStatus === "object" ? project.autoStatus : {});
       setHuurZakelijkPercentageStatusState(project.huurZakelijkPercentageStatus && typeof project.huurZakelijkPercentageStatus === "object" ? project.huurZakelijkPercentageStatus : {});
@@ -2537,6 +2556,7 @@ export default function App() {
               winst={yearlySummary?.winst}
               zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
               onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+              zaLegacyJaDefault={zaLegacyJaDefault}
               startersaftrekStatus={startersaftrekStatus}
               onSetStartersaftrekStatus={setStartersaftrekStatus}
               autoStatus={autoStatus}

@@ -5,6 +5,7 @@ import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
   IB_TARIEVEN_BY_YEAR, IB_MIN_YEAR, IB_MAX_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
+  resolveZelfstandigenaftrekStatusForYear,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
@@ -127,7 +128,7 @@ function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftr
   };
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -151,10 +152,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) +
     (kmVergoedingForYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
-  // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's,
-  // niets aangegeven (of "ja") houdt het bestaande gedrag aan (mét zelfstandigenaftrek) zodat
-  // eerder opgeslagen projecten dezelfde cijfers blijven tonen totdat dit expliciet wordt gezet.
-  const zaStatus = zelfstandigenaftrekStatus?.[year];
+  // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's. Een
+  // onbeantwoord jaar (zaStatusRaw null) valt terug op resolveZelfstandigenaftrekStatusForYear —
+  // "ja" voor een dossier dat al bestond vóór v194 (zaLegacyJaDefault, zodat eerder opgeslagen
+  // projecten dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor een nieuw dossier.
+  const zaStatusRaw = zelfstandigenaftrekStatus?.[year];
+  const zaStatus = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault);
   const zelfstandigenaftrekToegepast = zaStatus !== "nee";
   const startersaftrekToegepast = startersaftrekStatus?.[year] === "ja";
   const zaScenarios = zaStatus === "onbekend" ? {
@@ -487,7 +490,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
   <p class="toelichting">Zie Bijlage: Toelichtingen voor de algemene aannames (urencriterium, extrapolatie van schijven/percentages, startersaftrek en de 9-jaars-reserve) en het voorbehoud.</p>
   ` : `
-  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : " (mét zelfstandigenaftrek — niet aangegeven, rekent voorlopig met \"Ja\")"}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${!zaStatus ? " ⚠ Urencriterium nog niet aangegeven in de tool — zet dit op \"Onbekend\" bij Persoonlijke aannames voor beide scenario's (mét/zonder) naast elkaar." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
+  <p>Geschatte inkomstenbelasting${zaStatus === "nee" ? " (zonder zelfstandigenaftrek — zo aangegeven)" : zaStatus === "ja" ? (zaStatusRaw === "ja" ? " (mét zelfstandigenaftrek — zo aangegeven)" : " (mét zelfstandigenaftrek — niet aangegeven, rekent voorlopig met \"Ja\")") : ""}${startersaftrekToegepast ? " en startersaftrek" : ""}: <strong>${eur(ibEstimate.belasting)}</strong>.${zaStatusRaw == null ? " ⚠ Urencriterium nog niet aangegeven in de tool — zet dit op \"Onbekend\" bij Persoonlijke aannames voor beide scenario's (mét/zonder) naast elkaar." : ""}${mogelijkeKia > 0 ? ` Ná mogelijke KIA*: <strong>${eur(ibEstimateNaKia.belasting)}</strong>.` : ""}</p>
   ${ondernemersaftrekVoorJaar ? `
   <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
@@ -520,14 +523,15 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault) {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
-  // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren met
-  // zelfstandigenaftrekStatus "onbekend" doen bewust niet mee in deze keten (die tonen hun eigen
-  // twee scenario's, los van reserveverrekening).
+  // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
+  // resolven naar zelfstandigenaftrekStatus "onbekend" (expliciet, of — v194 — een onbeantwoord
+  // jaar in een niet-legacy dossier) doen bewust niet mee in deze keten (die tonen hun eigen twee
+  // scenario's, los van reserveverrekening).
   const jarenVoorReserve = yearsToInclude
-    .filter((year) => zelfstandigenaftrekStatus?.[year] !== "onbekend")
+    .filter((year) => resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) !== "onbekend")
     .map((year) => ({
       year,
       winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails),
@@ -549,7 +553,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const PAGE_BREAK_DIVIDER = '\n  <div style="page-break-before: always; break-before: page;"></div>\n';
 
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault))
     .join(PAGE_BREAK_DIVIDER);
 
   return `<!DOCTYPE html>

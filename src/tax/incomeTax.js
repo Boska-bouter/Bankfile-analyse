@@ -73,6 +73,24 @@ export function estimateIncomeTaxScenarios(winst, year) {
   };
 }
 
+// v194 — punt 13 uit het reviewdocument: een jaar waarvoor het urencriterium nooit is aangegeven
+// gaf altijd stilzwijgend "mét zelfstandigenaftrek" (zie `zaStatus !== "nee"` in
+// reports/aangiftevoorstel.js en PersoonlijkeAannamesPanel.jsx) — dat bestond om al opgeslagen
+// projecten dezelfde cijfers te laten tonen, maar oogt voor een gebruiker als "niets ingevuld, dus
+// de tool heeft het wel ongeveer goed", terwijl het urencriterium nu juist NIET uit bankgegevens is
+// af te leiden (de Belastingdienst koppelt de zelfstandigenaftrek er direct aan). Vanaf v194 geldt
+// dit stille "Ja"-gedrag daarom alleen nog voor dossiers die al bestonden vóór deze wijziging
+// (`zaLegacyJaDefault` — zie App.jsx/loadProjectFile, resulteert hier in "ja"); voor een
+// gloednieuw dossier resulteert een onbeantwoord jaar voortaan in "onbekend" (beide scenario's
+// naast elkaar, net als bij een expliciete "Onbekend"-keuze) — de veiligere aanname zolang niemand
+// het urencriterium heeft bevestigd. Een expliciet gezet jaar (ja/nee/onbekend) wint hier altijd,
+// ongeacht zaLegacyJaDefault.
+export function resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) {
+  const raw = zelfstandigenaftrekStatus?.[year];
+  if (raw != null) return raw;
+  return zaLegacyJaDefault ? "ja" : "onbekend";
+}
+
 // Grove, indicatieve schatting van de inkomensafhankelijke bijdrage Zorgverzekeringswet (Zvw) die
 // een zelfstandige (eenmanszaak/zzp) via de eigen aanslag IB betaalt — dit is het "lage" tarief
 // (zelfstandigen dragen zelf de volledige bijdrage af, in tegenstelling tot werknemers waarbij de
