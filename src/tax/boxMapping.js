@@ -55,9 +55,16 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 // financieel) blijven hier altijd ongewijzigd. Weggelaten (`year` null, het gedrag van vóór dit
 // mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
 export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null) {
+  // v188: leaseAutoKostenForYear is hier al berekend als combineAutoKosten(...) van financial-lease-
+  // en koop/operational-lease-autokosten (zie autoActiva.js) — dus niet-null zodra één van de drie
+  // autovormen geregistreerd staat. Dat is precies dezelfde voorwaarde als
+  // heeftGeregistreerdeAutoOpDeZaak in categorySplit.js, dus geen aparte
+  // leaseSummary/leaseDetails/autoActivaDetails/autoWizardStatus-doorgifte nodig om Brandstof/Parkeren
+  // ook hier uit te sluiten van de generieke %-splitsing.
+  const heeftLeaseAuto = !!leaseAutoKostenForYear;
   const factorFor = (category) => {
     if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
-    return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus) / 100;
+    return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto) / 100;
   };
   const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount * factorFor(tx.category), 0));
   const perCategorieVan = (cats) =>
