@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
-  17: "Auto", 6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad",
+  17: "Auto", 6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
   0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
 
@@ -23,6 +23,7 @@ export default function SetupWizardModal({
   verwachteAOV, setVerwachteAOV,
   autoWizardStatus, setAutoWizardStatus,
   years, onSeedAutoStatus,
+  zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus,
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
@@ -68,6 +69,11 @@ export default function SetupWizardModal({
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
     if (heeftVoorraad === null) list.push(9);
+    // Urencriterium is een IB/Zvw-vraag (zelfstandigenaftrek) en dus niet van toepassing bij een BV
+    // — bij het openen van de wizard is rechtsvorm echter nog niet per se al beantwoord (die vraag
+    // staat verderop in deze lijst), dus wordt de BV-uitzondering hieronder pas live gefilterd
+    // (net als bij stap 15/1/2), niet hier bij het opbouwen van de lijst.
+    if (Object.keys(zelfstandigenaftrekStatus || {}).length === 0) list.push(18);
     if (pendingFileNames.length > 0) list.push(0);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
@@ -87,6 +93,7 @@ export default function SetupWizardModal({
     if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
     if ((id === 1 || id === 2) && rechtsvorm === "bv") return false; // KOR en BTW-verlegd zijn n.v.t. bij een BV (altijd gewone BTW-plicht, niet verlegd)
+    if (id === 18 && rechtsvorm === "bv") return false; // zelfstandigenaftrek/urencriterium is n.v.t. bij een BV
     return true;
   });
 
@@ -381,6 +388,41 @@ export default function SetupWizardModal({
               </div>
             </div>
           )}
+          {currentStepId === 18 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Voldoe je aan het urencriterium voor de zelfstandigenaftrek?</p>
+              <p className="text-xs text-slate-400">
+                Minimaal 1.225 uur per jaar besteed aan de onderneming (en meer dan de helft van je totale
+                werktijd, tenzij je pas start). Bepaalt of de zelfstandigenaftrek (en de startersaftrek) worden
+                meegerekend. Weet je het nog niet zeker? Kies dan "Onbekend" — de tool toont dan beide scenario's
+                (mét en zonder) naast elkaar, zodat je zelf kunt vergelijken.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "ja"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                >
+                  Ja
+                </button>
+                <button
+                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "nee"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                >
+                  Nee
+                </button>
+                <button
+                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "onbekend"); goNext(); }}
+                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                >
+                  Onbekend — toon beide scenario's
+                </button>
+              </div>
+              <p className="text-xs text-slate-400">
+                Per jaar nog te corrigeren in "Persoonlijke aannames" als de situatie halverwege het dossier
+                verandert.
+              </p>
+            </div>
+          )}
           {currentStepId === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
@@ -643,7 +685,7 @@ export default function SetupWizardModal({
           {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
               én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
               slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
-          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"

@@ -382,6 +382,22 @@ export default function App() {
       return next;
     });
   };
+  // Zet de standaardwaarde van zelfstandigenaftrekStatus in één keer voor alle jaren in het dossier
+  // — v192, gebruikt door de nieuwe wizard-vraag (zie SetupWizardModal), die maar één keer per
+  // dossier wordt gesteld terwijl zelfstandigenaftrekStatus zelf een per-jaar instelling is. Zelfde
+  // patroon als seedAutoStatusForAllYears hierboven. status=null (bijv. "weet ik nog niet") zet
+  // bewust niets — de wizard toont die keuze dan ook niet als los te kiezen optie (zie de wizard-
+  // stap zelf), zodat "niets gezet" hier hetzelfde betekent als vóór deze wizard-vraag bestond
+  // (rekent voorlopig met "Ja", zie de toelichting bij PersoonlijkeAannamesPanel.jsx).
+  const seedZelfstandigenaftrekStatusForAllYears = (yearsList, status) => {
+    if (!status || !yearsList || yearsList.length === 0) return;
+    snapshotBeforeAction("Zelfstandigenaftrek-status ingesteld (wizard)");
+    setZelfstandigenaftrekStatusState((prev) => {
+      const next = { ...prev };
+      for (const y of yearsList) next[y] = status;
+      return next;
+    });
+  };
   const setStartersaftrekStatus = (year, status) => {
     snapshotBeforeAction("Startersaftrek-status aangepast");
     setStartersaftrekStatusState((prev) => {
@@ -2183,6 +2199,8 @@ export default function App() {
             setAutoWizardStatus={(v) => { snapshotBeforeAction("Auto-vraag beantwoord"); setAutoWizardStatus(v); }}
             years={years}
             onSeedAutoStatus={seedAutoStatusForAllYears}
+            zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+            onSeedZelfstandigenaftrekStatus={seedZelfstandigenaftrekStatusForAllYears}
             heeftVoorraad={heeftVoorraad}
             setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
             eigenNamen={eigenNamen}
