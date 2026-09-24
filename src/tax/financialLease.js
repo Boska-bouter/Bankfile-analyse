@@ -31,45 +31,86 @@ export function computeAanschafwaardeBedrijfsmiddel(details) {
   return n(details?.koopprijs) + n(details?.teBetalenBtw);
 }
 
-// Sectie 2 — de leasestructuur zelf. Lost de kasstromen (aanbetaling van de hoofdsom, dan de
-// betalingen) op naar het maandelijkse rentepercentage waarvoor de netto contante waarde van alle
-// betalingen precies gelijk is aan het gefinancierde bedrag (dezelfde soort berekening als IRR/
-// interne-rentevoet in een spreadsheet) — met bisectie, want hier is geen nette formule voor.
-export function computeFinancialLeaseRate(details) {
-  const principal = computeOnbetaaldGedeelteKoop(details);
+// v182 — punt 1 uit de leasereview (de belangrijkste): vóór deze aanpassing gebruikte de
+// rentepercentage-afleiding hieronder een geïdealiseerde tijdrekening (maand 1, 2, 3, ... exact,
+// los van échte kalenderdatums), terwijl de amortisatie in loanAmortization.js juist wél op de
+// daadwerkelijke banktransactiedatums rekent (met een benaderde dagtelling, 30 dagen per maand). Bij
+// een leasecontract dat in de praktijk niet perfect elke kalendermaand op precies dezelfde dag afschrijft
+// (weekend/feestdag-verschuivingen, een net iets afwijkende eerste termijn) paste het afgeleide
+// percentage daardoor niet exact bij de manier waarop de amortisatie het toepast.
+//
+// Vanaf v182 rekenen beide met dezelfde tijdrekening: échte kalenderdatums en een exacte dagtelling
+// (dag/365), in plaats van een maand-index resp. een dag/30-benadering. buildNominaleLeaseSchedule
+// hieronder genereert daarvoor de volledige contractuele betaalreeks met echte datums (op dezelfde
+// manier geankerd als generateProjectedLeasePayments — datumEersteTermijn indien ingevuld, anders
+// startdatum + 1 maand, dan maandelijks door) — bewust een aparte, eenvoudigere functie die geen
+// rekening houdt met een eventuele vroegtijdige beëindiging: de rentepercentage-afleiding gaat over
+// de volledige CONTRACTUELE reeks (zoals ook vóór v182 al het geval was), niet over wat er in de
+// praktijk (mogelijk voortijdig) daadwerkelijk is betaald — dat blijft, exact als voorheen, een apart
+// vraagstuk (zie "Contract vroegtijdig beëindigd" elders).
+function buildNominaleLeaseSchedule(details) {
   const looptijd = Number(details.looptijd);
   const maandbedrag = Number(details.maandbedrag);
+  if (!(looptijd > 0) || !(maandbedrag > 0) || !details.startdatum) return [];
   const eindbetaling = details.eindbetaling === "" || details.eindbetaling == null ? 0 : Number(details.eindbetaling);
   const extra = details.extraBedrag1eTermijn === "" || details.extraBedrag1eTermijn == null ? 0 : Number(details.extraBedrag1eTermijn);
+  const start = new Date(details.startdatum);
+  const eersteTermijnDatum = details.datumEersteTermijn ? new Date(details.datumEersteTermijn) : null;
+  const payments = [];
+  for (let m = 1; m <= looptijd; m++) {
+    let date;
+    if (eersteTermijnDatum) {
+      date = new Date(eersteTermijnDatum);
+      date.setMonth(date.getMonth() + (m - 1));
+    } else {
+      date = new Date(start);
+      date.setMonth(date.getMonth() + m);
+    }
+    let amount = maandbedrag;
+    if (m === 1) amount += extra;
+    if (m === looptijd) amount += eindbetaling;
+    payments.push({ date, amount });
+  }
+  return payments;
+}
 
-  if (!(principal > 0) || !(looptijd > 0) || !(maandbedrag > 0)) return null;
+// Sectie 2 — de leasestructuur zelf. Lost de kasstromen (aanbetaling van de hoofdsom, dan de
+// betalingen, elk op hun échte kalenderdatum) op naar het jaarlijkse rentepercentage waarvoor de
+// netto contante waarde van alle betalingen — verdisconteerd op dag/365 sinds de startdatum —
+// precies gelijk is aan het gefinancierde bedrag (dezelfde soort berekening als IRR/interne-
+// rentevoet in een spreadsheet, XIRR-stijl op échte datums in plaats van gelijke periodes) — met
+// bisectie, want hier is geen nette formule voor.
+export function computeFinancialLeaseRate(details) {
+  const principal = computeOnbetaaldGedeelteKoop(details);
+  if (!(principal > 0)) return null;
+  const payments = buildNominaleLeaseSchedule(details);
+  if (payments.length === 0) return null;
+  const start = new Date(details.startdatum);
 
-  const cashflow = (month) => {
-    let v = month === 1 ? maandbedrag + extra : maandbedrag;
-    if (month === looptijd) v += eindbetaling;
-    return v;
-  };
-  const npv = (monthlyRate) => {
+  const npv = (annualRate) => {
     let total = -principal;
-    for (let m = 1; m <= looptijd; m++) total += cashflow(m) / Math.pow(1 + monthlyRate, m);
+    for (const p of payments) {
+      const dagen = (p.date - start) / (1000 * 60 * 60 * 24);
+      total += p.amount / Math.pow(1 + annualRate, dagen / 365);
+    }
     return total;
   };
 
-  // Bisectie tussen 0% en 5%/maand (~60%+ per jaar, ruim boven wat een reële lease ooit zou zijn).
-  // NPV daalt monotoon met een stijgende rente (hogere rente = betalingen minder waard nu), dus
-  // een simpele bisectie is hier voldoende en robuuster dan Newton-Raphson (geen afgeleide nodig,
-  // geen risico op divergeren).
+  // Bisectie tussen 0% en 300%/jaar, ruim boven wat een reële lease ooit zou zijn. NPV daalt
+  // monotoon met een stijgende rente (hogere rente = betalingen minder waard nu), dus een simpele
+  // bisectie is hier voldoende en robuuster dan Newton-Raphson (geen afgeleide nodig, geen risico
+  // op divergeren).
   let lo = 0;
-  let hi = 0.05;
+  let hi = 3;
   if (npv(0) < 0) return null; // zelfs bij 0% rente wordt de hoofdsom niet terugbetaald door de ingevulde betalingen — invoer klopt niet
-  if (npv(hi) > 0) return null; // ook bij 5%/maand nog steeds niet passend — onrealistische invoer
+  if (npv(hi) > 0) return null; // ook bij 300%/jaar nog steeds niet passend — onrealistische invoer
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
     if (npv(mid) > 0) lo = mid;
     else hi = mid;
   }
-  const monthlyRate = (lo + hi) / 2;
-  return monthlyRate * 12 * 100; // jaarlijks percentage, zoals de rest van de tool dat al gebruikt
+  const annualRate = (lo + hi) / 2;
+  return annualRate * 100; // jaarlijks percentage, zoals de rest van de tool dat al gebruikt
 }
 
 // Genereert het volledige, theoretische betaalschema voor de hele looptijd — op basis van wat er

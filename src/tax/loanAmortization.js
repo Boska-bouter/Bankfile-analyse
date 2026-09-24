@@ -72,30 +72,29 @@ function netTerugboekingenTegenBetalingen(transactions) {
 
 // Splitst de betalingen op een lening (of financiële lease) in rente en aflossing, op basis van
 // het oorspronkelijke bedrag, de startdatum en het rentepercentage. Rekent per betaling het
-// aantal verstreken maanden sinds de vorige betaling (of de startdatum, voor de eerste), berekent
-// daarover de rente over het op dat moment nog openstaande bedrag, en trekt de rest van de
-// betaling af als aflossing. Werkt hierdoor ook bij onregelmatige betalingen — er wordt geen vast
-// schema aangenomen, alleen de daadwerkelijke betalingen uit de bank tellen.
+// exacte aantal verstreken dagen sinds de vorige betaling (of de startdatum, voor de eerste) —
+// vóór v182 werd dit benaderd als "maanden × 30 dagen", wat niet exact aansloot bij de échte
+// kalenderdatums waarmee computeFinancialLeaseRate hierboven het rentepercentage afleidt (zie de
+// toelichting daar) — berekent daarover de rente (jaarlijks percentage × dag/365) over het op dat
+// moment nog openstaande bedrag, en trekt de rest van de betaling af als aflossing. Werkt hierdoor
+// ook bij onregelmatige betalingen — er wordt geen vast schema aangenomen, alleen de daadwerkelijke
+// betalingen uit de bank tellen.
 export function computeLoanAmortization(transactions, details) {
   const hoofdsom = details?.leningbedrag ?? details?.leasebedrag;
   if (!details || !hoofdsom || !details.startdatum || details.rente == null || details.rente === "") return null;
   const startBalance = Number(hoofdsom);
-  const monthlyRate = Number(details.rente) / 100 / 12;
-  if (!(startBalance > 0) || isNaN(monthlyRate)) return null;
+  const annualRate = Number(details.rente) / 100;
+  if (!(startBalance > 0) || isNaN(annualRate)) return null;
   const { transactions: genetteTransacties, ongekoppeldeTerugboekingen } = netTerugboekingenTegenBetalingen(transactions);
   let balance = startBalance;
   let lastDate = new Date(details.startdatum);
   const rows = [];
   for (const tx of genetteTransacties) {
-    const maandenVerstreken = Math.max(
-      (tx.date.getFullYear() - lastDate.getFullYear()) * 12 + (tx.date.getMonth() - lastDate.getMonth()) +
-        (tx.date.getDate() - lastDate.getDate()) / 30,
-      0
-    );
+    const dagenVerstreken = Math.max((tx.date - lastDate) / (1000 * 60 * 60 * 24), 0);
     // Na de verrekening hierboven is elke overgebleven transactie een echte (negatieve) betaling —
     // een niet-gekoppelde terugboeking is al uitgefilterd (zie ongekoppeldeTerugboekingen) en raakt
     // dus bewust noch de rente/aflossing-berekening, noch het saldo.
-    const rente = balance * monthlyRate * maandenVerstreken;
+    const rente = balance * annualRate * (dagenVerstreken / 365);
     const betaling = Math.abs(tx.amount);
     const aflossing = Math.max(betaling - rente, 0);
     balance = Math.max(balance - aflossing, 0);
