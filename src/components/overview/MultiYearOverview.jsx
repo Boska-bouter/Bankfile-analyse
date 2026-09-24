@@ -68,8 +68,18 @@ export default function MultiYearOverview({
                 <th className="text-right font-medium py-2 px-3">Overboeking naar privé</th>
                 <th className="text-right font-medium py-2 px-3">Privé uitgaven</th>
                 {!korRegeling && <th className="text-right font-medium py-2 px-3">Te betalen BTW</th>}
-                <th className="text-right font-medium py-2 px-3">Geschat IB/IH*</th>
-                <th className="text-right font-medium py-2 px-3">Geschat Zvw*</th>
+                <th
+                  className="text-right font-medium py-2 px-3"
+                  title="Grove basisindicatie over de winst — zonder zelfstandigenaftrek, startersaftrek of heffingskortingen. Zie de Indicatieve aangifteberekening voor de uitgebreidere berekening met de persoonlijke fiscale aannames."
+                >
+                  Basisindicatie IB/IH*
+                </th>
+                <th
+                  className="text-right font-medium py-2 px-3"
+                  title="Grove basisindicatie over de winst — zonder zelfstandigenaftrek of startersaftrek. Zie de Indicatieve aangifteberekening voor de uitgebreidere berekening met de persoonlijke fiscale aannames."
+                >
+                  Basisindicatie Zvw*
+                </th>
                 <th className="text-right font-medium py-2 px-3" title="Wat daadwerkelijk vanaf de zakelijke rekening is afgedragen aan IB/IH en Zvw dit jaar">Al betaald ZVW/IH</th>
                 <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status IB/IH</th>
                 <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status Zvw</th>
@@ -156,10 +166,12 @@ export default function MultiYearOverview({
           </table>
           <p className="mt-2 text-xs text-slate-400">Klik op een jaar om ernaartoe te springen.</p>
           <p className="mt-1 text-xs text-slate-400">
-            * Grove, indicatieve schattingen van de inkomstenbelasting en de inkomensafhankelijke bijdrage
-            Zorgverzekeringswet (Zvw) over de winst — zonder heffingskortingen, startersaftrek of overig inkomen.
-            Geen belastingadvies. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit — vergelijk de
-            geschatte bedragen met de kolom "Al betaald ZVW/IH" hiernaast voor wat daadwerkelijk al is afgedragen.
+            * Grove <strong>basisindicaties</strong> van de inkomstenbelasting en de inkomensafhankelijke bijdrage
+            Zorgverzekeringswet (Zvw) over de winst — zonder zelfstandigenaftrek, startersaftrek, heffingskortingen of
+            overig inkomen. Geen belastingadvies. Zie de "Indicatieve aangifteberekening" verderop voor de
+            uitgebreidere berekening mét deze persoonlijke fiscale aannames — die kan hierdoor een ander bedrag laten
+            zien dan deze basisindicatie. WUO sluit onttrekkingen (privé-overmakingen, ZVW/IH) bewust uit — vergelijk
+            de geschatte bedragen met de kolom "Al betaald ZVW/IH" hiernaast voor wat daadwerkelijk al is afgedragen.
           </p>
         </div>
       )}

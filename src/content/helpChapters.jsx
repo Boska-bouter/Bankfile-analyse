@@ -175,9 +175,9 @@ export const HELP_CHAPTERS = [
           bovenop (gemarkeerd met †).
         </p>
         <p>
-          <strong>Tekort / Over</strong> is WUO min Totaal prive uitgegeven, min Te betalen OB, min Geschat IB — dus
-          wat er overblijft nadat zowel al het privé uitgegeven geld als de nog te betalen belastingen zijn
-          meegerekend. Een tekort betekent dat de winst dat niet dekt.
+          <strong>Tekort / Over</strong> is WUO min Totaal prive uitgegeven, min Te betalen OB, min Basisindicatie
+          IB/IH — dus wat er overblijft nadat zowel al het privé uitgegeven geld als de nog te betalen belastingen
+          zijn meegerekend. Een tekort betekent dat de winst dat niet dekt.
         </p>
         <p>
           <strong>Trend t.o.v. vorig jaar</strong> vergelijkt Tekort/Over met hetzelfde cijfer van het voorgaande
@@ -185,9 +185,10 @@ export const HELP_CHAPTERS = [
           transactie).
         </p>
         <p className="text-xs text-slate-400">
-          * Geschat IB is een grove, indicatieve schatting van de inkomstenbelasting over WUO — zonder
-          heffingskortingen, startersaftrek of overig inkomen mee te rekenen. Geen belastingadvies, alleen een
-          indicatie.
+          * Basisindicatie IB/IH is een grove, indicatieve schatting van de inkomstenbelasting over WUO — zonder
+          zelfstandigenaftrek, startersaftrek, heffingskortingen of overig inkomen mee te rekenen. Geen
+          belastingadvies, alleen een snelle indicatie. Zie de "Indicatieve aangifteberekening" voor de uitgebreidere
+          berekening mét deze persoonlijke fiscale aannames — die kan hierdoor een ander bedrag laten zien.
         </p>
       </div>
     ),
