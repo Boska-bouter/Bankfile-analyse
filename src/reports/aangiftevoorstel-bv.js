@@ -189,7 +189,7 @@ function buildYearSectionBv(
     const b = c.beeindigingsresultaat;
     if (b.boekresultaat != null) {
       openPunten.push(
-        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus ${b.boekresultaat >= 0 ? "boekwinst" : "boekverlies"} ${eur(Math.abs(b.boekresultaat))} (al verwerkt in de winst hierboven). Zie Bijlage.`
+        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus boekresultaat ${b.boekresultaat >= 0 ? "+" : "−"}${eur(Math.abs(b.boekresultaat))} (${b.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}, al verwerkt in de winst hierboven). Zie Bijlage.`
       );
     } else {
       openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract). Zie Bijlage.`);
@@ -454,10 +454,11 @@ function buildBijlageToelichtingenHtmlBv() {
     fiscaal wezenlijk verschillend:
   </p>
   <p class="toelichting">
-    <strong>1. Boekwinst/-verlies</strong> = de verkoop-/veilingopbrengst minus de fiscale boekwaarde
-    op de einddatum (aanschafwaarde minus de tot dan toe berekende afschrijving). Dit is een gewone
-    winst-/verliespost van de BV en is al verwerkt in het resultaat vóór Vpb hierboven — een hogere
-    opbrengst dan de boekwaarde verhoogt de winst, een lagere opbrengst verlaagt de winst. De
+    <strong>1. Boekresultaat</strong> = de verkoop-/veilingopbrengst minus de fiscale boekwaarde op de
+    einddatum (aanschafwaarde minus de tot dan toe berekende afschrijving). Dit is een gewone
+    winst-/verliespost van de BV en is al verwerkt in het resultaat vóór Vpb hierboven: een
+    <strong>plus</strong> (opbrengst hoger dan de boekwaarde) is winst en verhóógt de winst, een
+    <strong>min</strong> (opbrengst lager dan de boekwaarde) is een aftrekpost en verlaagt de winst. De
     afschrijving zelf stopt vanaf de einddatum (geen afschrijving meer in latere jaren).
   </p>
   <p class="toelichting">
@@ -474,8 +475,15 @@ function buildBijlageToelichtingenHtmlBv() {
   </p>
   <p class="toelichting" style="color:#b45309;">
     ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze tool geen fiscale
-    boekwaarde van het object, en kan dus ook geen boekwinst/-verlies worden bepaald — alleen de
+    boekwaarde van het object, en kan dus ook geen boekresultaat worden bepaald — alleen de
     restschuld/overwaarde wordt dan getoond.
+  </p>
+  <p class="toelichting">
+    Zijn (een deel van) de leasetermijnen betaald vanaf een rekening die niet in dit dossier is
+    geïmporteerd, geef dan bij het leasecontract onder "Termijnen van een andere rekening" aan tot en
+    met welke datum alle termijnen zijn betaald — anders denkt deze tool ten onrechte dat die termijnen
+    nooit zijn betaald, met een te hoog berekend openstaande saldo (en dus een onjuiste
+    restschuld/overwaarde bij verkoop) tot gevolg.
   </p>
 
   <h2>Investeringsaftrek (KIA) — algemene regels</h2>

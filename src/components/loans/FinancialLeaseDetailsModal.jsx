@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import {
   computeOnbetaaldGedeelteKoop, computeAanschafwaardeBedrijfsmiddel, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
   generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
-  normalizeKenteken,
+  normalizeKenteken, mergeHandmatigeTermijnen,
 } from "../../tax/financialLease.js";
 import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
 import { computeLeaseAfschrijvingVoorJaar, buildLeaseActivumFromSegment, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
@@ -44,6 +44,9 @@ function formFromSegment(segment) {
     datumEersteTermijn: s.datumEersteTermijn ?? "",
     contractBeeindigd: s.contractBeeindigd ?? false,
     einddatumContract: s.einddatumContract ?? "",
+    // v206: bevestiging dat termijnen (mogelijk) van een andere rekening zijn betaald — zie
+    // tax/financialLease.js (mergeHandmatigeTermijnen).
+    handmatigBetaaldTotEnMet: s.handmatigBetaaldTotEnMet ?? "",
     // v205: "verkoopsom" (nu getoond als "Verkoop-/veilingopbrengst") is bij een daadwerkelijke
     // beëindiging het enige bedrag dat de gebruiker nog los hoeft in te vullen — restschuld/overwaarde
     // wordt sindsdien automatisch berekend (opbrengst vs. de op de bankbetalingen gebaseerde
@@ -99,6 +102,7 @@ function cleanSegment(form) {
     datumEersteTermijn: form.datumEersteTermijn || null,
     contractBeeindigd: form.contractBeeindigd,
     einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
+    handmatigBetaaldTotEnMet: form.handmatigBetaaldTotEnMet || null,
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
     soort: form.soort || null,
     afschrijvingstermijnJaren: form.soort ? n(form.afschrijvingstermijnJaren) : null,
@@ -171,10 +175,18 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   }, [form, onbetaaldGedeelteKoop, renteJaarlijks]);
   const perJaar = useMemo(() => groupAmortizationByYear(amortization), [amortization]);
   const projectedPayments = useMemo(() => generateProjectedLeasePayments(form), [form]);
+  // v206: als bevestigd is dat termijnen (deels) van een andere rekening zijn betaald, tellen die
+  // vanaf hier mee als "gevonden" — anders zou de controle hieronder ze ten onrechte als ontbrekend
+  // blijven melden. Zonder ingevulde "handmatigBetaaldTotEnMet" is dit exact dezelfde lijst als
+  // voorheen (segmentTransactions).
+  const effectiveSegmentTransactions = useMemo(
+    () => mergeHandmatigeTermijnen(cleanSegment(form), segmentTransactions),
+    [form, segmentTransactions]
+  );
   const paymentCheck = useMemo(() => {
     if (projectedPayments.length === 0) return null;
-    return matchLeasePaymentsToSchedule(projectedPayments, segmentTransactions, Number(form.maandbedrag) || 0);
-  }, [projectedPayments, segmentTransactions, form.maandbedrag]);
+    return matchLeasePaymentsToSchedule(projectedPayments, effectiveSegmentTransactions, Number(form.maandbedrag) || 0);
+  }, [projectedPayments, effectiveSegmentTransactions, form.maandbedrag]);
 
   // Aanvullende, grovere controle náást de per-termijn vergelijking hierboven: als de datums/
   // bedragen per termijn niet allemaal exact matchen (bijv. door een net iets verkeerd ingevulde
@@ -185,23 +197,24 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   // hierboven niet (die blijven nuttig om te zien WELKE termijn afwijkt), maar is een geruststellend
   // (of juist waarschuwend) totaalsignaal ernaast.
   const laatsteTransactieDatum = useMemo(
-    () => segmentTransactions.reduce((max, tx) => (!max || tx.date > max ? tx.date : max), null),
-    [segmentTransactions]
+    () => effectiveSegmentTransactions.reduce((max, tx) => (!max || tx.date > max ? tx.date : max), null),
+    [effectiveSegmentTransactions]
   );
   const totaalControle = useMemo(() => {
     if (!laatsteTransactieDatum || projectedPayments.length === 0) return null;
     // Netto optellen (mét teken) en pas dan absoluut nemen — een bijschrijving (terugboeking/
     // correctie van de leasemaatschappij) moet een eerdere betaling verrekenen, niet als extra
-    // betaling erbovenop tellen (dat gaf voorheen een te hoog "totaal betaald").
-    const totaalBetaald = Math.abs(segmentTransactions.reduce((a, tx) => a + tx.amount, 0));
+    // betaling erbovenop tellen (dat gaf voorheen een te hoog "totaal betaald"). Telt ook eventuele,
+    // met "Betaald t/m" bevestigde termijnen van een andere rekening mee (effectiveSegmentTransactions).
+    const totaalBetaald = Math.abs(effectiveSegmentTransactions.reduce((a, tx) => a + tx.amount, 0));
     const verwachtTotNu = projectedPayments
       .filter((p) => p.date <= laatsteTransactieDatum)
       .reduce((a, p) => a + Math.abs(p.amount), 0);
     if (verwachtTotNu === 0) return null;
     const verschil = totaalBetaald - verwachtTotNu;
     const marge = Math.max(Number(form.maandbedrag) || 0, 25);
-    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: segmentTransactions.filter((tx) => tx.amount < 0).length };
-  }, [segmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
+    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: effectiveSegmentTransactions.filter((tx) => tx.amount < 0).length };
+  }, [effectiveSegmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
 
   // Berekende afschrijving per jaar voor dit contract als "Soort" is ingevuld — puur ter controle/
   // preview in dit venster, dezelfde berekening (computeLeaseAfschrijvingVoorJaar) als het
@@ -634,11 +647,39 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         </div>
       )}
 
+      <div className="border-t border-slate-200 pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          Termijnen van een andere rekening (optioneel)
+        </p>
+        <p className="text-xs text-slate-400 mb-2">
+          Zijn er termijnen betaald vanaf een rekening die niet in dit dossier is geïmporteerd (bijv.
+          een privérekening of een rekening bij een andere bank)? Vul hieronder in tot en met welke
+          datum alle termijnen zijn betaald — de tool vult dan alleen de daadwerkelijk ontbrekende
+          termijnen (op basis van het contractschema) synthetisch aan, zodat de rente, het openstaande
+          saldo en (bij een latere verkoop/veiling) de restschuld/overwaarde kloppen. Een termijn die al
+          als banktransactie in dit dossier is gevonden, telt niet dubbel.
+        </p>
+        <label className="text-sm">
+          <span className="block text-xs font-medium text-slate-600 mb-1">Termijnen betaald t/m</span>
+          <input
+            type="date" value={form.handmatigBetaaldTotEnMet} onChange={set("handmatigBetaaldTotEnMet")}
+            className="w-full max-w-xs rounded-md border border-slate-300 px-2 py-1.5"
+          />
+        </label>
+        {form.handmatigBetaaldTotEnMet && (
+          <p className="text-xs text-slate-400 mt-2">
+            Alle termijnen tot en met {new Date(form.handmatigBetaaldTotEnMet).toLocaleDateString("nl-NL")} tellen nu
+            mee als betaald, ook zonder bijbehorende banktransactie in dit dossier.
+          </p>
+        )}
+      </div>
+
       {paymentCheck && (() => {
         const counts = { gevonden: 0, "gevonden-afwijkend": 0, "gevonden-samen": 0, ontbrekend: 0, "nog-niet-in-beeld": 0 };
         for (const r of paymentCheck.results) counts[r.status]++;
         const aandacht = paymentCheck.results.filter((r) => r.status === "ontbrekend" || r.status === "gevonden-afwijkend");
         const inBeeldTotaal = paymentCheck.results.length - counts["nog-niet-in-beeld"];
+        const aantalSynthetic = paymentCheck.results.filter((r) => r.matchedTx?.synthetic).length;
         return (
           <div className="rounded-md border border-slate-200 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
@@ -646,11 +687,14 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             </p>
             <p className="text-sm text-slate-700">
               <strong>{counts.gevonden + counts["gevonden-afwijkend"] + counts["gevonden-samen"]}</strong> van{" "}
-              <strong>{inBeeldTotaal}</strong> verwachte termijnen gevonden in de geïmporteerde bestanden
+              <strong>{inBeeldTotaal}</strong> verwachte termijnen gevonden
               {counts.ontbrekend > 0 && <> — <strong className="text-red-700">{counts.ontbrekend} ontbrekend</strong></>}
               {counts["gevonden-afwijkend"] > 0 && <> — <strong className="text-amber-700">{counts["gevonden-afwijkend"]} met een afwijkend bedrag</strong></>}
-              {counts["nog-niet-in-beeld"] > 0 && <span className="text-slate-400"> ({counts["nog-niet-in-beeld"]} termijnen liggen na de laatst geïmporteerde datum, nog niet te controleren)</span>}
+              {counts["nog-niet-in-beeld"] > 0 && <span className="text-slate-400"> ({counts["nog-niet-in-beeld"]} termijnen liggen na de laatst geïmporteerde/bevestigde datum, nog niet te controleren)</span>}
               .
+              {aantalSynthetic > 0 && (
+                <span className="text-slate-400"> (waarvan {aantalSynthetic} op basis van "Termijnen betaald t/m" hierboven, niet uit een geïmporteerd bestand)</span>
+              )}
             </p>
             {totaalControle && (counts.ontbrekend > 0 || counts["gevonden-afwijkend"] > 0) && (
               <p className={`mt-2 text-xs rounded-md px-2.5 py-1.5 ${totaalControle.klopt ? "bg-emerald-50 border border-emerald-200 text-emerald-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
@@ -718,11 +762,11 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 {form.soort ? (
                   boekresultaatPreview && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700" title="Opbrengst minus de fiscale boekwaarde op de einddatum — dit telt mee in de winst van de onderneming.">
-                        Boekwinst/-verlies (telt mee in de winst)
+                      <span className="text-sm font-medium text-slate-700" title="Opbrengst minus de fiscale boekwaarde op de einddatum.">
+                        Boekresultaat: {boekresultaatPreview.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}
                       </span>
                       <span className={`text-sm font-mono font-semibold ${boekresultaatPreview.boekresultaat >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                        {eur(boekresultaatPreview.boekresultaat)}
+                        {boekresultaatPreview.boekresultaat >= 0 ? "+" : "−"}{eur(Math.abs(boekresultaatPreview.boekresultaat))}
                       </span>
                     </div>
                   )

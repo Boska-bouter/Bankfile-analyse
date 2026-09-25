@@ -255,6 +255,28 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   return { results, onverwachteBetalingen };
 }
 
+// v206: sommige leasetermijnen worden soms van een andere bankrekening betaald die niet in dit
+// dossier is geïmporteerd (bijv. een privérekening, of een rekening bij een andere bank) — zonder
+// correctie zou de tool dan ten onrechte denken dat die termijnen nooit zijn betaald, met een te hoog
+// berekend openstaande saldo (en dus rente/aflossing/restschuld-bij-beëindiging) tot gevolg.
+// `segment.handmatigBetaaldTotEnMet` (optioneel, een datum) laat de gebruiker bevestigen dat ALLE
+// termijnen tot en met die datum zijn betaald, ook als ze niet als banktransactie in dit dossier
+// voorkomen. Vult hier alleen de daadwerkelijk ONTBREKENDE termijnen synthetisch aan (op basis van het
+// contractuele schema, generateProjectedLeasePayments) — een termijn die al als echte banktransactie
+// is gevonden telt niet dubbel. Zonder ingevulde datum (elk bestaand dossier) verandert er niets.
+export function mergeHandmatigeTermijnen(segment, segTx) {
+  if (!segment?.handmatigBetaaldTotEnMet) return segTx;
+  const grens = new Date(segment.handmatigBetaaldTotEnMet);
+  const projected = generateProjectedLeasePayments(segment).filter((p) => p.date <= grens);
+  if (projected.length === 0) return segTx;
+  const { results } = matchLeasePaymentsToSchedule(projected, segTx, Number(segment.maandbedrag) || 0);
+  const synthetic = results
+    .filter((r) => r.status === "ontbrekend" || r.status === "nog-niet-in-beeld")
+    .map((r) => ({ date: r.projected.date, amount: r.projected.amount, synthetic: true }));
+  if (synthetic.length === 0) return segTx;
+  return [...segTx, ...synthetic].sort((a, b) => a.date - b.date);
+}
+
 // ---- Opeenvolgende contracten (herfinanciering/vervanging halverwege de looptijd) ----
 //
 // Soms wordt een lopend financieel-leasecontract halverwege vervangen door een nieuw contract met
