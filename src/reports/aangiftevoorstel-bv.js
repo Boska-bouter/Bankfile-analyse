@@ -16,6 +16,7 @@ import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
+import { computeLeaseAutoKostenVoorJaar } from "../tax/autoBijtelling.js";
 import { eur } from "../utils/amounts.js";
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
@@ -86,7 +87,16 @@ function buildYearSectionBv(
   // DGA-salaris en dividend van dit jaar — voor de gebruikelijk-looncheck en de box 2-schatting.
   const dgaSalarisDitJaar = Math.abs(classified.filter((tx) => tx.category === "DGA-salaris" && !tx.isMirror && tx.year === year).reduce((a, tx) => a + tx.amount, 0));
   const dividendDitJaar = Math.abs(classified.filter((tx) => tx.category === "Dividenduitkering" && !tx.isMirror && tx.year === year).reduce((a, tx) => a + tx.amount, 0));
-  const gebruikelijkLoon = checkGebruikelijkLoon(dgaSalarisDitJaar, year);
+  // v201: bijtelling privégebruik auto bij een financial-lease auto van de BV. Dit is GEEN correctie
+  // op de winst/Vpb (de volledige leasekosten blijven op vennootschapsniveau gewoon aftrekbaar,
+  // ongewijzigd) — bijtelling hoort bij een BV bij de DGA persoonlijk, als loon in natura, en telt
+  // dus mee voor de gebruikelijk-loonregeling en de loonheffing. computeLeaseAutoKostenVoorJaar is
+  // dezelfde functie als voor een zzp'er, maar we gebruiken hier bewust normaleBijtellingTotaal (de
+  // volledige, ongecapte bijtelling) — niet de afgetopte "onttrekking", die alleen relevant is voor
+  // de zzp-winstcorrectie (aftopping op werkelijke autokosten hoort niet bij een BV/loon-in-natura).
+  const leaseAutoKostenBv = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
+  const bijtellingPrivegebruikAuto = leaseAutoKostenBv?.normaleBijtellingTotaal || 0;
+  const gebruikelijkLoon = checkGebruikelijkLoon(dgaSalarisDitJaar + bijtellingPrivegebruikAuto, year);
   const box2Estimate = estimateBox2(dividendDitJaar, year);
   const rc = rcVerloop[year] || { mutatieDitJaar: 0, standEindJaar: 0 };
   const ev = evVerloop[year] || { kapitaalstorting: 0, resultaatNaVpb: summary.winst - vpbEstimate.belasting, dividend: dividendDitJaar, standEindJaar: null };
@@ -143,7 +153,12 @@ function buildYearSectionBv(
   if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`Nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);
-  if (dgaSalarisDitJaar > 0 && !gebruikelijkLoon.voldoetVermoedelijk) openPunten.push(`DGA-salaris (${eur(dgaSalarisDitJaar)}) lijkt onder het gebruikelijk loon van ${eur(gebruikelijkLoon.minimum)} te liggen`);
+  if (dgaSalarisDitJaar > 0 && !gebruikelijkLoon.voldoetVermoedelijk) openPunten.push(`DGA-salaris (${eur(dgaSalarisDitJaar)}${bijtellingPrivegebruikAuto > 0 ? ` + bijtelling auto ${eur(bijtellingPrivegebruikAuto)}` : ""}) lijkt onder het gebruikelijk loon van ${eur(gebruikelijkLoon.minimum)} te liggen`);
+  if (bijtellingPrivegebruikAuto > 0) {
+    openPunten.push(
+      `Bijtelling privégebruik auto (financial lease, ${eur(bijtellingPrivegebruikAuto)}) — dit is geen correctie op de winst/Vpb, maar hoort als loon in natura bij het DGA-salaris. Check of dit is verwerkt in de loonheffing.`
+    );
+  }
 
   // v161: "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat sinds die
   // versie niet meer standaard in ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de
@@ -240,7 +255,11 @@ function buildYearSectionBv(
     oprichtingsdatum van de BV — jaren van vóór de geselecteerde periode tellen hier niet in mee. Rekening-courant
     boven ca. €500.000 kent aparte regels (excessief lenen bij eigen vennootschap) die deze tool niet toetst.
   </p>
-  ${dgaSalarisDitJaar > 0 ? `<p class="toelichting">Gebruikelijk-loonregeling: DGA-salaris ${eur(dgaSalarisDitJaar)} ${gebruikelijkLoon.voldoetVermoedelijk ? "voldoet vermoedelijk aan" : `lijkt ónder`} het wettelijk minimum van ${eur(gebruikelijkLoon.minimum)} voor ${year}${gebruikelijkLoon.geëxtrapoleerd ? " (minimum van dit jaar nog niet bekend, benaderd met het meest recente bekende bedrag)" : ""} — puur een signaal, geen definitieve toets.</p>` : ""}
+  ${dgaSalarisDitJaar > 0 || bijtellingPrivegebruikAuto > 0 ? `<p class="toelichting">Gebruikelijk-loonregeling: DGA-salaris ${eur(dgaSalarisDitJaar)}${
+    bijtellingPrivegebruikAuto > 0 ? ` + bijtelling privégebruik auto ${eur(bijtellingPrivegebruikAuto)} (loon in natura) = ${eur(dgaSalarisDitJaar + bijtellingPrivegebruikAuto)}` : ""
+  } ${gebruikelijkLoon.voldoetVermoedelijk ? "voldoet vermoedelijk aan" : `lijkt ónder`} het wettelijk minimum van ${eur(gebruikelijkLoon.minimum)} voor ${year}${gebruikelijkLoon.geëxtrapoleerd ? " (minimum van dit jaar nog niet bekend, benaderd met het meest recente bekende bedrag)" : ""} — puur een signaal, geen definitieve toets.${
+    bijtellingPrivegebruikAuto > 0 ? " De bijtelling zelf verandert de winst/Vpb-berekening niet — die blijft op vennootschapsniveau ongewijzigd (leasekosten blijven volledig aftrekbaar)." : ""
+  }</p>` : ""}
   ${dividendDitJaar > 0 ? `<p class="toelichting">${
     heeftHolding
       ? `Je gaf aan dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze tool niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
