@@ -114,6 +114,9 @@ export function combineAutoKosten(leaseAutoKosten, autoActivaKosten) {
     normaleBijtellingTotaal: leaseAutoKosten.normaleBijtellingTotaal + autoActivaKosten.normaleBijtellingTotaal,
     onttrekking: leaseAutoKosten.onttrekking + autoActivaKosten.onttrekking,
     nettoAftrekbareAutokosten: leaseAutoKosten.nettoAftrekbareAutokosten + autoActivaKosten.nettoAftrekbareAutokosten,
+    // v205: alleen relevant voor een financieel-geleased object (autoActivaKosten — een gekochte of
+    // operationeel-geleasede auto — kent dit veld niet, vandaar de fallback op 0).
+    boekresultaatBeeindigingTotaal: (leaseAutoKosten.boekresultaatBeeindigingTotaal || 0) + (autoActivaKosten.boekresultaatBeeindigingTotaal || 0),
     winstCorrectie: leaseAutoKosten.winstCorrectie + autoActivaKosten.winstCorrectie,
   };
 }

@@ -81,7 +81,19 @@ function buildYearSectionBv(
   // afschrijving alsnog wordt meegeteld — exact dezelfde constructie als bij de zzp-variant.
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
-  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, activaAfschrijvingForYear?.totaalAfschrijving || 0);
+  // v205: de afschrijving (en een eventueel boekresultaat bij vroegtijdige verkoop/veiling, zie
+  // hieronder) van een gekapitaliseerd financieel-leaseobject (auto/machine, "Soort" ingevuld) telde
+  // tot nu toe NERGENS mee in de winst/Vpb van een BV — dat was al zo vóórdat de v201-bijtelling en de
+  // v205-beëindiging werden toegevoegd (een pre-existent gat t.o.v. de zzp-variant, die dit al wel
+  // meetelde). Nu vóór computeYearlySummary bepaald, net als bij de zzp-variant, zodat de daadwerkelijk
+  // berekende afschrijving alsnog in de winst wordt meegeteld. Bewust ZONDER de "onttrekking" (de
+  // zzp-specifieke aftopping van autokosten op het privégebruik) — die correctie is bij een BV niet van
+  // toepassing: de volledige leasekosten blijven op vennootschapsniveau altijd aftrekbaar, bijtelling
+  // is bij een BV loon in natura bij de DGA (zie bijtellingPrivegebruikAuto hieronder), geen
+  // winstcorrectie.
+  const leaseAutoKostenBv = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
+  const leaseAutoWinstCorrectieBv = (leaseAutoKostenBv?.afschrijvingTotaal || 0) - (leaseAutoKostenBv?.boekresultaatBeeindigingTotaal || 0);
+  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, leaseAutoWinstCorrectieBv + (activaAfschrijvingForYear?.totaalAfschrijving || 0));
   const vpbEstimate = estimateVpb(summary.winst, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
 
@@ -105,7 +117,6 @@ function buildYearSectionBv(
   // dezelfde functie als voor een zzp'er, maar we gebruiken hier bewust normaleBijtellingTotaal (de
   // volledige, ongecapte bijtelling) — niet de afgetopte "onttrekking", die alleen relevant is voor
   // de zzp-winstcorrectie (aftopping op werkelijke autokosten hoort niet bij een BV/loon-in-natura).
-  const leaseAutoKostenBv = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
   const bijtellingPrivegebruikAuto = leaseAutoKostenBv?.normaleBijtellingTotaal || 0;
   const gebruikelijkLoon = checkGebruikelijkLoon(dgaSalarisDitJaar + bijtellingPrivegebruikAuto, year);
   const box2Estimate = estimateBox2(dividendDitJaar, year);
@@ -171,6 +182,26 @@ function buildYearSectionBv(
     );
   }
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
+  // v205: vroegtijdige beëindiging (verkoop/veiling) van een leaseauto/-machine dit jaar — zie de
+  // toelichting bij leaseAutoWinstCorrectieBv hierboven en de Bijlage.
+  const beeindigdeLeaseContracten = (leaseAutoKostenBv?.contracten || []).filter((c) => c.beeindigingsresultaat);
+  for (const c of beeindigdeLeaseContracten) {
+    const b = c.beeindigingsresultaat;
+    if (b.boekresultaat != null) {
+      openPunten.push(
+        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus ${b.boekresultaat >= 0 ? "boekwinst" : "boekverlies"} ${eur(Math.abs(b.boekresultaat))} (al verwerkt in de winst hierboven). Zie Bijlage.`
+      );
+    } else {
+      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract). Zie Bijlage.`);
+    }
+    if (b.restschuldOfOverwaarde != null) {
+      openPunten.push(
+        b.restschuldOfOverwaarde >= 0
+          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost, zie Bijlage)`
+          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost, zie Bijlage)`
+      );
+    }
+  }
 
   // v161: "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat sinds die
   // versie niet meer standaard in ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de
@@ -414,6 +445,37 @@ function buildBijlageToelichtingenHtmlBv() {
     de herfinanciering puur het openstaande saldo van dezelfde auto oversluit (bijv. omdat er feitelijk
     extra in de auto is geïnvesteerd), controleer dan handmatig of de afschrijvingsbasis nog aansluit.
     De rente van elk gekoppeld contract blijft wel gewoon apart doorlopen over zijn eigen bedrag/periode.
+  </p>
+
+  <h2>Vroegtijdige verkoop/veiling van een leaseauto of -machine</h2>
+  <p class="toelichting">
+    Wordt een financieel-geleased bedrijfsmiddel vroegtijdig verkocht of geveild (bijv. bij niet
+    nakomen van betalingen), dan spelen twee onafhankelijke bedragen — vaak door elkaar gehaald, maar
+    fiscaal wezenlijk verschillend:
+  </p>
+  <p class="toelichting">
+    <strong>1. Boekwinst/-verlies</strong> = de verkoop-/veilingopbrengst minus de fiscale boekwaarde
+    op de einddatum (aanschafwaarde minus de tot dan toe berekende afschrijving). Dit is een gewone
+    winst-/verliespost van de BV en is al verwerkt in het resultaat vóór Vpb hierboven — een hogere
+    opbrengst dan de boekwaarde verhoogt de winst, een lagere opbrengst verlaagt de winst. De
+    afschrijving zelf stopt vanaf de einddatum (geen afschrijving meer in latere jaren).
+  </p>
+  <p class="toelichting">
+    <strong>2. Restschuld of overwaarde</strong> = de opbrengst vergeleken met de nog openstaande
+    lease-hoofdsom (dus NIET de boekwaarde) op dat moment. Is de opbrengst lager dan de openstaande
+    hoofdsom, dan blijft er een restschuld over die de BV nog aan de leasemaatschappij moet betalen —
+    dat is een balansmutatie (aflossing), GEEN kostenpost, en telt dus niet mee in de winst hierboven.
+    Is de opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de
+    leasemaatschappij aan de BV terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit
+    al in punt 1 verwerkt). Deze tool berekent de openstaande hoofdsom op basis van de daadwerkelijke
+    bankbetalingen tot aan de einddatum — dit kan afwijken van wat de leasemaatschappij zelf als
+    afkoopsom rekent (bijv. bij afwijkende voorwaarden bij vroegtijdige beëindiging), dus controleer dit
+    bedrag altijd bij de leasemaatschappij zelf.
+  </p>
+  <p class="toelichting" style="color:#b45309;">
+    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze tool geen fiscale
+    boekwaarde van het object, en kan dus ook geen boekwinst/-verlies worden bepaald — alleen de
+    restschuld/overwaarde wordt dan getoond.
   </p>
 
   <h2>Investeringsaftrek (KIA) — algemene regels</h2>

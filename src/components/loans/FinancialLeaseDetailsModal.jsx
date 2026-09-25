@@ -6,7 +6,8 @@ import {
   normalizeKenteken,
 } from "../../tax/financialLease.js";
 import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
-import { computeLeaseAfschrijvingVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
+import { computeLeaseAfschrijvingVoorJaar, buildLeaseActivumFromSegment, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
+import { computeAfschrijvingPerJaar } from "../../tax/activa.js";
 import { eur } from "../../utils/amounts.js";
 
 const FIELDS_AANKOOP = [
@@ -43,8 +44,13 @@ function formFromSegment(segment) {
     datumEersteTermijn: s.datumEersteTermijn ?? "",
     contractBeeindigd: s.contractBeeindigd ?? false,
     einddatumContract: s.einddatumContract ?? "",
+    // v205: "verkoopsom" (nu getoond als "Verkoop-/veilingopbrengst") is bij een daadwerkelijke
+    // beëindiging het enige bedrag dat de gebruiker nog los hoeft in te vullen — restschuld/overwaarde
+    // wordt sindsdien automatisch berekend (opbrengst vs. de op de bankbetalingen gebaseerde
+    // openstaande lease-hoofdsom, zie hieronder) in plaats van los ingetypt te worden. Een ouder
+    // dossier met een al opgeslagen "restschuld"-waarde verliest die simpelweg (nergens meer gelezen),
+    // zonder dat dat verder ergens toe leidt.
     verkoopsom: s.verkoopsom ?? "",
-    restschuld: s.restschuld ?? "",
     // Kapitalisatie/afschrijving + bijtelling (financiële lease auto/machine, zie
     // tax/autoBijtelling.js) — allemaal optioneel en standaard leeg, zodat een bestaand contract
     // (zonder deze velden) exact hetzelfde blijft rekenen als voorheen.
@@ -94,7 +100,6 @@ function cleanSegment(form) {
     contractBeeindigd: form.contractBeeindigd,
     einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
-    restschuld: form.contractBeeindigd ? n(form.restschuld) : null,
     soort: form.soort || null,
     afschrijvingstermijnJaren: form.soort ? n(form.afschrijvingstermijnJaren) : null,
     cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
@@ -201,6 +206,14 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   // Berekende afschrijving per jaar voor dit contract als "Soort" is ingevuld — puur ter controle/
   // preview in dit venster, dezelfde berekening (computeLeaseAfschrijvingVoorJaar) als het
   // aangiftevoorstel gebruikt.
+  // v205: is dit segment op zichzelf (dus zonder rekening te houden met een eventueel volgend,
+  // gekoppeld vervolgcontract — dat weet dit venster per segment niet) daadwerkelijk vroegtijdig
+  // verkocht/geveild? Alleen dan bevriest de afschrijving op de einddatum — bij een simpele
+  // herfinanciering (geen ingevulde opbrengst) loopt de afschrijving in de preview hieronder gewoon
+  // door, precies zoals bij het echte aangiftevoorstel (zie autoBijtelling.js).
+  const segmentBeeindigdMetOpbrengst = form.contractBeeindigd && form.verkoopsom !== "" && !!form.einddatumContract;
+  const terminationEinddatum = segmentBeeindigdMetOpbrengst ? form.einddatumContract : null;
+
   const leaseActivumAfschrijvingPerJaar = useMemo(() => {
     if (!form.soort || !form.startdatum) return [];
     const segment = cleanSegment(form);
@@ -209,12 +222,29 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     if (!(termijn > 0)) return [];
     const rows = [];
     for (let j = startYear; j <= startYear + Math.ceil(termijn); j++) {
-      const afschrijving = computeLeaseAfschrijvingVoorJaar(segment, j);
+      const afschrijving = computeLeaseAfschrijvingVoorJaar(segment, j, terminationEinddatum);
       if (rows.length > 0 && afschrijving <= 0) break;
       rows.push({ jaar: j, afschrijving });
+      if (terminationEinddatum && j >= new Date(terminationEinddatum).getFullYear()) break;
     }
     return rows;
-  }, [form]);
+  }, [form, terminationEinddatum]);
+
+  // v205: boekwaarde/boekresultaat bij beëindiging — alleen te bepalen als "Soort" is ingevuld (dan
+  // is er een fiscale boekwaarde om mee te vergelijken). Ter info/preview in dit venster; de
+  // daadwerkelijke berekening voor het aangiftevoorstel gebeurt met de kenteken-groep-logica in
+  // autoBijtelling.js (bij een gekoppeld vervolgcontract kan de uitkomst daar iets afwijken van deze
+  // preview, zie de melding hieronder bij "Overgenomen van eerdere contractperiode").
+  const boekresultaatPreview = useMemo(() => {
+    if (!segmentBeeindigdMetOpbrengst || !form.soort) return null;
+    const segment = cleanSegment(form);
+    const terminationYear = new Date(segment.einddatumContract).getFullYear();
+    const activum = buildLeaseActivumFromSegment(segment, segment.einddatumContract);
+    const r = activum ? computeAfschrijvingPerJaar(activum, terminationYear) : null;
+    if (!r) return null;
+    const opbrengst = Number(segment.verkoopsom);
+    return { boekwaardeBijBeeindiging: r.boekwaardeEindJaar, boekresultaat: opbrengst - r.boekwaardeEindJaar };
+  }, [form, segmentBeeindigdMetOpbrengst]);
 
   // Welke jaren zijn relevant om de privégebruik-toggle voor te tonen: alle jaren waarin er
   // daadwerkelijk banktransacties voor dit contract zijn, plus het huidige kalenderjaar en het
@@ -584,7 +614,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             Totaal over de volledige{form.contractBeeindigd ? ", afgebroken" : ""} looptijd ({amortization.rows.length}{" "}
             termijnen): rente {eur(amortization.totaalRente)}, aflossing {eur(amortization.totaalAflossing)}.
             {form.contractBeeindigd
-              ? " Dit schema stopt bij de opgegeven einddatum — de restschuld hieronder is de werkelijke afkoopsom/overname, die kan afwijken van dit theoretische schema."
+              ? " Dit schema stopt bij de opgegeven einddatum — het saldo op dat moment is een op het contract gebaseerde schatting van de openstaande hoofdsom, die kan afwijken van de werkelijke afkoopsom/overname bij de leasemaatschappij."
               : " Dit is de volledige looptijd zoals ingevuld, ongeacht hoeveel er al daadwerkelijk via de bank is betaald."}
           </p>
           {amortization.ongekoppeldeTerugboekingen?.length > 0 && (
@@ -674,33 +704,51 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Verkoopsom (indien van toepassing)</span>
+                <span className="block text-xs font-medium text-slate-600 mb-1">Verkoop-/veilingopbrengst (indien van toepassing)</span>
                 <input type="number" min="0" step="0.01" value={form.verkoopsom} onChange={set("verkoopsom")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
-              </label>
-              <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Restschuld (indien van toepassing)</span>
-                <input type="number" min="0" step="0.01" value={form.restschuld} onChange={set("restschuld")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
               </label>
             </div>
             <p className="text-xs text-slate-400">
-              Ging het contract simpelweg over in een nieuw contract (zie hieronder), zonder aparte verkoop/afkoop? Dan
-              kun je verkoopsom en restschuld leeg laten — die zijn alleen relevant bij een daadwerkelijke
-              verkoop/afkoop van het leaseobject.
+              Ging het contract simpelweg over in een nieuw contract (zie hieronder), zonder aparte verkoop/veiling? Dan
+              kun je de opbrengst leeg laten — die is alleen relevant als het bedrijfsmiddel daadwerkelijk is
+              verkocht of geveild (bijv. bij niet nakomen van betalingen).
             </p>
-            {form.verkoopsom !== "" && form.restschuld !== "" && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Resultaat bij beëindiging (verkoopsom − restschuld)</span>
-                <span className={`text-sm font-mono font-semibold ${Number(form.verkoopsom) - Number(form.restschuld) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                  {eur(Number(form.verkoopsom) - Number(form.restschuld))}
-                </span>
+            {segmentBeeindigdMetOpbrengst && (
+              <div className="space-y-2">
+                {form.soort ? (
+                  boekresultaatPreview && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700" title="Opbrengst minus de fiscale boekwaarde op de einddatum — dit telt mee in de winst van de onderneming.">
+                        Boekwinst/-verlies (telt mee in de winst)
+                      </span>
+                      <span className={`text-sm font-mono font-semibold ${boekresultaatPreview.boekresultaat >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                        {eur(boekresultaatPreview.boekresultaat)}
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    Vul hierboven bij "Soort" auto/machine in om ook een boekwinst/-verlies (voor de winstberekening)
+                    te kunnen bepalen — zonder "Soort" kent deze tool geen fiscale boekwaarde van dit leaseobject.
+                  </p>
+                )}
+                {amortization && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700" title="Opbrengst vergeleken met de op basis van de bankbetalingen berekende openstaande lease-hoofdsom — dit is GEEN winst/verliespost, alleen de afwikkeling van de financiering.">
+                      {amortization.saldoNu - Number(form.verkoopsom) >= 0 ? "Restschuld (nog te betalen)" : "Overwaarde (wordt terugbetaald)"}
+                    </span>
+                    <span className="text-sm font-mono font-semibold text-slate-900">
+                      {eur(Math.abs(amortization.saldoNu - Number(form.verkoopsom)))}
+                    </span>
+                  </div>
+                )}
+                {!amortization && (
+                  <p className="text-xs text-slate-400">
+                    Nog niet genoeg ingevuld (koopprijs/looptijd/maandbedrag/startdatum) om de openstaande
+                    lease-hoofdsom — en dus een eventuele restschuld/overwaarde — te kunnen berekenen.
+                  </p>
+                )}
               </div>
-            )}
-            {form.restschuld !== "" && amortization && Math.abs(Number(form.restschuld) - amortization.saldoNu) > 25 && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
-                ⚠ De opgegeven restschuld ({eur(Number(form.restschuld))}) wijkt meer dan €25 af van het op basis van de
-                bankbetalingen berekende openstaande saldo ({eur(amortization.saldoNu)}) — controleer de invoer, of dit
-                verschil kan kloppen (bijv. bij afwijkende voorwaarden bij vroegtijdige beëindiging).
-              </p>
             )}
             {canAddNext && (
               <button

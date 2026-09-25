@@ -281,6 +281,26 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} nog onzeker geclassificeerd`);
   if (yc.priveTransferMissingMirrors.length > 0) openPunten.push(`${yc.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
   if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
+  // v205: vroegtijdige beëindiging (verkoop/veiling) van een leaseauto/-machine dit jaar — zie de
+  // toelichting bij winstCorrectie/computeLeaseAutoKostenVoorJaar en de Bijlage.
+  const beeindigdeLeaseContracten = (leaseAutoKostenForYear?.contracten || []).filter((c) => c.beeindigingsresultaat);
+  for (const c of beeindigdeLeaseContracten) {
+    const b = c.beeindigingsresultaat;
+    if (b.boekresultaat != null) {
+      openPunten.push(
+        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus ${b.boekresultaat >= 0 ? "boekwinst" : "boekverlies"} ${eur(Math.abs(b.boekresultaat))} (al verwerkt in de winst hierboven). Zie Bijlage.`
+      );
+    } else {
+      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract). Zie Bijlage.`);
+    }
+    if (b.restschuldOfOverwaarde != null) {
+      openPunten.push(
+        b.restschuldOfOverwaarde >= 0
+          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost, zie Bijlage)`
+          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost, zie Bijlage)`
+      );
+    }
+  }
 
   // Totaal zakelijke kosten (rubrieken 2 t/m 5) — voor de samenvatting, geen nieuwe berekening,
   // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld. Vanaf v161 ook de 5
@@ -761,6 +781,37 @@ function buildBijlageToelichtingenHtml() {
     feitelijk extra in de auto is geïnvesteerd), controleer dan handmatig of de afschrijvingsbasis nog
     aansluit. De rente van elk gekoppeld contract blijft wel gewoon apart doorlopen over zijn eigen
     bedrag/periode.
+  </p>
+
+  <h2>Vroegtijdige verkoop/veiling van een leaseauto of -machine</h2>
+  <p class="toelichting">
+    Wordt een financieel-geleased bedrijfsmiddel vroegtijdig verkocht of geveild (bijv. bij niet
+    nakomen van betalingen), dan spelen twee onafhankelijke bedragen — vaak door elkaar gehaald, maar
+    fiscaal wezenlijk verschillend:
+  </p>
+  <p class="toelichting">
+    <strong>1. Boekwinst/-verlies</strong> = de verkoop-/veilingopbrengst minus de fiscale boekwaarde
+    op de einddatum (aanschafwaarde minus de tot dan toe berekende afschrijving). Dit is een gewone
+    winst-/verliespost van de onderneming en is al verwerkt in de winst hierboven — een hogere
+    opbrengst dan de boekwaarde verhoogt de winst, een lagere opbrengst verlaagt de winst. De
+    afschrijving zelf stopt vanaf de einddatum (geen afschrijving meer in latere jaren).
+  </p>
+  <p class="toelichting">
+    <strong>2. Restschuld of overwaarde</strong> = de opbrengst vergeleken met de nog openstaande
+    lease-hoofdsom (dus NIET de boekwaarde) op dat moment. Is de opbrengst lager dan de openstaande
+    hoofdsom, dan blijft er een restschuld over die je nog aan de leasemaatschappij moet betalen — dat
+    is een balansmutatie (aflossing), GEEN kostenpost, en telt dus niet mee in de winst hierboven. Is de
+    opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de leasemaatschappij aan
+    je terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit al in punt 1 verwerkt).
+    Deze tool berekent de openstaande hoofdsom op basis van de daadwerkelijke bankbetalingen tot aan de
+    einddatum — dit kan afwijken van wat de leasemaatschappij zelf als afkoopsom rekent (bijv. bij
+    afwijkende voorwaarden bij vroegtijdige beëindiging), dus controleer dit bedrag altijd bij de
+    leasemaatschappij zelf.
+  </p>
+  <p class="toelichting" style="color:#b45309;">
+    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze tool geen fiscale
+    boekwaarde van het object, en kan dus ook geen boekwinst/-verlies worden bepaald — alleen de
+    restschuld/overwaarde wordt dan getoond.
   </p>
 
   <h2>Huur (deels zakelijk) — percentage zakelijk gebruik</h2>

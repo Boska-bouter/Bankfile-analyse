@@ -10,6 +10,16 @@
 // die daardoor in het eerste jaar "gemist" worden, komen aan het eind van de looptijd terug als
 // een extra, deels jaar — anders zou er in totaal minder worden afgeschreven dan aanschafwaarde
 // minus restwaarde, wat niet klopt.
+// v205: optioneel `activum.einddatum` — vroegtijdige beëindiging/verkoop van het bedrijfsmiddel vóór
+// het einde van de normale afschrijvingstermijn (tot nu toe alleen relevant voor een verkocht/
+// geveild financieel-geleased object, zie computeLeaseAfschrijvingVoorJaar in tax/autoBijtelling.js,
+// maar generiek genoeg om ook voor een los aangeschaft activum te gebruiken). Zonder dit veld (elk
+// bestaand activum/dossier) verandert er niets — 100% backwards compatible. Mét een ingevulde
+// einddatum wordt de afschrijving vanaf de maand ná die datum bevroren: geen verdere afschrijving in
+// latere jaren, en in het jaar van beëindiging zelf alleen naar rato tot en met de eindmaand (net als
+// de "tijdklem" in het jaar van aanschaf hierboven). De boekwaarde op dat bevriezingsmoment
+// (`boekwaardeEindJaar` voor het beëindigingsjaar en elk jaar erna) is de fiscale boekwaarde die
+// vergeleken moet worden met de verkoop-/veilingopbrengst om een boekwinst/-verlies te bepalen.
 export function computeAfschrijvingPerJaar(activum, year) {
   const aanschafwaarde = Number(activum.aanschafwaarde);
   const restwaarde = activum.restwaarde === "" || activum.restwaarde == null ? 0 : Number(activum.restwaarde);
@@ -25,12 +35,21 @@ export function computeAfschrijvingPerJaar(activum, year) {
 
   if (year < aanschafjaar) return { afschrijving: 0, boekwaardeEindJaar: aanschafwaarde };
 
+  const eindDatum = activum.einddatum ? new Date(activum.einddatum) : null;
+  // Cumulatief aantal maanden vanaf aanschaf t/m (incl.) de eindmaand — dezelfde "incl. de
+  // aanschafmaand zelf"-telling als eersteJaarMaanden hierboven, alleen dan over de volledige periode
+  // aanschaf → beëindiging in plaats van aanschaf → einde eerste jaar.
+  const maandenTotBeeindiging = eindDatum
+    ? Math.max(0, Math.min((eindDatum.getFullYear() - aanschafjaar) * 12 + (eindDatum.getMonth() - aanschafdatum.getMonth()) + 1, totaalMaanden))
+    : null;
+
   // Cumulatief aantal afschrijvingsmaanden t/m het einde van een gegeven jaar, gekapt op de
-  // totale looptijd in maanden.
+  // totale looptijd in maanden (en, bij een vroegtijdige beëindiging, ook gekapt op
+  // maandenTotBeeindiging — dat is voor elk jaar t/m het beëindigingsjaar zelf nooit lager dan wat er
+  // normaliter al zou zijn afgeschreven, en bevriest de teller voor elk jaar erna).
   const maandenTotEindeVan = (j) => {
-    if (j < aanschafjaar) return 0;
-    if (j === aanschafjaar) return Math.min(eersteJaarMaanden, totaalMaanden);
-    return Math.min(eersteJaarMaanden + (j - aanschafjaar) * 12, totaalMaanden);
+    const normaal = j < aanschafjaar ? 0 : j === aanschafjaar ? Math.min(eersteJaarMaanden, totaalMaanden) : Math.min(eersteJaarMaanden + (j - aanschafjaar) * 12, totaalMaanden);
+    return maandenTotBeeindiging == null ? normaal : Math.min(normaal, maandenTotBeeindiging);
   };
 
   const totVorigJaar = maandenTotEindeVan(year - 1);

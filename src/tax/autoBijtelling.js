@@ -43,7 +43,12 @@ export const AUTOKOSTEN_CATEGORIEN = ["Autokosten", "Brandstof", "Parkeren", "Ve
 // een financiële lease is er, anders dan bij een los aangeschaft bedrijfsmiddel, meestal geen apart
 // ingevulde restwaarde-verwachting — 0 is hier de behoudende, gebruikelijke aanname (zie ook hoe
 // activa.js zelf restwaarde behandelt: leeg/ontbrekend = 0).
-export function buildLeaseActivumFromSegment(segment) {
+// v205: `einddatum` is optioneel — geeft mee dat het leasecontract vroegtijdig is beëindigd (verkoop/
+// veiling van het bedrijfsmiddel) op die datum, zodat computeAfschrijvingPerJaar de afschrijving vanaf
+// dat moment bevriest (zie de toelichting daar). `null`/weggelaten = ongewijzigd gedrag (afschrijving
+// loopt gewoon door over de volledige termijn) — dit geldt voor ieder bestaand dossier én voor een
+// simpele herfinanciering/vervolgcontract (waar geen daadwerkelijke verkoop plaatsvond).
+export function buildLeaseActivumFromSegment(segment, einddatum = null) {
   if (!segment || !segment.soort) return null;
   const aanschafwaarde = computeAanschafwaardeBedrijfsmiddel(segment);
   const ingevoerdTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
@@ -56,15 +61,17 @@ export function buildLeaseActivumFromSegment(segment) {
     restwaarde: segment.restwaarde ?? 0,
     afschrijvingstermijnJaren,
     aanschafdatum: segment.startdatum,
+    einddatum,
   };
 }
 
 // Berekende afschrijving van dit ene leasecontract-segment voor een specifiek jaar. 0 als `soort`
 // niet is gezet, of als er nog niet genoeg is ingevuld om een termijn/aanschafdatum te bepalen (een
 // "machine"-segment zonder ingevulde afschrijvingstermijn levert bijvoorbeeld bewust 0 op, in plaats
-// van te gokken naar een termijn — net als een onvolledig ingevuld activum in activa.js).
-export function computeLeaseAfschrijvingVoorJaar(segment, year) {
-  const activum = buildLeaseActivumFromSegment(segment);
+// van te gokken naar een termijn — net als een onvolledig ingevuld activum in activa.js). `einddatum`:
+// zie buildLeaseActivumFromSegment hierboven.
+export function computeLeaseAfschrijvingVoorJaar(segment, year, einddatum = null) {
+  const activum = buildLeaseActivumFromSegment(segment, einddatum);
   if (!activum) return 0;
   const r = computeAfschrijvingPerJaar(activum, year);
   return r ? r.afschrijving : 0;
@@ -169,6 +176,11 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
   let leaseRenteTotaal = 0;
   let normaleBijtellingTotaal = 0;
   let heeftAutoMetPrivegebruik = false;
+  // v205: boekwinst/-verlies bij een daadwerkelijke, vroegtijdige verkoop/veiling van een
+  // gekapitaliseerd leaseobject (zie hieronder) — opgeteld over alle contracten die in ÉÉN specifiek
+  // jaar (dit jaar) zijn beëindigd. Voor ieder ander jaar (en voor elk bestaand dossier zonder
+  // ingevulde beëindiging-met-opbrengst) blijft dit gewoon 0.
+  let boekresultaatBeeindigingTotaal = 0;
 
   for (const lease of leaseSummary || []) {
     if (lease.category !== "Lease (financieel)") continue;
@@ -183,6 +195,16 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
       // aanschaf/financiering.
       const primary = group[0];
       const isGroep = group.length > 1;
+      const laatsteInGroep = group[group.length - 1];
+
+      // v205: vroegtijdige beëindiging (verkoop/veiling) van DEZE (kenteken-)groep — alleen als op
+      // het LAATSTE segment van de groep zowel "contract vroegtijdig beëindigd" is aangevinkt ALS een
+      // verkoop-/veilingopbrengst is ingevuld. Zonder ingevulde opbrengst is dit gewoon een
+      // herfinanciering/vervolgcontract (zie de toelichting in FinancialLeaseDetailsModal.jsx) — dan
+      // verandert er niets aan de doorlopende afschrijving hieronder.
+      const isBeeindigdMetOpbrengst = !!laatsteInGroep.contractBeeindigd && laatsteInGroep.verkoopsom != null && !!laatsteInGroep.einddatumContract;
+      const terminationEinddatum = isBeeindigdMetOpbrengst ? laatsteInGroep.einddatumContract : null;
+      const terminationYear = isBeeindigdMetOpbrengst ? new Date(laatsteInGroep.einddatumContract).getFullYear() : null;
 
       // --- Afschrijving: ÉÉN doorlopende tijdlijn per (kenteken-)groep, geankerd op het EERSTE
       // segment. Bewuste, door de gebruiker (accountant) te controleren vereenvoudiging: een 2e/
@@ -196,8 +218,34 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
       // de auto, niet alleen het openstaande saldo overgesloten), dan is dit een bewuste,
       // documenteerde aanname die per geval gecontroleerd moet worden — geen automatisch afgeleid
       // fiscaal feit.
-      const afschrijving = computeLeaseAfschrijvingVoorJaar(primary, year);
+      const afschrijving = computeLeaseAfschrijvingVoorJaar(primary, year, terminationEinddatum);
       afschrijvingTotaal += afschrijving;
+
+      // v205: boekwinst/-verlies — alleen berekend in het jaar van beëindiging zelf (een eenmalige
+      // gebeurtenis, geen jaarlijks terugkerend bedrag). boekwaardeBijBeeindiging komt uit dezelfde,
+      // nu bevroren afschrijvingsberekening als hierboven; restschuldOfOverwaarde vergelijkt de
+      // opbrengst met de daadwerkelijk op basis van de bankbetalingen berekende openstaande
+      // lease-hoofdsom — bewust een ANDER bedrag dan de boekwaarde (zie de toelichting in de Bijlage).
+      // Beide zijn `null` als er nog te weinig is ingevuld om ze te kunnen bepalen (bijv. geen "Soort"
+      // ingevuld voor de boekwaarde, of een lease die te onvolledig is voor een amortisatieschema).
+      let beeindigingsresultaat = null;
+      if (isBeeindigdMetOpbrengst && terminationYear === year) {
+        const opbrengst = Number(laatsteInGroep.verkoopsom);
+        const activumBijBeeindiging = buildLeaseActivumFromSegment(primary, terminationEinddatum);
+        const r = activumBijBeeindiging ? computeAfschrijvingPerJaar(activumBijBeeindiging, terminationYear) : null;
+        const boekwaardeBijBeeindiging = r ? r.boekwaardeEindJaar : null;
+        const boekresultaat = r ? opbrengst - boekwaardeBijBeeindiging : null;
+        const amortizationBijBeeindiging = computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+        const openstaandeHoofdsom = amortizationBijBeeindiging?.saldoNu ?? null;
+        beeindigingsresultaat = {
+          opbrengst,
+          boekwaardeBijBeeindiging,
+          boekresultaat,
+          openstaandeHoofdsom,
+          restschuldOfOverwaarde: openstaandeHoofdsom != null ? openstaandeHoofdsom - opbrengst : null,
+        };
+        if (boekresultaat != null) boekresultaatBeeindigingTotaal += boekresultaat;
+      }
 
       let leaseRente = 0;
       let privegebruikMeerDan500km = false;
@@ -244,6 +292,9 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
         // rij van meerdere aan elkaar gekoppelde contractsegmenten (zelfde kenteken)?
         kenteken: isGroep ? (primary.kenteken || null) : null,
         aantalGekoppeldeSegmenten: group.length,
+        // v205: alleen gezet in het jaar van een daadwerkelijke, vroegtijdige verkoop/veiling — zie
+        // hierboven.
+        beeindigingsresultaat,
       });
     }
   }
@@ -268,13 +319,20 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
     contracten,
     afschrijvingTotaal, leaseRenteTotaal, autokostenTransactieTotaal, totaleAutokosten,
     normaleBijtellingTotaal, onttrekking, nettoAftrekbareAutokosten,
+    // v205: boekwinst (positief) of boekverlies (negatief) op een dit jaar verkocht/geveild
+    // leaseobject — zie de toelichting bij boekresultaat hierboven. 0 als er dit jaar geen enkele
+    // daadwerkelijke beëindiging-met-opbrengst was (elk bestaand dossier).
+    boekresultaatBeeindigingTotaal,
     // Het bedrag waarmee de winst per saldo extra gecorrigeerd moet worden, BOVENOP wat er al aan
     // rente/gecategoriseerde kosten wordt afgetrokken: de nieuwe afschrijving is een kostenpost die
     // er nog niet was (verlaagt de winst), de onttrekking draait een deel daarvan (en eventueel ook
-    // een deel van de al aftrekbare rente/gecategoriseerde kosten) weer terug (verhoogt de winst).
-    // Kan dus negatief zijn (bijv. bij een forse onttrekking) — dat betekent dat de winst per saldo
-    // hóger uitkomt dan zonder deze correctie, niet lager. Bedoeld om bij de bestaande
-    // renteAftrekbaar-parameter van computeYearlySummary opgeteld te worden (zie yearlySummary.js).
-    winstCorrectie: afschrijvingTotaal - onttrekking,
+    // een deel van de al aftrekbare rente/gecategoriseerde kosten) weer terug (verhoogt de winst), en
+    // een boekwinst/-verlies bij verkoop verhoogt resp. verlaagt de winst nog een keer extra (vandaar
+    // het aftrekken hieronder: winst = ... - winstCorrectie, dus een boekWINST moet winstCorrectie
+    // verlágen om de winst te verhogen). Kan dus negatief zijn (bijv. bij een forse onttrekking of een
+    // boekwinst) — dat betekent dat de winst per saldo hóger uitkomt dan zonder deze correctie, niet
+    // lager. Bedoeld om bij de bestaande renteAftrekbaar-parameter van computeYearlySummary opgeteld
+    // te worden (zie yearlySummary.js).
+    winstCorrectie: afschrijvingTotaal - onttrekking - boekresultaatBeeindigingTotaal,
   };
 }
