@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, Fragment } from "react";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, Check, X } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
@@ -103,7 +103,10 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
-export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp }) {
+export function DetailTable({
+  group, onRequestChange, onConfirmCorrect, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp,
+  fingerprintByTxId, transactionNotes, onSetNote,
+}) {
   const [query, setQuery] = useState("");
   const [showAmountFilter, setShowAmountFilter] = useState(false);
   const [amountFilterAlign, setAmountFilterAlign] = useState("right"); // "right" | "left"
@@ -138,6 +141,18 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
+  // v203: eigen toelichting bij een transactie (bijv. "naheffing Q2 2025 LB"), voor als de
+  // bank-omschrijving zelf niet duidelijk is. Eén rij tegelijk in bewerkstand.
+  const [editingNoteTxId, setEditingNoteTxId] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const startEditNote = (tx) => {
+    setEditingNoteTxId(tx.id);
+    setNoteDraft((transactionNotes && fingerprintByTxId && transactionNotes[fingerprintByTxId[tx.id]]) || "");
+  };
+  const saveNote = (tx) => {
+    onSetNote?.(tx, noteDraft);
+    setEditingNoteTxId(null);
+  };
 
   const applyChange = (tx, patch) => onRequestChange(tx, patch);
 
@@ -418,12 +433,59 @@ export function DetailTable({ group, onRequestChange, onConfirmCorrect, enableDr
                   >
                     {t.counterparty}
                   </td>
-                  <td
-                    className={`px-4 py-2 text-slate-500 cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words max-w-sm" : "max-w-[14rem] truncate"}`}
-                    onClick={() => setExpandedCell((cur) => (cur === `${t.id}:desc` ? null : `${t.id}:desc`))}
-                    title="Klik om de volledige tekst te tonen/verbergen"
-                  >
-                    {expandedCell === `${t.id}:desc` ? (t.fullDescription || t.description) : t.description}
+                  <td className="px-4 py-2 text-slate-500 max-w-sm">
+                    <div
+                      className={`cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words" : "max-w-[14rem] truncate"}`}
+                      onClick={() => setExpandedCell((cur) => (cur === `${t.id}:desc` ? null : `${t.id}:desc`))}
+                      title="Klik om de volledige tekst te tonen/verbergen"
+                    >
+                      {expandedCell === `${t.id}:desc` ? (t.fullDescription || t.description) : t.description}
+                    </div>
+                    {onSetNote && (
+                      editingNoteTxId === t.id ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={noteDraft}
+                            onChange={(e) => setNoteDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveNote(t);
+                              if (e.key === "Escape") setEditingNoteTxId(null);
+                            }}
+                            placeholder="Toelichting, bijv. naheffing Q2 2025 LB"
+                            className="flex-1 min-w-0 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                          />
+                          <button onClick={() => saveNote(t)} className="shrink-0 rounded border border-emerald-300 bg-emerald-50 p-1 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
+                            <Check className="h-3 w-3" />
+                          </button>
+                          <button onClick={() => setEditingNoteTxId(null)} className="shrink-0 rounded border border-slate-300 p-1 text-slate-500 hover:bg-slate-50" title="Annuleren">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        (() => {
+                          const note = transactionNotes?.[fingerprintByTxId?.[t.id]];
+                          return note ? (
+                            <button
+                              onClick={() => startEditNote(t)}
+                              className="mt-1 flex items-start gap-1 text-left text-xs italic text-sky-700 hover:text-sky-900"
+                              title="Toelichting bewerken"
+                            >
+                              <Pencil className="h-3 w-3 shrink-0 mt-0.5" /> <span className="break-words">{note}</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => startEditNote(t)}
+                              className="mt-1 text-xs text-slate-300 hover:text-slate-600"
+                              title="Toelichting toevoegen"
+                            >
+                              + toelichting
+                            </button>
+                          );
+                        })()
+                      )
+                    )}
                   </td>
                 </tr>
               ))}

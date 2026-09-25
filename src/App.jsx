@@ -178,6 +178,11 @@ export default function App() {
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
   const [excludedManualFingerprints, setExcludedManualFingerprints] = useState([]);
+  // v203: vrije toelichtingstekst per transactie (bijv. "naheffing Q2 2025 LB"), voor als de
+  // bank-omschrijving zelf niet duidelijk genoeg is. Gesleuteld op dezelfde inhoud-gebaseerde
+  // "fingerprint" als excludedManualFingerprints hierboven (niet het technische, sessie-gebonden
+  // tx.id) — zie duplicates.js — zodat een toelichting ook na herladen van het project blijft staan.
+  const [transactionNotes, setTransactionNotes] = useState({}); // { [fingerprint]: string }
   const [reviewFileModal, setReviewFileModal] = useState(null);
   const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
   const [businessKeywords, setBusinessKeywords] = useState([]);
@@ -344,6 +349,7 @@ export default function App() {
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
     setDismissedDuplicateNotice(!!settings.dismissedDuplicateNotice);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
+    setTransactionNotes(settings.transactionNotes && typeof settings.transactionNotes === "object" ? settings.transactionNotes : {});
     setBusinessKeywords(Array.isArray(settings.businessKeywords) ? settings.businessKeywords : []);
     setBusinessExpenseKeywords(Array.isArray(settings.businessExpenseKeywords) ? settings.businessExpenseKeywords : []);
     setReviewedIncomeKeys(Array.isArray(settings.reviewedIncomeKeys) ? settings.reviewedIncomeKeys : []);
@@ -393,6 +399,21 @@ export default function App() {
   const setHoldingBoekingField = (year, field, value) => {
     snapshotBeforeAction("Holding-boeking aangepast");
     setHoldingBoekingen((prev) => ({ ...prev, [year]: { ...(prev[year] || {}), [field]: value } }));
+  };
+  const setTransactionNote = (tx, note) => {
+    const fp = fingerprintByTxId[tx.id];
+    if (!fp) return;
+    snapshotBeforeAction("Toelichting aangepast");
+    setTransactionNotes((prev) => {
+      const trimmed = (note || "").trim();
+      if (!trimmed) {
+        if (!(fp in prev)) return prev;
+        const next = { ...prev };
+        delete next[fp];
+        return next;
+      }
+      return { ...prev, [fp]: trimmed };
+    });
   };
   const setIbGedaan = (year, gedaan) => {
     snapshotBeforeAction("IB-status aangepast");
@@ -579,7 +600,7 @@ export default function App() {
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
         ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
@@ -592,7 +613,7 @@ export default function App() {
     categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
     ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
@@ -667,7 +688,7 @@ export default function App() {
       label,
       state: {
         parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage,
@@ -692,6 +713,7 @@ export default function App() {
     setHoldingBoekingen(s.holdingBoekingen);
     setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
     setExcludedManualFingerprints(s.excludedManualFingerprints);
+    setTransactionNotes(s.transactionNotes || {});
     setBusinessKeywords(s.businessKeywords);
     setBusinessExpenseKeywords(s.businessExpenseKeywords);
     setReviewedIncomeKeys(s.reviewedIncomeKeys);
@@ -1732,7 +1754,7 @@ export default function App() {
       excludedDuplicateFingerprints, dismissedDuplicateNotice, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+      leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
@@ -1800,6 +1822,7 @@ export default function App() {
       setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
       setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
       setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
+      setTransactionNotes(project.transactionNotes && typeof project.transactionNotes === "object" ? project.transactionNotes : {});
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
       setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
       setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
@@ -1842,6 +1865,7 @@ export default function App() {
     setExcludedDuplicateFingerprints([]);
     setDismissedDuplicateNotice(false);
     setExcludedManualFingerprints([]);
+    setTransactionNotes({});
     setReviewFileModal(null);
     setBusinessKeywords([]);
     setBusinessExpenseKeywords([]);
@@ -2884,6 +2908,9 @@ export default function App() {
                         isExpanded={expandedTable === "Zakelijk"}
                         onToggleExpand={() => setExpandedTable((v) => (v === "Zakelijk" ? null : "Zakelijk"))}
                         onOpenHelp={setHelpPopupChapter}
+                        fingerprintByTxId={fingerprintByTxId}
+                        transactionNotes={transactionNotes}
+                        onSetNote={setTransactionNote}
                       />
                     </div>
                   )}
@@ -2901,6 +2928,9 @@ export default function App() {
                         draggingTxId={dragState ? dragState.tx.id : null}
                         isExpanded={expandedTable === "Prive"}
                         onToggleExpand={() => setExpandedTable((v) => (v === "Prive" ? null : "Prive"))}
+                        fingerprintByTxId={fingerprintByTxId}
+                        transactionNotes={transactionNotes}
+                        onSetNote={setTransactionNote}
                       />
                     </div>
                   )}
