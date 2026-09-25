@@ -9,6 +9,7 @@ const STEP_LABELS = {
 };
 
 export default function SetupWizardModal({
+  forceRechtsvormStep = false,
   pendingFileNames, onAccountTypeChoose,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
@@ -56,7 +57,11 @@ export default function SetupWizardModal({
     // Rechtsvorm (en de holding-vraag die daarvan afhangt) komt bewust meteen na de naam van de
     // rekeninghouder — vóór alle andere vragen — zodat KOR/BTW-verlegd hieronder al weten of ze
     // relevant zijn (beide zijn niet van toepassing bij een BV, zie de live-filter verderop).
-    if (rechtsvorm === null) list.push(14);
+    // forceRechtsvormStep: handmatig geopend via "Basisvragen bewerken" (in plaats van bij het
+    // laden van een nieuw bestand) — dan hoort de Rechtsvorm-vraag er altijd bij, ook als hij al
+    // eerder beantwoord is, zodat zzp/BV achteraf nog omgezet kan worden. De live-filter hieronder
+    // (op rechtsvorm) zorgt er vanzelf voor dat na een wissel de juiste vervolgvragen verschijnen.
+    if (rechtsvorm === null || forceRechtsvormStep) list.push(14);
     if (heeftHolding === null) list.push(15);
     if (eigenRekeningenExtra === null) list.push(11);
     if (zakelijkeSpaarRekening === null) list.push(16);
@@ -482,7 +487,21 @@ export default function SetupWizardModal({
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setRechtsvorm("zzp"); goNext(); }}
+                  onClick={() => {
+                    // Omzetting van BV terug naar zzp: bij het kiezen van BV worden KOR/BTW-verlegd
+                    // hieronder stilzwijgend op "nee" gezet (niet van toepassing bij een BV) — dat is
+                    // geen echt antwoord voor de zzp-situatie, dus die moeten weer als onbeantwoord
+                    // gaan gelden. Deze wizard-sessie vraagt ze zelf niet meteen opnieuw (de
+                    // wachtrij ligt al vast bij het openen), maar de bestaande checklist/"Werk te
+                    // doen" en het BTW-instellingenpaneel signaleren daarna vanzelf dat KOR en
+                    // BTW-verlegd nog beantwoord moeten worden.
+                    if (rechtsvorm === "bv") {
+                      setKorRegeling(null);
+                      setBtwVerlegd(null);
+                    }
+                    setRechtsvorm("zzp");
+                    goNext();
+                  }}
                   className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Eenmanszaak/zzp

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, CONTINUITY_GAP_THRESHOLD } from "./importers/transactions.js";
@@ -291,6 +291,10 @@ export default function App() {
   const [showCategoryOverview, setShowCategoryOverview] = useState(false);
   const { updateAvailable } = useVersionCheck();
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
+  // v199: handmatig geopend via de "Basisvragen bewerken"-knop — in dat geval moet de Rechtsvorm-
+  // stap (zzp/BV) altijd in de wizard-wachtrij komen, ook als hij al eerder beantwoord is (zie
+  // forceRechtsvormStep op SetupWizardModal), zodat je rechtsvorm achteraf nog kunt omzetten.
+  const [manualWizardOpen, setManualWizardOpen] = useState(false);
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -2241,6 +2245,20 @@ export default function App() {
               >
                 <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
               </button>
+              {/* v199: heropent de wizard om basisvragen te wijzigen (o.a. rechtsvorm zzp/BV,
+                  KOR, BTW-verlegd, leaseauto/lening/AOV) — de wizard vraagt normaal alleen nog
+                  onbeantwoorde vragen, maar hier forceren we de Rechtsvorm-stap altijd terug in
+                  de wachtrij (zie forceRechtsvormStep), zodat je zzp/BV ook achteraf kunt omzetten.
+                  Wisselen van rechtsvorm haalt automatisch de bijbehorende vervolgvragen erbij
+                  (bijv. holdingstructuur bij BV, of KOR/BTW-verlegd/urencriterium bij zzp) omdat
+                  die velden voor de "andere" rechtsvorm nooit ingevuld zijn. */}
+              <button
+                onClick={() => setManualWizardOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                title="Rechtsvorm, KOR, BTW-verlegd en andere basisvragen wijzigen"
+              >
+                <Settings className="h-3.5 w-3.5" /> Basisvragen bewerken
+              </button>
             </div>
           </div>
         )}
@@ -2253,8 +2271,9 @@ export default function App() {
           />
         )}
 
-        {showSetupWizard && (
+        {(showSetupWizard || manualWizardOpen) && (
           <SetupWizardModal
+            forceRechtsvormStep={manualWizardOpen}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
             korRegeling={korRegeling}
@@ -2294,7 +2313,7 @@ export default function App() {
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
-            onClose={() => setShowSetupWizard(false)}
+            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); }}
           />
         )}
 
