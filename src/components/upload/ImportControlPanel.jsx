@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle, Trash2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
+import { CONTINUITY_GAP_THRESHOLD } from "../../importers/transactions.js";
+
+// Een verschil kleiner dan CONTINUITY_GAP_THRESHOLD (€100) wordt overal elders in de tool (het
+// jaaroverzicht, de indicatieve aangifteberekening) al niet als een echt probleem behandeld — puur
+// afronding of een periodegrens die net niet exact aansluit. Deze importcontrole gebruikte tot nu
+// toe een veel strengere tolerantie (in de praktijk: exact op de cent) voor "klopt het saldo", en
+// liet daardoor iedere paar euro's afwijking al als een amber/rode waarschuwing zien — inconsistent
+// met de rest van de tool. Vanaf nu telt zo'n klein verschil hier ook als "in orde", met alleen een
+// informatieve melding erbij (geen actie nodig, wel zichtbaar).
+const isMinorDiff = (diff) => Math.abs(diff) < CONTINUITY_GAP_THRESHOLD;
 
 function StatusLine({ ok, warn, children }) {
   return (
@@ -23,8 +33,9 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
   if (diagnostics.length === 0) return null;
 
   const anyIssue =
-    diagnostics.some((d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok)) ||
-    continuity.some((c) => !c.ok);
+    diagnostics.some(
+      (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff))
+    ) || continuity.some((c) => !c.ok && !isMinorDiff(c.diff));
 
   return (
     <section className={`rounded-lg border ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
@@ -82,11 +93,18 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                       : `${d.missingCounterparty} transactie(s) zonder tegenpartij én zonder omschrijving`}
                   </StatusLine>
                   {d.balanceCheck ? (
-                    <StatusLine ok={d.balanceCheck.ok} warn>
+                    <StatusLine ok={d.balanceCheck.ok || isMinorDiff(d.balanceCheck.diff)} warn={!d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff)}>
                       {d.balanceCheck.ok ? (
                         <>
                           Saldo sluit aan (begin- en eindsaldo kloppen met de som van de transacties)
                           {d.balanceCheck.isCorrected && " — met een handmatig gecorrigeerd beginsaldo"}
+                        </>
+                      ) : isMinorDiff(d.balanceCheck.diff) ? (
+                        <>
+                          Saldo sluit nagenoeg aan (verschil {eur(d.balanceCheck.diff)}) — waarschijnlijk gewoon afronding, geen actie nodig, maar{" "}
+                          <button onClick={() => onReviewFile(d.fileName)} className="underline hover:no-underline">
+                            toch even bekijken kan altijd
+                          </button>
                         </>
                       ) : (
                         <>
@@ -108,19 +126,25 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
             <div className="rounded-md bg-white border border-slate-100 p-3">
               <p className="text-xs font-semibold text-slate-700 mb-1.5">Aansluiting tussen bestanden</p>
               <ul className="space-y-1 text-xs text-slate-600">
-                {continuity.map((c) => (
-                  <StatusLine key={`${c.fileA}__${c.fileB}`} ok={c.ok} warn>
-                    <strong>{c.fileA}</strong> (eindigt {c.aTo.toLocaleDateString("nl-NL")}, saldo {eur(c.aLastBalance)}) →{" "}
-                    <strong>{c.fileB}</strong> (begint {c.bFrom.toLocaleDateString("nl-NL")}, saldo {eur(c.bOpeningBalance)})
-                    {c.ok ? " — sluit aan." : (
-                      <>
-                        {" "}— verschil {eur(c.diff)}. Dat kan een periodegrens zijn die niet exact aansluit (geen
-                        probleem), of het is de moeite waard om na te gaan of er tussenin iets ontbreekt.
-                        {Math.abs(c.diff) < 100 && " Een verschil van een paar euro is meestal gewoon afronding — dit telt daarom nergens elders mee als een gemiste periode."}
-                      </>
-                    )}
-                  </StatusLine>
-                ))}
+                {continuity.map((c) => {
+                  const minor = !c.ok && isMinorDiff(c.diff);
+                  return (
+                    <StatusLine key={`${c.fileA}__${c.fileB}`} ok={c.ok || minor} warn={!c.ok && !minor}>
+                      <strong>{c.fileA}</strong> (eindigt {c.aTo.toLocaleDateString("nl-NL")}, saldo {eur(c.aLastBalance)}) →{" "}
+                      <strong>{c.fileB}</strong> (begint {c.bFrom.toLocaleDateString("nl-NL")}, saldo {eur(c.bOpeningBalance)})
+                      {c.ok ? (
+                        " — sluit aan."
+                      ) : minor ? (
+                        <> — verschil {eur(c.diff)}. Een verschil van een paar euro is meestal gewoon afronding of een periodegrens — dit telt daarom nergens elders mee als een gemiste periode.</>
+                      ) : (
+                        <>
+                          {" "}— verschil {eur(c.diff)}. Dat kan een periodegrens zijn die niet exact aansluit (geen
+                          probleem), of het is de moeite waard om na te gaan of er tussenin iets ontbreekt.
+                        </>
+                      )}
+                    </StatusLine>
+                  );
+                })}
               </ul>
             </div>
           )}

@@ -2161,6 +2161,17 @@ export default function App() {
                       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700">
                         <Check className="h-2.5 w-2.5" /> saldo klopt
                       </span>
+                    ) : Math.abs(balanceCheck.diff) < CONTINUITY_GAP_THRESHOLD ? (
+                      // v202: een verschil kleiner dan €100 wordt elders in de tool (jaaroverzicht,
+                      // aangifteberekening) al niet als een echt probleem behandeld — puur afronding of
+                      // een periodegrens die net niet exact aansluit. Dit chipje volgt nu dezelfde regel.
+                      <button
+                        onClick={() => setReviewFileModal(f.fileName)}
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                        title="Klein verschil, waarschijnlijk afronding — klik om te bekijken"
+                      >
+                        <Check className="h-2.5 w-2.5" /> saldo klopt (verschil {eur(balanceCheck.diff)})
+                      </button>
                     ) : (
                       <button
                         onClick={() => setReviewFileModal(f.fileName)}
