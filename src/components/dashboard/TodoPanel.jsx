@@ -84,7 +84,14 @@ export default function TodoPanel({ items }) {
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  {item.ref && <span className="text-xs text-slate-400">Ga erheen →</span>}
+                  {item.ref && (
+                    <button
+                      onClick={() => item.ref.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      className="text-xs text-slate-400 hover:text-slate-700 hover:underline"
+                    >
+                      Ga erheen →
+                    </button>
+                  )}
                 </span>
               </div>
             )}
