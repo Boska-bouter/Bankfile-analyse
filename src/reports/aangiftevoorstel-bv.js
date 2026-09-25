@@ -13,10 +13,11 @@ import { computeRekeningCourantVerloop, computeEigenVermogenVerloop } from "../t
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
-import { computeActivaSummary, computeActivaAfschrijvingForYear } from "../tax/activa.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
+import { computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
-import { computeLeaseAutoKostenVoorJaar } from "../tax/autoBijtelling.js";
+import { computeLeaseAutoKostenVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
 import { eur } from "../utils/amounts.js";
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
@@ -83,6 +84,16 @@ function buildYearSectionBv(
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, activaAfschrijvingForYear?.totaalAfschrijving || 0);
   const vpbEstimate = estimateVpb(summary.winst, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
+
+  // v204: KIA (kleinschaligheidsinvesteringsaftrek) gold tot nu toe alleen in het zzp-rapport, maar is
+  // net zo goed van toepassing op een BV onder de Vpb — computeInvesteringenForYear/computeMogelijkeKia
+  // zijn generieke, rechtsvorm-onafhankelijke functies (zelfde als bij de zzp-variant in
+  // aangiftevoorstel.js). "Ná mogelijke KIA*" is ook hier een apart scenario naast de winst
+  // hierboven — geen automatische correctie, want niet elke investering kwalificeert (zie Bijlage).
+  const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
+  const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
+  const winstNaKia = summary.winst - mogelijkeKia;
+  const vpbEstimateNaKia = estimateVpb(winstNaKia, year);
 
   // DGA-salaris en dividend van dit jaar — voor de gebruikelijk-looncheck en de box 2-schatting.
   const dgaSalarisDitJaar = Math.abs(classified.filter((tx) => tx.category === "DGA-salaris" && !tx.isMirror && tx.year === year).reduce((a, tx) => a + tx.amount, 0));
@@ -159,6 +170,7 @@ function buildYearSectionBv(
       `Bijtelling privégebruik auto (financial lease, ${eur(bijtellingPrivegebruikAuto)}) — dit is geen correctie op de winst/Vpb, maar hoort als loon in natura bij het DGA-salaris. Check of dit is verwerkt in de loonheffing.`
     );
   }
+  if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
 
   // v161: "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat sinds die
   // versie niet meer standaard in ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de
@@ -185,6 +197,7 @@ function buildYearSectionBv(
       <div><span class="label">Geschatte Vpb*</span><span class="bedrag">${eur(vpbEstimate.belasting)}</span></div>
       <div><span class="label">Resultaat ná Vpb</span><span class="bedrag">${eur(summary.winst - vpbEstimate.belasting)}</span></div>
     </div>
+    ${mogelijkeKia > 0 ? `<p class="toelichting">Ná mogelijke KIA* (${eur(mogelijkeKia)}): geschatte Vpb <strong>${eur(vpbEstimateNaKia.belasting)}</strong> in plaats van ${eur(vpbEstimate.belasting)} — zie "Mogelijke investeringsaftrek (KIA)" hieronder en de Bijlage.</p>` : ""}
     ${kwartalen.length > 0
       ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
       <tbody><tr><td>Saldo</td>${kwartalen
@@ -294,6 +307,15 @@ function buildYearSectionBv(
 
   ${bvBalansHtml}
 
+  <h2>Mogelijke investeringsaftrek (KIA)</h2>
+  ${investeringenForYear.totaalInvestering > 0 ? `
+  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
+  ${mogelijkeKia > 0 ? `
+  <p><strong>* Resultaat vóór Vpb blijft ${eur(summary.winst)} — de KIA is een aftrekpost op de Vpb-grondslag, geen correctie op het bedrijfsresultaat zelf. Vpb vóór mogelijke KIA: ${eur(vpbEstimate.belasting)}. Vpb ná mogelijke KIA: ${eur(vpbEstimateNaKia.belasting)}.</strong></p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. personenauto's, grond en woningen meestal niet, en elk bedrijfsmiddel moet minimaal ca. €450 kosten) — deze tool kent dat onderscheid niet uit bankgegevens. Controleer zelf welke investeringen hierboven daadwerkelijk kwalificeren voordat je de KIA toepast.</p>
+  ` : ""}
+  ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel.</p>`}
+
   ${kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
   <table>
@@ -331,6 +353,78 @@ function buildYearSectionBv(
   </table>
 
   ${algemeneGegevensHtml}`;
+}
+
+// Bijlage met algemene, niet-jaargebonden toelichtingen — zelfde opzet als
+// buildBijlageToelichtingenHtml() in aangiftevoorstel.js (de zzp-variant), maar met de tekst aangepast
+// aan een BV/Vpb-context: financiële lease werkt voor een BV anders uit (bijtelling als loon in natura
+// bij de DGA in plaats van een aftopping op de winst/aftrekbare kosten van de ondernemer zelf), en de
+// zelfstandigenaftrek/heffingskortingen-secties uit de zzp-bijlage zijn hier bewust weggelaten (die
+// bestaan alleen in de IB, niet in de Vpb).
+function buildBijlageToelichtingenHtmlBv() {
+  return `
+  <h1>Bijlage: Toelichtingen</h1>
+  <p class="subtitle">Algemene uitleg bij een aantal rubrieken hierboven — hier maar één keer uitgeschreven in plaats van per jaar.</p>
+
+  <h2>Financiële baten en lasten — rente versus aflossing</h2>
+  <p class="toelichting">
+    Alleen de rente is een kostenpost — de rest van elke termijn is aflossing op de financiering, een
+    balansmutatie, geen bedrijfskosten. Is bij een leasecontract de "soort" (auto/machine) ingevuld,
+    dan is het geleasde object wél een eigen bedrijfsmiddel van de BV dat gekapitaliseerd en
+    afgeschreven wordt — zie dan "3. Afschrijvingen" in de jaarsectie. Zonder ingevulde "soort" (het
+    gebruikelijke geval tot nu toe) staat bij "Financiële baten en lasten" alleen de rente, zoals
+    voorheen.
+  </p>
+
+  <h2>Afschrijvingen — algemeen</h2>
+  <p class="toelichting">
+    Een bedrijfsmiddel (auto, apparatuur of machine) mag niet in één keer als kosten worden
+    afgetrokken — dit zijn bedrijfsmiddelen (activa) die over de gebruiksduur afgeschreven moeten
+    worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Zodra bedrijfsmiddelen zijn
+    geregistreerd bij "Activa" (aanschafwaarde, -datum, afschrijvingstermijn, restwaarde) gebruikt
+    deze tool de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
+    ingevuld, dan berekent deze tool geen afschrijvingsschema en staat het bruto aanschafbedrag in de
+    jaarsectie alleen ter herkenning.
+  </p>
+
+  <h2>Financiële lease auto — kapitalisatie en bijtelling als loon in natura bij de DGA</h2>
+  <p class="toelichting">
+    Bij financiële lease is de auto een eigen bedrijfsmiddel van de BV, dat gekapitaliseerd en
+    afgeschreven wordt (aanschafwaarde = het gefinancierde bedrag bij aanvang van het contract, niet de
+    cataloguswaarde; fiscale minimale afschrijvingstermijn van ${MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN}
+    jaar). De leasekosten (afschrijving + rente) blijven op vennootschapsniveau altijd volledig
+    aftrekbaar bij het resultaat vóór Vpb — anders dan bij een zzp'er kent een BV geen aftopping van de
+    autokosten op de winst.
+  </p>
+  <p class="toelichting">
+    Rijdt de DGA meer dan 500 km privé per jaar in een geleasede auto van de BV, dan geldt in plaats
+    daarvan de normale bijtelling privégebruik auto (bijtellingspercentage × cataloguswaarde) zoals bij
+    een gewone werknemer: dit is loon in natura bij de DGA persoonlijk, geen correctie op de winst of de
+    Vpb van de BV. Deze tool telt die bijtelling daarom mee bij het DGA-salaris voor de
+    gebruikelijk-loonregeling (zie "Rekening-courant, kapitaal en dividend" in de jaarsectie) en meldt
+    dit als open punt — controleer of de bijtelling daadwerkelijk in de loonaangifte/loonheffing van de
+    DGA is verwerkt.
+  </p>
+  <p class="toelichting" style="color:#b45309;">
+    ⚠ Bij een tussentijds vervangen/geherfinancierd leasecontract van dezelfde auto (herkend op een
+    gelijk kenteken) telt de afschrijving maar één keer mee, doorlopend vanaf de OORSPRONKELIJKE
+    aanschaf/financiering — het bedrag van een later, gekoppeld contract wordt bewust NIET nogmaals als
+    afschrijvingsbasis meegeteld (dat zou dubbel tellen), ook al kan het financieel om een nieuw, hoger
+    bedrag gaan. Dit is een gangbare, maar door de gebruiker te controleren aanname: klopt het niet dat
+    de herfinanciering puur het openstaande saldo van dezelfde auto oversluit (bijv. omdat er feitelijk
+    extra in de auto is geïnvesteerd), controleer dan handmatig of de afschrijvingsbasis nog aansluit.
+    De rente van elk gekoppeld contract blijft wel gewoon apart doorlopen over zijn eigen bedrag/periode.
+  </p>
+
+  <h2>Investeringsaftrek (KIA) — algemene regels</h2>
+  <p class="toelichting">
+    De kleinschaligheidsinvesteringsaftrek (KIA) geldt niet alleen voor de inkomstenbelasting, maar net
+    zo goed voor de vennootschapsbelasting van een BV: het is een aftrekpost op de fiscale winst vóór
+    Vpb, gebaseerd op het totaal geïnvesteerde bedrag in bedrijfsmiddelen in dat jaar. De getoonde
+    mogelijke KIA is een mógelijke, geen definitieve aftrek — niet elk bedrijfsmiddel telt mee voor de
+    KIA (bijv. personenauto's en grond meestal niet, en elk bedrijfsmiddel moet minimaal circa €450
+    hebben gekost). Controleer dit zelf per aanschaf.
+  </p>`;
 }
 
 export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding) {
@@ -442,6 +536,8 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     geen officiële aangifte, geen jaarrekening en geen belastingadvies. Controleer de cijfers altijd zelf of met je
     boekhouder/accountant voordat je aangifte doet.
   </div>
+  <div style="page-break-before: always;"></div>
+  ${buildBijlageToelichtingenHtmlBv()}
 </body></html>`;
 }
 
