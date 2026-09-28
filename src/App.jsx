@@ -2060,15 +2060,31 @@ export default function App() {
               // (businessAdvies, dezelfde berekening als de rode balk in het Meerjarenoverzicht) mee, zodat
               // je het niet kunt missen zonder dat blok open te klappen. Een echt verlies (winst < 0) blijft
               // het meest ernstige signaal (rood/"risk"); een tekort ondanks positieve winst is amber.
+              // v254 — de kaart toonde voorheen alleen de winst zelf als groot bedrag, met de Tekort/Over-
+              // duiding puur in de subtitel-tekst. Dat liet de indruk ontstaan dat een "tekort" een fiscaal
+              // verlies zou zijn. Nu twee losse, duidelijk gelabelde regels (zelfde "lines"-opzet als de
+              // IB & Zvw-kaart hieronder): het fiscale resultaat (winst uit onderneming) los van het
+              // privé/kasstroomsignaal (Tekort/Over — dekt de winst de privé-uitgaven + belasting?).
               key: "result",
               title: `Resultaat ${activeYear}`,
               icon: <span>€</span>,
-              value: yearlySummary ? eur(yearlySummary.winst) : "—",
+              lines: [
+                { label: "Fiscaal resultaat", value: yearlySummary ? `Winst ${eur(yearlySummary.winst)}` : "—" },
+                {
+                  label: "Privé/kasstroomsignaal",
+                  value:
+                    businessAdvies == null
+                      ? "—"
+                      : businessAdvies.niveau === "negatief"
+                      ? `Indicatief tekort ${eur(Math.abs(businessAdvies.verschil))}`
+                      : `Indicatief over ${eur(businessAdvies.verschil)}`,
+                },
+              ],
               subtitle:
                 yearlySummary && yearlySummary.winst < 0
-                  ? "Verlies"
+                  ? "Fiscaal verlies"
                   : businessAdvies?.niveau === "negatief"
-                  ? "Winst, maar tekort t.o.v. privé-uitgaven + belasting"
+                  ? "Winst, maar tekort t.o.v. privé-uitgaven + belasting — geen fiscaal verlies"
                   : "Winst (indicatief)",
               tone:
                 yearlySummary && yearlySummary.winst < 0

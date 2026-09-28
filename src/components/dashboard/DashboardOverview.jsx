@@ -53,11 +53,15 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
                   posten naast elkaar tonen (bijv. IB/Zvw of de aftrekposten) — de gebruiker gaf aan
                   liever de losse bedragen te zien dan een samengevoegd totaal. */}
               {card.lines ? (
-                <div className="mt-1.5 space-y-1">
+                <div className="mt-1.5 space-y-1.5">
+                  {/* v254 — label/waarde staan onder elkaar i.p.v. naast elkaar op 1 regel: bij een
+                      langere label (bijv. "Privé/kasstroomsignaal") liep de waarde er anders zonder
+                      spatie tegenaan, omdat flex-items van huis uit niet onder hun eigen tekstbreedte
+                      krimpen. Voor de bestaande korte labels (IB/Zvw) oogt dit nauwelijks anders. */}
                   {card.lines.map((l) => (
-                    <div key={l.label} className="flex items-baseline justify-between gap-2">
-                      <span className="text-[10px] text-slate-500">{l.label}</span>
-                      <span className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{l.value}</span>
+                    <div key={l.label}>
+                      <div className="text-[10px] text-slate-500 leading-tight">{l.label}</div>
+                      <div className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{l.value}</div>
                     </div>
                   ))}
                 </div>

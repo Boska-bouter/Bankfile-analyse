@@ -24,14 +24,23 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-left">
+      {/* v253 — <div role="button"> i.p.v. <button>: de HelpHint hieronder is zelf ook een button,
+          en een button-in-button is ongeldige HTML (en liet een klik op "uitleg" ook de sectie
+          in-/uitklappen). Zelfde patroon als QuarterlyBtwPanel.jsx. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="w-full flex items-center gap-2 p-4 text-left cursor-pointer"
+      >
         <span className="text-sm font-semibold flex items-center gap-2">
           Classificatiezekerheid
           {onOpenHelp && <HelpHint chapter="classificatiezekerheid" onOpen={onOpenHelp} />}
         </span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
-      </button>
+      </div>
       <div className="px-4 pb-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-emerald-50 border border-emerald-200 py-2">

@@ -61,12 +61,19 @@ export default function PersoonlijkeAannamesPanel({
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
+      {/* v253 — <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left cursor-pointer"
+      >
         <span>Persoonlijke aannames voor IB — zelfstandigenaftrek, heffingskortingen &amp; KIA</span>
         {onOpenHelp && <HelpHint chapter="persoonlijke-aannames" onOpen={onOpenHelp} />}
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+      </div>
       {open && (
         <div className="px-5 pb-5 space-y-4">
           <div>

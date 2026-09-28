@@ -236,7 +236,11 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
   if (summary.persoonlijkVanZakelijkeRekening > 0) {
     tekst += ` Let op: ${eur(summary.persoonlijkVanZakelijkeRekening)} hiervan is opgenomen vanaf de zakelijke rekening voor "Persoonlijk & vertrouwelijk" — dat telt terecht niet mee als zakelijke kost, maar is wél meegeteld als geld dat naar privé is gegaan, anders zou dit bedrag nergens in dit overzicht zichtbaar zijn.`;
   }
-  return { niveau, tekst };
+  // v254 — `verschil` (Tekort/Over als los getal) zit al in de tekst verwerkt, maar was tot nu toe
+  // niet apart beschikbaar — de dashboardkaart in App.jsx ("Resultaat {jaar}") wil dit bedrag nu
+  // los van de winst tonen (Fiscaal resultaat vs. Privé/kasstroomsignaal), i.p.v. het uit de tekst
+  // te moeten parsen.
+  return { niveau, tekst, verschil };
 }
 
 // Nog te betalen/terug te vragen OB per jaar — alleen de kwartalen die nog NIET als "betaald"

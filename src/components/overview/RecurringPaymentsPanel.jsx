@@ -50,7 +50,14 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-sm font-semibold">
+      {/* v253 — <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="w-full flex items-center gap-2 p-4 text-sm font-semibold cursor-pointer"
+      >
         <span className="flex items-center gap-2">
           Terugkerende betalingen {activeYear}
           {onOpenHelp && <HelpHint chapter="terugkerende-betalingen" onOpen={onOpenHelp} />}
@@ -58,7 +65,7 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
         <span className="text-xs font-normal text-slate-400">({recurringPayments.length})</span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+      </div>
       {open && (
         <div className="px-4 pb-4 overflow-x-auto">
           <div className="flex items-center gap-2 mb-2">

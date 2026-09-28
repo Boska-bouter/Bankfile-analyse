@@ -42,13 +42,20 @@ export default function MultiYearOverview({
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
+      {/* v253 — <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
+        className="w-full flex items-center justify-between p-4 text-sm font-semibold cursor-pointer"
+      >
         <span className="flex items-center gap-2">
           {years.length > 1 ? `Meerjarenoverzicht (${years.length} jaar)` : "Jaaroverzicht — is dit rendabel?"}
           {onOpenHelp && <HelpHint chapter="jaaroverzicht" onOpen={onOpenHelp} />}
         </span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+      </div>
       {businessAdvies && (
         <div
           className={`mx-4 mb-3 rounded-lg border px-3 py-2 text-xs ${
