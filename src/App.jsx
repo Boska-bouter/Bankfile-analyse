@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, CONTINUITY_GAP_THRESHOLD } from "./importers/transactions.js";
@@ -48,6 +48,7 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
+import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
@@ -1043,6 +1044,76 @@ export default function App() {
     snapshotBeforeAction('"Klopt zo" bevestigd');
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
+
+  // ---- Dashboard-overzicht (v217, fase 1) — dossierbrede kaarten met live cijfers, elk een
+  // snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina. Bewust dossierbreed
+  // (niet per jaar) omdat de onderliggende tellingen (confidenceSummary, pendingPersonReview,
+  // pendingOverigReview, pendingDuplicateCount) dat zelf ook al zijn — zie TodoPanel hieronder
+  // voor dezelfde aanpak. Fase 2 voegt hier per-jaar kaarten (Aangifte/Resultaat/Leningen/Lease)
+  // aan toe; fase 3 de situationele kaarten (BV-signalering, BTW-instellingen). ----
+  const jumpToSection = (ref) => {
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+  const dashboardCards = useMemo(() => {
+    if (transactions.length === 0) return [];
+    return [
+      {
+        key: "confidence",
+        title: "Te controleren",
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        value: confidenceSummary.needsReview,
+        subtitle:
+          confidenceSummary.needsReview > 0
+            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
+            : "Alles automatisch met vertrouwen ingedeeld",
+        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
+        hint: "Transacties met onzekere classificatie bekijken",
+        onClick: () => {
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          jumpToSection(confidenceSectionRef);
+        },
+      },
+      {
+        key: "personReview",
+        title: "Overboekingen aan personen",
+        icon: <Users className="h-3.5 w-3.5" />,
+        value: pendingPersonReview.length,
+        subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
+        tone: pendingPersonReview.length > 0 ? "attention" : "ok",
+        hint: "Openstaande overboekingen aan personen bekijken",
+        onClick: () => {
+          setShowPersonReview(true);
+          jumpToSection(personReviewSectionRef);
+        },
+      },
+      {
+        key: "overigReview",
+        title: '"Overig" opruimen',
+        icon: <HelpCircle className="h-3.5 w-3.5" />,
+        value: pendingOverigReview.length,
+        subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",
+        tone: pendingOverigReview.length > 0 ? "attention" : "ok",
+        hint: 'Openstaande "Overig"-tegenpartijen bekijken',
+        onClick: () => {
+          setShowOverigReview(true);
+          jumpToSection(overigReviewSectionRef);
+        },
+      },
+      {
+        key: "duplicates",
+        title: "Duplicaten",
+        icon: <Copy className="h-3.5 w-3.5" />,
+        value: pendingDuplicateCount,
+        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
+        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
+        hint: "Mogelijk dubbele transacties bekijken",
+        onClick: () => {
+          if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
+          jumpToSection(duplicatesSectionRef);
+        },
+      },
+    ];
+  }, [transactions.length, confidenceSummary, pendingPersonReview.length, pendingOverigReview.length, pendingDuplicateCount]);
 
   const addBusinessKeyword = (kw) => {
     snapshotBeforeAction("Zakelijke tegenpartij toegevoegd");
@@ -2154,6 +2225,8 @@ export default function App() {
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+        <DashboardOverview cards={dashboardCards} />
+
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
