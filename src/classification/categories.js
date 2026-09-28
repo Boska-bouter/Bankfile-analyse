@@ -149,6 +149,15 @@ export const DEFAULT_RULES = [
     description: "Streaming- en krantenabonnementen — deze blijven altijd Privé, ook wanneer ze vanaf een zakelijke rekening worden betaald (vrijwel nooit een echte zakelijke aftrekpost)." },
   { name: "Zakelijk - apparatuur/machines", color: "bg-orange-50 text-orange-700", keywords: [] },
   { name: "Kinderopvang", color: "bg-rose-50 text-rose-700", keywords: ["kinderopvang", "gastouder", "peuterspeelzaal", "kinderdagverblijf", " bso "] },
+  // v223 — privé zorgkosten (tandarts, huisarts, apotheek, ...), voorheen zonder eigen categorie
+  // en dus bij "Prive: overig"/"Winkels divers" beland.
+  { name: "Medische uitgaven", color: "bg-red-50 text-red-700", keywords: [
+    "tandarts", "tandartsenpraktijk", "tandheelkunde", "mondzorg", "orthodontie", "orthodontist",
+    "huisarts", "huisartsenpraktijk", "huisartsenpost", "apotheek", "ziekenhuis", "polikliniek",
+    "fysiotherapie", "fysiotherapeut", "logopedie", "podotherapie", "podologie", "diëtist", "dietist",
+    "ggz", "psycholoog", "psychotherapie", "verloskundige", "kraamzorg", "optometrist",
+    "eigen risico zorgverzekering",
+  ] },
   { name: "Lease (operationeel)", color: "bg-teal-100 text-teal-800", keywords: [
     "lease", "leaseplan", "alphabet", "athlon", "arval", "ayvens", "grenke", "volkswagen pon financial services",
     "directlease", "hiltermann lease", "van mossel autolease", "international car lease holding", "iclh",
@@ -267,7 +276,7 @@ export const SPLIT_CATEGORY_NAMES = {
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -353,7 +362,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
-  "Kinderopvang": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
+  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
   "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
@@ -568,6 +577,7 @@ export const SUBTYPE_TO_MAIN = {
   "Interne overboeking: zakelijk sparen": "Interne overboekingen",
   "Interne overboeking: privé sparen": "Interne overboekingen",
   "Kinderopvang": "Privé",
+  "Medische uitgaven": "Privé",
   "Lease (operationeel)": "Vervoer & auto",
   "Lease (financieel)": "Financiering",
   "Leningen": "Financiering",

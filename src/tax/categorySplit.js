@@ -42,6 +42,13 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 export const SPLITSBARE_CATEGORIEEN = [
   "Brandstof",
   "Zakelijk mobiel/internet",
+  // v223: het privé-tegenhangster van "Zakelijk mobiel/internet" — anders dan "Brandstof" (dat op
+  // BEIDE rekeningen gewoon dezelfde categorienaam houdt, zie SPLIT_CATEGORY_NAMES in categories.js)
+  // krijgt een mobiel/internet-abonnement dat vanaf de privérekening wordt betaald een eigen naam
+  // ("Prive - mobiel/internet") zodra het niet als bevestigde zakelijke uitgave herkend is — zonder
+  // deze regel viel zo'n transactie dus BUITEN dit paneel, en kon een deels-zakelijk telefoon-/
+  // internetabonnement dat toevallig vanaf privé betaald is nooit een percentage zakelijk krijgen.
+  "Prive - mobiel/internet",
   "Reiskosten (OV)",
   "Parkeren",
   "Huur",

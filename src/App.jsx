@@ -3213,6 +3213,27 @@ export default function App() {
                   const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
                   const diff = Math.round((zakSum + priSum) * 100) / 100;
                   if (zakSum === 0 && priSum === 0) return null;
+                  // v224: als er voor dit specifieke jaar aan één van beide kanten helemaal GEEN
+                  // transacties geladen zijn (bijv. een privérekening die pas vanaf 2024 is
+                  // aangeleverd, terwijl de zakelijke rekening al vanaf 2020 loopt), is deze controle
+                  // sowieso niet uit te voeren — er is dan simpelweg niets om de zakelijke kant tegen af
+                  // te zetten. Dat is geen fout/inconsistentie (de zakelijke boekingen kunnen prima
+                  // kloppen), dus dan een neutrale melding tonen in plaats van de amber
+                  // "komt niet overeen"-waarschuwing, die anders ten onrechte een probleem suggereert.
+                  const zijdeOntbreekt = priGroupForYear.items.length === 0 ? "Prive" : zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
+                  if (zijdeOntbreekt) {
+                    return (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3">
+                        <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+                        <p className="text-sm text-slate-600">
+                          <strong>Controle overboeking zakelijk ↔ privé</strong>: voor {activeYear} is geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
+                          rekening geladen (0 transacties) — deze controle kan dan niet worden uitgevoerd. De {zijdeOntbreekt === "Prive" ? "zakelijke" : "privé"}-
+                          kant toont hier {eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)} aan overboekingen, zonder dat daar iets tegenover kan staan — dat is op
+                          zichzelf geen fout.
+                        </p>
+                      </div>
+                    );
+                  }
                   const ok = Math.abs(diff) < 0.01;
                   return (
                     <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`}>
