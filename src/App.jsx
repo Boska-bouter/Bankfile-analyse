@@ -1845,7 +1845,53 @@ export default function App() {
     return computeBusinessAdvies(activeYear, yearlySummary, yearlyOpenOB[activeYear] || 0, ibEstimate, !!ibStatus[activeYear]?.gedaan, priGroupForYear.items, zvwEstimate);
   }, [activeYear, yearlySummary, yearlyOpenOB, ibEstimate, zvwEstimate, ibStatus, priGroupForYear]);
 
+  // v246 — hierboven stonden incompleteLoansCount/incompleteLeasesCount alleen lokaal in de
+  // dashboardCards-berekening verderop; nu ook in een eigen useMemo (plus incompleteActivaCount,
+  // die nog nergens dossierbreed werd bijgehouden) zodat het mini-dashboard op tabblad
+  // "Instellingen" (instellingenDashboardCards) dezelfde tellingen kan hergebruiken i.p.v. ze een
+  // tweede keer uit te rekenen. v254 — hiernaartoe verplaatst (was ná yearlyProgress) omdat
+  // yearlyProgress ze nu zelf ook nodig heeft, voor het "aannames"-signaal bij Indicatieve aangifte.
+  const incompleteLoansCount = useMemo(
+    () => loanSummary.filter((l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend).length,
+    [loanSummary, loanDetails]
+  );
+  const incompleteLeasesCount = useMemo(
+    () =>
+      leaseSummary.filter((l) => {
+        if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+        if (leaseDetails[l.key]?.onbekend) return false;
+        return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
+      }).length,
+    [leaseSummary, leaseDetails, confirmedLeaseTypeKeys]
+  );
+  const incompleteActivaCount = useMemo(
+    () =>
+      activaSummary.filter((a) => {
+        const details = activaDetails[a.key];
+        if (details?.onbekend) return false;
+        return !(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
+      }).length,
+    [activaSummary, activaDetails]
+  );
+
   // ---- Voortgangspercentage per jaar (voor de jaarknoppen in "Werk te doen") ----
+  //
+  // v254 — herzien op expliciet verzoek: dit percentage/status ging voorheen ook over of de
+  // IB/Zvw-aangifte en BTW-kwartalen al daadwerkelijk AANGEGEVEN/BETAALD/GEDAAN waren. Dat
+  // suggereerde ten onrechte dat "100%"/groen zou betekenen dat de aangifte is ingediend. Vanaf nu
+  // is dit zuiver een DOSSIERCONTROLE-percentage (is alles administratief op orde: ingedeeld,
+  // beoordeeld, instellingen bekend?) — een dossier kan dus 100% groen staan terwijl de aangiften
+  // zelf nog niet gedaan zijn. Die drie waren daarvoor gewone `checks`-fracties tussen de andere in;
+  // nu apart in `werkelijkAangifteChecks`, dat NIET meetelt in `pct`/`status`, maar wel een eigen
+  // signaal levert (`werkelijkAangifteStatus`) voor de losse "Werkelijke aangifte"-regel op de
+  // dashboardkaart. Verder nieuw: `openPunten` (hoeveel van de dossiercontrole-checks nog niet
+  // volledig klaar zijn — een klein, telbaar aantal i.p.v. alleen een percentage) en
+  // `aannamesCount`/`aannamesStatus` — hoeveel aannames de INDICATIEVE berekening nog bevat
+  // (urencriterium/gedeelde-huur-percentage onbevestigd, onvolledige leningen/lease/activa-
+  // gegevens). Bewust NIET meegenomen als "aanname": startersaftrek (leeg laten is daar een
+  // geldig, expliciet "nee/n.v.t." — geen open vraag) en het generieke "percentage zakelijk per
+  // categorie"-systeem (te generiek om zonder ruis te tellen; huur (deels zakelijk) heeft wél een
+  // eigen status-veld en telt daarom wel mee).
   const yearlyProgress = useMemo(() => {
     const map = {};
     for (const year of years) {
@@ -1871,19 +1917,42 @@ export default function App() {
         checks.push({ frac: done / overigKeysThisYear.size });
       }
       checks.push({ frac: korRegeling !== null ? 1 : 0 });
+      const kwTotal = quartersForYear.length;
       if (korRegeling === false) {
         checks.push({ frac: btwVerlegd !== null ? 1 : 0 });
-        const kwTotal = quartersForYear.length;
-        let kwScore = 0;
-        for (const q of quartersForYear) {
-          const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
-          kwScore += (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0);
-        }
-        checks.push({ frac: kwTotal > 0 ? kwScore / kwTotal : 1 });
       }
-      checks.push({ frac: ibStatus[year]?.gedaan ? 1 : 0 });
-      checks.push({ frac: zvwStatus[year]?.gedaan ? 1 : 0 });
+      // avgFrac/pct/openPunten hieronder zijn zuiver DOSSIERCONTROLE (administratief) — of de
+      // aangiften al daadwerkelijk gedaan/betaald zijn, telt hier bewust niet meer mee (zie
+      // werkelijkAangifteChecks verderop).
       const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
+      const openPunten = checks.filter((c) => c.frac < 0.999).length;
+
+      // ---- Werkelijke aangifte — apart signaal, telt niet mee in pct/status hierboven ----
+      let kwScore = 0;
+      for (const q of quartersForYear) {
+        const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
+        kwScore += (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0);
+      }
+      const werkelijkAangifteChecks =
+        korRegeling === false
+          ? [{ frac: kwTotal > 0 ? kwScore / kwTotal : 1 }, { frac: ibStatus[year]?.gedaan ? 1 : 0 }, { frac: zvwStatus[year]?.gedaan ? 1 : 0 }]
+          : [{ frac: ibStatus[year]?.gedaan ? 1 : 0 }, { frac: zvwStatus[year]?.gedaan ? 1 : 0 }];
+      const werkelijkAangifteDone = werkelijkAangifteChecks.filter((c) => c.frac >= 0.999).length;
+      const werkelijkAangifteStatus =
+        werkelijkAangifteDone === 0 ? "niet-geregistreerd" : werkelijkAangifteDone === werkelijkAangifteChecks.length ? "gedaan" : "deels";
+
+      // ---- Indicatieve aangifte — aantal aannames dat de berekening nog bevat (v254) ----
+      // Bewust dossierbreed voor leningen/lease/activa (net als instellingenDashboardCards) — een
+      // lening/lease/activum loopt meestal over meerdere jaren, dus een aparte telling per jaar zou
+      // hier geen scherper beeld geven. Alleen relevant voor zzp/eenmanszaak: een BV kent het
+      // urencriterium/zelfstandigenaftrek niet.
+      let aannamesCount = incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount;
+      if (rechtsvorm !== "bv") {
+        const zaRaw = zelfstandigenaftrekStatus?.[year];
+        if (zaRaw == null || zaRaw === "onbekend") aannamesCount += 1;
+      }
+      const gedeeldeHuurDitJaar = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
+      if (gedeeldeHuurDitJaar && huurZakelijkPercentageStatus?.[year] == null) aannamesCount += 1;
 
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
@@ -1895,13 +1964,13 @@ export default function App() {
       const gatDitJaar = fileContinuity.some((g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
       let status;
       if (gatDitJaar) status = "rood";
-      else if (avgFrac >= 0.95 && onzekerDitJaar === 0) status = "groen";
+      else if (openPunten === 0 && onzekerDitJaar === 0) status = "groen";
       else status = "oranje";
 
-      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar };
+      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, openPunten, aannamesCount, werkelijkAangifteStatus };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
 
   // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
   // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina.
@@ -1937,33 +2006,6 @@ export default function App() {
     });
     return () => cancelAnimationFrame(raf);
   }, [activeTab, pendingScrollRef]);
-  // v246 — hierboven stonden incompleteLoansCount/incompleteLeasesCount alleen lokaal in de
-  // dashboardCards-berekening hieronder; nu ook in een eigen useMemo (plus incompleteActivaCount,
-  // die nog nergens dossierbreed werd bijgehouden) zodat het nieuwe mini-dashboard op tabblad
-  // "Instellingen" (instellingenDashboardCards, verderop) dezelfde tellingen kan hergebruiken i.p.v.
-  // ze een tweede keer uit te rekenen.
-  const incompleteLoansCount = useMemo(
-    () => loanSummary.filter((l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend).length,
-    [loanSummary, loanDetails]
-  );
-  const incompleteLeasesCount = useMemo(
-    () =>
-      leaseSummary.filter((l) => {
-        if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
-        if (leaseDetails[l.key]?.onbekend) return false;
-        return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
-      }).length,
-    [leaseSummary, leaseDetails, confirmedLeaseTypeKeys]
-  );
-  const incompleteActivaCount = useMemo(
-    () =>
-      activaSummary.filter((a) => {
-        const details = activaDetails[a.key];
-        if (details?.onbekend) return false;
-        return !(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
-      }).length,
-    [activaSummary, activaDetails]
-  );
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
     const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
@@ -2038,16 +2080,41 @@ export default function App() {
       // is dat altijd het geval — zie de activeYear-init hieronder in de bestandsladers). ----
       ...(activeYear
         ? [
+            // v254 — herzien op expliciet verzoek: deze kaart heette "Aangifte {jaar} X%", wat
+            // suggereerde dat X% = hoe ver de aangifte zelf gevorderd is. Nu drie losse regels die
+            // niet met elkaar verrekend worden: Dossiercontrole (zuiver administratief — is alles
+            // ingedeeld/beoordeeld/bekend?), Indicatieve aangifte (hoeveel aannames zitten er nog in
+            // de berekening?) en Werkelijke aangifte (is de aangifte zelf al geregistreerd als
+            // gedaan?). Een dossier kan dus "Dossiercontrole: Compleet" tonen terwijl "Werkelijke
+            // aangifte: Niet geregistreerd" blijft staan — dat is precies het punt.
             {
               key: "yearStatus",
-              title: `Aangifte ${activeYear}`,
-              icon: <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress?.status || "oranje"]}</span>,
-              value: `${yearProgress?.pct ?? 0}%`,
+              title: `Dossierstatus ${activeYear}`,
+              icon: <span>📋</span>,
+              lines: [
+                {
+                  label: "Dossiercontrole",
+                  value: !yearProgress || yearProgress.openPunten === 0 ? "🟢 Compleet" : `🟠 ${yearProgress.openPunten} ${yearProgress.openPunten === 1 ? "punt" : "punten"}`,
+                },
+                {
+                  label: "Indicatieve aangifte",
+                  value: !yearProgress || yearProgress.aannamesCount === 0 ? "🟢 Geen aannames" : `🟠 ${yearProgress.aannamesCount} ${yearProgress.aannamesCount === 1 ? "aanname" : "aannames"}`,
+                },
+                {
+                  label: "Werkelijke aangifte",
+                  value:
+                    yearProgress?.werkelijkAangifteStatus === "gedaan"
+                      ? "🟢 Gedaan"
+                      : yearProgress?.werkelijkAangifteStatus === "deels"
+                      ? "🟡 Deels geregistreerd"
+                      : "⚪ Niet geregistreerd",
+                },
+              ],
               subtitle: yearProgress?.gatDitJaar
                 ? "Gat in bestandscontinuïteit"
                 : yearProgress?.onzekerDitJaar > 0
                 ? `${yearProgress.onzekerDitJaar} onzeker dit jaar`
-                : "Klaar voor aangifte",
+                : null,
               tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
               hint: "Naar de aangifte-checklist voor dit jaar",
               onClick: () => jumpToSection(checklistSectionRef),
