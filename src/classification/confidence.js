@@ -15,7 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment } from "./classify.js";
+import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -61,7 +61,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van privé spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-  const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
+  const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(r, text));
   if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
 
   // De twee "laatste redmiddel"-gokken uit autoClassify() (zie classify.js) — geen enkel zoekwoord

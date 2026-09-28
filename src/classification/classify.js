@@ -186,7 +186,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
       for (const rule of rules) {
-        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()))) {
+        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
           const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
@@ -224,7 +224,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // overige abonnementen" + type "Zakelijk" (verkeerde rekening) in plaats van stilzwijgend op
   // type "Prive" gezet te worden.
   for (const rule of rules) {
-    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()))) {
+    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
       const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       return { category: categoryName, type };
@@ -294,6 +294,27 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // "Overig" gezet omdat de classificatie toen nog geen idee had wat voor soort terugboeking dit was.
 // Nu die herkenning bestaat, mag de override net als de andere twee gevallen hierboven wijken voor
 // de nieuwe, specifiekere automatische classificatie.
+// Sommige regels herkennen hun trefwoord ondubbelzinnig verkeerd in een specifiek, goed te
+// herkennen tekstpatroon — dit vangt die bekende gevallen af vóórdat een trefwoordmatch wordt
+// geaccepteerd, in plaats van de trefwoordenlijst zelf onveilig smal te maken (v220).
+export function isKnownFalsePositiveRuleMatch(rule, text) {
+  // "Betaalautomaat kosten" herkent (onder andere) de merknamen van pinbetaaldiensten (SumUp,
+  // Zettle, CCV, Mollie, ...) om de eigen, door de bank in rekening gebrachte servicekosten van
+  // zo'n dienst te herkennen. Diezelfde merknamen staan echter OOK op de rekening van de klant die
+  // bij een kraam/winkel/horecazaak met zo'n pinapparaat heeft afgerekend — zulke aankopen hebben
+  // vrijwel altijd het patroon "<merk>*<winkelnaam>" (bijv. "Zettle*MaasakkersH",
+  // "CCV*KFC Nederweert", "SumUp *Van Nielen"). Dat is een gewone aankoop bij die winkel/kraam, geen
+  // factuur van de betaaldienst zelf aan de rekeninghouder — een asterisk in de tekst is hiervoor een
+  // betrouwbaar signaal (komt in gewone bankomschrijvingen vrijwel nooit los voor).
+  if (rule.name === "Betaalautomaat kosten" && text.includes("*")) return true;
+  // "Bankkosten" herkent (onder andere) de eigen bank op naam, voor de periodieke pakket-/
+  // servicekosten die de bank zelf afschrijft. Een "Betaalverzoek"/Tikkie-achtige betaling via
+  // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —
+  // de banknaam staat er toevallig ook in (bijv. "ING Betaalverzoek via ING Bank").
+  if (rule.name === "Bankkosten" && /betaalverzoek|tikkie/.test(text)) return true;
+  return false;
+}
+
 function looksLikeRecognizedRefund(text, rules) {
   if (!/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) return false;
   return rules.some((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
