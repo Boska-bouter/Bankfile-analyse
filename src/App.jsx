@@ -342,6 +342,42 @@ export default function App() {
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
 
+  // ---- Tabbladen (v228) — de app was tot nu toe één lange scroll-pagina met een sticky navbalk die
+  // alleen naar secties VERDER OP DEZELFDE PAGINA scrolde (StickyTopNav / jumpToSection hierboven).
+  // Nu zijn het echte tabbladen: alle secties blijven altijd gemount (lokale state zoals
+  // zoekvelden/ReviewStep-rijstate en de scroll-refs hierboven blijven zo intact), maar per sectie
+  // wordt met een CSS display:none/block bepaald of hij zichtbaar is voor het actieve tabblad. Zie
+  // TAB_KEYS/REF_TAB_ENTRIES/sectionTabStyle hieronder en de tabToevoeging her en der in de JSX.
+  const TAB_KEYS = ["overzicht", "controleren", "resultaten", "details", "instellingen"];
+  const [activeTab, setActiveTab] = useState("overzicht");
+  // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
+  // jumpToSection hieronder om bij een kruis-tabblad-sprong eerst het juiste tabblad te activeren
+  // en dan pas te scrollen (de sectie stond tot dat moment op display:none).
+  const REF_TAB_ENTRIES = [
+    [confidenceSectionRef, "controleren"],
+    [personReviewSectionRef, "controleren"],
+    [overigReviewSectionRef, "controleren"],
+    [duplicatesSectionRef, "controleren"],
+    [periodeReviewSectionRef, "controleren"],
+    [checklistSectionRef, "overzicht"],
+    [multiYearSectionRef, "resultaten"],
+    [quarterlyBtwSectionRef, "resultaten"],
+    [obIbSectionRef, "resultaten"],
+    [loansSectionRef, "resultaten"],
+    [leasesSectionRef, "resultaten"],
+    [bvSignaleringSectionRef, "resultaten"],
+    [btwSettingsSectionRef, "instellingen"],
+    [incomeRatesSectionRef, "instellingen"],
+    [detailsSectionRef, "details"],
+  ];
+  // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
+  // unmounten (zie de kop van dit blok hierboven).
+  const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey ? undefined : "none" });
+  // Wordt gezet door jumpToSection zodra er eerst nog van tabblad gewisseld moet worden — de
+  // daadwerkelijke scrollIntoView gebeurt pas ná die tabwissel (zie de useEffect hieronder), anders
+  // scrollt hij naar een sectie die nog display:none staat.
+  const [pendingScrollRef, setPendingScrollRef] = useState(null);
+
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
   const applySettingsToState = (settings) => {
@@ -1007,12 +1043,12 @@ export default function App() {
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
-    setTimeout(() => overigReviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    jumpToSection(overigReviewSectionRef);
   };
   const jumpToPersonenFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowPersonReview(true);
-    setTimeout(() => personReviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    jumpToSection(personReviewSectionRef);
   };
 
   // ---- Inkomstenbronnen-review ----
@@ -1721,8 +1757,27 @@ export default function App() {
   //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
   //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
   const jumpToSection = (ref) => {
+    const entry = REF_TAB_ENTRIES.find(([r]) => r === ref);
+    const targetTab = entry ? entry[1] : null;
+    if (targetTab && targetTab !== activeTab) {
+      // Sectie zit op een ander tabblad: eerst wisselen, dan pas scrollen (zie de useEffect
+      // hieronder — deze ref staat nu nog op display:none).
+      setActiveTab(targetTab);
+      setPendingScrollRef(ref);
+      return;
+    }
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
+  // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
+  // geworden — requestAnimationFrame wacht op de eerstvolgende render/paint na de tabwissel.
+  useEffect(() => {
+    if (!pendingScrollRef) return;
+    const raf = requestAnimationFrame(() => {
+      pendingScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setPendingScrollRef(null);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeTab, pendingScrollRef]);
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
     const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
@@ -1924,12 +1979,15 @@ export default function App() {
   // scrollt terug naar de kaartenlaag bovenaan; de rest hergebruikt de bestaande sectie-refs. ----
   const topNavItems = useMemo(() => {
     if (transactions.length === 0) return [];
+    // v228 — dit was een sticky navbalk die naar bestaande secties VERDER OP DEZELFDE PAGINA
+    // scrolde (jumpToSection); nu zijn het echte tabbladen (zie activeTab hierboven) — gewoon van
+    // tabblad wisselen, zonder erbij te scrollen (een tabblad opent altijd bovenaan).
     return [
-      { key: "overzicht", label: "Overzicht", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
-      { key: "controleren", label: "Controleren", onClick: () => jumpToSection(confidenceSectionRef) },
-      { key: "instellingen", label: "Instellingen", onClick: () => jumpToSection(btwSettingsSectionRef) },
-      { key: "resultaten", label: "Resultaten", onClick: () => jumpToSection(multiYearSectionRef) },
-      { key: "details", label: "Details", onClick: () => jumpToSection(detailsSectionRef) },
+      { key: "overzicht", label: "Overzicht", onClick: () => setActiveTab("overzicht") },
+      { key: "controleren", label: "Controleren", onClick: () => setActiveTab("controleren") },
+      { key: "resultaten", label: "Resultaten", onClick: () => setActiveTab("resultaten") },
+      { key: "details", label: "Details", onClick: () => setActiveTab("details") },
+      { key: "instellingen", label: "Instellingen", onClick: () => setActiveTab("instellingen") },
     ];
   }, [transactions.length]);
 
@@ -2394,7 +2452,7 @@ export default function App() {
         </div>
       </header>
 
-      <StickyTopNav items={topNavItems} />
+      <StickyTopNav items={topNavItems} activeTab={activeTab} />
 
       {updateAvailable && <UpdateAvailableBanner />}
 
@@ -2428,7 +2486,9 @@ export default function App() {
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
-        <DashboardOverview cards={dashboardCards} />
+        <div style={sectionTabStyle("overzicht")}>
+          <DashboardOverview cards={dashboardCards} />
+        </div>
 
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
@@ -2487,7 +2547,7 @@ export default function App() {
         )}
 
         {parsedFiles.length === 0 && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <p className="text-sm text-emerald-900">
               <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
@@ -2497,14 +2557,14 @@ export default function App() {
         )}
 
         {error && (
-          <section className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3">
+          <section className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
             <p className="text-sm text-rose-900 whitespace-pre-line">{error}</p>
           </section>
         )}
 
         {parsedFiles.length > 0 && (
-          <section className="flex flex-wrap gap-2">
+          <section className="flex flex-wrap gap-2" style={sectionTabStyle("overzicht")}>
             {parsedFiles.map((f) => {
               const balanceCheck = checkBalanceConsistency(allTransactions.filter((t) => t.source === f.fileName));
               return (
@@ -2555,10 +2615,12 @@ export default function App() {
           />
         )}
 
-        <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+        <div style={sectionTabStyle("overzicht")}>
+          <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+        </div>
 
         {transactions.length > 0 && (
-          <div ref={confidenceSectionRef}>
+          <div ref={confidenceSectionRef} style={sectionTabStyle("controleren")}>
             <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} onOpenLevel={setOpenConfidenceLevel} />
           </div>
         )}
@@ -2568,7 +2630,7 @@ export default function App() {
             bepaalt namelijk ook wat classificatiezekerheid en de checklist hierboven/hieronder
             laten zien. Nu direct hier, tussen classificatiezekerheid en de aangifte-checklist. */}
         {years.length > 0 && activeYear && (
-          <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center justify-between gap-2 flex-wrap" style={sectionTabStyle("overzicht")}>
             {years.length > 1 ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-slate-400">Jaar:</span>
@@ -2685,7 +2747,7 @@ export default function App() {
         )}
 
         {activeYear && (
-          <div ref={checklistSectionRef}>
+          <div ref={checklistSectionRef} style={sectionTabStyle("overzicht")}>
             <AangifteStatusBar
               activeYear={activeYear}
               yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
@@ -2714,11 +2776,17 @@ export default function App() {
           </div>
         )}
 
-        <TodoPanel items={todoItems} />
+        <div style={sectionTabStyle("overzicht")}>
+          <TodoPanel items={todoItems} />
+        </div>
 
-        {years.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
+        {years.length > 0 && (
+          <div style={sectionTabStyle("overzicht")}>
+            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+          </div>
+        )}
 
-        <div ref={multiYearSectionRef}>
+        <div ref={multiYearSectionRef} style={sectionTabStyle("resultaten")}>
                   {rechtsvorm === "bv" ? (
                     <MultiYearOverviewBV
                       years={years}
@@ -2753,18 +2821,18 @@ export default function App() {
                 </div>
 
                 {rechtsvorm === "bv" && heeftHolding === true && (
-                  <div className="mt-4">
+                  <div className="mt-4" style={sectionTabStyle("resultaten")}>
                     <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
                   </div>
                 )}
 
                 {rechtsvorm === "bv" && bvSignalering && (
-                  <div className="mt-4" ref={bvSignaleringSectionRef}>
+                  <div className="mt-4" ref={bvSignaleringSectionRef} style={sectionTabStyle("resultaten")}>
                     <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
                   </div>
                 )}
 
-                <div ref={quarterlyBtwSectionRef}>
+                <div ref={quarterlyBtwSectionRef} style={sectionTabStyle("resultaten")}>
                   {!korRegeling ? (
                     <QuarterlyBtwPanel
                       quarters={quarterlyBtwData}
@@ -2787,7 +2855,7 @@ export default function App() {
 
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
-          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50">
+          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
             <div className="px-4 py-3 flex items-start gap-3">
               <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -2852,7 +2920,11 @@ export default function App() {
         
 
         {parsedFiles.length > 0 && (
-          <div ref={incomeRatesSectionRef} className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
+          <div
+            ref={incomeRatesSectionRef}
+            className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}
+            style={sectionTabStyle("instellingen")}
+          >
             {!expandedBusinessExpenseList && (
               <section className="rounded-lg border border-slate-200 bg-white p-5">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
@@ -2918,20 +2990,22 @@ export default function App() {
         )}
 
         {transactions.length > 0 && pendingIncomeReview.length > 0 && (
-          <IncomeReviewStep
-            items={pendingIncomeReview}
-            totalCount={incomeSummary.length}
-            doneCount={incomeSummary.length - pendingIncomeReview.length}
-            search={incomeSearch}
-            onSearch={setIncomeSearch}
-            onMark={markIncomeSource}
-          />
+          <div style={sectionTabStyle("controleren")}>
+            <IncomeReviewStep
+              items={pendingIncomeReview}
+              totalCount={incomeSummary.length}
+              doneCount={incomeSummary.length - pendingIncomeReview.length}
+              search={incomeSearch}
+              onSearch={setIncomeSearch}
+              onMark={markIncomeSource}
+            />
+          </div>
         )}
 
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
             {personSummary.length > 0 && (
-              <section ref={personReviewSectionRef} className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden">
+              <section ref={personReviewSectionRef} className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowPersonReview((v) => !v)}
                   className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
@@ -2963,7 +3037,7 @@ export default function App() {
             )}
 
             {overigSummary.length > 0 && (
-              <section ref={overigReviewSectionRef} className="rounded-lg border border-amber-200 bg-white overflow-hidden">
+              <section ref={overigReviewSectionRef} className="rounded-lg border border-amber-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowOverigReview((v) => !v)}
                   className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
@@ -3000,7 +3074,7 @@ export default function App() {
             )}
 
             {periodeMismatches.length > 0 && (
-              <section ref={periodeReviewSectionRef} className="rounded-lg border border-sky-200 bg-white overflow-hidden">
+              <section ref={periodeReviewSectionRef} className="rounded-lg border border-sky-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <div className="px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -3011,7 +3085,7 @@ export default function App() {
               </section>
             )}
 
-            <div ref={loansSectionRef}>
+            <div ref={loansSectionRef} style={sectionTabStyle("resultaten")}>
               <LoanInterestPanel
                 loanSummary={loanSummary}
                 privateLoanSummary={privateLoanSummary}
@@ -3026,7 +3100,7 @@ export default function App() {
               />
             </div>
 
-            <div ref={leasesSectionRef}>
+            <div ref={leasesSectionRef} style={sectionTabStyle("resultaten")}>
               <LeaseInterestPanel
                 leaseSummary={leaseSummary}
                 leaseDetails={leaseDetails}
@@ -3042,47 +3116,53 @@ export default function App() {
               />
             </div>
 
-            <ActivaPanel
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              activeYear={activeYear}
-              onOpenModal={setActivaDetailsModalKey}
-              onMarkUnknown={markActivaUnknown}
-              onUnmarkUnknown={unmarkActivaUnknown}
-              onOpenHelp={setHelpPopupChapter}
-            />
+            <div style={sectionTabStyle("resultaten")}>
+              <ActivaPanel
+                activaSummary={activaSummary}
+                activaDetails={activaDetails}
+                activeYear={activeYear}
+                onOpenModal={setActivaDetailsModalKey}
+                onMarkUnknown={markActivaUnknown}
+                onUnmarkUnknown={unmarkActivaUnknown}
+                onOpenHelp={setHelpPopupChapter}
+              />
+            </div>
 
-            <PersoonlijkeAannamesPanel
-              activeYear={activeYear}
-              winst={yearlySummary?.winst}
-              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
-              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
-              zaLegacyJaDefault={zaLegacyJaDefault}
-              startersaftrekStatus={startersaftrekStatus}
-              onSetStartersaftrekStatus={setStartersaftrekStatus}
-              autoStatus={autoStatus}
-              onSetAutoStatus={setAutoStatus}
-              autoWizardStatus={autoWizardStatus}
-              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
-              kmVergoedingDetails={kmVergoedingDetails}
-              onSetKmVergoedingField={setKmVergoedingField}
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              gedeeldeHuur={gedeeldeHuurForActiveYear}
-              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
-              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
-              categoryBtwRates={effectiveCategoryBtwRates}
-              onOpenHelp={setHelpPopupChapter}
-            />
+            <div style={sectionTabStyle("resultaten")}>
+              <PersoonlijkeAannamesPanel
+                activeYear={activeYear}
+                winst={yearlySummary?.winst}
+                zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+                onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+                zaLegacyJaDefault={zaLegacyJaDefault}
+                startersaftrekStatus={startersaftrekStatus}
+                onSetStartersaftrekStatus={setStartersaftrekStatus}
+                autoStatus={autoStatus}
+                onSetAutoStatus={setAutoStatus}
+                autoWizardStatus={autoWizardStatus}
+                onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
+                kmVergoedingDetails={kmVergoedingDetails}
+                onSetKmVergoedingField={setKmVergoedingField}
+                activaSummary={activaSummary}
+                activaDetails={activaDetails}
+                gedeeldeHuur={gedeeldeHuurForActiveYear}
+                huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
+                onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
+                categoryBtwRates={effectiveCategoryBtwRates}
+                onOpenHelp={setHelpPopupChapter}
+              />
+            </div>
 
-            <CategoryPercentagePanel
-              activeYear={activeYear}
-              categorieTotalen={categorieTotalenActiveYear}
-              categoryZakelijkPercentage={categoryZakelijkPercentage}
-              onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
-              onOpenHelp={setHelpPopupChapter}
-            />
+            <div style={sectionTabStyle("resultaten")}>
+              <CategoryPercentagePanel
+                activeYear={activeYear}
+                categorieTotalen={categorieTotalenActiveYear}
+                categoryZakelijkPercentage={categoryZakelijkPercentage}
+                onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
+                autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
+                onOpenHelp={setHelpPopupChapter}
+              />
+            </div>
 
             {years.length > 0 && activeYear && (
               <>
@@ -3173,13 +3253,13 @@ export default function App() {
 
                 
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("resultaten")}>
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
 
                         {parsedFiles.length > 0 && (
-          <div ref={btwSettingsSectionRef}>
+          <div ref={btwSettingsSectionRef} style={sectionTabStyle("instellingen")}>
             <BtwRatesPanel
               categoryBtwRates={categoryBtwRates}
               setCategoryBtwRates={setCategoryBtwRatesWithUndo}
@@ -3193,22 +3273,30 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+          <div style={sectionTabStyle("instellingen")}>
+            <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+          </div>
         )}
 
         {parsedFiles.length > 0 && (
-          <CounterpartyRulesPanel
-            overridesByCounterparty={overridesByCounterparty}
-            setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
-            onOpenHelp={setHelpPopupChapter}
-          />
+          <div style={sectionTabStyle("instellingen")}>
+            <CounterpartyRulesPanel
+              overridesByCounterparty={overridesByCounterparty}
+              setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
         )}
 
         {parsedFiles.length > 0 && (
-          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
+          <div style={sectionTabStyle("instellingen")}>
+            <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
+          </div>
         )}
 
-                <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
+                <div style={sectionTabStyle("resultaten")}>
+                  <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
+                </div>
 
                 {(() => {
                   // Sinds v213 heet dezelfde overboeking aan elke kant anders (zie classify.js): de
@@ -3235,7 +3323,7 @@ export default function App() {
                   const zijdeOntbreekt = priGroupForYear.items.length === 0 ? "Prive" : zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
                   if (zijdeOntbreekt) {
                     return (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
                         <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
                         <p className="text-sm text-slate-600">
                           <strong>Controle overboeking zakelijk ↔ privé</strong>: voor {activeYear} is geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
@@ -3248,7 +3336,7 @@ export default function App() {
                   }
                   const ok = Math.abs(diff) < 0.01;
                   return (
-                    <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`}>
+                    <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
                       {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
                       <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
                         <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}
@@ -3258,10 +3346,14 @@ export default function App() {
                   );
                 })()}
 
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400" style={sectionTabStyle("details")}>
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
-                <div ref={detailsSectionRef} className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
+                <div
+                  ref={detailsSectionRef}
+                  className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}
+                  style={sectionTabStyle("details")}
+                >
                   {(!expandedTable || expandedTable === "Zakelijk") && (
                     <div
                       data-dropzone="Zakelijk"
