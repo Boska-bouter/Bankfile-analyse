@@ -3775,38 +3775,10 @@ export default function App() {
             })()}
 
             {/* v245 — Leningen/Lease/Activa/Persoonlijke aannames/Percentage zakelijk per categorie
-                hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten". */}
-            <div ref={loansSectionRef} style={sectionTabStyle("instellingen")}>
-              <LoanInterestPanel
-                loanSummary={loanSummary}
-                privateLoanSummary={privateLoanSummary}
-                loanDetails={loanDetails}
-                onOpenModal={setLoanDetailsModalKey}
-                onMarkUnknown={markLoanUnknown}
-                onUnmarkUnknown={unmarkLoanUnknown}
-                onMarkNotALoan={markLoanNotALoan}
-                onMarkAsPrive={markLoanAsPrive}
-                onMarkAsZakelijk={markLoanAsZakelijk}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-
-            <div ref={leasesSectionRef} style={sectionTabStyle("instellingen")}>
-              <LeaseInterestPanel
-                leaseSummary={leaseSummary}
-                leaseDetails={leaseDetails}
-                confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
-                onConfirmType={confirmLeaseType}
-                onOpenModal={setLeaseDetailsModalKey}
-                onMarkUnknown={markLeaseUnknown}
-                onUnmarkUnknown={unmarkLeaseUnknown}
-                onMergeInto={mergeLeaseInto}
-                onUndoMerge={undoMergeLease}
-                leaseMerges={leaseMerges}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-
+                hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten".
+                v252 — volgorde aangepast: "Rentepercentage per lening" moet direct onder "Percentage
+                zakelijk per categorie" staan, en "Lease" (als die er is) daar weer boven — dus nu
+                Activa → Persoonlijke aannames → Percentage zakelijk per categorie → Lease → Leningen. */}
             <div ref={activaSectionRef} style={sectionTabStyle("instellingen")}>
               <ActivaPanel
                 activaSummary={activaSummary}
@@ -3851,6 +3823,37 @@ export default function App() {
                 categoryZakelijkPercentage={categoryZakelijkPercentage}
                 onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
                 autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
+                onOpenHelp={setHelpPopupChapter}
+              />
+            </div>
+
+            <div ref={leasesSectionRef} style={sectionTabStyle("instellingen")}>
+              <LeaseInterestPanel
+                leaseSummary={leaseSummary}
+                leaseDetails={leaseDetails}
+                confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+                onConfirmType={confirmLeaseType}
+                onOpenModal={setLeaseDetailsModalKey}
+                onMarkUnknown={markLeaseUnknown}
+                onUnmarkUnknown={unmarkLeaseUnknown}
+                onMergeInto={mergeLeaseInto}
+                onUndoMerge={undoMergeLease}
+                leaseMerges={leaseMerges}
+                onOpenHelp={setHelpPopupChapter}
+              />
+            </div>
+
+            <div ref={loansSectionRef} style={sectionTabStyle("instellingen")}>
+              <LoanInterestPanel
+                loanSummary={loanSummary}
+                privateLoanSummary={privateLoanSummary}
+                loanDetails={loanDetails}
+                onOpenModal={setLoanDetailsModalKey}
+                onMarkUnknown={markLoanUnknown}
+                onUnmarkUnknown={unmarkLoanUnknown}
+                onMarkNotALoan={markLoanNotALoan}
+                onMarkAsPrive={markLoanAsPrive}
+                onMarkAsZakelijk={markLoanAsZakelijk}
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>
