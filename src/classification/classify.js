@@ -122,8 +122,18 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // hebt geladen (zie ook de "eigen rekening (niet geladen)"-vraag in de wizard, die hetzelfde
   // via IBAN afvangt). Minder hard bewijs dan een IBAN-match, maar wel een bewust door de
   // gebruiker zelf opgegeven naam — geen gok van de tool.
+  // v223: `eigenNamen` bevat sinds nu de volledige, genormaliseerde naam (voorletter(s) + achternaam
+  // samen, bijv. "r meijer") in plaats van alléén de kale achternaam (App.jsx/normalizePersonName) —
+  // een bare achternaam bleek in de praktijk ook te matchen op de rekening van naamgenoten/
+  // familieleden (bijv. de ouders "F Meijer en/of A Meijer-le Roux", of een zoon "Ricardo Meijer"),
+  // die dan ten onrechte als "overboeking naar/van de ondernemer zelf" werden geboekt. Leestekens in
+  // de transactietekst zelf ("R. Meijer" met punt) moeten daarvoor ook hier weg, anders matcht "r
+  // meijer" niet met "r. meijer" in de tekst — vandaar deze apart genormaliseerde variant, alleen
+  // voor déze check (de gewone `text` hierboven/hieronder blijft ongewijzigd voor de andere regels,
+  // die wél op leestekens als "b.v."/".nl" steunen).
+  const textForEigenNaam = text.replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ");
   if (eigenNamen.length > 0) {
-    const matchedNaam = eigenNamen.find((naam) => naam && text.includes(naam));
+    const matchedNaam = eigenNamen.find((naam) => naam && textForEigenNaam.includes(naam));
     if (matchedNaam) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
@@ -307,11 +317,48 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
   // factuur van de betaaldienst zelf aan de rekeninghouder — een asterisk in de tekst is hiervoor een
   // betrouwbaar signaal (komt in gewone bankomschrijvingen vrijwel nooit los voor).
   if (rule.name === "Betaalautomaat kosten" && text.includes("*")) return true;
+  // "Betaalautomaat kosten" (vervolg, v223): twee vergelijkbare "koopt-iets-bij-een-online-partij"-
+  // patronen, ontdekt in een echt dossier (R. Meijer) waar een privérekening was geladen. Net als bij
+  // de "*"-check hierboven staat de merknaam van de betaaldienst er ook gewoon op te lezen wanneer
+  // iemand een HEEL GEWONE consumentenaankoop/-abonnement online afrekent — niet omdat de
+  // rekeninghouder zelf servicekosten van die betaaldienst betaalt:
+  //   1) "<webwinkel/abonnement> via/door/by <betaaldienst>" — de manier waarop veel Nederlandse
+  //      incasso's/afschrijvingen de onderliggende betaaldienst vermelden naast de eigenlijke
+  //      verkopende partij (bijv. "VIDEOLAND DOOR BUCKAROO", "Kaartje2go NL verkoop via Stichting
+  //      Mollie Payments", "NS Reizigers B.V. by Buckaroo").
+  //   2) "... Doorlopende incasso Overige partij: <BETAALDIENST> N.V." — dezelfde situatie maar dan
+  //      in de vaste Nederlandse-incasso-omschrijving: "Overige partij" is hier de PSP die de incasso
+  //      namens de werkelijke leverancier verwerkt (bijv. "HBO MAX ... Doorlopende incasso Overige
+  //      partij: ADYEN N.V." — Adyen int hier voor HBO Max, niet voor de rekeninghouder zelf).
+  // In beide gevallen staat de betaaldienst-merknaam er dus als TUSSENPARTIJ bij, niet als degene die
+  // de rekeninghouder zelf kosten in rekening brengt — vandaar dat we deze twee patronen, net als de
+  // "*"-aankopen, uitsluiten van de "Betaalautomaat kosten"-classificatie.
+  if (
+    rule.name === "Betaalautomaat kosten" &&
+    (/\b(via|door|by)\b\s+(stichting\s+)?(mollie|buckaroo|adyen|ccv|worldline|multisafepay|pay\.nl|sumup|mypos|payter|viva\s+wallet|zettle|cm\.com)/.test(text) ||
+      /overige partij:\s*(stichting\s+)?(mollie|buckaroo|adyen|ccv|worldline|multisafepay|pay\.nl|sumup|mypos|payter|viva\s+wallet|zettle|cm\.com)/.test(text))
+  ) {
+    return true;
+  }
+  // "Betaalautomaat kosten" (vervolg, v223): "ovpay.nl" (het OV-chipkaart-/reizigersbetaalsysteem
+  // van het openbaar vervoer, bijv. "NLOVLX5MAGXWYMK5WG www.ovpay.nl") bevat toevallig de trefwoord-
+  // substring "pay.nl" (de betaaldienst Pay.nl) — dat is een heel andere partij, en dit is gewoon een
+  // OV-reis, geen betaaldienst-kostenafschrijving.
+  if (rule.name === "Betaalautomaat kosten" && text.includes("ovpay")) return true;
   // "Bankkosten" herkent (onder andere) de eigen bank op naam, voor de periodieke pakket-/
   // servicekosten die de bank zelf afschrijft. Een "Betaalverzoek"/Tikkie-achtige betaling via
   // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —
   // de banknaam staat er toevallig ook in (bijv. "ING Betaalverzoek via ING Bank").
   if (rule.name === "Bankkosten" && /betaalverzoek|tikkie/.test(text)) return true;
+  // "Boekhouder, accountant & administratie" herkent het boekhoudpakket AFAS op het kale woord
+  // "afas" — dat matcht óók op "AFAS Live" (de concertzaal in Amsterdam-Zuidoost, gesponsord door
+  // hetzelfde bedrijf), een heel gewone privé-uitgave (kaartje/consumptie), geen boekhoudpakket-
+  // factuur. Bewust hier afgevangen (en niet louter door het standaard-trefwoord in categories.js aan
+  // te scherpen naar "afas software"): een al opgeslagen project neemt zijn EIGEN, op het moment van
+  // opslaan bewaarde trefwoordenlijst mee en voegt die samen met de (nieuwe) standaardlijst (zie
+  // mergeCategoryRules) — de kale "afas" blijft daardoor ook na deze wijziging nog meekomen bij een
+  // ouder, al geladen project, tenzij hij hier expliciet wordt uitgesloten.
+  if (rule.name === "Boekhouder, accountant & administratie" && text.includes("afas live")) return true;
   return false;
 }
 

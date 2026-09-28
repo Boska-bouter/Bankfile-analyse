@@ -94,6 +94,26 @@ export function extractKeywordCandidate(text) {
   return words.find((w) => w.length >= 4) || "";
 }
 
+// Normaliseert een volledige (rekeninghouder-/partner-)naam voor de "eigen naam"-herkenning in
+// classify.js (v223) — puur leestekens weg en spaties gelijktrekken, zonder (zoals
+// extractKeywordCandidate hierboven) tot één los woord terug te brengen. Dat ene-woord-gedrag is
+// juist gemaakt voor bedrijfsnamen (een kort, kenmerkend woord is daar een prima signaal), maar bij
+// een persoonsnaam blijft er dan vaak niets anders over dan de kale ACHTERNAAM — en een veelvoorkomende
+// Nederlandse achternaam ("Meijer", "De Vries", ...) is op zichzelf veel te zwak: die staat ook op de
+// rekening van niet-geladen familieleden/naamgenoten, of duikt toevallig op in een heel andere
+// overboeking (bijv. de eigen naam als incasso-referentie bij de verhuurder). Door voorletter(s) EN
+// achternaam samen als één vaste woordgroep te eisen (i.p.v. van elkaar los), moet de tekst veel
+// specifieker overeenkomen voor een match telt.
+export function normalizePersonName(naam) {
+  const raw = String(naam || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 export function extractRecurringName(tx) {
   const raw = (tx.counterparty || tx.description || "").trim();
   if (!raw) return "";

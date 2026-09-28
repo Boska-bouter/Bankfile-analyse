@@ -17,7 +17,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, extractKeywordCandidate, ibansMatch } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, extractKeywordCandidate, normalizePersonName, ibansMatch } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -830,7 +830,10 @@ export default function App() {
 
   const eigenNamenKeywords = useMemo(() => {
     if (!eigenNamen) return [];
-    return [eigenNamen.ondernemer, eigenNamen.partner].map((n) => extractKeywordCandidate(n)).filter(Boolean);
+    // v223: voorheen extractKeywordCandidate (bedoeld voor bedrijfsnamen) — die reduceert een naam
+    // tot één kaal woord, meestal de achternaam, wat bij een veelvoorkomende achternaam veel te
+    // makkelijk ook naamgenoten/familieleden matcht (zie classify.js/normalizePersonName).
+    return [eigenNamen.ondernemer, eigenNamen.partner].map((n) => normalizePersonName(n)).filter(Boolean);
   }, [eigenNamen]);
 
   // Extra, door de gebruiker zelf opgegeven naam voor de zakelijke spaarrekening (bijv. bij een
