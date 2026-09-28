@@ -48,7 +48,7 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
             <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
               Annuleren
             </button>
-            <button onClick={save} className="rounded-lg px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700">
+            <button onClick={save} className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800">
               Opslaan
             </button>
           </div>

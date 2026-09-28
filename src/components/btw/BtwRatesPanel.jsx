@@ -13,7 +13,7 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
   const [openGroup, setOpenGroup] = useState(null);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-5 text-sm font-semibold">
         <span>
           BTW-instellingen
@@ -33,13 +33,13 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
             <span className="text-xs font-medium text-slate-600">Kleineondernemersregeling (KOR):</span>
             <button
               onClick={() => setKorRegeling(true)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${korRegeling === true ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${korRegeling === true ? "bg-teal-700 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
             >
               Ja
             </button>
             <button
               onClick={() => setKorRegeling(false)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${korRegeling === false ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${korRegeling === false ? "bg-teal-700 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
             >
               Nee
             </button>
@@ -58,13 +58,13 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                 <span className="text-xs font-medium text-slate-600">BTW-verlegd op zakelijke inkomsten (standaard):</span>
                 <button
                   onClick={() => setBtwVerlegd(true)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-medium ${btwVerlegd === true ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium ${btwVerlegd === true ? "bg-teal-700 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
                 >
                   Ja
                 </button>
                 <button
                   onClick={() => setBtwVerlegd(false)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-medium ${btwVerlegd === false ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium ${btwVerlegd === false ? "bg-teal-700 text-white" : "bg-white border border-slate-300 text-slate-600"}`}
                 >
                   Nee
                 </button>

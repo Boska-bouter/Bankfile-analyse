@@ -36,7 +36,7 @@ export default function MultiYearOverview({
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           {years.length > 1 ? `Meerjarenoverzicht (${years.length} jaar)` : "Jaaroverzicht — is dit rendabel?"}

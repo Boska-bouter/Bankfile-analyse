@@ -49,7 +49,7 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
   const pageItems = useMemo(() => recurringPayments.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE), [recurringPayments, page]);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           Terugkerende betalingen {activeYear}

@@ -6,8 +6,8 @@ import { Building2, Home, FileSpreadsheet } from "lucide-react";
 export default function AccountTypeChooser({ pendingFileNames, onChoose }) {
   if (pendingFileNames.length === 0) return null;
   return (
-    <section className="rounded-xl border-2 border-slate-900 bg-white overflow-hidden">
-      <div className="bg-slate-900 text-white px-5 py-3">
+    <section className="rounded-xl border-2 border-teal-700 bg-white overflow-hidden">
+      <div className="bg-teal-700 text-white px-5 py-3">
         <h2 className="text-sm font-semibold">Is dit een zakelijke rekening of een privérekening?</h2>
         <p className="text-xs text-slate-300 mt-1">
           Bepaalt het standaard-label voor alle transacties uit dat bestand — dit kan later altijd nog per

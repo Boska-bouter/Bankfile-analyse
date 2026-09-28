@@ -24,7 +24,7 @@ export default function LeaseInterestPanel({
   }).length;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Lease (operationeel/financieel)</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
@@ -120,13 +120,13 @@ export default function LeaseInterestPanel({
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => onConfirmType(lease, "operationeel")}
-                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                           >
                             Operationeel
                           </button>
                           <button
                             onClick={() => onConfirmType(lease, "financieel")}
-                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                           >
                             Financieel
                           </button>

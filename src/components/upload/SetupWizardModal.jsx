@@ -151,7 +151,7 @@ export default function SetupWizardModal({
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="px-5 py-3 border-b border-slate-200 bg-slate-900 text-white shrink-0">
+        <div className="px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
           <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
         </div>
@@ -181,7 +181,7 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setEigenNamen({ ondernemer: typedNow.eigenNaamOndernemer?.trim() || null, partner: typedNow.eigenNaamPartner?.trim() || null }); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
+                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800"
                 >
                   Doorgaan
                 </button>
@@ -228,13 +228,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Zakelijk" }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
                 >
                   Zakelijke rekening
                 </button>
                 <button
                   onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Prive" }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
                 >
                   Privérekening
                 </button>
@@ -320,7 +320,7 @@ export default function SetupWizardModal({
                   <button
                     key={opt.key}
                     onClick={() => setTypedNow((p) => ({ ...p, autoKeuze: opt.key, autoSoort: opt.key === "prive" ? null : p.autoSoort }))}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
                   >
                     {opt.label}
                   </button>
@@ -339,7 +339,7 @@ export default function SetupWizardModal({
                       <button
                         key={opt.key}
                         onClick={() => setTypedNow((p) => ({ ...p, autoSoort: opt.key }))}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
                       >
                         {opt.label}
                       </button>
@@ -369,7 +369,7 @@ export default function SetupWizardModal({
                     onSeedAutoStatus(years, status);
                     goNext();
                   }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
+                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-40"
                 >
                   Doorgaan
                 </button>
@@ -532,7 +532,7 @@ export default function SetupWizardModal({
                     setRechtsvorm("zzp");
                     goNext();
                   }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Eenmanszaak/zzp
                 </button>
@@ -547,7 +547,7 @@ export default function SetupWizardModal({
                     setBtwVerlegd(false);
                     goNext();
                   }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   BV
                 </button>
@@ -568,13 +568,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setHeeftHolding(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja, holding + werkmaatschappij
                 </button>
                 <button
                   onClick={() => { setHeeftHolding(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee, alleen deze BV
                 </button>
@@ -589,13 +589,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setKorRegeling(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja, KOR
                 </button>
                 <button
                   onClick={() => { setKorRegeling(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee
                 </button>
@@ -614,13 +614,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setBtwVerlegd(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja
                 </button>
                 <button
                   onClick={() => { setBtwVerlegd(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee
                 </button>
@@ -740,7 +740,7 @@ export default function SetupWizardModal({
           {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
-              className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
             >
               {isLastStep ? "Klaar" : "Doorgaan"} <ChevronRight className="h-3.5 w-3.5" />
             </button>

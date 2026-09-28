@@ -2306,7 +2306,7 @@ export default function App() {
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-slate-700"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-teal-800"
             >
               Gebruik laatste project
             </button>
@@ -2468,7 +2468,7 @@ export default function App() {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <button onClick={undoLastAction} className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+          <button onClick={undoLastAction} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
             Ongedaan maken
           </button>
         </div>
@@ -2602,7 +2602,7 @@ export default function App() {
                     key={year}
                     onClick={() => setActiveYear(year)}
                     className={`rounded-lg px-2.5 py-1 text-xs font-medium border ${
-                      year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      year === activeYear ? "bg-teal-700 border-teal-700 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                     }`}
                   >
                     {year}
@@ -2889,7 +2889,7 @@ export default function App() {
             style={sectionTabStyle("instellingen")}
           >
             {!expandedBusinessExpenseList && (
-              <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
@@ -2928,7 +2928,7 @@ export default function App() {
               </section>
             )}
             {!expandedBusinessIncomeList && (
-              <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
@@ -2968,7 +2968,7 @@ export default function App() {
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
             {personSummary.length > 0 && (
-              <section ref={personReviewSectionRef} className="rounded-xl border border-fuchsia-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={personReviewSectionRef} className="rounded-xl border border-fuchsia-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowPersonReview((v) => !v)}
                   className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
@@ -3000,7 +3000,7 @@ export default function App() {
             )}
 
             {overigSummary.length > 0 && (
-              <section ref={overigReviewSectionRef} className="rounded-xl border border-amber-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={overigReviewSectionRef} className="rounded-xl border border-amber-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowOverigReview((v) => !v)}
                   className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
@@ -3037,7 +3037,7 @@ export default function App() {
             )}
 
             {periodeMismatches.length > 0 && (
-              <section ref={periodeReviewSectionRef} className="rounded-xl border border-sky-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={periodeReviewSectionRef} className="rounded-xl border border-sky-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <div className="px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -3167,7 +3167,7 @@ export default function App() {
                           <div className="flex gap-2 flex-wrap pt-1">
                             <button
                               onClick={() => exportAangiftevoorstel([activeYear])}
-                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                              className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
                             >
                               Berekening bekijken
                             </button>
@@ -3201,7 +3201,7 @@ export default function App() {
                             ))}
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => exportAangiftevoorstel()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                            <button onClick={() => exportAangiftevoorstel()} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
                               Berekening tonen
                             </button>
                             <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
@@ -3222,7 +3222,7 @@ export default function App() {
                 </div>
 
                         {parsedFiles.length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-4" style={sectionTabStyle("instellingen")}>
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={sectionTabStyle("instellingen")}>
             <h3 className="text-sm font-semibold text-slate-500 mb-3">Instellingen / Geladen files</h3>
             <div className="flex flex-wrap gap-2">
               {parsedFiles.map((f) => {
@@ -3412,7 +3412,7 @@ export default function App() {
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
                 <p className="text-sm font-semibold">Indicatieve aangifteberekening {selectedAangifteYears.join(", ")}</p>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
                     <Download className="h-4 w-4" /> Downloaden
                   </button>
                   <button

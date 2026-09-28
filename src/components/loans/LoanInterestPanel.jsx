@@ -9,7 +9,7 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
   if (loanSummary.length === 0 && privateLoanSummary.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Rentepercentage per lening</span>
         <span className="text-xs font-normal text-slate-400">({loanSummary.length + privateLoanSummary.length})</span>

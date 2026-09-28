@@ -29,7 +29,7 @@ export default function TodoPanel({ items }) {
   };
 
   return (
-    <section className="rounded-xl border-2 border-slate-900 bg-white overflow-hidden">
+    <section className="rounded-xl border-2 border-teal-700 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-900 text-stone-50">
         <p className="text-sm font-semibold">Werk te doen ({items.length})</p>
       </div>

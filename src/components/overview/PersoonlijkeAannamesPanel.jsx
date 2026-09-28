@@ -60,7 +60,7 @@ export default function PersoonlijkeAannamesPanel({
   const huurBtwTarief = categoryBtwRates?.["Huur (deels zakelijk)"] || 0;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Persoonlijke aannames voor IB — zelfstandigenaftrek, heffingskortingen &amp; KIA</span>
         {onOpenHelp && <HelpHint chapter="persoonlijke-aannames" onOpen={onOpenHelp} />}

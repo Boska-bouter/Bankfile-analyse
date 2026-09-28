@@ -40,7 +40,7 @@ export default function KeywordSuggestionModal({ suggestion, onAccept, onDismiss
           <button onClick={onDismiss} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
             Nee, dank je
           </button>
-          <button onClick={onAccept} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+          <button onClick={onAccept} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
             Ja, trefwoord toevoegen
           </button>
         </div>

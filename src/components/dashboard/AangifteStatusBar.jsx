@@ -41,7 +41,7 @@ export default function AangifteStatusBar({
 }) {
   if (!activeYear) return null;
   return (
-    <section className="rounded-xl border-2 border-slate-900 bg-white overflow-hidden">
+    <section className="rounded-xl border-2 border-teal-700 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-900 text-stone-50 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold flex items-center gap-2">

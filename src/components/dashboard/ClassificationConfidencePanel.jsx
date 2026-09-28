@@ -23,7 +23,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
   const pct = (n) => Math.round((n / total) * 100);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-left">
         <span className="text-sm font-semibold flex items-center gap-2">
           Classificatiezekerheid

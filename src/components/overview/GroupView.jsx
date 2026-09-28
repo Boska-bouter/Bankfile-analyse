@@ -36,7 +36,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   const [expandedMain, setExpandedMain] = useState(null);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
@@ -220,7 +220,7 @@ export function DetailTable({
   const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
           <div className="flex items-center gap-2">
@@ -252,9 +252,9 @@ export function DetailTable({
                 <div className={`absolute ${amountFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-60 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-lg`}>
                   <p className="text-xs text-slate-500 mb-2">Filter op bedrag</p>
                   <div className="flex gap-1 mb-2">
-                    <button onClick={() => setAmountSign("beide")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "beide" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Beide</button>
-                    <button onClick={() => setAmountSign("neg")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "neg" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Betaald (–)</button>
-                    <button onClick={() => setAmountSign("pos")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "pos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Ontvangen (+)</button>
+                    <button onClick={() => setAmountSign("beide")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "beide" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>Beide</button>
+                    <button onClick={() => setAmountSign("neg")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "neg" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>Betaald (–)</button>
+                    <button onClick={() => setAmountSign("pos")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "pos" ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>Ontvangen (+)</button>
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="number" inputMode="decimal" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} placeholder="Min" className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />

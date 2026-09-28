@@ -80,7 +80,7 @@ export default function RawFileReviewModal({
                 placeholder={balanceCheck ? String(balanceCheck.fileOpeningBalance) : "—"}
                 className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
               />
-              <button onClick={applyOpeningCorrection} className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+              <button onClick={applyOpeningCorrection} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
                 Toepassen
               </button>
               {openingBalanceCorrection != null && (
@@ -142,7 +142,7 @@ export default function RawFileReviewModal({
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Uitgesloten regels tellen nergens meer mee — terugzetten kan hier altijd.</p>
-          <button onClick={onClose} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">Sluiten</button>
+          <button onClick={onClose} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">Sluiten</button>
         </div>
       </div>
     </div>

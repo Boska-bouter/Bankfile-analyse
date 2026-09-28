@@ -61,7 +61,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               <button
                 onClick={() => onApplyYears(selectedYears)}
                 disabled={selectedYears.length === 0}
-                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+                className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40"
               >
                 Toepassen op gekozen jaren
               </button>

@@ -20,7 +20,7 @@ export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyP
             key={year}
             onClick={() => onSelectYear(year)}
             className={`shrink-0 flex flex-col items-center rounded-lg px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-xs font-medium leading-tight ${
-              year === activeYear ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              year === activeYear ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
             title={`Jaar ${year}${yp ? ` — ${yp.pct}% klaar. ${STATUS_LABEL[yp.status]}` : ""}`}
           >

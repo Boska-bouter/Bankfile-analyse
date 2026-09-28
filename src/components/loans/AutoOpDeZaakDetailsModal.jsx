@@ -184,7 +184,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Opslaan</button>
+            <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>
           </div>
         </div>
       </div>

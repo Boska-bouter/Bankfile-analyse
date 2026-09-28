@@ -65,7 +65,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-5 text-sm font-semibold">
         <span>Categorieregels — zoekwoorden per subtype</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -121,7 +121,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                                     placeholder="bijv. albert heijn, shell, kpn…"
                                     className="flex-1 min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                   />
-                                  <button onClick={() => addKeyword(r.name)} className="shrink-0 rounded-lg bg-slate-900 text-white px-2 py-1 text-xs hover:bg-slate-700">
+                                  <button onClick={() => addKeyword(r.name)} className="shrink-0 rounded-lg bg-teal-700 text-white px-2 py-1 text-xs hover:bg-teal-800">
                                     <Plus className="h-3 w-3" />
                                   </button>
                                 </div>
@@ -148,13 +148,13 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
               />
               <button
                 onClick={() => setNewCategoryMain("Zakelijk")}
-                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
               >
                 Zakelijk
               </button>
               <button
                 onClick={() => setNewCategoryMain("Privé")}
-                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Privé" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Privé" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
               >
                 Privé
               </button>
