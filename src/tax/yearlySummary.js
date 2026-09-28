@@ -36,6 +36,18 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   let zakBruto = 0, zakBtwTotaal = 0, zakelijkeInkomsten = 0, uitkeringenAanPrive = 0, priUitgegeven = 0;
   let zakVast = 0, zakVariabel = 0, priVast = 0, priVariabel = 0, zakelijkeUitgaven = 0, alBetaaldeZvwIh = 0;
   let verschuldigdBtw = 0, voorbelasting = 0, zakelijkVanPriveRekening = 0, zakelijkeKostenNetto = 0;
+  // v249 — "Persoonlijk & vertrouwelijk" (gokken/dating/adult content/drugs e.d.) staat bewust altijd
+  // op fiscalTreatmentOf "geen" (zie categories.js) — nooit een aftrekbare kostenpost, ongeacht
+  // tx.type. Maar een dossier gebruikt deze categorie soms bewust MET tx.type "Zakelijk" (puur om de
+  // tegenpartijnaam niet apart als "Prive" te hoeven labelen) voor geld dat wél vanaf de zakelijke
+  // rekening is opgenomen voor iets persoonlijks/vertrouwelijks. Zonder correctie verdween zo'n
+  // opname helemaal uit de Tekort/Over-berekening: niet als kostenpost (terecht, "geen"), maar ook
+  // niet als "naar privé gegaan" (want tx.category matchte geen van de expliciete "Prive opnames"/
+  // "Ontvangen van zakelijk"-categorieën hieronder) — waardoor de winst en het resultaat er beter
+  // uitzagen dan de werkelijke geldstroom rechtvaardigde. Nu telt zo'n opname alsnog mee als
+  // "uitkeringenAanPrive" (net als een gewone "Prive opnames"), zodat het bedrag zichtbaar blijft in
+  // Tekort/Over — puur als bedrag, zonder de vertrouwelijke details verder te tonen.
+  let persoonlijkVanZakelijkeRekening = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
       // "Terugboeking van prive" (en de andere incomeTransferCategories) zijn geen persoonlijke
@@ -74,6 +86,15 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // die hierop terugvalt als de privérekening zelf niet is geladen) het volledige oorspronkelijk
       // opgenomen bedrag zien, ook als een deel daarvan later is teruggestort.
       if (tx.category === "Terugboeking van prive") uitkeringenAanPrive -= Math.abs(tx.amount);
+      // Zie de toelichting bij persoonlijkVanZakelijkeRekening hierboven — bewust NIET opgeteld bij
+      // uitkeringenAanPrive zelf: computeBusinessAdvies (en MultiYearOverview.effectiefFor) gebruiken
+      // ofwel priUitgegeven (als de privérekening is geladen) ofwel uitkeringenAanPrive (als niet) —
+      // nooit allebei. Zou dit bedrag hier al meetellen, dan verdween het alsnog uit de Tekort/Over-
+      // som zodra priUitgegeven > 0 is (het overgrote-deel-scenario: één gemengde rekening met veel
+      // "Prive"-getypeerde transacties). Door het apart te houden en pas bij de Tekort/Over-som zelf
+      // op te tellen (ongeacht welke van de twee als basis dient) telt het altijd mee, precies één
+      // keer.
+      if (tx.category === "Persoonlijk & vertrouwelijk" && tx.amount < 0) persoonlijkVanZakelijkeRekening += Math.abs(tx.amount);
     }
 
     // De fiscale zakelijke berekening (winst/BTW) zelf: gebaseerd op de categorie, niet op
@@ -155,7 +176,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   return {
     zakBruto, zakBtwTotaal, zakelijkeInkomsten, uitkeringenAanPrive, priUitgegeven,
     winst: zakBruto - zakBtwTotaal - renteAftrekbaar - leaseAutoWinstCorrectie, zakVast, zakVariabel, priVast, priVariabel,
-    zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting, zakelijkVanPriveRekening,
+    zakelijkeUitgaven, alBetaaldeZvwIh, verschuldigdBtw, voorbelasting, zakelijkVanPriveRekening, persoonlijkVanZakelijkeRekening,
     // Netto omzet = zakelijke inkomsten min de daarover verschuldigde BTW — zelfde bedrag als
     // "1. Opbrengsten" in het Aangiftevoorstel. zakelijkeKostenNetto is netto zakelijke kosten
     // (excl. financiering/rente, die apart als renteAftrekbaar wordt afgetrokken in "winst").
@@ -189,7 +210,12 @@ const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energi
 export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, zvwEstimate) {
   if (!activeYear || !summary) return null;
   const ibBelastingEffectief = ibEstimate.belasting + (zvwEstimate?.bijdrage || 0);
-  const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
+  // v249 — persoonlijkVanZakelijkeRekening (zie yearlySummary.js) telt hier altijd extra mee, ongeacht
+  // of priUitgegeven of uitkeringenAanPrive als basis dient — anders verdween dit bedrag alsnog uit
+  // de som zodra de privérekening (of gemengde-rekening "Prive"-transacties) al een priUitgegeven > 0
+  // opleverde.
+  const effectievePriveUitgegeven =
+    (summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive) + (summary.persoonlijkVanZakelijkeRekening || 0);
   const verschil = summary.winst - effectievePriveUitgegeven - openOB - ibBelastingEffectief;
 
   let niveau, tekst;
@@ -206,6 +232,9 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
   }
   if (summary.zakelijkVanPriveRekening > 0) {
     tekst += ` Let op: ${eur(summary.zakelijkVanPriveRekening)} hiervan zijn zakelijke kosten die vanaf de privérekening zijn betaald — die tellen terecht mee in de winst, maar ook mee als "persoonlijk uitgegeven" hierboven. Tekort/Over kan daardoor iets strenger uitvallen dan strikt nodig.`;
+  }
+  if (summary.persoonlijkVanZakelijkeRekening > 0) {
+    tekst += ` Let op: ${eur(summary.persoonlijkVanZakelijkeRekening)} hiervan is opgenomen vanaf de zakelijke rekening voor "Persoonlijk & vertrouwelijk" — dat telt terecht niet mee als zakelijke kost, maar is wél meegeteld als geld dat naar privé is gegaan, anders zou dit bedrag nergens in dit overzicht zichtbaar zijn.`;
   }
   return { niveau, tekst };
 }

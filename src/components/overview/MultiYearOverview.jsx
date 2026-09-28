@@ -30,7 +30,12 @@ export default function MultiYearOverview({
     const zvwGedaan = !!zvwStatus[year]?.gedaan;
     const ibBelastingEffectief = ibEstimate.belasting + zvwEstimate.bijdrage;
     const priUitgegevenIsAanname = summary.priUitgegeven === 0 && summary.uitkeringenAanPrive > 0;
-    const effectievePriveUitgegeven = summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive;
+    // v249 — persoonlijkVanZakelijkeRekening (opnames voor "Persoonlijk & vertrouwelijk" vanaf de
+    // zakelijke rekening — zie yearlySummary.js) telt hier altijd extra mee, ongeacht welke van de
+    // twee (priUitgegeven/uitkeringenAanPrive) als basis dient — zelfde correctie als in
+    // computeBusinessAdvies, anders verdwijnt dit bedrag zodra priUitgegeven > 0 is.
+    const effectievePriveUitgegeven =
+      (summary.priUitgegeven > 0 ? summary.priUitgegeven : summary.uitkeringenAanPrive) + (summary.persoonlijkVanZakelijkeRekening || 0);
     const verschil = summary.winst - effectievePriveUitgegeven - (korRegeling ? 0 : openOB) - ibBelastingEffectief;
     return { summary, openOB, ibEstimate, zvwEstimate, ibGedaan, zvwGedaan, priUitgegevenIsAanname, effectievePriveUitgegeven, verschil };
   };
