@@ -359,6 +359,10 @@ export default function App() {
   const loansSectionRef = useRef(null);
   const leasesSectionRef = useRef(null);
   const incomeRatesSectionRef = useRef(null);
+  // v246 — nieuw, voor het mini-dashboard op tabblad "Instellingen" (instellingenDashboardCards):
+  // Activa en Persoonlijke aannames hadden nog geen eigen ref om naartoe te kunnen springen.
+  const activaSectionRef = useRef(null);
+  const aannamesSectionRef = useRef(null);
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
   const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
@@ -395,6 +399,8 @@ export default function App() {
     [bvSignaleringSectionRef, "overzicht"],
     [loansSectionRef, "instellingen"],
     [leasesSectionRef, "instellingen"],
+    [activaSectionRef, "instellingen"],
+    [aannamesSectionRef, "instellingen"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
     [detailsSectionRef, "controleren"],
@@ -1923,17 +1929,36 @@ export default function App() {
     });
     return () => cancelAnimationFrame(raf);
   }, [activeTab, pendingScrollRef]);
+  // v246 — hierboven stonden incompleteLoansCount/incompleteLeasesCount alleen lokaal in de
+  // dashboardCards-berekening hieronder; nu ook in een eigen useMemo (plus incompleteActivaCount,
+  // die nog nergens dossierbreed werd bijgehouden) zodat het nieuwe mini-dashboard op tabblad
+  // "Instellingen" (instellingenDashboardCards, verderop) dezelfde tellingen kan hergebruiken i.p.v.
+  // ze een tweede keer uit te rekenen.
+  const incompleteLoansCount = useMemo(
+    () => loanSummary.filter((l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend).length,
+    [loanSummary, loanDetails]
+  );
+  const incompleteLeasesCount = useMemo(
+    () =>
+      leaseSummary.filter((l) => {
+        if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+        if (leaseDetails[l.key]?.onbekend) return false;
+        return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
+      }).length,
+    [leaseSummary, leaseDetails, confirmedLeaseTypeKeys]
+  );
+  const incompleteActivaCount = useMemo(
+    () =>
+      activaSummary.filter((a) => {
+        const details = activaDetails[a.key];
+        if (details?.onbekend) return false;
+        return !(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
+      }).length,
+    [activaSummary, activaDetails]
+  );
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
     const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
-    const incompleteLoansCount = loanSummary.filter(
-      (l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend
-    ).length;
-    const incompleteLeasesCount = leaseSummary.filter((l) => {
-      if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
-      if (leaseDetails[l.key]?.onbekend) return false;
-      return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
-    }).length;
     const quartersOpenCount = checklistData?.quartersOpen?.length || 0;
     return [
       {
@@ -2197,9 +2222,11 @@ export default function App() {
     zvwStatus,
     loanSummary,
     loanDetails,
+    incompleteLoansCount,
     leaseSummary,
     leaseDetails,
     confirmedLeaseTypeKeys,
+    incompleteLeasesCount,
     checklistData,
     rechtsvorm,
     bvSignalering,
@@ -2319,6 +2346,129 @@ export default function App() {
     pendingDuplicateCount,
     duplicatePendingBreakdown,
     periodeMismatches.length,
+  ]);
+
+  // v246 — mini-dashboard voor tabblad "Instellingen", zelfde soort kaarten als op Overzicht/
+  // Controleren (zie dashboardCards/controlerenDashboardCards hierboven) maar dan precies de
+  // instellingen-items die een compleet/onvolledig-status hebben: Leningen, Lease en Activa
+  // (rentepercentages/afschrijving nodig voor een kloppende winstberekening), Persoonlijke aannames
+  // (urencriterium voor de zelfstandigenaftrek — bepaalt of die aftrek uberhaupt van toepassing is)
+  // en BTW-instellingen (KOR/btw-verlegd, dezelfde kaart als al op Overzicht stond — hier ook, want
+  // de daadwerkelijke instelling staat nu fysiek op dit tabblad). Categorie-/tegenpartijregels en de
+  // andere pure configuratielijsten (geen vaste lijst met wel/niet-compleet) staan er bewust niet
+  // bij, net zoals "Geladen files" ook geen eigen kaart kreeg op het Controleren-dashboard.
+  const instellingenDashboardCards = useMemo(() => {
+    if (transactions.length === 0) return [];
+    const zelfstandigenaftrekStatusDitJaar = activeYear
+      ? resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, activeYear, zaLegacyJaDefault)
+      : null;
+    return [
+      {
+        key: "loans",
+        title: "Leningen",
+        icon: <span>📄</span>,
+        value: loanSummary.length,
+        subtitle:
+          loanSummary.length === 0
+            ? "Geen gevonden"
+            : incompleteLoansCount === 0
+            ? "Alle gegevens compleet"
+            : incompleteLoansCount === loanSummary.length
+            ? "Nog geen gegevens ingevuld"
+            : `${incompleteLoansCount} van ${loanSummary.length} nog onvolledig`,
+        tone:
+          loanSummary.length === 0
+            ? "neutral"
+            : incompleteLoansCount === 0
+            ? "ok"
+            : incompleteLoansCount === loanSummary.length
+            ? "risk"
+            : "attention",
+        hint: "Naar de leningen-sectie",
+        onClick: () => jumpToSection(loansSectionRef),
+      },
+      {
+        key: "leases",
+        title: "Lease",
+        icon: <span>🚗</span>,
+        value: leaseSummary.length,
+        subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+        tone: incompleteLeasesCount > 0 ? "attention" : leaseSummary.length > 0 ? "ok" : "neutral",
+        hint: "Naar de lease-sectie",
+        onClick: () => jumpToSection(leasesSectionRef),
+      },
+      {
+        key: "activa",
+        title: "Activa (afschrijving)",
+        icon: <span>🏷️</span>,
+        value: activaSummary.length,
+        subtitle:
+          activaSummary.length === 0
+            ? "Geen gevonden"
+            : incompleteActivaCount === 0
+            ? "Alle gegevens compleet"
+            : incompleteActivaCount === activaSummary.length
+            ? "Nog geen gegevens ingevuld"
+            : `${incompleteActivaCount} van ${activaSummary.length} nog onvolledig`,
+        tone:
+          activaSummary.length === 0
+            ? "neutral"
+            : incompleteActivaCount === 0
+            ? "ok"
+            : incompleteActivaCount === activaSummary.length
+            ? "risk"
+            : "attention",
+        hint: "Naar de activa-sectie",
+        onClick: () => jumpToSection(activaSectionRef),
+      },
+      ...(rechtsvorm !== "bv" && activeYear
+        ? [
+            {
+              key: "aannames",
+              title: `Persoonlijke aannames ${activeYear}`,
+              icon: <span>🧑</span>,
+              value: zelfstandigenaftrekStatusDitJaar === "onbekend" ? "?" : "✓",
+              subtitle:
+                zelfstandigenaftrekStatusDitJaar === "onbekend"
+                  ? "Urencriterium nog niet aangegeven"
+                  : zelfstandigenaftrekStatusDitJaar === "ja"
+                  ? "Urencriterium: ja"
+                  : "Urencriterium: nee",
+              tone: zelfstandigenaftrekStatusDitJaar === "onbekend" ? "attention" : "ok",
+              hint: "Naar de persoonlijke aannames voor dit jaar",
+              onClick: () => jumpToSection(aannamesSectionRef),
+            },
+          ]
+        : []),
+      ...(transactions.length > 0 && (korRegeling === null || (korRegeling === false && btwVerlegd === null))
+        ? [
+            {
+              key: "btwSettings",
+              title: "BTW-instellingen",
+              icon: <Settings className="h-3.5 w-3.5" />,
+              value: "!",
+              subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
+              tone: "attention",
+              hint: "Naar de BTW-instellingen",
+              onClick: () => jumpToSection(btwSettingsSectionRef),
+            },
+          ]
+        : []),
+    ];
+  }, [
+    transactions.length,
+    loanSummary,
+    incompleteLoansCount,
+    leaseSummary,
+    incompleteLeasesCount,
+    activaSummary,
+    incompleteActivaCount,
+    rechtsvorm,
+    activeYear,
+    zelfstandigenaftrekStatus,
+    zaLegacyJaDefault,
+    korRegeling,
+    btwVerlegd,
   ]);
 
   // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
@@ -3181,7 +3331,13 @@ export default function App() {
           />
         )}
 
-        
+        {/* v246 — Mini-dashboard bovenaan het Instellingen-tabblad, zelfde soort kaarten als op
+            Overzicht/Controleren (zie dashboardCards/controlerenDashboardCards) maar dan precies de
+            instellingen-items met een compleet/onvolledig-status: Leningen, Lease, Activa,
+            Persoonlijke aannames (urencriterium) en BTW-instellingen. */}
+        <div style={sectionTabStyle("instellingen")}>
+          <DashboardOverview title="Instellingen" cards={instellingenDashboardCards} />
+        </div>
 
         {parsedFiles.length > 0 && (
           <div
@@ -3604,7 +3760,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("instellingen")}>
+            <div ref={activaSectionRef} style={sectionTabStyle("instellingen")}>
               <ActivaPanel
                 activaSummary={activaSummary}
                 activaDetails={activaDetails}
@@ -3616,7 +3772,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("instellingen")}>
+            <div ref={aannamesSectionRef} style={sectionTabStyle("instellingen")}>
               <PersoonlijkeAannamesPanel
                 activeYear={activeYear}
                 winst={yearlySummary?.winst}
