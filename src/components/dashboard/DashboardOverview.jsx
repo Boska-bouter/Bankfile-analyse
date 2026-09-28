@@ -43,7 +43,22 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
                 {card.icon}
                 <span>{card.title}</span>
               </div>
-              <div className={`mt-1 text-2xl font-semibold leading-tight ${TONE_VALUE[tone]}`}>{card.value}</div>
+              {/* v239 — "lines": losse, los afleesbare bedragen (label + bedrag per stuk) i.p.v. 1
+                  opgeteld totaal in de grote getal-stijl. Voor kaarten die bewust meerdere aparte
+                  posten naast elkaar tonen (bijv. IB/Zvw of de aftrekposten) — de gebruiker gaf aan
+                  liever de losse bedragen te zien dan een samengevoegd totaal. */}
+              {card.lines ? (
+                <div className="mt-1.5 space-y-1">
+                  {card.lines.map((l) => (
+                    <div key={l.label} className="flex items-baseline justify-between gap-2">
+                      <span className="text-[10px] text-slate-500">{l.label}</span>
+                      <span className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{l.value}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`mt-1 text-2xl font-semibold leading-tight ${TONE_VALUE[tone]}`}>{card.value}</div>
+              )}
               {card.subtitle && <div className="mt-0.5 text-[11px] text-slate-500 leading-snug">{card.subtitle}</div>}
             </button>
           );

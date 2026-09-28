@@ -1977,8 +1977,11 @@ export default function App() {
                     key: "ibZvw",
                     title: `IB & Zvw ${activeYear} (indicatief)`,
                     icon: <span>🧮</span>,
-                    value: eur(dashboardAangifteIndicatie.ib.belasting + dashboardAangifteIndicatie.zvw.bijdrage),
-                    subtitle: `IB ${eur(dashboardAangifteIndicatie.ib.belasting)} · Zvw ${eur(dashboardAangifteIndicatie.zvw.bijdrage)}`,
+                    // v239 — losse bedragen (geen opgeteld totaal) — zie "lines" in DashboardOverview.jsx.
+                    lines: [
+                      { label: "IB", value: eur(dashboardAangifteIndicatie.ib.belasting) },
+                      { label: "Zvw", value: eur(dashboardAangifteIndicatie.zvw.bijdrage) },
+                    ],
                     tone: "neutral",
                     hint: "Naar de indicatieve aangifteberekening",
                     onClick: () => setShowAangifteYearPicker(true),
@@ -1987,12 +1990,11 @@ export default function App() {
                     key: "aftrekposten",
                     title: "Aftrekposten (indicatief)",
                     icon: <span>➖</span>,
-                    value: eur(
-                      dashboardAangifteIndicatie.zelfstandigenaftrekBedrag +
-                        dashboardAangifteIndicatie.mkbVrijstellingBedrag +
-                        dashboardAangifteIndicatie.startersaftrekBedrag
-                    ),
-                    subtitle: `ZA ${eur(dashboardAangifteIndicatie.zelfstandigenaftrekBedrag)} · MKB ${eur(dashboardAangifteIndicatie.mkbVrijstellingBedrag)} · Start ${eur(dashboardAangifteIndicatie.startersaftrekBedrag)}`,
+                    lines: [
+                      { label: "Zelfstandigenaftrek", value: eur(dashboardAangifteIndicatie.zelfstandigenaftrekBedrag) },
+                      { label: "MKB-winstvrijstelling", value: eur(dashboardAangifteIndicatie.mkbVrijstellingBedrag) },
+                      { label: "Startersaftrek", value: eur(dashboardAangifteIndicatie.startersaftrekBedrag) },
+                    ],
                     tone: "neutral",
                     hint: "Naar de indicatieve aangifteberekening",
                     onClick: () => setShowAangifteYearPicker(true),
