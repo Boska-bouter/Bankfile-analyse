@@ -2008,13 +2008,27 @@ export default function App() {
               title: "Leningen",
               icon: <span>📄</span>,
               value: loanSummary.length,
-              subtitle: incompleteLoansCount > 0 ? `${incompleteLoansCount} nog onvolledig` : loanSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
-              // v234-fix: stond op "neutral" (grijs/wit) zodra er niets meer onvolledig was, ook al
-              // meldde de subtitel dan al "Alle gegevens compleet" — dat oogde inconsistent naast de
-              // andere kaarten, die bij "in orde" wél groen kleuren. Nu ook hier "ok" zodra er
-              // daadwerkelijk leningen zijn én alles compleet is; "Geen gevonden" (0 leningen) blijft
-              // neutraal, want dat is geen bereikt resultaat.
-              tone: incompleteLoansCount > 0 ? "attention" : loanSummary.length > 0 ? "ok" : "neutral",
+              // v242 — 3 aparte kleurtoestanden i.p.v. 2 ("attention" dekte zowel "1 van de 3 nog
+              // onvolledig" als "geen enkele lening heeft gegevens" met dezelfde amber kleur): "goed"
+              // (alles compleet, groen), "deels" (sommige wel/sommige niet, amber) en "ontbreekt" (er
+              // zijn leningen gevonden maar nergens iets ingevuld, rood — dringender dan "deels").
+              // "Geen gevonden" (0 leningen) blijft neutraal, dat is geen echt op te lossen punt.
+              subtitle:
+                loanSummary.length === 0
+                  ? "Geen gevonden"
+                  : incompleteLoansCount === 0
+                  ? "Alle gegevens compleet"
+                  : incompleteLoansCount === loanSummary.length
+                  ? "Nog geen gegevens ingevuld"
+                  : `${incompleteLoansCount} van ${loanSummary.length} nog onvolledig`,
+              tone:
+                loanSummary.length === 0
+                  ? "neutral"
+                  : incompleteLoansCount === 0
+                  ? "ok"
+                  : incompleteLoansCount === loanSummary.length
+                  ? "risk"
+                  : "attention",
               hint: "Naar de leningen-sectie",
               onClick: () => jumpToSection(loansSectionRef),
             },

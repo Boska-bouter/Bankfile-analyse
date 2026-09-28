@@ -11,12 +11,17 @@ const TONE_CARD = {
   ok: "border-emerald-200 bg-emerald-50 hover:border-emerald-300",
   attention: "border-amber-300 bg-amber-50 hover:border-amber-400",
   neutral: "border-slate-200 bg-white hover:border-slate-300",
+  // v242 — apart van "attention" (amber, voor "deels compleet"): dit is voor "er is iets gevonden,
+  // maar er is helemaal nog niets over ingevuld" — bijv. leningen/leases waarvan geen enkele de
+  // gegevens heeft. Iets dringender dan een gedeeltelijke onvolledigheid, dus rood i.p.v. amber.
+  risk: "border-red-300 bg-red-50 hover:border-red-400",
 };
 
 const TONE_VALUE = {
   ok: "text-emerald-700",
   attention: "text-amber-700",
   neutral: "text-slate-900",
+  risk: "text-red-700",
 };
 
 export default function DashboardOverview({ title = "Overzicht", cards }) {
