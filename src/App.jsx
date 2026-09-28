@@ -2878,16 +2878,10 @@ export default function App() {
               >
                 <Printer className="h-3.5 w-3.5" /> Print
               </button>
-              <button
-                onClick={() => {
-                  setShowAangifteMeerdereJaren(false);
-                  setShowAangifteYearPicker((v) => !v);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                title="Bekijk de indicatieve aangifteberekening"
-              >
-                <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
-              </button>
+              {/* v241 — de knop "Indicatieve aangifteberekening bekijken" stond hier dubbel: dezelfde
+                  knop staat ook al in de donkere "Aangifte {jaar}"-statusbalk direct hieronder (beide
+                  openden hetzelfde showAangifteYearPicker-venster). Hier weggehaald, in de statusbalk
+                  laten staan. */}
               {/* v199: heropent de wizard om basisvragen te wijzigen (o.a. rechtsvorm zzp/BV,
                   KOR, BTW-verlegd, leaseauto/lening/AOV) — de wizard vraagt normaal alleen nog
                   onbeantwoorde vragen, maar hier forceren we de Rechtsvorm-stap altijd terug in
