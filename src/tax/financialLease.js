@@ -14,21 +14,27 @@ export function computeOnbetaaldGedeelteKoop(details) {
 //     openstaat/terugbetaald moet worden — koopprijs+BTW, verminderd met wat al op een andere manier
 //     is voldaan (aanbetaling, inruilwaarde, aflossing van een lopende lening). Dat is de juiste basis
 //     voor de leaseschuld/rente-amortisatie (computeFinancialLeaseRate/computeLoanAmortization) — die
-//     rekent immers alleen over het bedrag waarover daadwerkelijk rente wordt betaald.
-//   - "Aanschafwaarde bedrijfsmiddel" is wat het bedrijfsmiddel zelf waard is/heeft gekost — koopprijs
-//     + de daarover verschuldigde BTW, ZONDER de financieringswijze te verrekenen. Een aanbetaling,
-//     een ingeruild ander bedrijfsmiddel of het aflossen van een oude lening veranderen niets aan wat
-//     de auto/machine zelf heeft gekost, en horen dus niet in de afschrijvingsbasis te worden
-//     afgetrokken — dat drukt anders de afschrijving ten onrechte omlaag. Dit is de juiste basis voor
-//     de afschrijving (zie buildLeaseActivumFromSegment in tax/autoBijtelling.js).
+//     rekent immers alleen over het bedrag waarover daadwerkelijk rente wordt betaald. De BTW blijft
+//     hier WEL in zitten: de leasemaatschappij financiert doorgaans ook het BTW-bedrag mee, dus dat
+//     is wél onderdeel van de leaseschuld waarover rente wordt betaald.
+//   - "Aanschafwaarde bedrijfsmiddel" (de AFSCHRIJVINGSbasis) is wat het bedrijfsmiddel zelf waard is
+//     — v256, op expliciet verzoek gecorrigeerd naar UITSLUITEND de koopprijs (excl. BTW), zonder de
+//     BTW erbij. Eerder (t/m v255) stond hier koopprijs + BTW, maar BTW bij een financial lease van
+//     een zakelijk bedrijfsmiddel is (behoudens KOR/vrijgestelde prestaties) meteen volledig
+//     aftrekbaar als voorbelasting — dat is geen meerjarige afschrijvingspost, en zou hier dus
+//     dubbelop zijn (eerst in één keer terug via de BTW-aangifte, dan nogmaals via 5+ jaar
+//     afschrijving). Het nettoresultaat van de BTW op de winstberekening is dus bewust nul: hij komt
+//     hier nergens meer in voor (niet in de afschrijving, en dit dossier houdt BTW-aangifte/
+//     voorbelasting sowieso los bij, buiten dit veld om). Een aanbetaling, een ingeruild ander
+//     bedrijfsmiddel of het aflossen van een oude lening veranderen niets aan wat de auto/machine
+//     zelf heeft gekost, en horen dus sowieso niet in de afschrijvingsbasis te worden afgetrokken —
+//     dat drukt de afschrijving ten onrechte omlaag. Zie buildLeaseActivumFromSegment in
+//     tax/autoBijtelling.js voor waar dit gebruikt wordt.
 //
-// `koopprijs` is in deze tool altijd EXCLUSIEF BTW en `teBetalenBtw` is de daar afzonderlijk over
-// verschuldigde/betaalde BTW (vandaar dat het twee losse velden zijn in plaats van één "koopprijs
-// incl. BTW") — koopprijs + teBetalenBtw dubbelt dus niet, dat is precies de BTW-inclusieve
-// aanschafwaarde van het bedrijfsmiddel.
+// `koopprijs` is in deze tool altijd EXCLUSIEF BTW.
 export function computeAanschafwaardeBedrijfsmiddel(details) {
   const n = (v) => (v === "" || v == null ? 0 : Number(v));
-  return n(details?.koopprijs) + n(details?.teBetalenBtw);
+  return n(details?.koopprijs);
 }
 
 // v182 — punt 1 uit de leasereview (de belangrijkste): vóór deze aanpassing gebruikte de

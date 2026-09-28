@@ -175,14 +175,18 @@ export default function PersoonlijkeAannamesPanel({
               <option value="">Onbekend/niet aangegeven — huidige percentage-splitsing op Brandstof/Parkeren blijft bruikbaar</option>
               <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
               <option value="prive">Privéauto zakelijk gebruikt (kilometervergoeding)</option>
-              <option value="beide">Beide — zowel een auto op de zaak als een privéauto zakelijk gebruikt</option>
             </select>
+            {/* v256 — optie "Beide" (zowel auto op de zaak als privéauto zakelijk gebruikt) verwijderd
+                uit de keuzelijst op verzoek — komt vrijwel nooit voor. Een dossier waar dit al eerder
+                was ingevuld (autoStatus "beide") blijft gewoon werken zoals het was — alle onderliggende
+                berekeningen (categorySplit.js/boxMapping.js/kmVergoeding.js) herkennen "beide" nog
+                steeds, alleen kan het niet meer opnieuw gekozen worden. */}
             <p className="mt-1.5 text-xs text-slate-400">
-              Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" (of "beide") tellen
-              werkelijke autokosten (brandstof, parkeren, verzekering, MRB) mee met een
-              bijtellingscorrectie voor privégebruik, en vervalt de generieke %-splitsing op
-              Brandstof/Parkeren voor dit jaar; bij "privéauto zakelijk gebruikt" (of "beide") geldt in
-              plaats daarvan een kilometervergoeding voor het zakelijke gebruik.
+              Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen werkelijke
+              autokosten (brandstof, parkeren, verzekering, MRB) mee met een bijtellingscorrectie voor
+              privégebruik, en vervalt de generieke %-splitsing op Brandstof/Parkeren voor dit jaar; bij
+              "privéauto zakelijk gebruikt" geldt in plaats daarvan een kilometervergoeding voor het
+              zakelijke gebruik.
             </p>
             {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (

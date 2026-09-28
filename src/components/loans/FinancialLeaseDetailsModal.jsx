@@ -250,7 +250,15 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     if (!form.soort || !form.startdatum) return [];
     const segment = cleanSegment(form);
     const startYear = new Date(segment.startdatum).getFullYear();
-    const termijn = segment.afschrijvingstermijnJaren || (segment.soort === "auto" ? MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN : 0);
+    // v256 — de WERKELIJKE afschrijving (computeLeaseAfschrijvingVoorJaar hieronder) kapt een
+    // ingevulde termijn altijd af op minimaal 5 jaar (fiscale 20%-cap, zie
+    // MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN in autoBijtelling.js) — dus moet de lusgrens hier
+    // hetzelfde doen, anders toont deze preview bij bijv. 3 ingevulde jaren maar 3-4 rijen terwijl er
+    // in werkelijkheid 5 jaar wordt afgeschreven, en lijkt het net of de cap niet werkt.
+    const ingevoerdeTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
+    const termijn = ingevoerdeTermijn > 0
+      ? Math.max(ingevoerdeTermijn, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)
+      : (segment.soort === "auto" ? MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN : 0);
     if (!(termijn > 0)) return [];
     const rows = [];
     for (let j = startYear; j <= startYear + Math.ceil(termijn); j++) {
@@ -365,11 +373,23 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Aankoop</p>
+        {/* v256 — expliciete waarschuwing toegevoegd: "Koopprijs" moest al ALTIJD excl. BTW (de BTW
+            staat er apart naast, zie "Te betalen BTW"), maar dat stond alleen in het kleine, grijze
+            veldlabel — makkelijk over het hoofd te zien, met als risico dat iemand hier per ongeluk
+            de BTW-inclusieve prijs intypt (die dan dubbel zou meetellen, samen met "Te betalen BTW"). */}
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3">
+          Let op: "Koopprijs" is altijd <strong>exclusief BTW</strong> — de BTW vul je apart in bij "Te betalen BTW"
+          hieronder.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           {FIELDS_AANKOOP.map(([field, label]) => (
             <label key={field} className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
-              <input type="number" min="0" step="0.01" value={form[field]} onChange={set(field)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+              <input
+                type="number" min="0" step="0.01" value={form[field]} onChange={set(field)}
+                placeholder={field === "koopprijs" ? "excl. BTW" : undefined}
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+              />
             </label>
           ))}
         </div>
@@ -388,9 +408,12 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         )}
         {form.soort && aanschafwaardeBedrijfsmiddel !== onbetaaldGedeelteKoop && (
           <p className="text-xs text-slate-400">
-            Deze twee bedragen wijken hier af doordat aanbetaling/inruilwaarde/inlossing lopende lening wél de
-            leaseschuld verlagen maar niet wat het bedrijfsmiddel zelf heeft gekost — de afschrijving rekent met
-            de aanschafwaarde, de lease-rente met het onbetaalde gedeelte koop.
+            Deze twee bedragen wijken hier af doordat (a) aanbetaling/inruilwaarde/inlossing lopende lening wél de
+            leaseschuld verlagen maar niet wat het bedrijfsmiddel zelf heeft gekost, en (b) de BTW wél in de
+            leaseschuld zit (de leasemaatschappij financiert die doorgaans mee) maar niet in de afschrijvingsbasis
+            (die BTW is in plaats daarvan meteen volledig aftrekbaar als voorbelasting, niet iets om over 5+ jaar af
+            te schrijven) — de afschrijving rekent met de aanschafwaarde, de lease-rente met het onbetaalde gedeelte
+            koop.
           </p>
         )}
       </div>
