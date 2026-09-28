@@ -2361,6 +2361,7 @@ export default function App() {
         {(showSetupWizard || manualWizardOpen) && (
           <SetupWizardModal
             forceRechtsvormStep={manualWizardOpen}
+            alreadyEstablished={Object.keys(accountTypeByFile).length > 0}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
             korRegeling={korRegeling}

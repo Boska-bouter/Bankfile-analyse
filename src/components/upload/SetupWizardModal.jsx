@@ -10,6 +10,7 @@ const STEP_LABELS = {
 
 export default function SetupWizardModal({
   forceRechtsvormStep = false,
+  alreadyEstablished = false,
   pendingFileNames, onAccountTypeChoose,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
@@ -52,6 +53,20 @@ export default function SetupWizardModal({
   // dat is waarom ze hier conditioneel zijn op "nog niet beantwoord" (null), in plaats van steeds
   // opnieuw in de wachtrij te komen zoals stap 0 dat wel doet.
   const [initialSteps] = useState(() => {
+    // alreadyEstablished: dit is geen gloednieuw dossier maar een bestaand project waar al minstens
+    // één bestand een rekeningtype heeft (dus de dossierbrede vragen hieronder zijn ooit al gesteld,
+    // beantwoord óf bewust met "Later invullen" overgeslagen). In dat laatste geval bleef de bijbehorende
+    // state op null staan, waardoor zo'n vraag — zonder deze uitzondering — bij ÉLK nieuw geladen
+    // bestand weer terug zou komen (bijv. de zakelijke-spaarrekening- of auto-vraag). Dat is verwarrend
+    // bij een bestaand project: op expliciet verzoek wordt dan alleen nog het rekeningtype gevraagd
+    // (stap 0) plus de vaste opslag-herinnering (stap 4) — de rest geldt als al afgehandeld en is,
+    // indien alsnog nodig, gewoon te beantwoorden via "Basisvragen bewerken" (forceRechtsvormStep).
+    if (alreadyEstablished && !forceRechtsvormStep) {
+      const list = [];
+      if (pendingFileNames.length > 0) list.push(0);
+      list.push(4);
+      return list;
+    }
     const list = [];
     // Rekeningtype (zakelijk/privé) van het/de net geladen bestand(en) eerst vragen — dat is de
     // meest concrete, direct te beantwoorden vraag over wat er nu ligt, vóórdat de (dossierbrede)
