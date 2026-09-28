@@ -5,14 +5,32 @@
 //
 // Score-niveaus, van hoog naar laag vertrouwen:
 // - "override"  — een eerder door de gebruiker bevestigde tegenpartij- of rij-correctie
-// - "keyword"    — een match op een specifieke categorieregel (DEFAULT_RULES-keyword)
+// - "keyword"    — een match op een specifieke categorieregel (DEFAULT_RULES-keyword), of een
+//                  overboeking naar/van een eigen andere rekening die is herkend op IBAN (zie
+//                  PRIVE_TRANSFER_CATEGORIES hieronder) — een IBAN-match op een door de gebruiker
+//                  zelf bevestigde eigen rekening is minstens zo hard bewijs als een keyword-match,
+//                  dus die twee delen bewust hetzelfde (hoogste automatische) vertrouwensniveau
 // - "heuristic"  — een generieke regel zonder keyword-match (bijv. "looksLikePerson", of het
 //                  automatisch toekennen van "Zakelijke inkomsten" puur op basis van rekeningtype)
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
-import { counterpartyKey, ibanKey } from "../utils/normalization.js";
+import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
 
-export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory) {
+// Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
+// resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
+// elders geladen/opgegeven rekening (ongeacht of dát de zakelijke of de privé-kant is) is vrijwel
+// zeker automatisch juist bepaald — dat is precies de IBAN-check uit autoClassify() in classify.js.
+// Zonder deze check belandde zo'n transactie (voor het eerst gezien, dus nog geen eigen override)
+// op "heuristic" en dus in de "nog te controleren"-lijst — bij het laden van een privérekening met
+// veel onderlinge overboekingen ontstond zo een lange rij overbodige controlevragen over boekingen
+// die feitelijk al via de andere rekening zijn vastgelegd/beoordeeld.
+const PRIVE_TRANSFER_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive"];
+function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
+  if (!tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return false;
+  return ownAccountsElsewhere.some((o) => o.accountType && ibansMatch(tx.counterpartyIban, o.iban));
+}
+
+export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = []) {
   // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
   // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
   // isStaleOverigForZakelijkSpaar in classify.js) wijkt resolvedCategory af van de opgeslagen
@@ -28,6 +46,10 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
   if (keyOverride && keyOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+
+  if (PRIVE_TRANSFER_CATEGORIES.includes(resolvedCategory) && isOwnAccountTransferMatch(tx, ownAccountsElsewhere)) {
+    return { level: "keyword", label: "Automatisch herkend: overboeking naar/van eigen andere rekening (IBAN)" };
+  }
 
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };

@@ -827,7 +827,7 @@ export default function App() {
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
       );
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category);
+      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || []);
       return { ...tx, ...resolved, confidence };
     });
     // "Prive opnames"/"Uitbetaling aan prive"/"Terugboeking van prive" zijn geld dat tussen
