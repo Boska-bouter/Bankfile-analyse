@@ -348,7 +348,10 @@ export default function App() {
   // zoekvelden/ReviewStep-rijstate en de scroll-refs hierboven blijven zo intact), maar per sectie
   // wordt met een CSS display:none/block bepaald of hij zichtbaar is voor het actieve tabblad. Zie
   // TAB_KEYS/REF_TAB_ENTRIES/sectionTabStyle hieronder en de tabToevoeging her en der in de JSX.
-  const TAB_KEYS = ["overzicht", "controleren", "resultaten", "details", "instellingen"];
+  // v235 — "Details" is samengevoegd met "Controleren" (de detailtabellen staan onderaan dat
+  // tabblad, ná de andere controlesecties — zie de fysieke volgorde in de JSX verderop, die bepaalt
+  // wat waar staat binnen één tabblad).
+  const TAB_KEYS = ["overzicht", "controleren", "resultaten", "instellingen"];
   const [activeTab, setActiveTab] = useState("overzicht");
   // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
   // jumpToSection hieronder om bij een kruis-tabblad-sprong eerst het juiste tabblad te activeren
@@ -368,7 +371,7 @@ export default function App() {
     [bvSignaleringSectionRef, "resultaten"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
-    [detailsSectionRef, "details"],
+    [detailsSectionRef, "controleren"],
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
@@ -1997,7 +2000,6 @@ export default function App() {
       { key: "overzicht", label: "Overzicht", onClick: () => setActiveTab("overzicht") },
       { key: "controleren", label: "Controleren", onClick: () => setActiveTab("controleren") },
       { key: "resultaten", label: "Resultaten", onClick: () => setActiveTab("resultaten") },
-      { key: "details", label: "Details", onClick: () => setActiveTab("details") },
       { key: "instellingen", label: "Instellingen", onClick: () => setActiveTab("instellingen") },
     ];
   }, [transactions.length]);
@@ -3347,7 +3349,7 @@ export default function App() {
                     // geen tegenrekening om tegen te verifiëren), dus groen/emerald in plaats van het
                     // neutrale grijs dat eerder suggereerde dat hier nog iets te checken viel.
                     return (
-                      <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
+                      <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("controleren")}>
                         <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                         <p className="text-sm text-emerald-900">
                           <strong>Controle overboeking zakelijk ↔ privé</strong>: geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
@@ -3360,7 +3362,7 @@ export default function App() {
                   if (zakSum === 0 && priSum === 0) return null;
                   const ok = Math.abs(diff) < 0.01;
                   return (
-                    <div className={`rounded-xl border-2 px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
+                    <div className={`rounded-xl border-2 px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("controleren")}>
                       {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
                       <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
                         <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}
@@ -3370,13 +3372,13 @@ export default function App() {
                   );
                 })()}
 
-                <p className="text-xs text-slate-400" style={sectionTabStyle("details")}>
+                <p className="text-xs text-slate-400" style={sectionTabStyle("controleren")}>
                   Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
                 </p>
                 <div
                   ref={detailsSectionRef}
                   className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}
-                  style={sectionTabStyle("details")}
+                  style={sectionTabStyle("controleren")}
                 >
                   {(!expandedTable || expandedTable === "Zakelijk") && (
                     <div
