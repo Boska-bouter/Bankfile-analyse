@@ -1299,6 +1299,47 @@ export default function App() {
     requestCategoryChange(tx, { category: tx.category, type: tx.type });
   };
 
+  // v236 — Bulk-bevestigen voor de 🟡/🔴-controleer-pop-up (UncertainTransactionsModal): "Alles
+  // goedkeuren" markeert in één keer alle daar getoonde transacties als "klopt zo". Gaat NIET via
+  // confirmClassificationCorrect/requestCategoryChange hierboven: die opent bij tegenpartijen met
+  // meerdere transacties (matches.length > 1) een scope-modal ("deze rij / alle jaren / gekozen
+  // jaren?") — bij honderden transacties achter elkaar zou dat honderden keren dezelfde
+  // pendingCategoryChange-state overschrijven en alleen de allerlaatste daadwerkelijk tonen, terwijl
+  // de rest onbevestigd blijft. Omdat "klopt zo" de waarde niet wijzigt (enkel bevestigt), is die
+  // scope-keuze hier niet nodig — elke transactie krijgt gewoon zijn eigen expliciete override.
+  const confirmAllUncertain = (txs) => {
+    if (!txs || txs.length === 0) return;
+    snapshotBeforeAction("Alle transacties in dit venster bevestigd");
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const tx of txs) {
+        if (tx.id == null) continue;
+        next[tx.id] = { ...(next[tx.id] || {}), category: tx.category, type: tx.type };
+      }
+      return next;
+    });
+    // Een enkele transactie zonder bruikbaar row-id (zeldzaam) volgt dezelfde tegenpartij-override
+    // als de normale (niet-bulk) bevestigingsflow (zie setCounterpartyOverride hieronder).
+    const withoutId = txs.filter((tx) => tx.id == null);
+    if (withoutId.length > 0) {
+      setOverridesByCounterparty((prev) => {
+        const next = { ...prev };
+        for (const tx of withoutId) {
+          const key = (tx.counterpartyIban && ibanKey(tx.counterpartyIban, tx.amount)) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
+          if (!key) continue;
+          next[key] = {
+            ...(next[key] || {}),
+            category: tx.category,
+            type: tx.type,
+            displayName: next[key]?.displayName || tx.counterparty || tx.description,
+            sign: tx.amount >= 0 ? "pos" : "neg",
+          };
+        }
+        return next;
+      });
+    }
+  };
+
   const requestCategoryChange = (tx, patch) => {
     // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
     // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
@@ -2537,6 +2578,7 @@ export default function App() {
             bulkCounts={uncertainModalData.bulkCounts}
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
+            onConfirmAll={confirmAllUncertain}
             onJumpToOverig={jumpToOverigFromModal}
             onJumpToPersonen={jumpToPersonenFromModal}
             onClose={() => setOpenConfidenceLevel(null)}

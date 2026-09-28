@@ -11,7 +11,7 @@ const LEVEL_INFO = {
 };
 
 export default function UncertainTransactionsModal({
-  level, transactions, bulkCounts, onRequestChange, onConfirmCorrect, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions, bulkCounts, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
@@ -23,9 +23,26 @@ export default function UncertainTransactionsModal({
           <p className="text-sm font-semibold text-slate-800">
             {info.icon} {info.label} ({transactions.length + bulkTotal})
           </p>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* v236 — bevestigt in één keer het huidige voorstel (categorie/type) voor alle hier
+                getoonde transacties, zonder ze één voor één te hoeven langslopen. */}
+            {transactions.length > 0 && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Weet je zeker dat je het voorstel voor alle ${transactions.length} getoonde transacties in één keer wilt goedkeuren?`)) {
+                    onConfirmAll(transactions);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2.5 py-1.5 text-xs font-medium hover:bg-emerald-100"
+                title="Bevestig het voorstel voor alle hier getoonde transacties in één keer"
+              >
+                <Check className="h-3.5 w-3.5" /> Alles goedkeuren ({transactions.length})
+              </button>
+            )}
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {bulkTotal > 0 && (
