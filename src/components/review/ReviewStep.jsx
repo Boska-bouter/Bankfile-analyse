@@ -48,19 +48,47 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
 
 // title/accentClasses/defaultCategory laten dit component hergebruiken voor zowel "Overboekingen
 // aan personen" als "Overig opruimen" — zelfde werkstroom, andere brontabel en kleuraccent.
-export default function ReviewStep({ items, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction }) {
+//
+// v226: `items` (nog te bevestigen) en `allItems` (dossierbreed, inclusief al bevestigde
+// tegenpartijen) komen nu apart binnen. Vóór deze wijziging viel de lijst, zodra alles bevestigd
+// was, terug op `allItems` en toonde die ONVOORWAARDELIJK — dus precies de tegenpartijen die net
+// met "Klopt zo" bevestigd waren, bleven met een even actieve "Klopt zo"-knop in beeld staan. Dat
+// was zo bedoeld (verder kunnen aanpassen blijft mogelijk), maar zag er voor de gebruiker uit alsof
+// de bevestiging niet had gewerkt: "ik heb 'm als klopt zo aangegeven, dus hoeft hij niet meer in
+// het overzicht te staan". Nu toont de lijst standaard ALLEEN de nog te bevestigen tegenpartijen
+// (dus leeg zodra alles bevestigd is) — bevestigde tegenpartijen zijn alleen nog zichtbaar via de
+// expliciete "Toon ook bevestigde tegenpartijen"-schakelaar hieronder.
+export default function ReviewStep({ items, allItems, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction }) {
+  const [showAll, setShowAll] = useState(false);
+  const bron = showAll ? allItems : items;
   const filtered = useMemo(() => {
-    if (!search.trim()) return items;
+    if (!search.trim()) return bron;
     const q = search.toLowerCase();
-    return items.filter((i) => i.name.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
-  }, [items, search]);
+    return bron.filter((i) => i.name.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
+  }, [bron, search]);
+  const aantalBevestigd = (allItems?.length || 0) - items.length;
 
   return (
     <div className="p-5">
       <p className="text-xs text-slate-500 mb-3 max-w-2xl">{explanation}</p>
-      {allDone && (
+      {allDone && !showAll && (
         <p className="mb-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-          Alles gecontroleerd. Je kunt hier nog steeds wijzigingen maken — die passen direct alle transacties van die tegenpartij aan.
+          Alles gecontroleerd — niets meer openstaand.
+          {aantalBevestigd > 0 && (
+            <> <button onClick={() => setShowAll(true)} className="underline font-medium hover:text-emerald-900">Toon alle {aantalBevestigd} bevestigde tegenpartijen</button> als je alsnog iets wilt aanpassen.</>
+          )}
+        </p>
+      )}
+      {!allDone && !showAll && aantalBevestigd > 0 && (
+        <p className="mb-3 text-xs text-slate-400">
+          {aantalBevestigd} tegenpartij(en) hier al bevestigd (niet getoond).{" "}
+          <button onClick={() => setShowAll(true)} className="underline hover:text-slate-600">Toon ook bevestigde tegenpartijen</button>.
+        </p>
+      )}
+      {showAll && (
+        <p className="mb-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+          Je ziet nu ook de al bevestigde tegenpartijen — die passen bij een wijziging net zo goed direct alle transacties aan.
+          {" "}<button onClick={() => setShowAll(false)} className="underline font-medium hover:text-slate-700">Verberg bevestigde tegenpartijen weer</button>.
         </p>
       )}
       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -80,7 +108,11 @@ export default function ReviewStep({ items, allDone, search, onSearch, onMark, o
         {filtered.map((item) => (
           <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={onMark} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} />
         ))}
-        {filtered.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">Geen tegenpartijen gevonden voor "{search}"</p>}
+        {filtered.length === 0 && (
+          <p className="p-4 text-sm text-slate-400 text-center">
+            {search.trim() ? `Geen tegenpartijen gevonden voor "${search}"` : "Niets (meer) te tonen."}
+          </p>
+        )}
       </div>
     </div>
   );

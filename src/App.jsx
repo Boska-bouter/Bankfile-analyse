@@ -2902,7 +2902,8 @@ export default function App() {
                 </button>
                 {showPersonReview && (
                   <ReviewStep
-                    items={pendingPersonReview.length > 0 ? pendingPersonReview : personSummary}
+                    items={pendingPersonReview}
+                    allItems={personSummary}
                     allDone={pendingPersonReview.length === 0}
                     search={personSearch}
                     onSearch={setPersonSearch}
@@ -2933,7 +2934,8 @@ export default function App() {
                 </button>
                 {showOverigReview && (
                   <ReviewStep
-                    items={pendingOverigReview.length > 0 ? pendingOverigReview : overigSummary}
+                    items={pendingOverigReview}
+                    allItems={overigSummary}
                     allDone={pendingOverigReview.length === 0}
                     search={overigSearch}
                     onSearch={setOverigSearch}
