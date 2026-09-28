@@ -11,7 +11,10 @@ import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, D
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar } from "./tax/gedeeldeHuur.js";
 import { computeSplitsbareCategorieTotalenVoorJaar, heeftGeregistreerdeAutoOpDeZaak } from "./tax/categorySplit.js";
-import { estimateIncomeTax, estimateZvw } from "./tax/incomeTax.js";
+import {
+  estimateIncomeTax, estimateZvw, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
+  estimateZvwMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
+} from "./tax/incomeTax.js";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
@@ -1663,6 +1666,40 @@ export default function App() {
     }
     return map;
   }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaSummary, activaDetails]);
+  // v237 — Zelfde reserve-keten (niet-gerealiseerde zelfstandigenaftrek over de jaren heen) en
+  // dezelfde "...MetOndernemersaftrek"-functies als het volledige Aangiftevoorstel-rapport
+  // (reports/aangiftevoorstel.js), nu ook lichtgewicht herbruikt voor de dashboardkaarten "IB & Zvw"
+  // en "Aftrekposten" bij het geselecteerde jaar — zodat die kaarten dezelfde bedragen tonen als de
+  // uitgebreide berekening, i.p.v. een losstaande, mogelijk afwijkende schatting. Alleen relevant voor
+  // zzp/eenmanszaak (rechtsvorm !== "bv"); een BV kent geen zelfstandigenaftrek/Zvw op deze manier.
+  // Bewuste vereenvoudiging t.o.v. het volledige rapport: een jaar met "onbekend" urencriterium wordt
+  // hier behandeld als "ja" (in plaats van beide scenario's apart te tonen) — te veel nuance voor een
+  // compacte kaart; de volledige, preciezere uitsplitsing (incl. beide scenario's) staat in de
+  // "Indicatieve aangifteberekening" zelf, waar deze kaarten ook naartoe doorklikken.
+  const ondernemersaftrekPerJaar = useMemo(() => {
+    if (rechtsvorm === "bv" || years.length === 0) return {};
+    const jarenData = years.map((y) => ({
+      year: y,
+      winst: yearlySummaries[y]?.winst || 0,
+      zelfstandigenaftrekStatus: resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, y, zaLegacyJaDefault),
+      startersaftrekToegepast: startersaftrekStatus?.[y] === "ja",
+    }));
+    return computeOndernemersaftrekMetReserve(jarenData);
+  }, [rechtsvorm, years, yearlySummaries, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus]);
+  const dashboardAangifteIndicatie = useMemo(() => {
+    if (rechtsvorm === "bv" || !activeYear || !yearlySummary) return null;
+    const aftrek = ondernemersaftrekPerJaar[activeYear];
+    const startersaftrekToegepastDitJaar = startersaftrekStatus?.[activeYear] === "ja";
+    const ondernemersaftrekBedrag = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
+    const winstUitsplitsing = computeBelastbareWinstUitsplitsing(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar);
+    return {
+      ib: estimateIncomeTaxMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
+      zvw: estimateZvwMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
+      zelfstandigenaftrekBedrag: aftrek?.zelfstandigenaftrekBedrag || 0,
+      startersaftrekBedrag: aftrek?.startersaftrekBedrag || 0,
+      mkbVrijstellingBedrag: winstUitsplitsing.mkbVrijstellingBedrag,
+    };
+  }, [rechtsvorm, activeYear, yearlySummary, ondernemersaftrekPerJaar, startersaftrekStatus]);
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
   // afschrijving (berekend als Activa is ingevuld, anders het bruto aanschafbedrag ter herkenning)
@@ -1928,6 +1965,40 @@ export default function App() {
               hint: "Naar het jaaroverzicht",
               onClick: () => jumpToSection(multiYearSectionRef),
             },
+            // v237 — twee kaarten met de indicatieve fiscale doorrekening voor het geselecteerde jaar,
+            // naast de "Resultaat"-kaart hierboven: IB+Zvw in 1 box, de drie aftrekposten in de andere.
+            // Alleen bij zzp/eenmanszaak (rechtsvorm !== "bv") — een BV kent deze posten niet op deze
+            // manier. Beide klikken door naar dezelfde "Indicatieve aangifteberekening" als elders in
+            // de tool, waar de volledige, preciezere uitsplitsing (incl. het "onbekend"-urencriterium-
+            // scenario) te zien is — deze kaarten zijn bewust een vereenvoudigde samenvatting.
+            ...(rechtsvorm !== "bv" && dashboardAangifteIndicatie
+              ? [
+                  {
+                    key: "ibZvw",
+                    title: `IB & Zvw ${activeYear} (indicatief)`,
+                    icon: <span>🧮</span>,
+                    value: eur(dashboardAangifteIndicatie.ib.belasting + dashboardAangifteIndicatie.zvw.bijdrage),
+                    subtitle: `IB ${eur(dashboardAangifteIndicatie.ib.belasting)} · Zvw ${eur(dashboardAangifteIndicatie.zvw.bijdrage)}`,
+                    tone: "neutral",
+                    hint: "Naar de indicatieve aangifteberekening",
+                    onClick: () => setShowAangifteYearPicker(true),
+                  },
+                  {
+                    key: "aftrekposten",
+                    title: "Aftrekposten (indicatief)",
+                    icon: <span>➖</span>,
+                    value: eur(
+                      dashboardAangifteIndicatie.zelfstandigenaftrekBedrag +
+                        dashboardAangifteIndicatie.mkbVrijstellingBedrag +
+                        dashboardAangifteIndicatie.startersaftrekBedrag
+                    ),
+                    subtitle: `ZA ${eur(dashboardAangifteIndicatie.zelfstandigenaftrekBedrag)} · MKB ${eur(dashboardAangifteIndicatie.mkbVrijstellingBedrag)} · Start ${eur(dashboardAangifteIndicatie.startersaftrekBedrag)}`,
+                    tone: "neutral",
+                    hint: "Naar de indicatieve aangifteberekening",
+                    onClick: () => setShowAangifteYearPicker(true),
+                  },
+                ]
+              : []),
             {
               key: "loans",
               title: "Leningen",
@@ -2020,6 +2091,7 @@ export default function App() {
     activeYear,
     yearlyProgress,
     yearlySummary,
+    dashboardAangifteIndicatie,
     loanSummary,
     loanDetails,
     leaseSummary,
