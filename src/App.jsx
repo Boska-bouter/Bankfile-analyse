@@ -2462,9 +2462,46 @@ export default function App() {
             },
           ]
         : []),
+      // v251 — "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop/uitgaven (leveranciers)"
+      // hadden nog geen eigen kaart — puur informatief (geen compleet/onvolledig-status, dus neutrale
+      // kleur), maar wel handig als snelkoppeling. Een klik doet hetzelfde als het bestaande
+      // uitklap-knopje in KeywordManager zelf (isExpanded/onToggleExpand): de betreffende lijst gaat
+      // naar de volle-breedte "uitklap box"-weergave (de andere lijst klapt dan vanzelf weg, zie de
+      // grid/!expandedBusiness...List-conditie hierboven bij incomeRatesSectionRef).
+      ...(parsedFiles.length > 0
+        ? [
+            {
+              key: "businessIncomeEntries",
+              title: "Zakelijke tegenpartijen",
+              icon: <span>🤝</span>,
+              value: businessIncomeEntries.length,
+              subtitle: businessIncomeEntries.length === 1 ? "klant herkend" : "klanten herkend",
+              tone: "neutral",
+              hint: "Zakelijke tegenpartijen (inkomsten) bekijken",
+              onClick: () => {
+                setExpandedBusinessIncomeList(true);
+                jumpToSection(incomeRatesSectionRef);
+              },
+            },
+            {
+              key: "businessExpenseEntries",
+              title: "Zakelijke inkoop/uitgaven",
+              icon: <span>📦</span>,
+              value: businessExpenseEntries.length,
+              subtitle: businessExpenseEntries.length === 1 ? "leverancier herkend" : "leveranciers herkend",
+              tone: "neutral",
+              hint: "Zakelijke inkoop/uitgaven (leveranciers) bekijken",
+              onClick: () => {
+                setExpandedBusinessExpenseList(true);
+                jumpToSection(incomeRatesSectionRef);
+              },
+            },
+          ]
+        : []),
     ];
   }, [
     transactions.length,
+    parsedFiles.length,
     loanSummary,
     incompleteLoansCount,
     leaseSummary,
@@ -2477,6 +2514,8 @@ export default function App() {
     zaLegacyJaDefault,
     korRegeling,
     btwVerlegd,
+    businessIncomeEntries,
+    businessExpenseEntries,
   ]);
 
   // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
