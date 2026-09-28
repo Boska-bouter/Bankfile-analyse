@@ -1976,12 +1976,29 @@ export default function App() {
               onClick: () => jumpToSection(checklistSectionRef),
             },
             {
+              // v246 — deze kaart keek voorheen alleen naar de winst zelf (pas amber bij een verlies).
+              // Daardoor kon een jaar met prima winst hier "neutraal" ogen, terwijl het Meerjarenoverzicht
+              // verderop (ingeklapt, dus niet altijd zichtbaar) al een Tekort/Over-waarschuwing toont —
+              // winst die niet volstaat naast privé-uitgaven + belasting. Nu neemt deze kaart dat signaal
+              // (businessAdvies, dezelfde berekening als de rode balk in het Meerjarenoverzicht) mee, zodat
+              // je het niet kunt missen zonder dat blok open te klappen. Een echt verlies (winst < 0) blijft
+              // het meest ernstige signaal (rood/"risk"); een tekort ondanks positieve winst is amber.
               key: "result",
               title: `Resultaat ${activeYear}`,
               icon: <span>€</span>,
               value: yearlySummary ? eur(yearlySummary.winst) : "—",
-              subtitle: yearlySummary && yearlySummary.winst < 0 ? "Verlies" : "Winst (indicatief)",
-              tone: yearlySummary && yearlySummary.winst < 0 ? "attention" : "neutral",
+              subtitle:
+                yearlySummary && yearlySummary.winst < 0
+                  ? "Verlies"
+                  : businessAdvies?.niveau === "negatief"
+                  ? "Winst, maar tekort t.o.v. privé-uitgaven + belasting"
+                  : "Winst (indicatief)",
+              tone:
+                yearlySummary && yearlySummary.winst < 0
+                  ? "risk"
+                  : businessAdvies?.niveau === "negatief"
+                  ? "attention"
+                  : "ok",
               hint: "Naar het jaaroverzicht",
               onClick: () => jumpToSection(multiYearSectionRef),
             },
@@ -2129,6 +2146,7 @@ export default function App() {
     activeYear,
     yearlyProgress,
     yearlySummary,
+    businessAdvies,
     dashboardAangifteIndicatie,
     ibStatus,
     zvwStatus,
