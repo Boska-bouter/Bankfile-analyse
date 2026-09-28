@@ -216,25 +216,39 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // automatisch wél goed terechtkomen. Elke andere, bewust gekozen categorie (ook "Zakelijke
 // inkomsten" of "Prive: overig") blijft gewoon onaangetast — alleen "Overig" wordt op deze manier
 // "heropend".
-function isStaleOverigForZakelijkSpaar(override, tx, accountType, zakelijkeSpaarKeywords) {
-  return !!override && override.category === "Overig" &&
-    (() => {
-      const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-      return ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) ||
-        (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)));
-    })();
+//
+// Sinds v213 ook heropend op een IBAN-match met een eigen andere (elders geladen/opgegeven)
+// rekening — anders bleef een OUDE, puur op tegenpartijnaam+teken gebaseerde "Overig"-override
+// (bijv. "bouwservice ricobello::neg", ooit gezet vóór de privérekening zelf was geladen) een
+// volledig andere, nieuw binnengekomen transactie van dezelfde tegenpartij blokkeren — ook als die
+// nieuwe transactie via de tegenrekening-IBAN allang met zekerheid als "overboeking naar/van je
+// eigen andere rekening" herkend kon worden (zie ook confidence.js/isOwnAccountTransferMatch, dat
+// dezelfde IBAN-check gebruikt om zo'n transactie hoog te scoren). Een counterparty-key-override is
+// namelijk puur tekst+teken-gebaseerd en onderscheidt niet WELKE transactie van die tegenpartij het
+// was — dus een override die ooit terecht op één (destijds nog onduidelijke) transactie is gezet,
+// kan een compleet andere, achteraf overduidelijke transactie meesleuren.
+function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere) {
+  if (!override || override.category !== "Overig") return false;
+  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  if (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw))) return true;
+  if (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw))) return true;
+  if (tx.counterpartyIban && ownAccountsElsewhere && ownAccountsElsewhere.length > 0) {
+    const matched = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
+    if (matched && matched.accountType && matched.accountType !== accountType) return true;
+  }
+  return false;
 }
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   const rowOverride = overridesByRow[tx.id];
-  if (rowOverride && !isStaleOverigForZakelijkSpaar(rowOverride, tx, accountType, zakelijkeSpaarKeywords)) return rowOverride;
+  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return rowOverride;
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   const ibanOverride = ik && overridesByCounterparty[ik];
-  if (ibanOverride && !isStaleOverigForZakelijkSpaar(ibanOverride, tx, accountType, zakelijkeSpaarKeywords)) return ibanOverride;
+  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return ibanOverride;
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && !isStaleOverigForZakelijkSpaar(keyOverride, tx, accountType, zakelijkeSpaarKeywords)) return keyOverride;
+  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return keyOverride;
   return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
 }
