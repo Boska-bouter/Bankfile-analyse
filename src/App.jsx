@@ -367,7 +367,11 @@ export default function App() {
   // v235 — "Details" is samengevoegd met "Controleren" (de detailtabellen staan onderaan dat
   // tabblad, ná de andere controlesecties — zie de fysieke volgorde in de JSX verderop, die bepaalt
   // wat waar staat binnen één tabblad).
-  const TAB_KEYS = ["overzicht", "controleren", "resultaten", "instellingen"];
+  // v245 — tabblad "Resultaten" is vervallen; de inhoud is verdeeld: Meerjarenoverzicht en
+  // BTW-aangifte per kwartaal naar "Overzicht", de invulpanelen (leningen/lease/activa/persoonlijke
+  // aannames/percentage zakelijk per categorie/terugkerende betalingen) naar "Instellingen", en de
+  // categorie-overzichten (Zakelijk/Privé) naar "Controleren" (boven de detailtabellen).
+  const TAB_KEYS = ["overzicht", "controleren", "instellingen"];
   const [activeTab, setActiveTab] = useState("overzicht");
   // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
   // jumpToSection hieronder om bij een kruis-tabblad-sprong eerst het juiste tabblad te activeren
@@ -380,12 +384,12 @@ export default function App() {
     [duplicatesSectionRef, "controleren"],
     [periodeReviewSectionRef, "controleren"],
     [checklistSectionRef, "overzicht"],
-    [multiYearSectionRef, "resultaten"],
-    [quarterlyBtwSectionRef, "resultaten"],
-    [obIbSectionRef, "resultaten"],
-    [loansSectionRef, "resultaten"],
-    [leasesSectionRef, "resultaten"],
-    [bvSignaleringSectionRef, "resultaten"],
+    [multiYearSectionRef, "overzicht"],
+    [quarterlyBtwSectionRef, "overzicht"],
+    [obIbSectionRef, "overzicht"],
+    [bvSignaleringSectionRef, "overzicht"],
+    [loansSectionRef, "instellingen"],
+    [leasesSectionRef, "instellingen"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
     [detailsSectionRef, "controleren"],
@@ -2259,7 +2263,6 @@ export default function App() {
     return [
       { key: "overzicht", label: "Overzicht", onClick: () => setActiveTab("overzicht") },
       { key: "controleren", label: "Controleren", onClick: () => setActiveTab("controleren") },
-      { key: "resultaten", label: "Resultaten", onClick: () => setActiveTab("resultaten") },
       { key: "instellingen", label: "Instellingen", onClick: () => setActiveTab("instellingen") },
     ];
   }, [transactions.length]);
@@ -3023,7 +3026,9 @@ export default function App() {
           </div>
         )}
 
-        <div ref={multiYearSectionRef} style={sectionTabStyle("resultaten")}>
+        {/* v245 — Meerjarenoverzicht + BTW-aangifte per kwartaal hiernaartoe verplaatst vanuit het
+            vervallen tabblad "Resultaten". */}
+        <div ref={multiYearSectionRef} style={sectionTabStyle("overzicht")}>
                   {rechtsvorm === "bv" ? (
                     <MultiYearOverviewBV
                       years={years}
@@ -3058,18 +3063,18 @@ export default function App() {
                 </div>
 
                 {rechtsvorm === "bv" && heeftHolding === true && (
-                  <div className="mt-4" style={sectionTabStyle("resultaten")}>
+                  <div className="mt-4" style={sectionTabStyle("overzicht")}>
                     <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
                   </div>
                 )}
 
                 {rechtsvorm === "bv" && bvSignalering && (
-                  <div className="mt-4" ref={bvSignaleringSectionRef} style={sectionTabStyle("resultaten")}>
+                  <div className="mt-4" ref={bvSignaleringSectionRef} style={sectionTabStyle("overzicht")}>
                     <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
                   </div>
                 )}
 
-                <div ref={quarterlyBtwSectionRef} style={sectionTabStyle("resultaten")}>
+                <div ref={quarterlyBtwSectionRef} style={sectionTabStyle("overzicht")}>
                   {!korRegeling ? (
                     <QuarterlyBtwPanel
                       quarters={quarterlyBtwData}
@@ -3433,7 +3438,9 @@ export default function App() {
               );
             })()}
 
-            <div ref={loansSectionRef} style={sectionTabStyle("resultaten")}>
+            {/* v245 — Leningen/Lease/Activa/Persoonlijke aannames/Percentage zakelijk per categorie
+                hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten". */}
+            <div ref={loansSectionRef} style={sectionTabStyle("instellingen")}>
               <LoanInterestPanel
                 loanSummary={loanSummary}
                 privateLoanSummary={privateLoanSummary}
@@ -3448,7 +3455,7 @@ export default function App() {
               />
             </div>
 
-            <div ref={leasesSectionRef} style={sectionTabStyle("resultaten")}>
+            <div ref={leasesSectionRef} style={sectionTabStyle("instellingen")}>
               <LeaseInterestPanel
                 leaseSummary={leaseSummary}
                 leaseDetails={leaseDetails}
@@ -3464,7 +3471,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("resultaten")}>
+            <div style={sectionTabStyle("instellingen")}>
               <ActivaPanel
                 activaSummary={activaSummary}
                 activaDetails={activaDetails}
@@ -3476,7 +3483,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("resultaten")}>
+            <div style={sectionTabStyle("instellingen")}>
               <PersoonlijkeAannamesPanel
                 activeYear={activeYear}
                 winst={yearlySummary?.winst}
@@ -3501,7 +3508,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("resultaten")}>
+            <div style={sectionTabStyle("instellingen")}>
               <CategoryPercentagePanel
                 activeYear={activeYear}
                 categorieTotalen={categorieTotalenActiveYear}
@@ -3599,12 +3606,7 @@ export default function App() {
                   </div>
                 )}
 
-                
 
-                <div className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("resultaten")}>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
-                </div>
 
         {/* v243 — "Controleren / Geladen files" (de losse bestand-chips) stond hier apart, met
             grotendeels dezelfde informatie (bestandsnaam, regelaantal, saldo-check) als de
@@ -3650,8 +3652,19 @@ export default function App() {
           </div>
         )}
 
-                <div style={sectionTabStyle("resultaten")}>
+                {/* v245 — geen duidelijke, door de gebruiker genoemde bestemming voor dit paneel bij
+                    het opheffen van tabblad "Resultaten" — als invulpaneel bij "Instellingen" gezet,
+                    samen met Leningen/Lease/Activa hierboven. */}
+                <div style={sectionTabStyle("instellingen")}>
                   <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
+                </div>
+
+                {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
+                    vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
+                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd. */}
+                <div className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
 
                 {(() => {
