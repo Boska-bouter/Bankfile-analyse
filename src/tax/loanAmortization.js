@@ -1,4 +1,4 @@
-import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen } from "./financialLease.js";
+import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen, stripExtraBedrag1eTermijnUitTransacties } from "./financialLease.js";
 
 // v181 — punt 3 uit de leasereview: een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek
 // klant") corrigeert vrijwel altijd een eerdere betaling (een deel van een eerder geïncasseerde
@@ -183,7 +183,11 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
     // andere rekening zijn betaald en dus niet als banktransactie in dit dossier voorkomen — zie de
     // toelichting bij mergeHandmatigeTermijnen in financialLease.js. Zonder die opgave (elk bestaand
     // dossier) is dit exact dezelfde lijst als voorheen.
-    const segTx = mergeHandmatigeTermijnen(segment, rawSegTx);
+    // v207: is "extra bedrag 1e termijn" (de administratiekosten) in dezelfde banktransactie
+    // betaald als het maandbedrag van de eerste termijn, trek dat bedrag er dan hier weer af — zie
+    // de toelichting bij stripExtraBedrag1eTermijnUitTransacties in financialLease.js. Zonder
+    // ingevulde "extra bedrag 1e termijn" (elk bestaand dossier) verandert hier niets.
+    const segTx = stripExtraBedrag1eTermijnUitTransacties(segment, mergeHandmatigeTermijnen(segment, rawSegTx));
     const hoofdsom = computeOnbetaaldGedeelteKoop(segment);
     const rente = computeFinancialLeaseRate(segment);
     if (rente == null) {

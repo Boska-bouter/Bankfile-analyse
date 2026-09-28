@@ -181,15 +181,30 @@ export function computeFileContinuity(diagnostics, accountTypeByFile) {
   return results;
 }
 
+// Herkent een IBAN-achtige reeks in de bestandsnaam zelf (landcode + 2 controlecijfers + minstens
+// 10 tekens) — veel bankexports (en deze tool zelf, bij een eerdere download) noemen het bestand
+// naar het rekeningnummer, bijv. "2025NL63INGB0008292483_2025-01-01_2025-12-31.940". Alleen als
+// fallback gebruikt, dus de kans dat een toevallige cijferreeks in de bestandsnaam hiermee verward
+// wordt is verwaarloosbaar (een IBAN-patroon is te specifiek om per ongeluk te ontstaan).
+const IBAN_IN_FILENAME_RE = /[A-Z]{2}\d{2}[A-Z0-9]{10,30}/;
+
 // Bepaalt per bestand het eigen rekeningnummer (uit de "ownAccount"-kolom, indien aanwezig) —
 // nodig om overboekingen tussen je eigen rekeningen te herkennen wanneer je meerdere eigen
 // bestanden tegelijk laadt. Neemt de eerst-gevonden, niet-lege waarde per bestand (die is per
-// bestand toch steeds hetzelfde rekeningnummer).
+// bestand toch steeds hetzelfde rekeningnummer). Bevat het bankbestand zelf geen bruikbaar eigen
+// rekeningnummer (sommige CSV-exports hebben geen "eigen rekening"-kolom), dan wordt de
+// bestandsnaam als fallback doorzocht op een IBAN-achtige reeks.
 export function computeOwnAccountByFile(allTransactions) {
   const result = {};
   for (const tx of allTransactions) {
     if (result[tx.source]) continue;
     if (tx.ownAccount) result[tx.source] = tx.ownAccount;
+  }
+  const sources = new Set(allTransactions.map((tx) => tx.source));
+  for (const source of sources) {
+    if (result[source]) continue;
+    const match = String(source || "").toUpperCase().match(IBAN_IN_FILENAME_RE);
+    if (match) result[source] = match[0];
   }
   return result;
 }

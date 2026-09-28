@@ -1333,18 +1333,64 @@ export default function App() {
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
   // Kwartalen voor de wizard-stap: alleen kwartalen die al voorbij zijn (geen zin om te vragen of
-  // een kwartaal dat nog loopt al is aangegeven/betaald).
+  // een kwartaal dat nog loopt al is aangegeven/betaald) — én die nog GEEN status hebben. Zonder
+  // deze laatste voorwaarde kwam deze stap ("Welke BTW-kwartalen zijn al aangegeven/betaald?")
+  // steeds weer terug bij elke volgende keer dat de wizard opende (bijv. bij het laden van nog een
+  // rekening, ook een privérekening die met BTW niets te maken heeft) — ook als alle kwartalen al
+  // een keer waren afgevinkt. Zodra een kwartaal hier ooit een status heeft gekregen (aangegeven
+  // en/of betaald aangevinkt, of bewust op "nee" gelaten via de checkboxen), blijft die stap er dus
+  // buiten; een kwartaal dat écht nog nooit is bekeken (bijv. een nieuw jaar) komt wél weer langs.
   const wizardQuarters = useMemo(() => {
     const now = new Date();
     const list = [];
     for (const year of years) {
       for (let kwartaal = 1; kwartaal <= 4; kwartaal++) {
         const quarterEnd = new Date(year, kwartaal * 3, 0);
-        if (quarterEnd < now) list.push({ year, kwartaal });
+        const key = `${year}-Q${kwartaal}`;
+        if (quarterEnd < now && !kwartaalStatus[key]) list.push({ year, kwartaal });
       }
     }
     return list;
-  }, [years]);
+  }, [years, kwartaalStatus]);
+  // De wizard-vragen over de auto en het urencriterium (zie SetupWizardModal) worden maar één keer
+  // per dossier gesteld en zetten dan meteen autoStatus/zelfstandigenaftrekStatus voor alle jaren
+  // die op dát moment al bekend waren. Komt er daarna nog een jaar bij (een later geladen bestand
+  // met een nieuw jaartal — heel gebruikelijk in dit dossier-per-jaar-erbij-laden-patroon), dan
+  // vraagt de wizard niet opnieuw (bewust, zie de "=== null"-check daar), maar zonder deze aanvulling
+  // bleef zo'n nieuw jaar dan gewoon leeg in "Persoonlijke aannames" — alsof er nooit iets was
+  // ingevuld. Vul een ontbrekend jaar daarom automatisch aan: voor de auto met de ene dossierbrede
+  // keuze die de wizard kent, voor het urencriterium met het antwoord van het dichtstbijzijnde al
+  // bekende jaar (er is geen dossierbrede variant van die vraag). Blijft in beide gevallen gewoon
+  // per jaar te corrigeren in "Persoonlijke aannames" zelf.
+  useEffect(() => {
+    if (!autoWizardStatus?.status) return;
+    if (!years.some((y) => !(y in autoStatus))) return;
+    setAutoStatusState((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const y of years) {
+        if (!(y in next)) { next[y] = autoWizardStatus.status; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [years, autoWizardStatus, autoStatus]);
+  useEffect(() => {
+    const bekendeJaren = Object.keys(zelfstandigenaftrekStatus || {}).map(Number).sort((a, b) => a - b);
+    if (bekendeJaren.length === 0) return;
+    if (!years.some((y) => !(y in zelfstandigenaftrekStatus))) return;
+    setZelfstandigenaftrekStatusState((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const y of years) {
+        if (y in next) continue;
+        const eerderJaar = bekendeJaren.filter((ky) => ky < y).pop();
+        const bronJaar = eerderJaar ?? bekendeJaren[0];
+        next[y] = prev[bronJaar];
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [years, zelfstandigenaftrekStatus]);
   useEffect(() => {
     if (!activeYear && years.length) setActiveYear(years[0]);
     if (activeYear && !years.includes(activeYear) && years.length) setActiveYear(years[years.length - 1]);

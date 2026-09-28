@@ -48,12 +48,19 @@ export function computeAanschafwaardeBedrijfsmiddel(details) {
 // de volledige CONTRACTUELE reeks (zoals ook vóór v182 al het geval was), niet over wat er in de
 // praktijk (mogelijk voortijdig) daadwerkelijk is betaald — dat blijft, exact als voorheen, een apart
 // vraagstuk (zie "Contract vroegtijdig beëindigd" elders).
+// v207 — "Extra bedrag 1e termijn" is in de praktijk vrijwel altijd een eenmalige
+// administratiekostenpost van de leasemaatschappij, geen onderdeel van de financiering zelf: het
+// verhoogt niet wat er wordt geleend (computeOnbetaaldGedeelteKoop hierboven telt dit bedrag dan ook
+// terecht niet mee), dus hoort het ook niet mee te tellen in de kasstroom waarmee het jaarlijkse
+// rentepercentage wordt afgeleid — vóór deze fix werd dit bedrag wél bij de eerste termijn opgeteld,
+// waardoor de rentepercentage-afleiding hieronder ten onrechte een hoger percentage berekende (méér
+// terugbetaald voor dezelfde hoofdsom, dus "moet wel een hogere rente zijn" — terwijl het gewoon een
+// losse kostenpost is).
 function buildNominaleLeaseSchedule(details) {
   const looptijd = Number(details.looptijd);
   const maandbedrag = Number(details.maandbedrag);
   if (!(looptijd > 0) || !(maandbedrag > 0) || !details.startdatum) return [];
   const eindbetaling = details.eindbetaling === "" || details.eindbetaling == null ? 0 : Number(details.eindbetaling);
-  const extra = details.extraBedrag1eTermijn === "" || details.extraBedrag1eTermijn == null ? 0 : Number(details.extraBedrag1eTermijn);
   const start = new Date(details.startdatum);
   const eersteTermijnDatum = details.datumEersteTermijn ? new Date(details.datumEersteTermijn) : null;
   const payments = [];
@@ -67,7 +74,6 @@ function buildNominaleLeaseSchedule(details) {
       date.setMonth(date.getMonth() + m);
     }
     let amount = maandbedrag;
-    if (m === 1) amount += extra;
     if (m === looptijd) amount += eindbetaling;
     payments.push({ date, amount });
   }
@@ -118,6 +124,16 @@ export function computeFinancialLeaseRate(details) {
 // en kunt controleren of de berekening klopt, ook voor termijnen die nog moeten komen. Bij een
 // vroegtijdige beëindiging stopt het schema bij de einddatum in plaats van door te lopen tot het
 // einde van de oorspronkelijke looptijd.
+//
+// v207 — het bedrag van de eerste termijn zelf ("amount") is nu altijd gewoon het kale maandbedrag,
+// nooit meer plus "extra bedrag 1e termijn" (zie de toelichting bij buildNominaleLeaseSchedule
+// hierboven: dat extra bedrag is een administratiekostenpost, geen onderdeel van de financiering/
+// aflossing). Het bedrag zelf komt in de praktijk in de bankfile op een van twee manieren voor: als
+// twee losse afschrijvingen (het kale maandbedrag, en los daarvan de administratiekosten), of als
+// één gecombineerde afschrijving (maandbedrag + administratiekosten samen). matchLeasePaymentsToSchedule
+// hieronder moet dus BEIDE mogelijkheden herkennen als "de eerste termijn is betaald" — vandaar het
+// meegegeven `extraBedrag1eTermijn`-veld op deze eerste termijn, puur als matchtolerantie (telt niet
+// mee in "amount" zelf, dus ook niet in de rente/aflossing-berekening die op dit schema voortbouwt).
 export function generateProjectedLeasePayments(details) {
   const looptijd = Number(details.looptijd);
   const maandbedrag = Number(details.maandbedrag);
@@ -145,9 +161,10 @@ export function generateProjectedLeasePayments(details) {
     }
     if (einddatumBeeindiging && date > einddatumBeeindiging) break;
     let amount = maandbedrag;
-    if (m === 1) amount += extra;
     if (m === looptijd && !einddatumBeeindiging) amount += eindbetaling;
-    payments.push({ date, amount: -amount });
+    const payment = { date, amount: -amount };
+    if (m === 1 && extra > 0) payment.extraBedrag1eTermijn = extra;
+    payments.push(payment);
   }
   return payments;
 }
@@ -206,7 +223,16 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
     }
     if (best) {
       best.claimed = true;
-      const bedragVerschil = Math.round((Math.abs(best.tx.amount) - Math.abs(r.projected.amount)) * 100) / 100;
+      let bedragVerschil = Math.round((Math.abs(best.tx.amount) - Math.abs(r.projected.amount)) * 100) / 100;
+      // v207 — de eerste termijn mag ook precies "extra bedrag 1e termijn" méér zijn dan het kale
+      // maandbedrag: dat is dan de leasemaatschappij die het maandbedrag en de administratiekosten
+      // in één keer heeft afgeschreven, in plaats van als twee losse regels. Zonder deze tolerantie
+      // werd zo'n heel normale, correct betaalde eerste termijn ten onrechte als "bedrag wijkt af"
+      // (of, vóór v207, zelfs als volledig "ontbrekend") aangemerkt.
+      if (r.projected.extraBedrag1eTermijn && Math.abs(bedragVerschil - r.projected.extraBedrag1eTermijn) <= AMOUNT_MARGIN) {
+        bedragVerschil = 0;
+        r.gecombineerdMetExtra = true; // de gematchte transactie bevat ook de administratiekosten
+      }
       r.status = Math.abs(bedragVerschil) <= AMOUNT_MARGIN ? "gevonden" : "gevonden-afwijkend";
       r.matchedTx = best.tx;
       r.bedragVerschil = bedragVerschil;
@@ -253,6 +279,29 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
 
   const onverwachteBetalingen = available.filter((a) => !a.claimed).map((a) => a.tx);
   return { results, onverwachteBetalingen };
+}
+
+// v207 — is de eerste termijn daadwerkelijk in één bankafschrijving betaald sámen met "extra bedrag
+// 1e termijn" (de administratiekosten, zie de toelichting bij buildNominaleLeaseSchedule/
+// generateProjectedLeasePayments hierboven), dan bevat de bijbehorende banktransactie dat bedrag nu
+// nog steeds — en zou computeLoanAmortization (loanAmortization.js) die transactie in zijn geheel
+// als aflossing/rente van de lease verwerken, inclusief de administratiekosten. Dat drukt de
+// aflossing dat jaar ten onrechte omhoog (en het openstaande saldo dus te snel omlaag), voor een
+// bedrag dat helemaal geen onderdeel van de financiering is. Trekt daarom, vlak vóórdat de
+// transacties de rente/aflossing-splitsing ingaan, het administratiekosten-deel eraf van precies de
+// ene transactie waarin het (aantoonbaar, via dezelfde matching als hierboven) is meegenomen — de
+// rest van het bedrag (het kale maandbedrag) blijft daarna normaal meetellen. Zonder een ingevulde
+// "extra bedrag 1e termijn" (elk bestaand dossier) verandert er niets.
+export function stripExtraBedrag1eTermijnUitTransacties(segment, segTx) {
+  const extra = segment?.extraBedrag1eTermijn === "" || segment?.extraBedrag1eTermijn == null ? 0 : Number(segment.extraBedrag1eTermijn);
+  if (!(extra > 0)) return segTx;
+  const projected = generateProjectedLeasePayments(segment);
+  const eersteTermijn = projected.find((p) => p.extraBedrag1eTermijn);
+  if (!eersteTermijn) return segTx;
+  const { results } = matchLeasePaymentsToSchedule([eersteTermijn], segTx, Number(segment.maandbedrag) || 0);
+  const match = results[0];
+  if (!match?.gecombineerdMetExtra || !match.matchedTx) return segTx;
+  return segTx.map((tx) => (tx === match.matchedTx ? { ...tx, amount: tx.amount + extra } : tx));
 }
 
 // v206: sommige leasetermijnen worden soms van een andere bankrekening betaald die niet in dit

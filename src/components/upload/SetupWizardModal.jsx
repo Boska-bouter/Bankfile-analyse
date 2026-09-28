@@ -53,6 +53,11 @@ export default function SetupWizardModal({
   // opnieuw in de wachtrij te komen zoals stap 0 dat wel doet.
   const [initialSteps] = useState(() => {
     const list = [];
+    // Rekeningtype (zakelijk/privé) van het/de net geladen bestand(en) eerst vragen — dat is de
+    // meest concrete, direct te beantwoorden vraag over wat er nu ligt, vóórdat de (dossierbrede)
+    // vragen hieronder volgen. Heeft geen invloed op de lease/lening/AOV-zoekacties verderop (die
+    // zoeken sowieso los van het rekeningtype in de tekst van de al ingelezen transacties).
+    if (pendingFileNames.length > 0) list.push(0);
     if (eigenNamen === null) list.push(10);
     // Rechtsvorm (en de holding-vraag die daarvan afhangt) komt bewust meteen na de naam van de
     // rekeninghouder — vóór alle andere vragen — zodat KOR/BTW-verlegd hieronder al weten of ze
@@ -63,7 +68,10 @@ export default function SetupWizardModal({
     // (op rechtsvorm) zorgt er vanzelf voor dat na een wissel de juiste vervolgvragen verschijnen.
     if (rechtsvorm === null || forceRechtsvormStep) list.push(14);
     if (heeftHolding === null) list.push(15);
-    if (eigenRekeningenExtra === null) list.push(11);
+    // forceRechtsvormStep (handmatig geopend via "Basisvragen bewerken") hoort ook deze stap altijd
+    // weer te tonen — anders is er, zodra er ooit al een (lege of gevulde) lijst is opgeslagen, geen
+    // enkele manier meer om later alsnog een privé-tegenrekening toe te voegen of te wijzigen.
+    if (eigenRekeningenExtra === null || forceRechtsvormStep) list.push(11);
     if (zakelijkeSpaarRekening === null) list.push(16);
     if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
     // Auto-vraag staat bewust vóór de leaseauto-vraag: bij "financial lease" als antwoord schakelt
@@ -79,7 +87,6 @@ export default function SetupWizardModal({
     // staat verderop in deze lijst), dus wordt de BV-uitzondering hieronder pas live gefilterd
     // (net als bij stap 15/1/2), niet hier bij het opbouwen van de lijst.
     if (Object.keys(zelfstandigenaftrekStatus || {}).length === 0) list.push(18);
-    if (pendingFileNames.length > 0) list.push(0);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
       list.push(2);
@@ -173,21 +180,29 @@ export default function SetupWizardModal({
                 gaat laden? Met het rekeningnummer kan de tool een overboeking daarheen alsnog herkennen als privé.
                 Je kunt er meerdere toevoegen.
               </p>
-              {(typedNow.eigenRekeningenLijst || []).length > 0 && (
-                <ul className="space-y-1">
-                  {typedNow.eigenRekeningenLijst.map((r, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
-                      <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {r.accountType === "Zakelijk" ? "Zakelijk" : "Privé"}</span>
-                      <button
-                        onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningenLijst: p.eigenRekeningenLijst.filter((_, j) => j !== i) }))}
-                        className="shrink-0 text-xs text-slate-400 hover:text-slate-700"
-                      >
-                        Verwijderen
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {(() => {
+                // Bij het opnieuw openen van deze stap (bijv. via "Basisvragen bewerken", nadat
+                // deze lijst al eerder is opgeslagen) staat er in typedNow nog niets — val dan terug
+                // op de al opgeslagen eigenRekeningenExtra, zodat die niet stilzwijgend leeg lijkt en
+                // bij op "Doorgaan" klikken per ongeluk wordt overschreven met een lege lijst.
+                const huidigeLijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
+                if (huidigeLijst.length === 0) return null;
+                return (
+                  <ul className="space-y-1">
+                    {huidigeLijst.map((r, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+                        <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {r.accountType === "Zakelijk" ? "Zakelijk" : "Privé"}</span>
+                        <button
+                          onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningenLijst: huidigeLijst.filter((_, j) => j !== i) }))}
+                          className="shrink-0 text-xs text-slate-400 hover:text-slate-700"
+                        >
+                          Verwijderen
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
               <input
                 type="text"
                 value={typedNow.eigenRekeningIban ?? ""}
@@ -213,7 +228,7 @@ export default function SetupWizardModal({
                     if (!typedNow.eigenRekeningIban?.trim() && !typedNow.eigenRekeningType) return;
                     setTypedNow((p) => ({
                       ...p,
-                      eigenRekeningenLijst: [...(p.eigenRekeningenLijst || []), { iban: p.eigenRekeningIban?.trim() || null, accountType: p.eigenRekeningType || null }],
+                      eigenRekeningenLijst: [...(p.eigenRekeningenLijst ?? eigenRekeningenExtra ?? []), { iban: p.eigenRekeningIban?.trim() || null, accountType: p.eigenRekeningType || null }],
                       eigenRekeningIban: "", eigenRekeningType: null,
                     }));
                   }}
@@ -230,7 +245,7 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    let lijst = typedNow.eigenRekeningenLijst || [];
+                    let lijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
                     if (typedNow.eigenRekeningIban?.trim() || typedNow.eigenRekeningType) {
                       lijst = [...lijst, { iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }];
                       setTypedNow((p) => ({ ...p, eigenRekeningenLijst: lijst, eigenRekeningIban: "", eigenRekeningType: null }));
@@ -701,10 +716,13 @@ export default function SetupWizardModal({
               <span />
             )}
           </div>
-          {/* Stappen 6-11 hebben allemaal hun eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat
-              én doorgaat — een extra "Doorgaan" hieronder zou dubbelop zijn, en erger: die knop
-              slaat niets op, dus zou de zojuist getypte tekst stilletjes negeren. */}
-          {![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {/* Elke stap met een eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat én doorgaat staat
+              hieronder in de uitsluitingslijst — een extra "Doorgaan" hieronder zou dubbelop zijn,
+              en erger: die knop slaat niets op, dus zou het zojuist gekozen antwoord (of getypte
+              tekst) stilletjes negeren. Stap 1 (KOR) en 2 (BTW-verlegd) hoorden hier eerder ten
+              onrechte niet bij — die hebben net als de andere Ja/Nee-stappen al hun eigen knoppen,
+              dus stond er per ongeluk een tweede, niets-opslaande "Doorgaan"-knop naast. */}
+          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
