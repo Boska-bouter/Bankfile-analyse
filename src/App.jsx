@@ -194,6 +194,11 @@ export default function App() {
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   // v243 — null = "auto", zelfde patroon als showPersonReview/showOverigReview hieronder.
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(null);
+  // v246 — de "geen duplicaten, maar wel dezelfde datum/bedrag/omschrijving"-lijst (confirmedSeparateGroups)
+  // stond altijd volledig uitgeklapt zodra de Duplicaten-sectie open was, óók als het er honderd waren —
+  // dat overschaduwde de échte duplicaten die nog aandacht nodig hebben. Nu staat die lijst standaard
+  // ingeklapt onder een eigen knopje, puur ter info/naslag.
+  const [showConfirmedSeparateDuplicates, setShowConfirmedSeparateDuplicates] = useState(false);
   const [excludedManualFingerprints, setExcludedManualFingerprints] = useState([]);
   // v203: vrije toelichtingstekst per transactie (bijv. "naheffing Q2 2025 LB"), voor als de
   // bank-omschrijving zelf niet duidelijk genoeg is. Gesleuteld op dezelfde inhoud-gebaseerde
@@ -862,7 +867,37 @@ export default function App() {
     snapshotBeforeAction("Duplicaten verwijderen");
     setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...duplicateFingerprints])]);
   };
+  // v246 — hetzelfde mechanisme als removeDuplicates hierboven, maar dan per afzonderlijke groep, zodat
+  // je niet alles in 1 keer hoeft te verwijderen — en met een tegenhanger (restoreDuplicateGroup) om een
+  // eerdere verwijdering weer ongedaan te maken, ook rechtstreeks vanuit de detailweergave (originele
+  // regels bekijken) waar je de boeking nog eens goed kunt bekijken voordat je beslist.
+  const isDuplicateGroupRemoved = (group) => group.slice(1).every((t) => excludedDuplicateFingerprints.includes(t.fingerprint));
+  const removeDuplicateGroup = (group) => {
+    snapshotBeforeAction("Duplicaat verwijderd");
+    const fps = group.slice(1).map((t) => t.fingerprint);
+    setExcludedDuplicateFingerprints((prev) => [...new Set([...prev, ...fps])]);
+  };
+  const restoreDuplicateGroup = (group) => {
+    snapshotBeforeAction("Duplicaat hersteld");
+    const fpSet = new Set(group.slice(1).map((t) => t.fingerprint));
+    setExcludedDuplicateFingerprints((prev) => prev.filter((fp) => !fpSet.has(fp)));
+  };
   const pendingDuplicateCount = duplicateFingerprints.size - excludedDuplicateFingerprints.filter((fp) => duplicateFingerprints.has(fp)).length;
+  // v246 — splitst pendingDuplicateCount uit naar "zeker" (het lopende saldo bevestigt met zekerheid dat
+  // het dezelfde boeking is — er valt niets meer te beoordelen, alleen nog te verwijderen) versus
+  // "onzeker" (geen saldogegevens beschikbaar, dus dit vraagt echt een eigen beoordeling). Alleen de
+  // onzekere groepen rechtvaardigen nog de amber "aandacht nodig"-kleur/melding; zodra die op 0 staan is
+  // er in feite niets meer te BEOORDELEN (ook al staan de zekere duplicaten nog niet verwijderd).
+  const duplicatePendingBreakdown = useMemo(() => {
+    let zeker = 0, onzeker = 0;
+    for (const group of duplicateGroups) {
+      const pendingInGroup = group.slice(1).filter((t) => !excludedDuplicateFingerprints.includes(t.fingerprint)).length;
+      if (pendingInGroup === 0) continue;
+      if (group[0].certainty === "onzeker") onzeker += pendingInGroup;
+      else zeker += pendingInGroup;
+    }
+    return { zeker, onzeker };
+  }, [duplicateGroups, excludedDuplicateFingerprints]);
 
   const pendingAccountFiles = useMemo(
     () => parsedFiles.map((f) => f.fileName).filter((name) => !(name in accountTypeByFile)),
@@ -1944,12 +1979,21 @@ export default function App() {
         },
       },
       {
+        // v246 — de kleur/melding is nu gebaseerd op duplicatePendingBreakdown.onzeker (echt zelf te
+        // beoordelen) i.p.v. pendingDuplicateCount als geheel: zodra alle gevonden duplicaten met
+        // zekerheid zijn bevestigd op basis van het lopende saldo, is er niets meer te BEOORDELEN (wel
+        // nog te verwijderen), dus geen amber "aandacht" meer nodig.
         key: "duplicates",
         title: "Duplicaten",
         icon: <Copy className="h-3.5 w-3.5" />,
         value: pendingDuplicateCount,
-        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
-        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
+        subtitle:
+          duplicatePendingBreakdown.onzeker > 0
+            ? `${duplicatePendingBreakdown.onzeker} zelf te beoordelen`
+            : pendingDuplicateCount > 0
+            ? "alle bevestigd — nog te verwijderen"
+            : "Geen gevonden",
+        tone: duplicatePendingBreakdown.onzeker > 0 ? "attention" : "ok",
         hint: "Mogelijk dubbele transacties bekijken",
         onClick: () => {
           if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
@@ -2143,6 +2187,7 @@ export default function App() {
     pendingPersonReview.length,
     pendingOverigReview.length,
     pendingDuplicateCount,
+    duplicatePendingBreakdown,
     activeYear,
     yearlyProgress,
     yearlySummary,
@@ -2241,8 +2286,13 @@ export default function App() {
         title: "Duplicaten",
         icon: <Copy className="h-3.5 w-3.5" />,
         value: pendingDuplicateCount,
-        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
-        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
+        subtitle:
+          duplicatePendingBreakdown.onzeker > 0
+            ? `${duplicatePendingBreakdown.onzeker} zelf te beoordelen`
+            : pendingDuplicateCount > 0
+            ? "alle bevestigd — nog te verwijderen"
+            : "Geen gevonden",
+        tone: duplicatePendingBreakdown.onzeker > 0 ? "attention" : "ok",
         hint: "Mogelijk dubbele transacties bekijken",
         onClick: () => {
           if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
@@ -2267,6 +2317,7 @@ export default function App() {
     pendingPersonReview.length,
     pendingOverigReview.length,
     pendingDuplicateCount,
+    duplicatePendingBreakdown,
     periodeMismatches.length,
   ]);
 
@@ -3121,7 +3172,13 @@ export default function App() {
             duplicatesSectionRef verderop. */}
 
         {duplicateDetailGroup && (
-          <DuplicateGroupDetailModal group={duplicateDetailGroup} onClose={() => setDuplicateDetailGroup(null)} />
+          <DuplicateGroupDetailModal
+            group={duplicateDetailGroup}
+            onClose={() => setDuplicateDetailGroup(null)}
+            removed={isDuplicateGroupRemoved(duplicateDetailGroup)}
+            onRemove={() => removeDuplicateGroup(duplicateDetailGroup)}
+            onRestore={() => restoreDuplicateGroup(duplicateDetailGroup)}
+          />
         )}
 
         
@@ -3298,33 +3355,56 @@ export default function App() {
                 alleen bepalen of "Aangifte {jaar}" hier nog los over nagt) — in plaats daarvan altijd
                 zichtbaar zodra er ooit duplicaten of bevestigd-losse groepen zijn gevonden, ingeklapt
                 met een groen vinkje als er niets meer open staat, met de "Bekijk welke transacties"-lijst
-                nog altijd één klik verderop zodat je het bij een schoon dossier alsnog kunt naslaan. */}
+                nog altijd één klik verderop zodat je het bij een schoon dossier alsnog kunt naslaan.
+                v246 — drie verbeteringen: (1) de "dit zijn GEEN duplicaten"-lijst (confirmedSeparateGroups)
+                stond hier altijd volledig uitgeklapt, óók als het er honderd waren — die staat nu
+                ingeklapt onder een eigen knopje (showConfirmedSeparateDuplicates), puur ter naslag; (2) de
+                amber "aandacht nodig"-kleur/telling is nu gebaseerd op duplicatePendingBreakdown.onzeker
+                (écht zelf te beoordelen, want geen saldogegevens) i.p.v. alle nog-niet-verwijderde
+                duplicaten — zodra alle gevonden duplicaten met zekerheid zijn bevestigd op basis van het
+                saldo, is er niets meer te BEOORDELEN, dus wordt de sectie groen (met de melding dat ze
+                nog wel verwijderd moeten worden); (3) elke groep heeft nu een eigen "Verwijderen"-knop
+                i.p.v. alleen de bulk-actie, met een "Ongedaan maken" erna — diezelfde twee acties staan
+                ook in de detailweergave (originele regels bekijken), zie DuplicateGroupDetailModal. */}
             {(duplicateGroups.length > 0 || confirmedSeparateGroups.length > 0) && (() => {
-              const open = showDuplicateDetails === null ? pendingDuplicateCount > 0 : showDuplicateDetails;
+              const needsJudgment = duplicatePendingBreakdown.onzeker > 0;
+              const open = showDuplicateDetails === null ? needsJudgment : showDuplicateDetails;
               return (
-                <section ref={duplicatesSectionRef} className="rounded-xl border-2 border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
+                <section
+                  ref={duplicatesSectionRef}
+                  className={`rounded-xl border-2 ${needsJudgment ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}
+                  style={sectionTabStyle("controleren")}
+                >
                   <button
                     onClick={() => setShowDuplicateDetails(!open)}
                     className="w-full px-4 py-3 flex items-center gap-2 text-left"
                   >
-                    {pendingDuplicateCount === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-                    <span className="text-sm font-semibold text-amber-900">Duplicaten controleren</span>
-                    {pendingDuplicateCount > 0 ? (
+                    {!needsJudgment && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+                    <span className={`text-sm font-semibold ${needsJudgment ? "text-amber-900" : "text-emerald-900"}`}>Duplicaten controleren</span>
+                    {needsJudgment ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingDuplicateCount}
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {duplicatePendingBreakdown.onzeker} zelf te beoordelen
+                      </span>
+                    ) : pendingDuplicateCount > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-semibold">
+                        {pendingDuplicateCount} bevestigd — nog te verwijderen
                       </span>
                     ) : (
                       <span className="text-xs text-emerald-700">Niets openstaand</span>
                     )}
                     <span className="flex-1" />
-                    {open ? <ChevronDown className="h-4 w-4 text-amber-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />}
+                    {open ? (
+                      <ChevronDown className={`h-4 w-4 shrink-0 ${needsJudgment ? "text-amber-400" : "text-emerald-400"}`} />
+                    ) : (
+                      <ChevronRight className={`h-4 w-4 shrink-0 ${needsJudgment ? "text-amber-400" : "text-emerald-400"}`} />
+                    )}
                   </button>
                   {open && (
                     <div className="px-4 pb-3 space-y-2">
                       {pendingDuplicateCount > 0 && (
                         <div className="flex gap-3 pb-1">
                           <button onClick={removeDuplicates} className="text-xs font-medium text-amber-900 underline hover:no-underline">
-                            Duplicaten verwijderen (bewaar de eerste van elk stel)
+                            Alle {pendingDuplicateCount} nog openstaande verwijderen (bewaar de eerste van elk stel)
                           </button>
                           <button onClick={() => setDismissedDuplicateNotice(true)} className="text-xs text-amber-700 hover:text-amber-900">
                             Negeren (niet meer noemen bij "Aangifte")
@@ -3339,19 +3419,40 @@ export default function App() {
                         // basis van het lopende saldo, wanneer beschikbaar) i.p.v. hier opnieuw
                         // uitgerekend te worden — zie duplicates.js.
                         const zeker = first.certainty === "duplicaat";
+                        const removedGroup = isDuplicateGroupRemoved(group);
                         return (
-                          <div key={group[0].fingerprint} className="rounded-lg bg-white border border-amber-200 px-3 py-2 text-xs">
+                          <div
+                            key={group[0].fingerprint}
+                            className={`rounded-lg border px-3 py-2 text-xs ${removedGroup ? "bg-emerald-50 border-emerald-200" : "bg-white border-amber-200"}`}
+                          >
                             <div className="flex items-start justify-between gap-2">
                               <p className="text-slate-700">
                                 {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
                                 <span className="text-slate-400"> — {group.length}x</span>
                               </p>
-                              <button
-                                onClick={() => setDuplicateDetailGroup(group)}
-                                className="shrink-0 text-[11px] font-medium text-amber-900 underline hover:no-underline whitespace-nowrap"
-                              >
-                                Bekijk originele regels
-                              </button>
+                              <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
+                                <button
+                                  onClick={() => setDuplicateDetailGroup(group)}
+                                  className="text-[11px] font-medium text-amber-900 underline hover:no-underline"
+                                >
+                                  Bekijk originele regels
+                                </button>
+                                {removedGroup ? (
+                                  <button
+                                    onClick={() => restoreDuplicateGroup(group)}
+                                    className="text-[11px] font-medium text-emerald-700 underline hover:no-underline"
+                                  >
+                                    Ongedaan maken
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => removeDuplicateGroup(group)}
+                                    className="text-[11px] font-medium text-rose-700 underline hover:no-underline"
+                                  >
+                                    Verwijderen
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             {crossFile ? (
                               <p className="mt-0.5 text-amber-700">
@@ -3360,7 +3461,9 @@ export default function App() {
                             ) : (
                               <p className="mt-0.5 text-slate-400">Komt {group.length}x voor binnen hetzelfde bestand ({files[0]}).</p>
                             )}
-                            {zeker ? (
+                            {removedGroup ? (
+                              <p className="mt-0.5 font-medium text-emerald-700">✓ Verwijderd — de eerste regel van dit stel is bewaard.</p>
+                            ) : zeker ? (
                               <p className="mt-0.5 font-medium text-red-700">
                                 ✓ Bevestigd op basis van saldo: het lopende saldo na mutatie is bij alle {group.length} regels
                                 gelijk ({eur(first.balance)}) — dat kan alleen als het écht dezelfde boeking is, dus dit is met
@@ -3376,28 +3479,40 @@ export default function App() {
                         );
                       })}
                       {confirmedSeparateGroups.length > 0 && (
-                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                          <p className="text-xs text-emerald-900">
-                            <strong>{confirmedSeparateGroups.length}x</strong> zelfde datum/bedrag/omschrijving gevonden, maar
-                            het lopende saldo na mutatie loopt bij elke boeking door — dat bevestigt dat dit losse, echte
-                            transacties zijn, geen duplicaten.
-                          </p>
-                          <div className="mt-2 space-y-1.5">
-                            {confirmedSeparateGroups.map((group) => (
-                              <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-[11px] text-emerald-800">
-                                <span>
-                                  {group[0].date.toLocaleDateString("nl-NL")} · {eur(group[0].amount)} ·{" "}
-                                  {group[0].counterparty || group[0].description || "(geen omschrijving)"} — {group.length}x
-                                </span>
-                                <button
-                                  onClick={() => setDuplicateDetailGroup(group)}
-                                  className="shrink-0 underline hover:no-underline whitespace-nowrap"
-                                >
-                                  Bekijk originele regels
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-200">
+                          <button
+                            onClick={() => setShowConfirmedSeparateDuplicates((v) => !v)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-left"
+                          >
+                            <span className="text-xs text-emerald-900">
+                              <strong>{confirmedSeparateGroups.length}x</strong> zelfde datum/bedrag/omschrijving gevonden, maar zijn{" "}
+                              <strong>geen</strong> duplicaten (saldo bevestigt: losse, echte transacties) — alleen ter info
+                            </span>
+                            <span className="flex-1" />
+                            {showConfirmedSeparateDuplicates ? (
+                              <ChevronDown className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            )}
+                          </button>
+                          {showConfirmedSeparateDuplicates && (
+                            <div className="px-3 pb-2 space-y-1.5">
+                              {confirmedSeparateGroups.map((group) => (
+                                <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-[11px] text-emerald-800">
+                                  <span>
+                                    {group[0].date.toLocaleDateString("nl-NL")} · {eur(group[0].amount)} ·{" "}
+                                    {group[0].counterparty || group[0].description || "(geen omschrijving)"} — {group.length}x
+                                  </span>
+                                  <button
+                                    onClick={() => setDuplicateDetailGroup(group)}
+                                    className="shrink-0 underline hover:no-underline whitespace-nowrap"
+                                  >
+                                    Bekijk originele regels
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
