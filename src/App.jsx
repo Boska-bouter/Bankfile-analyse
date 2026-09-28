@@ -52,6 +52,7 @@ import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
 import StickyTopNav from "./components/dashboard/StickyTopNav.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
+import DuplicateGroupDetailModal from "./components/dashboard/DuplicateGroupDetailModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
 import VerwachteMatchModal from "./components/shared/VerwachteMatchModal.jsx";
 import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
@@ -196,6 +197,9 @@ export default function App() {
   // tx.id) — zie duplicates.js — zodat een toelichting ook na herladen van het project blijft staan.
   const [transactionNotes, setTransactionNotes] = useState({}); // { [fingerprint]: string }
   const [reviewFileModal, setReviewFileModal] = useState(null);
+  // v237 — houdt bij welke groep "mogelijk dubbele transacties" de gebruiker in detail wil vergelijken
+  // (originele regels naast elkaar, incl. IBAN/volledige omschrijving/saldo per bestand).
+  const [duplicateDetailGroup, setDuplicateDetailGroup] = useState(null);
   const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
@@ -737,7 +741,7 @@ export default function App() {
   );
   const fileContinuity = useMemo(() => computeFileContinuity(importDiagnostics, accountTypeByFile), [importDiagnostics, accountTypeByFile]);
 
-  const { fingerprintByTxId, duplicateGroups, duplicateFingerprints } = useMemo(
+  const { fingerprintByTxId, duplicateGroups, duplicateFingerprints, confirmedSeparateGroups } = useMemo(
     () => computeDuplicateInfo(allTransactions),
     [allTransactions]
   );
@@ -2900,15 +2904,24 @@ export default function App() {
                   const files = [...new Set(group.map((t) => t.source))];
                   const crossFile = files.length > 1;
                   const first = group[0];
-                  const saldos = group.map((t) => t.balance);
-                  const heeftSaldos = saldos.every((s) => s != null);
-                  const alleGelijk = heeftSaldos && saldos.every((s) => s === saldos[0]);
+                  // v237 — de certainty per transactie komt nu uit computeDuplicateInfo zelf (op basis
+                  // van het lopende saldo, wanneer beschikbaar) i.p.v. hier opnieuw uitgerekend te
+                  // worden — zie duplicates.js.
+                  const zeker = first.certainty === "duplicaat";
                   return (
                     <div key={group[0].fingerprint} className="rounded-lg bg-white border border-amber-200 px-3 py-2 text-xs">
-                      <p className="text-slate-700">
-                        {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
-                        <span className="text-slate-400"> — {group.length}x</span>
-                      </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-slate-700">
+                          {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
+                          <span className="text-slate-400"> — {group.length}x</span>
+                        </p>
+                        <button
+                          onClick={() => setDuplicateDetailGroup(group)}
+                          className="shrink-0 text-[11px] font-medium text-amber-900 underline hover:no-underline whitespace-nowrap"
+                        >
+                          Bekijk originele regels
+                        </button>
+                      </div>
                       {crossFile ? (
                         <p className="mt-0.5 text-amber-700">
                           ⚠ Komt voor in <strong>meerdere bestanden</strong>: {files.join(", ")} — waarschijnlijk overlappende exportperiodes.
@@ -2916,16 +2929,17 @@ export default function App() {
                       ) : (
                         <p className="mt-0.5 text-slate-400">Komt {group.length}x voor binnen hetzelfde bestand ({files[0]}).</p>
                       )}
-                      {heeftSaldos && (
-                        alleGelijk ? (
-                          <p className="mt-0.5 text-amber-700">
-                            Saldo na mutatie bij alle {group.length} gelijk ({eur(saldos[0])}) — dat wijst sterk op een echte dubbeling, geen {group.length} losse betalingen (anders zou het lopende saldo elke keer zijn opgeschoven).
-                          </p>
-                        ) : (
-                          <p className="mt-0.5 text-slate-400">
-                            Saldo na mutatie loopt door ({saldos.map((s) => eur(s)).join(" → ")}) — dat wijst op {group.length} losse, echte transacties.
-                          </p>
-                        )
+                      {zeker ? (
+                        <p className="mt-0.5 font-medium text-red-700">
+                          ✓ Bevestigd op basis van saldo: het lopende saldo na mutatie is bij alle {group.length} regels
+                          gelijk ({eur(first.balance)}) — dat kan alleen als het écht dezelfde boeking is, dus dit is met
+                          zekerheid een dubbeling.
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-slate-400">
+                          Geen (volledige) saldogegevens beschikbaar om dit automatisch te bevestigen — vergelijk de
+                          originele regels hierboven om zelf te beoordelen.
+                        </p>
                       )}
                     </div>
                   );
@@ -2933,6 +2947,36 @@ export default function App() {
               </div>
             )}
           </section>
+        )}
+
+        {confirmedSeparateGroups.length > 0 && showDuplicateDetails && (
+          <section className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3" style={sectionTabStyle("controleren")}>
+            <p className="text-xs text-emerald-900">
+              <strong>{confirmedSeparateGroups.length}x</strong> zelfde datum/bedrag/omschrijving gevonden, maar het
+              lopende saldo na mutatie loopt bij elke boeking door — dat bevestigt dat dit losse, echte transacties zijn,
+              geen duplicaten. Deze staan daarom niet (meer) bij de te controleren duplicaten hierboven.
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {confirmedSeparateGroups.map((group) => (
+                <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-[11px] text-emerald-800">
+                  <span>
+                    {group[0].date.toLocaleDateString("nl-NL")} · {eur(group[0].amount)} ·{" "}
+                    {group[0].counterparty || group[0].description || "(geen omschrijving)"} — {group.length}x
+                  </span>
+                  <button
+                    onClick={() => setDuplicateDetailGroup(group)}
+                    className="shrink-0 underline hover:no-underline whitespace-nowrap"
+                  >
+                    Bekijk originele regels
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {duplicateDetailGroup && (
+          <DuplicateGroupDetailModal group={duplicateDetailGroup} onClose={() => setDuplicateDetailGroup(null)} />
         )}
 
         

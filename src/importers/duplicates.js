@@ -1,10 +1,14 @@
 import { normKey } from "../utils/normalization.js";
 
-// Dubbele-transacties-check: dezelfde datum + bedrag + tegenpartij/omschrijving komt vaker voor
-// dan 1x — kan gebeuren als je een bankexport met overlappende periode nogmaals uploadt. Elke
-// transactie krijgt een stabiele "vingerafdruk" (inhoud + volgnummer binnen de groep gelijke
-// transacties) zodat een keuze om duplicaten uit te sluiten ook na herladen van het project
-// blijft staan — in tegenstelling tot het technische, sessie-gebonden id.
+// v237 — Zekerheid inbouwen: een letterlijke boekingstijdstempel is niet beschikbaar in dit soort
+// bank-exports (datum zonder tijd-component, geen uniek mutatienummer per regel), maar het LOPENDE
+// SALDO na elke mutatie (wanneer de bron een saldokolom heeft) is een veel sterker signaal dan de
+// tekstuele match (datum+bedrag+tegenpartij+omschrijving) alleen: twee losse, opeenvolgende
+// transacties kunnen nooit toevallig hetzelfde lopende saldo achterlaten, terwijl exact dezelfde
+// boeking twee keer ingelezen vanzelfsprekend wél hetzelfde saldo laat zien. Dus waar mogelijk wordt
+// het saldo nu ook echt gebruikt om een match te bevestigen ("duplicaat") of te ontkrachten ("apart"
+// — gegarandeerd losse, echte transacties), in plaats van alleen informatief in de UI getoond te
+// worden zoals voorheen.
 export function computeDuplicateInfo(allTransactions) {
   const counters = {};
   const fingerprintByTxId = {};
@@ -18,8 +22,27 @@ export function computeDuplicateInfo(allTransactions) {
     if (!byFingerprintKey[key]) byFingerprintKey[key] = [];
     byFingerprintKey[key].push({ ...tx, fingerprint });
   }
-  const duplicateGroups = Object.values(byFingerprintKey).filter((g) => g.length > 1);
-  // Bij een duplicaat-groep wordt de EERSTE bewaard, de rest gemarkeerd als "te verwijderen".
+
+  const rawGroups = Object.values(byFingerprintKey).filter((g) => g.length > 1);
+
+  const duplicateGroups = [];
+  const confirmedSeparateGroups = [];
+  for (const group of rawGroups) {
+    const saldos = group.map((t) => t.balance);
+    const heeftAlleSaldos = saldos.every((s) => s != null);
+    const alleGelijk = heeftAlleSaldos && saldos.every((s) => s === saldos[0]);
+    if (heeftAlleSaldos && !alleGelijk) {
+      // Saldo loopt door bij elke boeking in de groep → onmogelijk dezelfde boeking twee keer,
+      // gegarandeerd losse, echte transacties. Deze tellen niet meer mee als (mogelijke) duplicaten.
+      confirmedSeparateGroups.push(group.map((t) => ({ ...t, certainty: "apart" })));
+      continue;
+    }
+    // Met saldo én allemaal gelijk: harde bevestiging. Zonder (volledige) saldo-informatie: nog
+    // steeds onzeker, net als voorheen — puur op tekst/bedrag/datum gebaseerd.
+    const certainty = heeftAlleSaldos ? "duplicaat" : "onzeker";
+    duplicateGroups.push(group.map((t) => ({ ...t, certainty })));
+  }
+
   const duplicateFingerprints = new Set(duplicateGroups.flatMap((g) => g.slice(1).map((t) => t.fingerprint)));
-  return { fingerprintByTxId, duplicateGroups, duplicateFingerprints };
+  return { fingerprintByTxId, duplicateGroups, duplicateFingerprints, confirmedSeparateGroups };
 }
