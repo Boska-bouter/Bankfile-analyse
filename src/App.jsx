@@ -1704,6 +1704,231 @@ export default function App() {
     return map;
   }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen]);
 
+  // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
+  // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina.
+  // v222: dit blok staat hier bewust op TWEE manieren precies goed geplaatst, allebei nodig:
+  // 1) Het leest yearlyProgress/yearlySummary/loanSummary/leaseSummary/checklistData/bvSignalering/
+  //    periodeMismatches, die hierboven (allemaal `const`) al gedeclareerd zijn — hoger in de
+  //    component (zoals in v217/v218) gaf een "Cannot access before initialization"-crash.
+  // 2) Het staat VÓÓR de vroege returns hieronder (showStartupChoice/!loaded) — hooks (useMemo) MOETEN
+  //    bij elke render in dezelfde volgorde aangeroepen worden; erna zetten (zoals per ongeluk in
+  //    v221 gebeurde) betekent dat deze twee useMemo's worden OVERGESLAGEN zolang het project nog aan
+  //    het laden is, en er dus bij de overgang naar "geladen" ineens twee hooks BIJKOMEN — exact de
+  //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
+  //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
+  const jumpToSection = (ref) => {
+    setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+  const dashboardCards = useMemo(() => {
+    if (transactions.length === 0) return [];
+    const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
+    const incompleteLoansCount = loanSummary.filter(
+      (l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend
+    ).length;
+    const incompleteLeasesCount = leaseSummary.filter((l) => {
+      if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+      if (leaseDetails[l.key]?.onbekend) return false;
+      return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
+    }).length;
+    const quartersOpenCount = checklistData?.quartersOpen?.length || 0;
+    return [
+      {
+        key: "confidence",
+        title: "Te controleren",
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        value: confidenceSummary.needsReview,
+        subtitle:
+          confidenceSummary.needsReview > 0
+            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
+            : "Alles automatisch met vertrouwen ingedeeld",
+        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
+        hint: "Transacties met onzekere classificatie bekijken",
+        onClick: () => {
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          jumpToSection(confidenceSectionRef);
+        },
+      },
+      {
+        key: "personReview",
+        title: "Overboekingen aan personen",
+        icon: <Users className="h-3.5 w-3.5" />,
+        value: pendingPersonReview.length,
+        subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
+        tone: pendingPersonReview.length > 0 ? "attention" : "ok",
+        hint: "Openstaande overboekingen aan personen bekijken",
+        onClick: () => {
+          setShowPersonReview(true);
+          jumpToSection(personReviewSectionRef);
+        },
+      },
+      {
+        key: "overigReview",
+        title: '"Overig" opruimen',
+        icon: <HelpCircle className="h-3.5 w-3.5" />,
+        value: pendingOverigReview.length,
+        subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",
+        tone: pendingOverigReview.length > 0 ? "attention" : "ok",
+        hint: 'Openstaande "Overig"-tegenpartijen bekijken',
+        onClick: () => {
+          setShowOverigReview(true);
+          jumpToSection(overigReviewSectionRef);
+        },
+      },
+      {
+        key: "duplicates",
+        title: "Duplicaten",
+        icon: <Copy className="h-3.5 w-3.5" />,
+        value: pendingDuplicateCount,
+        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
+        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
+        hint: "Mogelijk dubbele transacties bekijken",
+        onClick: () => {
+          if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
+          jumpToSection(duplicatesSectionRef);
+        },
+      },
+      // ---- Fase 2 (v218) — per geselecteerd jaar (activeYear), zelfde jaar als StickyYearNav. Deze
+      // kaarten verschijnen alleen zodra er een jaar geselecteerd is (na het laden van transacties
+      // is dat altijd het geval — zie de activeYear-init hieronder in de bestandsladers). ----
+      ...(activeYear
+        ? [
+            {
+              key: "yearStatus",
+              title: `Aangifte ${activeYear}`,
+              icon: <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress?.status || "oranje"]}</span>,
+              value: `${yearProgress?.pct ?? 0}%`,
+              subtitle: yearProgress?.gatDitJaar
+                ? "Gat in bestandscontinuïteit"
+                : yearProgress?.onzekerDitJaar > 0
+                ? `${yearProgress.onzekerDitJaar} onzeker dit jaar`
+                : "Klaar voor aangifte",
+              tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
+              hint: "Naar de aangifte-checklist voor dit jaar",
+              onClick: () => jumpToSection(checklistSectionRef),
+            },
+            {
+              key: "result",
+              title: `Resultaat ${activeYear}`,
+              icon: <span>€</span>,
+              value: yearlySummary ? eur(yearlySummary.winst) : "—",
+              subtitle: yearlySummary && yearlySummary.winst < 0 ? "Verlies" : "Winst (indicatief)",
+              tone: yearlySummary && yearlySummary.winst < 0 ? "attention" : "neutral",
+              hint: "Naar het jaaroverzicht",
+              onClick: () => jumpToSection(multiYearSectionRef),
+            },
+            {
+              key: "loans",
+              title: "Leningen",
+              icon: <span>📄</span>,
+              value: loanSummary.length,
+              subtitle: incompleteLoansCount > 0 ? `${incompleteLoansCount} nog onvolledig` : loanSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+              tone: incompleteLoansCount > 0 ? "attention" : "neutral",
+              hint: "Naar de leningen-sectie",
+              onClick: () => jumpToSection(loansSectionRef),
+            },
+            {
+              key: "leases",
+              title: "Lease",
+              icon: <span>🚗</span>,
+              value: leaseSummary.length,
+              subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+              tone: incompleteLeasesCount > 0 ? "attention" : "neutral",
+              hint: "Naar de lease-sectie",
+              onClick: () => jumpToSection(leasesSectionRef),
+            },
+            {
+              key: "btwQuarters",
+              title: `BTW-kwartalen ${activeYear}`,
+              icon: <span>🧾</span>,
+              value: quartersOpenCount,
+              subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
+              tone: quartersOpenCount > 0 ? "attention" : "ok",
+              hint: "Naar het BTW-kwartaaloverzicht",
+              onClick: () => jumpToSection(quarterlyBtwSectionRef),
+            },
+            // ---- Fase 3 (v219): situationeel, alleen als er echt een signaal is ----
+            ...(rechtsvorm === "bv" && bvSignalering
+              ? [
+                  {
+                    key: "bvSignalering",
+                    title: "BV-signalering",
+                    icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                    value: "!",
+                    subtitle: bvSignalering.redenen[0] || "Bekijk de toelichting",
+                    tone: "attention",
+                    hint: "Naar de BV-signalering",
+                    onClick: () => jumpToSection(bvSignaleringSectionRef),
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      // ---- Fase 3 (v219, vervolg) — dossierbreed, niet jaar-gebonden ----
+      ...(transactions.length > 0 && (korRegeling === null || (korRegeling === false && btwVerlegd === null))
+        ? [
+            {
+              key: "btwSettings",
+              title: "BTW-instellingen",
+              icon: <Settings className="h-3.5 w-3.5" />,
+              value: "!",
+              subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
+              tone: "attention",
+              hint: "Naar de BTW-instellingen",
+              onClick: () => jumpToSection(btwSettingsSectionRef),
+            },
+          ]
+        : []),
+      ...(transactions.length > 0
+        ? [
+            {
+              key: "periode",
+              title: "Factuurperiode",
+              icon: <AlertTriangle className="h-3.5 w-3.5" />,
+              value: periodeMismatches.length,
+              subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
+              tone: periodeMismatches.length > 0 ? "attention" : "ok",
+              hint: "Naar de factuurperiode-controle",
+              onClick: () => jumpToSection(periodeReviewSectionRef),
+            },
+          ]
+        : []),
+    ];
+  }, [
+    transactions.length,
+    confidenceSummary,
+    pendingPersonReview.length,
+    pendingOverigReview.length,
+    pendingDuplicateCount,
+    activeYear,
+    yearlyProgress,
+    yearlySummary,
+    loanSummary,
+    loanDetails,
+    leaseSummary,
+    leaseDetails,
+    confirmedLeaseTypeKeys,
+    checklistData,
+    rechtsvorm,
+    bvSignalering,
+    korRegeling,
+    btwVerlegd,
+    periodeMismatches.length,
+  ]);
+
+  // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
+  // de dashboardkaarten hierboven, maar dan altijd bereikbaar tijdens het scrollen. "Overzicht"
+  // scrollt terug naar de kaartenlaag bovenaan; de rest hergebruikt de bestaande sectie-refs. ----
+  const topNavItems = useMemo(() => {
+    if (transactions.length === 0) return [];
+    return [
+      { key: "overzicht", label: "Overzicht", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
+      { key: "controleren", label: "Controleren", onClick: () => jumpToSection(confidenceSectionRef) },
+      { key: "instellingen", label: "Instellingen", onClick: () => jumpToSection(btwSettingsSectionRef) },
+      { key: "resultaten", label: "Resultaten", onClick: () => jumpToSection(multiYearSectionRef) },
+      { key: "details", label: "Details", onClick: () => jumpToSection(detailsSectionRef) },
+    ];
+  }, [transactions.length]);
+
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
   // ontbrekende spiegelboeking) — dat stond dubbel. Hier staat alleen wat de checklist niet laat zien.
@@ -2050,225 +2275,6 @@ export default function App() {
     );
   }
 
-  // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
-  // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina. Bewust
-  // hier, ná alle vroege returns (leeg dossier / nog aan het laden): dit blok leest yearlyProgress,
-  // yearlySummary, loanSummary/leaseSummary, checklistData, bvSignalering en periodeMismatches, die
-  // allemaal PAS eerder in deze functie zijn gedeclareerd (`const`) — hoger in de component zou een
-  // "Cannot access before initialization"-crash (wit scherm) opleveren, precies zoals in v218/v219
-  // gebeurde toen dit blok nog vóór die declaraties stond.
-  const jumpToSection = (ref) => {
-    setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  };
-  const dashboardCards = useMemo(() => {
-    if (transactions.length === 0) return [];
-    const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
-    const incompleteLoansCount = loanSummary.filter(
-      (l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend
-    ).length;
-    const incompleteLeasesCount = leaseSummary.filter((l) => {
-      if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
-      if (leaseDetails[l.key]?.onbekend) return false;
-      return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
-    }).length;
-    const quartersOpenCount = checklistData?.quartersOpen?.length || 0;
-    return [
-      {
-        key: "confidence",
-        title: "Te controleren",
-        icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        value: confidenceSummary.needsReview,
-        subtitle:
-          confidenceSummary.needsReview > 0
-            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
-            : "Alles automatisch met vertrouwen ingedeeld",
-        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
-        hint: "Transacties met onzekere classificatie bekijken",
-        onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
-          jumpToSection(confidenceSectionRef);
-        },
-      },
-      {
-        key: "personReview",
-        title: "Overboekingen aan personen",
-        icon: <Users className="h-3.5 w-3.5" />,
-        value: pendingPersonReview.length,
-        subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
-        tone: pendingPersonReview.length > 0 ? "attention" : "ok",
-        hint: "Openstaande overboekingen aan personen bekijken",
-        onClick: () => {
-          setShowPersonReview(true);
-          jumpToSection(personReviewSectionRef);
-        },
-      },
-      {
-        key: "overigReview",
-        title: '"Overig" opruimen',
-        icon: <HelpCircle className="h-3.5 w-3.5" />,
-        value: pendingOverigReview.length,
-        subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",
-        tone: pendingOverigReview.length > 0 ? "attention" : "ok",
-        hint: 'Openstaande "Overig"-tegenpartijen bekijken',
-        onClick: () => {
-          setShowOverigReview(true);
-          jumpToSection(overigReviewSectionRef);
-        },
-      },
-      {
-        key: "duplicates",
-        title: "Duplicaten",
-        icon: <Copy className="h-3.5 w-3.5" />,
-        value: pendingDuplicateCount,
-        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
-        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
-        hint: "Mogelijk dubbele transacties bekijken",
-        onClick: () => {
-          if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
-          jumpToSection(duplicatesSectionRef);
-        },
-      },
-      // ---- Fase 2 (v218) — per geselecteerd jaar (activeYear), zelfde jaar als StickyYearNav. Deze
-      // kaarten verschijnen alleen zodra er een jaar geselecteerd is (na het laden van transacties
-      // is dat altijd het geval — zie de activeYear-init hieronder in de bestandsladers). ----
-      ...(activeYear
-        ? [
-            {
-              key: "yearStatus",
-              title: `Aangifte ${activeYear}`,
-              icon: <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress?.status || "oranje"]}</span>,
-              value: `${yearProgress?.pct ?? 0}%`,
-              subtitle: yearProgress?.gatDitJaar
-                ? "Gat in bestandscontinuïteit"
-                : yearProgress?.onzekerDitJaar > 0
-                ? `${yearProgress.onzekerDitJaar} onzeker dit jaar`
-                : "Klaar voor aangifte",
-              tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
-              hint: "Naar de aangifte-checklist voor dit jaar",
-              onClick: () => jumpToSection(checklistSectionRef),
-            },
-            {
-              key: "result",
-              title: `Resultaat ${activeYear}`,
-              icon: <span>€</span>,
-              value: yearlySummary ? eur(yearlySummary.winst) : "—",
-              subtitle: yearlySummary && yearlySummary.winst < 0 ? "Verlies" : "Winst (indicatief)",
-              tone: yearlySummary && yearlySummary.winst < 0 ? "attention" : "neutral",
-              hint: "Naar het jaaroverzicht",
-              onClick: () => jumpToSection(multiYearSectionRef),
-            },
-            {
-              key: "loans",
-              title: "Leningen",
-              icon: <span>📄</span>,
-              value: loanSummary.length,
-              subtitle: incompleteLoansCount > 0 ? `${incompleteLoansCount} nog onvolledig` : loanSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
-              tone: incompleteLoansCount > 0 ? "attention" : "neutral",
-              hint: "Naar de leningen-sectie",
-              onClick: () => jumpToSection(loansSectionRef),
-            },
-            {
-              key: "leases",
-              title: "Lease",
-              icon: <span>🚗</span>,
-              value: leaseSummary.length,
-              subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
-              tone: incompleteLeasesCount > 0 ? "attention" : "neutral",
-              hint: "Naar de lease-sectie",
-              onClick: () => jumpToSection(leasesSectionRef),
-            },
-            {
-              key: "btwQuarters",
-              title: `BTW-kwartalen ${activeYear}`,
-              icon: <span>🧾</span>,
-              value: quartersOpenCount,
-              subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
-              tone: quartersOpenCount > 0 ? "attention" : "ok",
-              hint: "Naar het BTW-kwartaaloverzicht",
-              onClick: () => jumpToSection(quarterlyBtwSectionRef),
-            },
-            // ---- Fase 3 (v219): situationeel, alleen als er echt een signaal is ----
-            ...(rechtsvorm === "bv" && bvSignalering
-              ? [
-                  {
-                    key: "bvSignalering",
-                    title: "BV-signalering",
-                    icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                    value: "!",
-                    subtitle: bvSignalering.redenen[0] || "Bekijk de toelichting",
-                    tone: "attention",
-                    hint: "Naar de BV-signalering",
-                    onClick: () => jumpToSection(bvSignaleringSectionRef),
-                  },
-                ]
-              : []),
-          ]
-        : []),
-      // ---- Fase 3 (v219, vervolg) — dossierbreed, niet jaar-gebonden ----
-      ...(transactions.length > 0 && (korRegeling === null || (korRegeling === false && btwVerlegd === null))
-        ? [
-            {
-              key: "btwSettings",
-              title: "BTW-instellingen",
-              icon: <Settings className="h-3.5 w-3.5" />,
-              value: "!",
-              subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
-              tone: "attention",
-              hint: "Naar de BTW-instellingen",
-              onClick: () => jumpToSection(btwSettingsSectionRef),
-            },
-          ]
-        : []),
-      ...(transactions.length > 0
-        ? [
-            {
-              key: "periode",
-              title: "Factuurperiode",
-              icon: <AlertTriangle className="h-3.5 w-3.5" />,
-              value: periodeMismatches.length,
-              subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
-              tone: periodeMismatches.length > 0 ? "attention" : "ok",
-              hint: "Naar de factuurperiode-controle",
-              onClick: () => jumpToSection(periodeReviewSectionRef),
-            },
-          ]
-        : []),
-    ];
-  }, [
-    transactions.length,
-    confidenceSummary,
-    pendingPersonReview.length,
-    pendingOverigReview.length,
-    pendingDuplicateCount,
-    activeYear,
-    yearlyProgress,
-    yearlySummary,
-    loanSummary,
-    loanDetails,
-    leaseSummary,
-    leaseDetails,
-    confirmedLeaseTypeKeys,
-    checklistData,
-    rechtsvorm,
-    bvSignalering,
-    korRegeling,
-    btwVerlegd,
-    periodeMismatches.length,
-  ]);
-
-  // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
-  // de dashboardkaarten hierboven, maar dan altijd bereikbaar tijdens het scrollen. "Overzicht"
-  // scrollt terug naar de kaartenlaag bovenaan; de rest hergebruikt de bestaande sectie-refs. ----
-  const topNavItems = useMemo(() => {
-    if (transactions.length === 0) return [];
-    return [
-      { key: "overzicht", label: "Overzicht", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
-      { key: "controleren", label: "Controleren", onClick: () => jumpToSection(confidenceSectionRef) },
-      { key: "instellingen", label: "Instellingen", onClick: () => jumpToSection(btwSettingsSectionRef) },
-      { key: "resultaten", label: "Resultaten", onClick: () => jumpToSection(multiYearSectionRef) },
-      { key: "details", label: "Details", onClick: () => jumpToSection(detailsSectionRef) },
-    ];
-  }, [transactions.length]);
 
   return (
     <div className="min-h-screen bg-stone-50 text-slate-900 font-sans">
