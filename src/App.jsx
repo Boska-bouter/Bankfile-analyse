@@ -3222,8 +3222,8 @@ export default function App() {
                 </div>
 
                         {parsedFiles.length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={sectionTabStyle("instellingen")}>
-            <h3 className="text-sm font-semibold text-slate-500 mb-3">Instellingen / Geladen files</h3>
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={sectionTabStyle("controleren")}>
+            <h3 className="text-sm font-semibold text-slate-500 mb-3">Controleren / Geladen files</h3>
             <div className="flex flex-wrap gap-2">
               {parsedFiles.map((f) => {
                 const balanceCheck = checkBalanceConsistency(allTransactions.filter((t) => t.source === f.fileName));
