@@ -57,3 +57,36 @@ export function computePeriodeMismatches(classified, reviewedPeriodeKeys, period
   }
   return results.sort((a, b) => a.tx.date - b.tx.date);
 }
+
+// v243 — Zelfde detectie als computePeriodeMismatches hierboven, maar dan ZONDER de al-behandelde
+// items eruit te filteren — inclusief een status per item ("open"/"bevestigd"/"verplaatst"). Nodig
+// voor het "toon toch" -knopje in het Controleren-mini-dashboard: zodra alle factuurperiode-punten
+// zijn afgehandeld verdwijnen ze uit computePeriodeMismatches (dat is precies de bedoeling van die
+// functie), maar de gebruiker moet ze desgewenst nog kunnen terugzien/nalopen, ook als alles al
+// "groen" is.
+export function computeAllPeriodeSignals(classified, reviewedPeriodeKeys, periodeQuarterOverrides) {
+  const results = [];
+  for (const tx of classified) {
+    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || tx.type !== "Zakelijk") continue;
+    const periode = detectPeriodeInDescription(tx.fullDescription || tx.description);
+    if (!periode) continue;
+    const startQ = Math.ceil((periode.start.getMonth() + 1) / 3);
+    const startY = periode.start.getFullYear();
+    const endQ = Math.ceil((periode.end.getMonth() + 1) / 3);
+    const endY = periode.end.getFullYear();
+    if (startY !== endY || startQ !== endQ) continue;
+    const boekingQ = Math.ceil((tx.date.getMonth() + 1) / 3);
+    const boekingY = tx.date.getFullYear();
+    if (startY === boekingY && startQ === boekingQ) continue;
+    let status = "open";
+    if (periodeQuarterOverrides[tx.id] !== undefined) status = "verplaatst";
+    else if (reviewedPeriodeKeys.includes(tx.id)) status = "bevestigd";
+    results.push({
+      tx,
+      boekingKwartaal: `${boekingY}-Q${boekingQ}`,
+      voorgesteldKwartaal: `${startY}-Q${startQ}`,
+      status,
+    });
+  }
+  return results.sort((a, b) => a.tx.date - b.tx.date);
+}

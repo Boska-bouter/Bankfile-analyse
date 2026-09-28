@@ -29,17 +29,21 @@ function StatusLine({ ok, warn, children }) {
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de tool blijft gewoon meteen bruikbaar.
 export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile }) {
-  const [open, setOpen] = useState(false);
+  // v243 — null = "auto" (open zodra er een echt punt is, ingeklapt zodra alles klopt), zelfde
+  // patroon als de andere Controleren-secties — een expliciete klik wint daarna, ongeacht of er
+  // later nog een bestand bijkomt.
+  const [openOverride, setOpenOverride] = useState(null);
   if (diagnostics.length === 0) return null;
 
   const anyIssue =
     diagnostics.some(
       (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff))
     ) || continuity.some((c) => !c.ok && !isMinorDiff(c.diff));
+  const open = openOverride === null ? anyIssue : openOverride;
 
   return (
     <section className={`rounded-xl border-2 ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-3 text-left">
+      <button onClick={() => setOpenOverride(!open)} className="w-full flex items-center gap-2 px-4 py-3 text-left">
         {anyIssue ? <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
         <span className={`text-sm font-semibold ${anyIssue ? "text-amber-900" : "text-emerald-900"}`}>
           Importcontrole — {diagnostics.length} bestand{diagnostics.length === 1 ? "" : "en"} ingelezen
