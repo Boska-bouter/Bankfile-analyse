@@ -35,7 +35,7 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
           <div>
             <p className="text-sm font-semibold text-slate-800">{isLease ? "Leasegegevens" : "Leninggegevens"} — {loan.name}</p>
@@ -54,33 +54,33 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
           <div className="grid grid-cols-2 gap-4">
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{isLease ? "Leasebedrag" : "Leningbedrag"} (oorspronkelijk) *</span>
-              <input type="number" min="0" step="0.01" value={form[bedragVeld]} onChange={set(bedragVeld)} placeholder="bijv. 25000" className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form[bedragVeld]} onChange={set(bedragVeld)} placeholder="bijv. 25000" className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Startdatum *</span>
-              <input type="date" value={form.startdatum} onChange={set("startdatum")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="date" value={form.startdatum} onChange={set("startdatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Rentepercentage per jaar *</span>
-              <input type="number" min="0" step="0.01" value={form.rente} onChange={set("rente")} placeholder="bijv. 4.5" className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form.rente} onChange={set("rente")} placeholder="bijv. 4.5" className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum (optioneel)</span>
-              <input type="date" value={form.einddatum} onChange={set("einddatum")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="date" value={form.einddatum} onChange={set("einddatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Al afgelost tot nu (optioneel)</span>
-              <input type="number" min="0" step="0.01" value={form.alAfgelost} onChange={set("alAfgelost")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form.alAfgelost} onChange={set("alAfgelost")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Totale rente al betaald (optioneel)</span>
-              <input type="number" min="0" step="0.01" value={form.totaleRenteBetaald} onChange={set("totaleRenteBetaald")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form.totaleRenteBetaald} onChange={set("totaleRenteBetaald")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           </div>
           <p className="text-xs text-slate-400">* Verplicht om de splitsing te kunnen berekenen.</p>
 
           {amortization && (
-            <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3">
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 mb-1">Berekende splitsing</p>
               <p className="text-sm text-emerald-900">
                 Rente: <strong>{eur(amortization.totaalRente)}</strong> · Aflossing: <strong>{eur(amortization.totaalAflossing)}</strong> · Nog openstaand: <strong>{eur(amortization.saldoNu)}</strong>
@@ -96,8 +96,8 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Opslaan</button>
+            <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
+            <button onClick={handleSave} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Opslaan</button>
           </div>
         </div>
       </div>

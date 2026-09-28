@@ -13,7 +13,7 @@ export default function PeriodeReviewStep({ items, onConfirm, onMove, onOpenHelp
         indeling in "BTW-aangifte per kwartaal".{" "}
         {onOpenHelp && <HelpHint chapter="factuurperiode" onOpen={onOpenHelp} />}
       </p>
-      <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+      <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {items.map(({ tx, boekingKwartaal, voorgesteldKwartaal }) => (
           <div key={tx.id} className="flex flex-wrap items-center gap-3 p-3">
             <div className="flex-1 min-w-[14rem]">
@@ -27,11 +27,11 @@ export default function PeriodeReviewStep({ items, onConfirm, onMove, onOpenHelp
             <div className="flex flex-wrap gap-2 shrink-0">
               <button
                 onClick={() => onMove(tx, voorgesteldKwartaal)}
-                className="rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
+                className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
               >
                 Verplaatsen naar {voorgesteldKwartaal}
               </button>
-              <button onClick={() => onConfirm(tx)} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+              <button onClick={() => onConfirm(tx)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
                 Nee, boekingsdatum klopt
               </button>
             </div>

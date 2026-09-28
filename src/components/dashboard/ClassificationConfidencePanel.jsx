@@ -23,7 +23,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
   const pct = (n) => Math.round((n / total) * 100);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-left">
         <span className="text-sm font-semibold flex items-center gap-2">
           Classificatiezekerheid
@@ -34,11 +34,11 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
       </button>
       <div className="px-4 pb-4">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-md bg-emerald-50 border border-emerald-200 py-2">
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 py-2">
             <p className="text-lg font-semibold text-emerald-800">{approved.length}</p>
             <p className="text-xs text-emerald-700">🟢 automatisch goedgekeurd ({pct(approved.length)}%)</p>
           </div>
-          <div className="rounded-md bg-amber-50 border border-amber-200 py-2">
+          <div className="rounded-lg bg-amber-50 border border-amber-200 py-2">
             <p className="text-lg font-semibold text-amber-800">{review.length}</p>
             {onOpenLevel && review.length > 0 ? (
               <button onClick={() => onOpenLevel("heuristic")} className="text-xs text-amber-700 underline hover:no-underline">
@@ -48,7 +48,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
               <p className="text-xs text-amber-700">🟡 controleren ({pct(review.length)}%)</p>
             )}
           </div>
-          <div className="rounded-md bg-rose-50 border border-rose-200 py-2">
+          <div className="rounded-lg bg-rose-50 border border-rose-200 py-2">
             <p className="text-lg font-semibold text-rose-800">{unclear.length}</p>
             {onOpenLevel && unclear.length > 0 ? (
               <button onClick={() => onOpenLevel("fallback")} className="text-xs text-rose-700 underline hover:no-underline">
@@ -65,7 +65,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
               De 🟢-transacties matchen een specifieke regel of zijn al eens door jou bevestigd. Onderstaande hebben dat
               (nog) niet — geen foutmelding, alleen een seintje dat een blik erop de moeite waard is.
             </p>
-            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
               {needsReview.slice(0, 200).map((tx) => (
                 <div key={tx.id} className="flex items-center gap-2 p-2 text-xs">
                   <span className="shrink-0">{LEVEL_ICON[tx.confidence.level]}</span>
@@ -74,12 +74,12 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                     <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
                     <p className="text-[10px] text-slate-400">{tx.confidence.label}</p>
                   </div>
-                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[tx.category] || "bg-slate-200 text-slate-700"}`}>{tx.category}</span>
+                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[tx.category] || "bg-slate-200 text-slate-700"}`}>{tx.category}</span>
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (
                     <button
                       onClick={() => onConfirmCorrect(tx)}
-                      className="shrink-0 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded px-1 py-0.5"
+                      className="shrink-0 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md px-1 py-0.5"
                       title="Klopt zo — markeer deze indeling als bevestigd (wordt voortaan 🟢)"
                     >
                       ✓ Klopt zo

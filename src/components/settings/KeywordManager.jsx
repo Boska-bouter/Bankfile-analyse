@@ -39,9 +39,9 @@ export default function KeywordManager({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder={placeholder}
-          className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
-        <button onClick={submit} className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-white ${addButtonClass}`}>
+        <button onClick={submit} className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-white ${addButtonClass}`}>
           <Plus className="h-4 w-4" /> Toevoegen
         </button>
       </div>
@@ -60,7 +60,7 @@ export default function KeywordManager({
             )}
           </div>
           {showEntries && (
-            <div className={`${isExpanded ? "max-h-[32rem]" : "max-h-64"} overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md`}>
+            <div className={`${isExpanded ? "max-h-[32rem]" : "max-h-64"} overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg`}>
               {entries.map((item) => (
                 <div key={item.key} className="flex items-center gap-2 p-2.5">
                   <div className="flex-1 min-w-0">
@@ -80,7 +80,7 @@ export default function KeywordManager({
                     <select
                       value={mainCategoryOf(item.category)}
                       onChange={(e) => onReclassify(item, e.target.value)}
-                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      className="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs"
                       title="Naar een andere categorie verplaatsen"
                     >
                       {MAIN_CATEGORY_ORDER.map((c) => (
@@ -92,7 +92,7 @@ export default function KeywordManager({
                     <select
                       value={item.gemengd ? "gemengd" : item.category === "Zakelijke inkomsten 0%" ? "0" : item.category === "Zakelijke inkomsten 9%" ? "9" : item.category === "Zakelijke inkomsten 21%" ? "21" : "algemeen"}
                       onChange={(e) => onSetIncomeRate(item, e.target.value)}
-                      className={`shrink-0 rounded-md border px-2 py-1 text-xs ${item.gemengd ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300"}`}
+                      className={`shrink-0 rounded-lg border px-2 py-1 text-xs ${item.gemengd ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300"}`}
                       title={item.gemengd ? "Deze klant heeft nu meerdere tarieven tegelijk (per losse transactie in te zien/aan te passen bij het hoofdoverzicht) — kies hier een tarief om alles naar één tarief te zetten" : "BTW-tarief op de facturen aan deze klant, voor wie zowel laag- als hoogbelast (of vrijgesteld) factureert"}
                     >
                       {item.gemengd && <option value="gemengd" disabled>⚠ Gemengd — kies om samen te voegen</option>}
@@ -106,7 +106,7 @@ export default function KeywordManager({
                     <select
                       value={item.btwVerlegd == null ? "default" : item.btwVerlegd ? "ja" : "nee"}
                       onChange={(e) => onSetBtwVerlegd(item, e.target.value === "default" ? null : e.target.value === "ja")}
-                      className="shrink-0 rounded-md border border-slate-300 px-2 py-1 text-xs"
+                      className="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs"
                       title={`BTW-verlegd voor deze klant (standaard: ${btwVerlegdDefault ? "ja" : "nee"})`}
                     >
                       <option value="default">BTW-verlegd: standaard ({btwVerlegdDefault ? "ja" : "nee"})</option>

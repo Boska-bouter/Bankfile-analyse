@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 export default function ZakelijkTotaalModal({ year, winst, priveUitgegeven, totaal, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
           <p className="text-sm font-semibold text-slate-800">Zakelijk totaal (netto) — {year}</p>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
@@ -30,7 +30,7 @@ export default function ZakelijkTotaalModal({ year, winst, priveUitgegeven, tota
           </p>
         </div>
         <div className="px-4 py-3 border-t border-slate-200 flex justify-end">
-          <button onClick={onClose} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+          <button onClick={onClose} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
             Sluiten
           </button>
         </div>

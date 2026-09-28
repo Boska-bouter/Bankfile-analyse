@@ -13,7 +13,7 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
   if (!signalering) return null;
 
   return (
-    <section className="rounded-lg border border-rose-200 bg-rose-50">
+    <section className="rounded-xl border border-rose-200 bg-rose-50">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold text-rose-900">
         <span className="flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
@@ -50,7 +50,7 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
               </li>
             </ol>
           </div>
-          <div className="rounded-md border border-rose-200 bg-white/60 px-3 py-2">
+          <div className="rounded-lg border border-rose-200 bg-white/60 px-3 py-2">
             <p className="font-semibold mb-1">Belangrijke vangnet-regel: meld betalingsonmacht op tijd</p>
             <p>
               Kan de BV een BTW- of loonheffing-afdracht niet betalen? Meld dit binnen 2 weken na de vervaldatum

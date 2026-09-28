@@ -13,7 +13,7 @@ export default function FixedCategoriesPanel({ fixedCategories, setFixedCategori
   const [openGroup, setOpenGroup] = useState(null);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Vaste/variabele kosten</span>
         <span className="text-xs font-normal text-slate-400">({fixedCategories.length} vast)</span>
@@ -34,9 +34,9 @@ export default function FixedCategoriesPanel({ fixedCategories, setFixedCategori
               const isOpen = openGroup === main;
               const vastCount = subtypes.filter((c) => fixedCategories.includes(c)).length;
               return (
-                <div key={main} className="rounded-md border border-slate-100">
+                <div key={main} className="rounded-lg border border-slate-100">
                   <button onClick={() => setOpenGroup((v) => (v === main ? null : main))} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs">
-                    <span className={`rounded px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
+                    <span className={`rounded-md px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                       {main} <span className="opacity-60">({vastCount}/{subtypes.length} vast)</span>
                     </span>
                     {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}

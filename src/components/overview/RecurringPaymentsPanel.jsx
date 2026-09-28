@@ -49,7 +49,7 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
   const pageItems = useMemo(() => recurringPayments.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE), [recurringPayments, page]);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           Terugkerende betalingen {activeYear}
@@ -66,7 +66,7 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
             <input
               type="number" min="2" value={minCount}
               onChange={(e) => setMinCount(Math.max(2, parseInt(e.target.value, 10) || 2))}
-              className="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs"
+              className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-xs"
             />
             <span className="text-xs text-slate-500">keer voorkomen</span>
           </div>
@@ -93,10 +93,10 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
                     <tr key={`${r.name}-${r.type}-${i}`}>
                       <td className="py-1.5 pr-4 max-w-[12rem] truncate" title={r.name}>{r.name}</td>
                       <td className="py-1.5 px-3">
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${r.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{r.type}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium ${r.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{r.type}</span>
                       </td>
                       <td className="py-1.5 px-3">
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[r.category] || "bg-slate-200 text-slate-700"}`}>{r.category}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[r.category] || "bg-slate-200 text-slate-700"}`}>{r.category}</span>
                       </td>
                       <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">
                         {r.betaaldCount > 0 && <div>Betaald: {eur(Math.abs(r.totaalBetaald))} <span className="text-slate-400">(gem. {eur(Math.abs(r.gemBetaald))})</span></div>}
@@ -116,9 +116,9 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
               </table>
               {recurringPayments.length > PAGE_SIZE && (
                 <div className="flex items-center justify-center gap-3 mt-3">
-                  <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40">← Vorige 15</button>
+                  <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40">← Vorige 15</button>
                   <span className="text-xs text-slate-400 font-mono whitespace-nowrap">{page * PAGE_SIZE + 1}–{page * PAGE_SIZE + pageItems.length} van {recurringPayments.length}</span>
-                  <button onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= recurringPayments.length} className="rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40">Volgende 15 →</button>
+                  <button onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= recurringPayments.length} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40">Volgende 15 →</button>
                 </div>
               )}
             </>

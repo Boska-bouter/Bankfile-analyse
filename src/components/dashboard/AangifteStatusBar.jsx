@@ -41,7 +41,7 @@ export default function AangifteStatusBar({
 }) {
   if (!activeYear) return null;
   return (
-    <section className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
+    <section className="rounded-xl border-2 border-slate-900 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-900 text-stone-50 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold flex items-center gap-2">
@@ -55,7 +55,7 @@ export default function AangifteStatusBar({
         </div>
         <button
           onClick={onOpenAangiftevoorstel}
-          className="shrink-0 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-100"
+          className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-100"
         >
           Indicatieve aangifteberekening bekijken
         </button>
@@ -194,7 +194,7 @@ export default function AangifteStatusBar({
                     {onRequestChange && (
                       <button
                         onClick={() => onRequestChange(tx, { category: tx.category, type: "Zakelijk" })}
-                        className="shrink-0 rounded border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
+                        className="shrink-0 rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
                         title="Klopt deze transactie eigenlijk toch bij Zakelijk? Zet 'm dan direct op type Zakelijk (categorie blijft gelijk)."
                       >
                         Zet op Zakelijk
@@ -253,7 +253,7 @@ export default function AangifteStatusBar({
                 {onConfirmCorrect && (
                   <button
                     onClick={() => checklistData.inkomstenZonderOmschrijving.forEach((tx) => onConfirmCorrect(tx))}
-                    className="rounded border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:bg-emerald-50"
+                    className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:bg-emerald-50"
                   >
                     Ja, allemaal zakelijk
                   </button>
@@ -266,7 +266,7 @@ export default function AangifteStatusBar({
                     {onRequestChange && (
                       <button
                         onClick={() => onRequestChange(tx, { category: "Overig", type: tx.type })}
-                        className="shrink-0 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100"
+                        className="shrink-0 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100"
                         title="Toch niet zakelijk? Zet 'm op Overig, voor verdere beoordeling."
                       >
                         Toch niet zakelijk

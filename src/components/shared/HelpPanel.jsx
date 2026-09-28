@@ -44,7 +44,7 @@ export default function HelpPanel({ onClose, openChapter }) {
   const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze tool", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
 
   return (
-    <section className="rounded-lg border-2 border-slate-200 bg-white overflow-hidden">
+    <section className="rounded-xl border-2 border-slate-200 bg-white overflow-hidden">
       <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-800">Help en uitleg</h2>
         <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0">

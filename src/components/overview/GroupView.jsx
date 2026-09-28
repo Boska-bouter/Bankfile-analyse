@@ -36,7 +36,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   const [expandedMain, setExpandedMain] = useState(null);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
@@ -64,7 +64,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   <td className="py-1">
                     <span className="inline-flex items-center gap-1">
                       {canExpand && (isOpen ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" /> : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />)}
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
@@ -75,7 +75,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   subtypesPresent.map((s) => (
                     <tr key={`${c}__${s}`} className="border-b border-slate-50 bg-slate-50/60">
                       <td className="py-1 pl-6">
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
                       <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s])}</td>
                       <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(btwByCategory[s] || 0)}</td>
@@ -220,7 +220,7 @@ export function DetailTable({
   const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-xl border border-slate-200 bg-white">
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
           <div className="flex items-center gap-2">
@@ -242,24 +242,24 @@ export function DetailTable({
               <button
                 ref={amountFilterBtnRef}
                 onClick={() => openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter)}
-                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
+                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   amountMin || amountMax || amountSign !== "beide" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
               >
                 Bedrag{(amountMin || amountMax || amountSign !== "beide") ? " ✓" : ""}
               </button>
               {showAmountFilter && (
-                <div className={`absolute ${amountFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-60 max-w-[calc(100vw-2rem)] rounded-md border border-slate-200 bg-white p-3 shadow-lg`}>
+                <div className={`absolute ${amountFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-60 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-lg`}>
                   <p className="text-xs text-slate-500 mb-2">Filter op bedrag</p>
                   <div className="flex gap-1 mb-2">
-                    <button onClick={() => setAmountSign("beide")} className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${amountSign === "beide" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Beide</button>
-                    <button onClick={() => setAmountSign("neg")} className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${amountSign === "neg" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Betaald (–)</button>
-                    <button onClick={() => setAmountSign("pos")} className={`flex-1 rounded-md px-2 py-1 text-xs font-medium ${amountSign === "pos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Ontvangen (+)</button>
+                    <button onClick={() => setAmountSign("beide")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "beide" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Beide</button>
+                    <button onClick={() => setAmountSign("neg")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "neg" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Betaald (–)</button>
+                    <button onClick={() => setAmountSign("pos")} className={`flex-1 rounded-lg px-2 py-1 text-xs font-medium ${amountSign === "pos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}>Ontvangen (+)</button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input type="number" inputMode="decimal" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} placeholder="Min" className="w-full min-w-0 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                    <input type="number" inputMode="decimal" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} placeholder="Min" className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                     <span className="text-slate-400 text-xs">t/m</span>
-                    <input type="number" inputMode="decimal" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} placeholder="Max" className="w-full min-w-0 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                    <input type="number" inputMode="decimal" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} placeholder="Max" className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                   </div>
                   {(amountMin || amountMax || amountSign !== "beide") && (
                     <button onClick={() => { setAmountMin(""); setAmountMax(""); setAmountSign("beide"); }} className="mt-2 text-xs text-slate-400 hover:text-rose-600">
@@ -273,23 +273,23 @@ export function DetailTable({
               <button
                 ref={dateFilterBtnRef}
                 onClick={() => openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter)}
-                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
+                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   dateFrom || dateTo ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
               >
                 Datum{(dateFrom || dateTo) ? " ✓" : ""}
               </button>
               {showDateFilter && (
-                <div className={`absolute ${dateFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-slate-200 bg-white p-3 shadow-lg`}>
+                <div className={`absolute ${dateFilterAlign === "left" ? "left-0" : "right-0"} z-10 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-lg`}>
                   <p className="text-xs text-slate-500 mb-2">Filter op periode</p>
                   <div className="space-y-2">
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Van</label>
-                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                     </div>
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Tot en met</label>
-                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
                     </div>
                   </div>
                   {(dateFrom || dateTo) && (
@@ -302,7 +302,7 @@ export function DetailTable({
             </div>
             <button
               onClick={() => setFilterHeuristic((v) => !v)}
-              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
                 filterHeuristic ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-300 bg-white text-slate-600"
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🟡 Controleren"
@@ -311,7 +311,7 @@ export function DetailTable({
             </button>
             <button
               onClick={() => setFilterFallback((v) => !v)}
-              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
                 filterFallback ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-300 bg-white text-slate-600"
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🔴 Onduidelijk"
@@ -351,7 +351,7 @@ export function DetailTable({
                     <td className="px-1 py-1 text-center">
                       {!t.isMirror && <span
                         onPointerDown={(e) => onRowDragStart(e, t)}
-                        className="inline-flex items-center justify-center cursor-grab text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md"
+                        className="inline-flex items-center justify-center cursor-grab text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
                         style={{ fontSize: "1.1rem", lineHeight: 1, width: "2.25rem", height: "2.25rem", touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
                         title="Sleep naar de andere tabel om Zakelijk/Prive te wijzigen"
                       >
@@ -372,7 +372,7 @@ export function DetailTable({
                         {onConfirmCorrect && (
                           <button
                             onClick={() => onConfirmCorrect(t)}
-                            className="inline-flex items-center gap-0.5 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
+                            className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
                             title="Categorie en subtype kloppen — bevestigen (wordt voortaan 🟢)"
                           >
                             ✓ OK
@@ -386,7 +386,7 @@ export function DetailTable({
                     <select
                       value={mainCategoryOf(t.category)}
                       onChange={(e) => applyChange(t, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || t.category, type: t.type })}
-                      className={`block rounded px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+                      className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
                     >
                       {MAIN_CATEGORY_ORDER.map((c) => (
                         <option key={c} value={c}>{c}</option>
@@ -395,7 +395,7 @@ export function DetailTable({
                     <select
                       value={t.category}
                       onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
-                      className="block mt-1 rounded px-1 py-0 text-[10px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+                      className="block mt-1 rounded-md px-1 py-0 text-[10px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
                       title="Subtype (bepaalt BTW-percentage en vast/variabel)"
                     >
                       {subtypesForMainCategory(mainCategoryOf(t.category)).map((s) => (
@@ -406,7 +406,7 @@ export function DetailTable({
                   <td className="px-4 py-2">
                     {t.isMirror ? (
                       <span
-                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
+                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
                         title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
                           `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
                           "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Prive. " +
@@ -419,7 +419,7 @@ export function DetailTable({
                     <select
                       value={t.type}
                       onChange={(e) => applyChange(t, { category: t.category, type: e.target.value })}
-                      className={`rounded px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                      className={`rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                     >
                       <option value="Prive">Prive</option>
                       <option value="Zakelijk">Zakelijk</option>
@@ -454,12 +454,12 @@ export function DetailTable({
                               if (e.key === "Escape") setEditingNoteTxId(null);
                             }}
                             placeholder="Toelichting, bijv. naheffing Q2 2025 LB"
-                            className="flex-1 min-w-0 rounded border border-slate-300 px-1.5 py-0.5 text-xs"
+                            className="flex-1 min-w-0 rounded-md border border-slate-300 px-1.5 py-0.5 text-xs"
                           />
-                          <button onClick={() => saveNote(t)} className="shrink-0 rounded border border-emerald-300 bg-emerald-50 p-1 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
+                          <button onClick={() => saveNote(t)} className="shrink-0 rounded-md border border-emerald-300 bg-emerald-50 p-1 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
                             <Check className="h-3 w-3" />
                           </button>
-                          <button onClick={() => setEditingNoteTxId(null)} className="shrink-0 rounded border border-slate-300 p-1 text-slate-500 hover:bg-slate-50" title="Annuleren">
+                          <button onClick={() => setEditingNoteTxId(null)} className="shrink-0 rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50" title="Annuleren">
                             <X className="h-3 w-3" />
                           </button>
                         </div>

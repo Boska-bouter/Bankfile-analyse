@@ -24,7 +24,7 @@ export default function LeaseInterestPanel({
   }).length;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Lease (operationeel/financieel)</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
@@ -44,14 +44,14 @@ export default function LeaseInterestPanel({
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
           {onUndoMerge && leaseMerges?.length > 0 && (
-            <div className="rounded-md bg-slate-50 border border-slate-200 p-3 mb-3 text-xs text-slate-600 space-y-1.5">
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 mb-3 text-xs text-slate-600 space-y-1.5">
               <p className="font-semibold text-slate-700">Samengevoegde leases</p>
               {leaseMerges.map((m) => (
                 <div key={m.sourceKey} className="flex items-center justify-between gap-2 flex-wrap">
                   <span>"{m.sourceName}" is samengevoegd met "{m.targetName}"</span>
                   <button
                     onClick={() => onUndoMerge(m.sourceKey)}
-                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
                   >
                     Loskoppelen
                   </button>
@@ -64,7 +64,7 @@ export default function LeaseInterestPanel({
             </div>
           )}
           {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
-            <div key={group.map((l) => l.key).join("+")} className="rounded-md bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
+            <div key={group.map((l) => l.key).join("+")} className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
               <p>
                 <strong>Horen deze bij elkaar?</strong> {group.map((l) => `"${l.name}"`).join(" en ")} lijken op dezelfde
                 tegenpartij te wijzen — mogelijk hetzelfde leasecontract, bijvoorbeeld met een deel van de betalingen
@@ -75,7 +75,7 @@ export default function LeaseInterestPanel({
                   <button
                     key={l.key}
                     onClick={() => onMergeInto(l.key, group[0].key)}
-                    className="rounded-md border border-blue-300 bg-white px-2 py-1 text-[11px] font-medium text-blue-800 hover:bg-blue-100"
+                    className="rounded-lg border border-blue-300 bg-white px-2 py-1 text-[11px] font-medium text-blue-800 hover:bg-blue-100"
                   >
                     Ja, "{l.name}" samenvoegen met "{group[0].name}"
                   </button>
@@ -96,7 +96,7 @@ export default function LeaseInterestPanel({
               const segments = isFinancieel ? getLeaseSegments(details) : [];
               const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
               return (
-                <div key={lease.key} className="rounded-md border border-slate-100 p-3">
+                <div key={lease.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{lease.name}</span>
                     {isBeeindigd && (
@@ -108,10 +108,10 @@ export default function LeaseInterestPanel({
                     <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                           Operationeel
                         </button>
-                        <button onClick={() => onConfirmType(lease, "financieel")} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onConfirmType(lease, "financieel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                           Financieel
                         </button>
                       </div>
@@ -120,29 +120,29 @@ export default function LeaseInterestPanel({
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => onConfirmType(lease, "operationeel")}
-                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${!isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                           >
                             Operationeel
                           </button>
                           <button
                             onClick={() => onConfirmType(lease, "financieel")}
-                            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${isFinancieel ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                           >
                             Financieel
                           </button>
                         </div>
                         {isFinancieel && (
                           isOnbekend ? (
-                            <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                            <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                               Toch invullen
                             </button>
                           ) : (
                             <>
-                              <button onClick={() => onOpenModal(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              <button onClick={() => onOpenModal(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                                 {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
                               </button>
                               {!isCompleteFinancialLeaseDetails(details) && (
-                                <button onClick={() => onMarkUnknown(lease.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                                <button onClick={() => onMarkUnknown(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                                   Gegevens onbekend
                                 </button>
                               )}
@@ -161,7 +161,7 @@ export default function LeaseInterestPanel({
                           if (e.target.value) onMergeInto(lease.key, e.target.value);
                           e.target.value = "";
                         }}
-                        className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
                       >
                         <option value="">Samenvoegen met…</option>
                         {leaseSummary.filter((l) => l.key !== lease.key).map((l) => (
@@ -175,11 +175,11 @@ export default function LeaseInterestPanel({
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>
                     ) : amortization ? (
                       <>
-                        <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                        <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
                           Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
                         </p>
                         {amortization.renteNietBerekenbaar && (
-                          <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                          <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
                             ⚠ Voor (een deel van) dit contract kon het rentepercentage niet berekend worden — de ingevulde bedragen sluiten niet op elkaar aan. Het totaal hierboven is hierdoor onvolledig. Controleer de invoer bij "Gegevens bewerken".
                           </p>
                         )}

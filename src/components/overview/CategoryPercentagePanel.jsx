@@ -27,7 +27,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
   };
 
   return (
-    <div className="flex items-center gap-3 text-sm rounded-md border border-slate-100 p-2.5">
+    <div className="flex items-center gap-3 text-sm rounded-lg border border-slate-100 p-2.5">
       <span className="flex-1 min-w-[10rem] truncate font-medium">{categorie}</span>
       <span className="text-xs text-slate-400 font-mono">totaal {eur(totaal)}</span>
       <input
@@ -42,7 +42,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
-        className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+        className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm"
       />
       <span className="text-xs text-slate-400">% zakelijk</span>
     </div>
@@ -70,7 +70,7 @@ export default function CategoryPercentagePanel({
   const aangepast = categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Percentage zakelijk per categorie</span>
         {aangepast > 0 && <span className="text-xs font-normal text-slate-400">({aangepast} aangepast)</span>}
@@ -90,7 +90,7 @@ export default function CategoryPercentagePanel({
             {onOpenHelp && <HelpHint chapter="categorie-percentage-zakelijk" onOpen={onOpenHelp} />}
           </p>
           {autoOpDeZaakDitJaar && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mb-3">
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
               Je hebt voor {activeYear} "Auto op de zaak" aangegeven — Brandstof en Parkeren staan daarom
               niet (meer) in de lijst hieronder. Het privégebruik daarvan loopt voor dit jaar via de
               bijtelling/onttrekkings-correctie bij de leaseauto-gegevens, niet via dit percentage.

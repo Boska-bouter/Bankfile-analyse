@@ -38,7 +38,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
     ) || continuity.some((c) => !c.ok && !isMinorDiff(c.diff));
 
   return (
-    <section className={`rounded-lg border ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+    <section className={`rounded-xl border ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-3 text-left">
         {anyIssue ? <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
         <span className={`text-sm font-semibold ${anyIssue ? "text-amber-900" : "text-emerald-900"}`}>
@@ -55,7 +55,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
           {diagnostics.map((d) => {
             const totalSkipped = d.skippedNoDate + d.skippedBadAmount;
             return (
-              <div key={d.fileName} className="rounded-md bg-white border border-slate-100 p-3">
+              <div key={d.fileName} className="rounded-lg bg-white border border-slate-100 p-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <p className="text-xs font-semibold text-slate-700 flex-1">{d.fileName}</p>
                   {onRemoveFile && (
@@ -123,7 +123,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
             );
           })}
           {continuity.length > 0 && (
-            <div className="rounded-md bg-white border border-slate-100 p-3">
+            <div className="rounded-lg bg-white border border-slate-100 p-3">
               <p className="text-xs font-semibold text-slate-700 mb-1.5">Aansluiting tussen bestanden</p>
               <ul className="space-y-1 text-xs text-slate-600">
                 {continuity.map((c) => {

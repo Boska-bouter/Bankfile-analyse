@@ -29,7 +29,7 @@ export default function TodoPanel({ items }) {
   };
 
   return (
-    <section className="rounded-lg border-2 border-slate-900 bg-white overflow-hidden">
+    <section className="rounded-xl border-2 border-slate-900 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-900 text-stone-50">
         <p className="text-sm font-semibold">Werk te doen ({items.length})</p>
       </div>
@@ -48,12 +48,12 @@ export default function TodoPanel({ items }) {
                     if (e.key === "Escape") setEditingKey(null);
                   }}
                   placeholder="Naam (leeg = geen naam bekend)"
-                  className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-sm"
                 />
-                <button onClick={() => saveEdit(item)} className="rounded-md border border-emerald-300 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
+                <button onClick={() => saveEdit(item)} className="rounded-lg border border-emerald-300 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
                   <Check className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={() => setEditingKey(null)} className="rounded-md border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-50" title="Annuleren">
+                <button onClick={() => setEditingKey(null)} className="rounded-lg border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-50" title="Annuleren">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -69,7 +69,7 @@ export default function TodoPanel({ items }) {
                 </button>
                 <span className="flex items-center gap-1 shrink-0">
                   {item.onRename && (
-                    <button onClick={() => startEdit(item)} className="rounded-md p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100" title="Naam corrigeren">
+                    <button onClick={() => startEdit(item)} className="rounded-lg p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100" title="Naam corrigeren">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -78,7 +78,7 @@ export default function TodoPanel({ items }) {
                       onClick={() => {
                         if (window.confirm("Dit open punt verwijderen? (bijv. omdat de naam per ongeluk verkeerd is ingevuld tijdens de wizard, of niet relevant blijkt)")) item.onRemove();
                       }}
-                      className="rounded-md p-1 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      className="rounded-lg p-1 text-slate-400 hover:text-red-600 hover:bg-red-50"
                       title="Verwijderen"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

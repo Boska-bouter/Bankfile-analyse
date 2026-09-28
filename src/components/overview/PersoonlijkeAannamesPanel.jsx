@@ -60,7 +60,7 @@ export default function PersoonlijkeAannamesPanel({
   const huurBtwTarief = categoryBtwRates?.["Huur (deels zakelijk)"] || 0;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Persoonlijke aannames voor IB — zelfstandigenaftrek, heffingskortingen &amp; KIA</span>
         {onOpenHelp && <HelpHint chapter="persoonlijke-aannames" onOpen={onOpenHelp} />}
@@ -76,7 +76,7 @@ export default function PersoonlijkeAannamesPanel({
             <select
               value={rawStatus == null ? "" : rawStatus}
               onChange={(e) => onSetZelfstandigenaftrekStatus(activeYear, e.target.value || null)}
-              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
             >
               <option value="">
                 {zaLegacyJaDefault ? "Niet aangegeven (rekent voorlopig met \"Ja\")" : "Niet aangegeven (toont voorlopig beide scenario's)"}
@@ -101,7 +101,7 @@ export default function PersoonlijkeAannamesPanel({
             <select
               value={startersaftrekAan ? "ja" : ""}
               onChange={(e) => onSetStartersaftrekStatus(activeYear, e.target.value || null)}
-              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
             >
               <option value="">Nee / niet van toepassing</option>
               <option value="ja">Ja</option>
@@ -113,7 +113,7 @@ export default function PersoonlijkeAannamesPanel({
             </p>
           </div>
 
-          <div className="rounded-md bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
             {scenarios ? (
               <>
                 <p className="font-semibold text-slate-700">Twee scenario's ({activeYear}):</p>
@@ -163,7 +163,7 @@ export default function PersoonlijkeAannamesPanel({
             <select
               value={autoStatus?.[activeYear] || ""}
               onChange={(e) => onSetAutoStatus(activeYear, e.target.value || null)}
-              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
             >
               <option value="">Onbekend/niet aangegeven — huidige percentage-splitsing op Brandstof/Parkeren blijft bruikbaar</option>
               <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
@@ -181,7 +181,7 @@ export default function PersoonlijkeAannamesPanel({
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
                 <button
                   onClick={onOpenAutoActivaModal}
-                  className="mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 >
                   Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""} auto op de zaak instellen →
                 </button>
@@ -194,7 +194,7 @@ export default function PersoonlijkeAannamesPanel({
                 </p>
               )}
             {(autoStatus?.[activeYear] === "prive" || autoStatus?.[activeYear] === "beide") && (
-              <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3">
+              <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
                 <p className="text-xs font-medium text-slate-600 mb-2">
                   Kilometervergoeding privéauto zakelijk gebruik in {activeYear}
                 </p>
@@ -205,7 +205,7 @@ export default function PersoonlijkeAannamesPanel({
                       type="number" min={0} step={1}
                       value={kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers ?? ""}
                       onChange={(e) => onSetKmVergoedingField(activeYear, "zakelijkeKilometers", e.target.value)}
-                      className="w-32 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                      className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>
                   <label className="text-sm">
@@ -215,7 +215,7 @@ export default function PersoonlijkeAannamesPanel({
                       value={kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? ""}
                       placeholder="bijv. 0,23"
                       onChange={(e) => onSetKmVergoedingField(activeYear, "vergoedingPerKm", e.target.value)}
-                      className="w-32 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                      className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>
                   {kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers > 0 && kmVergoedingDetails?.[activeYear]?.vergoedingPerKm > 0 && (
@@ -255,7 +255,7 @@ export default function PersoonlijkeAannamesPanel({
                     const n = Math.max(0, Math.min(100, Number(v)));
                     onSetHuurZakelijkPercentageStatus(activeYear, n);
                   }}
-                  className="w-24 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                  className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                 />
                 <span className="text-sm text-slate-500">%</span>
               </div>
@@ -266,7 +266,7 @@ export default function PersoonlijkeAannamesPanel({
                 hetzelfde als gewone "Huur").
               </p>
 
-              <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3 space-y-1 text-xs">
+              <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-xs">
                 <p><span className="text-slate-500">Totale huur (bruto, incl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurBruto)}</strong></p>
                 <p><span className="text-slate-500">Totale huur (netto, excl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurNetto)}</strong></p>
                 <p><span className="text-slate-500">Percentage zakelijk:</span> <strong>{gedeeldeHuur.percentage}%</strong></p>

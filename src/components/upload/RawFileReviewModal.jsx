@@ -49,7 +49,7 @@ export default function RawFileReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-slate-800">Bekijk &amp; corrigeer — {fileName}</h2>
@@ -78,15 +78,15 @@ export default function RawFileReviewModal({
               <input
                 type="text" inputMode="decimal" value={openingInput} onChange={(e) => setOpeningInput(e.target.value)}
                 placeholder={balanceCheck ? String(balanceCheck.fileOpeningBalance) : "—"}
-                className="w-32 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
               />
-              <button onClick={applyOpeningCorrection} className="rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+              <button onClick={applyOpeningCorrection} className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
                 Toepassen
               </button>
               {openingBalanceCorrection != null && (
                 <button
                   onClick={() => { setOpeningInput(""); onSetOpeningBalanceCorrection(fileName, null); }}
-                  className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-white"
+                  className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-white"
                 >
                   Terugzetten
                 </button>
@@ -142,7 +142,7 @@ export default function RawFileReviewModal({
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Uitgesloten regels tellen nergens meer mee — terugzetten kan hier altijd.</p>
-          <button onClick={onClose} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">Sluiten</button>
+          <button onClick={onClose} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">Sluiten</button>
         </div>
       </div>
     </div>

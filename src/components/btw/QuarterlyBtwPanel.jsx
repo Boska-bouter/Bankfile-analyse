@@ -15,7 +15,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
   if (quarters.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       {/* Een <div role="button"> in plaats van een <button> voor de hele balk, omdat de
           "Waar vind ik dit op het aangifteformulier?"-link daarbinnen zelf ook een button is —
           een button-in-button is ongeldige HTML en laat een klik op de link per ongeluk ook de
@@ -49,7 +49,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             tussen haakjes onder.{" "}
             {onOpenHelp && <HelpHint chapter="btw-aangifte-kwartaal" onOpen={onOpenHelp} />}
           </p>
-          <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5 mb-3">
+          <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 mb-3">
             Vergelijk het saldo per kwartaal gerust met wat er daadwerkelijk is aangegeven en betaald — een verschil
             betekent niet automatisch een fout (een eerdere aangifte kan op andere gegevens gebaseerd zijn); het is
             vooral een signaal om na te gaan waar het vandaan komt. "Aangegeven"/"betaald" hieronder is alleen een

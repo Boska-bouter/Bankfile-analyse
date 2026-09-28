@@ -9,7 +9,7 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
   if (loanSummary.length === 0 && privateLoanSummary.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Rentepercentage per lening</span>
         <span className="text-xs font-normal text-slate-400">({loanSummary.length + privateLoanSummary.length})</span>
@@ -33,21 +33,21 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
               const isOnbekend = !!details?.onbekend;
               const amortization = computeLoanAmortization(loan.transactions, details);
               return (
-                <div key={loan.key} className="rounded-md border border-slate-100 p-3">
+                <div key={loan.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{loan.name}</span>
                     <span className="text-xs text-slate-400 font-mono">{loan.count}x, totaal {eur(loan.total)}</span>
                     {isOnbekend ? (
-                      <button onClick={() => onUnmarkUnknown(loan.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <button onClick={() => onUnmarkUnknown(loan.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                         Toch invullen
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => onOpenModal(loan.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onOpenModal(loan.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                           {details?.leningbedrag && details?.startdatum ? "Gegevens bewerken" : "Gegevens invullen"}
                         </button>
                         {!(details?.leningbedrag && details?.startdatum) && (
-                          <button onClick={() => onMarkUnknown(loan.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                          <button onClick={() => onMarkUnknown(loan.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                             Gegevens onbekend
                           </button>
                         )}
@@ -56,7 +56,7 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
                     {onMarkAsPrive && (
                       <button
                         onClick={() => onMarkAsPrive(loan)}
-                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
                         title="Zet deze transactie(s) op 'Leningen (privé)' — de rente telt dan niet meer mee als aftrekbare bedrijfskosten"
                       >
                         Dit is een privélening
@@ -65,7 +65,7 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
                     {onMarkNotALoan && (
                       <button
                         onClick={() => onMarkNotALoan(loan)}
-                        className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
+                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
                         title="Zet deze transactie(s) op 'Overig' om zelf een andere categorie te kiezen"
                       >
                         Dit is geen lening
@@ -75,7 +75,7 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
                   {isOnbekend ? (
                     <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lening wordt niet gesplitst.</p>
                   ) : amortization ? (
-                    <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                    <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
                       Gesplitst: rente <strong>{eur(amortization.totaalRente)}</strong> (aftrekbaar) · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> (niet aftrekbaar) · nog openstaand <strong>{eur(amortization.saldoNu)}</strong>
                     </p>
                   ) : (
@@ -93,14 +93,14 @@ export default function LoanInterestPanel({ loanSummary, privateLoanSummary = []
               </p>
               <div className="space-y-3">
                 {privateLoanSummary.map((loan) => (
-                  <div key={loan.key} className="rounded-md border border-slate-100 p-3">
+                  <div key={loan.key} className="rounded-lg border border-slate-100 p-3">
                     <div className="flex items-center gap-3 text-sm flex-wrap">
                       <span className="flex-1 min-w-[8rem] truncate font-medium">{loan.name}</span>
                       <span className="text-xs text-slate-400 font-mono">{loan.count}x, totaal {eur(loan.total)}</span>
                       {onMarkAsZakelijk && (
                         <button
                           onClick={() => onMarkAsZakelijk(loan)}
-                          className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
+                          className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
                           title="Zet deze transactie(s) terug op 'Leningen' — de rente telt dan weer mee als aftrekbare bedrijfskosten"
                         >
                           Toch zakelijk (Leningen)

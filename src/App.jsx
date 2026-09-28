@@ -2296,7 +2296,7 @@ export default function App() {
     const fileCount = pending ? pending.parsedFiles.length : 0;
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+        <div className="max-w-md w-full rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">Vorig project gevonden</h1>
           <p className="text-sm text-slate-500 mb-5">
             Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}
@@ -2306,13 +2306,13 @@ export default function App() {
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-slate-700"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-slate-700"
             >
               Gebruik laatste project
             </button>
             <button
               onClick={startEmpty}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
             >
               Leeg beginnen
             </button>
@@ -2389,13 +2389,13 @@ export default function App() {
                 knoptekst zelf kort blijft. */}
             <button
               onClick={() => bankFileInputRef.current?.click()}
-              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-md px-2.5 py-1.5 flex flex-col items-center leading-tight"
+              className="text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg px-3 py-1.5 flex flex-col items-center leading-tight"
               title="Voeg een nieuw bank-bestand toe (CSV, XLS, MT940 of CAMT.053)"
             >
               <span className="flex items-center gap-1">
                 <Upload className="h-3.5 w-3.5" /> Bestand laden
               </span>
-              <span className="text-[10px] font-normal text-slate-400">(CSV/XLS, MT940, CAMT.053)</span>
+              <span className="text-[10px] font-normal text-teal-100">(CSV/XLS, MT940, CAMT.053)</span>
             </button>
             <input
               ref={bankFileInputRef}
@@ -2411,7 +2411,7 @@ export default function App() {
             {parsedFiles.length > 0 && (
               <button
                 onClick={saveProjectFile}
-                className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-md px-2.5 py-1.5 flex items-center gap-1"
+                className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
                 title="Download een projectbestand (.json) met alle transacties en instellingen — dit is het bestand om te bewaren, te delen of op een andere computer verder te werken. Anders dan de automatische opslag hierboven blijft dit bestand ook bewaard als je browsergegevens wist."
               >
                 <Download className="h-3.5 w-3.5" /> Project opslaan
@@ -2419,7 +2419,7 @@ export default function App() {
             )}
             <button
               onClick={() => projectFileInputRef.current.click()}
-              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-md px-2.5 py-1.5 flex items-center gap-1"
+              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
               title="Laad een eerder opgeslagen projectbestand (.json)"
             >
               <Upload className="h-3.5 w-3.5" /> Project laden
@@ -2437,14 +2437,14 @@ export default function App() {
             {parsedFiles.length > 0 && (
               <button
                 onClick={clearAllData}
-                className="text-xs font-medium text-rose-700 bg-white hover:bg-rose-50 rounded-md px-2.5 py-1.5 flex items-center gap-1"
+                className="text-xs font-medium text-rose-700 bg-white hover:bg-rose-50 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Wis alles
               </button>
             )}
             <button
               onClick={() => setShowHelp((v) => !v)}
-              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-md px-2.5 py-1.5 flex items-center gap-1"
+              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
             >
               Help en uitleg
             </button>
@@ -2459,7 +2459,7 @@ export default function App() {
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
       {lastActionSnapshot && (
-        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-lg border border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
+        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-xl border border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
           <div className="flex items-start justify-between gap-1">
             <p className="text-[11px] text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>
@@ -2468,7 +2468,7 @@ export default function App() {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <button onClick={undoLastAction} className="rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+          <button onClick={undoLastAction} className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
             Ongedaan maken
           </button>
         </div>
@@ -2547,7 +2547,7 @@ export default function App() {
         )}
 
         {parsedFiles.length === 0 && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <p className="text-sm text-emerald-900">
               <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
@@ -2557,48 +2557,9 @@ export default function App() {
         )}
 
         {error && (
-          <section className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
+          <section className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
             <p className="text-sm text-rose-900 whitespace-pre-line">{error}</p>
-          </section>
-        )}
-
-        {parsedFiles.length > 0 && (
-          <section className="flex flex-wrap gap-2" style={sectionTabStyle("overzicht")}>
-            {parsedFiles.map((f) => {
-              const balanceCheck = checkBalanceConsistency(allTransactions.filter((t) => t.source === f.fileName));
-              return (
-                <span key={f.fileName} className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1.5 text-xs">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-slate-400" />
-                  {f.fileName} <span className="text-slate-400">({f.rows.length} regels)</span>
-                  {balanceCheck &&
-                    (balanceCheck.ok ? (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700">
-                        <Check className="h-2.5 w-2.5" /> saldo klopt
-                      </span>
-                    ) : Math.abs(balanceCheck.diff) < CONTINUITY_GAP_THRESHOLD ? (
-                      // v202: een verschil kleiner dan €100 wordt elders in de tool (jaaroverzicht,
-                      // aangifteberekening) al niet als een echt probleem behandeld — puur afronding of
-                      // een periodegrens die net niet exact aansluit. Dit chipje volgt nu dezelfde regel.
-                      <button
-                        onClick={() => setReviewFileModal(f.fileName)}
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                        title="Klein verschil, waarschijnlijk afronding — klik om te bekijken"
-                      >
-                        <Check className="h-2.5 w-2.5" /> saldo klopt (verschil {eur(balanceCheck.diff)})
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setReviewFileModal(f.fileName)}
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 hover:bg-amber-200"
-                        title="Klik om de losse transacties te bekijken en zo nodig uit te sluiten"
-                      >
-                        <AlertCircle className="h-2.5 w-2.5" /> saldo klopt niet ({eur(balanceCheck.diff)})
-                      </button>
-                    ))}
-                </span>
-              );
-            })}
           </section>
         )}
 
@@ -2615,7 +2576,9 @@ export default function App() {
           />
         )}
 
-        <div style={sectionTabStyle("overzicht")}>
+        {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
+            controlestappen op het Controleren-tabblad. */}
+        <div style={sectionTabStyle("controleren")}>
           <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
         </div>
 
@@ -2638,7 +2601,7 @@ export default function App() {
                   <button
                     key={year}
                     onClick={() => setActiveYear(year)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium border ${
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium border ${
                       year === activeYear ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                     }`}
                   >
@@ -2652,13 +2615,13 @@ export default function App() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
               >
                 <Download className="h-3.5 w-3.5" /> Excel exporteren
               </button>
               <button
                 onClick={() => printReport(groups)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
                 title="Opent direct het printvenster van je browser — kies daar een printer, of 'Opslaan als PDF'"
               >
                 <Printer className="h-3.5 w-3.5" /> Print
@@ -2668,7 +2631,7 @@ export default function App() {
                   setShowAangifteMeerdereJaren(false);
                   setShowAangifteYearPicker((v) => !v);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
                 title="Bekijk de indicatieve aangifteberekening"
               >
                 <Download className="h-3.5 w-3.5" /> Indicatieve aangifteberekening bekijken
@@ -2682,7 +2645,7 @@ export default function App() {
                   die velden voor de "andere" rechtsvorm nooit ingevuld zijn. */}
               <button
                 onClick={() => setManualWizardOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
                 title="Rechtsvorm, KOR, BTW-verlegd en andere basisvragen wijzigen"
               >
                 <Settings className="h-3.5 w-3.5" /> Basisvragen bewerken
@@ -2855,7 +2818,7 @@ export default function App() {
 
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
-          <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
+          <section ref={duplicatesSectionRef} className="rounded-xl border border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
             <div className="px-4 py-3 flex items-start gap-3">
               <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -2886,7 +2849,7 @@ export default function App() {
                   const heeftSaldos = saldos.every((s) => s != null);
                   const alleGelijk = heeftSaldos && saldos.every((s) => s === saldos[0]);
                   return (
-                    <div key={group[0].fingerprint} className="rounded-md bg-white border border-amber-200 px-3 py-2 text-xs">
+                    <div key={group[0].fingerprint} className="rounded-lg bg-white border border-amber-200 px-3 py-2 text-xs">
                       <p className="text-slate-700">
                         {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
                         <span className="text-slate-400"> — {group.length}x</span>
@@ -2926,13 +2889,13 @@ export default function App() {
             style={sectionTabStyle("instellingen")}
           >
             {!expandedBusinessExpenseList && (
-              <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <section className="rounded-xl border border-slate-200 bg-white p-5">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
                 </p>
                 {(incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd && (
-                  <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                  <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
                     <p>
                       Je gaf in de wizard aan dat je omzet onder meerdere BTW-tarieven valt ({incomeBtwTarieven.map((t) => `${t}%`).join(", ")}).
                       Ken hieronder per klant het juiste tarief toe (kolom "BTW-tarief") — klanten die je nog niet apart hebt ingesteld
@@ -2940,7 +2903,7 @@ export default function App() {
                     </p>
                     <button
                       onClick={() => setMeerdereTarievenBevestigd(true)}
-                      className="mt-2 rounded border border-amber-400 bg-white px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
+                      className="mt-2 rounded-md border border-amber-400 bg-white px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
                     >
                       Nagelopen, verberg deze melding
                     </button>
@@ -2965,7 +2928,7 @@ export default function App() {
               </section>
             )}
             {!expandedBusinessIncomeList && (
-              <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <section className="rounded-xl border border-slate-200 bg-white p-5">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
@@ -3005,7 +2968,7 @@ export default function App() {
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
             {personSummary.length > 0 && (
-              <section ref={personReviewSectionRef} className="rounded-lg border border-fuchsia-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={personReviewSectionRef} className="rounded-xl border border-fuchsia-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowPersonReview((v) => !v)}
                   className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
@@ -3037,7 +3000,7 @@ export default function App() {
             )}
 
             {overigSummary.length > 0 && (
-              <section ref={overigReviewSectionRef} className="rounded-lg border border-amber-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={overigReviewSectionRef} className="rounded-xl border border-amber-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowOverigReview((v) => !v)}
                   className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
@@ -3074,7 +3037,7 @@ export default function App() {
             )}
 
             {periodeMismatches.length > 0 && (
-              <section ref={periodeReviewSectionRef} className="rounded-lg border border-sky-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
+              <section ref={periodeReviewSectionRef} className="rounded-xl border border-sky-200 bg-white overflow-hidden" style={sectionTabStyle("controleren")}>
                 <div className="px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -3179,7 +3142,7 @@ export default function App() {
                     className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2"
                     onClick={() => setShowAangifteYearPicker(false)}
                   >
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
                       {!showAangifteMeerdereJaren ? (
                         <>
                           <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
@@ -3204,7 +3167,7 @@ export default function App() {
                           <div className="flex gap-2 flex-wrap pt-1">
                             <button
                               onClick={() => exportAangiftevoorstel([activeYear])}
-                              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
                             >
                               Berekening bekijken
                             </button>
@@ -3238,10 +3201,10 @@ export default function App() {
                             ))}
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => exportAangiftevoorstel()} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                            <button onClick={() => exportAangiftevoorstel()} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
                               Berekening tonen
                             </button>
-                            <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                            <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                               Terug
                             </button>
                           </div>
@@ -3259,6 +3222,48 @@ export default function App() {
                 </div>
 
                         {parsedFiles.length > 0 && (
+          <section className="rounded-xl border border-slate-200 bg-white p-4" style={sectionTabStyle("instellingen")}>
+            <h3 className="text-sm font-semibold text-slate-500 mb-3">Instellingen / Geladen files</h3>
+            <div className="flex flex-wrap gap-2">
+              {parsedFiles.map((f) => {
+                const balanceCheck = checkBalanceConsistency(allTransactions.filter((t) => t.source === f.fileName));
+                return (
+                  <span key={f.fileName} className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1.5 text-xs">
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-slate-400" />
+                    {f.fileName} <span className="text-slate-400">({f.rows.length} regels)</span>
+                    {balanceCheck &&
+                      (balanceCheck.ok ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700">
+                          <Check className="h-2.5 w-2.5" /> saldo klopt
+                        </span>
+                      ) : Math.abs(balanceCheck.diff) < CONTINUITY_GAP_THRESHOLD ? (
+                        // v202: een verschil kleiner dan €100 wordt elders in de tool (jaaroverzicht,
+                        // aangifteberekening) al niet als een echt probleem behandeld — puur afronding of
+                        // een periodegrens die net niet exact aansluit. Dit chipje volgt nu dezelfde regel.
+                        <button
+                          onClick={() => setReviewFileModal(f.fileName)}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                          title="Klein verschil, waarschijnlijk afronding — klik om te bekijken"
+                        >
+                          <Check className="h-2.5 w-2.5" /> saldo klopt (verschil {eur(balanceCheck.diff)})
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setReviewFileModal(f.fileName)}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          title="Klik om de losse transacties te bekijken en zo nodig uit te sluiten"
+                        >
+                          <AlertCircle className="h-2.5 w-2.5" /> saldo klopt niet ({eur(balanceCheck.diff)})
+                        </button>
+                      ))}
+                  </span>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {parsedFiles.length > 0 && (
           <div ref={btwSettingsSectionRef} style={sectionTabStyle("instellingen")}>
             <BtwRatesPanel
               categoryBtwRates={categoryBtwRates}
@@ -3323,7 +3328,7 @@ export default function App() {
                   const zijdeOntbreekt = priGroupForYear.items.length === 0 ? "Prive" : zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
                   if (zijdeOntbreekt) {
                     return (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
                         <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
                         <p className="text-sm text-slate-600">
                           <strong>Controle overboeking zakelijk ↔ privé</strong>: voor {activeYear} is geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
@@ -3336,7 +3341,7 @@ export default function App() {
                   }
                   const ok = Math.abs(diff) < 0.01;
                   return (
-                    <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
+                    <div className={`rounded-xl border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
                       {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
                       <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
                         <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}
@@ -3357,7 +3362,7 @@ export default function App() {
                   {(!expandedTable || expandedTable === "Zakelijk") && (
                     <div
                       data-dropzone="Zakelijk"
-                      className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
+                      className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
                     >
                       <DetailTable
                         group={zakGroupForYear}
@@ -3378,7 +3383,7 @@ export default function App() {
                   {(!expandedTable || expandedTable === "Prive") && (
                     <div
                       data-dropzone="Prive"
-                      className={`rounded-lg transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
+                      className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
                     >
                       <DetailTable
                         group={priGroupForYear}
@@ -3403,21 +3408,21 @@ export default function App() {
 
         {aangiftevoorstelPreview && (
           <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={() => setAangiftevoorstelPreview(null)}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
                 <p className="text-sm font-semibold">Indicatieve aangifteberekening {selectedAangifteYears.join(", ")}</p>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
                     <Download className="h-4 w-4" /> Downloaden
                   </button>
                   <button
                     onClick={printAangiftevoorstelPreview}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
                     title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
                   >
                     <Printer className="h-4 w-4" /> Printen
                   </button>
-                  <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                  <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                     Sluiten
                   </button>
                 </div>
@@ -3430,7 +3435,7 @@ export default function App() {
 
       {dragState && (
         <div
-          className={`fixed z-50 pointer-events-none rounded-md border-2 shadow-lg px-3 py-2 text-xs font-medium bg-white ${
+          className={`fixed z-50 pointer-events-none rounded-lg border-2 shadow-lg px-3 py-2 text-xs font-medium bg-white ${
             dragState.overZone && dragState.overZone !== dragState.tx.type
               ? dragState.overZone === "Zakelijk" ? "border-emerald-500 text-emerald-800" : "border-slate-500 text-slate-800"
               : "border-slate-300 text-slate-500"

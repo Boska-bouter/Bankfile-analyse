@@ -36,7 +36,7 @@ export default function MultiYearOverview({
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           {years.length > 1 ? `Meerjarenoverzicht (${years.length} jaar)` : "Jaaroverzicht — is dit rendabel?"}
@@ -46,7 +46,7 @@ export default function MultiYearOverview({
       </button>
       {businessAdvies && (
         <div
-          className={`mx-4 mb-3 rounded-md border px-3 py-2 text-xs ${
+          className={`mx-4 mb-3 rounded-lg border px-3 py-2 text-xs ${
             businessAdvies.niveau === "negatief" ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
           }`}
         >

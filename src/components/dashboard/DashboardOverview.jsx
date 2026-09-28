@@ -34,7 +34,7 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
               type="button"
               onClick={card.onClick}
               disabled={!clickable}
-              className={`text-left rounded-lg border p-3 transition-colors ${TONE_CARD[tone]} ${
+              className={`text-left rounded-xl border p-3 transition-colors ${TONE_CARD[tone]} ${
                 clickable ? "cursor-pointer" : "cursor-default opacity-90"
               }`}
               title={card.hint}

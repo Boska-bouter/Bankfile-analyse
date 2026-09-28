@@ -340,7 +340,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 p-4 space-y-5">
+    <div className="rounded-xl border border-slate-200 p-4 space-y-5">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-800">{title}</p>
         {canRemove && (
@@ -351,7 +351,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       </div>
 
       {validatieStatus && (
-        <div className={`text-xs font-medium rounded-md border px-2.5 py-1.5 ${VALIDATIE_LABEL[validatieStatus].klasse}`}>
+        <div className={`text-xs font-medium rounded-lg border px-2.5 py-1.5 ${VALIDATIE_LABEL[validatieStatus].klasse}`}>
           {VALIDATIE_LABEL[validatieStatus].tekst}
           {validatieStatus === "rood" && (
             <p className="mt-1 font-normal">
@@ -369,7 +369,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           {FIELDS_AANKOOP.map(([field, label]) => (
             <label key={field} className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
-              <input type="number" min="0" step="0.01" value={form[field]} onChange={set(field)} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form[field]} onChange={set(field)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           ))}
         </div>
@@ -401,7 +401,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           {FIELDS_LEASE.map(([field, label]) => (
             <label key={field} className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
-              <input type="number" min="0" step="0.01" value={form[field]} onChange={set(field)} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+              <input type="number" min="0" step="0.01" value={form[field]} onChange={set(field)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           ))}
           <label className="text-sm">
@@ -420,12 +420,12 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 suggestie.setMonth(suggestie.getMonth() + 1, 1);
                 onChange({ ...form, startdatum: nieuweStartdatum, datumEersteTermijn: suggestie.toISOString().slice(0, 10) });
               }}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
             />
           </label>
           <label className="text-sm">
             <span className="block text-xs font-medium text-slate-600 mb-1">Datum 1e termijn</span>
-            <input type="date" value={form.datumEersteTermijn} onChange={set("datumEersteTermijn")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+            <input type="date" value={form.datumEersteTermijn} onChange={set("datumEersteTermijn")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
           </label>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -434,7 +434,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           voorgestelde 1e van de volgende maand.
         </p>
         {datumEersteTermijnWijktAf && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2">
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
             ⚠ "Datum 1e termijn" ({new Date(form.datumEersteTermijn).toLocaleDateString("nl-NL")}) ligt meer dan een half jaar
             van de startdatum ({new Date(form.startdatum).toLocaleDateString("nl-NL")}) af — dit schuift het hele schema hieronder
             mee, waardoor het niet meer aansluit bij de echte betalingen. Klopt dit niet, pas de datum hierboven aan (meestal
@@ -458,7 +458,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             <select
               value={form.soort || ""}
               onChange={(e) => onChange({ ...form, soort: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
             >
               <option value="">Niet ingevuld (geen kapitalisatie)</option>
               <option value="auto">Auto</option>
@@ -473,7 +473,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               <input
                 type="number" min="1" step="1" value={form.afschrijvingstermijnJaren} onChange={set("afschrijvingstermijnJaren")}
                 placeholder={String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5"
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
               />
             </label>
           )}
@@ -484,7 +484,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 <input
                   type="text" value={form.kenteken} onChange={set("kenteken")}
                   placeholder="bijv. 12-ABC-3"
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 uppercase"
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5 uppercase"
                 />
               </label>
               <label className="text-sm">
@@ -492,7 +492,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 <input
                   type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")}
                   disabled={capitalisatieOvergenomen}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </label>
               <label className="text-sm">
@@ -500,7 +500,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 <input
                   type="number" min="0" step="0.1" value={form.bijtellingspercentage} onChange={set("bijtellingspercentage")}
                   disabled={capitalisatieOvergenomen}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </label>
             </>
@@ -515,7 +515,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </p>
         )}
         {capitalisatieOvergenomen && (
-          <p className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 mt-2">
+          <p className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 mt-2">
             Overgenomen van eerdere contractperiode (kenteken {form.kenteken}) — dezelfde auto heeft
             fiscaal maar één cataloguswaarde en bijtellingspercentage, ook al is het leasecontract
             ervoor tussentijds vervangen/geherfinancierd. Ook de afschrijving loopt in dat geval door
@@ -535,7 +535,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </p>
         )}
         {capitalisatieWijktAf && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mt-2">
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
             ⚠ Dit kenteken is ook gebruikt bij een eerdere contractperiode met een andere
             cataloguswaarde/bijtellingspercentage — normaal gesproken zijn dit eigenschappen van
             dezelfde auto. Weet je zeker dat dit klopt?
@@ -543,7 +543,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         )}
 
         {form.soort && leaseActivumAfschrijvingPerJaar.length > 0 && (
-          <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 p-3">
+          <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Berekende afschrijving per jaar</p>
             {matchedPreceding && (
               <p className="text-xs text-slate-400 mb-2">
@@ -601,7 +601,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       </div>
 
       {leaseVergoedingWijktAf && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
           ⚠ Onbetaald gedeelte koop + lease vergoeding + extra bedrag 1e termijn ({eur(onbetaaldGedeelteKoop + Number(form.leaseVergoeding) + extraBedrag1eTermijnNum)}) wijkt meer dan
           €25 af van maandbedrag × looptijd + eindbetaling + extra ({eur(totaleLeaseBetalingen)}) — controleer de invoer.
         </p>
@@ -617,7 +617,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       </div>
 
       {amortization && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 mb-2">
             Volledig schema over de{form.contractBeeindigd ? " (afgebroken)" : ""} looptijd — voor de belastingaangifte
             telt per jaar wat er aan rente/aflossing is betaald, niet het totaal ineens
@@ -650,7 +650,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               : " Dit is de volledige looptijd zoals ingevuld, ongeacht hoeveel er al daadwerkelijk via de bank is betaald."}
           </p>
           {amortization.ongekoppeldeTerugboekingen?.length > 0 && (
-            <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+            <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
               {amortization.ongekoppeldeTerugboekingen.length} bijschrijving(en)/terugboeking(en) kon(den) niet
               betrouwbaar aan een eerdere termijn gekoppeld worden en zijn daarom NIET in de rente/aflossing
               hierboven verwerkt (ook niet als saldoverhoging) — controleer deze zelf:{" "}
@@ -682,7 +682,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           <span className="block text-xs font-medium text-slate-600 mb-1">Termijnen betaald t/m</span>
           <input
             type="date" value={form.handmatigBetaaldTotEnMet} onChange={set("handmatigBetaaldTotEnMet")}
-            className="w-full max-w-xs rounded-md border border-slate-300 px-2 py-1.5"
+            className="w-full max-w-xs rounded-lg border border-slate-300 px-2 py-1.5"
           />
         </label>
         {form.handmatigBetaaldTotEnMet && (
@@ -700,7 +700,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         const inBeeldTotaal = paymentCheck.results.length - counts["nog-niet-in-beeld"];
         const aantalSynthetic = paymentCheck.results.filter((r) => r.matchedTx?.synthetic).length;
         return (
-          <div className="rounded-md border border-slate-200 p-3">
+          <div className="rounded-lg border border-slate-200 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
               Controle: zijn alle termijnen ook echt betaald?
             </p>
@@ -716,7 +716,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               )}
             </p>
             {totaalControle && (counts.ontbrekend > 0 || counts["gevonden-afwijkend"] > 0) && (
-              <p className={`mt-2 text-xs rounded-md px-2.5 py-1.5 ${totaalControle.klopt ? "bg-emerald-50 border border-emerald-200 text-emerald-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+              <p className={`mt-2 text-xs rounded-lg px-2.5 py-1.5 ${totaalControle.klopt ? "bg-emerald-50 border border-emerald-200 text-emerald-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
                 {totaalControle.klopt ? "✓ " : "⚠ "}
                 <strong>Totaalcontrole:</strong> in totaal is {eur(totaalControle.totaalBetaald)} betaald in {totaalControle.aantal} betaling(en)
                 aan deze leasemaatschappij, tegenover een verwacht totaal van {eur(totaalControle.verwachtTotNu)} tot en met de laatst
@@ -764,11 +764,11 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum contract</span>
-                <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Verkoop-/veilingopbrengst (indien van toepassing)</span>
-                <input type="number" min="0" step="0.01" value={form.verkoopsom} onChange={set("verkoopsom")} className="w-full rounded-md border border-slate-300 px-2 py-1.5" />
+                <input type="number" min="0" step="0.01" value={form.verkoopsom} onChange={set("verkoopsom")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
             </div>
             <p className="text-xs text-slate-400">
@@ -817,7 +817,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               <button
                 onClick={onAddNext}
                 disabled={!form.einddatumContract}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + Nieuw contract toevoegen vanaf deze einddatum
               </button>
@@ -872,7 +872,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
           <div>
             <p className="text-sm font-semibold text-slate-800">Financiële lease — {lease.name}</p>
@@ -912,8 +912,8 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Opslaan</button>
+            <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
+            <button onClick={handleSave} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Opslaan</button>
           </div>
         </div>
       </div>

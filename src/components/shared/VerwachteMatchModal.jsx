@@ -14,7 +14,7 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-3" onClick={onDismiss}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
           <p className="text-sm font-semibold text-slate-800">{label.titel}</p>
           <button onClick={onDismiss} className="text-slate-400 hover:text-slate-700 shrink-0">
@@ -26,7 +26,7 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
             Je gaf aan dat er een {label.werkwoord} is bij <strong>"{naam}"</strong>. Er {matches.length === 1 ? "is 1 transactie" : `zijn ${matches.length} transacties`} gevonden die
             hierop lijken:
           </p>
-          <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+          <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
             {matches.slice(0, 10).map((t) => (
               <div key={t.id} className="flex items-center gap-2 p-2 text-xs">
                 <div className="flex-1 min-w-0">
@@ -41,10 +41,10 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
           <p>Nu meteen zo indelen en de gegevens invullen?</p>
         </div>
         <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-end gap-2">
-          <button onClick={onDismiss} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          <button onClick={onDismiss} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
             Nee, dit is het niet
           </button>
-          <button onClick={onAccept} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
+          <button onClick={onAccept} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">
             Ja, indelen
           </button>
         </div>

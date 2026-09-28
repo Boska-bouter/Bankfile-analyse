@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* v230 — professionelere typografie (mockup-stijl): IBM Plex Sans voor lopende tekst (in plaats van
+   het systeemlettertype dat Tailwinds `font-sans` standaard gebruikt), Sora voor koppen. Fonts zelf
+   worden geladen via de <link>-tags in index.html. */
+body {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}

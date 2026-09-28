@@ -17,7 +17,7 @@ export default function MultiYearOverviewBV({
   if (years.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           {years.length > 1 ? `Meerjarenoverzicht BV (${years.length} jaar)` : "Jaaroverzicht BV"}
@@ -25,7 +25,7 @@ export default function MultiYearOverviewBV({
         </span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
-      <div className="mx-4 mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <div className="mx-4 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
         BV-tak nog in ontwikkeling — dit overzicht neemt geen holdingstructuur mee en is niet gelijk aan een
         jaarrekening.
       </div>

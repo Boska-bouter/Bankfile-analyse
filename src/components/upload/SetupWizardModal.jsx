@@ -150,7 +150,7 @@ export default function SetupWizardModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
         <div className="px-5 py-3 border-b border-slate-200 bg-slate-900 text-white shrink-0">
           <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
@@ -168,20 +168,20 @@ export default function SetupWizardModal({
                 value={typedNow.eigenNaamOndernemer ?? ""}
                 onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamOndernemer: e.target.value }))}
                 placeholder="Naam rekeninghouder"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
               <input
                 type="text"
                 value={typedNow.eigenNaamPartner ?? ""}
                 onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamPartner: e.target.value }))}
                 placeholder="Naam fiscaal partner (optioneel)"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
               <p className="text-xs text-slate-400">Optioneel — je kunt dit ook later nog invullen, of overslaan.</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setEigenNamen({ ondernemer: typedNow.eigenNaamOndernemer?.trim() || null, partner: typedNow.eigenNaamPartner?.trim() || null }); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
+                  className="rounded-lg px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700"
                 >
                   Doorgaan
                 </button>
@@ -205,7 +205,7 @@ export default function SetupWizardModal({
                 return (
                   <ul className="space-y-1">
                     {huidigeLijst.map((r, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+                      <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
                         <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {r.accountType === "Zakelijk" ? "Zakelijk" : "Privé"}</span>
                         <button
                           onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningenLijst: huidigeLijst.filter((_, j) => j !== i) }))}
@@ -223,18 +223,18 @@ export default function SetupWizardModal({
                 value={typedNow.eigenRekeningIban ?? ""}
                 onChange={(e) => setTypedNow((p) => ({ ...p, eigenRekeningIban: e.target.value }))}
                 placeholder="Rekeningnummer (IBAN)"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Zakelijk" }))}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
                 >
                   Zakelijke rekening
                 </button>
                 <button
                   onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Prive" }))}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
                 >
                   Privérekening
                 </button>
@@ -247,7 +247,7 @@ export default function SetupWizardModal({
                       eigenRekeningIban: "", eigenRekeningType: null,
                     }));
                   }}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 >
                   + Toevoegen
                 </button>
@@ -268,7 +268,7 @@ export default function SetupWizardModal({
                     setEigenRekeningenExtra(lijst);
                     goNext();
                   }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
                   Doorgaan
                 </button>
@@ -320,7 +320,7 @@ export default function SetupWizardModal({
                   <button
                     key={opt.key}
                     onClick={() => setTypedNow((p) => ({ ...p, autoKeuze: opt.key, autoSoort: opt.key === "prive" ? null : p.autoSoort }))}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
                   >
                     {opt.label}
                   </button>
@@ -339,7 +339,7 @@ export default function SetupWizardModal({
                       <button
                         key={opt.key}
                         onClick={() => setTypedNow((p) => ({ ...p, autoSoort: opt.key }))}
-                        className={`rounded-md px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
                       >
                         {opt.label}
                       </button>
@@ -369,7 +369,7 @@ export default function SetupWizardModal({
                     onSeedAutoStatus(years, status);
                     goNext();
                   }}
-                  className="rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
+                  className="rounded-lg px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
                 >
                   Doorgaan
                 </button>
@@ -418,8 +418,8 @@ export default function SetupWizardModal({
                 automatisch berekend.
               </p>
               <div className="flex gap-2">
-                <button onClick={() => { setHeeftVoorraad(true); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Ja</button>
-                <button onClick={() => { setHeeftVoorraad(false); goNext(); }} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Nee</button>
+                <button onClick={() => { setHeeftVoorraad(true); goNext(); }} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Ja</button>
+                <button onClick={() => { setHeeftVoorraad(false); goNext(); }} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Nee</button>
               </div>
             </div>
           )}
@@ -435,19 +435,19 @@ export default function SetupWizardModal({
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { onSeedZelfstandigenaftrekStatus(years, "ja"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
                   Ja
                 </button>
                 <button
                   onClick={() => { onSeedZelfstandigenaftrekStatus(years, "nee"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
                   Nee
                 </button>
                 <button
                   onClick={() => { onSeedZelfstandigenaftrekStatus(years, "onbekend"); goNext(); }}
-                  className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
                 >
                   Onbekend — toon beide scenario's
                 </button>
@@ -464,7 +464,7 @@ export default function SetupWizardModal({
               {pendingFileNames.map((fileName) => {
                 const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
                 return (
-                  <div key={fileName} className="rounded-md border border-slate-200 p-3 space-y-2">
+                  <div key={fileName} className="rounded-lg border border-slate-200 p-3 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
                       <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
@@ -474,7 +474,7 @@ export default function SetupWizardModal({
                           setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" }));
                           if (pendingFileNames.length === 1) goNext(); // dit was de laatste — meteen door naar de volgende vraag
                         }}
-                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
                       >
                         <Building2 className="h-3.5 w-3.5" /> Zakelijk
                       </button>
@@ -484,13 +484,13 @@ export default function SetupWizardModal({
                           setTypedNow((p) => ({ ...p, [fileName]: "Prive" }));
                           if (pendingFileNames.length === 1) goNext();
                         }}
-                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
                       >
                         <Home className="h-3.5 w-3.5" /> Privé
                       </button>
                     </div>
                     {typedNow[fileName] && continuityMatch && (
-                      <div className={`flex items-start gap-1.5 rounded-md px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+                      <div className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
                         {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
                         <span>
                           {continuityMatch.fileA === fileName ? (
@@ -532,7 +532,7 @@ export default function SetupWizardModal({
                     setRechtsvorm("zzp");
                     goNext();
                   }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Eenmanszaak/zzp
                 </button>
@@ -547,7 +547,7 @@ export default function SetupWizardModal({
                     setBtwVerlegd(false);
                     goNext();
                   }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   BV
                 </button>
@@ -568,13 +568,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setHeeftHolding(true); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja, holding + werkmaatschappij
                 </button>
                 <button
                   onClick={() => { setHeeftHolding(false); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee, alleen deze BV
                 </button>
@@ -589,13 +589,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setKorRegeling(true); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${korRegeling === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja, KOR
                 </button>
                 <button
                   onClick={() => { setKorRegeling(false); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${korRegeling === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee
                 </button>
@@ -614,13 +614,13 @@ export default function SetupWizardModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => { setBtwVerlegd(true); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${btwVerlegd === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === true ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Ja
                 </button>
                 <button
                   onClick={() => { setBtwVerlegd(false); goNext(); }}
-                  className={`rounded-md px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
                 >
                   Nee
                 </button>
@@ -654,7 +654,7 @@ export default function SetupWizardModal({
                   Alles betaald
                 </button>
               </div>
-              <div className="divide-y divide-slate-100 border border-slate-100 rounded-md">
+              <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
                 {quartersToAsk.map((q) => {
                   const key = `${q.year}-Q${q.kwartaal}`;
                   const status = kwartaalStatus[key] || {};
@@ -699,7 +699,7 @@ export default function SetupWizardModal({
               {onSaveProject && (
                 <button
                   onClick={onSaveProject}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   Project nu opslaan
                 </button>
@@ -740,7 +740,7 @@ export default function SetupWizardModal({
           {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
-              className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
             >
               {isLastStep ? "Klaar" : "Doorgaan"} <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -786,7 +786,7 @@ function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
             <button
               key={o.waarde}
               onClick={() => onKlaar(gekozen, o.waarde)}
-              className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
+              className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
             >
               {o.label}
             </button>
@@ -808,7 +808,7 @@ function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
       </p>
       <div className="flex flex-col gap-2">
         {TARIEF_OPTIES.map((o) => (
-          <label key={o.waarde} className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+          <label key={o.waarde} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
             <input type="checkbox" checked={gekozen.includes(o.waarde)} onChange={() => toggle(o.waarde)} />
             {o.label}
           </label>
@@ -818,7 +818,7 @@ function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
         <button
           onClick={doorgaan}
           disabled={gekozen.length === 0}
-          className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+          className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
         >
           Doorgaan
         </button>
@@ -854,7 +854,7 @@ function LijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChange
       {lijst.length > 0 && (
         <ul className="space-y-1">
           {lijst.map((naam, i) => (
-            <li key={i} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+            <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
               <span className="truncate">{naam}</span>
               <button onClick={() => onChangeLijst(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">
                 Verwijderen
@@ -872,9 +872,9 @@ function LijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChange
               onChange={(e) => setHuidig(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voegToe(); } }}
               placeholder={placeholder}
-              className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <button onClick={voegToe} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+            <button onClick={voegToe} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
               + Toevoegen
             </button>
           </div>
@@ -886,7 +886,7 @@ function LijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChange
       )}
       <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
       <div className="flex gap-2">
-        <button onClick={doorgaan} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+        <button onClick={doorgaan} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
           Doorgaan
         </button>
       </div>
@@ -912,17 +912,17 @@ function VerwachteNaamVraag({ vraag, placeholder, value, onChange, onJa, onNee }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
       />
       <p className="text-xs text-slate-400">
         De naam is niet verplicht — je kunt "Ja" ook zonder naam invullen, en de gegevens altijd later aanvullen.
         Weet je de naam wel? Dan kan de tool meteen zoeken of die al in de geladen bestanden voorkomt.
       </p>
       <div className="flex gap-2">
-        <button onClick={() => onJa(value.trim())} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+        <button onClick={() => onJa(value.trim())} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
           Ja
         </button>
-        <button onClick={onNee} className="rounded-md px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+        <button onClick={onNee} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
           Nee
         </button>
       </div>

@@ -40,7 +40,7 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Tegenpartijregels</span>
         <span className="text-xs font-normal text-slate-400">({rules.length})</span>
@@ -61,19 +61,19 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
           ) : filtered.length === 0 ? (
             <p className="text-sm text-slate-400 py-4 text-center">Geen regels gevonden voor "{search}".</p>
           ) : (
-            <div className="max-h-96 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+            <div className="max-h-96 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
               {filtered.map((r) => (
                 <div key={r.key} className="flex items-center gap-2 p-2.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate flex items-center gap-1.5">
                       {r.displayName}
                       {r.viaIban && (
-                        <span className="shrink-0 rounded bg-indigo-100 text-indigo-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">IBAN</span>
+                        <span className="shrink-0 rounded-md bg-indigo-100 text-indigo-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">IBAN</span>
                       )}
                     </p>
                     <p className="text-[10px] text-slate-400">
                       {r.sign} ·{" "}
-                      <span className={`inline-block rounded px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
+                      <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
                         {mainCategoryOf(r.category)}
                       </span>{" "}
                       · {r.category} · {r.type}

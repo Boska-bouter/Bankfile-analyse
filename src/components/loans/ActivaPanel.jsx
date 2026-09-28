@@ -19,7 +19,7 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
   }).length;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Activa (bedrijfsmiddelen) — afschrijving</span>
         <span className="text-xs font-normal text-slate-400">({activaSummary.length})</span>
@@ -46,21 +46,21 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
               const compleet = isCompleteActivaDetails(details);
               const afschrijvingDitJaar = compleet && activeYear ? computeAfschrijvingPerJaar(details, activeYear) : null;
               return (
-                <div key={activum.key} className="rounded-md border border-slate-100 p-3">
+                <div key={activum.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}</span>
                     <span className="text-xs text-slate-400 font-mono">{eur(Math.abs(activum.tx.amount))}, {activum.tx.date.toLocaleDateString("nl-NL")}</span>
                     {isOnbekend ? (
-                      <button onClick={() => onUnmarkUnknown(activum.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <button onClick={() => onUnmarkUnknown(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                         Toch invullen
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => onOpenModal(activum.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onOpenModal(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                           {compleet ? "Gegevens bewerken" : "Gegevens invullen"}
                         </button>
                         {!compleet && (
-                          <button onClick={() => onMarkUnknown(activum.key)} className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                          <button onClick={() => onMarkUnknown(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                             Gegevens onbekend
                           </button>
                         )}
@@ -70,7 +70,7 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
                   {isOnbekend ? (
                     <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze afschrijving wordt niet berekend.</p>
                   ) : afschrijvingDitJaar ? (
-                    <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2.5 py-1.5">
+                    <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
                       Afschrijving in {activeYear}: <strong>{eur(afschrijvingDitJaar.afschrijving)}</strong> · boekwaarde eind {activeYear}: <strong>{eur(afschrijvingDitJaar.boekwaardeEindJaar)}</strong>
                       {afschrijvingDitJaar.volledigAfgeschreven && <span className="block text-emerald-600">Volledig afgeschreven.</span>}
                     </p>

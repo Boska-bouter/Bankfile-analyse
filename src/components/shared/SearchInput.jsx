@@ -27,14 +27,14 @@ export default function SearchInput({ value, onChange, placeholder, className = 
 
   return (
     <div className={`relative ${className}`}>
-      <div className="flex items-center rounded-md border border-slate-300 bg-white">
+      <div className="flex items-center rounded-lg border border-slate-300 bg-white">
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={placeholder}
-          className="w-full min-w-0 rounded-md border-0 px-3 py-1.5 text-sm focus:outline-none"
+          className="w-full min-w-0 rounded-lg border-0 px-3 py-1.5 text-sm focus:outline-none"
         />
         {value && (
           <button
@@ -48,7 +48,7 @@ export default function SearchInput({ value, onChange, placeholder, className = 
         )}
       </div>
       {focused && matches.length > 0 && (
-        <div className="absolute left-0 right-0 z-20 mt-1 rounded-md border border-slate-200 bg-white shadow-lg max-h-56 overflow-y-auto">
+        <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg max-h-56 overflow-y-auto">
           {matches.map((s) => (
             <button
               key={s}

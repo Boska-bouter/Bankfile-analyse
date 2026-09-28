@@ -12,14 +12,14 @@ const STATUS_LABEL = {
 export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyProgress }) {
   if (years.length <= 1) return null;
   return (
-    <nav className="fixed left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-lg shadow-lg p-1 max-h-[75vh] overflow-y-auto">
+    <nav className="fixed left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-xl shadow-lg p-1 max-h-[75vh] overflow-y-auto">
       {years.map((year) => {
         const yp = yearlyProgress[year];
         return (
           <button
             key={year}
             onClick={() => onSelectYear(year)}
-            className={`shrink-0 flex flex-col items-center rounded-md px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-xs font-medium leading-tight ${
+            className={`shrink-0 flex flex-col items-center rounded-lg px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-xs font-medium leading-tight ${
               year === activeYear ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
             title={`Jaar ${year}${yp ? ` — ${yp.pct}% klaar. ${STATUS_LABEL[yp.status]}` : ""}`}

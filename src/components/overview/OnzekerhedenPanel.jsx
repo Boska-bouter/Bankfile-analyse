@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
   const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-lg border border-amber-200 bg-amber-50/40">
+    <section className="rounded-xl border border-amber-200 bg-amber-50/40">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left text-amber-900">
         <span>Wat deze tool niet kan weten</span>
         <span className="flex-1" />

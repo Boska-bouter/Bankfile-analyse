@@ -65,7 +65,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-5 text-sm font-semibold">
         <span>Categorieregels — zoekwoorden per subtype</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -79,9 +79,9 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
               const rules = groupedByMain[main];
               const isGroupOpen = !!openGroups[main] || isSearching;
               return (
-                <div key={main} className="rounded-md border border-slate-100">
+                <div key={main} className="rounded-lg border border-slate-100">
                   <button onClick={() => toggleGroup(main)} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs">
-                    <span className={`rounded px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
+                    <span className={`rounded-md px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                       {main} <span className="opacity-60">({rules.length})</span>
                     </span>
                     {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
@@ -91,10 +91,10 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                       {rules.map((r) => {
                         const isOpenCard = !!expandedCards[r.name] || isSearching;
                         return (
-                          <div key={r.name} className="rounded-md border border-slate-100">
+                          <div key={r.name} className="rounded-lg border border-slate-100">
                             <button onClick={() => toggleCard(r.name)} className="w-full flex items-center justify-between gap-2 p-3 text-left">
                               <span className="flex items-center gap-2 min-w-0">
-                                <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium truncate ${r.color}`}>{r.name}</span>
+                                <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate ${r.color}`}>{r.name}</span>
                                 <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap">{r.keywords.length} zoekwoord{r.keywords.length === 1 ? "" : "en"}</span>
                               </span>
                               {isOpenCard ? <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
@@ -119,9 +119,9 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                                     onChange={(e) => setNewKeywordByCategory((prev) => ({ ...prev, [r.name]: e.target.value }))}
                                     onKeyDown={(e) => e.key === "Enter" && addKeyword(r.name)}
                                     placeholder="bijv. albert heijn, shell, kpn…"
-                                    className="flex-1 min-w-0 rounded-md border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="flex-1 min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                   />
-                                  <button onClick={() => addKeyword(r.name)} className="shrink-0 rounded-md bg-slate-900 text-white px-2 py-1 text-xs hover:bg-slate-700">
+                                  <button onClick={() => addKeyword(r.name)} className="shrink-0 rounded-lg bg-slate-900 text-white px-2 py-1 text-xs hover:bg-slate-700">
                                     <Plus className="h-3 w-3" />
                                   </button>
                                 </div>
@@ -136,7 +136,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
               );
             })}
           </div>
-          <div className="mt-3 rounded-md border-2 border-dashed border-slate-200 p-3">
+          <div className="mt-3 rounded-lg border-2 border-dashed border-slate-200 p-3">
             <p className="text-xs font-medium text-slate-600 mb-2">Nieuwe categorie toevoegen</p>
             <div className="flex gap-1.5">
               <input
@@ -144,21 +144,21 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustomCategory()}
                 placeholder="Naam van de nieuwe categorie…"
-                className="flex-1 min-w-0 rounded-md border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="flex-1 min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <button
                 onClick={() => setNewCategoryMain("Zakelijk")}
-                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
               >
                 Zakelijk
               </button>
               <button
                 onClick={() => setNewCategoryMain("Privé")}
-                className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Privé" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
+                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Privé" ? "bg-slate-900 text-white border-slate-900" : "border-slate-300 text-slate-600"}`}
               >
                 Privé
               </button>
-              <button onClick={addCustomCategory} className="shrink-0 inline-flex items-center gap-1 rounded-md bg-emerald-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-emerald-700">
+              <button onClick={addCustomCategory} className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-emerald-700">
                 <Plus className="h-3.5 w-3.5" /> Toevoegen
               </button>
             </div>

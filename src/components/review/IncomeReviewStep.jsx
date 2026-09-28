@@ -12,7 +12,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
   }, [items, search]);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+    <section className="rounded-xl border border-slate-200 bg-white overflow-hidden">
       <div className="bg-slate-900 text-stone-50 px-5 py-4">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Building2 className="h-4 w-4 text-emerald-400" /> Wie zijn je zakelijke klanten?
@@ -33,7 +33,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
       <div className="p-5">
         <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam…" className="w-64 mb-3" />
 
-        <div className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-md">
+        <div className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
           {filtered.map((item) => (
             <div key={item.key} className="flex flex-wrap items-center gap-3 p-3">
               <div className="flex-1 min-w-0">
@@ -45,13 +45,13 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
               </div>
               <button
                 onClick={() => onMark(item, "zakelijk")}
-                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-100"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-100"
               >
                 <Building2 className="h-3.5 w-3.5" /> Ja, zakelijk
               </button>
               <button
                 onClick={() => onMark(item, "nee")}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-slate-50 text-slate-600 px-3 py-1.5 text-xs font-medium hover:bg-slate-100"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-600 px-3 py-1.5 text-xs font-medium hover:bg-slate-100"
               >
                 Nee
               </button>

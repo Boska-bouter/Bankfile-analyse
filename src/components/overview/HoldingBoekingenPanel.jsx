@@ -14,7 +14,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
   if (years.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
+    <section className="rounded-xl border border-slate-200 bg-white">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span>Holding-boekingen (handmatig)</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -54,7 +54,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
                         value={b.kapitaalstorting ?? ""}
                         onChange={(e) => onSetField(year, "kapitaalstorting", e.target.value === "" ? null : Number(e.target.value))}
                         placeholder="0,00"
-                        className="w-28 rounded-md border border-slate-300 px-2 py-1"
+                        className="w-28 rounded-lg border border-slate-300 px-2 py-1"
                       />
                     </td>
                     <td className="py-2 px-3">
@@ -64,7 +64,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
                         value={b.dividendOntvangen ?? ""}
                         onChange={(e) => onSetField(year, "dividendOntvangen", e.target.value === "" ? null : Number(e.target.value))}
                         placeholder="0,00"
-                        className="w-28 rounded-md border border-slate-300 px-2 py-1"
+                        className="w-28 rounded-lg border border-slate-300 px-2 py-1"
                       />
                     </td>
                     <td className="py-2 pl-3">
