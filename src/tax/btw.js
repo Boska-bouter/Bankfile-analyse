@@ -12,9 +12,11 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "AOV (arbeidsongeschiktheidsverzekering)",
   "Verzekeringen", // privé-verzekeringen — net als hun zakelijke tegenhangers vrijgesteld van BTW
   "Uitbetalen loon",
-  "Uitbetaling aan prive",
   "Prive opnames",
   "Terugboeking van prive",
+  "Ontvangen van zakelijk", // v213: privé-kant van "Uitbetaling aan prive" (zie classify.js)
+  "Terugboeking naar zakelijk", // v213: privé-kant van "Terugboeking van prive"
+  "Overboeking van bekenden", // v213: geldbeweging tussen bekenden, nooit BTW-belast
   // BV-specifiek: loon/dividend/kapitaal/rekening-courant zijn nooit met BTW belast — dit stond hier
   // per abuis niet bij toen deze categorieën zijn toegevoegd, waardoor het toolstandaardtarief van
   // 21% ten onrechte werd toegepast (zie App.jsx/aangiftevoorstel-bv.js: dit vertekende de netto

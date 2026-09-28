@@ -5,11 +5,30 @@ import { fiscalTreatmentOf, mainCategoryOf } from "../classification/categories.
 // stortingen) — die horen qua hoofdcategorie bij "Privé", maar zijn geen "verkeerde rekening": het
 // IS precies de bedoeling dat deze op de zakelijke rekening staan met type "Zakelijk" (en op de
 // privérekening met type "Prive"). Die moeten hier dus worden uitgesloten van het rekening-signaal.
-const PRIVE_TRANSFER_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive"];
+const PRIVE_TRANSFER_CATEGORIES = [
+  "Prive opnames", "Terugboeking van prive", // zakelijke kant
+  "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
+];
+// Dezelfde overboeking heet sinds v213 aan elke kant anders (zie classify.js) — deze twee subsets
+// zijn nodig omdat priveTransferOrphans/-MissingMirrors hieronder bewust per kant een andere naam
+// verwachten (een privérekening kan zelf nooit "Prive opnames"/"Terugboeking van prive" krijgen).
+const PRIVE_TRANSFER_CATEGORIES_ZAKELIJK = ["Prive opnames", "Terugboeking van prive"];
+const PRIVE_TRANSFER_CATEGORIES_PRIVE = ["Ontvangen van zakelijk", "Terugboeking naar zakelijk"];
 
 // Bouwt de aangifte-checklist-data voor één jaar — hergebruikt voor zowel het actieve jaar in de
 // hoofdweergave als voor het meerjarige Aangiftevoorstel.
-export function computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus) {
+// `priveRekeningGeladen` (optioneel, standaard false voor bestaande aanroepen): is er daadwerkelijk
+// een privérekening-BESTAND geladen in dit dossier (ongeacht het jaar)? Zolang dat niet zo is,
+// genereert de app voor elke "Prive opnames"/"Uitbetaling aan prive"/"Terugboeking van prive"-
+// boeking op de zakelijke rekening een spiegelboeking met het vaste id-achtervoegsel
+// "-prive-spiegel" (zie App.jsx) — priveTransferOrphans/priveTransferMissingMirrors hieronder
+// controleren of die spiegel er inderdaad is. Zodra de privérekening ZELF ook geladen is, wordt
+// die spiegel bewust NIET meer aangemaakt (de echte transactie aan de privékant is dan al zijn eigen
+// tegenboeking) — zonder deze vlag zou dat elke keer ten onrechte als "ontbrekende spiegel"/"wees"
+// worden gerapporteerd, voor exact de transacties die al correct aan elkaar gekoppeld zijn. De
+// aggregaat-controle "Uitbetaling aan prive"/"Prive opnames" (zie App.jsx) blijft in dat geval de
+// vangnet-check voor een echte mismatch.
+export function computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen = false) {
   const allYearItems = [...zakItems, ...priItems];
   const overigCount = allYearItems.filter((tx) => tx.category === "Overig").length;
   const totalCount = allYearItems.length;
@@ -73,13 +92,16 @@ export function computeChecklistLikeDataForYear(zakItems, priItems, quartersForY
   const loonheffingInVerwachteBereik =
     loonheffingPct === null ? null : Math.abs(loonheffingPct - LOONHEFFING_REFERENTIE_PCT) <= LOONHEFFING_MARGE_PCT;
 
-  const priveTransferOrphans = priItems.filter(
-    (tx) => !tx.isMirror && (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames" || tx.category === "Terugboeking van prive")
+  // Zodra de privérekening zelf ook geladen is, wordt er bewust geen spiegel meer aangemaakt (zie
+  // de toelichting bij `priveRekeningGeladen` hierboven) — dan hebben deze twee lijsten geen
+  // betekenis meer (élke echte transactie zou anders ten onrechte als "wees"/"ontbrekend" gelden).
+  const priveTransferOrphans = priveRekeningGeladen ? [] : priItems.filter(
+    (tx) => !tx.isMirror && PRIVE_TRANSFER_CATEGORIES_PRIVE.includes(tx.category)
   );
   const priveMirrorIds = new Set(priItems.filter((tx) => tx.isMirror).map((tx) => tx.id));
-  const priveTransferMissingMirrors = zakItems.filter(
+  const priveTransferMissingMirrors = priveRekeningGeladen ? [] : zakItems.filter(
     (tx) =>
-      (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
+      PRIVE_TRANSFER_CATEGORIES_ZAKELIJK.includes(tx.category) &&
       !priveMirrorIds.has(`${tx.id}-prive-spiegel`)
   );
 

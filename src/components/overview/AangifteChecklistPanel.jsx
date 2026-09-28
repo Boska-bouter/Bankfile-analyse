@@ -118,7 +118,7 @@ export default function AangifteChecklistPanel({ checklistData, activeYear, korR
             <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <span>
               {checklistData.priveTransferOrphans.length} transactie{checklistData.priveTransferOrphans.length === 1 ? "" : "s"} aan de <strong>Prive</strong>-kant met categorie
-              "Uitbetaling aan prive"/"Prive opnames" die <strong>geen spiegelboeking</strong> is — dus een losse, echte transactie in een categorie die eigenlijk bedoeld is voor geld
+              "Ontvangen van zakelijk"/"Terugboeking naar zakelijk" die <strong>geen spiegelboeking</strong> is — dus een losse, echte transactie in een categorie die eigenlijk bedoeld is voor geld
               dat vanuit Zakelijk overkomt.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferOrphans.slice(0, 5).map((tx) => (
@@ -133,7 +133,7 @@ export default function AangifteChecklistPanel({ checklistData, activeYear, korR
           <li className="flex items-start gap-2">
             <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
             <span>
-              {checklistData.priveTransferMissingMirrors.length} zakelijke transactie{checklistData.priveTransferMissingMirrors.length === 1 ? "" : "s"} ("Uitbetaling aan prive"/"Prive opnames")
+              {checklistData.priveTransferMissingMirrors.length} zakelijke transactie{checklistData.priveTransferMissingMirrors.length === 1 ? "" : "s"} ("Prive opnames"/"Terugboeking van prive")
               zonder spiegelboeking aan de Prive-kant — dit zou eigenlijk nooit mogen voorkomen, dus dit is de moeite van het navragen waard.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferMissingMirrors.slice(0, 5).map((tx) => (

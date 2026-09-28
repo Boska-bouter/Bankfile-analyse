@@ -7,7 +7,13 @@ import { normKey, counterpartyKey } from "../utils/normalization.js";
 // Zonder deze uitsluiting kreeg je bij het laden van een privérekening met veel onderlinge
 // overboekingen (bijv. naar de al bekende zakelijke rekening, of naar een eigen spaarrekening) een
 // lange rij overbodige controlevragen over geld dat feitelijk al verklaard is.
-const GEEN_KLANT_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive", "Interne overboeking: privé sparen"];
+const GEEN_KLANT_CATEGORIES = [
+  "Prive opnames", "Terugboeking van prive", // zakelijke kant (zie functie hieronder: wordt hier niet bereikt, maar voor de volledigheid)
+  "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
+  "Interne overboeking: privé sparen",
+  // Geld van een bekende (zie classify.js) is per definitie ook geen klant/opdrachtgever.
+  "Overboeking van bekenden",
+];
 
 // Groepeert binnenkomende betalingen per tegenpartij — voor de vraag "is dit een zakelijke
 // klant, of loondienst/privé-inkomen?". Bestanden die op rekeningniveau al als "Zakelijk" zijn

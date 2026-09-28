@@ -61,7 +61,13 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     // op tx.type gebaseerd, niet op categorie.
     if (tx.type === "Zakelijk") {
       if (tx.category === "Belastingen: ZVW" || tx.category === "Belastingen: IH") alBetaaldeZvwIh += Math.abs(tx.amount);
-      if (tx.category === "Uitbetaling aan prive" || tx.category === "Prive opnames") uitkeringenAanPrive += Math.abs(tx.amount);
+      // "Ontvangen van zakelijk" is sinds v213 de privé-kant van deze overboeking (zie classify.js) en
+      // hoort normaliter dus niet met tx.type "Zakelijk" voor te komen — maar een bestaande, handmatige
+      // override kan een zakelijke transactie wél op deze categorie hebben staan (bijv. na de v213-
+      // hernoeming van een eerdere "Uitbetaling aan prive"-override, of als bewust gemarkeerde
+      // "verkeerde rekening"-correctie). Zonder deze categorie hier mee te tellen verdween zo'n bedrag
+      // ten onrechte uit "Totaal aan prive uitgekeerd".
+      if (tx.category === "Prive opnames" || tx.category === "Ontvangen van zakelijk") uitkeringenAanPrive += Math.abs(tx.amount);
       // "Terugboeking van prive": geld dat vanuit privé terugkomt op de zakelijke rekening — dit
       // verlaagt het bedrag dat per saldo naar privé is gegaan (dus aftrekken, niet los laten
       // staan). Zonder deze aftrek liet "Overboeking naar privé" (en de "Privé uitgaven"-schatting

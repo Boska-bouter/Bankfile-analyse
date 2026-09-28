@@ -251,10 +251,10 @@ export const SPLIT_CATEGORY_NAMES = {
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
-  "Terugboeking van prive",
-  "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
+  "Terugboeking van prive", "Terugboeking naar zakelijk",
+  "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -269,9 +269,11 @@ export const CATEGORY_COLOR = Object.fromEntries([
   ["Inkomsten/betalingen niet dit jaar", "bg-stone-200 text-stone-700"],
   ["Uitbetalen loon", "bg-sky-100 text-sky-800"],
   ["Verkoop activa", "bg-lime-100 text-lime-800"],
-  ["Uitbetaling aan prive", "bg-amber-200 text-amber-900"],
+  ["Ontvangen van zakelijk", "bg-amber-200 text-amber-900"],
   ["Terugboeking van prive", "bg-amber-100 text-amber-800"],
+  ["Terugboeking naar zakelijk", "bg-amber-100 text-amber-800"],
   ["Overboekingen aan personen", "bg-fuchsia-100 text-fuchsia-800"],
+  ["Overboeking van bekenden", "bg-fuchsia-50 text-fuchsia-700"],
   ["Interne overboeking: zakelijk sparen", "bg-cyan-100 text-cyan-800"],
   ["Interne overboeking: privé sparen", "bg-cyan-50 text-cyan-700"],
   ["Overig", "bg-slate-200 text-slate-700"],
@@ -296,8 +298,8 @@ export const DEFAULT_FIXED_CATEGORIES = [
 
 export const INCOME_TRANSFER_CATEGORIES = [
   "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
-  "Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive",
-  "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen",
+  "Prive opnames", "Ontvangen van zakelijk", "Terugboeking van prive", "Terugboeking naar zakelijk",
+  "Overboekingen aan personen", "Overboeking van bekenden", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen",
 ];
 
 // Route B (zie gesprek): telt een transactie mee als zakelijke omzet/kostenpost in W&V/BTW? Dat
@@ -335,9 +337,9 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
-  "Kinderopvang": "geen", "Overboekingen aan personen": "geen", "Prive - mobiel/internet": "geen",
-  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen", "Leningen (privé)": "geen",
-  "Toeslagen": "geen", "Uitbetaling aan prive": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
+  "Kinderopvang": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
+  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
+  "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
   // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
@@ -387,6 +389,11 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Belastingen: Naheffingen voorgaande jaren": "Belastingen: Naheffingen OB voorgaande jaren",
   "Loonadministratie": "Boekhouder, accountant & administratie",
   "Boekhouder & advies": "Boekhouder, accountant & administratie",
+  // v213: op de privérekening gaf deze categorienaam de boeking de formulering van de ZAKELIJKE
+  // kant (alsof je zelf "uitbetaalt aan privé", terwijl je op de privérekening juist ontvangt) —
+  // "Uitbetaling aan prive" werd door de classificatie uitsluitend op een privérekening gebruikt
+  // (nooit op een zakelijke), dus is dit een simpele 1-op-1 hernoeming. Zie classify.js.
+  "Uitbetaling aan prive": "Ontvangen van zakelijk",
 };
 
 // Volgt de hernoem-keten volledig door in plaats van maar één stap: "Specials" is ooit hernoemd naar
@@ -551,6 +558,7 @@ export const SUBTYPE_TO_MAIN = {
   "Leningen (privé)": "Privé",
   "Marketing-website": "Inkoop & zakelijke uitgaven",
   "Overboekingen aan personen": "Privé",
+  "Overboeking van bekenden": "Privé",
   "Overig": "Nog te beoordelen",
   "Onderhoud apparatuur/machines": "Apparatuur & inventaris",
   "Parkeren": "Vervoer & auto",
@@ -559,11 +567,12 @@ export const SUBTYPE_TO_MAIN = {
   "Prive opnames": "Privé",
   "Prive overige abonnementen": "Privé",
   "Terugboeking van prive": "Privé",
+  "Terugboeking naar zakelijk": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
   "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
   "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
-  "Uitbetaling aan prive": "Privé",
+  "Ontvangen van zakelijk": "Privé",
   "Prive - vrijetijd-uitgaan-vakantie & uit eten": "Privé",
   "Prive: overig": "Privé",
   "Partneralimentatie": "Privé",

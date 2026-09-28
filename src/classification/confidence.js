@@ -24,7 +24,10 @@ import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js"
 // op "heuristic" en dus in de "nog te controleren"-lijst — bij het laden van een privérekening met
 // veel onderlinge overboekingen ontstond zo een lange rij overbodige controlevragen over boekingen
 // die feitelijk al via de andere rekening zijn vastgelegd/beoordeeld.
-const PRIVE_TRANSFER_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive"];
+const PRIVE_TRANSFER_CATEGORIES = [
+  "Prive opnames", "Terugboeking van prive", // zakelijke kant
+  "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
+];
 function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
   if (!tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return false;
   return ownAccountsElsewhere.some((o) => o.accountType && ibansMatch(tx.counterpartyIban, o.iban));

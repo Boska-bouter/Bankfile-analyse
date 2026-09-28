@@ -134,9 +134,19 @@ function migrateOverridesCategories(overrides) {
   if (!overrides || typeof overrides !== "object") return overrides || {};
   const out = {};
   for (const [key, val] of Object.entries(overrides)) {
-    out[key] = val && typeof val === "object" && val.category
-      ? { ...val, category: migrateLegacyCategoryName(val.category) }
-      : val;
+    if (!val || typeof val !== "object" || !val.category) {
+      out[key] = val;
+      continue;
+    }
+    // "Terugboeking van prive" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
+    // (geld terug náár zakelijk) — sindsdien heet dat aan de privékant "Terugboeking naar zakelijk"
+    // (zie classify.js), zodat de twee kanten van deze boeking niet meer dezelfde naam delen. De
+    // generieke migrateLegacyCategoryName hieronder kan deze migratie niet doen (die kent geen
+    // `type`), dus dit specifieke geval eerst, vóór de generieke hernoeming.
+    const category = val.category === "Terugboeking van prive" && val.type === "Prive"
+      ? "Terugboeking naar zakelijk"
+      : migrateLegacyCategoryName(val.category);
+    out[key] = { ...val, category };
   }
   return out;
 }
@@ -649,7 +659,7 @@ export default function App() {
   const ownAccountsElsewhereByFile = useMemo(() => {
     const entries = Object.entries(ownAccountByFile)
       .filter(([fileName]) => accountTypeByFile[fileName])
-      .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName] }));
+      .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName], isLoadedFile: true }));
     // Handmatig opgegeven eigen rekeningen die je (nog) niet hebt geladen (zie de wizard-vraag) —
     // tellen voor élk geladen bestand mee, niet gekoppeld aan een specifiek fileName. Er kunnen er
     // meerdere zijn (bijv. een extra zakelijke rekening én twee privérekeningen). Is zo'n rekening
@@ -659,13 +669,19 @@ export default function App() {
     // blijft (find/some hieronder gebruiken toch maar de eerste match), maar wél verwarrend, en een
     // reëel risico zodra iemand het rekeningtype van het echte bestand nog aanpast zonder aan deze
     // oude wizard-invoer te denken.
+    // `isLoadedFile: false` — dit is bewust ANDERS dan de "entries" hierboven: een via de wizard
+    // opgegeven rekening is nog GEEN geladen bestand, dus de daadwerkelijke tegenboeking staat nog
+    // nergens in de data. De spiegelboeking hieronder (zie "classified") moet dit onderscheid kennen
+    // — anders verdwijnt het geld van zo'n nog-niet-geladen rekening stilzwijgend uit het overzicht
+    // (geen spiegel én geen echte transactie), in plaats van gewoon zichtbaar te blijven totdat die
+    // rekening ook echt geladen wordt.
     const extra = (eigenRekeningenExtra || [])
       .filter((r) => r.iban && !entries.some((e) => ibansMatch(e.iban, r.iban)))
-      .map((r) => ({ iban: r.iban, accountType: r.accountType }));
+      .map((r) => ({ iban: r.iban, accountType: r.accountType, isLoadedFile: false }));
     const result = {};
     for (const pf of parsedFiles) {
       result[pf.fileName] = [
-        ...entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType })),
+        ...entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType, isLoadedFile: true })),
         ...extra,
       ];
     }
@@ -830,18 +846,23 @@ export default function App() {
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || []);
       return { ...tx, ...resolved, confidence };
     });
-    // "Prive opnames"/"Uitbetaling aan prive"/"Terugboeking van prive" zijn geld dat tussen
-    // zakelijk en privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
+    // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
+    // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
     // zakelijk en privé in beide richtingen klopt, zonder de oorspronkelijke boeking te veranderen.
     // Alleen als de bijbehorende privérekening niet zelf ook geladen is: staat die er wél bij, dan
     // heeft die eigen transactie via de eigen-rekening-herkenning hierboven al zijn eigen kant van
     // dezelfde overboeking gekregen — een spiegel zou die dan dubbel tellen.
+    // `isLoadedFile` (zie ownAccountsElsewhereByFile hierboven) is hier bewust vereist: een via de
+    // wizard opgegeven, maar nog niet geladen rekening levert nog GEEN eigen transactie op de andere
+    // kant op — zonder deze voorwaarde werd de spiegel voor zo'n rekening ten onrechte óók
+    // onderdrukt, waardoor het bedrag nergens meer zichtbaar was (geen spiegel én geen echte
+    // transactie) totdat die rekening alsnog werd geladen.
     const mirrors = [];
     for (const tx of base) {
-      const otherSideAlsoLoaded = (ownAccountsElsewhereByFile[tx.source] || []).some((o) => o.accountType === "Prive");
+      const otherSideAlsoLoaded = (ownAccountsElsewhereByFile[tx.source] || []).some((o) => o.accountType === "Prive" && o.isLoadedFile);
       if (
-        (tx.category === "Prive opnames" || tx.category === "Uitbetaling aan prive" || tx.category === "Terugboeking van prive") &&
+        (tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
         tx.type === "Zakelijk" && !otherSideAlsoLoaded
       ) {
         mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
@@ -1596,9 +1617,13 @@ export default function App() {
     [rechtsvorm, activeYear, yearlySummaries, evVerloop, yearlyOpenOB, years]
   );
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
+  // Is er daadwerkelijk een privérekening-BESTAND geladen in dit dossier? Zie de toelichting bij
+  // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
+  // betekenis heeft, of dat de echte privétransacties zelf al hun eigen tegenboeking zijn.
+  const priveRekeningGeladen = useMemo(() => Object.values(accountTypeByFile).includes("Prive"), [accountTypeByFile]);
   const checklistData = useMemo(
-    () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus),
-    [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus]
+    () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
+    [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen]
   );
   const businessAdvies = useMemo(() => {
     if (!activeYear || !yearlySummary) return null;
@@ -1613,7 +1638,7 @@ export default function App() {
       const priItems = (groups.find((g) => g.year === year && g.type === "Prive") || { items: [] }).items;
       const allYearItems = [...zakItems, ...priItems];
       const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed);
-      const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus);
+      const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen);
       const checks = [{ frac: yc.categorizedPct / 100 }];
 
       const personKeysThisYear = new Set(
@@ -1661,7 +1686,7 @@ export default function App() {
       map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen]);
 
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
@@ -2925,9 +2950,18 @@ export default function App() {
                 <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
 
                 {(() => {
-                  const isTransferCat = (c) => c === "Uitbetaling aan prive" || c === "Prive opnames";
-                  const zakSum = zakGroupForYear.items.filter((t) => isTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-                  const priSum = priGroupForYear.items.filter((t) => isTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+                  // Sinds v213 heet dezelfde overboeking aan elke kant anders (zie classify.js): de
+                  // zakelijke rekening gebruikt "Prive opnames" (geld weg) / "Terugboeking van prive"
+                  // (geld terug), de privérekening gebruikt daarvoor "Ontvangen van zakelijk" / "Terugboeking
+                  // naar zakelijk" — dus deze controle mag NIET meer op dezelfde categorienaam aan beide
+                  // kanten filteren (dat leverde priSum altijd 0 op, en dus een valse mismatch-melding
+                  // zodra de privérekening zelf ook geladen was). In plaats daarvan wordt per kant op de
+                  // eigen categorienamen gefilterd — de bedragen (met hun eigen teken) moeten samen nog
+                  // steeds op nul uitkomen.
+                  const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
+                  const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
+                  const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+                  const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
                   const diff = Math.round((zakSum + priSum) * 100) / 100;
                   if (zakSum === 0 && priSum === 0) return null;
                   const ok = Math.abs(diff) < 0.01;
@@ -2935,7 +2969,7 @@ export default function App() {
                     <div className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`}>
                       {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
                       <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
-                        <strong>Controle "Uitbetaling aan prive" / "Prive opnames"</strong>: Zakelijk {eur(zakSum)} tegenover Prive {eur(priSum)}
+                        <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}
                         {ok ? " — komt overeen (samen nul, zoals het hoort)." : <> — komt <strong>niet</strong> overeen (verschil {eur(diff)}). Mogelijk staat er aan de privékant een aparte, niet-gekoppelde transactie, of ontbreekt er iets.</>}
                       </p>
                     </div>

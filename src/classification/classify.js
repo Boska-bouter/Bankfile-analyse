@@ -3,7 +3,7 @@ import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
-  return category === "Zakelijke inkomsten" || category === "Uitbetaling aan prive" || category === "Prive opnames"
+  return category === "Zakelijke inkomsten" || category === "Prive opnames"
     ? "Zakelijk"
     : "Prive";
 }
@@ -48,13 +48,28 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // rekeningnummer (IBAN), niet op een tekstlabel dat bank tot bank verschilt of soms
   // ontbreekt. Werkt dus hetzelfde bij CSV, MT940 en CAMT.053, en bij elke bank, zolang je de
   // betreffende andere rekening ook zelf hebt geladen.
+  //
+  // De categorienaam is bewust voor elke rekening/richting-combinatie anders (v213) — elk van deze
+  // vier benoemt de boeking zoals hij vanaf DIE rekening gezien wordt, in plaats van dat dezelfde
+  // ("zakelijke-kant"-)naam ook op de privérekening zelf verschijnt:
+  //   - Zakelijk, geld gaat weg naar privé:      "Prive opnames"
+  //   - Zakelijk, geld komt terug van privé:     "Terugboeking van prive"
+  //   - Prive,    geld komt van zakelijk:        "Ontvangen van zakelijk"   (vóór v213: "Uitbetaling aan prive")
+  //   - Prive,    geld gaat terug naar zakelijk: "Terugboeking naar zakelijk" (vóór v213: ook "Terugboeking van prive")
+  // Vóór deze wijziging kreeg de privérekening dezelfde namen als de zakelijke kant ("Uitbetaling
+  // aan prive"/"Terugboeking van prive") — vanaf de privérekening zelf bekeken klopt die formulering
+  // niet ("uitbetaling AAN prive" alsof je zelf de betaler bent, terwijl je hier juist ontvangt), en
+  // "Terugboeking van prive" stond zo voor twee verschillende, tegenovergestelde boekingsrichtingen
+  // tegelijk (zowel het ontvangen ván als het terugstorten náár zakelijk). Fiscaal verandert er
+  // niets: alle vier blijven "geen" (zie CATEGORY_FISCAL_TREATMENT) en tellen voor de spiegel-/
+  // saldocontrole (App.jsx/checklist.js) nog steeds als hetzelfde soort overboeking.
   if (tx.counterpartyIban && ownAccountsElsewhere.length > 0) {
     const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
     if (matchedOwn && matchedOwn.accountType && matchedOwn.accountType !== accountType) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
       }
-      return isIncome ? { category: "Uitbetaling aan prive", type } : { category: "Terugboeking van prive", type };
+      return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
     }
   }
 
@@ -89,7 +104,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
       }
-      return isIncome ? { category: "Uitbetaling aan prive", type } : { category: "Terugboeking van prive", type };
+      return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
     }
   }
 
@@ -152,6 +167,15 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   if (isIncome) {
     if (accountType === "Zakelijk") {
       return { category: "Zakelijke inkomsten", type };
+    }
+    // Geld dat op de privérekening binnenkomt van een kennelijk persoon (geen bedrijfsnaam) — bijv.
+    // het terugkrijgen van een voorgeschoten etentje, een cadeau, of een andere onderlinge
+    // afrekening tussen bekenden. Dit is nooit omzet van een klant, dus hoort niet thuis in de
+    // generieke "Inkomsten"-emmer (die de "wie zijn je zakelijke klanten?"-review juist WEL
+    // doorloopt — zie GEEN_KLANT_CATEGORIES in reviewSummaries.js) en verdient een eigen, herkenbare
+    // categorie in plaats van elke keer opnieuw te moeten worden bevestigd als "geen klant".
+    if (looksLikePerson(tx.counterparty || tx.description)) {
+      return { category: "Overboeking van bekenden", type };
     }
     return { category: "Inkomsten", type };
   }

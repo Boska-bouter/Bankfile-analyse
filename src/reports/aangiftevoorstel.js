@@ -260,7 +260,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // van deze reconstructie.
   const zakItemsChecklist = classified.filter((tx) => tx.type === "Zakelijk" && tx.year === year);
   const priItemsChecklist = classified.filter((tx) => tx.type === "Prive" && tx.year === year);
-  const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {});
+  const priveRekeningGeladen = Object.values(accountTypeByFile || {}).includes("Prive");
+  const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {}, priveRekeningGeladen);
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
     (tx) => !tx.isMirror && tx.confidence?.level !== "override" && tx.confidence?.level !== "keyword" && tx.confidence?.level !== "heuristic"
   ).length;

@@ -8,7 +8,7 @@ export const HELP_CHAPTERS = [
       <p>
         Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op basis van het percentage per
         categorie. Alleen van toepassing op Zakelijke transacties. Standaard staan Bankkosten, alle Belastingen, alle
-        Verzekeringen, Inhuur personeel, Uitbetaling aan prive, Huur, Overig en Overboekingen aan personen op 0%.
+        Verzekeringen, Inhuur personeel, Prive opnames/Ontvangen van zakelijk, Huur, Overig en Overboekingen aan personen op 0%.
       </p>
     ),
   },
@@ -162,7 +162,7 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Zak. Ink.</strong> is de categorie "Zakelijke inkomsten"; <strong>WUO (bruto)</strong> is de winst
           uit onderneming vóór persoonlijke belastingen (Zakelijke inkomsten min de overige zakelijke kosten, na
-          aftrek van BTW — "Uitbetaling aan prive"/"Prive opnames"/"Terugboeking van prive", "Belastingen:
+          aftrek van BTW — "Prive opnames"/"Ontvangen van zakelijk"/"Terugboeking van prive"/"Terugboeking naar zakelijk", "Belastingen:
           ZVW"/"Belastingen: IH", en "Belastingen: Naheffingen OB/IB voorgaande jaren" tellen bewust niet mee: de
           eerste drie zijn onttrekkingen aan/inbreng in de winst, de rest zijn persoonlijke belastingen of een
           balansmutatie — geen van alle zijn het zakelijke kosten of omzet. "Belastingen: Naheffingen LH voorgaande
