@@ -15,6 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
+import { looksLikeForeignCardPayment } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -62,6 +63,18 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
   if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
+
+  // De twee "laatste redmiddel"-gokken uit autoClassify() (zie classify.js) — geen enkel zoekwoord
+  // matchte (anders had de check hierboven al gematched), dus dit is puur een structurele schatting
+  // (buitenlandse pinbetaling / kaartbetaling zonder tegenrekening-IBAN), geen inhoudelijke
+  // herkenning. Bewust op "heuristic" (net als "Overboekingen aan personen"), zodat dit zichtbaar in
+  // de "nog te controleren"-lijst blijft staan.
+  if (resolvedCategory === "Prive - vrijetijd-uitgaan-vakantie & uit eten" && looksLikeForeignCardPayment(tx)) {
+    return { level: "heuristic", label: "Geschat: buitenlandse pinbetaling, waarschijnlijk vakantie/uitje" };
+  }
+  if (resolvedCategory === "Winkels divers" && !tx.counterpartyIban) {
+    return { level: "heuristic", label: "Geschat: losse pinbetaling zonder herkend zoekwoord" };
+  }
 
   return { level: "heuristic", label: "Automatisch bepaald (geen specifiek zoekwoord)" };
 }

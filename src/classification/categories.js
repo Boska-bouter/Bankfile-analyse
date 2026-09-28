@@ -39,7 +39,10 @@ export const DEFAULT_RULES = [
     "kaufland", "rewe", "edeka", "real,-", "delhaize", "carrefour", "colruyt", " okay ", "intermarché",
     "intermarche", " cora ", "picnic", "crisp", "ekoplaza", "odin", "marqt", "amazing oriental",
     "boon's markt", "dagwinkel", "supercoop", "aldi süd", "aldi nord", "netto markt", "penny markt", "dm-drogerie",
-    "rossmann", "globus", "marktkauf", "trinkgut", "bio-planet",
+    "dmdrogerie", "rossmann", "globus", "marktkauf", "trinkgut", "bio-planet",
+    // Flitsbezorgers (boodschappen thuisbezorgd) — een woord als "flink" zonder toevoeging is met
+    // opzet niet gebruikt (te generiek, matcht ook het gewone Nederlandse woord "flink").
+    "flink bv", "flink food", "gorillas", "getir",
   ] },
   { name: "Brandstof", color: "bg-orange-100 text-orange-800", keywords: [
     "shell", "esso", "esso express", "total", "totalenergies", "total energies", "lukoil", "avia",
@@ -129,6 +132,9 @@ export const DEFAULT_RULES = [
     " action ", "hema", "blokker", "xenos", "haco", "leen bakker", "kwantum", " casa ",
     "søstrene grene", "big bazar", "marskramer", "praxis", "gamma", "karwei", "hornbach", "hubo", "homedeco",
     "bauhaus", " obi ", "trekpleister",
+    // Woon/tuin/speelgoed/drogisterij-winkels.
+    "ikea", "intratuin", "tuincentrum", "toychamp", "intertoys", "babydump", "babypark", "primera",
+    "de verfzaak", "galeria kaufhof", "bcc", "expert",
   ],
     description: "Fysieke en online winkelaankopen: kleding, schoenen, accessoires/sieraden, kookwinkels en huishoudwinkels." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
@@ -155,7 +161,7 @@ export const DEFAULT_RULES = [
   { name: "Lease (financieel)", color: "bg-teal-200 text-teal-900", keywords: [] },
   { name: "Marketing-website", color: "bg-green-100 text-green-800", keywords: ["google ads", "google ireland", "meta ads", "facebook ads", "facebook payments", "mailchimp", "hostnet", "versio", "transip", "strato", "canva", "linkedin ads"] },
   { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark"] },
-  { name: "Prive opnames", color: "bg-amber-100 text-amber-800", keywords: ["geldautomaat", "pinopname", "contant opgenomen", " atm "] },
+  { name: "Prive opnames", color: "bg-amber-100 text-amber-800", keywords: ["geldautomaat", "pinopname", "contant opgenomen", " atm ", "geldmaat"] },
   { name: "Reiskosten (OV)", color: "bg-cyan-200 text-cyan-900", keywords: [
     "ns.nl", "ns-groep", "ns groep", "ovpay", "gvb", "ret", "htm", "arriva", "connexxion", "qbuzz",
     "9292", "syntus", "keolis", "breng", "u-ov", "r-net", "translink", "flixbus", "eurolines",
@@ -179,6 +185,13 @@ export const DEFAULT_RULES = [
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
     "feelgoods burgers",
+    // Vervoer/vermaak dat bij uitjes hoort, geen eigen-vervoer-/OV-kosten (die staan al bij
+    // Brandstof/Reiskosten (OV)).
+    " uber", "uber ", " taxi", "taxi ", " museum ", "pretpark", "attractiepark", "bowling", "escape room",
+    // Generieke horeca-woorden (geen uitputtende merknamenlijst nodig) — vangt ook onbekende
+    // restaurants/eetgelegenheden, ook buitenlandse (taverna, pizzeria).
+    "taverna", "pizzeria", " grill", "grillhouse", " tavern", "steakhouse", "kebab", "shoarma",
+    "shawarma", "döner", "doner", " diner", "foodcourt", "food court", " buffet", " bbq ",
   ] },
   { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente"] },
   { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
@@ -193,8 +206,8 @@ export const DEFAULT_RULES = [
   ],
     description: "Arbeidsongeschiktheidsverzekering — een veelvoorkomende, specifieke aftrekpost bij zzp'ers die anders in de generieke \"Verzekering: Zakelijk\" verdwijnt." },
   { name: "Verzekeringen", color: "bg-teal-100 text-teal-800", keywords: [
-    "zorgverzekering", "zorgpremie", "zilveren kruis", " cz zorg", "cz zorgverzekering", "vgz", "menzis",
-    "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering",
+    "zorgverzekering", "zorgpremie", "zilveren kruis", " cz zorg", "cz zorgverzekering", " cz ", "cz groep",
+    "vgz", "menzis", "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering", "anderzorg",
     "achmea", "interpolis", "allianz", "independer", "assuradeur", "anwb", "nationale-nederlanden", "nationale nederlanden",
     "ohra", "vereniging eigen huis", "lemonade verzekering", "europeesche verzekeringen", "unigarant",
     "achmea rechtsbijstand", "a.s.r.",
@@ -207,6 +220,9 @@ export const DEFAULT_RULES = [
     "gadgetsalarm", "crazzy digidz", "moonflash", "epplejeck", "payu", "adyen", "autoverleden", "alipay",
     "amazon.nl", "amazon.de", "amazon", "coolblue", "wehkamp", "beslist.nl", "vidaxl", "aliexpress",
     "temu", "otto.nl", "de bijenkorf", "bijenkorf", "fonq", "alternate",
+    // Achteraf-betalen-diensten die bij webshopaankopen horen (de webshop zelf staat er meestal niet
+    // bij in de omschrijving, alleen de betaaldienst).
+    "klarna", "riverty", "afterpay", "billink", "in3",
   ],
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
   { name: "Zakelijke inkoop/uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],

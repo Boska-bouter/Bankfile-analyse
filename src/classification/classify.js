@@ -17,6 +17,30 @@ export function defaultTypeForCategory(category) {
 // zakelijke sfeer verschuift.
 const ZAKELIJK_SPAAR_KEYWORDS = ["spaarrekening", "zakelijk sparen", "vermogenssparen", "flexibel sparen"];
 
+// Landcodes zoals banken die aan het einde van de tegenpartijnaam zetten bij een buitenlandse pin-/
+// creditcardbetaling (bijv. "KARAVOLIAS BAKERY IALYSOS DO GRC", "Kochmuetze Neuss Neuss DEU") — dit
+// is een generiek, bank-onafhankelijk patroon (geen lijst met duizenden buitenlandse winkelnamen
+// nodig). "NLD" hoort hier bewust NIET bij: dat betekent juist een BINNENLANDSE transactie. Een
+// redelijk uitgebreide, maar niet volledig uitputtende ISO 3166-1 alpha-3-lijst van landen waar
+// doorgaans op vakantie/voor een uitje wordt gepind — dit is een HEURISTIEK (zie confidence.js: komt
+// als "controleer" in de reviewlijst terecht), geen definitieve/onomkeerbare classificatie.
+const FOREIGN_COUNTRY_CODES = new Set([
+  "DEU", "BEL", "FRA", "GBR", "ESP", "ITA", "GRC", "PRT", "AUT", "CHE", "POL", "TUR", "LUX", "DNK",
+  "SWE", "NOR", "FIN", "IRL", "HUN", "CZE", "HRV", "SVN", "SVK", "BGR", "ROU", "EST", "LVA", "LTU",
+  "MLT", "CYP", "ISL", "MAR", "EGY", "THA", "IDN", "ARE", "MEX", "CAN", "AUS", "ZAF", "BRA", "USA",
+  "ALB", "MNE", "SRB", "MKD", "AND", "MCO", "TUN", "IND", "CHN", "JPN", "KOR", "SGP", "NZL",
+]);
+
+// Exported zodat confidence.js exact dezelfde herkenning gebruikt om het vertrouwensniveau te
+// bepalen (in plaats van deze regex/lijst te dupliceren en op termijn uit de pas te laten lopen).
+export function looksLikeForeignCardPayment(tx) {
+  const check = (val) => {
+    const m = (val || "").trim().match(/\b([A-Z]{3})$/);
+    return !!m && FOREIGN_COUNTRY_CODES.has(m[1]);
+  };
+  return check(tx.counterparty) || check(tx.description);
+}
+
 export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   // `type` volgt UITSLUITEND het geregistreerde rekeningtype van deze transactie (accountType) —
   // nooit de categorie of een trefwoordmatch. Dit is bewust: het is precies hoe zichtbaar wordt dat
@@ -153,9 +177,21 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     if (text.includes("belastingdienst")) {
       return { category: "Belastingen: overig", type };
     }
-    if (/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting)\b/i.test(text)) {
-      // Onduidelijk WAT er precies terugbetaald is — bewust naar "Overig" (controleren) in plaats
-      // van te gokken, in plaats van dit stilzwijgend als omzet te boeken.
+    // "terugboeking" staat er sinds v215 ook bij: banken zetten voor een terug-geannuleerde incasso
+    // vaak "Reden: Terugboeking op verzoek klant" neer, zonder een van de andere signaalwoorden.
+    if (/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) {
+      // Wél nog te herleiden WAT er is terugbetaald? Dan hergebruiken we dezelfde trefwoordenlijsten
+      // als de uitgavenkant hieronder (SPLIT_CATEGORY_NAMES) — een KPN-/Eneco-/verzekeraar-
+      // terugboeking hoort bij dezelfde categorie als de oorspronkelijke uitgave, niet in de
+      // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
+      // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
+      for (const rule of rules) {
+        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()))) {
+          const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+          const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+          return { category: categoryName, type };
+        }
+      }
       return { category: "Overig", type };
     }
   }
@@ -200,9 +236,34 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return { category: "Zakelijke inkoop/uitgaven", type };
   }
 
+  // Buitenlandse pinbetaling op een privérekening, nog niet via een specifiek trefwoord herkend —
+  // vrijwel altijd een vakantie-/uitje-uitgave. Bewust VÓÓR de looksLikePerson-check hieronder: veel
+  // kleine buitenlandse (horeca-)ondernemers staan met een persoonsnaam in de bankexport (bijv.
+  // "Kasapis Vasileios Rodos GRC"), en zijn dan feitelijk een lokale vakantie-uitgave, geen
+  // overboeking aan een bekende. Dit is een HEURISTIEK/schatting (zie confidence.js), geen definitieve
+  // classificatie — komt zichtbaar als "controleren" in de reviewlijst terecht, precies zodat een
+  // zakelijke uitgave bij een buitenlandse leverancier (software, congres, hosting) alsnog
+  // gecorrigeerd kan worden.
+  if (accountType !== "Zakelijk" && looksLikeForeignCardPayment(tx)) {
+    return { category: "Prive - vrijetijd-uitgaan-vakantie & uit eten", type };
+  }
+
   if (looksLikePerson(tx.counterparty || tx.description)) {
     return { category: "Overboekingen aan personen", type };
   }
+
+  // Laatste redmiddel op een privérekening: een pinbetaling zonder tegenrekening-IBAN (dus geen
+  // gewone bankoverschrijving naar een met naam bekende partij, maar een kaartbetaling bij een
+  // winkel/dienst) die nergens anders op matcht, is vrijwel altijd een gewone winkelaankoop — een
+  // voorzichtige standaardgok naar "Winkels divers" in plaats van de generieke "Overig", zodat
+  // niet elke losse pinbetaling apart handmatig hoeft te worden ingedeeld. Net als de vakantie-gok
+  // hierboven een HEURISTIEK: zichtbaar als "controleren" in de reviewlijst, dus corrigeerbaar.
+  // Alleen op de PRIVÉrekening — op de zakelijke rekening blijft een onherkende uitgave bewust op
+  // "Overig" staan, omdat de fiscale inzet (aftrekbaarheid) daar te groot is om te gokken.
+  if (accountType !== "Zakelijk" && !tx.counterpartyIban && tx.amount < 0) {
+    return { category: "Winkels divers", type };
+  }
+
   return { category: "Overig", type };
 }
 
@@ -227,7 +288,18 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // namelijk puur tekst+teken-gebaseerd en onderscheidt niet WELKE transactie van die tegenpartij het
 // was — dus een override die ooit terecht op één (destijds nog onduidelijke) transactie is gezet,
 // kan een compleet andere, achteraf overduidelijke transactie meesleuren.
-function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere) {
+// Sinds v215 ook heropend wanneer de transactietekst een duidelijk terugboeking-/terugbetaal-
+// signaal bevat ÉN nu een specifieke leverancier-trefwoordregel matcht (zie het "isIncome"-blok
+// hierboven) — bijv. "kpn bv::pos"/"cz groep zorgverzekeraar::pos"/"eneco services::pos", ooit op
+// "Overig" gezet omdat de classificatie toen nog geen idee had wat voor soort terugboeking dit was.
+// Nu die herkenning bestaat, mag de override net als de andere twee gevallen hierboven wijken voor
+// de nieuwe, specifiekere automatische classificatie.
+function looksLikeRecognizedRefund(text, rules) {
+  if (!/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) return false;
+  return rules.some((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
+}
+
+function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) {
   if (!override || override.category !== "Overig") return false;
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   if (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw))) return true;
@@ -236,19 +308,20 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
     const matched = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
     if (matched && matched.accountType && matched.accountType !== accountType) return true;
   }
+  if (looksLikeRecognizedRefund(text, rules)) return true;
   return false;
 }
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   const rowOverride = overridesByRow[tx.id];
-  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return rowOverride;
+  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return rowOverride;
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   const ibanOverride = ik && overridesByCounterparty[ik];
-  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return ibanOverride;
+  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return ibanOverride;
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere)) return keyOverride;
+  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return keyOverride;
   return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
 }
