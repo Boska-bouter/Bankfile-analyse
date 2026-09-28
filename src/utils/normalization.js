@@ -134,8 +134,25 @@ export function counterpartyKey(name, amount) {
 // The Netherlands" de andere keer noemen, terwijl het rekeningnummer gelijk blijft. Alleen
 // beschikbaar als het bankbestand een tegenrekening-IBAN-kolom had (of, bij MT940, een
 // gestructureerd /IBAN/-subveld).
+// Sommige MT940-exports (bijv. ING's ":25:"-veld met het eigen rekeningnummer) plakken de
+// valutacode direct achter de IBAN, zonder scheidingsteken (":25:NL63INGB0008292483EUR" i.p.v.
+// ":25:NL63INGB0008292483"). Zonder correctie faalt ibansMatch() hieronder voor zo'n rekening: de
+// "een kaal rekeningnummer staat als staart in de volledige IBAN"-vergelijking klopt dan niet meer,
+// omdat de IBAN zelf niet meer de staart van de string is (de valutacode is dat wel). Gevolg: een
+// overboeking tussen de zakelijke en de privérekening van dezelfde cliënt werd op de kant van de
+// rekening met deze valutacode-staart NIET herkend als "eigen rekening", en dus ook niet als
+// zodanig geclassificeerd — met als resultaat dat zo'n overboeking niet tegen elkaar werd
+// weggestreept en in plaats daarvan aan een kant (ten onrechte) als gewone inkomsten/uitgaven werd
+// meegeteld. Hier alleen een bekende, veelgebruikte valutacode strippen, en alleen als wat overblijft
+// nog op een geldige IBAN lijkt (landcode + 2 controlecijfers, gevolgd door minstens 6 tekens) —
+// zodat een toevallige rekeningnummer-staart die op een valutacode lijkt niet per ongeluk wordt
+// afgekapt.
+const IBAN_WITH_TRAILING_CURRENCY_RE = /^([A-Z]{2}\d{2}[A-Z0-9]{6,30})(EUR|USD|GBP|CHF|JPY|SEK|NOK|DKK)$/;
+
 export function normalizeIban(raw) {
-  return String(raw || "").replace(/\s+/g, "").toUpperCase();
+  const s = String(raw || "").replace(/\s+/g, "").toUpperCase();
+  const match = s.match(IBAN_WITH_TRAILING_CURRENCY_RE);
+  return match ? match[1] : s;
 }
 
 // Vergelijkt twee rekeningnummers waarvan er één een volledig IBAN kan zijn en de ander een kaal

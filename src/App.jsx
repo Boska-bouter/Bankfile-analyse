@@ -17,7 +17,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, extractKeywordCandidate } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, extractKeywordCandidate, ibansMatch } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -652,9 +652,15 @@ export default function App() {
       .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName] }));
     // Handmatig opgegeven eigen rekeningen die je (nog) niet hebt geladen (zie de wizard-vraag) —
     // tellen voor élk geladen bestand mee, niet gekoppeld aan een specifiek fileName. Er kunnen er
-    // meerdere zijn (bijv. een extra zakelijke rekening én twee privérekeningen).
+    // meerdere zijn (bijv. een extra zakelijke rekening én twee privérekeningen). Is zo'n rekening
+    // inmiddels ALSNOG als eigen bestand geladen (de wizard-invoer is dan achterhaald, maar wordt
+    // nergens automatisch opgeruimd), dan die dubbele/verouderde entry hier negeren — anders staat
+    // dezelfde rekening tweemaal in de lijst. Op zich onschadelijk zolang het rekeningtype gelijk
+    // blijft (find/some hieronder gebruiken toch maar de eerste match), maar wél verwarrend, en een
+    // reëel risico zodra iemand het rekeningtype van het echte bestand nog aanpast zonder aan deze
+    // oude wizard-invoer te denken.
     const extra = (eigenRekeningenExtra || [])
-      .filter((r) => r.iban)
+      .filter((r) => r.iban && !entries.some((e) => ibansMatch(e.iban, r.iban)))
       .map((r) => ({ iban: r.iban, accountType: r.accountType }));
     const result = {};
     for (const pf of parsedFiles) {
