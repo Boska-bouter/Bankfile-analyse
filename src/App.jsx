@@ -324,6 +324,7 @@ export default function App() {
   const [confirmMessage, setConfirmMessage] = useState(null);
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
+  const bankFileInputRef = useRef(null); // v226 — "Bestand laden"-knop in de sticky navbalk (zie StickyTopNav)
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
   const confidenceSectionRef = useRef(null);
@@ -2367,7 +2368,7 @@ export default function App() {
         </div>
       </header>
 
-      <StickyTopNav items={topNavItems} />
+      <StickyTopNav items={topNavItems} onLoadFile={() => bankFileInputRef.current?.click()} />
 
       {updateAvailable && <UpdateAvailableBanner />}
 
@@ -2482,11 +2483,15 @@ export default function App() {
           <label className="inline-flex items-center gap-2 rounded-md bg-slate-900 text-stone-50 px-4 py-2 text-sm font-medium hover:bg-slate-800 cursor-pointer">
             <FileSpreadsheet className="h-4 w-4" /> Bestanden kiezen
             <input
+              ref={bankFileInputRef}
               type="file"
               multiple
               accept=".csv,.xlsx,.xls,.940,.sta,.mt940,.swi,.txt,.xml"
               className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = "";
+              }}
             />
           </label>
         </section>
@@ -2713,6 +2718,74 @@ export default function App() {
 
         {years.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
 
+        <div ref={multiYearSectionRef}>
+                  {rechtsvorm === "bv" ? (
+                    <MultiYearOverviewBV
+                      years={years}
+                      yearlySummaries={yearlySummaries}
+                      kostenTotaalByYear={kostenTotaalByYear}
+                      dgaSalarisByYear={dgaSalarisByYear}
+                      rcVerloop={rcVerloop}
+                      evVerloop={evVerloop}
+                      onYearClick={setActiveYear}
+                      activeYear={activeYear}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  ) : (
+                    <MultiYearOverview
+                      years={years}
+                      yearlySummaries={yearlySummaries}
+                      yearlyOpenOB={yearlyOpenOB}
+                      korRegeling={korRegeling}
+                      onYearClick={setActiveYear}
+                      ibStatus={ibStatus}
+                      setIbGedaan={setIbGedaan}
+                      zvwStatus={zvwStatus}
+                      setZvwGedaan={setZvwGedaan}
+                      costBreakdownByYear={costBreakdownByYear}
+                      kostenTotaalByYear={kostenTotaalByYear}
+                      volledigeJaren={volledigeJaren}
+                      businessAdvies={businessAdvies}
+                      activeYear={activeYear}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  )}
+                </div>
+
+                {rechtsvorm === "bv" && heeftHolding === true && (
+                  <div className="mt-4">
+                    <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
+                  </div>
+                )}
+
+                {rechtsvorm === "bv" && bvSignalering && (
+                  <div className="mt-4" ref={bvSignaleringSectionRef}>
+                    <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
+                  </div>
+                )}
+
+                <div ref={quarterlyBtwSectionRef}>
+                  {!korRegeling ? (
+                    <QuarterlyBtwPanel
+                      quarters={quarterlyBtwData}
+                      kwartaalStatus={kwartaalStatus}
+                      setKwartaalStatusField={setKwartaalStatusField}
+                      activeYear={activeYear}
+                      costBreakdownByQuarter={costBreakdownByQuarter}
+                      onOpenHelp={setHelpPopupChapter}
+                      obIbSectionRef={obIbSectionRef}
+                    />
+                  ) : (
+                    // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
+                    // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
+                    // dus die blijft hier los staan, net als voorheen.
+                    <div ref={obIbSectionRef} className="flex items-center justify-end">
+                      <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
+                    </div>
+                  )}
+                </div>
+
+
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
           <section ref={duplicatesSectionRef} className="rounded-lg border border-amber-300 bg-amber-50">
             <div className="px-4 py-3 flex items-start gap-3">
@@ -2776,35 +2849,7 @@ export default function App() {
           </section>
         )}
 
-        {parsedFiles.length > 0 && (
-          <div ref={btwSettingsSectionRef}>
-            <BtwRatesPanel
-              categoryBtwRates={categoryBtwRates}
-              setCategoryBtwRates={setCategoryBtwRatesWithUndo}
-              btwVerlegd={btwVerlegd}
-              setBtwVerlegd={setBtwVerlegdWithUndo}
-              korRegeling={korRegeling}
-              setKorRegeling={setKorRegelingWithUndo}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-        )}
-
-        {parsedFiles.length > 0 && (
-          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
-        )}
-
-        {parsedFiles.length > 0 && (
-          <CounterpartyRulesPanel
-            overridesByCounterparty={overridesByCounterparty}
-            setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
-            onOpenHelp={setHelpPopupChapter}
-          />
-        )}
-
-        {parsedFiles.length > 0 && (
-          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
-        )}
+        
 
         {parsedFiles.length > 0 && (
           <div ref={incomeRatesSectionRef} className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}>
@@ -3126,77 +3171,42 @@ export default function App() {
                   </div>
                 )}
 
-                <div ref={multiYearSectionRef}>
-                  {rechtsvorm === "bv" ? (
-                    <MultiYearOverviewBV
-                      years={years}
-                      yearlySummaries={yearlySummaries}
-                      kostenTotaalByYear={kostenTotaalByYear}
-                      dgaSalarisByYear={dgaSalarisByYear}
-                      rcVerloop={rcVerloop}
-                      evVerloop={evVerloop}
-                      onYearClick={setActiveYear}
-                      activeYear={activeYear}
-                      onOpenHelp={setHelpPopupChapter}
-                    />
-                  ) : (
-                    <MultiYearOverview
-                      years={years}
-                      yearlySummaries={yearlySummaries}
-                      yearlyOpenOB={yearlyOpenOB}
-                      korRegeling={korRegeling}
-                      onYearClick={setActiveYear}
-                      ibStatus={ibStatus}
-                      setIbGedaan={setIbGedaan}
-                      zvwStatus={zvwStatus}
-                      setZvwGedaan={setZvwGedaan}
-                      costBreakdownByYear={costBreakdownByYear}
-                      kostenTotaalByYear={kostenTotaalByYear}
-                      volledigeJaren={volledigeJaren}
-                      businessAdvies={businessAdvies}
-                      activeYear={activeYear}
-                      onOpenHelp={setHelpPopupChapter}
-                    />
-                  )}
-                </div>
-
-                {rechtsvorm === "bv" && heeftHolding === true && (
-                  <div className="mt-4">
-                    <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
-                  </div>
-                )}
-
-                {rechtsvorm === "bv" && bvSignalering && (
-                  <div className="mt-4" ref={bvSignaleringSectionRef}>
-                    <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
-                  </div>
-                )}
-
-                <div ref={quarterlyBtwSectionRef}>
-                  {!korRegeling ? (
-                    <QuarterlyBtwPanel
-                      quarters={quarterlyBtwData}
-                      kwartaalStatus={kwartaalStatus}
-                      setKwartaalStatusField={setKwartaalStatusField}
-                      activeYear={activeYear}
-                      costBreakdownByQuarter={costBreakdownByQuarter}
-                      onOpenHelp={setHelpPopupChapter}
-                      obIbSectionRef={obIbSectionRef}
-                    />
-                  ) : (
-                    // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
-                    // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
-                    // dus die blijft hier los staan, net als voorheen.
-                    <div ref={obIbSectionRef} className="flex items-center justify-end">
-                      <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
-                    </div>
-                  )}
-                </div>
+                
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
+
+                        {parsedFiles.length > 0 && (
+          <div ref={btwSettingsSectionRef}>
+            <BtwRatesPanel
+              categoryBtwRates={categoryBtwRates}
+              setCategoryBtwRates={setCategoryBtwRatesWithUndo}
+              btwVerlegd={btwVerlegd}
+              setBtwVerlegd={setBtwVerlegdWithUndo}
+              korRegeling={korRegeling}
+              setKorRegeling={setKorRegelingWithUndo}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+        )}
+
+        {parsedFiles.length > 0 && (
+          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+        )}
+
+        {parsedFiles.length > 0 && (
+          <CounterpartyRulesPanel
+            overridesByCounterparty={overridesByCounterparty}
+            setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
+            onOpenHelp={setHelpPopupChapter}
+          />
+        )}
+
+        {parsedFiles.length > 0 && (
+          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
+        )}
 
                 <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
 
