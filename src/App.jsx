@@ -348,6 +348,7 @@ export default function App() {
   const incomeRatesSectionRef = useRef(null);
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
+  const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
 
   // ---- Tabbladen (v228) — de app was tot nu toe één lange scroll-pagina met een sticky navbalk die
   // alleen naar secties VERDER OP DEZELFDE PAGINA scrolde (StickyTopNav / jumpToSection hierboven).
@@ -364,6 +365,7 @@ export default function App() {
   // jumpToSection hieronder om bij een kruis-tabblad-sprong eerst het juiste tabblad te activeren
   // en dan pas te scrollen (de sectie stond tot dat moment op display:none).
   const REF_TAB_ENTRIES = [
+    [importControleSectionRef, "controleren"],
     [confidenceSectionRef, "controleren"],
     [personReviewSectionRef, "controleren"],
     [overigReviewSectionRef, "controleren"],
@@ -2037,6 +2039,19 @@ export default function App() {
               hint: "Naar het BTW-kwartaaloverzicht",
               onClick: () => jumpToSection(quarterlyBtwSectionRef),
             },
+            // v240 — vervangt de "Factuurperiode"-kaart die hier stond (die is verhuisd naar het
+            // Controleren-tabblad) — zelfde stijl als "BTW-kwartalen" hierboven: een getal per
+            // openstaand item (hier: IB/IH en Zvw voor {activeYear}, max. 2), i.p.v. een bedrag.
+            {
+              key: "ibZvwAangiften",
+              title: `IB/Zvw aangiften ${activeYear}`,
+              icon: <span>📮</span>,
+              value: (ibStatus[activeYear]?.gedaan ? 0 : 1) + (zvwStatus[activeYear]?.gedaan ? 0 : 1),
+              subtitle: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "Beide afgehandeld" : "nog niet afgevinkt als gedaan",
+              tone: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "ok" : "attention",
+              hint: "Naar de aangifte-checklist voor dit jaar",
+              onClick: () => jumpToSection(checklistSectionRef),
+            },
             // ---- Fase 3 (v219): situationeel, alleen als er echt een signaal is ----
             ...(rechtsvorm === "bv" && bvSignalering
               ? [
@@ -2069,20 +2084,9 @@ export default function App() {
             },
           ]
         : []),
-      ...(transactions.length > 0
-        ? [
-            {
-              key: "periode",
-              title: "Factuurperiode",
-              icon: <AlertTriangle className="h-3.5 w-3.5" />,
-              value: periodeMismatches.length,
-              subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
-              tone: periodeMismatches.length > 0 ? "attention" : "ok",
-              hint: "Naar de factuurperiode-controle",
-              onClick: () => jumpToSection(periodeReviewSectionRef),
-            },
-          ]
-        : []),
+      // v240 — "Factuurperiode" is verhuisd naar het nieuwe mini-dashboard op tabblad "Controleren"
+      // (zie controlerenDashboardCards hieronder) — hier op Overzicht vervangen door "IB/Zvw
+      // aangiften" hierboven, in dezelfde stijl (getal = nog te doen) als de BTW-kwartalen-kaart.
     ];
   }, [
     transactions.length,
@@ -2094,6 +2098,8 @@ export default function App() {
     yearlyProgress,
     yearlySummary,
     dashboardAangifteIndicatie,
+    ibStatus,
+    zvwStatus,
     loanSummary,
     loanDetails,
     leaseSummary,
@@ -2104,6 +2110,113 @@ export default function App() {
     bvSignalering,
     korRegeling,
     btwVerlegd,
+  ]);
+
+  // v240 — hoeveel geladen bestanden een saldo-afwijking hebben (per bestand zelf, via
+  // checkBalanceConsistency) of een echt aansluitgat hebben met het volgende bestand van dezelfde
+  // rekening (computeFileContinuity) — hetzelfde "boven de CONTINUITY_GAP_THRESHOLD" criterium als
+  // elders in de tool (kleine afrondingsverschillen tellen bewust niet mee). Gebruikt door de
+  // "Import controle"-kaart in het nieuwe mini-dashboard op het Controleren-tabblad hieronder.
+  const controlerenImportProblemCount = useMemo(() => {
+    const balansProblemen = importDiagnostics.filter(
+      (d) => d.balanceCheck && !d.balanceCheck.ok && Math.abs(d.balanceCheck.diff) >= CONTINUITY_GAP_THRESHOLD
+    ).length;
+    const aansluitProblemen = fileContinuity.filter((c) => !c.ok && Math.abs(c.diff) >= CONTINUITY_GAP_THRESHOLD).length;
+    return balansProblemen + aansluitProblemen;
+  }, [importDiagnostics, fileContinuity]);
+
+  // v240 — Mini-dashboard voor tabblad "Controleren": dezelfde kaartstijl als Overzicht, maar dan
+  // precies de items die je tijdens het daadwerkelijk controleren van een dossier afloopt (import,
+  // classificatie, openstaande overboekingen/tegenpartijen, duplicaten, factuurperiode) — bij elkaar
+  // op de plek waar je toch al aan het controleren bent, i.p.v. terug te moeten naar Overzicht.
+  // "Factuurperiode" stond eerder op Overzicht en is hiernaartoe verhuisd (zie dashboardCards
+  // hierboven, waar die kaart is weggehaald).
+  const controlerenDashboardCards = useMemo(() => {
+    if (transactions.length === 0) return [];
+    return [
+      {
+        key: "importControle",
+        title: "Import controle",
+        icon: <FileSpreadsheet className="h-3.5 w-3.5" />,
+        value: controlerenImportProblemCount,
+        subtitle: controlerenImportProblemCount > 0 ? "bestand(en) met saldo-afwijking" : "Alle saldi kloppen",
+        tone: controlerenImportProblemCount > 0 ? "attention" : "ok",
+        hint: "Naar de importcontrole",
+        onClick: () => jumpToSection(importControleSectionRef),
+      },
+      {
+        key: "confidence",
+        title: "Classificatie zekerheid",
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        value: confidenceSummary.needsReview,
+        subtitle:
+          confidenceSummary.needsReview > 0
+            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
+            : "Alles automatisch met vertrouwen ingedeeld",
+        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
+        hint: "Transacties met onzekere classificatie bekijken",
+        onClick: () => {
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          jumpToSection(confidenceSectionRef);
+        },
+      },
+      {
+        key: "personReview",
+        title: "Overboekingen aan personen",
+        icon: <Users className="h-3.5 w-3.5" />,
+        value: pendingPersonReview.length,
+        subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
+        tone: pendingPersonReview.length > 0 ? "attention" : "ok",
+        hint: "Openstaande overboekingen aan personen bekijken",
+        onClick: () => {
+          setShowPersonReview(true);
+          jumpToSection(personReviewSectionRef);
+        },
+      },
+      {
+        key: "overigReview",
+        title: '"Overig" opruimen',
+        icon: <HelpCircle className="h-3.5 w-3.5" />,
+        value: pendingOverigReview.length,
+        subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",
+        tone: pendingOverigReview.length > 0 ? "attention" : "ok",
+        hint: 'Openstaande "Overig"-tegenpartijen bekijken',
+        onClick: () => {
+          setShowOverigReview(true);
+          jumpToSection(overigReviewSectionRef);
+        },
+      },
+      {
+        key: "duplicates",
+        title: "Duplicaten",
+        icon: <Copy className="h-3.5 w-3.5" />,
+        value: pendingDuplicateCount,
+        subtitle: pendingDuplicateCount > 0 ? "mogelijk dubbele transactie(s)" : "Geen gevonden",
+        tone: pendingDuplicateCount > 0 ? "attention" : "ok",
+        hint: "Mogelijk dubbele transacties bekijken",
+        onClick: () => {
+          if (pendingDuplicateCount > 0) setDismissedDuplicateNotice(false);
+          jumpToSection(duplicatesSectionRef);
+        },
+      },
+      {
+        key: "periode",
+        title: "Factuurperiode",
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        value: periodeMismatches.length,
+        subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
+        tone: periodeMismatches.length > 0 ? "attention" : "ok",
+        hint: "Naar de factuurperiode-controle",
+        onClick: () => jumpToSection(periodeReviewSectionRef),
+      },
+    ];
+  }, [
+    transactions.length,
+    controlerenImportProblemCount,
+    confidenceSummary,
+    pendingPersonReview.length,
+    pendingOverigReview.length,
+    pendingDuplicateCount,
     periodeMismatches.length,
   ]);
 
@@ -2709,9 +2822,15 @@ export default function App() {
           />
         )}
 
+        {/* v240 — Mini-dashboard bovenaan het Controleren-tabblad, zelfde soort kaarten als op
+            Overzicht maar dan precies de items die je tijdens het controleren afloopt. */}
+        <div style={sectionTabStyle("controleren")}>
+          <DashboardOverview title="Controleren" cards={controlerenDashboardCards} />
+        </div>
+
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
             controlestappen op het Controleren-tabblad. */}
-        <div style={sectionTabStyle("controleren")}>
+        <div ref={importControleSectionRef} style={sectionTabStyle("controleren")}>
           <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
         </div>
 
