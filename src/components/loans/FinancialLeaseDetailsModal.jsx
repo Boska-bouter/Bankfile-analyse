@@ -175,6 +175,25 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   }, [form, onbetaaldGedeelteKoop, renteJaarlijks]);
   const perJaar = useMemo(() => groupAmortizationByYear(amortization), [amortization]);
   const projectedPayments = useMemo(() => generateProjectedLeasePayments(form), [form]);
+  // v208 — de restschuld/overwaarde bij vroegtijdige beëindiging/verkoop is bewust GEEN
+  // bank-amortisatie van de kale hoofdsom (dat is amortization.saldoNu hierboven, gebruikt voor de
+  // jaarlijkse fiscale renteaftrek), maar de manier waarop een leasemaatschappij zelf een
+  // afkoopsom/eindafrekening bepaalt: de totale, bij het afsluiten afgesproken leasesom (koopprijs +
+  // lease vergoeding — de financieringskosten over de HELE looptijd, dus inclusief de nog niet
+  // verstreken rente) minus wat er tot de beëindiging daadwerkelijk (volgens schema) is betaald.
+  // Vandaar dat "openstaand bedrag" hier hoger uitvalt dan de kale bank-hoofdsom: het omvat ook de
+  // rente die de leasemaatschappij bij een vroegtijdig einde nog had ontvangen als het contract was
+  // uitgediend. Het "extra bedrag 1e termijn" (administratiekosten) telt bewust nergens in mee — dat
+  // zat al niet in de leasesom (zie de toelichting bij generateProjectedLeasePayments).
+  const totaleLeaseInvestering = useMemo(() => {
+    const leaseVergoedingNum = form.leaseVergoeding === "" || form.leaseVergoeding == null ? 0 : Number(form.leaseVergoeding);
+    return onbetaaldGedeelteKoop + leaseVergoedingNum;
+  }, [onbetaaldGedeelteKoop, form.leaseVergoeding]);
+  const openstaandBedragBijBeeindiging = useMemo(() => {
+    if (projectedPayments.length === 0) return null;
+    const volgensSchemaBetaald = projectedPayments.reduce((a, p) => a + Math.abs(p.amount), 0);
+    return totaleLeaseInvestering - volgensSchemaBetaald;
+  }, [projectedPayments, totaleLeaseInvestering]);
   // v206: als bevestigd is dat termijnen (deels) van een andere rekening zijn betaald, tellen die
   // vanaf hier mee als "gevonden" — anders zou de controle hieronder ze ten onrechte als ontbrekend
   // blijven melden. Zonder ingevulde "handmatigBetaaldTotEnMet" is dit exact dezelfde lijst als
@@ -776,20 +795,20 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                     te kunnen bepalen — zonder "Soort" kent deze tool geen fiscale boekwaarde van dit leaseobject.
                   </p>
                 )}
-                {amortization && (
+                {openstaandBedragBijBeeindiging != null && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700" title="Opbrengst vergeleken met de op basis van de bankbetalingen berekende openstaande lease-hoofdsom — dit is GEEN winst/verliespost, alleen de afwikkeling van de financiering.">
-                      {amortization.saldoNu - Number(form.verkoopsom) >= 0 ? "Restschuld (nog te betalen)" : "Overwaarde (wordt terugbetaald)"}
+                    <span className="text-sm font-medium text-slate-700" title="De totale leasesom (koopprijs + lease vergoeding) minus wat er tot de beëindiging volgens schema is betaald, vergeleken met de opbrengst — dit is GEEN winst/verliespost, alleen de afwikkeling van de financiering.">
+                      {openstaandBedragBijBeeindiging - Number(form.verkoopsom) >= 0 ? "Restschuld (nog te betalen)" : "Overwaarde (wordt terugbetaald)"}
                     </span>
                     <span className="text-sm font-mono font-semibold text-slate-900">
-                      {eur(Math.abs(amortization.saldoNu - Number(form.verkoopsom)))}
+                      {eur(Math.abs(openstaandBedragBijBeeindiging - Number(form.verkoopsom)))}
                     </span>
                   </div>
                 )}
-                {!amortization && (
+                {openstaandBedragBijBeeindiging == null && (
                   <p className="text-xs text-slate-400">
-                    Nog niet genoeg ingevuld (koopprijs/looptijd/maandbedrag/startdatum) om de openstaande
-                    lease-hoofdsom — en dus een eventuele restschuld/overwaarde — te kunnen berekenen.
+                    Nog niet genoeg ingevuld (koopprijs/looptijd/maandbedrag/startdatum) om de totale leasesom —
+                    en dus een eventuele restschuld/overwaarde — te kunnen berekenen.
                   </p>
                 )}
               </div>

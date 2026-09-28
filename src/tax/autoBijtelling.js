@@ -235,8 +235,24 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
         const r = activumBijBeeindiging ? computeAfschrijvingPerJaar(activumBijBeeindiging, terminationYear) : null;
         const boekwaardeBijBeeindiging = r ? r.boekwaardeEindJaar : null;
         const boekresultaat = r ? opbrengst - boekwaardeBijBeeindiging : null;
+        // v208 — "openstaande hoofdsom" is bewust NIET (meer) de kale bank-amortisatie van de
+        // geleende hoofdsom (dat blijft de basis voor de jaarlijkse fiscale renteaftrek, zie
+        // leaseRente hieronder), maar de manier waarop een leasemaatschappij zelf een
+        // afkoopsom/eindafrekening bij vroegtijdige beëindiging bepaalt: de totale, bij het afsluiten
+        // afgesproken leasesom (koopprijs + lease vergoeding, over de HELE groep — bij een
+        // herfinanciering telt elk segment zijn eigen leasesom mee) minus wat er tot de beëindiging
+        // daadwerkelijk is betaald (dezelfde, al geteste betalingen/matching als de renteberekening
+        // hieronder, dus inclusief de v207-correctie voor "extra bedrag 1e termijn"). Dat ligt hoger
+        // dan de kale hoofdsom, omdat het ook de rente omvat die de leasemaatschappij bij het
+        // uitdienen van het volledige contract nog zou hebben ontvangen.
+        const leaseVergoedingNum = (s) => (s.leaseVergoeding === "" || s.leaseVergoeding == null ? 0 : Number(s.leaseVergoeding));
+        const totaleLeaseInvesteringGroep = group.reduce((a, s) => a + computeOnbetaaldGedeelteKoop(s) + leaseVergoedingNum(s), 0);
         const amortizationBijBeeindiging = computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-        const openstaandeHoofdsom = amortizationBijBeeindiging?.saldoNu ?? null;
+        const terminationDate = new Date(terminationEinddatum);
+        const totaalBetaald = (amortizationBijBeeindiging?.rows || [])
+          .filter((row) => row.tx.date <= terminationDate)
+          .reduce((a, row) => a + Math.abs(row.tx.amount), 0);
+        const openstaandeHoofdsom = amortizationBijBeeindiging ? totaleLeaseInvesteringGroep - totaalBetaald : null;
         beeindigingsresultaat = {
           opbrengst,
           boekwaardeBijBeeindiging,
