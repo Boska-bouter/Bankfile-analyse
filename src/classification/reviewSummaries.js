@@ -1,13 +1,25 @@
 import { normKey, counterpartyKey } from "../utils/normalization.js";
 
+// Categorieën die de classificatie (zie classify.js) al met harde zekerheid heeft bepaald als een
+// verschuiving tussen de eigen rekeningen van dezelfde rekeninghouder (IBAN-match met een eigen
+// andere rekening, of tekstherkenning van een eigen gekoppelde spaarrekening) — per definitie geen
+// klant/opdrachtgever, dus deze hoeven de "is dit een zakelijke klant?"-vraag niet meer te doorlopen.
+// Zonder deze uitsluiting kreeg je bij het laden van een privérekening met veel onderlinge
+// overboekingen (bijv. naar de al bekende zakelijke rekening, of naar een eigen spaarrekening) een
+// lange rij overbodige controlevragen over geld dat feitelijk al verklaard is.
+const GEEN_KLANT_CATEGORIES = ["Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive", "Interne overboeking: privé sparen"];
+
 // Groepeert binnenkomende betalingen per tegenpartij — voor de vraag "is dit een zakelijke
 // klant, of loondienst/privé-inkomen?". Bestanden die op rekeningniveau al als "Zakelijk" zijn
-// aangemerkt slaan deze vraag over (dat is al beantwoord).
-export function computeIncomeSummary(transactions, accountTypeByFile) {
+// aangemerkt slaan deze vraag over (dat is al beantwoord), net als transacties die de classificatie
+// al met zekerheid als eigen-rekening-verschuiving heeft herkend (zie GEEN_KLANT_CATEGORIES).
+export function computeIncomeSummary(classified, accountTypeByFile) {
   const map = {};
-  for (const tx of transactions) {
+  for (const tx of classified) {
+    if (tx.isMirror) continue;
     if (tx.amount <= 0) continue;
     if (accountTypeByFile[tx.source] === "Zakelijk") continue;
+    if (GEEN_KLANT_CATEGORIES.includes(tx.category)) continue;
     const key = normKey(tx.counterparty || tx.description);
     if (!key) continue;
     if (!map[key]) {

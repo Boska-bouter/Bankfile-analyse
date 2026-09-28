@@ -975,7 +975,7 @@ export default function App() {
   };
 
   // ---- Inkomstenbronnen-review ----
-  const incomeSummary = useMemo(() => computeIncomeSummary(transactions, accountTypeByFile), [transactions, accountTypeByFile]);
+  const incomeSummary = useMemo(() => computeIncomeSummary(classified, accountTypeByFile), [classified, accountTypeByFile]);
   const pendingIncomeReview = useMemo(() => incomeSummary.filter((i) => !reviewedIncomeKeys.includes(i.key)), [incomeSummary, reviewedIncomeKeys]);
   const markIncomeSource = (item, choice) => {
     if (choice === "zakelijk") {

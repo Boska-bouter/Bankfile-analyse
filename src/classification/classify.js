@@ -58,15 +58,24 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     }
   }
 
-  // Interne overboeking naar/van de eigen zakelijke spaarrekening. Zo'n spaarrekening is vrijwel
-  // altijd een pakketkeuze bij dezelfde bank als de zakelijke betaalrekening (niet iets wat je bij
-  // een andere bank apart afsluit), dus deze overboekingen staan gewoon als gewone regels tussen
-  // de transacties van de zakelijke rekening zelf, in dezelfde MT940-/CSV-export — er is geen
-  // apart te laden bestand of aparte IBAN voor nodig. Daarom hier bewust op tekst herkend in plaats
-  // van op IBAN zoals de "eigen rekening elders"-check hierboven. Alleen relevant vanaf een
-  // zakelijke rekening: beide kanten van deze overboeking horen bij dezelfde onderneming.
-  if (accountType === "Zakelijk" && (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) || zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)))) {
-    return { category: "Interne overboeking: zakelijk sparen", type };
+  // Interne overboeking naar/van een eigen (zakelijke of privé) spaarrekening. Zo'n spaarrekening is
+  // vrijwel altijd een pakketkeuze bij dezelfde bank als de betaalrekening zelf (niet iets wat je bij
+  // een andere bank apart afsluit), dus deze overboekingen staan gewoon als gewone regels tussen de
+  // transacties van die rekening zelf, in dezelfde MT940-/CSV-export — er is geen apart te laden
+  // bestand of aparte IBAN voor nodig. Daarom hier bewust op tekst herkend in plaats van op IBAN
+  // zoals de "eigen rekening elders"-check hierboven. Werkt sinds v212 ook op een privérekening (bijv.
+  // een aan de privé-betaalrekening gekoppelde "Oranje Spaarrekening") — hetzelfde principe als bij
+  // de zakelijke kant: puur een verschuiving binnen dezelfde rekeninghouder, dus nooit inkomen van
+  // een klant. Vóór v212 viel zo'n boeking op een privérekening terug op de generieke "Inkomsten"-
+  // categorie, waardoor de "wie zijn je zakelijke klanten?"-review 'm (vaak tientallen keren) ten
+  // onrechte als mogelijke klant voorlegde.
+  // De generieke bank-trefwoorden (hierboven) gelden voor beide rekeningtypes — de door de
+  // gebruiker zelf opgegeven `zakelijkeSpaarKeywords` (wizardvraag "zakelijke spaarrekening") is
+  // expliciet over de ZAKELIJKE rekening en telt dus alleen mee aan die kant.
+  const isEigenSpaarrekeningTekst = ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) ||
+    (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)));
+  if (isEigenSpaarrekeningTekst) {
+    return { category: accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
   }
 
   // Een overboeking naar/van de ondernemer zelf (of fiscaal partner), herkend op naam — voor de
@@ -175,18 +184,20 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
 // Een eerder toegekende "Overig" is per definitie nooit een bewuste, definitieve keuze — dat is
 // juist de controleer-/restcategorie (zie confidence.js en de checklist-review). Nu er een eigen
-// categorie voor de zakelijke-spaarrekening-overboeking bestaat, mag zo'n oude "Overig"-override
-// daarom alsnog automatisch worden bijgewerkt zodra de tekst overduidelijk een overboeking
-// naar/van de zakelijke spaarrekening is — anders zou een tegenpartij/rij die vóór deze fix al
-// eens (noodgedwongen) op "Overig" is gezet, voor altijd op de controleerlijst blijven staan,
-// terwijl identieke, nog niet eerder aangeraakte transacties automatisch wél goed terechtkomen.
-// Elke andere, bewust gekozen categorie (ook "Zakelijke inkomsten" of "Prive: overig") blijft
-// gewoon onaangetast — alleen "Overig" wordt op deze manier "heropend".
+// categorie voor de eigen-spaarrekening-overboeking bestaat (zakelijk én, sinds v212, privé), mag
+// zo'n oude "Overig"-override daarom alsnog automatisch worden bijgewerkt zodra de tekst
+// overduidelijk een overboeking naar/van die spaarrekening is — anders zou een tegenpartij/rij die
+// vóór deze herkenning al eens (noodgedwongen) op "Overig" is gezet, voor altijd op de
+// controleerlijst blijven staan, terwijl identieke, nog niet eerder aangeraakte transacties
+// automatisch wél goed terechtkomen. Elke andere, bewust gekozen categorie (ook "Zakelijke
+// inkomsten" of "Prive: overig") blijft gewoon onaangetast — alleen "Overig" wordt op deze manier
+// "heropend".
 function isStaleOverigForZakelijkSpaar(override, tx, accountType, zakelijkeSpaarKeywords) {
-  return !!override && override.category === "Overig" && accountType === "Zakelijk" &&
+  return !!override && override.category === "Overig" &&
     (() => {
       const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-      return ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) || zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw));
+      return ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) ||
+        (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)));
     })();
 }
 

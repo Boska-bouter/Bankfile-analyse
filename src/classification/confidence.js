@@ -54,6 +54,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
   if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
+  if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van privé spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));

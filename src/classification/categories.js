@@ -251,7 +251,7 @@ export const SPLIT_CATEGORY_NAMES = {
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Overboekingen aan personen",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive",
   "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Uitbetaling aan prive", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -273,6 +273,7 @@ export const CATEGORY_COLOR = Object.fromEntries([
   ["Terugboeking van prive", "bg-amber-100 text-amber-800"],
   ["Overboekingen aan personen", "bg-fuchsia-100 text-fuchsia-800"],
   ["Interne overboeking: zakelijk sparen", "bg-cyan-100 text-cyan-800"],
+  ["Interne overboeking: privé sparen", "bg-cyan-50 text-cyan-700"],
   ["Overig", "bg-slate-200 text-slate-700"],
   ...DEFAULT_RULES.map((r) => [r.name, r.color]),
 ]);
@@ -296,7 +297,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
 export const INCOME_TRANSFER_CATEGORIES = [
   "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
   "Prive opnames", "Uitbetaling aan prive", "Terugboeking van prive",
-  "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen",
+  "Overboekingen aan personen", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen",
 ];
 
 // Route B (zie gesprek): telt een transactie mee als zakelijke omzet/kostenpost in W&V/BTW? Dat
@@ -329,7 +330,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Belastingen: Naheffingen IB voorgaande jaren": "geen",
   // Transfers/boekwinst/nog-te-beoordelen — geen gewone omzet of kostenpost
   "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen",
-  "Interne overboeking: zakelijk sparen": "geen",
+  "Interne overboeking: zakelijk sparen": "geen", "Interne overboeking: privé sparen": "geen",
   // Alles met hoofdcategorie "Privé" of "Persoonlijk & vertrouwelijk": nooit een kostenpost,
   // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
@@ -542,6 +543,7 @@ export const SUBTYPE_TO_MAIN = {
   "Inkomsten": "Privé",
   "Inkomsten/betalingen niet dit jaar": "Zakelijke inkomsten",
   "Interne overboeking: zakelijk sparen": "Interne overboekingen",
+  "Interne overboeking: privé sparen": "Interne overboekingen",
   "Kinderopvang": "Privé",
   "Lease (operationeel)": "Vervoer & auto",
   "Lease (financieel)": "Financiering",
