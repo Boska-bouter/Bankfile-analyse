@@ -1056,6 +1056,16 @@ export default function App() {
   };
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
+    const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
+    const incompleteLoansCount = loanSummary.filter(
+      (l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend
+    ).length;
+    const incompleteLeasesCount = leaseSummary.filter((l) => {
+      if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
+      if (leaseDetails[l.key]?.onbekend) return false;
+      return l.category === "Lease (financieel)" && !isCompleteFinancialLeaseDetails(leaseDetails[l.key]);
+    }).length;
+    const quartersOpenCount = checklistData?.quartersOpen?.length || 0;
     return [
       {
         key: "confidence",
@@ -1112,8 +1122,84 @@ export default function App() {
           jumpToSection(duplicatesSectionRef);
         },
       },
+      // ---- Fase 2 (v218) — per geselecteerd jaar (activeYear), zelfde jaar als StickyYearNav. Deze
+      // kaarten verschijnen alleen zodra er een jaar geselecteerd is (na het laden van transacties
+      // is dat altijd het geval — zie de activeYear-init hieronder in de bestandsladers). ----
+      ...(activeYear
+        ? [
+            {
+              key: "yearStatus",
+              title: `Aangifte ${activeYear}`,
+              icon: <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress?.status || "oranje"]}</span>,
+              value: `${yearProgress?.pct ?? 0}%`,
+              subtitle: yearProgress?.gatDitJaar
+                ? "Gat in bestandscontinuïteit"
+                : yearProgress?.onzekerDitJaar > 0
+                ? `${yearProgress.onzekerDitJaar} onzeker dit jaar`
+                : "Klaar voor aangifte",
+              tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
+              hint: "Naar de aangifte-checklist voor dit jaar",
+              onClick: () => jumpToSection(checklistSectionRef),
+            },
+            {
+              key: "result",
+              title: `Resultaat ${activeYear}`,
+              icon: <span>€</span>,
+              value: yearlySummary ? eur(yearlySummary.winst) : "—",
+              subtitle: yearlySummary && yearlySummary.winst < 0 ? "Verlies" : "Winst (indicatief)",
+              tone: yearlySummary && yearlySummary.winst < 0 ? "attention" : "neutral",
+              hint: "Naar het jaaroverzicht",
+              onClick: () => jumpToSection(multiYearSectionRef),
+            },
+            {
+              key: "loans",
+              title: "Leningen",
+              icon: <span>📄</span>,
+              value: loanSummary.length,
+              subtitle: incompleteLoansCount > 0 ? `${incompleteLoansCount} nog onvolledig` : loanSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+              tone: incompleteLoansCount > 0 ? "attention" : "neutral",
+              hint: "Naar de leningen-sectie",
+              onClick: () => jumpToSection(loansSectionRef),
+            },
+            {
+              key: "leases",
+              title: "Lease",
+              icon: <span>🚗</span>,
+              value: leaseSummary.length,
+              subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+              tone: incompleteLeasesCount > 0 ? "attention" : "neutral",
+              hint: "Naar de lease-sectie",
+              onClick: () => jumpToSection(leasesSectionRef),
+            },
+            {
+              key: "btwQuarters",
+              title: `BTW-kwartalen ${activeYear}`,
+              icon: <span>🧾</span>,
+              value: quartersOpenCount,
+              subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
+              tone: quartersOpenCount > 0 ? "attention" : "ok",
+              hint: "Naar het BTW-kwartaaloverzicht",
+              onClick: () => jumpToSection(quarterlyBtwSectionRef),
+            },
+          ]
+        : []),
     ];
-  }, [transactions.length, confidenceSummary, pendingPersonReview.length, pendingOverigReview.length, pendingDuplicateCount]);
+  }, [
+    transactions.length,
+    confidenceSummary,
+    pendingPersonReview.length,
+    pendingOverigReview.length,
+    pendingDuplicateCount,
+    activeYear,
+    yearlyProgress,
+    yearlySummary,
+    loanSummary,
+    loanDetails,
+    leaseSummary,
+    leaseDetails,
+    confirmedLeaseTypeKeys,
+    checklistData,
+  ]);
 
   const addBusinessKeyword = (kw) => {
     snapshotBeforeAction("Zakelijke tegenpartij toegevoegd");
