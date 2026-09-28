@@ -574,14 +574,22 @@ export default function App() {
   };
   // Kilometervergoeding-invoer per jaar (zie tax/kmVergoeding.js) — `veld` is "zakelijkeKilometers"
   // of "vergoedingPerKm". Leeg/0 op beide velden verwijdert het jaar weer uit de map (geen effect).
+  // v250 — dit zette de ingetypte tekst meteen om naar Number(), en die omgezette waarde ging weer
+  // terug als de controlled value van het invoerveld. Bij een kommagetal ging dat mis zodra je bij
+  // "0" begon: "0." wordt door Number() al 0 (het punt valt weg), dus het veld toonde meteen weer
+  // "0" i.p.v. "0." — de volgende toets (bijv. "2") kwam er dan achter "0" bij te staan ("02"), wat
+  // een number-input niet toestaat. Nu blijft de ingetypte tekst gewoon bewaard (zoals ook al gebeurt
+  // in de losse-formulieren-modals, bijv. LoanDetailsModal) — pas de plekken die er ECHT mee rekenen
+  // (tax/kmVergoeding.js) zetten 'm om naar een getal; overal elders (vermenigvuldiging, > 0-check,
+  // tekst-interpolatie) werkt een numerieke string door JS' eigen coercion toch al.
   const setKmVergoedingField = (year, veld, waarde) => {
     snapshotBeforeAction("Kilometervergoeding aangepast");
     setKmVergoedingDetailsState((prev) => {
       const next = { ...prev };
       const huidig = { ...(next[year] || {}) };
       if (waarde === "" || waarde == null) delete huidig[veld];
-      else huidig[veld] = Number(waarde);
-      if (!huidig.zakelijkeKilometers && !huidig.vergoedingPerKm) delete next[year];
+      else huidig[veld] = waarde;
+      if (!Number(huidig.zakelijkeKilometers) && !Number(huidig.vergoedingPerKm)) delete next[year];
       else next[year] = huidig;
       return next;
     });

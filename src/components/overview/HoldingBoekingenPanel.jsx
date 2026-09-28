@@ -52,7 +52,12 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
                         type="number"
                         step="0.01"
                         value={b.kapitaalstorting ?? ""}
-                        onChange={(e) => onSetField(year, "kapitaalstorting", e.target.value === "" ? null : Number(e.target.value))}
+                        // v250 — sla de ingetypte tekst zelf op i.p.v. 'm meteen naar Number() om te zetten: bij
+                        // een kommagetal ging dat mis zodra je met "0" begon ("0." wordt door Number() al 0, dus
+                        // het invoerveld toonde meteen weer "0" i.p.v. "0." en de volgende toets kon niet meer
+                        // worden toegevoegd). De rest van dit paneel rekent er toch al mee via JS' eigen
+                        // number-coercion (aftrekken, Math.abs, eur()).
+                        onChange={(e) => onSetField(year, "kapitaalstorting", e.target.value === "" ? null : e.target.value)}
                         placeholder="0,00"
                         className="w-28 rounded-lg border border-slate-300 px-2 py-1"
                       />
@@ -62,7 +67,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
                         type="number"
                         step="0.01"
                         value={b.dividendOntvangen ?? ""}
-                        onChange={(e) => onSetField(year, "dividendOntvangen", e.target.value === "" ? null : Number(e.target.value))}
+                        onChange={(e) => onSetField(year, "dividendOntvangen", e.target.value === "" ? null : e.target.value)}
                         placeholder="0,00"
                         className="w-28 rounded-lg border border-slate-300 px-2 py-1"
                       />
