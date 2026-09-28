@@ -340,7 +340,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 p-4 space-y-5">
+    <div className="rounded-xl border-2 border-slate-200 p-4 space-y-5">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-800">{title}</p>
         {canRemove && (

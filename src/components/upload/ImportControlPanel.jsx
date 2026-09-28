@@ -38,7 +38,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
     ) || continuity.some((c) => !c.ok && !isMinorDiff(c.diff));
 
   return (
-    <section className={`rounded-xl border ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+    <section className={`rounded-xl border-2 ${anyIssue ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-3 text-left">
         {anyIssue ? <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
         <span className={`text-sm font-semibold ${anyIssue ? "text-amber-900" : "text-emerald-900"}`}>

@@ -17,7 +17,7 @@ export default function MultiYearOverviewBV({
   if (years.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span className="flex items-center gap-2">
           {years.length > 1 ? `Meerjarenoverzicht BV (${years.length} jaar)` : "Jaaroverzicht BV"}

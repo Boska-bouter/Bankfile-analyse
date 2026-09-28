@@ -1677,6 +1677,11 @@ export default function App() {
   // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
   // betekenis heeft, of dat de echte privétransacties zelf al hun eigen tegenboeking zijn.
   const priveRekeningGeladen = useMemo(() => Object.values(accountTypeByFile).includes("Prive"), [accountTypeByFile]);
+  // v233: zelfde soort vlag, maar dan voor de zakelijke kant — gebruikt door de "Controle
+  // overboeking zakelijk ↔ privé"-banner in het Details-tabblad hieronder, om net als hierboven
+  // dossierbreed (niet per item-aantal van het actieve jaar) te bepalen of er überhaupt een
+  // rekening van dat type geladen is.
+  const zakelijkRekeningGeladen = useMemo(() => Object.values(accountTypeByFile).includes("Zakelijk"), [accountTypeByFile]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen]
@@ -1881,7 +1886,12 @@ export default function App() {
               icon: <span>📄</span>,
               value: loanSummary.length,
               subtitle: incompleteLoansCount > 0 ? `${incompleteLoansCount} nog onvolledig` : loanSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
-              tone: incompleteLoansCount > 0 ? "attention" : "neutral",
+              // v234-fix: stond op "neutral" (grijs/wit) zodra er niets meer onvolledig was, ook al
+              // meldde de subtitel dan al "Alle gegevens compleet" — dat oogde inconsistent naast de
+              // andere kaarten, die bij "in orde" wél groen kleuren. Nu ook hier "ok" zodra er
+              // daadwerkelijk leningen zijn én alles compleet is; "Geen gevonden" (0 leningen) blijft
+              // neutraal, want dat is geen bereikt resultaat.
+              tone: incompleteLoansCount > 0 ? "attention" : loanSummary.length > 0 ? "ok" : "neutral",
               hint: "Naar de leningen-sectie",
               onClick: () => jumpToSection(loansSectionRef),
             },
@@ -1891,7 +1901,8 @@ export default function App() {
               icon: <span>🚗</span>,
               value: leaseSummary.length,
               subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
-              tone: incompleteLeasesCount > 0 ? "attention" : "neutral",
+              // v234-fix: zelfde correctie als bij "Leningen" hierboven.
+              tone: incompleteLeasesCount > 0 ? "attention" : leaseSummary.length > 0 ? "ok" : "neutral",
               hint: "Naar de lease-sectie",
               onClick: () => jumpToSection(leasesSectionRef),
             },
@@ -2296,7 +2307,7 @@ export default function App() {
     const fileCount = pending ? pending.parsedFiles.length : 0;
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
+        <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">Vorig project gevonden</h1>
           <p className="text-sm text-slate-500 mb-5">
             Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}
@@ -2459,7 +2470,7 @@ export default function App() {
       <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
 
       {lastActionSnapshot && (
-        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-xl border border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
+        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-xl border-2 border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
           <div className="flex items-start justify-between gap-1">
             <p className="text-[11px] text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>
@@ -2547,7 +2558,7 @@ export default function App() {
         )}
 
         {parsedFiles.length === 0 && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
+          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
             <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <p className="text-sm text-emerald-900">
               <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
@@ -2557,7 +2568,7 @@ export default function App() {
         )}
 
         {error && (
-          <section className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
+          <section className="rounded-xl border-2 border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
             <p className="text-sm text-rose-900 whitespace-pre-line">{error}</p>
           </section>
@@ -2818,7 +2829,7 @@ export default function App() {
 
 
         {duplicateGroups.length > 0 && pendingDuplicateCount > 0 && !dismissedDuplicateNotice && (
-          <section ref={duplicatesSectionRef} className="rounded-xl border border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
+          <section ref={duplicatesSectionRef} className="rounded-xl border-2 border-amber-300 bg-amber-50" style={sectionTabStyle("controleren")}>
             <div className="px-4 py-3 flex items-start gap-3">
               <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -2889,7 +2900,7 @@ export default function App() {
             style={sectionTabStyle("instellingen")}
           >
             {!expandedBusinessExpenseList && (
-              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
@@ -2928,7 +2939,7 @@ export default function App() {
               </section>
             )}
             {!expandedBusinessIncomeList && (
-              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
                 <p className="text-xs text-slate-500 mb-3">
                   Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
@@ -2968,7 +2979,7 @@ export default function App() {
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
             {personSummary.length > 0 && (
-              <section ref={personReviewSectionRef} className="rounded-xl border border-fuchsia-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
+              <section ref={personReviewSectionRef} className="rounded-xl border-2 border-fuchsia-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowPersonReview((v) => !v)}
                   className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
@@ -3000,7 +3011,7 @@ export default function App() {
             )}
 
             {overigSummary.length > 0 && (
-              <section ref={overigReviewSectionRef} className="rounded-xl border border-amber-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
+              <section ref={overigReviewSectionRef} className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <button
                   onClick={() => setShowOverigReview((v) => !v)}
                   className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
@@ -3037,7 +3048,7 @@ export default function App() {
             )}
 
             {periodeMismatches.length > 0 && (
-              <section ref={periodeReviewSectionRef} className="rounded-xl border border-sky-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
+              <section ref={periodeReviewSectionRef} className="rounded-xl border-2 border-sky-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
                 <div className="px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2">
                   <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -3222,7 +3233,7 @@ export default function App() {
                 </div>
 
                         {parsedFiles.length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" style={sectionTabStyle("controleren")}>
+          <section className="rounded-xl border-2 border-slate-200 bg-white p-4 shadow-sm" style={sectionTabStyle("controleren")}>
             <h3 className="text-sm font-semibold text-slate-500 mb-3">Controleren / Geladen files</h3>
             <div className="flex flex-wrap gap-2">
               {parsedFiles.map((f) => {
@@ -3317,31 +3328,39 @@ export default function App() {
                   const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
                   const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
                   const diff = Math.round((zakSum + priSum) * 100) / 100;
-                  if (zakSum === 0 && priSum === 0) return null;
-                  // v224: als er voor dit specifieke jaar aan één van beide kanten helemaal GEEN
-                  // transacties geladen zijn (bijv. een privérekening die pas vanaf 2024 is
-                  // aangeleverd, terwijl de zakelijke rekening al vanaf 2020 loopt), is deze controle
-                  // sowieso niet uit te voeren — er is dan simpelweg niets om de zakelijke kant tegen af
-                  // te zetten. Dat is geen fout/inconsistentie (de zakelijke boekingen kunnen prima
-                  // kloppen), dus dan een neutrale melding tonen in plaats van de amber
+                  // v224/v233: als er in dit DOSSIER helemaal geen rekening van één van beide types
+                  // geladen is (bijv. een dossier dat alleen de zakelijke rekening bevat), is deze
+                  // controle sowieso niet uit te voeren — er is dan simpelweg niets om de zakelijke
+                  // kant tegen af te zetten. Dat is geen fout/inconsistentie (de zakelijke boekingen
+                  // kunnen prima kloppen), dus dan een neutrale melding tonen in plaats van de amber
                   // "komt niet overeen"-waarschuwing, die anders ten onrechte een probleem suggereert.
-                  const zijdeOntbreekt = priGroupForYear.items.length === 0 ? "Prive" : zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
+                  // v233-fix: dit keek eerst naar priGroupForYear/zakGroupForYear.items.length (aantal
+                  // transacties in het ACTIEVE JAAR), maar spiegelboekingen voor privé-uitgaven die via
+                  // de zakelijke rekening liepen, tellen daar ook in mee — waardoor priGroupForYear
+                  // alsnog items kon bevatten terwijl er in werkelijkheid geen privé-bestand geladen was.
+                  // Nu wordt dossierbreed gekeken of er ÜBERHAUPT een bestand van dat rekeningtype is
+                  // geladen (priveRekeningGeladen/zakelijkRekeningGeladen hierboven), ongeacht het jaar.
+                  const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
                   if (zijdeOntbreekt) {
+                    if (zakSum === 0 && priSum === 0) return null;
+                    // v233: dit is geen probleem (er ontbreekt niets fout — het dossier bevat simpelweg
+                    // geen tegenrekening om tegen te verifiëren), dus groen/emerald in plaats van het
+                    // neutrale grijs dat eerder suggereerde dat hier nog iets te checken viel.
                     return (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
-                        <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                        <p className="text-sm text-slate-600">
-                          <strong>Controle overboeking zakelijk ↔ privé</strong>: voor {activeYear} is geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
-                          rekening geladen (0 transacties) — deze controle kan dan niet worden uitgevoerd. De {zijdeOntbreekt === "Prive" ? "zakelijke" : "privé"}-
-                          kant toont hier {eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)} aan overboekingen, zonder dat daar iets tegenover kan staan — dat is op
-                          zichzelf geen fout.
+                      <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("details")}>
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-emerald-900">
+                          <strong>Controle overboeking zakelijk ↔ privé</strong>: geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
+                          rekening geladen in dit dossier, dus niet te verifiëren — dat is geen fout. De {zijdeOntbreekt === "Prive" ? "zakelijke" : "privé"}-
+                          kant toont hier {eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)} aan overboekingen, zonder dat daar iets tegenover kan staan.
                         </p>
                       </div>
                     );
                   }
+                  if (zakSum === 0 && priSum === 0) return null;
                   const ok = Math.abs(diff) < 0.01;
                   return (
-                    <div className={`rounded-xl border px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
+                    <div className={`rounded-xl border-2 px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("details")}>
                       {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
                       <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
                         <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}

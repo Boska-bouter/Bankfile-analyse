@@ -22,7 +22,7 @@ const TONE_VALUE = {
 export default function DashboardOverview({ title = "Overzicht", cards }) {
   if (!cards || cards.length === 0) return null;
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">{title}</h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {cards.map((card) => {
@@ -34,7 +34,7 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
               type="button"
               onClick={card.onClick}
               disabled={!clickable}
-              className={`text-left rounded-xl border p-3 shadow-sm transition-colors ${TONE_CARD[tone]} ${
+              className={`text-left rounded-xl border-2 p-3 shadow-sm transition-colors ${TONE_CARD[tone]} ${
                 clickable ? "cursor-pointer" : "cursor-default opacity-90"
               }`}
               title={card.hint}

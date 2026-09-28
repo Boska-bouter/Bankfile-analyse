@@ -15,7 +15,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
   if (quarters.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       {/* Een <div role="button"> in plaats van een <button> voor de hele balk, omdat de
           "Waar vind ik dit op het aangifteformulier?"-link daarbinnen zelf ook een button is —
           een button-in-button is ongeldige HTML en laat een klik op de link per ongeluk ook de

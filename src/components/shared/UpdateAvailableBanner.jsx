@@ -14,7 +14,7 @@ export default function UpdateAvailableBanner() {
     window.location.replace(url.toString());
   };
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 top-2 z-[90] rounded-xl border border-amber-300 bg-amber-50 shadow-lg px-4 py-2.5 flex items-center gap-3 max-w-[calc(100vw-1.5rem)]">
+    <div className="fixed left-1/2 -translate-x-1/2 top-2 z-[90] rounded-xl border-2 border-amber-300 bg-amber-50 shadow-lg px-4 py-2.5 flex items-center gap-3 max-w-[calc(100vw-1.5rem)]">
       <p className="text-xs text-amber-900">Er is een nieuwere versie van deze tool beschikbaar.</p>
       <button
         onClick={bijwerken}

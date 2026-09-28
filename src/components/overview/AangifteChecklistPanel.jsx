@@ -12,7 +12,7 @@ const STATUS_TEKST = {
 
 export default function AangifteChecklistPanel({ checklistData, activeYear, korRegeling, btwVerlegd, yearStatus, onOpenHelp }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Aangifte-checklist {activeYear}
         {onOpenHelp && <HelpHint chapter="aangifte-checklist" onOpen={onOpenHelp} />}

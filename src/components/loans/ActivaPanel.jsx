@@ -19,7 +19,7 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
   }).length;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Activa (bedrijfsmiddelen) — afschrijving</span>
         <span className="text-xs font-normal text-slate-400">({activaSummary.length})</span>

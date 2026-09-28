@@ -13,7 +13,7 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
   const [openGroup, setOpenGroup] = useState(null);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-5 text-sm font-semibold">
         <span>
           BTW-instellingen

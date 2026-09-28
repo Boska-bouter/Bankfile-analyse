@@ -13,7 +13,7 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
   if (!signalering) return null;
 
   return (
-    <section className="rounded-xl border border-rose-200 bg-rose-50">
+    <section className="rounded-xl border-2 border-rose-200 bg-rose-50">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold text-rose-900">
         <span className="flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />

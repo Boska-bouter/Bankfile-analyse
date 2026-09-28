@@ -36,7 +36,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   const [expandedMain, setExpandedMain] = useState(null);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border-2 border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
@@ -220,7 +220,7 @@ export function DetailTable({
   const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
           <div className="flex items-center gap-2">

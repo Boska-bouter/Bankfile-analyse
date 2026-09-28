@@ -12,7 +12,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
   }, [items, search]);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+    <section className="rounded-xl border-2 border-slate-200 bg-white overflow-hidden shadow-sm">
       <div className="bg-slate-900 text-stone-50 px-5 py-4">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Building2 className="h-4 w-4 text-emerald-400" /> Wie zijn je zakelijke klanten?
