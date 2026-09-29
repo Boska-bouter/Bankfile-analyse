@@ -3729,17 +3729,28 @@ export default function App() {
           </div>
         )}
 
+        {/* Op verzoek: dezelfde volledige kop als Overzicht (status-kaart met ringmeter +
+            dossiercontrole-regels + jaar-dropdown) i.p.v. alleen de losse titel+dropdown-regel
+            hierboven — zelfde databron (yearlyProgress/dashboardCards "yearStatus"), alleen ook
+            hier getoond i.p.v. alleen op Overzicht. Verving eerder de losse zwevende
+            StickyYearNav-balk, die hier los over de inhoud heen hing. */}
+        <div style={sectionTabStyle("controleren")}>
+          <DashboardHeader
+            title="Controleren"
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            yearControl={
+              years.length > 1 && (
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+              )
+            }
+          />
+        </div>
+
         {/* Fase 2 (bouwvoorstel) — Controleren in kaartstijl: dezelfde onderliggende kaarten als
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
-            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel.
-            Jaar-dropdown rechtsboven i.p.v. de losse zwevende StickyYearNav-balk (die stond hier
-            los over de inhoud heen — dezelfde YearDropdown/onSelectYear als op Overzicht). */}
-        <div style={sectionTabStyle("controleren")} className="flex items-center justify-between gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Controleren</h2>
-          {years.length > 1 && (
-            <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
-          )}
-        </div>
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
           <SectionCardGrid cards={controlerenCardGroups} />
         </div>
@@ -3875,17 +3886,27 @@ export default function App() {
           </div>
         )}
 
+        {/* Op verzoek: dezelfde volledige kop als Overzicht (status-kaart met ringmeter +
+            dossiercontrole-regels + jaar-dropdown) i.p.v. alleen de losse titel+dropdown-regel
+            hierboven — zelfde databron (yearlyProgress/dashboardCards "yearStatus"), alleen ook
+            hier getoond i.p.v. alleen op Overzicht. */}
+        <div style={sectionTabStyle("instellingen")}>
+          <DashboardHeader
+            title="Instellingen"
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            yearControl={
+              years.length > 1 && (
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+              )
+            }
+          />
+        </div>
+
         {/* Fase 2 (bouwvoorstel) — Instellingen in kaartstijl: dezelfde onderliggende kaarten als
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
-            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel.
-            Jaar-dropdown rechtsboven i.p.v. de losse zwevende StickyYearNav-balk (die stond hier
-            los over de inhoud heen — dezelfde YearDropdown/onSelectYear als op Overzicht). */}
-        <div style={sectionTabStyle("instellingen")} className="flex items-center justify-between gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Instellingen</h2>
-          {years.length > 1 && (
-            <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
-          )}
-        </div>
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("instellingen")}>
           <SectionCardGrid cards={instellingenCardGroups} />
         </div>
