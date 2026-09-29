@@ -49,7 +49,6 @@ import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSi
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
-import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -3690,9 +3689,12 @@ export default function App() {
             de "Indicatieve aangifteberekening"-actie al tonen. checklistData/workflowSteps/
             ibStatus/zvwStatus blijven verder gewoon bestaan voor ander gebruik elders. */}
 
-        <div style={sectionTabStyle("overzicht")}>
-          <TodoPanel items={todoItems} />
-        </div>
+        {/* v276 — "Werk te doen"-paneel (TodoPanel) hier weggehaald: overbodig geworden naast de
+            "Nog te controleren"/"Nog in te stellen"-rollupkaarten hierboven, die dezelfde
+            openstaande signalen (dubbele transacties, overboekingen aan personen, "Overig",
+            leningen/lease zonder gegevens, etc.) al tonen in het nieuwe dashboard. De todoItems-
+            berekening hieronder is (nog) niet verwijderd — ongebruikt, maar onschadelijk — voor het
+            geval dezelfde signalenlijst later toch weer ergens getoond moet worden. */}
 
         {/* v270 — Meerjarenoverzicht en BTW-aangifte per kwartaal stonden hier hardcoded uitgeklapt
             (sinds v245, toen ze vanuit het vervallen tabblad "Resultaten" hiernaartoe verhuisden).
