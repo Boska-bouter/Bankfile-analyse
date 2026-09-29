@@ -7,7 +7,7 @@ import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
-import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown } from "./tax/btw.js";
+import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar } from "./tax/gedeeldeHuur.js";
 import { computeSplitsbareCategorieTotalenVoorJaar, heeftGeregistreerdeAutoOpDeZaak } from "./tax/categorySplit.js";
@@ -363,6 +363,8 @@ export default function App() {
   // Activa en Persoonlijke aannames hadden nog geen eigen ref om naartoe te kunnen springen.
   const activaSectionRef = useRef(null);
   const aannamesSectionRef = useRef(null);
+  // v261 — nieuw, voor de "Percentage zakelijk/privé"-kaart in het Instellingen-dashboard.
+  const categoryPercentageSectionRef = useRef(null);
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
   const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
@@ -2453,6 +2455,23 @@ export default function App() {
     periodeMismatches.length,
   ]);
 
+  // v261 — telt, over alle (niet-vaste-tarief) subtype-categorieën, hoeveel er op 21%/9%/0% staan —
+  // gebruikt door de "BTW-instellingen"-kaart hieronder. Losstaand van het actieve jaar: dit zijn
+  // dossierbrede instellingen, geen jaargebonden aannames.
+  const btwRateCounts = useMemo(() => {
+    let c21 = 0, c9 = 0, c0 = 0;
+    for (const main of MAIN_CATEGORY_ORDER) {
+      for (const c of subtypesForMainCategory(main)) {
+        if (FIXED_BTW_RATE_CATEGORIES[c] != null) continue;
+        const rate = categoryBtwRates[c] ?? 21;
+        if (rate === 21) c21++;
+        else if (rate === 9) c9++;
+        else c0++;
+      }
+    }
+    return { c21, c9, c0 };
+  }, [categoryBtwRates]);
+
   // v246 — mini-dashboard voor tabblad "Instellingen", zelfde soort kaarten als op Overzicht/
   // Controleren (zie dashboardCards/controlerenDashboardCards hierboven) maar dan precies de
   // instellingen-items die een compleet/onvolledig-status hebben: Leningen, Lease en Activa
@@ -2534,37 +2553,119 @@ export default function App() {
         onClick: () => jumpToSection(activaSectionRef),
         actionLabel: incompleteActivaCount > 0 ? "Controleren" : null,
       },
+      // v261 — was alleen het urencriterium (1 item, en alleen zichtbaar/onzichtbaar i.p.v. duidelijk
+      // "wel/niet opgegeven"); nu alle 3 persoonlijke-aannames-items die dit jaar kunnen spelen, elk
+      // met een eigen 🟢/🟠/⚪-status: urencriterium (zelfstandigenaftrek), auto (zakelijk/privé
+      // gebruik) en gedeelde huur (alleen relevant als er dit jaar "Huur (deels zakelijk)"-
+      // transacties zijn — anders ⚪ n.v.t. in plaats van een oneerlijke "nog niet opgegeven").
       ...(rechtsvorm !== "bv" && activeYear
-        ? [
-            {
-              key: "aannames",
-              title: `Persoonlijke aannames ${activeYear}`,
-              icon: <span>🧑</span>,
-              value: zelfstandigenaftrekStatusDitJaar === "onbekend" ? "?" : "✓",
-              subtitle:
-                zelfstandigenaftrekStatusDitJaar === "onbekend"
-                  ? "Urencriterium nog niet aangegeven"
-                  : zelfstandigenaftrekStatusDitJaar === "ja"
-                  ? "Urencriterium: ja"
-                  : "Urencriterium: nee",
-              tone: zelfstandigenaftrekStatusDitJaar === "onbekend" ? "attention" : "ok",
-              hint: "Naar de persoonlijke aannames voor dit jaar",
-              onClick: () => jumpToSection(aannamesSectionRef),
-            },
-          ]
+        ? (() => {
+            const autoStatusDitJaar = autoStatus?.[activeYear];
+            const autoLabel =
+              autoStatusDitJaar === "zaak"
+                ? "Op de zaak"
+                : autoStatusDitJaar === "prive"
+                ? "Privé zakelijk gebruikt"
+                : autoStatusDitJaar === "beide"
+                ? "Beide"
+                : autoStatusDitJaar === "geen"
+                ? "Geen auto"
+                : null;
+            const huurPercentageDitJaar = huurZakelijkPercentageStatus?.[activeYear];
+            const huurRelevant = !!gedeeldeHuurForActiveYear;
+            const missing =
+              (zelfstandigenaftrekStatusDitJaar === "onbekend" ? 1 : 0) +
+              (autoLabel == null ? 1 : 0) +
+              (huurRelevant && huurPercentageDitJaar == null ? 1 : 0);
+            return [
+              {
+                key: "aannames",
+                title: `Persoonlijke aannames ${activeYear}`,
+                icon: <span>🧑</span>,
+                lines: [
+                  {
+                    label: "Urencriterium",
+                    value:
+                      zelfstandigenaftrekStatusDitJaar === "onbekend"
+                        ? "🟠 Niet opgegeven"
+                        : zelfstandigenaftrekStatusDitJaar === "ja"
+                        ? "🟢 Ja"
+                        : "🟢 Nee",
+                  },
+                  { label: "Auto", value: autoLabel ? `🟢 ${autoLabel}` : "🟠 Niet opgegeven" },
+                  {
+                    label: "Gedeelde huur",
+                    value: !huurRelevant ? "⚪ N.v.t." : huurPercentageDitJaar != null ? `🟢 ${huurPercentageDitJaar}%` : "🟠 Niet opgegeven",
+                  },
+                ],
+                subtitle: missing === 0 ? "Alles opgegeven" : `${missing} ${missing === 1 ? "item" : "items"} nog niet opgegeven`,
+                tone: missing === 0 ? "ok" : "attention",
+                hint: "Naar de persoonlijke aannames voor dit jaar",
+                onClick: () => jumpToSection(aannamesSectionRef),
+                actionLabel: missing > 0 ? "Controleren" : null,
+              },
+            ];
+          })()
         : []),
-      ...(transactions.length > 0 && (korRegeling === null || (korRegeling === false && btwVerlegd === null))
+      // v261 — nieuw, informatief (geen "moet nog ingevuld worden"-toon: leeg laten = bewust de
+      // standaard gebruiken, zie CategoryPercentagePanel.jsx) — laat in één oogopslag zien hoeveel
+      // van de dit jaar relevante categorieën een expliciet percentage zakelijk hebben gekregen.
+      ...(transactions.length > 0 && activeYear
+        ? (() => {
+            const categorieenSplitsbaar = Object.keys(categorieTotalenActiveYear || {});
+            const percentageAangepast = categorieenSplitsbaar.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
+            return [
+              {
+                key: "categoryPercentages",
+                title: "Percentage zakelijk/privé",
+                icon: <span>➗</span>,
+                value: `${percentageAangepast}/${categorieenSplitsbaar.length}`,
+                subtitle:
+                  categorieenSplitsbaar.length === 0
+                    ? "Geen splitsbare categorieën dit jaar"
+                    : percentageAangepast === 0
+                    ? "Nog niets opgegeven — standaard percentages gebruikt"
+                    : percentageAangepast === categorieenSplitsbaar.length
+                    ? "Voor alle categorieën opgegeven"
+                    : `Voor ${percentageAangepast} van ${categorieenSplitsbaar.length} categorieën opgegeven`,
+                tone: "neutral",
+                hint: "Naar percentage zakelijk per categorie",
+                onClick: () => jumpToSection(categoryPercentageSectionRef),
+              },
+            ];
+          })()
+        : []),
+      // v261 — was alleen zichtbaar zolang KOR/BTW-verlegd nog niet beantwoord waren ("!"-kaart);
+      // blijft nu ook daarna staan, met de gevraagde 21%/9%/0%-verdeling van de categorieën, zodat
+      // je in één oogopslag kunt zien of de BTW-instellingen er redelijk uitzien.
+      ...(transactions.length > 0 && !korRegeling
         ? [
-            {
-              key: "btwSettings",
-              title: "BTW-instellingen",
-              icon: <Settings className="h-3.5 w-3.5" />,
-              value: "!",
-              subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
-              tone: "attention",
-              hint: "Naar de BTW-instellingen",
-              onClick: () => jumpToSection(btwSettingsSectionRef),
-            },
+            korRegeling === null || btwVerlegd === null
+              ? {
+                  key: "btwSettings",
+                  title: "BTW-instellingen",
+                  icon: <Settings className="h-3.5 w-3.5" />,
+                  value: "!",
+                  subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
+                  tone: "attention",
+                  hint: "Naar de BTW-instellingen",
+                  onClick: () => jumpToSection(btwSettingsSectionRef),
+                  actionLabel: "Beantwoorden",
+                }
+              : {
+                  key: "btwSettings",
+                  title: "BTW-instellingen",
+                  icon: <Settings className="h-3.5 w-3.5" />,
+                  lines: [
+                    { label: "21%", value: String(btwRateCounts?.c21 ?? 0) },
+                    { label: "9%", value: String(btwRateCounts?.c9 ?? 0) },
+                    { label: "0%", value: String(btwRateCounts?.c0 ?? 0) },
+                  ],
+                  subtitle: "Categorieën per BTW-tarief",
+                  tone: "neutral",
+                  hint: "Naar de BTW-instellingen",
+                  onClick: () => jumpToSection(btwSettingsSectionRef),
+                },
           ]
         : []),
       // v251 — "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop/uitgaven (leveranciers)"
@@ -2621,6 +2722,12 @@ export default function App() {
     btwVerlegd,
     businessIncomeEntries,
     businessExpenseEntries,
+    autoStatus,
+    huurZakelijkPercentageStatus,
+    gedeeldeHuurForActiveYear,
+    categorieTotalenActiveYear,
+    categoryZakelijkPercentage,
+    btwRateCounts,
   ]);
 
   // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
@@ -3927,7 +4034,7 @@ export default function App() {
               />
             </div>
 
-            <div style={sectionTabStyle("instellingen")}>
+            <div ref={categoryPercentageSectionRef} style={sectionTabStyle("instellingen")}>
               <CategoryPercentagePanel
                 activeYear={activeYear}
                 categorieTotalen={categorieTotalenActiveYear}
