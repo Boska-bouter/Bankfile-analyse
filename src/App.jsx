@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
@@ -315,6 +315,10 @@ export default function App() {
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
   const [showCategoryOverview, setShowCategoryOverview] = useState(false);
+  // v270 — Meerjarenoverzicht en BTW-aangifte per kwartaal stonden altijd uitgeklapt onder de
+  // kaarten op Overzicht; op verzoek nu als pop-up i.p.v. daar permanent te staan.
+  const [showMultiYearModal, setShowMultiYearModal] = useState(false);
+  const [showQuarterlyBtwModal, setShowQuarterlyBtwModal] = useState(false);
   const { updateAvailable } = useVersionCheck();
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
   // Handmatig geopend via de "Basisvragen bewerken"-knop — in dat geval moet de Rechtsvorm-stap
@@ -2176,7 +2180,7 @@ export default function App() {
                   ? "attention"
                   : "ok",
               hint: "Naar het jaaroverzicht",
-              onClick: () => jumpToSection(multiYearSectionRef),
+              onClick: () => setShowMultiYearModal(true),
             },
             // v237 — twee kaarten met de indicatieve fiscale doorrekening voor het geselecteerde jaar,
             // naast de "Resultaat"-kaart hierboven: IB+Zvw in 1 box, de drie aftrekposten in de andere.
@@ -2269,7 +2273,7 @@ export default function App() {
               subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
               tone: quartersOpenCount > 0 ? "attention" : "ok",
               hint: "Naar het BTW-kwartaaloverzicht",
-              onClick: () => jumpToSection(quarterlyBtwSectionRef),
+              onClick: () => setShowQuarterlyBtwModal(true),
             },
             // v240 — vervangt de "Factuurperiode"-kaart die hier stond (die is verhuisd naar het
             // Controleren-tabblad) — zelfde stijl als "BTW-kwartalen" hierboven: een getal per
@@ -2781,8 +2785,8 @@ export default function App() {
   );
   const resultatenItems = useMemo(
     () => [
-      { label: "Meerjarenoverzicht", onClick: () => jumpToSection(multiYearSectionRef) },
-      { label: "BTW-aangifte per kwartaal", onClick: () => jumpToSection(quarterlyBtwSectionRef) },
+      { label: "Meerjarenoverzicht", onClick: () => setShowMultiYearModal(true) },
+      { label: "BTW-aangifte per kwartaal", onClick: () => setShowQuarterlyBtwModal(true) },
       {
         label: "Indicatieve aangifteberekening",
         onClick: () => {
@@ -3268,6 +3272,100 @@ export default function App() {
 
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
+      {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
+      {showMultiYearModal && (
+        <div
+          className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3"
+          onClick={() => setShowMultiYearModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-semibold text-slate-800">Meerjarenoverzicht</h2>
+              <button onClick={() => setShowMultiYearModal(false)} className="text-slate-400 hover:text-slate-700 shrink-0">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-5 py-4 overflow-y-auto">
+              {rechtsvorm === "bv" ? (
+                <MultiYearOverviewBV
+                  years={years}
+                  yearlySummaries={yearlySummaries}
+                  kostenTotaalByYear={kostenTotaalByYear}
+                  dgaSalarisByYear={dgaSalarisByYear}
+                  rcVerloop={rcVerloop}
+                  evVerloop={evVerloop}
+                  onYearClick={setActiveYear}
+                  onOpenHelp={setHelpPopupChapter}
+                  yearlyProgress={yearlyProgress}
+                />
+              ) : (
+                <MultiYearOverview
+                  years={years}
+                  yearlySummaries={yearlySummaries}
+                  yearlyOpenOB={yearlyOpenOB}
+                  korRegeling={korRegeling}
+                  onYearClick={setActiveYear}
+                  ibStatus={ibStatus}
+                  setIbGedaan={setIbGedaan}
+                  zvwStatus={zvwStatus}
+                  setZvwGedaan={setZvwGedaan}
+                  costBreakdownByYear={costBreakdownByYear}
+                  kostenTotaalByYear={kostenTotaalByYear}
+                  volledigeJaren={volledigeJaren}
+                  businessAdvies={businessAdvies}
+                  activeYear={activeYear}
+                  onOpenHelp={setHelpPopupChapter}
+                  yearlyProgress={yearlyProgress}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* v270 — BTW-aangifte per kwartaal als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
+      {showQuarterlyBtwModal && (
+        <div
+          className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3"
+          onClick={() => setShowQuarterlyBtwModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-semibold text-slate-800">BTW-aangifte per kwartaal {activeYear}</h2>
+              <button onClick={() => setShowQuarterlyBtwModal(false)} className="text-slate-400 hover:text-slate-700 shrink-0">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-5 py-4 overflow-y-auto">
+              {!korRegeling ? (
+                <QuarterlyBtwPanel
+                  quarters={quarterlyBtwData}
+                  kwartaalStatus={kwartaalStatus}
+                  setKwartaalStatusField={setKwartaalStatusField}
+                  activeYear={activeYear}
+                  costBreakdownByQuarter={costBreakdownByQuarter}
+                  onOpenHelp={setHelpPopupChapter}
+                  obIbSectionRef={obIbSectionRef}
+                />
+              ) : (
+                // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
+                // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
+                // dus die blijft hier los staan, net als voorheen.
+                <div ref={obIbSectionRef} className="flex items-center justify-end">
+                  <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* v267 — Floating "terug"-knop: springt naar het vorige tabblad, of naar Overzicht ("home") als er
           geen vorig tabblad bekend is. Links onderin geplaatst, weg van de bestaande "Categorieën"-
           knop en het ongedaan-maken-paneel (die beide rechts staan). */}
@@ -3553,43 +3651,14 @@ export default function App() {
           <TodoPanel items={todoItems} />
         </div>
 
-        {/* v245 — Meerjarenoverzicht + BTW-aangifte per kwartaal hiernaartoe verplaatst vanuit het
-            vervallen tabblad "Resultaten". */}
-        <div ref={multiYearSectionRef} style={sectionTabStyle("overzicht")}>
-                  {rechtsvorm === "bv" ? (
-                    <MultiYearOverviewBV
-                      years={years}
-                      yearlySummaries={yearlySummaries}
-                      kostenTotaalByYear={kostenTotaalByYear}
-                      dgaSalarisByYear={dgaSalarisByYear}
-                      rcVerloop={rcVerloop}
-                      evVerloop={evVerloop}
-                      onYearClick={setActiveYear}
-                      onOpenHelp={setHelpPopupChapter}
-                      yearlyProgress={yearlyProgress}
-                    />
-                  ) : (
-                    <MultiYearOverview
-                      years={years}
-                      yearlySummaries={yearlySummaries}
-                      yearlyOpenOB={yearlyOpenOB}
-                      korRegeling={korRegeling}
-                      onYearClick={setActiveYear}
-                      ibStatus={ibStatus}
-                      setIbGedaan={setIbGedaan}
-                      zvwStatus={zvwStatus}
-                      setZvwGedaan={setZvwGedaan}
-                      costBreakdownByYear={costBreakdownByYear}
-                      kostenTotaalByYear={kostenTotaalByYear}
-                      volledigeJaren={volledigeJaren}
-                      businessAdvies={businessAdvies}
-                      activeYear={activeYear}
-                      onOpenHelp={setHelpPopupChapter}
-                      yearlyProgress={yearlyProgress}
-                    />
-                  )}
-                </div>
-
+        {/* v270 — Meerjarenoverzicht en BTW-aangifte per kwartaal stonden hier hardcoded uitgeklapt
+            (sinds v245, toen ze vanuit het vervallen tabblad "Resultaten" hiernaartoe verhuisden).
+            Op verzoek staan ze niet meer permanent onder de kaarten, maar alleen als pop-up — zie de
+            twee modals verderop in de render, vlak na de Overzicht-tab-div. De kaarten/links die
+            hiernaartoe verwezen (dashboardCards "yearStatus"/"btwQuarters", de "Resultaten"-
+            rollupkaart) openen nu setShowMultiYearModal/setShowQuarterlyBtwModal in plaats van
+            jumpToSection. HoldingBoekingenPanel/BvSignaleringPanel blijven wél gewoon inline staan
+            (daar is niet om gevraagd). */}
                 {rechtsvorm === "bv" && heeftHolding === true && (
                   <div className="mt-4" style={sectionTabStyle("overzicht")}>
                     <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
@@ -3601,27 +3670,6 @@ export default function App() {
                     <BvSignaleringPanel signalering={bvSignalering} activeYear={activeYear} heeftHolding={heeftHolding} />
                   </div>
                 )}
-
-                <div ref={quarterlyBtwSectionRef} style={sectionTabStyle("overzicht")}>
-                  {!korRegeling ? (
-                    <QuarterlyBtwPanel
-                      quarters={quarterlyBtwData}
-                      kwartaalStatus={kwartaalStatus}
-                      setKwartaalStatusField={setKwartaalStatusField}
-                      activeYear={activeYear}
-                      costBreakdownByQuarter={costBreakdownByQuarter}
-                      onOpenHelp={setHelpPopupChapter}
-                      obIbSectionRef={obIbSectionRef}
-                    />
-                  ) : (
-                    // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
-                    // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
-                    // dus die blijft hier los staan, net als voorheen.
-                    <div ref={obIbSectionRef} className="flex items-center justify-end">
-                      <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
-                    </div>
-                  )}
-                </div>
 
 
         {/* v243 — de duplicaten-sectie stond hier (vóór Overboekingen/Overig); ze is verplaatst naar

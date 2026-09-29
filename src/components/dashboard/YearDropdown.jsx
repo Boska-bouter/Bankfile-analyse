@@ -25,15 +25,16 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
 
   return (
     <div className="relative shrink-0" ref={ref}>
+      {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-300"
+        className="inline-flex items-center gap-2 rounded-full border-2 border-slate-300 bg-white px-4 py-2.5 text-base font-bold text-slate-800 shadow-sm hover:border-slate-400"
       >
-        {activeYear ?? "Jaar"} <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+        {activeYear ?? "Jaar"} <ChevronDown className="h-5 w-5 text-slate-500" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1.5 z-30 w-40 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+        <div className="absolute right-0 mt-1.5 z-30 w-44 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
           {years.map((year) => {
             const status = yearlyProgress?.[year]?.status;
             return (
@@ -43,11 +44,11 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
                   onSelectYear(year);
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-slate-50"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50"
               >
                 {status && <span>{STATUS_EMOJI[status] || "⚪"}</span>}
                 <span className="flex-1 font-medium text-slate-700">{year}</span>
-                {year === activeYear && <Check className="h-3.5 w-3.5 text-teal-600" />}
+                {year === activeYear && <Check className="h-4 w-4 text-teal-600" />}
               </button>
             );
           })}

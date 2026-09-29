@@ -83,18 +83,18 @@ export default function AppSidebar({
         </div>
       </div>
 
-      {/* Rekeninghouder */}
-      <div className="px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[11px]">
+      {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
+      <div className="px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
         {rekeninghouderNaam ? (
-          <>
-            <span className="text-slate-400">Rekeninghouder: </span>
-            <span className="text-slate-200 font-semibold">{rekeninghouderNaam}</span>{" "}
-            <button onClick={onEditRekeninghouder} className="text-indigo-300 underline decoration-dotted">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-slate-400 text-[11px]">Rekeninghouder</span>
+            <span className="text-white font-bold text-[15px] leading-tight">{rekeninghouderNaam}</span>
+            <button onClick={onEditRekeninghouder} className="self-start text-indigo-300 underline decoration-dotted text-[11px]">
               wijzigen
             </button>
-          </>
+          </div>
         ) : (
-          <button onClick={onEditRekeninghouder} className="text-slate-400 underline decoration-dotted">
+          <button onClick={onEditRekeninghouder} className="text-slate-300 underline decoration-dotted font-semibold">
             + Rekeninghouder invullen
           </button>
         )}
