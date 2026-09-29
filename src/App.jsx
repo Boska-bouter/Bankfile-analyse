@@ -257,6 +257,12 @@ export default function App() {
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
+  // v275 — los van verwachteLease (die alleen nog gevraagd wordt als de auto-vraag daar aanleiding
+  // toe geeft, zie SetupWizardModal): een aparte, altijd gestelde vraag voor overige financiële
+  // leaseobjecten (machines, apparatuur — geen auto). Zelfde vorm/gebruik als verwachteLease, apart
+  // gehouden zodat de twee wizardvragen elkaar niet overschrijven; bij classificatie/matching tellen
+  // beide lijsten gewoon mee voor categorie "Lease (financieel)".
+  const [verwachteLeaseOverig, setVerwachteLeaseOverig] = useState(null);
   const [verwachteLening, setVerwachteLening] = useState(null); // zelfde vorm als verwachteLease
   const [verwachteAOV, setVerwachteAOV] = useState(null);
   // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive"|"beide",
@@ -454,6 +460,7 @@ export default function App() {
     setLeaseDetails(settings.leaseDetails && typeof settings.leaseDetails === "object" ? settings.leaseDetails : {});
     setActivaDetails(settings.activaDetails && typeof settings.activaDetails === "object" ? settings.activaDetails : {});
     setVerwachteLease(settings.verwachteLease ?? null);
+    setVerwachteLeaseOverig(settings.verwachteLeaseOverig ?? null);
     setVerwachteLening(settings.verwachteLening ?? null);
     setVerwachteAOV(settings.verwachteAOV ?? null);
     setAutoWizardStatus(settings.autoWizardStatus ?? null);
@@ -700,7 +707,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
         ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
-        verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
@@ -713,7 +720,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
     ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
-    verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
   ]);
@@ -802,7 +809,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage,
-        verwachteLease, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
     });
@@ -838,6 +845,7 @@ export default function App() {
     setLeaseMergedInto(s.leaseMergedInto || {});
     setActivaDetails(s.activaDetails || {});
     setVerwachteLease(s.verwachteLease ?? null);
+    setVerwachteLeaseOverig(s.verwachteLeaseOverig ?? null);
     setVerwachteLening(s.verwachteLening ?? null);
     setVerwachteAOV(s.verwachteAOV ?? null);
     setAutoWizardStatus(s.autoWizardStatus ?? null);
@@ -1022,6 +1030,10 @@ export default function App() {
     if (verwachteMatchSuggestie) return;
     const proberen = [];
     (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    // v275 — losse lijst voor overige leaseobjecten (machines, apparatuur), zie verwachteLeaseOverig
+    // hierboven; eigen "type" (i.p.v. "lease") zodat de idx-gebaseerde verwachteAangeboden-sleutel
+    // niet botst met die van verwachteLease.
+    (verwachteLeaseOverig || []).forEach((item, idx) => proberen.push({ type: "lease-overig", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
     (verwachteLening || []).forEach((item, idx) => proberen.push({ type: "lening", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Leningen" }));
     if (verwachteAOV?.status === "ja") {
       proberen.push({ type: "aov", idx: null, naam: verwachteAOV.naam, gevonden: verwachteAOV.gevonden, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" });
@@ -1042,7 +1054,7 @@ export default function App() {
         return;
       }
     }
-  }, [classified, verwachteLease, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
+  }, [classified, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
 
   const addBusinessKeywords = (namen) => {
     if (namen.length > 0) {
@@ -1091,6 +1103,7 @@ export default function App() {
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: targetCategory, type: "Zakelijk" }, tx.counterpartyIban);
     }
     if (type === "lease") setVerwachteLease((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
+    if (type === "lease-overig") setVerwachteLeaseOverig((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
     if (type === "lening") setVerwachteLening((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
     if (type === "aov") setVerwachteAOV((prev) => ({ ...prev, gevonden: true }));
     setVerwachteMatchSuggestie(null);
@@ -2932,6 +2945,18 @@ export default function App() {
         });
       }
     });
+    (verwachteLeaseOverig || []).forEach((item, idx) => {
+      if (!item.gevonden) {
+        items.push({
+          key: `verwachte-lease-overig-${idx}`,
+          text: `Je gaf aan dat er een ander leaseobject is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          ref: leasesSectionRef,
+          naam: item.naam,
+          onRename: (nieuweNaam) => setVerwachteLeaseOverig((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
+          onRemove: () => setVerwachteLeaseOverig((prev) => (prev || []).filter((_, i) => i !== idx)),
+        });
+      }
+    });
     (verwachteLening || []).forEach((item, idx) => {
       if (!item.gevonden) {
         items.push({
@@ -2980,7 +3005,7 @@ export default function App() {
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
     periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
-    confidenceSummary, verwachteLease, verwachteLening, verwachteAOV,
+    confidenceSummary, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     incomeBtwTarieven, meerdereTarievenBevestigd,
   ]);
 
@@ -2993,7 +3018,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-      verwachteLease, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+      verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
@@ -3044,6 +3069,7 @@ export default function App() {
       setLeaseMergedInto(project.leaseMergedInto && typeof project.leaseMergedInto === "object" ? project.leaseMergedInto : {});
       setActivaDetails(project.activaDetails && typeof project.activaDetails === "object" ? project.activaDetails : {});
       setVerwachteLease(project.verwachteLease ?? null);
+      setVerwachteLeaseOverig(project.verwachteLeaseOverig ?? null);
       setVerwachteLening(project.verwachteLening ?? null);
       setVerwachteAOV(project.verwachteAOV ?? null);
       setAutoWizardStatus(project.autoWizardStatus ?? null);
@@ -3137,6 +3163,7 @@ export default function App() {
     setHuurZakelijkPercentageStatusState({});
     setCategoryZakelijkPercentageState({});
     setVerwachteLease(null);
+    setVerwachteLeaseOverig(null);
     setVerwachteLening(null);
     setVerwachteAOV(null);
     setHeeftVoorraad(null);
@@ -3630,6 +3657,8 @@ export default function App() {
             onSaveProject={saveProjectFile}
             verwachteLease={verwachteLease}
             setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}
+            verwachteLeaseOverig={verwachteLeaseOverig}
+            setVerwachteLeaseOverig={(v) => { snapshotBeforeAction("Leaseobject-vraag beantwoord"); setVerwachteLeaseOverig(v); }}
             verwachteLening={verwachteLening}
             setVerwachteLening={(v) => { snapshotBeforeAction("Leningvraag beantwoord"); setVerwachteLening(v); }}
             verwachteAOV={verwachteAOV}

@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
-  17: "Auto", 6: "Leaseauto", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
+  17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
   0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
 };
 
@@ -21,6 +21,7 @@ export default function SetupWizardModal({
   fileContinuity = [],
   onSaveProject,
   verwachteLease, setVerwachteLease,
+  verwachteLeaseOverig, setVerwachteLeaseOverig,
   verwachteLening, setVerwachteLening,
   verwachteAOV, setVerwachteAOV,
   autoWizardStatus, setAutoWizardStatus,
@@ -46,7 +47,7 @@ export default function SetupWizardModal({
   // is (alleen bij "nee" op BTW-verlegd) — dat wordt hieronder net als de KOR-uitzondering pas
   // live bepaald, niet bij het openen.
   //
-  // De vragen over lease/lening/AOV/voorraad (6-9) staan bewust vóór alles — op het moment dat de
+  // De vragen over lease/lening/AOV/voorraad (6, 19, 7-9) staan bewust vóór alles — op het moment dat de
   // wizard opent zijn de net geladen bestanden al ingelezen en geclassificeerd (dat gebeurt vóórdat
   // de wizard verschijnt), dus een hier ingevulde naam kan meteen gezocht worden in de transacties
   // die er al liggen. Ze worden alleen ÉÉN keer gevraagd (niet opnieuw bij een volgend bestand) —
@@ -94,6 +95,10 @@ export default function SetupWizardModal({
     // contractdetails, in plaats van twee keer los naar een auto/lease te vragen.
     if (autoWizardStatus === null) list.push(17);
     if (verwachteLease === null) list.push(6);
+    // v275 — losse, altijd gestelde vraag voor overige financiële leaseobjecten (machines,
+    // apparatuur, geen auto) — onafhankelijk van het antwoord op de auto-vraag, zodat die niet
+    // langer meelift op de (nu conditionele) leaseauto-vraag.
+    if (verwachteLeaseOverig === null) list.push(19);
     if (verwachteLening === null) list.push(7);
     if (verwachteAOV === null) list.push(8);
     if (heeftVoorraad === null) list.push(9);
@@ -390,13 +395,23 @@ export default function SetupWizardModal({
               vraag="Is er een leaseauto (financieel) in dit bedrijf?"
               toelichting={
                 typedNow.autoSoort === "financial"
-                  ? "Je gaf net aan dat de auto van de zaak financial lease is — vul hieronder de gegevens in. Kunnen er meerdere zijn (bijv. nog een auto of machine)? Voeg ze dan allemaal toe."
-                  : "Kunnen er meerdere zijn (bijv. meerdere auto's of machines)? Voeg ze dan allemaal toe."
+                  ? "Je gaf net aan dat de auto van de zaak financial lease is — vul hieronder de gegevens in. Kunnen er meerdere zijn (bijv. nog een auto)? Voeg ze dan allemaal toe."
+                  : "Kunnen er meerdere zijn (bijv. meerdere auto's)? Voeg ze dan allemaal toe."
               }
               placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)"
               lijst={typedNow.leaseLijst || []}
               onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseLijst: lijst }))}
               onKlaar={(lijst) => { setVerwachteLease(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
+            />
+          )}
+          {currentStepId === 19 && (
+            <VerwachteLijstVraag
+              vraag="Is er nog een ander financieel leaseobject in dit bedrijf (bijv. een machine of apparatuur, geen auto)?"
+              toelichting="Kunnen er meerdere zijn? Voeg ze dan allemaal toe. Gaat het juist om een leaseauto? Die is bij de auto-vraag hiervoor al aan bod gekomen."
+              placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)"
+              lijst={typedNow.leaseOverigLijst || []}
+              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseOverigLijst: lijst }))}
+              onKlaar={(lijst) => { setVerwachteLeaseOverig(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
             />
           )}
           {currentStepId === 7 && (
@@ -746,7 +761,7 @@ export default function SetupWizardModal({
               tekst) stilletjes negeren. Stap 1 (KOR) en 2 (BTW-verlegd) hoorden hier eerder ten
               onrechte niet bij — die hebben net als de andere Ja/Nee-stappen al hun eigen knoppen,
               dus stond er per ongeluk een tweede, niets-opslaande "Doorgaan"-knop naast. */}
-          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
