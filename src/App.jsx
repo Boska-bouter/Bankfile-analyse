@@ -3302,9 +3302,13 @@ export default function App() {
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
+      {/* v277 — bottom iets ruimer (was bottom-4/1rem) plus env(safe-area-inset-bottom) erbovenop,
+          zodat deze knop niet (bijna) achter de taakbalk/dock van een laptop of het home-indicator-
+          gebied van een tablet komt te zitten. */}
       <button
         onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-1.5 sm:right-2 bottom-4 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        className="fixed right-1.5 sm:right-2 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
         title="Snel opzoeken: alle categorieën en subtypes"
       >
         <ListTree className="h-5 w-5 shrink-0" />
@@ -3416,7 +3420,8 @@ export default function App() {
             const target = previousTabRef.current && previousTabRef.current !== activeTab ? previousTabRef.current : "overzicht";
             setActiveTab(target);
           }}
-          className="fixed left-[224px] sm:left-[228px] bottom-4 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="fixed left-[224px] sm:left-[228px] z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
           title="Terug naar vorig tabblad"
         >
           <ArrowLeft className="h-5 w-5 shrink-0" />

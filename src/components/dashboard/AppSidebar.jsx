@@ -66,7 +66,19 @@ export default function AppSidebar({
     // schermhoogte houdt en blijft staan tijdens scrollen door de (vaak veel langere) hoofdinhoud —
     // met min-h-screen zou de zijbalk als flex-sibling meestrekken met de hoogte van de hoofdinhoud,
     // waardoor "Beheer" en de footer ver onder de vouw terechtkomen.
-    <div className="w-[216px] shrink-0 bg-[#16203A] flex flex-col px-3.5 py-5 sticky top-0 h-screen overflow-y-auto">
+    // v277 — top/bottom-padding iets ruimer (en op iPad/tablet nog verder omlaag via
+    // env(safe-area-inset-top), voor de klok/statusbalk bovenin) en onderin ruimte voor de
+    // taakbalk/dock van een laptop. viewport-fit=cover + apple-mobile-web-app-status-bar-style
+    // "black-translucent" staan al in index.html, dus de env(safe-area-inset-*)-waarden werken
+    // zodra de tool als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
+    // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
+    <div
+      className="w-[216px] shrink-0 bg-[#16203A] flex flex-col px-3.5 sticky top-0 h-screen overflow-y-auto"
+      style={{
+        paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
+        paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
+      }}
+    >
       {/* Logo + org */}
       <div className="flex items-center gap-2.5 px-1.5 pb-1.5">
         <div
