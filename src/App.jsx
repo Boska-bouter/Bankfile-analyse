@@ -421,6 +421,26 @@ export default function App() {
     [incomeRatesSectionRef, "instellingen"],
     [detailsSectionRef, "controleren"],
   ];
+  // Fase 3 — sommige van de secties hierboven staan zelf op !expandedCardKeys.<key> (verborgen/
+  // unmounted zodra de bijbehorende SectionCard is uitgeklapt, zie controlerenCardGroups/
+  // instellingenCardGroups hieronder), zodat er nooit twee live kopieën van hetzelfde paneel
+  // tegelijk zichtbaar zijn. Een link die naar zo'n ref springt (bijv. vanuit "Details en
+  // overzichten" op Overzicht, of vanuit een "Nog te controleren/in te stellen"-rollup-item) deed
+  // dan niets: ref.current was null omdat die sectie op dat moment niet gemount was. jumpToSection
+  // hieronder klapt de kaart daarom eerst automatisch in (als hij openstond) vóór het scrollen —
+  // geen enkele aanroepende plek hoeft hier zelf rekening mee te houden.
+  const REF_COLLAPSE_KEYS = [
+    [importControleSectionRef, "importKwaliteit"],
+    [confidenceSectionRef, "importKwaliteit"],
+    [categorySectionRef, "categorieen"],
+    [activaSectionRef, "bedrijfsmiddelen"],
+    [leasesSectionRef, "bedrijfsmiddelen"],
+    [loansSectionRef, "bedrijfsmiddelen"],
+    [aannamesSectionRef, "persoonlijkeAannames"],
+    [categoryPercentageSectionRef, "persoonlijkeAannames"],
+    [btwSettingsSectionRef, "btw"],
+    [automatiseringSectionRef, "automatisering"],
+  ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
   const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey ? undefined : "none" });
@@ -2022,6 +2042,15 @@ export default function App() {
   //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
   //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
   const jumpToSection = (ref) => {
+    // Fase 3 — als deze ref bij een op dit moment uitgeklapte kaart hoort, staat 'ie op dit moment
+    // niet gemount (zie REF_COLLAPSE_KEYS hierboven) — eerst inklappen, dan pas (na een extra
+    // render) scrollen, anders gebeurt er niets (ref.current is null).
+    const collapseEntry = REF_COLLAPSE_KEYS.find(([r]) => r === ref);
+    const collapseKey = collapseEntry ? collapseEntry[1] : null;
+    const needsCollapse = !!(collapseKey && expandedCardKeys[collapseKey]);
+    if (needsCollapse) {
+      setExpandedCardKeys((prev) => ({ ...prev, [collapseKey]: false }));
+    }
     const entry = REF_TAB_ENTRIES.find(([r]) => r === ref);
     const targetTab = entry ? entry[1] : null;
     if (targetTab && targetTab !== activeTab) {
@@ -2031,10 +2060,19 @@ export default function App() {
       setPendingScrollRef(ref);
       return;
     }
+    if (needsCollapse) {
+      // Zelfde tabblad, maar de sectie moet eerst weer gemount worden nu de kaart net is
+      // ingeklapt — via dezelfde pendingScrollRef-route als een tabwissel hierboven.
+      setPendingScrollRef(ref);
+      return;
+    }
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
-  // geworden — requestAnimationFrame wacht op de eerstvolgende render/paint na de tabwissel.
+  // geworden — requestAnimationFrame wacht op de eerstvolgende render/paint na de tabwissel. Ook
+  // opnieuw triggeren op expandedCardKeys (Fase 3): na het automatisch inklappen van een kaart
+  // (zie jumpToSection hierboven) moet er ook zonder tabwissel een extra render/paint afgewacht
+  // worden vóórdat de doel-sectie weer gemount is.
   useEffect(() => {
     if (!pendingScrollRef) return;
     const raf = requestAnimationFrame(() => {
@@ -2042,7 +2080,7 @@ export default function App() {
       setPendingScrollRef(null);
     });
     return () => cancelAnimationFrame(raf);
-  }, [activeTab, pendingScrollRef]);
+  }, [activeTab, expandedCardKeys, pendingScrollRef]);
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
     const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
@@ -2285,10 +2323,19 @@ export default function App() {
               actionLabel: incompleteLeasesCount > 0 ? "Controleren" : null,
             },
             {
+              // Toonde eerst alleen een getal ("X nog niet aangegeven/betaald") — nu per kwartaal
+              // meteen het BTW-saldo (verschuldigde BTW min voorbelasting, zelfde berekening als de
+              // "BTW-saldo per kwartaal"-regel in het aangiftevoorstel), zodat je in één oogopslag
+              // ziet om welke bedragen het gaat i.p.v. alleen dát er nog iets openstaat. Een kwartaal
+              // zonder transacties (nog) telt hier als € 0,00, niet als ontbrekend.
               key: "btwQuarters",
               title: `BTW-kwartalen ${activeYear}`,
               icon: <span>🧾</span>,
-              value: quartersOpenCount,
+              lines: [1, 2, 3, 4].map((kwartaal) => {
+                const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
+                const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0;
+                return { label: `Q${kwartaal}`, value: `${eur(Math.abs(saldo))}${saldo < 0 ? " terug" : ""}` };
+              }),
               subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
               tone: quartersOpenCount > 0 ? "attention" : "ok",
               hint: "Naar het BTW-kwartaaloverzicht",
@@ -2369,6 +2416,7 @@ export default function App() {
     bvSignalering,
     korRegeling,
     btwVerlegd,
+    quarterlyBtwData,
   ]);
 
   // v240 — hoeveel geladen bestanden een saldo-afwijking hebben (per bestand zelf, via
@@ -2602,10 +2650,11 @@ export default function App() {
         actionLabel: incompleteActivaCount > 0 ? "Controleren" : null,
       },
       // v261 — was alleen het urencriterium (1 item, en alleen zichtbaar/onzichtbaar i.p.v. duidelijk
-      // "wel/niet opgegeven"); nu alle 3 persoonlijke-aannames-items die dit jaar kunnen spelen, elk
-      // met een eigen 🟢/🟠/⚪-status: urencriterium (zelfstandigenaftrek), auto (zakelijk/privé
-      // gebruik) en gedeelde huur (alleen relevant als er dit jaar "Huur (deels zakelijk)"-
-      // transacties zijn — anders ⚪ n.v.t. in plaats van een oneerlijke "nog niet opgegeven").
+      // "wel/niet opgegeven"); nu alle 3 persoonlijke-aannames-items die op dit jaar van toepassing
+      // zijn, elk met een eigen 🟢/🟠/⚪-status: urencriterium (zelfstandigenaftrek), startersaftrek
+      // en auto (zakelijk/privé gebruik) — zelfde 3 items als in het "Persoonlijke aannames"-paneel
+      // zelf (PersoonlijkeAannamesPanel.jsx). Gedeelde huur staat hier bewust niet (meer) bij: dat
+      // hoort bij "Percentage zakelijk per categorie", niet bij deze persoonlijke aannames.
       ...(rechtsvorm !== "bv" && activeYear
         ? (() => {
             const autoStatusDitJaar = autoStatus?.[activeYear];
@@ -2619,12 +2668,13 @@ export default function App() {
                 : autoStatusDitJaar === "geen"
                 ? "Geen auto"
                 : null;
-            const huurPercentageDitJaar = huurZakelijkPercentageStatus?.[activeYear];
-            const huurRelevant = !!gedeeldeHuurForActiveYear;
+            // Startersaftrek heeft geen "onbekend"-status: leeg/niet ingevuld betekent gewoon "Nee /
+            // niet van toepassing" (zie PersoonlijkeAannamesPanel.jsx) — telt daarom niet mee als
+            // "nog niet opgegeven".
+            const startersaftrekAan = startersaftrekStatus?.[activeYear] === "ja";
             const missing =
               (zelfstandigenaftrekStatusDitJaar === "onbekend" ? 1 : 0) +
-              (autoLabel == null ? 1 : 0) +
-              (huurRelevant && huurPercentageDitJaar == null ? 1 : 0);
+              (autoLabel == null ? 1 : 0);
             return [
               {
                 key: "aannames",
@@ -2640,11 +2690,8 @@ export default function App() {
                         ? "🟢 Ja"
                         : "🟢 Nee",
                   },
+                  { label: "Startersaftrek", value: startersaftrekAan ? "🟢 Ja" : "⚪ Nee" },
                   { label: "Auto", value: autoLabel ? `🟢 ${autoLabel}` : "🟠 Niet opgegeven" },
-                  {
-                    label: "Gedeelde huur",
-                    value: !huurRelevant ? "⚪ N.v.t." : huurPercentageDitJaar != null ? `🟢 ${huurPercentageDitJaar}%` : "🟠 Niet opgegeven",
-                  },
                 ],
                 subtitle: missing === 0 ? "Alles opgegeven" : `${missing} ${missing === 1 ? "item" : "items"} nog niet opgegeven`,
                 tone: missing === 0 ? "ok" : "attention",
@@ -2771,8 +2818,7 @@ export default function App() {
     businessIncomeEntries,
     businessExpenseEntries,
     autoStatus,
-    huurZakelijkPercentageStatus,
-    gedeeldeHuurForActiveYear,
+    startersaftrekStatus,
     categorieTotalenActiveYear,
     categoryZakelijkPercentage,
     btwRateCounts,

@@ -32,6 +32,15 @@ export default function JaaroverzichtCard({ year, summary, previousSummary, show
   const prevOmzet = previousSummary?.zakelijkeInkomstenNetto;
   const prevKosten = previousSummary?.zakelijkeKostenNetto;
   const prevWinst = previousSummary?.winst;
+  // Bruto omzet (incl. BTW) en het effectieve BTW-tarief dat daarop is toegepast — ontbrak hier
+  // nog helemaal (alleen de nette omzet excl. BTW stond hierboven als "Omzet"). zakelijkeInkomsten
+  // (bruto, incl. BTW) en verschuldigdBtw komen uit dezelfde computeYearlySummary-berekening als
+  // "Omzet"/"Kosten"/"Winst" hierboven — geen nieuwe berekening. Bij BTW-verlegd of gemengde
+  // tarieven (9%/21% door elkaar) is dit het GEWOGEN GEMIDDELDE tarief over de hele omzet van het
+  // jaar, niet per se één van de twee wettelijke tarieven zelf.
+  const brutoOmzet = summary?.zakelijkeInkomsten ?? 0;
+  const verschuldigdBtwOmzet = summary?.verschuldigdBtw ?? 0;
+  const btwTariefPct = hasSummary && omzet > 0 ? Math.round((verschuldigdBtwOmzet / omzet) * 100) : null;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-3">
@@ -63,6 +72,16 @@ export default function JaaroverzichtCard({ year, summary, previousSummary, show
           {hasSummary && showTrend && <DeltaBadge pct={pctDelta(winst, prevWinst)} />}
         </div>
       </div>
+      {hasSummary && (
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
+          <span>
+            Bruto omzet (incl. BTW) <span className="font-semibold text-slate-600">{eur(brutoOmzet)}</span>
+          </span>
+          <span>
+            BTW-tarief gebruikt <span className="font-semibold text-slate-600">{btwTariefPct != null ? `${btwTariefPct}%` : "—"}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
