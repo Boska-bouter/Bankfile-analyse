@@ -14,11 +14,28 @@ import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
   zvwStatus, setZvwGedaan, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
-  kostenTotaalByYear,
+  kostenTotaalByYear, yearlyProgress,
 }) {
   const [open, setOpen] = useState(false);
   const [voorbelastingModalYear, setVoorbelastingModalYear] = useState(null);
   if (years.length === 0) return null;
+
+  // v258 — punt 10 uit de ChatGPT-aanbevelingen: het meerjarenoverzicht toonde per jaar cijfers
+  // zonder te laten zien hoe zeker die zijn. Hergebruikt bewust dezelfde yearlyProgress-status als
+  // de "Dossierstatus"-kaart (v255) — dus dit bolletje gaat over dossiercontrole, niet over of de
+  // aangifte al is ingediend: een jaar met een ingediende maar niet-gecontroleerde aangifte is 🟠.
+  const statusDotFor = (year) => {
+    const p = yearlyProgress?.[year];
+    if (!p) return { dot: "⚪", title: "Geen controle-informatie beschikbaar voor dit jaar" };
+    const parts = [];
+    if (p.gatDitJaar) parts.push("gat in bestandscontinuïteit");
+    if (p.openPunten) parts.push(`${p.openPunten} open controlepunt${p.openPunten === 1 ? "" : "en"}`);
+    if (p.onzekerDitJaar) parts.push(`${p.onzekerDitJaar} onzekere transactie${p.onzekerDitJaar === 1 ? "" : "s"}`);
+    if (p.aannamesCount) parts.push(`${p.aannamesCount} aanname${p.aannamesCount === 1 ? "" : "n"} in de indicatieve aangifte`);
+    const dot = p.status === "rood" ? "🔴" : p.status === "groen" ? "🟢" : "🟠";
+    const title = parts.length ? `Dossiercontrole: ${parts.join(", ")}` : "Dossiercontrole compleet, geen onzekerheden";
+    return { dot, title };
+  };
 
   const effectiefFor = (year) => {
     const summary = yearlySummaries[year];
@@ -70,6 +87,7 @@ export default function MultiYearOverview({
           <table className="text-xs border-collapse">
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
+                <th className="text-center font-medium py-2 pr-2" title="Dossiercontrole voor dit jaar — zelfde status als de 'Dossierstatus'-kaart">Status</th>
                 <th className="text-left font-medium py-2 pr-3">Jaar</th>
                 <th className="text-right font-medium py-2 px-3" title="Bruto, zoals op de bank binnengekomen (incl. BTW)">Zakelijk inkomen</th>
                 <th className="text-right font-medium py-2 px-3">BTW-afdracht</th>
@@ -110,8 +128,11 @@ export default function MultiYearOverview({
                 let trendDelta = null;
                 if (prev && beideJarenVolledig) trendDelta = verschil - prev.verschil;
 
+                const { dot, title } = statusDotFor(year);
+
                 return (
                   <tr key={year} className="hover:bg-slate-50 cursor-pointer" onClick={() => onYearClick(year)}>
+                    <td className="py-2 pr-2 text-center" title={title}>{dot}</td>
                     <td className="py-2 pr-3 font-medium">{year}</td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap">{eurTight(summary.zakelijkeInkomsten)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">-{eurTight(summary.verschuldigdBtw)}</td>

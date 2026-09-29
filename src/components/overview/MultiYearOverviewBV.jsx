@@ -12,9 +12,25 @@ import HelpHint from "../shared/HelpHint.jsx";
 // Aangiftevoorstel, zodat de twee rapportages nooit uit de pas kunnen lopen.
 export default function MultiYearOverviewBV({
   years, yearlySummaries, kostenTotaalByYear, dgaSalarisByYear, rcVerloop, evVerloop, onYearClick, activeYear, onOpenHelp,
+  yearlyProgress,
 }) {
   const [open, setOpen] = useState(false);
   if (years.length === 0) return null;
+
+  // v258 — zelfde dossiercontrole-statusbolletje als in MultiYearOverview.jsx (zzp-variant), zie
+  // die file voor de toelichting.
+  const statusDotFor = (year) => {
+    const p = yearlyProgress?.[year];
+    if (!p) return { dot: "⚪", title: "Geen controle-informatie beschikbaar voor dit jaar" };
+    const parts = [];
+    if (p.gatDitJaar) parts.push("gat in bestandscontinuïteit");
+    if (p.openPunten) parts.push(`${p.openPunten} open controlepunt${p.openPunten === 1 ? "" : "en"}`);
+    if (p.onzekerDitJaar) parts.push(`${p.onzekerDitJaar} onzekere transactie${p.onzekerDitJaar === 1 ? "" : "s"}`);
+    if (p.aannamesCount) parts.push(`${p.aannamesCount} aanname${p.aannamesCount === 1 ? "" : "n"} in de indicatieve aangifte`);
+    const dot = p.status === "rood" ? "🔴" : p.status === "groen" ? "🟢" : "🟠";
+    const title = parts.length ? `Dossiercontrole: ${parts.join(", ")}` : "Dossiercontrole compleet, geen onzekerheden";
+    return { dot, title };
+  };
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
@@ -41,6 +57,7 @@ export default function MultiYearOverviewBV({
           <table className="text-xs border-collapse">
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
+                <th className="text-center font-medium py-2 pr-2" title="Dossiercontrole voor dit jaar — zelfde status als de 'Dossierstatus'-kaart">Status</th>
                 <th className="text-left font-medium py-2 pr-3">Jaar</th>
                 <th className="text-right font-medium py-2 px-3" title="Netto omzet, exclusief BTW">Omzet</th>
                 <th className="text-right font-medium py-2 px-3" title="Zakelijke kosten, netto (incl. DGA-salaris) — zelfde bedrag als in de indicatieve aangifteberekening BV">Kosten</th>
@@ -64,8 +81,11 @@ export default function MultiYearOverviewBV({
                 const ev = evVerloop?.[year] || { dividend: 0 };
                 const dgaSalaris = dgaSalarisByYear?.[year] || 0;
 
+                const { dot, title } = statusDotFor(year);
+
                 return (
                   <tr key={year} className="hover:bg-slate-50 cursor-pointer" onClick={() => onYearClick(year)}>
+                    <td className="py-2 pr-2 text-center" title={title}>{dot}</td>
                     <td className="py-2 pr-3 font-medium">{year}</td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap">{eurTight(summary.zakelijkeInkomstenNetto)}</td>
                     <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">-{eurTight(kosten)}</td>

@@ -2214,8 +2214,8 @@ export default function App() {
                   : incompleteLoansCount === 0
                   ? "Alle gegevens compleet"
                   : incompleteLoansCount === loanSummary.length
-                  ? "Nog geen gegevens ingevuld"
-                  : `${incompleteLoansCount} van ${loanSummary.length} nog onvolledig`,
+                  ? `🟠 Nog geen gegevens ingevuld`
+                  : `🟠 ${incompleteLoansCount} van ${loanSummary.length} heeft nog ontbrekende gegevens`,
               tone:
                 loanSummary.length === 0
                   ? "neutral"
@@ -2226,17 +2226,24 @@ export default function App() {
                   : "attention",
               hint: "Naar de leningen-sectie",
               onClick: () => jumpToSection(loansSectionRef),
+              actionLabel: incompleteLoansCount > 0 ? "Controleren" : null,
             },
             {
               key: "leases",
               title: "Lease",
               icon: <span>🚗</span>,
               value: leaseSummary.length,
-              subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+              subtitle:
+                incompleteLeasesCount > 0
+                  ? `🟠 ${incompleteLeasesCount} ${incompleteLeasesCount === 1 ? "contract heeft" : "contracten hebben"} nog ontbrekende gegevens`
+                  : leaseSummary.length > 0
+                  ? "Alle gegevens compleet"
+                  : "Geen gevonden",
               // v234-fix: zelfde correctie als bij "Leningen" hierboven.
               tone: incompleteLeasesCount > 0 ? "attention" : leaseSummary.length > 0 ? "ok" : "neutral",
               hint: "Naar de lease-sectie",
               onClick: () => jumpToSection(leasesSectionRef),
+              actionLabel: incompleteLeasesCount > 0 ? "Controleren" : null,
             },
             {
               key: "btwQuarters",
@@ -2465,8 +2472,8 @@ export default function App() {
             : incompleteLoansCount === 0
             ? "Alle gegevens compleet"
             : incompleteLoansCount === loanSummary.length
-            ? "Nog geen gegevens ingevuld"
-            : `${incompleteLoansCount} van ${loanSummary.length} nog onvolledig`,
+            ? `🟠 Nog geen gegevens ingevuld`
+            : `🟠 ${incompleteLoansCount} van ${loanSummary.length} heeft nog ontbrekende gegevens`,
         tone:
           loanSummary.length === 0
             ? "neutral"
@@ -2477,16 +2484,23 @@ export default function App() {
             : "attention",
         hint: "Naar de leningen-sectie",
         onClick: () => jumpToSection(loansSectionRef),
+        actionLabel: incompleteLoansCount > 0 ? "Controleren" : null,
       },
       {
         key: "leases",
         title: "Lease",
         icon: <span>🚗</span>,
         value: leaseSummary.length,
-        subtitle: incompleteLeasesCount > 0 ? `${incompleteLeasesCount} nog niet bepaald` : leaseSummary.length > 0 ? "Alle gegevens compleet" : "Geen gevonden",
+        subtitle:
+          incompleteLeasesCount > 0
+            ? `🟠 ${incompleteLeasesCount} ${incompleteLeasesCount === 1 ? "contract heeft" : "contracten hebben"} nog ontbrekende gegevens`
+            : leaseSummary.length > 0
+            ? "Alle gegevens compleet"
+            : "Geen gevonden",
         tone: incompleteLeasesCount > 0 ? "attention" : leaseSummary.length > 0 ? "ok" : "neutral",
         hint: "Naar de lease-sectie",
         onClick: () => jumpToSection(leasesSectionRef),
+        actionLabel: incompleteLeasesCount > 0 ? "Controleren" : null,
       },
       {
         key: "activa",
@@ -2499,8 +2513,8 @@ export default function App() {
             : incompleteActivaCount === 0
             ? "Alle gegevens compleet"
             : incompleteActivaCount === activaSummary.length
-            ? "Nog geen gegevens ingevuld"
-            : `${incompleteActivaCount} van ${activaSummary.length} nog onvolledig`,
+            ? `🟠 Nog geen gegevens ingevuld`
+            : `🟠 ${incompleteActivaCount} van ${activaSummary.length} heeft nog ontbrekende gegevens`,
         tone:
           activaSummary.length === 0
             ? "neutral"
@@ -2511,6 +2525,7 @@ export default function App() {
             : "attention",
         hint: "Naar de activa-sectie",
         onClick: () => jumpToSection(activaSectionRef),
+        actionLabel: incompleteActivaCount > 0 ? "Controleren" : null,
       },
       ...(rechtsvorm !== "bv" && activeYear
         ? [
@@ -3115,6 +3130,16 @@ export default function App() {
           <DashboardOverview cards={dashboardCards} />
         </div>
 
+        {/* v258 — "Wat deze tool niet kan weten" stond ver onderaan het Overzicht-tabblad (na de
+            hele checklist en de jaar-navigatie), terwijl dit juist de duiding is die je het eerst
+            wilt zien bij het lezen van het dashboard erboven — nu direct eronder, en standaard
+            opengeklapt zodat hij niet over het hoofd wordt gezien. */}
+        {years.length > 0 && (
+          <div style={sectionTabStyle("overzicht")}>
+            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+          </div>
+        )}
+
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
@@ -3369,12 +3394,6 @@ export default function App() {
           <TodoPanel items={todoItems} />
         </div>
 
-        {years.length > 0 && (
-          <div style={sectionTabStyle("overzicht")}>
-            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
-          </div>
-        )}
-
         {/* v245 — Meerjarenoverzicht + BTW-aangifte per kwartaal hiernaartoe verplaatst vanuit het
             vervallen tabblad "Resultaten". */}
         <div ref={multiYearSectionRef} style={sectionTabStyle("overzicht")}>
@@ -3389,6 +3408,7 @@ export default function App() {
                       onYearClick={setActiveYear}
                       activeYear={activeYear}
                       onOpenHelp={setHelpPopupChapter}
+                      yearlyProgress={yearlyProgress}
                     />
                   ) : (
                     <MultiYearOverview
@@ -3407,6 +3427,7 @@ export default function App() {
                       businessAdvies={businessAdvies}
                       activeYear={activeYear}
                       onOpenHelp={setHelpPopupChapter}
+                      yearlyProgress={yearlyProgress}
                     />
                   )}
                 </div>

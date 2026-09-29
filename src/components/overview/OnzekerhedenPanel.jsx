@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Info } from "lucide-react";
 
+// v258 — pal onder het dashboard gezet (was helemaal onderaan het tabblad) en standaard
+// opengeklapt, zodat deze duiding meteen opvalt bij het lezen van de dashboardkaarten erboven
+// in plaats van pas na scrollen ontdekt te worden.
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   return (
-    <section className="rounded-xl border-2 border-amber-200 bg-amber-50/40">
+    <section className="rounded-xl border-2 border-amber-300 bg-amber-50/60 shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left text-amber-900">
+        <Info className="h-4 w-4 shrink-0 text-amber-700" />
         <span>Wat deze tool niet kan weten</span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
