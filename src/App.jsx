@@ -64,7 +64,6 @@ import VerwachteMatchModal from "./components/shared/VerwachteMatchModal.jsx";
 import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
 import UpdateAvailableBanner from "./components/shared/UpdateAvailableBanner.jsx";
 import { useVersionCheck } from "./hooks/useVersionCheck.js";
-import StickyYearNav from "./components/dashboard/StickyYearNav.jsx";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
@@ -3387,14 +3386,6 @@ export default function App() {
 
       {updateAvailable && <UpdateAvailableBanner />}
 
-      {/* Fase 1, dashboard-restyling: op Overzicht zit de jaarkeuze nu als dropdown in de
-          DashboardHeader (zie YearDropdown.jsx) — die verving deze zwevende balk, die daar over de
-          dashboardkaarten heen hing. Op Controleren/Instellingen (nog geen eigen DashboardHeader)
-          blijft deze balk voorlopig gewoon staan. */}
-      {activeTab !== "overzicht" && (
-        <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
-      )}
-
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
@@ -3724,9 +3715,17 @@ export default function App() {
 
         {/* Fase 2 (bouwvoorstel) — Controleren in kaartstijl: dezelfde onderliggende kaarten als
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
-            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel.
+            Jaar-dropdown rechtsboven i.p.v. de losse zwevende StickyYearNav-balk (die stond hier
+            los over de inhoud heen — dezelfde YearDropdown/onSelectYear als op Overzicht). */}
+        <div style={sectionTabStyle("controleren")} className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Controleren</h2>
+          {years.length > 1 && (
+            <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+          )}
+        </div>
         <div style={sectionTabStyle("controleren")}>
-          <SectionCardGrid title="Controleren" cards={controlerenCardGroups} />
+          <SectionCardGrid cards={controlerenCardGroups} />
         </div>
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
@@ -3862,9 +3861,17 @@ export default function App() {
 
         {/* Fase 2 (bouwvoorstel) — Instellingen in kaartstijl: dezelfde onderliggende kaarten als
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
-            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel.
+            Jaar-dropdown rechtsboven i.p.v. de losse zwevende StickyYearNav-balk (die stond hier
+            los over de inhoud heen — dezelfde YearDropdown/onSelectYear als op Overzicht). */}
+        <div style={sectionTabStyle("instellingen")} className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Instellingen</h2>
+          {years.length > 1 && (
+            <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+          )}
+        </div>
         <div style={sectionTabStyle("instellingen")}>
-          <SectionCardGrid title="Instellingen" cards={instellingenCardGroups} />
+          <SectionCardGrid cards={instellingenCardGroups} />
         </div>
 
         {parsedFiles.length > 0 && (
