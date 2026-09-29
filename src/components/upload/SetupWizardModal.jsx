@@ -121,6 +121,12 @@ export default function SetupWizardModal({
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
     if ((id === 1 || id === 2) && rechtsvorm === "bv") return false; // KOR en BTW-verlegd zijn n.v.t. bij een BV (altijd gewone BTW-plicht, niet verlegd)
     if (id === 18 && rechtsvorm === "bv") return false; // zelfstandigenaftrek/urencriterium is n.v.t. bij een BV
+    // v274 — stap 6 (leaseauto) stond altijd los in de wachtrij (zie de toelichting bij stap 17
+    // hierboven) om ook een leaseobject te kunnen vragen los van de auto-vraag. Maar als bij de
+    // auto-vraag (stap 17) al "Nee" of "Privéauto zakelijk gebruikt" is gekozen, is er per
+    // definitie geen auto van de zaak — dan is "Is er een leaseauto (financieel) in dit bedrijf?"
+    // een verwarrende herhaling i.p.v. een zinvolle vervolgvraag, dus die slaan we dan over.
+    if (id === 6 && autoWizardStatus && (autoWizardStatus.status === "prive" || autoWizardStatus.status === "geen")) return false;
     return true;
   });
 
