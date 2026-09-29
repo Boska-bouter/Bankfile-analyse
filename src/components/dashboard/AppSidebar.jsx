@@ -1,4 +1,4 @@
-import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle } from "lucide-react";
+import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -37,7 +37,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
 }
 
 export default function AppSidebar({
-  orgName = "Over Rood",
+  orgName = "© Paul Gerits",
   rekeninghouderNaam,
   onEditRekeninghouder,
   activeTab,
@@ -54,6 +54,9 @@ export default function AppSidebar({
   onToggleHelp,
   saveState,
   lastSavedAt,
+  showActies,
+  onEditBasisvragen,
+  onOpenAangifteberekening,
 }) {
   return (
     // `sticky top-0 h-screen overflow-y-auto` (i.p.v. min-h-screen) zodat de zijbalk zelf de
@@ -100,6 +103,28 @@ export default function AppSidebar({
           <TabItem tabKey="overzicht" active={activeTab === "overzicht"} onClick={() => onSelectTab("overzicht")} />
           <TabItem tabKey="controleren" active={activeTab === "controleren"} badge={controlerenBadge} onClick={() => onSelectTab("controleren")} />
           <TabItem tabKey="instellingen" active={activeTab === "instellingen"} badge={instellingenBadge} onClick={() => onSelectTab("instellingen")} />
+        </div>
+      )}
+
+      {/* v267 — Acties: verplaatst vanuit de oude "Jaar:.../Excel/Print/Basisvragen"-rij boven het
+          (nu verwijderde) Aangifte-statusblok — zelfde handlers als voorheen. */}
+      {showActies && (
+        <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
+          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
+
+          {onEditBasisvragen && (
+            <button onClick={onEditBasisvragen} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="text-xs font-semibold text-slate-200">Basisvragen bewerken</span>
+            </button>
+          )}
+
+          {onOpenAangifteberekening && (
+            <button onClick={onOpenAangifteberekening} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <FileSpreadsheet className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="text-xs font-semibold text-slate-200">Indicatieve aangifteberekening</span>
+            </button>
+          )}
         </div>
       )}
 

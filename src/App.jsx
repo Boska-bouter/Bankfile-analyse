@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
@@ -50,7 +50,6 @@ import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
-import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
 import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -373,6 +372,16 @@ export default function App() {
   // aannames/percentage zakelijk per categorie/terugkerende betalingen) naar "Instellingen", en de
   // categorie-overzichten (Zakelijk/Privé) naar "Controleren" (boven de detailtabellen).
   const [activeTab, setActiveTab] = useState("overzicht");
+  // v267 — Onthoudt het vorige tabblad voor de floating "Terug"-knop hieronder — bijgewerkt ná elke
+  // activeTab-wijziging, zodat previousTabRef.current altijd het tabblad is waar je vandaan kwam
+  // (niet het huidige). Geen wijziging aan setActiveTab zelf nodig: alle bestaande aanroepen
+  // (onSelectTab, jumpToSection, enz.) blijven ongewijzigd werken.
+  const previousTabRef = useRef("overzicht");
+  const activeTabTrackerRef = useRef("overzicht");
+  useEffect(() => {
+    previousTabRef.current = activeTabTrackerRef.current;
+    activeTabTrackerRef.current = activeTab;
+  }, [activeTab]);
   // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
   // jumpToSection hieronder om bij een kruis-tabblad-sprong eerst het juiste tabblad te activeren
   // en dan pas te scrollen (de sectie stond tot dat moment op display:none).
@@ -3178,7 +3187,7 @@ export default function App() {
           door deze vaste linker zijbalk (AppSidebar.jsx) — zelfde handlers/refs als voorheen,
           alleen de plek van de knoppen is anders. Zie het bouwvoorstel-document. */}
       <AppSidebar
-        orgName="Over Rood"
+        orgName="© Paul Gerits"
         rekeninghouderNaam={eigenNamen?.ondernemer}
         onEditRekeninghouder={() => setShowRekeninghouderModal(true)}
         activeTab={activeTab}
@@ -3195,6 +3204,9 @@ export default function App() {
         onToggleHelp={() => setShowHelp((v) => !v)}
         saveState={saveState}
         lastSavedAt={lastSavedAt}
+        showActies={years.length > 0 && !!activeYear}
+        onEditBasisvragen={() => setManualWizardOpen(true)}
+        onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
       />
       <input
         ref={bankFileInputRef}
@@ -3256,6 +3268,23 @@ export default function App() {
       </button>
 
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
+
+      {/* v267 — Floating "terug"-knop: springt naar het vorige tabblad, of naar Overzicht ("home") als er
+          geen vorig tabblad bekend is. Links onderin geplaatst, weg van de bestaande "Categorieën"-
+          knop en het ongedaan-maken-paneel (die beide rechts staan). */}
+      {activeTab !== "overzicht" && (
+        <button
+          onClick={() => {
+            const target = previousTabRef.current && previousTabRef.current !== activeTab ? previousTabRef.current : "overzicht";
+            setActiveTab(target);
+          }}
+          className="fixed left-[224px] sm:left-[228px] bottom-4 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          title="Terug naar vorig tabblad"
+        >
+          <ArrowLeft className="h-5 w-5 shrink-0" />
+          <span className="hidden sm:inline">Terug</span>
+        </button>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
@@ -3329,23 +3358,29 @@ export default function App() {
             />
           </div>
 
+          {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
+              nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
+              "bvSignalering", RollupCard "Naar resultaten") een zinvolle, nog bestaande sectie
+              raken i.p.v. een dode scroll-target. */}
           {activeYear && (
-            <DetailsPanel
-              year={activeYear}
-              cardsByKey={dashboardCardsByKey}
-              aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
-              dashboardAangifteIndicatie={dashboardAangifteIndicatie}
-              winst={yearlySummary?.winst}
-              previousWinst={previousYearlySummary?.winst}
-              showTrend={showJaaroverzichtTrend}
-              onShowFullCalculation={() => {
-                setShowAangifteMeerdereJaren(false);
-                setShowAangifteYearPicker(true);
-              }}
-              zakCount={zakGroupForYear.items.length}
-              priCount={priGroupForYear.items.length}
-              onJump={handleDetailsJump}
-            />
+            <div ref={checklistSectionRef}>
+              <DetailsPanel
+                year={activeYear}
+                cardsByKey={dashboardCardsByKey}
+                aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
+                dashboardAangifteIndicatie={dashboardAangifteIndicatie}
+                winst={yearlySummary?.winst}
+                previousWinst={previousYearlySummary?.winst}
+                showTrend={showJaaroverzichtTrend}
+                onShowFullCalculation={() => {
+                  setShowAangifteMeerdereJaren(false);
+                  setShowAangifteYearPicker(true);
+                }}
+                zakCount={zakGroupForYear.items.length}
+                priCount={priGroupForYear.items.length}
+                onJump={handleDetailsJump}
+              />
+            </div>
           )}
         </div>
 
@@ -3454,65 +3489,6 @@ export default function App() {
           </div>
         )}
 
-        {/* De jaar-wisselaar + export/print/aangifte-knoppen horen bij "welk jaar bekijk ik nu" — dat
-            bepaalt namelijk ook wat classificatiezekerheid en de checklist hierboven/hieronder laten
-            zien — dus staan ze hier, tussen classificatiezekerheid en de aangifte-checklist. */}
-        {years.length > 0 && activeYear && (
-          <div className="flex items-center justify-between gap-2 flex-wrap" style={sectionTabStyle("overzicht")}>
-            {years.length > 1 ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-400">Jaar:</span>
-                {years.map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => setActiveYear(year)}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium border ${
-                      year === activeYear ? "bg-teal-700 border-teal-700 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {year}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <span />
-            )}
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-              >
-                <Download className="h-3.5 w-3.5" /> Excel exporteren
-              </button>
-              <button
-                onClick={() => printReport(groups)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                title="Opent direct het printvenster van je browser — kies daar een printer, of 'Opslaan als PDF'"
-              >
-                <Printer className="h-3.5 w-3.5" /> Print
-              </button>
-              {/* v241 — de knop "Indicatieve aangifteberekening bekijken" stond hier dubbel: dezelfde
-                  knop staat ook al in de donkere "Aangifte {jaar}"-statusbalk direct hieronder (beide
-                  openden hetzelfde showAangifteYearPicker-venster). Hier weggehaald, in de statusbalk
-                  laten staan. */}
-              {/* Heropent de wizard om basisvragen te wijzigen (o.a. rechtsvorm zzp/BV,
-                  KOR, BTW-verlegd, leaseauto/lening/AOV) — de wizard vraagt normaal alleen nog
-                  onbeantwoorde vragen, maar hier forceren we de Rechtsvorm-stap altijd terug in
-                  de wachtrij (zie forceRechtsvormStep), zodat je zzp/BV ook achteraf kunt omzetten.
-                  Wisselen van rechtsvorm haalt automatisch de bijbehorende vervolgvragen erbij
-                  (bijv. holdingstructuur bij BV, of KOR/BTW-verlegd/urencriterium bij zzp) omdat
-                  die velden voor de "andere" rechtsvorm nooit ingevuld zijn. */}
-              <button
-                onClick={() => setManualWizardOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-medium hover:border-slate-400"
-                title="Rechtsvorm, KOR, BTW-verlegd en andere basisvragen wijzigen"
-              >
-                <Settings className="h-3.5 w-3.5" /> Basisvragen bewerken
-              </button>
-            </div>
-          </div>
-        )}
-
         {showRekeninghouderModal && (
           <RekeninghouderModal
             eigenNamen={eigenNamen}
@@ -3568,33 +3544,11 @@ export default function App() {
           />
         )}
 
-        {activeYear && (
-          <div ref={checklistSectionRef} style={sectionTabStyle("overzicht")}>
-            <AangifteStatusBar
-              activeYear={activeYear}
-              yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
-              workflowSteps={workflowSteps}
-              // Dit knopje en de andere knop met exact dezelfde tekst (verderop op de pagina) doen
-              // beide hetzelfde: eerst de jaren-picker openen, zodat je andere/meerdere jaren kunt
-              // kiezen in plaats van rechtstreeks naar de Indicatieve aangifteberekening voor alléén
-              // het actieve jaar te gaan. De picker is een centraal modal-venster, dus verschijnt
-              // meteen zichtbaar, ongeacht scrollpositie.
-              onOpenAangiftevoorstel={() => {
-                setShowAangifteMeerdereJaren(false);
-                setShowAangifteYearPicker(true);
-              }}
-              checklistData={checklistData}
-              rechtsvorm={rechtsvorm}
-              korRegeling={korRegeling}
-              btwVerlegd={btwVerlegd}
-              ibGedaan={!!ibStatus[activeYear]?.gedaan}
-              zvwGedaan={!!zvwStatus[activeYear]?.gedaan}
-              onOpenHelp={setHelpPopupChapter}
-              onRequestChange={requestCategoryChange}
-              onConfirmCorrect={confirmClassificationCorrect}
-            />
-          </div>
-        )}
+        {/* v266 — de donkere "Aangifte {jaar}"-statusbalk (AangifteStatusBar) is hier weggehaald:
+            overbodig geworden naast de DashboardHeader-statuskaart (Dossiercontrole/Indicatieve
+            aangifte/Werkelijke aangifte) en de "Resultaten"-rollupkaart, die dezelfde informatie en
+            de "Indicatieve aangifteberekening"-actie al tonen. checklistData/workflowSteps/
+            ibStatus/zvwStatus blijven verder gewoon bestaan voor ander gebruik elders. */}
 
         <div style={sectionTabStyle("overzicht")}>
           <TodoPanel items={todoItems} />
