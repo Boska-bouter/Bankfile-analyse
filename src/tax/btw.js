@@ -48,10 +48,9 @@ DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
-// v191 — deze drie categorieën bestaan uitsluitend om omzet met een AFWIJKEND tarief dan het
-// dossierbrede standaardtarief apart te kunnen zetten (zie SUBTYPE_TO_MAIN in categories.js: alle
-// drie vallen onder hoofdcategorie "Zakelijke inkomsten", dus het BTW-instelscherm liet vóór v191
-// ook voor déze drie gewoon een vrij te kiezen percentage zien). Hun naam IS het tarief — een
+// Deze drie categorieën bestaan uitsluitend om omzet met een AFWIJKEND tarief dan het dossierbrede
+// standaardtarief apart te kunnen zetten (zie SUBTYPE_TO_MAIN in categories.js: alle drie vallen
+// onder hoofdcategorie "Zakelijke inkomsten"). Hun naam IS het tarief — een
 // transactie in "Zakelijke inkomsten 21%" wordt in computeQuarterlyBtwForYear (zie hieronder)
 // altijd als 1a-omzet (21%) meegeteld, ongeacht wat hier zou staan, dus een afwijkend opgeslagen
 // percentage voor deze categorie levert een intern tegenstrijdige berekening op: de omzet wordt op
@@ -91,10 +90,10 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
       merged["Inhuur personeel"] = 21;
     }
   }
-  // v191 — onvoorwaardelijk (niet alleen bij een versie-ophoging): zie FIXED_BTW_RATE_CATEGORIES
-  // hierboven. Zelfheelt elke keer dat een project geladen/opgeslagen wordt, dus ook als een
-  // afwijkende waarde ooit via het instelscherm is binnengeslopen (in plaats van alleen bij een
-  // eenmalige versiemigratie, zoals bij ZERO_BTW_CATEGORIES hierboven).
+  // Onvoorwaardelijk (niet alleen bij een versie-ophoging): zie FIXED_BTW_RATE_CATEGORIES hierboven.
+  // Zelfheelt elke keer dat een project geladen/opgeslagen wordt, dus ook als een afwijkende waarde
+  // ooit via het instelscherm is binnengeslopen (in plaats van alleen bij een eenmalige
+  // versiemigratie, zoals bij ZERO_BTW_CATEGORIES hierboven).
   for (const [c, rate] of Object.entries(FIXED_BTW_RATE_CATEGORIES)) merged[c] = rate;
   return merged;
 }

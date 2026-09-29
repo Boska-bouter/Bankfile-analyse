@@ -1,7 +1,7 @@
 // Generieke kolomherkenning via aliassen — werkt voor de meeste Nederlandse banken zonder dat
 // er een specifiek profiel per bank nodig is. Dit blijft de FALLBACK-laag: bankspecifieke
-// profielen (zie migratieplan, v2) kunnen hier vóór geschakeld worden voor hogere betrouwbaarheid,
-// zonder dat deze generieke herkenning wegvalt voor banken zonder eigen profiel.
+// profielen kunnen hier vóór geschakeld worden voor hogere betrouwbaarheid, zonder dat deze
+// generieke herkenning wegvalt voor banken zonder eigen profiel.
 export const HEADER_ALIASES = {
   date: ["datum", "date", "transactiedatum", "boekdatum", "rentedatum"],
   amount: ["bedrag (eur)", "bedrag", "amount", "bedrag eur"],

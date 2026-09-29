@@ -62,7 +62,7 @@ function formFromSegment(segment) {
     cataloguswaarde: s.cataloguswaarde ?? "",
     bijtellingspercentage: s.bijtellingspercentage ?? "",
     privegebruikMeerDan500kmPerJaar: s.privegebruikMeerDan500kmPerJaar ?? {},
-    // Kenteken (v150): koppelt contractsegmenten van DEZELFDE auto aan elkaar bij een tussentijds
+    // Kenteken: koppelt contractsegmenten van DEZELFDE auto aan elkaar bij een tussentijds
     // vervangen/geherfinancierd leasecontract — zie tax/autoBijtelling.js. Alleen relevant/getoond
     // bij soort "auto". Optioneel en standaard leeg, dus geen enkel bestaand contract heeft dit al
     // ingevuld.
@@ -120,7 +120,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   const set = (field) => (e) => onChange({ ...form, [field]: e.target.value });
   const setChecked = (field) => (e) => onChange({ ...form, [field]: e.target.checked });
 
-  // v150: is het ingevulde kenteken (genormaliseerd) hetzelfde als bij een EERDER contractsegment
+  // Is het ingevulde kenteken (genormaliseerd) hetzelfde als bij een EERDER contractsegment
   // van deze zelfde lease? Zo ja, dan gaat het (zie tax/autoBijtelling.js) fiscaal om dezelfde auto —
   // cataloguswaarde/bijtellingspercentage worden dan overgenomen van dat eerdere segment, in plaats
   // van opnieuw ingevuld te moeten worden. Bij meerdere eerdere matches (zou niet moeten voorkomen,
@@ -161,7 +161,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
       Number(form.bijtellingspercentage || 0) !== Number(matchedPreceding.bijtellingspercentage || 0));
 
   const onbetaaldGedeelteKoop = useMemo(() => computeOnbetaaldGedeelteKoop(form), [form]);
-  // v180 — apart van "onbetaald gedeelte koop" (de leaseschuld-basis hierboven): dit is de volledige
+  // Apart van "onbetaald gedeelte koop" (de leaseschuld-basis hierboven): dit is de volledige
   // aanschafwaarde van het bedrijfsmiddel (koopprijs + BTW), ongeacht aanbetaling/inruil/aflossing —
   // zie tax/financialLease.js en de toelichting bij buildLeaseActivumFromSegment in autoBijtelling.js.
   const aanschafwaardeBedrijfsmiddel = useMemo(() => computeAanschafwaardeBedrijfsmiddel(form), [form]);
@@ -321,7 +321,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     return Math.abs(maanden) > 6;
   })();
 
-  // Vanaf v179: één samenvattende validatiestatus (groen/oranje/rood) bovenop de losse
+  // Eén samenvattende validatiestatus (groen/oranje/rood) bovenop de losse
   // waarschuwingen hierboven/hieronder — zodat in één oogopslag duidelijk is hoe betrouwbaar de
   // berekende rente is, in plaats van dat de gebruiker zelf de losse meldingen moet doorlezen.
   // Rood: er is genoeg ingevuld om een rentepercentage te willen berekenen, maar dat lukt niet — de

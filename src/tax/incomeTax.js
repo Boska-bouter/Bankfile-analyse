@@ -3,16 +3,14 @@
 // Bron: gepubliceerde belastingschijven, zelfstandigenaftrek en mkb-winstvrijstelling per jaar.
 // Check jaarlijks op belastingdienst.nl of deze bedragen nog kloppen — ze wijzigen per jaar.
 //
-// v191 — 2020/2021/2022 toegevoegd: dit ontbrak, waardoor computeBelastbaarWinst (hieronder) een
-// jaar vóór 2023 stilzwijgend met de 2023-cijfers doorrekende (via de clamp op
-// IB_MIN_YEAR/IB_MAX_YEAR hieronder). Voor de mkb-winstvrijstelling maakte dat niet uit (ongewijzigd
-// 14% van 2020 t/m 2023), maar de zelfstandigenaftrek verschilde wél fors (2020: € 7.030, 2021:
-// € 6.670, 2022: € 6.310, tegenover € 5.030 in 2023) — bij een winst boven de aftrek werd de
-// belastbare winst voor die jaren daardoor te hoog ingeschat, en de geschatte IB/Zvw dus ook.
-// Gevonden bij het doorrekenen van een dossier met 2021/2022-jaren als regressietest. Bronnen
-// (Belastingdienst-cijfers, meerdere malen kruisgecontroleerd): zelfstandigenaftrek en
-// belastingschijven 2020-2022 volgens gepubliceerde overzichten; mkb-winstvrijstelling ongewijzigd
-// op 14%.
+// 2020/2021/2022 zijn nodig zodat computeBelastbaarWinst (hieronder) een jaar vóór 2023 niet
+// stilzwijgend met de 2023-cijfers doorrekent (via de clamp op IB_MIN_YEAR/IB_MAX_YEAR hieronder).
+// De zelfstandigenaftrek verschilt fors per jaar (2020: € 7.030, 2021: € 6.670, 2022: € 6.310,
+// tegenover € 5.030 in 2023) — bij een winst boven de aftrek zou de belastbare winst voor die jaren
+// anders te hoog worden ingeschat, en de geschatte IB/Zvw dus ook. De mkb-winstvrijstelling is
+// ongewijzigd 14% van 2020 t/m 2023. Bronnen (Belastingdienst-cijfers, meerdere malen
+// kruisgecontroleerd): zelfstandigenaftrek en belastingschijven 2020-2022 volgens gepubliceerde
+// overzichten.
 export const IB_TARIEVEN_BY_YEAR = {
   2020: { brackets: [{ tot: 68508, tarief: 0.3735 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 7030, mkbPct: 14 },
   2021: { brackets: [{ tot: 68508, tarief: 0.371 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6670, mkbPct: 14 },
@@ -73,18 +71,17 @@ export function estimateIncomeTaxScenarios(winst, year) {
   };
 }
 
-// v194 — punt 13 uit het reviewdocument: een jaar waarvoor het urencriterium nooit is aangegeven
-// gaf altijd stilzwijgend "mét zelfstandigenaftrek" (zie `zaStatus !== "nee"` in
-// reports/aangiftevoorstel.js en PersoonlijkeAannamesPanel.jsx) — dat bestond om al opgeslagen
-// projecten dezelfde cijfers te laten tonen, maar oogt voor een gebruiker als "niets ingevuld, dus
-// de tool heeft het wel ongeveer goed", terwijl het urencriterium nu juist NIET uit bankgegevens is
-// af te leiden (de Belastingdienst koppelt de zelfstandigenaftrek er direct aan). Vanaf v194 geldt
-// dit stille "Ja"-gedrag daarom alleen nog voor dossiers die al bestonden vóór deze wijziging
-// (`zaLegacyJaDefault` — zie App.jsx/loadProjectFile, resulteert hier in "ja"); voor een
-// gloednieuw dossier resulteert een onbeantwoord jaar voortaan in "onbekend" (beide scenario's
-// naast elkaar, net als bij een expliciete "Onbekend"-keuze) — de veiligere aanname zolang niemand
-// het urencriterium heeft bevestigd. Een expliciet gezet jaar (ja/nee/onbekend) wint hier altijd,
-// ongeacht zaLegacyJaDefault.
+// Een jaar waarvoor het urencriterium nooit is aangegeven mag niet zomaar stilzwijgend "mét
+// zelfstandigenaftrek" geven (zie `zaStatus !== "nee"` in reports/aangiftevoorstel.js en
+// PersoonlijkeAannamesPanel.jsx) — dat oogt voor een gebruiker als "niets ingevuld, dus de tool heeft
+// het wel ongeveer goed", terwijl het urencriterium juist NIET uit bankgegevens is af te leiden (de
+// Belastingdienst koppelt de zelfstandigenaftrek er direct aan). Dit stille "Ja"-gedrag geldt daarom
+// alleen nog voor dossiers die al bestonden vóórdat deze regel werd ingevoerd (`zaLegacyJaDefault` —
+// zie App.jsx/loadProjectFile, resulteert hier in "ja"), zodat een eerder opgeslagen project niet met
+// terugwerkende kracht andere cijfers toont; voor een gloednieuw dossier resulteert een onbeantwoord
+// jaar in "onbekend" (beide scenario's naast elkaar, net als bij een expliciete "Onbekend"-keuze) —
+// de veiligere aanname zolang niemand het urencriterium heeft bevestigd. Een expliciet gezet jaar
+// (ja/nee/onbekend) wint hier altijd, ongeacht zaLegacyJaDefault.
 export function resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) {
   const raw = zelfstandigenaftrekStatus?.[year];
   if (raw != null) return raw;
@@ -206,10 +203,10 @@ function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, 
   return computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe).belastbaar;
 }
 
-// v195 — punt 8 uit het reviewdocument: uitsplitsing van winst → ondernemersaftrek →
-// MKB-winstvrijstelling → belastbare winst als aparte, herbruikbare stappen (i.p.v. alleen het
-// eindresultaat, zoals computeBelastbaarInkomenGeneriek hierboven al deed) — voor het compacte
-// dashboard bovenaan de Indicatieve aangifteberekening, dat elke stap los toont.
+// Uitsplitsing van winst → ondernemersaftrek → MKB-winstvrijstelling → belastbare winst als aparte,
+// herbruikbare stappen (i.p.v. alleen het eindresultaat, zoals computeBelastbaarInkomenGeneriek
+// hierboven al doet) — voor het compacte dashboard bovenaan de Indicatieve aangifteberekening, dat
+// elke stap los toont.
 export function computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
   const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
   const mkbPct = IB_TARIEVEN_BY_YEAR[clampedYear].mkbPct;

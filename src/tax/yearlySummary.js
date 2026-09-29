@@ -130,15 +130,14 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     const btwVol = rawBtw(tx, categoryBtwRates, btwVerlegd);
     const btw = btwVol * factor;
     const bedrag = tx.amount * factor;
-    // v183 — "Zakelijk - apparatuur/machines" is een bedrijfsmiddel (zie tax/activa.js): de aanschaf
-    // zelf mag fiscaal niet in één keer als kosten worden afgetrokken, alleen de jaarlijkse
-    // afschrijving. Vóór v183 werd hier toch het VOLLEDIGE aanschafbedrag als normale "kosten"-
-    // categorie meegeteld in zakBruto/zakBtwTotaal/zakelijkeKostenNetto — tegelijk toonde het
-    // Aangiftevoorstel (boxMapping.js) er al wél de correct berekende afschrijving voor, zodra een
-    // activum was geregistreerd bij "Activa". Dat gaf twee verschillende bedragen voor dezelfde
-    // aanschaf: de getoonde "Zakelijke kosten" gebruikte de afschrijving, maar de onderliggende
-    // "winst" (en dus de IB/Zvw-schatting) gebruikte nog de volledige aanschaf. Vanaf nu telt de
-    // aanschaftransactie zelf hier NIET meer mee (net als "financiering" hieronder) — de aanroeper
+    // "Zakelijk - apparatuur/machines" is een bedrijfsmiddel (zie tax/activa.js): de aanschaf zelf
+    // mag fiscaal niet in één keer als kosten worden afgetrokken, alleen de jaarlijkse afschrijving.
+    // Het VOLLEDIGE aanschafbedrag mag dus niet als normale "kosten"-categorie meetellen in
+    // zakBruto/zakBtwTotaal/zakelijkeKostenNetto — dat zou een ander bedrag geven dan het
+    // Aangiftevoorstel (boxMapping.js), dat voor de getoonde "Zakelijke kosten" al de correct
+    // berekende afschrijving gebruikt zodra een activum is geregistreerd bij "Activa". De
+    // aanschaftransactie zelf telt hier daarom NIET mee (net als "financiering" hieronder) — de
+    // aanroeper
     // (App.jsx/aangiftevoorstel(-bv).js) telt in plaats daarvan de daadwerkelijk berekende
     // afschrijving (computeActivaAfschrijvingForYear, tax/activa.js) op bij de winstCorrectie die
     // hier binnenkomt, exact dezelfde constructie als bij de financiële-lease-afschrijving hierboven.

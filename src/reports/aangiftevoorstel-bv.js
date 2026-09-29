@@ -82,11 +82,10 @@ function buildYearSectionBv(
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  // v183: "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee in
-  // yearlySummary.js (zie de toelichting daar) — vóór deze aanpassing werd hier daarom niets meer
-  // teruggegeven voor de aanschaf van een bedrijfsmiddel. activaSummary/activaAfschrijvingForYear
-  // moeten daarom vóór computeYearlySummary worden bepaald, zodat de daadwerkelijk berekende
-  // afschrijving alsnog wordt meegeteld — exact dezelfde constructie als bij de zzp-variant.
+  // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js (zie de
+  // toelichting daar). activaSummary/activaAfschrijvingForYear moeten daarom vóór
+  // computeYearlySummary worden bepaald, zodat de daadwerkelijk berekende afschrijving alsnog wordt
+  // meegeteld — exact dezelfde constructie als bij de zzp-variant.
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   // v205: de afschrijving (en een eventueel boekresultaat bij vroegtijdige verkoop/veiling, zie
@@ -221,11 +220,10 @@ function buildYearSectionBv(
     }
   }
 
-  // v161: "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat sinds die
-  // versie niet meer standaard in ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de
-  // nieuwe "Auto's en machines"-post, zie aangiftevoorstel.js) — de BV-aangifte heeft die post niet
-  // (geen bijtellingsmechanisme voor een BV/DGA-auto in deze tool), dus hier gewoon weer meetellen
-  // als vanouds, ongewijzigd gedrag voor bestaande BV-dossiers.
+  // "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat niet standaard in
+  // ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de "Auto's en machines"-post, zie
+  // aangiftevoorstel.js) — de BV-aangifte heeft die post niet (geen bijtellingsmechanisme voor een
+  // BV/DGA-auto in deze tool), dus hier gewoon meetellen als vanouds.
   const overigeBedrijfskostenMetAuto = ib.autokostenOverig.totaal > 0
     ? [ib.autokostenOverig, ...ib.overigeBedrijfskosten]
     : ib.overigeBedrijfskosten;
@@ -539,8 +537,8 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   // vóórdat de cumulatieve reeks kan worden opgebouwd.
   const jaren = [...yearsToInclude].sort((a, b) => a - b);
   const resultaatNaVpbPerJaar = {};
-  // v183: apart bepaald zodat computeActivaAfschrijvingForYear elk jaar dezelfde afschrijving
-  // meetelt als buildYearSectionBv verderop (zie de toelichting daar).
+  // Apart bepaald zodat computeActivaAfschrijvingForYear elk jaar dezelfde afschrijving meetelt als
+  // buildYearSectionBv verderop (zie de toelichting daar).
   const activaSummaryVoorReserve = computeActivaSummary(classified);
   for (const year of jaren) {
     const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);

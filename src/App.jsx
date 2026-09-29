@@ -90,25 +90,11 @@ import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoAc
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 
 // ---------------------------------------------------------------------------
-// Dit is bewust een MINIMALE, functionele schil rond de volledig gemigreerde
-// logicalagen (importers/, classification/, tax/, storage/, utils/) — niet een
-// volledige 1-op-1 kopie van de originele ~2000-regelige hoofdcomponent.
-//
-// Wat hier al werkt, end-to-end, met de nieuwe module-structuur:
-//   upload -> rekeningtype per bestand -> parseFile() -> buildTransactions() ->
-//   resolveClassification() (met correcties) -> per-jaar detailtabel, direct
-//   bewerkbaar (categorie/type, tegenpartij-breed) -> categorietotalen + saldo-check
-//   + project opslaan/laden (downloadbaar .json-bestand, incl. correcties/instellingen)
-//   + automatisch bewaren per browser (window.storage), net als de vorige versie
-//   + "Wis alles" en een geactualiseerd Help-paneel
-//
-// Wat hier NOG NIET zit (volgende fase van het migratieplan):
-//   - review-stappen (inkomstenbronnen, overboekingen aan personen, "Overig" opruimen,
-//     factuurperiode)
-//   - BTW-kwartaaloverzicht, meerjarenoverzicht, aangiftevoorstel
-//   - leningen/lease-invoervensters, instellingen-hub (categorieregels bewerken,
-//     BTW-tarieven), zoeken/filteren in de detailtabel, "Werk te doen"-dashboard,
-//     importcontrole-scherm
+// Dit is de functionele schil (upload, tabbladen, dashboard, alle panelen) rond de
+// logicalagen: importers/ (inlezen en aansluiting tussen bestanden), classification/
+// (categoriseren van transacties), tax/ (BTW/IB/Vpb-berekeningen), storage/
+// (project opslaan/laden), utils/. De reports/-map bouwt de downloadbare/printbare
+// Indicatieve aangifteberekening (zzp en BV) uit diezelfde tax/-berekeningen.
 // ---------------------------------------------------------------------------
 
 // Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een projectbestand. Ontbreekt
@@ -157,10 +143,10 @@ function migrateOverridesCategories(overrides) {
   return out;
 }
 
-// v195 — punt 9 uit het reviewdocument: dezelfde statustekst als in het gegenereerde rapport
-// (reports/aangiftevoorstel.js, functie statusTekst) — géén nieuw statussysteem, alleen dezelfde
-// bestaande yearlyProgress-status (afgeleid uit categorisatie/onzekere transacties/bestandsgaten)
-// nu ook zichtbaar vóórdat je het rapport genereert. "Groen" betekent hier uitdrukkelijk alleen dat
+// Dezelfde statustekst als in het gegenereerde rapport (reports/aangiftevoorstel.js, functie
+// statusTekst) — géén apart statussysteem, alleen dezelfde bestaande yearlyProgress-status (afgeleid
+// uit categorisatie/onzekere transacties/bestandsgaten) ook zichtbaar vóórdat je het rapport
+// genereert. "Groen" betekent hier uitdrukkelijk alleen dat
 // de gegevenscontrole voldoende compleet is — niet dat de aangifte fiscaal correct is.
 function aangifteStatusTekst(status, aantalPunten) {
   if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
@@ -221,13 +207,13 @@ export default function App() {
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [zvwStatus, setZvwStatus] = useState({}); // { "2025": { gedaan: bool } }
   // { "2025": "ja" | "nee" | "onbekend" } — ontbrekend jaar = niet aangegeven; wat dat dan betekent
-  // hangt af van zaLegacyJaDefault hieronder (v194).
+  // hangt af van zaLegacyJaDefault hieronder.
   const [zelfstandigenaftrekStatus, setZelfstandigenaftrekStatusState] = useState({});
-  // v194 — punt 13 uit het reviewdocument: een onbeantwoord urencriterium-jaar rekende altijd
-  // stilzwijgend met "ja" (zelfstandigenaftrek toegepast) — veilig voor bestaande dossiers wier
-  // cijfers daarmee niet met terugwerkende kracht veranderen, maar een verkeerde indruk voor een
-  // gebruiker die nog niets heeft ingevuld. true = dit gedrag behouden (default bij het LADEN van
-  // een projectbestand van vóór deze wijziging, zie loadProjectFile hieronder); false = een
+  // Een onbeantwoord urencriterium-jaar stilzwijgend met "ja" (zelfstandigenaftrek toegepast) laten
+  // rekenen is veilig voor bestaande dossiers wier cijfers daarmee niet met terugwerkende kracht
+  // veranderen, maar geeft een verkeerde indruk aan een gebruiker die nog niets heeft ingevuld.
+  // true = dit gedrag behouden (default bij het LADEN van een projectbestand van vóór deze regel
+  // bestond, zie loadProjectFile hieronder); false = een
   // onbeantwoord jaar toont voortaan beide scenario's naast elkaar, net als een expliciete
   // "Onbekend"-keuze — de default voor een gloednieuw dossier (nog nooit een project geladen).
   // Zie resolveZelfstandigenaftrekStatusForYear in tax/incomeTax.js.
@@ -237,10 +223,9 @@ export default function App() {
   // { "2025": "zaak" | "prive" | "beide" } — of de auto van de zaak is (koop/operational/financial
   // lease), een privéauto zakelijk gebruikt wordt, of beide. Ontbrekend jaar = onbekend/niet
   // aangegeven — dan blijft de generieke %-splitsing (SPLITSBARE_CATEGORIEEN, zie
-  // tax/categorySplit.js) op Brandstof/Parkeren gewoon bruikbaar, zoals nu. Vanaf v174 bepaalt dit
-  // veld of Brandstof/Parkeren voor dat jaar uit die %-splitsing gehaald worden ten gunste van het
-  // aparte auto-bijtellings-/km-vergoedingsmodel — in v173 alleen de vraag/opslag, nog geen effect
-  // op de berekening.
+  // tax/categorySplit.js) op Brandstof/Parkeren gewoon bruikbaar. Dit veld bepaalt of
+  // Brandstof/Parkeren voor dat jaar uit die %-splitsing gehaald worden ten gunste van het aparte
+  // auto-bijtellings-/km-vergoedingsmodel.
   const [autoStatus, setAutoStatusState] = useState({});
   // { "2025": percentage (0-100) } — percentage zakelijk gebruik van "Huur (deels zakelijk)" per
   // jaar. Ontbrekend jaar = 100% (volledig aftrekbaar) — zie tax/gedeeldeHuur.js.
@@ -328,8 +313,8 @@ export default function App() {
   const [showCategoryOverview, setShowCategoryOverview] = useState(false);
   const { updateAvailable } = useVersionCheck();
   const [showSetupWizard, setShowSetupWizard] = useState(false); // gaat alleen open bij het laden van een bestand (zie handleFiles)
-  // v199: handmatig geopend via de "Basisvragen bewerken"-knop — in dat geval moet de Rechtsvorm-
-  // stap (zzp/BV) altijd in de wizard-wachtrij komen, ook als hij al eerder beantwoord is (zie
+  // Handmatig geopend via de "Basisvragen bewerken"-knop — in dat geval moet de Rechtsvorm-stap
+  // (zzp/BV) altijd in de wizard-wachtrij komen, ook als hij al eerder beantwoord is (zie
   // forceRechtsvormStep op SetupWizardModal), zodat je rechtsvorm achteraf nog kunt omzetten.
   const [manualWizardOpen, setManualWizardOpen] = useState(false);
   const [overigSearch, setOverigSearch] = useState("");
@@ -469,8 +454,8 @@ export default function App() {
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
     setZvwStatus(settings.zvwStatus && typeof settings.zvwStatus === "object" ? settings.zvwStatus : {});
     setZelfstandigenaftrekStatusState(settings.zelfstandigenaftrekStatus && typeof settings.zelfstandigenaftrekStatus === "object" ? settings.zelfstandigenaftrekStatus : {});
-    // v194: ontbreekt deze vlag (browseropslag van vóór deze wijziging), dan is dit een dossier dat
-    // al bestond vóór het urencriterium-standaardgedrag veranderde — behoud dan het oude gedrag
+    // Ontbreekt deze vlag (browseropslag van vóór deze regel bestond), dan is dit een dossier dat al
+    // bestond vóór het urencriterium-standaardgedrag veranderde — behoud dan het oude gedrag
     // (onbeantwoord jaar = "ja") in plaats van de nieuwe, veiligere default ("onbekend").
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
@@ -520,12 +505,12 @@ export default function App() {
     });
   };
   // Zet de standaardwaarde van zelfstandigenaftrekStatus in één keer voor alle jaren in het dossier
-  // — v192, gebruikt door de nieuwe wizard-vraag (zie SetupWizardModal), die maar één keer per
-  // dossier wordt gesteld terwijl zelfstandigenaftrekStatus zelf een per-jaar instelling is. Zelfde
-  // patroon als seedAutoStatusForAllYears hierboven. status=null (bijv. "weet ik nog niet") zet
-  // bewust niets — de wizard toont die keuze dan ook niet als los te kiezen optie (zie de wizard-
-  // stap zelf), zodat "niets gezet" hier hetzelfde betekent als vóór deze wizard-vraag bestond
-  // (rekent voorlopig met "Ja", zie de toelichting bij PersoonlijkeAannamesPanel.jsx).
+  // — gebruikt door de wizard-vraag (zie SetupWizardModal), die maar één keer per dossier wordt
+  // gesteld terwijl zelfstandigenaftrekStatus zelf een per-jaar instelling is. Zelfde patroon als
+  // seedAutoStatusForAllYears hierboven. status=null (bijv. "weet ik nog niet") zet bewust niets — de
+  // wizard toont die keuze dan ook niet als los te kiezen optie (zie de wizard-stap zelf), zodat
+  // "niets gezet" hier hetzelfde betekent als wanneer deze wizard-vraag niet bestond (rekent
+  // voorlopig met "Ja", zie de toelichting bij PersoonlijkeAannamesPanel.jsx).
   const seedZelfstandigenaftrekStatusForAllYears = (yearsList, status) => {
     if (!status || !yearsList || yearsList.length === 0) return;
     snapshotBeforeAction("Zelfstandigenaftrek-status ingesteld (wizard)");
@@ -1605,7 +1590,7 @@ export default function App() {
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
 
-  // v188: zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financial lease (soort "auto"), koop, of
+  // Zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financial lease (soort "auto"), koop, of
   // operational lease — tellen computeLeaseAutoKostenVoorJaar (autoBijtelling.js) resp.
   // computeAutoActivaKostenVoorJaar (autoActiva.js) voor ELK jaar 100% van Brandstof/Parkeren mee —
   // ongeacht wat autoStatus voor dat jaar zegt. De generieke %-splitsing hieronder moet die twee
@@ -1684,10 +1669,9 @@ export default function App() {
     () => (activeYear && rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, activeYear) : null),
     [kmVergoedingDetails, autoStatus, activeYear, rechtsvorm]
   );
-  // v183: hier naartoe verplaatst (was verderop) — "Zakelijk - apparatuur/machines" telt sinds v183
-  // niet meer als volledige kosten mee in yearlySummary.js (zie de toelichting daar), dus de
-  // daadwerkelijk berekende afschrijving moet worden meegeteld in winstCorrectieActiveYear hieronder,
-  // exact dezelfde constructie als de financiële-lease-afschrijving.
+  // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js (zie de
+  // toelichting daar), dus de daadwerkelijk berekende afschrijving moet worden meegeteld in
+  // winstCorrectieActiveYear hieronder, exact dezelfde constructie als de financiële-lease-afschrijving.
   const activaAfschrijvingForYear = useMemo(
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
@@ -1725,9 +1709,9 @@ export default function App() {
         : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
-      // v183: "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee in
-      // yearlySummary.js — de daadwerkelijk berekende afschrijving moet daarom hier worden meegeteld,
-      // exact dezelfde constructie als de financiële-lease-afschrijving.
+      // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js — de
+      // daadwerkelijk berekende afschrijving moet daarom hier worden meegeteld, exact dezelfde
+      // constructie als de financiële-lease-afschrijving.
       const activaAfschrijving = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
       const winstCorrectie =
         (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) +
@@ -2959,10 +2943,10 @@ export default function App() {
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
       setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
       setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
-      // v194: een projectbestand zonder deze vlag is opgeslagen vóór deze wijziging — behoud dan het
+      // Een projectbestand zonder deze vlag is opgeslagen vóórdat deze regel bestond — behoud dan het
       // oude gedrag (onbeantwoord urencriterium-jaar = "ja") zodat een eerder gedeeld/afgedrukt cijfer
-      // niet met terugwerkende kracht verandert. Alleen een bestand dat de vlag al draagt (opgeslagen
-      // door v194 of later) volgt de nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
+      // niet met terugwerkende kracht verandert. Alleen een bestand dat de vlag al draagt volgt de
+      // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
       setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
       setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
       setAutoStatusState(project.autoStatus && typeof project.autoStatus === "object" ? project.autoStatus : {});
@@ -3358,10 +3342,9 @@ export default function App() {
           </div>
         )}
 
-        {/* v198-fix: jaar-wisselaar + export/print/aangifte-knoppen stonden pas ver onderaan de
-            pagina (na alle review-panelen), terwijl ze horen bij "welk jaar bekijk ik nu" — dat
-            bepaalt namelijk ook wat classificatiezekerheid en de checklist hierboven/hieronder
-            laten zien. Nu direct hier, tussen classificatiezekerheid en de aangifte-checklist. */}
+        {/* De jaar-wisselaar + export/print/aangifte-knoppen horen bij "welk jaar bekijk ik nu" — dat
+            bepaalt namelijk ook wat classificatiezekerheid en de checklist hierboven/hieronder laten
+            zien — dus staan ze hier, tussen classificatiezekerheid en de aangifte-checklist. */}
         {years.length > 0 && activeYear && (
           <div className="flex items-center justify-between gap-2 flex-wrap" style={sectionTabStyle("overzicht")}>
             {years.length > 1 ? (
@@ -3400,7 +3383,7 @@ export default function App() {
                   knop staat ook al in de donkere "Aangifte {jaar}"-statusbalk direct hieronder (beide
                   openden hetzelfde showAangifteYearPicker-venster). Hier weggehaald, in de statusbalk
                   laten staan. */}
-              {/* v199: heropent de wizard om basisvragen te wijzigen (o.a. rechtsvorm zzp/BV,
+              {/* Heropent de wizard om basisvragen te wijzigen (o.a. rechtsvorm zzp/BV,
                   KOR, BTW-verlegd, leaseauto/lening/AOV) — de wizard vraagt normaal alleen nog
                   onbeantwoorde vragen, maar hier forceren we de Rechtsvorm-stap altijd terug in
                   de wachtrij (zie forceRechtsvormStep), zodat je zzp/BV ook achteraf kunt omzetten.
@@ -3479,13 +3462,11 @@ export default function App() {
               activeYear={activeYear}
               yearStatus={yearlyProgress[activeYear]?.status || "oranje"}
               workflowSteps={workflowSteps}
-              // v195-fix: dit knopje ging tot nu toe altijd rechtstreeks naar de Indicatieve
-              // aangifteberekening voor alléén het actieve jaar, zonder mogelijkheid om andere/
-              // meerdere jaren te kiezen — terwijl de andere knop met exact dezelfde tekst (verderop
-              // op de pagina) wél eerst de jaren-picker opent. Nu doen beide knoppen hetzelfde: de
-              // picker openen. v197-fix: de picker is nu een centraal modal-venster (in plaats van
-              // een blok verderop op de pagina + scroll-naar-beneden), dus die verschijnt meteen
-              // zichtbaar, ongeacht scrollpositie.
+              // Dit knopje en de andere knop met exact dezelfde tekst (verderop op de pagina) doen
+              // beide hetzelfde: eerst de jaren-picker openen, zodat je andere/meerdere jaren kunt
+              // kiezen in plaats van rechtstreeks naar de Indicatieve aangifteberekening voor alléén
+              // het actieve jaar te gaan. De picker is een centraal modal-venster, dus verschijnt
+              // meteen zichtbaar, ongeacht scrollpositie.
               onOpenAangiftevoorstel={() => {
                 setShowAangifteMeerdereJaren(false);
                 setShowAangifteYearPicker(true);
@@ -4076,10 +4057,9 @@ export default function App() {
 
             {years.length > 0 && activeYear && (
               <>
-                {/* v195-fix / v197-fix: de jaren-kiezer verscheen eerst als een blok ver onderaan
-                    de pagina, met een scroll-naar-beneden bij het klikken op het knopje bovenaan —
-                    dat voelde onrustig/onverwacht. Nu een centraal modal-venster, direct zichtbaar
-                    op de plek waar je al kijkt, ongeacht scrollpositie. Eerste stap: direct het
+                {/* De jaren-kiezer is een centraal modal-venster, direct zichtbaar op de plek waar
+                    je al kijkt, ongeacht scrollpositie (in plaats van een blok ver onderaan de
+                    pagina met een scroll-naar-beneden). Eerste stap: direct het
                     actieve jaar met status en openstaande punten, zodat iemand niet meteen een
                     jaren-selectie hoeft te maken voor de meest voorkomende situatie (het jaar waar
                     je toch al in zit). "Ander jaar/meerdere jaren kiezen" schakelt binnen hetzelfde

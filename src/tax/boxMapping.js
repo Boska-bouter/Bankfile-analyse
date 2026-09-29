@@ -10,11 +10,11 @@ import { effectiveZakelijkPercentage } from "./categorySplit.js";
 // bewust apart van deze winstberekening, net als op de aangifte zelf.
 const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
 const RUBRIEK_INKOOP = ["Zakelijke inkoop/uitgaven", "Inhuur personeel"];
-// Vanaf v161 gesplitst in twee: de categorieën die meetellen voor de bijtelling/onttrekking-
-// aftopping bij een geleasede auto (exact AUTOKOSTEN_CATEGORIEN uit autoBijtelling.js — deze horen
-// nu bij de samengevoegde "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die
-// dat niet doen ("Lease (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en
-// daarom een eigen, ongewijzigde plek onder Overige bedrijfskosten houden.
+// Gesplitst in twee: de categorieën die meetellen voor de bijtelling/onttrekking-aftopping bij een
+// geleasede auto (exact AUTOKOSTEN_CATEGORIEN uit autoBijtelling.js — deze horen bij de samengevoegde
+// "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die dat niet doen ("Lease
+// (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en daarom een eigen plek
+// onder Overige bedrijfskosten houden.
 const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)"];
 const RUBRIEK_HUISVESTING = ["Huur", "Huur (deels zakelijk)", "Energie-water", "Gemeentelijke kosten"];
 const RUBRIEK_VERKOOP = ["Marketing-website"];
@@ -23,8 +23,8 @@ const RUBRIEK_ANDERE_KOSTEN = [
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Personeel: overig", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
-  // Vanaf v172: de twee nieuwe "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) —
-  // zelfde rubriek als de andere abonnementen/kosten hierboven.
+  // De twee "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) horen in dezelfde
+  // rubriek als de andere abonnementen/kosten hierboven.
   "Streaming diensten", "Software & Online diensten",
 ];
 const RUBRIEK_ONTTREKKINGEN = ["Prive opnames", "Ontvangen van zakelijk"];
@@ -44,7 +44,7 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 // financieel) blijven hier altijd ongewijzigd. Weggelaten (`year` null, het gedrag van vóór dit
 // mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
 export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null) {
-  // v188: leaseAutoKostenForYear is hier al berekend als combineAutoKosten(...) van financial-lease-
+  // leaseAutoKostenForYear is hier al berekend als combineAutoKosten(...) van financial-lease-
   // en koop/operational-lease-autokosten (zie autoActiva.js) — dus niet-null zodra één van de drie
   // autovormen geregistreerd staat. Dat is precies dezelfde voorwaarde als
   // heeftGeregistreerdeAutoOpDeZaak in categorySplit.js, dus geen aparte
@@ -95,11 +95,11 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     ...(kmVergoedingRubriek ? [kmVergoedingRubriek] : []),
   ].filter((r) => r.totaal > 0);
 
-  // De 5 autokosten-categorieën (MRB, verzekering, brandstof, parkeren, onderhoud) horen vanaf v161
-  // niet meer bij "Overige bedrijfskosten" maar bij de samengevoegde "Auto's en machines"-post (zie
-  // aangiftevoorstel.js) — ook als er (nog) geen enkel leasecontract met "soort" is ingevuld (dan is
-  // dit gewoon de volledige, onveranderde aftrekpost, zonder bijtellingscorrectie). Netto, exact
-  // dezelfde sumCatNetto-conventie als de rest van deze functie.
+  // De 5 autokosten-categorieën (MRB, verzekering, brandstof, parkeren, onderhoud) horen bij de
+  // samengevoegde "Auto's en machines"-post (zie aangiftevoorstel.js), niet bij "Overige
+  // bedrijfskosten" — ook als er (nog) geen enkel leasecontract met "soort" is ingevuld (dan is dit
+  // gewoon de volledige aftrekpost, zonder bijtellingscorrectie). Netto, exact dezelfde
+  // sumCatNetto-conventie als de rest van deze functie.
   const autokostenOverig = rubriekNetto("Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", AUTOKOSTEN_CATEGORIEN);
 
   const apparatuurInvestering = sumCat(["Zakelijk - apparatuur/machines"]);

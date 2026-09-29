@@ -1,7 +1,7 @@
 import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen, stripExtraBedrag1eTermijnUitTransacties } from "./financialLease.js";
 
-// v181 — punt 3 uit de leasereview: een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek
-// klant") corrigeert vrijwel altijd een eerdere betaling (een deel van een eerder geïncasseerde
+// Een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek klant") corrigeert vrijwel altijd
+// een eerdere betaling (een deel van een eerder geïncasseerde
 // termijn wordt teruggestort, bijv. na een foutieve incasso of een klacht) — de rente/aflossing-
 // verdeling van DIE eerdere betaling moet dan mee gecorrigeerd worden, niet alleen het openstaande
 // saldo. In plaats van een aparte, foutgevoelige "achteraf terugdraaien"-berekening bovenop de
@@ -12,8 +12,8 @@ import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTer
 // gecorrigeerde betaling).
 //
 // Is er geen betrouwbare match, dan wordt de terugboeking bewust NIET meegenomen in de rente/
-// aflossing-berekening — niet als (foutieve) extra aflossing, en ook niet als saldoverhoging zoals
-// vóór v181 — maar apart teruggegeven (`ongekoppeldeTerugboekingen`) zodat hij zichtbaar blijft als
+// aflossing-berekening — niet als (foutieve) extra aflossing, en ook niet als saldoverhoging — maar
+// apart teruggegeven (`ongekoppeldeTerugboekingen`) zodat hij zichtbaar blijft als
 // een door de accountant zelf te beoordelen, ongekoppelde correctie, in plaats van een gok te wagen
 // die het saldo/de rente stilzwijgend verkeerd zou kunnen maken.
 //
@@ -72,10 +72,10 @@ function netTerugboekingenTegenBetalingen(transactions) {
 
 // Splitst de betalingen op een lening (of financiële lease) in rente en aflossing, op basis van
 // het oorspronkelijke bedrag, de startdatum en het rentepercentage. Rekent per betaling het
-// exacte aantal verstreken dagen sinds de vorige betaling (of de startdatum, voor de eerste) —
-// vóór v182 werd dit benaderd als "maanden × 30 dagen", wat niet exact aansloot bij de échte
-// kalenderdatums waarmee computeFinancialLeaseRate hierboven het rentepercentage afleidt (zie de
-// toelichting daar) — berekent daarover de rente (jaarlijks percentage × dag/365) over het op dat
+// exacte aantal verstreken dagen sinds de vorige betaling (of de startdatum, voor de eerste) — moet
+// exact aansluiten bij de échte kalenderdatums waarmee computeFinancialLeaseRate hierboven het
+// rentepercentage afleidt (zie de toelichting daar), niet een benadering als "maanden × 30 dagen" —
+// berekent daarover de rente (jaarlijks percentage × dag/365) over het op dat
 // moment nog openstaande bedrag, en trekt de rest van de betaling af als aflossing. Werkt hierdoor
 // ook bij onregelmatige betalingen — er wordt geen vast schema aangenomen, alleen de daadwerkelijke
 // betalingen uit de bank tellen.
@@ -174,8 +174,8 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
   // (bijv. 2020 t/m 2024 bij een lease die pas in 2025 een kapot vervolgcontract kreeg).
   const renteNietBerekenbaarJaren = new Set();
   let saldoNu = null;
-  // v181: ongekoppelde terugboekingen (zie netTerugboekingenTegenBetalingen) van alle segmenten
-  // samen — puur ter informatie/weergave, ze zijn al buiten de rente/aflossing-berekening gehouden.
+  // Ongekoppelde terugboekingen (zie netTerugboekingenTegenBetalingen) van alle segmenten samen —
+  // puur ter informatie/weergave, ze zijn al buiten de rente/aflossing-berekening gehouden.
   const ongekoppeldeTerugboekingen = [];
   for (const { segment, transactions: rawSegTx } of withTx) {
     if (!segment.koopprijs || !segment.looptijd || !segment.maandbedrag || !segment.startdatum) { onvolledig = true; continue; }

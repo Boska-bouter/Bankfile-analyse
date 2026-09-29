@@ -384,10 +384,10 @@ export const CATEGORY_FISCAL_TREATMENT = {
 
 // "Zakelijke inkoop" is samengevoegd met "Zakelijke uitgaven" — bestaande, eerder opgeslagen
 // correcties/regels met de oude naam worden bij het laden automatisch omgezet. "Zakelijke uitgaven"
-// zelf is later (v187) hernoemd naar "Zakelijke inkoop/uitgaven" — de subcategorie heette daarvoor
-// hetzelfde als haar hoofdcategorie "Inkoop & zakelijke uitgaven", wat verwarrend zocht. De
-// migratieketen loopt door (zie migrateLegacyCategoryName): "Zakelijke inkoop" en "Overig zakelijk:
-// overig" komen hierdoor via "Zakelijke uitgaven" alsnog op de nieuwe naam uit.
+// zelf heet inmiddels "Zakelijke inkoop/uitgaven" — de subcategorie heette daarvoor hetzelfde als
+// haar hoofdcategorie "Inkoop & zakelijke uitgaven", wat verwarrend zocht. De migratieketen loopt
+// door (zie migrateLegacyCategoryName): "Zakelijke inkoop" en "Overig zakelijk: overig" komen
+// hierdoor via "Zakelijke uitgaven" alsnog op de nieuwe naam uit.
 export const LEGACY_CATEGORY_RENAMES = {
   "Zakelijke inkoop": "Zakelijke uitgaven",
   "Zakelijke uitgaven": "Zakelijke inkoop/uitgaven",

@@ -9,7 +9,7 @@ export function computeOnbetaaldGedeelteKoop(details) {
   return n(details.koopprijs) + n(details.teBetalenBtw) - n(details.aanbetaling) - n(details.inruilwaarde) + n(details.inlossingLopendeLening);
 }
 
-// v180 — twee verschillende bedragen die tot nu toe (per ongeluk) door elkaar liepen:
+// Twee verschillende bedragen die bewust apart gehouden worden:
 //   - "Gefinancierd bedrag" (computeOnbetaaldGedeelteKoop hierboven) is wat er via DEZE lease nog
 //     openstaat/terugbetaald moet worden — koopprijs+BTW, verminderd met wat al op een andere manier
 //     is voldaan (aanbetaling, inruilwaarde, aflossing van een lopende lening). Dat is de juiste basis
@@ -37,23 +37,18 @@ export function computeAanschafwaardeBedrijfsmiddel(details) {
   return n(details?.koopprijs);
 }
 
-// v182 — punt 1 uit de leasereview (de belangrijkste): vóór deze aanpassing gebruikte de
-// rentepercentage-afleiding hieronder een geïdealiseerde tijdrekening (maand 1, 2, 3, ... exact,
-// los van échte kalenderdatums), terwijl de amortisatie in loanAmortization.js juist wél op de
-// daadwerkelijke banktransactiedatums rekent (met een benaderde dagtelling, 30 dagen per maand). Bij
-// een leasecontract dat in de praktijk niet perfect elke kalendermaand op precies dezelfde dag afschrijft
-// (weekend/feestdag-verschuivingen, een net iets afwijkende eerste termijn) paste het afgeleide
-// percentage daardoor niet exact bij de manier waarop de amortisatie het toepast.
-//
-// Vanaf v182 rekenen beide met dezelfde tijdrekening: échte kalenderdatums en een exacte dagtelling
-// (dag/365), in plaats van een maand-index resp. een dag/30-benadering. buildNominaleLeaseSchedule
-// hieronder genereert daarvoor de volledige contractuele betaalreeks met echte datums (op dezelfde
-// manier geankerd als generateProjectedLeasePayments — datumEersteTermijn indien ingevuld, anders
-// startdatum + 1 maand, dan maandelijks door) — bewust een aparte, eenvoudigere functie die geen
-// rekening houdt met een eventuele vroegtijdige beëindiging: de rentepercentage-afleiding gaat over
-// de volledige CONTRACTUELE reeks (zoals ook vóór v182 al het geval was), niet over wat er in de
-// praktijk (mogelijk voortijdig) daadwerkelijk is betaald — dat blijft, exact als voorheen, een apart
-// vraagstuk (zie "Contract vroegtijdig beëindigd" elders).
+// De rentepercentage-afleiding hieronder en de amortisatie in loanAmortization.js moeten met
+// dezelfde tijdrekening rekenen: échte kalenderdatums en een exacte dagtelling (dag/365), niet een
+// geïdealiseerde maand-index. Anders past het afgeleide rentepercentage niet exact bij de manier
+// waarop de amortisatie het toepast zodra een leasecontract in de praktijk niet perfect elke
+// kalendermaand op precies dezelfde dag afschrijft (weekend/feestdag-verschuivingen, een net iets
+// afwijkende eerste termijn). buildNominaleLeaseSchedule hieronder genereert daarvoor de volledige
+// contractuele betaalreeks met echte datums (op dezelfde manier geankerd als
+// generateProjectedLeasePayments — datumEersteTermijn indien ingevuld, anders startdatum + 1 maand,
+// dan maandelijks door) — bewust een aparte, eenvoudigere functie die geen rekening houdt met een
+// eventuele vroegtijdige beëindiging: de rentepercentage-afleiding gaat over de volledige
+// CONTRACTUELE reeks, niet over wat er in de praktijk (mogelijk voortijdig) daadwerkelijk is betaald
+// — dat blijft een apart vraagstuk (zie "Contract vroegtijdig beëindigd" elders).
 // v207 — "Extra bedrag 1e termijn" is in de praktijk vrijwel altijd een eenmalige
 // administratiekostenpost van de leasemaatschappij, geen onderdeel van de financiering zelf: het
 // verhoogt niet wat er wordt geleend (computeOnbetaaldGedeelteKoop hierboven telt dit bedrag dan ook

@@ -19,10 +19,10 @@ import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
-// v195 — punt 9 uit het reviewdocument: de statustekst is voortaan een functie van het aantal
-// openstaande punten (in plaats van een vaste tekst per kleur) — "groen" betekent hier altijd
-// alléén dat de gegevenscontrole voldoende compleet is, NIET dat de aangifte fiscaal correct is
-// (zie ook de vaste toelichting die overal waar deze tekst verschijnt naast staat).
+// De statustekst is een functie van het aantal openstaande punten (niet een vaste tekst per kleur)
+// — "groen" betekent hier altijd alléén dat de gegevenscontrole voldoende compleet is, NIET dat de
+// aangifte fiscaal correct is (zie ook de vaste toelichting die overal waar deze tekst verschijnt
+// naast staat).
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 function statusTekst(status, aantalPunten) {
   if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
@@ -116,9 +116,9 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
-  // v183: "Zakelijk - apparatuur/machines" telt niet meer als volledige kosten mee (zie
-  // yearlySummary.js) — in plaats daarvan telt hier de daadwerkelijk berekende afschrijving mee,
-  // exact dezelfde constructie als de financiële-lease-afschrijving hierboven.
+  // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee (zie yearlySummary.js) — in
+  // plaats daarvan telt hier de daadwerkelijk berekende afschrijving mee, exact dezelfde constructie
+  // als de financiële-lease-afschrijving hierboven.
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
@@ -127,10 +127,10 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus).winst;
 }
 
-// v185 — punt 3 uit het reviewdocument: bij "onbekend" urencriterium moeten beide scenario's (mét/
-// zonder zelfstandigenaftrek) volledig los van elkaar worden doorgerekend, inclusief hun eigen
-// heffingskortingen — niet, zoals voorheen, één gedeelde heffingskortingen-figuur die stilzwijgend
-// uitgaat van (in dit geval altijd) het "mét"-scenario. Startersaftrek is alleen relevant in het
+// Bij "onbekend" urencriterium moeten beide scenario's (mét/zonder zelfstandigenaftrek) volledig
+// los van elkaar worden doorgerekend, inclusief hun eigen heffingskortingen — niet één gedeelde
+// heffingskortingen-figuur die stilzwijgend van één scenario uitgaat. Startersaftrek is alleen
+// relevant in het
 // "mét zelfstandigenaftrek"-scenario: het is een aanvulling óp de zelfstandigenaftrek, niet een los
 // toe te passen aftrekpost (zie ook de toelichting bij STARTERSAFTREK_BEDRAG in tax/incomeTax.js).
 function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftrekToegepast) {
@@ -161,10 +161,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
-  // v183: activaSummary/activaAfschrijvingForYear vóór de winstCorrectie berekend (was ná summary
-  // hieronder) — "Zakelijk - apparatuur/machines" telt sinds v183 niet meer als volledige kosten mee
-  // in yearlySummary.js, dus de daadwerkelijk berekende afschrijving moet hier alsnog worden
-  // meegeteld, exact dezelfde constructie als de financiële-lease-afschrijving hierboven.
+  // activaSummary/activaAfschrijvingForYear moeten vóór de winstCorrectie berekend worden: "Zakelijk
+  // - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js, dus de
+  // daadwerkelijk berekende afschrijving moet hier alsnog worden meegeteld, exact dezelfde
+  // constructie als de financiële-lease-afschrijving hierboven.
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
@@ -173,8 +173,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's. Een
   // onbeantwoord jaar (zaStatusRaw null) valt terug op resolveZelfstandigenaftrekStatusForYear —
-  // "ja" voor een dossier dat al bestond vóór v194 (zaLegacyJaDefault, zodat eerder opgeslagen
-  // projecten dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor een nieuw dossier.
+  // "ja" voor een dossier dat al bestond vóór deze regel werd ingevoerd (zaLegacyJaDefault, zodat
+  // eerder opgeslagen projecten dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor
+  // een nieuw dossier.
   const zaStatusRaw = zelfstandigenaftrekStatus?.[year];
   const zaStatus = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault);
   const zelfstandigenaftrekToegepast = zaStatus !== "nee";
@@ -199,16 +200,16 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const heffingskortingen = ondernemersaftrekVoorJaar
     ? estimateHeffingskortingenMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateHeffingskortingen(summary.winst, year, zelfstandigenaftrekToegepast);
-  // v195 — punt 8: uitsplitsing winst → ondernemersaftrek → MKB-winstvrijstelling → belastbare winst
-  // voor het compacte dashboard bovenaan (samenvattingHtml hieronder). staatNegatiefToe volgt exact
+  // Uitsplitsing winst → ondernemersaftrek → MKB-winstvrijstelling → belastbare winst voor het
+  // compacte dashboard bovenaan (samenvattingHtml hieronder). staatNegatiefToe volgt exact
   // dezelfde regel als hierboven bij ibEstimate: alleen relevant (en dus "aan") in het
   // ondernemersaftrekVoorJaar-pad, mét startersaftrek — anders altijd "uit" (nooit onder € 0).
   const winstUitsplitsing = computeBelastbareWinstUitsplitsing(summary.winst, year, ondernemersaftrekBedrag, ondernemersaftrekVoorJaar ? startersaftrekToegepast : false);
   const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
-  // v184 — punt 2 uit het reviewdocument: de "mogelijke KIA" hierboven werd tot nu toe alleen
-  // getoond, nooit verwerkt in de IB-schatting. KIA is een aftrekpost op de winst zelf (vóór
-  // zelfstandigenaftrek/mkb-winstvrijstelling), dus wordt hier een VOLLEDIG los, tweede scenario
+  // De "mogelijke KIA" hierboven is alleen getoond, niet verwerkt in de IB-schatting hierboven: KIA
+  // is een aftrekpost op de winst zelf (vóór zelfstandigenaftrek/mkb-winstvrijstelling), dus wordt
+  // hier een VOLLEDIG los, tweede scenario
   // doorgerekend op (winst − mogelijke KIA) — de bestaande ibEstimate/zvwEstimate/heffingskortingen
   // hierboven (op de winst ZONDER KIA) blijven het hoofdcijfer, ongewijzigd: niet elk bedrijfsmiddel
   // kwalificeert voor KIA (personenauto's, grond, een drempel per bedrijfsmiddel — deze tool kent dat
@@ -230,8 +231,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   } : null;
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
 
-  // "Inkoopkosten, uitbesteed werk en andere externe kosten" (v150: één gecombineerde rubriek) hier
-  // uitgesplitst in 3 losse regels, rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
+  // "Inkoopkosten, uitbesteed werk en andere externe kosten" hier uitgesplitst in 3 losse regels,
+  // rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
   // (netto, exclusief BTW, zelfde sumCatNetto-conventie als de rest van boxMapping.js) — geen nieuwe
   // berekening, puur een andere weergave van precies dezelfde bedragen. "Andere externe kosten" heeft
   // in deze tool (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
@@ -239,12 +240,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const uitbesteedWerkBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Inhuur personeel")?.totaal || 0;
   const andereExterneKostenBedrag = 0;
 
-  // "Afschrijvingen" (v150: één gecombineerde rubriek van Activa-register + financiële-lease-
-  // afschrijving) hier uitgesplitst naar "Afschrijving auto's" en "Afschrijving machines", op basis
-  // van het `soort`-veld dat elk leasecontract in ib.leaseAutoKosten.contracten al heeft (zie
-  // computeLeaseAutoKostenVoorJaar in tax/autoBijtelling.js) — het Activa-register zelf bevat per
-  // definitie geen auto's (dat is uitsluitend "apparatuur/machines"), dus die afschrijving telt
-  // volledig mee bij "machines". Sommeert weer op tot exact hetzelfde totaal als v150's ene rubriek.
+  // "Afschrijvingen" (Activa-register + financiële-lease-afschrijving) hier uitgesplitst naar
+  // "Afschrijving auto's" en "Afschrijving machines", op basis van het `soort`-veld dat elk
+  // leasecontract in ib.leaseAutoKosten.contracten al heeft (zie computeLeaseAutoKostenVoorJaar in
+  // tax/autoBijtelling.js) — het Activa-register zelf bevat per definitie geen auto's (dat is
+  // uitsluitend "apparatuur/machines"), dus die afschrijving telt volledig mee bij "machines".
   const leaseAfschrijvingAuto = ib.leaseAutoKosten
     ? ib.leaseAutoKosten.contracten.filter((c) => c.soort === "auto").reduce((a, c) => a + c.afschrijving, 0)
     : 0;
@@ -286,10 +286,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ? "groen"
       : "oranje";
 
-  // v195 — punt 8 uit het reviewdocument: "Aannames/onzekerheden" bundelt voortaan ook de
-  // persoonlijke-aannames-signalen (urencriterium/KIA/kilometervergoeding) die voorheen alleen als
-  // losse zin verderop in het rapport stonden — als korte fragmenten, niet als volledige zinnen
-  // (de uitleg zelf staat één keer in de Bijlage: Toelichtingen, hier alleen het signaal).
+  // "Aannames/onzekerheden" bundelt ook de persoonlijke-aannames-signalen
+  // (urencriterium/KIA/kilometervergoeding), als korte fragmenten, niet als volledige zinnen (de
+  // uitleg zelf staat één keer in de Bijlage: Toelichtingen, hier alleen het signaal).
   const openPunten = [];
   if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven (zie Bijlage)`);
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
@@ -324,10 +323,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   }
 
   // Totaal zakelijke kosten (rubrieken 2 t/m 5) — voor de samenvatting, geen nieuwe berekening,
-  // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld. Vanaf v161 ook de 5
-  // gecategoriseerde autokosten (ib.autokostenOverig) meegeteld — die zaten tot v160 in
-  // "overigeBedrijfskosten" (destijds "Auto- en transportkosten"), maar zijn sindsdien een eigen
-  // veld (zie boxMapping.js) omdat ze nu in de "Auto's en machines"-rubriek getoond worden.
+  // gewoon dezelfde bedragen als in de W&V hieronder bij elkaar opgeteld, inclusief de 5
+  // gecategoriseerde autokosten (ib.autokostenOverig) — die hebben een eigen veld (zie boxMapping.js)
+  // omdat ze in de "Auto's en machines"-rubriek getoond worden, niet bij "overigeBedrijfskosten".
   const kostenTotaal =
     (ib.inkoopkosten.totaal || 0) +
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
@@ -338,12 +336,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     renteAftrekbaar -
     (ib.leaseAutoKosten?.onttrekking || 0);
 
-  // v195 — punt 7 uit het reviewdocument: compact fiscaal dashboard bovenaan, met élke stap van
-  // winst → belastbare winst → IB/Zvw als eigen regel (in plaats van alleen het eindresultaat) —
-  // zodat in één oogopslag duidelijk is wat de tool ongeveer als aangifte verwacht. Bij "onbekend"
-  // urencriterium (zaScenarios) vervangen de losse regels een compacte twee-scenario-tabel: dat
-  // verving de eerdere twee losse prose-paragrafen verderop (zie "Indicatieve inkomstenbelasting en
-  // Zvw-bijdrage" hieronder, nu ingekort tot alleen de aanvullende details).
+  // Compact fiscaal dashboard bovenaan, met élke stap van winst → belastbare winst → IB/Zvw als
+  // eigen regel (in plaats van alleen het eindresultaat) — zodat in één oogopslag duidelijk is wat
+  // de tool ongeveer als aangifte verwacht. Bij "onbekend" urencriterium (zaScenarios) vervangen de
+  // losse regels een compacte twee-scenario-tabel (zie "Indicatieve inkomstenbelasting en
+  // Zvw-bijdrage" hieronder, met alleen de aanvullende details).
   // v262 — presentatie-verbetering van de indicatieve aangifteberekening (op verzoek, na een eigen
   // voorstel): de winst en de twee uiteindelijke cijfers (indicatieve IB/Zvw) krijgen nu duidelijk
   // meer visueel gewicht dan de tussenstappen (aftrek, MKB-vrijstelling) — voorheen stonden alle
@@ -429,8 +426,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   // De rente van een financiële lease (auto of machine) is een aparte financieringskost, geen
   // "autokostenpost" — die blijft daarom altijd hier staan, volledig en ongewijzigd aftrekbaar, en
-  // wordt (net als vóór v161) nooit meegeteld in de bijtelling-aftopping bij "Auto's en machines"
-  // hieronder.
+  // wordt nooit meegeteld in de bijtelling-aftopping bij "Auto's en machines" hieronder.
   const financieelTotaalRente = ib.financieleBatenLasten.renteLeningen + ib.financieleBatenLasten.renteLease;
   const financieelTotaalAflossing = ib.financieleBatenLasten.aflossingLeningen + ib.financieleBatenLasten.aflossingLease;
   const financieelHtml =
@@ -450,13 +446,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ])}`
       : "";
 
-  // Vanaf v161: "Auto's en machines" als ÉÉN samengevoegde bedrijfskostenpost, in dezelfde stijl als
-  // de officiële Belastingdienst-voorbeelden (bevestigd door de gebruiker) — één "totale autokosten"-
+  // "Auto's en machines" als ÉÉN samengevoegde bedrijfskostenpost, in dezelfde stijl als de
+  // officiële Belastingdienst-voorbeelden (bevestigd door de gebruiker) — één "totale autokosten"-
   // bedrag voor de auto (afschrijving + de 5 gecategoriseerde autokosten — NIET de lease-rente, die
   // blijft een aparte financieringskost bij "Financiële baten en lasten" hierboven), waar bij
   // privégebruik de bijtelling in zijn GEHEEL van wordt afgetrokken (afgetopt op nul, nooit een
-  // negatief bedrag), in plaats van de vóór v161 gebruikte weergave met losse volledige aftrekposten
-  // plus een aparte optelregel. Machines hebben geen bijtelling en blijven daarom een gewone, volledige
+  // negatief bedrag). Machines hebben geen bijtelling en blijven daarom een gewone, volledige
   // aftrekpost; ook een auto zonder bijtellingssituatie (geen privégebruik >500km, of geen lease)
   // blijft een gewone volledige aftrekpost — zie de "Auto — autokosten"-regel hieronder, die dan
   // gewoon gelijk is aan "totale autokosten".
@@ -518,8 +513,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const gedeeldeHuurHtml = (() => {
     const gh = gedeeldeHuurForYear;
     if (!gh) return "";
-    // Vanaf v154 ook hier alleen de eindbedragen, geen volledige tabel meer — zelfde reden als bij
-    // de financiële-lease-auto hierboven. Volledige uitsplitsing staat in de tool zelf.
+    // Alleen de eindbedragen, geen volledige tabel — zelfde reden als bij de financiële-lease-auto
+    // hierboven. Volledige uitsplitsing staat in de tool zelf.
     return `
   <div class="rubriek"><span>Huur (deels zakelijk) — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
   <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de tool zelf.</p>`;
@@ -634,8 +629,8 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
-  // resolven naar zelfstandigenaftrekStatus "onbekend" (expliciet, of — v194 — een onbeantwoord
-  // jaar in een niet-legacy dossier) doen bewust niet mee in deze keten (die tonen hun eigen twee
+  // resolven naar zelfstandigenaftrekStatus "onbekend" (expliciet, of een onbeantwoord jaar in een
+  // niet-legacy dossier) doen bewust niet mee in deze keten (die tonen hun eigen twee
   // scenario's, los van reserveverrekening).
   const jarenVoorReserve = yearsToInclude
     .filter((year) => resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) !== "onbekend")
@@ -772,9 +767,9 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 </body></html>`;
 }
 
-// Bijlage met de algemene, niet-jaargebonden toelichtingen die tot v150 per jaar herhaald werden in
-// buildYearSection — nu één keer, aan het eind van het hele (meerjaren-)rapport. In elke jaarsectie
-// staat op de plek waar zo'n toelichting stond nu alleen nog het jaarspecifieke bedrag/de
+// Bijlage met de algemene, niet-jaargebonden toelichtingen bij buildYearSection — één keer, aan het
+// eind van het hele (meerjaren-)rapport, in plaats van herhaald per jaar. In elke jaarsectie staat
+// op de plek waar zo'n toelichting zou staan alleen het jaarspecifieke bedrag/de
 // jaarspecifieke waarschuwing (indien van toepassing) plus een verwijzing hierheen. Puur tekst,
 // géén bedragen die uit een jaarsectie zijn weggehaald — elk bedrag blijft in de jaarsectie zelf
 // staan.

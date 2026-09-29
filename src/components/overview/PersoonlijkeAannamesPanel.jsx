@@ -22,29 +22,27 @@ export default function PersoonlijkeAannamesPanel({
   gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
   const [open, setOpen] = useState(false);
-  // Vanaf v173 blijft dit paneel altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag
-  // hieronder is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht
-  // of er dit jaar winst is.
+  // Dit paneel blijft altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag hieronder
+  // is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht of er dit
+  // jaar winst is.
   //
-  // v186: het zelfstandigenaftrek/startersaftrek/heffingskortingen/KIA-blok hieronder werd tot nu toe
-  // nóg verborgen bij winst € 0 of negatief ("heeftWinst"-gate, een restant van vóór v173, toen het
-  // hele paneel op die voorwaarde verborgen bleef). Dat verborg ook de vraag zelf ("voldaan aan het
-  // urencriterium?") in een verliesjaar — terwijl juist in een verliesjaar belangrijk is om dit vast
-  // te leggen: computeOndernemersaftrekMetReserve (tax/incomeTax.js) gebruikt de status van dit jaar
-  // om te bepalen hoeveel niet-gerealiseerde zelfstandigenaftrek als reserve meegaat naar een later
-  // jaar. Zonder deze invoer kon die keuze voor een verliesjaar niet gemaakt of gecontroleerd worden.
-  // De bedragen zelf (IB, heffingskortingen) zijn bij winst ≤ € 0 gewoon € 0,00 — dat blijft kloppen,
-  // dus alleen de zichtbaarheid van het blok is aangepast, niet de onderliggende berekeningen.
+  // Het zelfstandigenaftrek/startersaftrek/heffingskortingen/KIA-blok hieronder blijft ook zichtbaar
+  // bij winst € 0 of negatief: juist in een verliesjaar is belangrijk om vast te leggen of aan het
+  // urencriterium is voldaan — computeOndernemersaftrekMetReserve (tax/incomeTax.js) gebruikt de
+  // status van dit jaar om te bepalen hoeveel niet-gerealiseerde zelfstandigenaftrek als reserve
+  // meegaat naar een later jaar. Zonder deze invoer kan die keuze voor een verliesjaar niet gemaakt of
+  // gecontroleerd worden. De bedragen zelf (IB, heffingskortingen) zijn bij winst ≤ € 0 gewoon € 0,00.
   if (!activeYear) return null;
 
-  // v194 — punt 13 uit het reviewdocument: een onbeantwoord jaar liet dit paneel altijd stilzwijgend
-  // op "Ja" rekenen (via het "onbekend_default"-sentinel hieronder) — dat gaf een gebruiker het idee
-  // dat de tool het al ongeveer goed had, terwijl het urencriterium juist niet uit bankgegevens is af
-  // te leiden. Voor een nieuw dossier (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar nu naar
-  // "onbekend" (beide scenario's) in plaats van stilzwijgend "ja" — zie resolveZelfstandigenaftrekStatusForYear.
-  // Voor een dossier van vóór deze wijziging blijft het oude gedrag ("ja") behouden. rawStatus (i.p.v.
-  // het geresolveerde status) bepaalt of de dropdown de placeholder toont — het onderscheid tussen
-  // "nog niet gekozen" en "expliciet gekozen" blijft zo zichtbaar, ook al is het gedrag al bepaald.
+  // Een onbeantwoord jaar mag niet stilzwijgend op "Ja" rekenen (via het "onbekend_default"-sentinel
+  // hieronder) — dat geeft de indruk dat de tool het al ongeveer goed heeft, terwijl het
+  // urencriterium juist niet uit bankgegevens is af te leiden. Voor een nieuw dossier
+  // (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar naar "onbekend" (beide scenario's) —
+  // zie resolveZelfstandigenaftrekStatusForYear. Voor een ouder dossier (van vóór deze regel bestond)
+  // blijft het gedrag "ja" behouden, zodat een eerder opgeslagen project niet met terugwerkende kracht
+  // van berekening verandert. rawStatus (i.p.v. de geresolveerde status) bepaalt of de dropdown de
+  // placeholder toont — het onderscheid tussen "nog niet gekozen" en "expliciet gekozen" blijft zo
+  // zichtbaar, ook al is het gedrag al bepaald.
   const rawStatus = zelfstandigenaftrekStatus?.[activeYear];
   const status = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, activeYear, zaLegacyJaDefault);
   const zelfstandigenaftrekToegepast = status !== "nee";
@@ -61,7 +59,7 @@ export default function PersoonlijkeAannamesPanel({
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      {/* v253 — <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
+      {/* <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
       <div
         role="button"
         tabIndex={0}

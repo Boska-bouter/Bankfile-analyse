@@ -16,11 +16,9 @@ import { computeBtw } from "./btw.js";
 
 // Fiscale ondergrens voor de afschrijvingstermijn van een bedrijfsmiddel: de Belastingdienst staat
 // voor de normale fiscale afschrijving maximaal 20% van de aanschafwaarde per jaar toe, dus nooit
-// een kortere termijn dan 5 jaar — dit gold in deze tool tot v179 alleen voor een auto (via
-// MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN hieronder), maar geldt net zo goed voor een financieel-
-// geleased(e) machine/overig bedrijfsmiddel met een kortere ingevulde termijn. De naam van de
-// constante blijft ongewijzigd (elders al gebruikt, o.a. tax/autoActiva.js) — alleen waar hij wordt
-// toegepast is vanaf v179 verbreed van "alleen auto" naar "elk leaseobject met een soort ingevuld".
+// een kortere termijn dan 5 jaar — dit geldt voor elk leaseobject met een "soort" ingevuld (auto,
+// machine of overig bedrijfsmiddel), niet alleen voor een auto. De naam van de constante blijft
+// "AUTO" (elders al gebruikt, o.a. tax/autoActiva.js) ook al is de toepassing breder.
 export const MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN = 5;
 
 // Exact de 5 categorieën die de gebruiker heeft bevestigd voor "totale autokosten" — bewust NIET
@@ -34,10 +32,9 @@ export const AUTOKOSTEN_CATEGORIEN = ["Autokosten", "Brandstof", "Parkeren", "Ve
 // gezet — het overgrote deel van bestaande dossiers).
 //
 // Aanschafwaarde = de volledige aanschafwaarde van het bedrijfsmiddel (koopprijs + BTW,
-// computeAanschafwaardeBedrijfsmiddel), NIET het gefinancierde bedrag (computeOnbetaaldGedeelteKoop)
-// — vóór v180 werd hier per abuis het GEFINANCIERDE bedrag gebruikt als afschrijvingsbasis, waardoor
-// een aanbetaling, inruilwaarde of het aflossen van een lopende lening de afschrijving ten onrechte
-// verlaagde. Wat het bedrijfsmiddel zelf heeft gekost verandert niet door de manier waarop het is
+// computeAanschafwaardeBedrijfsmiddel), NIET het gefinancierde bedrag (computeOnbetaaldGedeelteKoop):
+// een aanbetaling, inruilwaarde of het aflossen van een lopende lening mag de afschrijving niet
+// verlagen — wat het bedrijfsmiddel zelf heeft gekost verandert niet door de manier waarop het is
 // gefinancierd — zie de toelichting bij computeAanschafwaardeBedrijfsmiddel in financialLease.js.
 // Ook NIET de cataloguswaarde (die is alleen relevant voor de bijtelling hieronder). Restwaarde: bij
 // een financiële lease is er, anders dan bij een los aangeschaft bedrijfsmiddel, meestal geen apart
@@ -52,9 +49,9 @@ export function buildLeaseActivumFromSegment(segment, einddatum = null) {
   if (!segment || !segment.soort) return null;
   const aanschafwaarde = computeAanschafwaardeBedrijfsmiddel(segment);
   const ingevoerdTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
-  // Vanaf v179: de fiscale 5-jaars-ondergrens (20%-afschrijvingscap) geldt voor ELK leaseobject met
-  // een "soort" ingevuld, niet meer alleen voor een auto — een financieel-geleasede machine met een
-  // kortere ingevulde termijn schreef daarvoor ten onrechte sneller af dan fiscaal is toegestaan.
+  // De fiscale 5-jaars-ondergrens (20%-afschrijvingscap) geldt voor ELK leaseobject met een "soort"
+  // ingevuld, niet alleen voor een auto — anders zou een financieel-geleasede machine met een kortere
+  // ingevulde termijn sneller afschrijven dan fiscaal is toegestaan.
   const afschrijvingstermijnJaren = Math.max(ingevoerdTermijn, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN);
   return {
     aanschafwaarde,
@@ -93,12 +90,11 @@ export function computeAutoPrivegebruikOnttrekking(totaleAutokosten, cataloguswa
 // weergave in het aangiftevoorstel) te kunnen tonen — NIET om het nogmaals van de winst af te
 // trekken.
 //
-// NETTO (exclusief BTW), niet het bruto bankbedrag — tot v161 werd hier per ongeluk het bruto
-// bedrag gebruikt, terwijl afschrijving en lease-rente (waarmee dit wordt opgeteld tot "totale
-// autokosten") altijd al netto zijn, en de rest van het rapport ook overal netto rekent. Bij
-// categorieën met 0% BTW (het gebruikelijke geval voor bijv. Belastingen: MRB) maakt dit niets uit;
-// bij een categorie mét BTW (bijv. Brandstof, Onderhoud) telde de aftopping op "totale autokosten"
-// tot nu toe een te hoog bedrag mee.
+// NETTO (exclusief BTW), niet het bruto bankbedrag: afschrijving en lease-rente (waarmee dit wordt
+// opgeteld tot "totale autokosten") zijn altijd al netto, en de rest van het rapport rekent ook
+// overal netto. Bij categorieën met 0% BTW (het gebruikelijke geval voor bijv. Belastingen: MRB)
+// maakt dit niets uit; bij een categorie mét BTW (bijv. Brandstof, Onderhoud) zou een bruto bedrag de
+// aftopping op "totale autokosten" te hoog laten uitvallen.
 export function sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
   return Math.abs(
@@ -122,19 +118,18 @@ function computeLeaseRenteVoorJaarVoorEenLease(lease, details, year) {
 }
 
 // Groepeert de contractsegmenten van ÉÉN lease (dus alleen binnen `details.contracts` van dat ene
-// leasecontract — NIET tussen verschillende leases) op genormaliseerd kenteken. Dit is de kern van
-// de v150-fix voor een tussentijds vervangen/geherfinancierd leasecontract van DEZELFDE auto (zie
-// het "nieuw vervolgcontract"-mechanisme in financialLease.js/FinancialLeaseDetailsModal.jsx): zo'n
-// 2e (of latere) segment heeft vaak hetzelfde kenteken als het vorige, en moet dan als DEZELFDE
-// fiscale auto behandeld worden (één doorlopende afschrijving, één bijtelling/onttrekking per jaar),
-// in plaats van als een tweede, apart bedrijfsmiddel.
+// leasecontract — NIET tussen verschillende leases) op genormaliseerd kenteken. Dit behandelt een
+// tussentijds vervangen/geherfinancierd leasecontract van DEZELFDE auto correct (zie het "nieuw
+// vervolgcontract"-mechanisme in financialLease.js/FinancialLeaseDetailsModal.jsx): zo'n 2e (of
+// latere) segment heeft vaak hetzelfde kenteken als het vorige, en moet dan als DEZELFDE fiscale auto
+// behandeld worden (één doorlopende afschrijving, één bijtelling/onttrekking per jaar), in plaats van
+// als een tweede, apart bedrijfsmiddel.
 //
 // Een segment zonder (of met leeg) kenteken vormt altijd zijn eigen, aparte groep van precies 1 —
-// dat geldt voor IEDER bestaand dossier (het kenteken-veld is nieuw in v150 en staat nergens al
-// ingevuld), dus voor die dossiers is elke groep hieronder per definitie een singleton en verandert
-// er ten opzichte van v148/v149 helemaal niets: dezelfde segmenten, in dezelfde volgorde, elk
-// onafhankelijk doorgerekend zoals voorheen. Groepen ontstaan alleen als er daadwerkelijk 2+
-// segmenten met hetzelfde (genormaliseerde) kenteken zijn.
+// dat geldt voor elk dossier zonder ingevuld kenteken, dus voor die dossiers is elke groep hieronder
+// per definitie een singleton: dezelfde segmenten, in dezelfde volgorde, elk onafhankelijk
+// doorgerekend. Groepen ontstaan alleen als er daadwerkelijk 2+ segmenten met hetzelfde
+// (genormaliseerde) kenteken zijn.
 function groupSegmentenOpKenteken(segments) {
   const groups = [];
   const byKenteken = new Map();
@@ -320,13 +315,12 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
   // "Totale autokosten" (het plafond waarop de bijtelling wordt afgetopt) = afschrijving + de 5
   // gecategoriseerde kostenposten. De rente van een financiële lease hoort hier NIET bij — dat is een
   // aparte financieringskost (bij "Financiële baten en lasten"), geen autokostenpost, en blijft altijd
-  // volledig en ongewijzigd aftrekbaar, ongeacht de bijtelling (zie winstCorrectie hieronder, die ook
-  // al vóór deze correctie nooit de rente aanraakte). Tot v161 werd leaseRenteTotaal hier per abuis wél
-  // meegeteld in het plafond zelf — dat kon de bijtelling ten onrechte hoger toestaan dan gerechtvaardigd
-  // (de rente werd namelijk zelf nooit teruggedraaid, dus meetellen in het plafond verruimde alleen de
-  // ruimte voor de onttrekking, zonder dat er iets tegenover stond). Vanaf nu telt alleen afschrijving +
-  // de gecategoriseerde autokosten mee voor het plafond; leaseRenteTotaal blijft wel apart beschikbaar
-  // (voor weergave) via het veld hieronder.
+  // volledig en ongewijzigd aftrekbaar, ongeacht de bijtelling (zie winstCorrectie hieronder, die de
+  // rente ook nooit aanraakt). leaseRenteTotaal mag daarom niet meetellen in het plafond zelf — de
+  // rente wordt zelf nooit teruggedraaid, dus meetellen in het plafond zou de ruimte voor de
+  // onttrekking verruimen zonder dat daar iets tegenover staat. Alleen afschrijving + de
+  // gecategoriseerde autokosten tellen mee voor het plafond; leaseRenteTotaal blijft wel apart
+  // beschikbaar (voor weergave) via het veld hieronder.
   const totaleAutokosten = afschrijvingTotaal + autokostenTransactieTotaal;
   const onttrekking = heeftAutoMetPrivegebruik ? Math.min(normaleBijtellingTotaal, totaleAutokosten) : 0;
   const nettoAftrekbareAutokosten = totaleAutokosten - onttrekking;

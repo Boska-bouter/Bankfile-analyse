@@ -1,4 +1,4 @@
-// Confidence-scoring voor een classificatie — nieuw in v2 (zie migratieplan, sectie 6). Dit
+// Confidence-scoring voor een classificatie. Dit
 // VERVANGT classify.js niet: resolveClassification blijft de bron van waarheid voor de
 // daadwerkelijke categorie. Deze module scoort achteraf hoe zeker die uitkomst is, zodat de UI
 // (bijv. het importcontrole-scherm) kan tonen welke transacties extra aandacht verdienen.
