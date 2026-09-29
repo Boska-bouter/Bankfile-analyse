@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Info } from "lucide-react";
 
-// v258 — pal onder het dashboard gezet (was helemaal onderaan het tabblad) en standaard
-// opengeklapt, zodat deze duiding meteen opvalt bij het lezen van de dashboardkaarten erboven
-// in plaats van pas na scrollen ontdekt te worden.
+// Staat pal onder het dashboard (niet onderaan het tabblad) en standaard opengeklapt, zodat deze
+// duiding meteen opvalt bij het lezen van de dashboardkaarten erboven in plaats van pas na
+// scrollen ontdekt te worden.
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
   const [open, setOpen] = useState(true);
   return (
@@ -27,7 +27,6 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
               Voorraad — inkoopwaarde en verkoopwaarde van onverkochte goederen
               {heeftVoorraad ? " (je gaf aan dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""}
             </li>
-            <li>Privégebruik van bedrijfsmiddelen (bijv. een auto) voor zover niet als aparte correctie vastgelegd</li>
             <li>Inkomsten of kosten die buiten deze bankrekening om liepen (andere rekening, contant, in natura)</li>
             <li>Fiscale situaties die niet uit bankgegevens blijken (bijv. eigen woning, andere ondernemingen)</li>
             <li>Correcties, memoriaalboekingen of suppleties uit een eerdere administratie</li>

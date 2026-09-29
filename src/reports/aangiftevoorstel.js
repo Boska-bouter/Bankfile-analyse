@@ -336,6 +336,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     renteAftrekbaar -
     (ib.leaseAutoKosten?.onttrekking || 0);
 
+  // Omzet excl. BTW (ib.opbrengsten.totaal) plus de over het jaar verschuldigde BTW op de omzet
+  // (som van box 1a/1b per kwartaal) geeft de omzet inclusief BTW — dus wat er daadwerkelijk
+  // binnenkomt/is gefactureerd, in plaats van alleen het nettobedrag dat in de winstberekening zit.
+  const btwOverOmzetTotaal = kwartalen.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
+  const omzetInclBtw = (ib.opbrengsten.totaal || 0) + btwOverOmzetTotaal;
+
   // Compact fiscaal dashboard bovenaan, met élke stap van winst → belastbare winst → IB/Zvw als
   // eigen regel (in plaats van alleen het eindresultaat) — zodat in één oogopslag duidelijk is wat
   // de tool ongeveer als aangifte verwacht. Bij "onbekend" urencriterium (zaScenarios) vervangen de
@@ -355,6 +361,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </div>
     <div class="kerncijfers-stappen">
       <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      ${btwOverOmzetTotaal > 0 ? `<div><span>Omzet incl. BTW</span><span>${eur(omzetInclBtw)}</span></div>` : ""}
       <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
     </div>
     <p class="kerncijfers-voetnoot">Urencriterium onbekend — twee scenario's, zie "Aannames/onzekerheden" hiernaast.</p>
@@ -373,6 +380,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </div>
     <div class="kerncijfers-stappen">
       <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      ${btwOverOmzetTotaal > 0 ? `<div><span>Omzet incl. BTW</span><span>${eur(omzetInclBtw)}</span></div>` : ""}
       <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
     </div>
     <div class="kerncijfers-stappen">

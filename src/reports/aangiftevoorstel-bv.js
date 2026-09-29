@@ -235,6 +235,11 @@ function buildYearSectionBv(
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
     renteAftrekbaar;
 
+  // Omzet (ib.opbrengsten.totaal, netto/exclusief BTW) plus de over het jaar verschuldigde BTW op
+  // de omzet (som van box 1a/1b per kwartaal) geeft de omzet inclusief BTW.
+  const btwOverOmzetTotaal = kwartalen.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
+  const omzetInclBtw = (ib.opbrengsten.totaal || 0) + btwOverOmzetTotaal;
+
   // v262 — zelfde drieluik als de zzp-aangifte: een kerncijfers-kaart met "Resultaat vóór Vpb" als
   // uitgelichte kop en "Resultaat ná Vpb" als uitgelicht resultaat, een losse (grijze) BTW-kaart, en
   // een losse statuskaart met kleur op de dossierstatus — in plaats van alles in één grijs vlak.
@@ -244,7 +249,8 @@ function buildYearSectionBv(
       <span class="bedrag-groot">${eur(summary.winst)}</span>
     </div>
     <div class="kerncijfers-stappen">
-      <div><span>Omzet</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      ${btwOverOmzetTotaal > 0 ? `<div><span>Omzet incl. BTW</span><span>${eur(omzetInclBtw)}</span></div>` : ""}
       <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
     </div>
     <div class="kerncijfers-resultaat">
