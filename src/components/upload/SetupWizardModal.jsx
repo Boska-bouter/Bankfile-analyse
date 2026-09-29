@@ -760,8 +760,13 @@ export default function SetupWizardModal({
               en erger: die knop slaat niets op, dus zou het zojuist gekozen antwoord (of getypte
               tekst) stilletjes negeren. Stap 1 (KOR) en 2 (BTW-verlegd) hoorden hier eerder ten
               onrechte niet bij — die hebben net als de andere Ja/Nee-stappen al hun eigen knoppen,
-              dus stond er per ongeluk een tweede, niets-opslaande "Doorgaan"-knop naast. */}
-          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+              dus stond er per ongeluk een tweede, niets-opslaande "Doorgaan"-knop naast. Stap 17
+              (Auto) hoorde hier v275/v276 ook nog niet bij: die heeft zelf al een eigen "Doorgaan"-
+              knop die autoWizardStatus opslaat vóór goNext() — met deze tweede, niets-opslaande knop
+              ernaast leek de auto-vraag beantwoord (de wizard ging door) terwijl autoWizardStatus in
+              werkelijkheid null bleef, waardoor de leaseauto-vraag (stap 6) alsnog verscheen alsof er
+              nooit "Privéauto"/"Nee" was gekozen. */}
+          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
