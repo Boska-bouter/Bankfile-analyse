@@ -54,7 +54,10 @@ import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
 import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
-import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
+import RollupCard from "./components/dashboard/RollupCard.jsx";
+import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
+import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
+import YearDropdown from "./components/dashboard/YearDropdown.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import DuplicateGroupDetailModal from "./components/dashboard/DuplicateGroupDetailModal.jsx";
@@ -2732,6 +2735,92 @@ export default function App() {
     [instellingenDashboardCards]
   );
 
+  // Fase 1, dashboard-restyling (Stijl F) — de 4 samenvattende categorie-kaarten bovenaan Overzicht
+  // ("Nog te controleren"/"Nog in te stellen"/"Resultaten"/"Automatische herkenning" in het mockup).
+  // Dit zijn ROLLUPS van bestaande data (controlerenDashboardCards/instellingenDashboardCards/
+  // businessIncomeEntries/businessExpenseEntries) — geen nieuwe berekening, alleen samengevat en
+  // doorklikbaar. Zie RollupCard.jsx.
+  const dashboardCardsByKey = useMemo(() => Object.fromEntries(dashboardCards.map((c) => [c.key, c])), [dashboardCards]);
+  const teControlerenItems = useMemo(
+    () =>
+      controlerenDashboardCards
+        .filter((c) => c.tone === "attention" || c.tone === "risk")
+        .slice(0, 4)
+        .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
+    [controlerenDashboardCards]
+  );
+  const inTeStellenItems = useMemo(
+    () =>
+      instellingenDashboardCards
+        .filter((c) => c.tone === "attention" || c.tone === "risk")
+        .slice(0, 4)
+        .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
+    [instellingenDashboardCards]
+  );
+  const resultatenItems = useMemo(
+    () => [
+      { label: "Meerjarenoverzicht", onClick: () => jumpToSection(multiYearSectionRef) },
+      { label: "BTW-aangifte per kwartaal", onClick: () => jumpToSection(quarterlyBtwSectionRef) },
+      {
+        label: "Indicatieve aangifteberekening",
+        onClick: () => {
+          setShowAangifteMeerdereJaren(false);
+          setShowAangifteYearPicker(true);
+        },
+      },
+    ],
+    []
+  );
+  const automatischeHerkenningItems = useMemo(() => {
+    const incomeCard = instellingenDashboardCards.find((c) => c.key === "businessIncomeEntries");
+    const expenseCard = instellingenDashboardCards.find((c) => c.key === "businessExpenseEntries");
+    return [
+      { label: "Categorieregels", count: categoryRules.length },
+      incomeCard && { label: "Zakelijke klanten herkend", count: incomeCard.value, onClick: incomeCard.onClick },
+      expenseCard && { label: "Zakelijke inkoop/uitgaven", count: expenseCard.value, onClick: expenseCard.onClick },
+    ].filter(Boolean);
+  }, [instellingenDashboardCards, categoryRules]);
+
+  // Jaaroverzicht-kaart (omzet/kosten/winst) — %-vergelijking t.o.v. vorig jaar alleen tonen als
+  // beide jaren "volledig" zijn (zelfde voorwaarde als het bestaande Meerjarenoverzicht hanteert).
+  const previousYearlySummary = activeYear ? yearlySummaries[Number(activeYear) - 1] : null;
+  const showJaaroverzichtTrend = !!(activeYear && volledigeJaren.has(Number(activeYear)) && volledigeJaren.has(Number(activeYear) - 1));
+
+  // Springt naar de juiste plek voor het "Details en overzichten"-paneel (DetailsPanel.jsx) — hergebruikt
+  // dezelfde refs/handlers die de rest van de app al gebruikt, geen nieuwe navigatielogica.
+  const handleDetailsJump = (target) => {
+    switch (target) {
+      case "details":
+      case "categorieen":
+        jumpToSection(detailsSectionRef);
+        break;
+      case "activa":
+        jumpToSection(activaSectionRef);
+        break;
+      case "leningen":
+        jumpToSection(loansSectionRef);
+        break;
+      case "lease":
+        jumpToSection(leasesSectionRef);
+        break;
+      case "btw":
+        jumpToSection(btwSettingsSectionRef);
+        break;
+      case "excel":
+        exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
+        break;
+      case "print":
+        printReport(groups);
+        break;
+      case "aangifte":
+        setShowAangifteMeerdereJaren(false);
+        setShowAangifteYearPicker(true);
+        break;
+      default:
+        break;
+    }
+  };
+
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
   // ontbrekende spiegelboeking) — dat stond dubbel. Hier staat alleen wat de checklist niet laat zien.
@@ -3129,7 +3218,13 @@ export default function App() {
 
       {updateAvailable && <UpdateAvailableBanner />}
 
-      <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+      {/* Fase 1, dashboard-restyling: op Overzicht zit de jaarkeuze nu als dropdown in de
+          DashboardHeader (zie YearDropdown.jsx) — die verving deze zwevende balk, die daar over de
+          dashboardkaarten heen hing. Op Controleren/Instellingen (nog geen eigen DashboardHeader)
+          blijft deze balk voorlopig gewoon staan. */}
+      {activeTab !== "overzicht" && (
+        <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+      )}
 
       {lastActionSnapshot && (
         <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-xl border-2 border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
@@ -3159,33 +3254,90 @@ export default function App() {
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
-        {/* Fase 1, dashboard-restyling: de "Dossierstatus {jaar}"-kaart (key "yearStatus") stond
-            voorheen als gelijkwaardige tegel tussen de andere dashboardCards in DashboardOverview —
-            nu prominent bovenaan in DashboardHeader (ringmeter + statusregels), de rest van de
-            (ongewijzigde) dashboardCards-data als kaartgrid eronder. Zie het bouwvoorstel: de echte
-            data is een platte lijst tegels, geen 4 categorieën zoals in de eerste mockup — hier dus
-            per tegel een eigen kaart i.p.v. een verzonnen groepering. */}
-        <div style={sectionTabStyle("overzicht")}>
+        {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
+            platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan
+            de info-banner + Jaaroverzicht-kaart naast elkaar, dan de 4 rollup-categoriekaarten, dan
+            het "Details en overzichten"-paneel met sub-tabs. Alle data hier is dezelfde die al
+            bestond (dashboardCards/controlerenDashboardCards/instellingenDashboardCards/
+            yearlySummaries) — alleen anders gegroepeerd, zie RollupCard.jsx/DetailsPanel.jsx. */}
+        <div style={sectionTabStyle("overzicht")} className="space-y-5">
           <DashboardHeader
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            yearControl={
+              years.length > 1 && (
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+              )
+            }
           />
-          <div className="mt-5">
-            <SectionCardGrid cards={dashboardCards.filter((c) => c.key !== "yearStatus")} />
-          </div>
-        </div>
 
-        {/* v258 — "Wat deze tool niet kan weten" stond ver onderaan het Overzicht-tabblad (na de
-            hele checklist en de jaar-navigatie), terwijl dit juist de duiding is die je het eerst
-            wilt zien bij het lezen van het dashboard erboven — nu direct eronder, en standaard
-            opengeklapt zodat hij niet over het hoofd wordt gezien. */}
-        {years.length > 0 && (
-          <div style={sectionTabStyle("overzicht")}>
-            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+          {years.length > 0 && (
+            <div className="grid md:grid-cols-2 gap-4 items-stretch">
+              <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+              {activeYear && (
+                <JaaroverzichtCard
+                  year={activeYear}
+                  summary={yearlySummary}
+                  previousSummary={previousYearlySummary}
+                  showTrend={showJaaroverzichtTrend}
+                  onOpenDetails={() => jumpToSection(detailsSectionRef)}
+                />
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <RollupCard
+              title="Nog te controleren"
+              icon={<span>⚠️</span>}
+              tone="risk"
+              count={controlerenBadge}
+              items={teControlerenItems}
+              ctaLabel="Alle controles bekijken"
+              onCta={() => setActiveTab("controleren")}
+            />
+            <RollupCard
+              title="Nog in te stellen"
+              icon={<span>⚙️</span>}
+              tone="attention"
+              count={instellingenBadge}
+              items={inTeStellenItems}
+              ctaLabel="Alle instellingen bekijken"
+              onCta={() => setActiveTab("instellingen")}
+            />
+            <RollupCard
+              title="Resultaten"
+              icon={<span>📊</span>}
+              tone="ok"
+              items={resultatenItems}
+              ctaLabel="Naar resultaten"
+              onCta={() => jumpToSection(checklistSectionRef)}
+            />
+            <RollupCard
+              title="Automatische herkenning"
+              icon={<span>🔁</span>}
+              tone="info"
+              items={automatischeHerkenningItems}
+              ctaLabel="Alle herkenningsregels bekijken"
+              onCta={() => setActiveTab("instellingen")}
+            />
           </div>
-        )}
+
+          {activeYear && (
+            <DetailsPanel
+              year={activeYear}
+              cardsByKey={dashboardCardsByKey}
+              yearlySummary={yearlySummary}
+              previousYearlySummary={previousYearlySummary}
+              showTrend={showJaaroverzichtTrend}
+              zakCount={zakGroupForYear.items.length}
+              priCount={priGroupForYear.items.length}
+              onJump={handleDetailsJump}
+            />
+          )}
+        </div>
 
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
 
