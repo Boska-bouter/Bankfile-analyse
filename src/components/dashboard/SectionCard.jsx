@@ -1,8 +1,13 @@
 // Restyling (fase 1) van de dashboardtegel: zelfde databron/contract als DashboardOverview.jsx
 // ({key,title,value|lines,subtitle,tone,actionLabel,icon,onClick,hint}), nieuwe kaartstijl zoals
 // het goedgekeurde mockup-canvas (Stijl F): afgeronde witte kaart, zachtere kleuren, actieknop
-// onderin i.p.v. de hele kaart als knop. `expandable`/`expanded` zijn nu al voorzien (zie het
-// bouwvoorstel, "Ruimte voor meer detail later") maar worden in fase 1 nog niet gebruikt.
+// onderin i.p.v. de hele kaart als knop.
+// Fase 3 — `expandable`/`expanded`/`children` (uitklappen naar het volledige onderliggende paneel
+// i.p.v. ernaartoe springen) worden nu gebruikt. Belangrijk: het uitgeklapte paneel (`children`) kan
+// zelf knoppen/velden/dropdowns bevatten (bijv. BTW-tarieven, categorieregels) — die mogen NIET
+// genest zitten in de klikbare kaart-knop (ongeldige/onvoorspelbare HTML, geneste <button>s). Alleen
+// de kop (titel/waarde/regels/actieknop-label) zit daarom in de klikbare knop; het uitgeklapte
+// paneel staat er als aparte, gewone sectie naast/onder, buiten die knop.
 const TONE = {
   ok: { border: "border-emerald-200", bg: "bg-emerald-50", dot: "bg-emerald-500", text: "text-emerald-700" },
   attention: { border: "border-amber-300", bg: "bg-amber-50", dot: "bg-amber-500", text: "text-amber-700" },
@@ -15,43 +20,47 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
   const clickable = !!onClick;
   const Wrapper = clickable ? "button" : "div";
   return (
-    <Wrapper
-      type={clickable ? "button" : undefined}
-      onClick={onClick}
-      title={hint}
-      className={`text-left rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
-        clickable ? "hover:border-slate-300 cursor-pointer" : ""
-      }`}
+    <div
+      className={`rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
+        clickable ? "hover:border-slate-300" : ""
+      } ${expanded ? "col-span-full" : ""}`}
     >
-      <div className="flex items-center gap-2">
-        <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
-          {icon}
+      <Wrapper
+        type={clickable ? "button" : undefined}
+        onClick={onClick}
+        title={hint}
+        className={`text-left flex flex-col gap-2.5 ${clickable ? "cursor-pointer" : ""}`}
+      >
+        <div className="flex items-center gap-2">
+          <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
+            {icon}
+          </div>
+          <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{title}</span>
+          {value != null && !lines && (
+            <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
+              {value}
+            </span>
+          )}
         </div>
-        <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{title}</span>
-        {value != null && !lines && (
-          <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
-            {value}
-          </span>
+
+        {lines ? (
+          <div className="flex flex-col gap-1.5">
+            {lines.map((l) => (
+              <div key={l.label} className="flex justify-between items-baseline gap-2">
+                <span className="text-[11.5px] text-slate-500">{l.label}</span>
+                <span className={`text-[13px] font-semibold ${t.text}`}>{l.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{subtitle}</p>
         )}
-      </div>
 
-      {lines ? (
-        <div className="flex flex-col gap-1.5">
-          {lines.map((l) => (
-            <div key={l.label} className="flex justify-between items-baseline gap-2">
-              <span className="text-[11.5px] text-slate-500">{l.label}</span>
-              <span className={`text-[13px] font-semibold ${t.text}`}>{l.value}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{subtitle}</p>
-      )}
+        {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
+      </Wrapper>
 
-      {expanded && children}
-
-      {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
-    </Wrapper>
+      {expanded && children && <div className="pt-1 mt-1 border-t border-slate-100">{children}</div>}
+    </div>
   );
 }
 
@@ -76,7 +85,10 @@ export default function SectionCardGrid({ title, cards }) {
             actionLabel={card.actionLabel}
             onClick={card.onClick}
             hint={card.hint}
-          />
+            expanded={card.expanded}
+          >
+            {card.expandedContent}
+          </SectionCard>
         ))}
       </div>
     </section>

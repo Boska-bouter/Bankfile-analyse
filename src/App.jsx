@@ -243,6 +243,11 @@ export default function App() {
   // zelf al wanneer zakelijke kosten vanaf de privérekening zijn betaald).
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
+  // Fase 3 (bouwvoorstel) — per kaart onthouden of 'ie is uitgeklapt naar het volledige
+  // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
+  // (zie toggleCardExpand hieronder) — de rest blijft in fase 3 v1 gewoon "Bekijken" (springen).
+  const [expandedCardKeys, setExpandedCardKeys] = useState({});
+  const toggleCardExpand = (key) => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
@@ -2809,6 +2814,24 @@ export default function App() {
     );
     return { tone: worstTone, lines, onClick: primary.onClick, hint: primary.hint };
   };
+  // Fase 3 — maakt een kaart "uitklapbaar": i.p.v. naar de sectie te springen, klapt de kaart zelf
+  // open en toont dan (via expandedContent) een live kopie van het volledige onderliggende paneel,
+  // met dezelfde props/state als de sectie verderop op de pagina — geen nieuwe berekening, alleen
+  // hetzelfde paneel ook hier tonen. Alleen toegepast op kaarten die 1-op-1 uit kant-en-klare,
+  // zelfstandige paneelcomponenten bestaan (geen met andere ui-state verweven inline secties) — zie
+  // de toelichting bij de kaarten hieronder voor welke dat (nog) niet zijn.
+  const withExpand = (card, key, expandedContent) => {
+    if (!card) return null;
+    const isOpen = !!expandedCardKeys[key];
+    return {
+      ...card,
+      expandable: true,
+      expanded: isOpen,
+      expandedContent,
+      onClick: () => toggleCardExpand(key),
+      actionLabel: isOpen ? "Inklappen ↑" : "Uitklappen ↓",
+    };
+  };
   const controlerenCardGroups = useMemo(() => {
     if (transactions.length === 0) return [];
     const g = (key, title, icon, memberKeys, extra) => {
@@ -2817,19 +2840,42 @@ export default function App() {
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
     return [
-      g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
+      withExpand(
+        g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
+        "importKwaliteit",
+        <div className="space-y-3">
+          <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+          <ClassificationConfidencePanel
+            classified={classified}
+            onOpenHelp={setHelpPopupChapter}
+            onConfirmCorrect={confirmClassificationCorrect}
+            onOpenLevel={setOpenConfidenceLevel}
+          />
+        </div>
+      ),
+      // Fase 3 — "Herkomst van geld" en "Opschonen" bestaan (nog) uit inline secties met hun eigen,
+      // met de rest van de pagina verweven open/dicht-status (showPersonReview/showOverigReview,
+      // enz.) i.p.v. losse zelfstandige paneel-componenten — die hier nogmaals tonen zou dezelfde
+      // sectie op 2 plekken tegelijk laten reageren op precies dezelfde knoppen. Blijven daarom voor
+      // nu "Bekijken" (springen); pas uitklapbaar te maken nadat die secties zelf een eigen
+      // component zijn geworden.
       g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview"]),
       g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
-      {
-        key: "categorieen",
-        title: "Categorieën",
-        icon: <span>📊</span>,
-        tone: "neutral",
-        subtitle: "Categorieoverzicht zakelijk en privé bekijken",
-        hint: "Naar de categorieoverzichten",
-        onClick: () => jumpToSection(categorySectionRef),
-        actionLabel: "Bekijken",
-      },
+      withExpand(
+        {
+          key: "categorieen",
+          title: "Categorieën",
+          icon: <span>📊</span>,
+          tone: "neutral",
+          subtitle: "Categorieoverzicht zakelijk en privé bekijken",
+          hint: "Naar de categorieoverzichten",
+        },
+        "categorieen",
+        <div className="grid md:grid-cols-2 gap-4">
+          <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+          <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+        </div>
+      ),
       {
         key: "aansluitingDetail",
         title: "Aansluiting & detail",
@@ -2841,7 +2887,18 @@ export default function App() {
         actionLabel: "Bekijken",
       },
     ].filter(Boolean);
-  }, [transactions.length, controlerenCardsByKey]);
+  }, [
+    transactions.length,
+    controlerenCardsByKey,
+    expandedCardKeys,
+    importDiagnostics,
+    fileContinuity,
+    classified,
+    zakGroupForYear,
+    priGroupForYear,
+    effectiveCategoryBtwRates,
+    btwVerlegd,
+  ]);
   const instellingenCardGroups = useMemo(() => {
     if (transactions.length === 0) return [];
     const g = (key, title, icon, memberKeys, extra) => {
@@ -2850,22 +2907,157 @@ export default function App() {
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
     return [
+      // Fase 3 — "Tegenpartijen" bestaat uit 2 KeywordManager-lijsten die hun open/dicht-stand delen
+      // met een grid-layout verderop op de pagina (expandedBusinessIncomeList/...ExpenseList) — hier
+      // nogmaals tonen zou die twee weergaven laten interfereren. Blijft daarom voorlopig "Bekijken".
       g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
-      g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
-      g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames", "categoryPercentages"]),
-      g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"]),
-      {
-        key: "automatisering",
-        title: "Automatisering",
-        icon: <span>⚙️</span>,
-        tone: "neutral",
-        subtitle: "Categorie-/tegenpartijregels, vaste categorieën en vaste lasten",
-        hint: "Naar de automatiseringsinstellingen",
-        onClick: () => jumpToSection(automatiseringSectionRef),
-        actionLabel: "Bekijken",
-      },
+      withExpand(
+        g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
+        "bedrijfsmiddelen",
+        <div className="space-y-3">
+          <ActivaPanel
+            activaSummary={activaSummary}
+            activaDetails={activaDetails}
+            activeYear={activeYear}
+            onOpenModal={setActivaDetailsModalKey}
+            onMarkUnknown={markActivaUnknown}
+            onUnmarkUnknown={unmarkActivaUnknown}
+            onOpenHelp={setHelpPopupChapter}
+          />
+          <LeaseInterestPanel
+            leaseSummary={leaseSummary}
+            leaseDetails={leaseDetails}
+            confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+            onConfirmType={confirmLeaseType}
+            onOpenModal={setLeaseDetailsModalKey}
+            onMarkUnknown={markLeaseUnknown}
+            onUnmarkUnknown={unmarkLeaseUnknown}
+            onMergeInto={mergeLeaseInto}
+            onUndoMerge={undoMergeLease}
+            leaseMerges={leaseMerges}
+            onOpenHelp={setHelpPopupChapter}
+          />
+          <LoanInterestPanel
+            loanSummary={loanSummary}
+            privateLoanSummary={privateLoanSummary}
+            loanDetails={loanDetails}
+            onOpenModal={setLoanDetailsModalKey}
+            onMarkUnknown={markLoanUnknown}
+            onUnmarkUnknown={unmarkLoanUnknown}
+            onMarkNotALoan={markLoanNotALoan}
+            onMarkAsPrive={markLoanAsPrive}
+            onMarkAsZakelijk={markLoanAsZakelijk}
+            onOpenHelp={setHelpPopupChapter}
+          />
+        </div>
+      ),
+      withExpand(
+        g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames", "categoryPercentages"]),
+        "persoonlijkeAannames",
+        <div className="space-y-3">
+          <PersoonlijkeAannamesPanel
+            activeYear={activeYear}
+            winst={yearlySummary?.winst}
+            zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+            onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+            zaLegacyJaDefault={zaLegacyJaDefault}
+            startersaftrekStatus={startersaftrekStatus}
+            onSetStartersaftrekStatus={setStartersaftrekStatus}
+            autoStatus={autoStatus}
+            onSetAutoStatus={setAutoStatus}
+            autoWizardStatus={autoWizardStatus}
+            onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
+            kmVergoedingDetails={kmVergoedingDetails}
+            onSetKmVergoedingField={setKmVergoedingField}
+            activaSummary={activaSummary}
+            activaDetails={activaDetails}
+            leaseSummary={leaseSummary}
+            leaseDetails={leaseDetails}
+            gedeeldeHuur={gedeeldeHuurForActiveYear}
+            huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
+            onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
+            categoryBtwRates={effectiveCategoryBtwRates}
+            onOpenHelp={setHelpPopupChapter}
+          />
+          <CategoryPercentagePanel
+            activeYear={activeYear}
+            categorieTotalen={categorieTotalenActiveYear}
+            categoryZakelijkPercentage={categoryZakelijkPercentage}
+            onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
+            autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
+            onOpenHelp={setHelpPopupChapter}
+          />
+        </div>
+      ),
+      withExpand(
+        g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"]),
+        "btw",
+        <BtwRatesPanel
+          categoryBtwRates={categoryBtwRates}
+          setCategoryBtwRates={setCategoryBtwRatesWithUndo}
+          btwVerlegd={btwVerlegd}
+          setBtwVerlegd={setBtwVerlegdWithUndo}
+          korRegeling={korRegeling}
+          setKorRegeling={setKorRegelingWithUndo}
+          onOpenHelp={setHelpPopupChapter}
+        />
+      ),
+      withExpand(
+        {
+          key: "automatisering",
+          title: "Automatisering",
+          icon: <span>⚙️</span>,
+          tone: "neutral",
+          subtitle: "Categorie-/tegenpartijregels, vaste categorieën en vaste lasten",
+          hint: "Naar de automatiseringsinstellingen",
+        },
+        "automatisering",
+        <div className="space-y-3">
+          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+          <CounterpartyRulesPanel
+            overridesByCounterparty={overridesByCounterparty}
+            setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
+            onOpenHelp={setHelpPopupChapter}
+          />
+          <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
+          <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
+        </div>
+      ),
     ].filter(Boolean);
-  }, [transactions.length, instellingenCardsByKey]);
+  }, [
+    transactions.length,
+    instellingenCardsByKey,
+    expandedCardKeys,
+    activaSummary,
+    activaDetails,
+    activeYear,
+    leaseSummary,
+    leaseDetails,
+    confirmedLeaseTypeKeys,
+    leaseMerges,
+    loanSummary,
+    privateLoanSummary,
+    loanDetails,
+    zelfstandigenaftrekStatus,
+    zaLegacyJaDefault,
+    startersaftrekStatus,
+    autoStatus,
+    autoWizardStatus,
+    kmVergoedingDetails,
+    gedeeldeHuurForActiveYear,
+    huurZakelijkPercentageStatus,
+    effectiveCategoryBtwRates,
+    yearlySummary,
+    categorieTotalenActiveYear,
+    categoryZakelijkPercentage,
+    categoryBtwRates,
+    btwVerlegd,
+    korRegeling,
+    categoryRules,
+    overridesByCounterparty,
+    fixedCategories,
+    classified,
+  ]);
 
   // ---- Navigatie (fase 1, dashboard-restyling) — de 3 tabbladen zitten nu in AppSidebar.jsx i.p.v.
   // in een sticky bovenbalk (StickyTopNav is uitgefaseerd). v271 — voorheen (net als bij de oude
@@ -3756,12 +3948,17 @@ export default function App() {
         </div>
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
-            controlestappen op het Controleren-tabblad. */}
-        <div ref={importControleSectionRef} style={sectionTabStyle("controleren")}>
-          <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
-        </div>
+            controlestappen op het Controleren-tabblad.
+            Fase 3 — zodra de "Import & kwaliteit"-kaart is uitgeklapt, toont die kaart zelf al deze
+            twee panelen (zie controlerenCardGroups hierboven); hier dan even niet nogmaals tonen om
+            dubbele content op de pagina te voorkomen. Ingeklapt staan ze gewoon weer hier. */}
+        {!expandedCardKeys.importKwaliteit && (
+          <div ref={importControleSectionRef} style={sectionTabStyle("controleren")}>
+            <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+          </div>
+        )}
 
-        {transactions.length > 0 && (
+        {transactions.length > 0 && !expandedCardKeys.importKwaliteit && (
           <div ref={confidenceSectionRef} style={sectionTabStyle("controleren")}>
             <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} onOpenLevel={setOpenConfidenceLevel} />
           </div>
@@ -4304,18 +4501,25 @@ export default function App() {
                 v252 — volgorde aangepast: "Rentepercentage per lening" moet direct onder "Percentage
                 zakelijk per categorie" staan, en "Lease" (als die er is) daar weer boven — dus nu
                 Activa → Persoonlijke aannames → Percentage zakelijk per categorie → Lease → Leningen. */}
-            <div ref={activaSectionRef} style={sectionTabStyle("instellingen")}>
-              <ActivaPanel
-                activaSummary={activaSummary}
-                activaDetails={activaDetails}
-                activeYear={activeYear}
-                onOpenModal={setActivaDetailsModalKey}
-                onMarkUnknown={markActivaUnknown}
-                onUnmarkUnknown={unmarkActivaUnknown}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
+            {/* Fase 3 — verborgen zodra de kaart "Bedrijfsmiddelen & financiering" is uitgeklapt (die
+                toont dit paneel dan zelf, zie controlerenCardGroups/instellingenCardGroups hierboven)
+                om dubbele content te voorkomen. */}
+            {!expandedCardKeys.bedrijfsmiddelen && (
+              <div ref={activaSectionRef} style={sectionTabStyle("instellingen")}>
+                <ActivaPanel
+                  activaSummary={activaSummary}
+                  activaDetails={activaDetails}
+                  activeYear={activeYear}
+                  onOpenModal={setActivaDetailsModalKey}
+                  onMarkUnknown={markActivaUnknown}
+                  onUnmarkUnknown={unmarkActivaUnknown}
+                  onOpenHelp={setHelpPopupChapter}
+                />
+              </div>
+            )}
 
+            {!expandedCardKeys.persoonlijkeAannames && (
+            <>
             <div ref={aannamesSectionRef} style={sectionTabStyle("instellingen")}>
               <PersoonlijkeAannamesPanel
                 activeYear={activeYear}
@@ -4353,7 +4557,11 @@ export default function App() {
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>
+            </>
+            )}
 
+            {!expandedCardKeys.bedrijfsmiddelen && (
+            <>
             <div ref={leasesSectionRef} style={sectionTabStyle("instellingen")}>
               <LeaseInterestPanel
                 leaseSummary={leaseSummary}
@@ -4384,6 +4592,8 @@ export default function App() {
                 onOpenHelp={setHelpPopupChapter}
               />
             </div>
+            </>
+            )}
 
             {years.length > 0 && activeYear && (
               <>
@@ -4481,7 +4691,8 @@ export default function App() {
             heffen; gebruik de Importcontrole-sectie (via de "Import controle"-kaart in het
             mini-dashboard) voor dit alles. */}
 
-        {parsedFiles.length > 0 && (
+        {/* Fase 3 — verborgen zodra de kaart "BTW" is uitgeklapt (toont dit paneel dan zelf). */}
+        {parsedFiles.length > 0 && !expandedCardKeys.btw && (
           <div ref={btwSettingsSectionRef} style={sectionTabStyle("instellingen")}>
             <BtwRatesPanel
               categoryBtwRates={categoryBtwRates}
@@ -4495,13 +4706,15 @@ export default function App() {
           </div>
         )}
 
-        {parsedFiles.length > 0 && (
+        {/* Fase 3 — deze 4 panelen verborgen zodra de kaart "Automatisering" is uitgeklapt (toont ze
+            dan zelf, zie instellingenCardGroups hierboven). */}
+        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
           <div ref={automatiseringSectionRef} style={sectionTabStyle("instellingen")}>
             <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
           </div>
         )}
 
-        {parsedFiles.length > 0 && (
+        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
           <div style={sectionTabStyle("instellingen")}>
             <CounterpartyRulesPanel
               overridesByCounterparty={overridesByCounterparty}
@@ -4511,7 +4724,7 @@ export default function App() {
           </div>
         )}
 
-        {parsedFiles.length > 0 && (
+        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
           <div style={sectionTabStyle("instellingen")}>
             <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
           </div>
@@ -4520,17 +4733,22 @@ export default function App() {
                 {/* v245 — geen duidelijke, door de gebruiker genoemde bestemming voor dit paneel bij
                     het opheffen van tabblad "Resultaten" — als invulpaneel bij "Instellingen" gezet,
                     samen met Leningen/Lease/Activa hierboven. */}
+                {!expandedCardKeys.automatisering && (
                 <div style={sectionTabStyle("instellingen")}>
                   <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
                 </div>
+                )}
 
                 {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
                     vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
-                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd. */}
+                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd.
+                    Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
+                {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
+                )}
 
                 {(() => {
                   // Sinds v213 heet dezelfde overboeking aan elke kant anders (zie classify.js): de
