@@ -78,11 +78,3 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   return { level: "heuristic", label: "Automatisch bepaald (geen specifiek zoekwoord)" };
 }
-
-// Handig voor UI-statusiconen (bijv. het importcontrole-scherm, zie migratieplan 6a).
-export const CONFIDENCE_ICON = {
-  override: "🟢",
-  keyword: "🟢",
-  heuristic: "🟡",
-  fallback: "🔴",
-};

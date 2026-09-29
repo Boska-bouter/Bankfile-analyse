@@ -207,7 +207,7 @@ export function computeVolledigeJaren(classified) {
 // en staan er wel typische privé-uitgaven tussen (anders is het beeld mogelijk vertekend omdat
 // niet alle privé-uitgaven zijn opgegeven).
 const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
-export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, ibGedaan, priItems, zvwEstimate) {
+export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, priItems, zvwEstimate) {
   if (!activeYear || !summary) return null;
   const ibBelastingEffectief = ibEstimate.belasting + (zvwEstimate?.bijdrage || 0);
   // v249 — persoonlijkVanZakelijkeRekening (zie yearlySummary.js) telt hier altijd extra mee, ongeacht
@@ -250,7 +250,7 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, i
 // 100% mee als voorbelasting, exact zoals voorheen. `categoryZakelijkPercentage` is de generieke
 // tegenhanger daarvan (zie categorySplit.js) — zelfde soort optionele correctie, maar dan voor élke
 // "kosten"/"geen"-categorie met een ingesteld percentage in plaats van alleen "Huur (deels zakelijk)".
-export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, kwartaalStatus, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
+export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
   const perQuarter = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -280,7 +280,7 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
     }
   }
   const result = {};
-  for (const [key, q] of Object.entries(perQuarter)) {
+  for (const q of Object.values(perQuarter)) {
     if (!result[q.year]) result[q.year] = 0;
     result[q.year] += q.verschuldigdBtw - q.voorbelasting;
   }

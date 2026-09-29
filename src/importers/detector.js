@@ -43,15 +43,3 @@ export async function parseFile(file) {
   const mapping = buildColumnMapping(headers);
   return { headers, rows, mapping };
 }
-
-// Herberekent de kolomherkenning (mapping) van eerder opgeslagen bestanden aan de hand van de
-// huidige HEADER_ALIASES — nodig omdat de mapping ooit werd vastgelegd op het moment van
-// uploaden; als de tool nadien beter is geworden in kolomherkenning, profiteren eerder
-// opgeslagen/geladen projecten daar anders niet automatisch van.
-export function refreshFileMappings(parsedFiles) {
-  return (parsedFiles || []).map((pf) => {
-    const headers = pf.headers && pf.headers.length ? pf.headers : pf.rows && pf.rows.length ? Object.keys(pf.rows[0]) : [];
-    if (!headers.length) return pf;
-    return { ...pf, headers, mapping: buildColumnMapping(headers) };
-  });
-}

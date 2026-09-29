@@ -1,18 +1,7 @@
-import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
+import { fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw } from "./btw.js";
 import { AUTOKOSTEN_CATEGORIEN } from "./autoBijtelling.js";
 import { effectiveZakelijkPercentage } from "./categorySplit.js";
-
-// Welke categorieën in welk vak van de BTW-aangifte terechtkomen — puur informatief, gebaseerd
-// op de eigen BTW-instellingen (percentages, uitgesloten van voorbelasting).
-export function computeBtwBoxMapping(effectiveCategoryBtwRates, voorbelastingExcluded) {
-  const omzetRate = effectiveCategoryBtwRates["Zakelijke inkomsten"];
-  const voorbelastingCategorieen = CATEGORY_ORDER.filter(
-    (c) => c !== "Zakelijke inkomsten" && !voorbelastingExcluded.includes(c) && (effectiveCategoryBtwRates[c] || 0) > 0
-  );
-  const uitgeslotenMetBtw = voorbelastingExcluded.filter((c) => (effectiveCategoryBtwRates[c] || 0) > 0);
-  return { omzetRate, voorbelastingCategorieen, uitgeslotenMetBtw };
-}
 
 // Koppeling naar de aangifte inkomstenbelasting (winst uit onderneming, eenmanszaak/zzp) — in
 // exact dezelfde volgorde en rubrieken als de winst-en-verliesrekening op de Belastingdienst-

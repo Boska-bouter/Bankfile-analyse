@@ -65,7 +65,7 @@ function printInPage(groups) {
   if (!document.getElementById("bank-print-styles")) {
     const style = document.createElement("style");
     style.id = "bank-print-styles";
-    style.textContent = `@media print { body > *:not(#bank-print-area) { display: none !important; } #bank-print-area { display: block !important; position: static !important; } ${PRINT_STYLES.replace(/(^|\})\s*([a-zA-Z0-9.# ,>*]+)\s*\{/g, (m, brace, sel) => `${brace} #bank-print-area ${sel.trim()} {`)} }`;
+    style.textContent = `@media print { body > *:not(#bank-print-area) { display: none !important; } #bank-print-area { display: block !important; position: static !important; } ${PRINT_STYLES.replace(/(^|\})\s*([a-zA-Z0-9.# ,>*]+)\s*\{/g, (_m, brace, sel) => `${brace} #bank-print-area ${sel.trim()} {`)} }`;
     document.head.appendChild(style);
   }
   area.innerHTML = buildReportBodyContent(groups);

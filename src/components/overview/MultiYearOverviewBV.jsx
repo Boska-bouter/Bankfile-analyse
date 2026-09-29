@@ -11,7 +11,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // computeEigenVermogenVerloop (src/tax/bv.js) — dezelfde cumulatieve reeks als in het BV-
 // Aangiftevoorstel, zodat de twee rapportages nooit uit de pas kunnen lopen.
 export default function MultiYearOverviewBV({
-  years, yearlySummaries, kostenTotaalByYear, dgaSalarisByYear, rcVerloop, evVerloop, onYearClick, activeYear, onOpenHelp,
+  years, yearlySummaries, kostenTotaalByYear, dgaSalarisByYear, rcVerloop, evVerloop, onYearClick, onOpenHelp,
   yearlyProgress,
 }) {
   const [open, setOpen] = useState(false);

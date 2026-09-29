@@ -367,20 +367,6 @@ export function estimateHeffingskortingen(winst, year, zelfstandigenaftrekToegep
   return { algemeneHeffingskorting, arbeidskorting, totaal: algemeneHeffingskorting + arbeidskorting };
 }
 
-// IB-schatting ná algemene heffingskorting + arbeidskorting — de kortingen kunnen de te betalen
-// IB nooit negatief maken (dat zou een teruggave via een ándere weg zijn, niet iets wat deze
-// grove schatting claimt te kunnen berekenen).
-export function estimateIncomeTaxNaHeffingskortingen(winst, year, zelfstandigenaftrekToegepast = true) {
-  const voor = estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast);
-  const kortingen = estimateHeffingskortingen(winst, year, zelfstandigenaftrekToegepast);
-  return {
-    ...voor,
-    ...kortingen,
-    belastingVoorKortingen: voor.belasting,
-    belastingNaKortingen: Math.max(0, voor.belasting - kortingen.totaal),
-  };
-}
-
 // ---------------------------------------------------------------------------------------------
 // Kleinschaligheidsinvesteringsaftrek (KIA) — GROVE INDICATIE.
 // ---------------------------------------------------------------------------------------------
@@ -395,10 +381,6 @@ export const KIA_STAFFEL_BY_YEAR = {
   2025: { drempel: 2900, vast1Tot: 70602, pct1: 28, vastBedrag: 19769, vastTot: 130744, afbouwPct: 7.56, nul: 392230 },
   2026: { drempel: 2900, vast1Tot: 71683, pct1: 28, vastBedrag: 20072, vastTot: 132746, afbouwPct: 7.56, nul: 398236 },
 };
-// Behouden voor bestaande imports elders in de tool.
-export const KIA_MIN_TOTAAL = 2901;
-export const KIA_MAX_TOTAAL = 398236;
-
 export function computeMogelijkeKia(totaalInvestering, year) {
   if (!totaalInvestering || totaalInvestering <= 0) return 0;
   const clampedYear = Math.max(2023, Math.min(2026, year));

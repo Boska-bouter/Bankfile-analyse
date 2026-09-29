@@ -1,5 +1,3 @@
-import { X } from "lucide-react";
-
 // Eigen bevestigingsvenster in plaats van window.confirm() — die werkt onbetrouwbaar in de
 // app-op-beginscherm-modus op iOS. Dit is vooralsnog de eenvoudige variant zonder
 // jaar-selectie — die complexere versie (voor bulkwijzigingen over meerdere jaren) hoort bij
@@ -20,13 +18,5 @@ export default function ConfirmBanner({ message, onConfirm, onCancel }) {
         </div>
       </section>
     </div>
-  );
-}
-
-export function CloseButton({ onClick }) {
-  return (
-    <button onClick={onClick} className="text-slate-400 hover:text-slate-700 shrink-0">
-      <X className="h-4 w-4" />
-    </button>
   );
 }

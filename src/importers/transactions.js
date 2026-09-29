@@ -158,8 +158,6 @@ export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
 // (rood) dat de jaarstatus beïnvloedt en in het Aangiftevoorstel als waarschuwing verschijnt.
 export const CONTINUITY_GAP_GEEL = 500;
 export const CONTINUITY_GAP_ROOD = 1000;
-// Bestaande code die vraagt "is dit een écht gat" (de rode grens) gebruikt deze naam nog.
-export const CONTINUITY_GAP_THRESHOLD = CONTINUITY_GAP_ROOD;
 // Losstaande, ongewijzigde tolerantie voor de saldocontrole bínnen één bestand (begin- + mutaties =
 // eindsaldo van dát bestand) — een ander soort check dan de aansluiting tussen twee bestanden
 // hierboven, en bewust niet meegeschoven naar €1000 toen die grens drie niveaus kreeg.

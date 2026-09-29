@@ -23,9 +23,6 @@ export function parseEuroNumber(raw) {
 export const eur = (n) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(n || 0);
 
-export const eurShort = (n) =>
-  new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 0 }).format(n || 0);
-
 // Zelfde als eur(), maar zonder de spatie die Intl.NumberFormat standaard tussen "€" en het
 // getal zet — gebruikt in dichte tabellen zoals het Jaaroverzicht, waar elke centimeter telt.
 export const eurTight = (n) => eur(n).replace(/\s/g, "");

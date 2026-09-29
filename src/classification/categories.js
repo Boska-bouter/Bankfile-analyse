@@ -486,31 +486,6 @@ export function mergeCategoryRules(savedRules) {
   return [...merged, ...custom];
 }
 
-export function migrateOverridesMap(map, counterpartyKeyFn) {
-  const next = {};
-  for (const [key, val] of Object.entries(map || {})) {
-    const migratedVal = val && val.category ? { ...val, category: migrateLegacyCategoryName(val.category) } : val;
-    // IBAN-sleutels blijven ongewijzigd — die zijn al stabiel en mogen nooit worden vervangen
-    // door een op naam herberekende sleutel (dat zou precies het voordeel van IBAN tenietdoen).
-    if (key.startsWith("IBAN::")) {
-      next[key] = migratedVal;
-      continue;
-    }
-    // Sleutel opnieuw berekenen aan de hand van de bewaarde weergavenaam — zo blijven oude,
-    // opgeslagen tegenpartij-correcties correct matchen ook als de sleutelberekening verbetert.
-    if (migratedVal && migratedVal.displayName) {
-      const sign = migratedVal.sign === "neg" ? -1 : 1;
-      const newKey = counterpartyKeyFn(migratedVal.displayName, sign);
-      if (newKey) {
-        next[newKey] = migratedVal;
-        continue;
-      }
-    }
-    next[key] = migratedVal;
-  }
-  return next;
-}
-
 // ---- Hoofdcategorieën — een overzichtelijke laag bovenop de fijnmazige subtypes hierboven ----
 //
 // Alle BTW-percentages, vaste/variabele-indeling, keyword-herkenning en fiscale speciale gevallen

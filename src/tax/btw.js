@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER, INCOME_TRANSFER_CATEGORIES, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
+import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
 import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
@@ -262,7 +262,7 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
 
 // Zelfde uitsplitsing als hierboven, maar voor het hele jaar in één keer (geen kwartaal-sleutel)
 // — voor de pop-ups bij "Voorbelasting" en "Zakelijk totaal (netto)" in het meerjarenoverzicht.
-export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
+export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
   const cats = {};
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
