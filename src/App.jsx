@@ -850,6 +850,15 @@ export default function App() {
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
     setZvwStatus(s.zvwStatus || {});
+    // v269 — deze 5 velden zaten al in de momentopname (snapshotBeforeAction hierboven) maar werden
+    // hier nooit teruggezet: "Percentage zakelijk per categorie" en de aftrek-/auto-instellingen
+    // leken daardoor ten onrechte NIET ongedaan te maken (de state bleef gewoon op de nieuwe waarde
+    // staan, alleen het paneel las hem uit alsof er niets gebeurd was).
+    setZelfstandigenaftrekStatusState(s.zelfstandigenaftrekStatus || {});
+    setStartersaftrekStatusState(s.startersaftrekStatus || {});
+    setAutoStatusState(s.autoStatus || {});
+    setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
+    setCategoryZakelijkPercentageState(s.categoryZakelijkPercentage || {});
     setLastActionSnapshot(null);
   };
 

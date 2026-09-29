@@ -100,25 +100,6 @@ export default function AppSidebar({
         )}
       </div>
 
-      {/* v268 — "Laatste actie / Ongedaan maken": verplaatst vanuit een zwevend paneel rechts in
-          App.jsx naar hier, zodat het niet meer over de inhoud heen hangt. Bewust wit/opvallend
-          i.p.v. de donkere zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. */}
-      {lastActionSnapshot && (
-        <div className="mb-4 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
-          <div className="flex items-start justify-between gap-1">
-            <p className="text-[11px] text-slate-600 leading-tight">
-              Laatste actie: <strong>{lastActionSnapshot.label}</strong>
-            </p>
-            <button onClick={onDismissLastAction} className="text-slate-400 hover:text-slate-700 shrink-0">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <button onClick={onUndoLastAction} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
-            Ongedaan maken
-          </button>
-        </div>
-      )}
-
       {/* Tabs */}
       {tabsVisible && (
         <div className="flex flex-col gap-1">
@@ -147,6 +128,26 @@ export default function AppSidebar({
               <span className="text-xs font-semibold text-slate-200">Indicatieve aangifteberekening</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* v269 — "Laatste actie / Ongedaan maken" stond eerst bovenaan (v268); op verzoek nu hieronder,
+          direct onder de Acties-knoppen (los van showActies, want een actie kan ook al ongedaan te
+          maken zijn vóórdat er een actief jaar is). Bewust wit/opvallend i.p.v. de donkere
+          zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. */}
+      {lastActionSnapshot && (
+        <div className="mt-3 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-1">
+            <p className="text-[11px] text-slate-600 leading-tight">
+              Laatste actie: <strong>{lastActionSnapshot.label}</strong>
+            </p>
+            <button onClick={onDismissLastAction} className="text-slate-400 hover:text-slate-700 shrink-0">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <button onClick={onUndoLastAction} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
+            Ongedaan maken
+          </button>
         </div>
       )}
 
