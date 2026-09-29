@@ -3613,6 +3613,19 @@ export default function App() {
           />
         )}
 
+        {/* v278 — zonder geladen bestanden staan zowel DashboardOverview (cards.length===0) als
+            ImportControlPanel (diagnostics.length===0) hieronder op "return null", en alles verderop
+            op dit tabblad staat achter "transactions.length > 0". Sinds tabsVisible altijd true is
+            (v271) is dit tabblad dus gewoon aan te klikken met een leeg dossier — zonder deze
+            placeholder was dat een compleet wit scherm i.p.v. een duidelijke lege staat. */}
+        {transactions.length === 0 && (
+          <div style={sectionTabStyle("controleren")}>
+            <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om hier iets te controleren.</p>
+            </section>
+          </div>
+        )}
+
         {/* v240 — Mini-dashboard bovenaan het Controleren-tabblad, zelfde soort kaarten als op
             Overzicht maar dan precies de items die je tijdens het controleren afloopt. */}
         <div style={sectionTabStyle("controleren")}>
@@ -3736,6 +3749,18 @@ export default function App() {
             onRemove={() => removeDuplicateGroup(duplicateDetailGroup)}
             onRestore={() => restoreDuplicateGroup(duplicateDetailGroup)}
           />
+        )}
+
+        {/* v278 — zelfde lege-staat placeholder als op Controleren: zonder geladen bestanden staat
+            DashboardOverview hieronder op "return null" en alles verderop achter
+            "parsedFiles.length > 0", wat anders een wit scherm gaf zodra dit tabblad (sinds
+            tabsVisible altijd true is, v271) met een leeg dossier werd geopend. */}
+        {parsedFiles.length === 0 && (
+          <div style={sectionTabStyle("instellingen")}>
+            <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om hier iets in te stellen.</p>
+            </section>
+          </div>
         )}
 
         {/* v246 — Mini-dashboard bovenaan het Instellingen-tabblad, zelfde soort kaarten als op
