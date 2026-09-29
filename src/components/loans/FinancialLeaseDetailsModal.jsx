@@ -784,56 +784,89 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 pixels van de onderliggende pagina "doorschijnen" in dit net-toegevoegde stukje van
                 een al scrollend, fixed-position venster (een bekende WebKit-rendertekortkoming),
                 en dat effect verdwijnt niet vanzelf door te scrollen of het venster te verlaten. */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum contract</span>
                 <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Verkoop-/veilingopbrengst (indien van toepassing)</span>
+                <span className="block text-xs font-medium text-slate-600 mb-1">Verkoop-/veilingopbrengst</span>
                 <input type="number" min="0" step="0.01" value={form.verkoopsom} onChange={set("verkoopsom")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
             </div>
             <p className="text-xs text-slate-400">
-              Ging het contract simpelweg over in een nieuw contract (zie hieronder), zonder aparte verkoop/veiling? Dan
-              kun je de opbrengst leeg laten — die is alleen relevant als het bedrijfsmiddel daadwerkelijk is
-              verkocht of geveild (bijv. bij niet nakomen van betalingen).
+              Alleen invullen bij een daadwerkelijke verkoop/veiling (bijv. bij niet nakomen van betalingen). Ging het
+              contract simpelweg over in een nieuw contract (zie hieronder), zonder aparte verkoop/veiling? Dan kun je
+              de opbrengst leeg laten.
             </p>
             {segmentBeeindigdMetOpbrengst && (
-              <div className="space-y-2">
-                {form.soort ? (
-                  boekresultaatPreview && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700" title="Opbrengst minus de fiscale boekwaarde op de einddatum.">
-                        Boekresultaat: {boekresultaatPreview.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}
-                      </span>
-                      <span className={`text-sm font-mono font-semibold ${boekresultaatPreview.boekresultaat >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                        {boekresultaatPreview.boekresultaat >= 0 ? "+" : "−"}{eur(Math.abs(boekresultaatPreview.boekresultaat))}
-                      </span>
+              <div className="space-y-3">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">
+                    Boekresultaat — fiscale winst/verlies op dit leaseobject
+                  </p>
+                  {form.soort ? (
+                    boekresultaatPreview && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm text-slate-500">
+                          <span>Verkoop-/veilingopbrengst</span>
+                          <span className="font-mono">{eur(Number(form.verkoopsom))}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-slate-500">
+                          <span>− Fiscale boekwaarde op einddatum</span>
+                          <span className="font-mono">{eur(boekresultaatPreview.boekwaardeBijBeeindiging)}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-1">
+                          <span className="text-sm font-medium text-slate-700">
+                            = Boekresultaat ({boekresultaatPreview.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"})
+                          </span>
+                          <span className={`text-sm font-mono font-semibold ${boekresultaatPreview.boekresultaat >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                            {boekresultaatPreview.boekresultaat >= 0 ? "+" : "−"}{eur(Math.abs(boekresultaatPreview.boekresultaat))}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      Vul hierboven bij "Soort" auto/machine in om ook een boekwinst/-verlies (voor de winstberekening)
+                      te kunnen bepalen — zonder "Soort" kent deze tool geen fiscale boekwaarde van dit leaseobject.
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">
+                    Afwikkeling van de financiering — geen winst/verliespost
+                  </p>
+                  {openstaandBedragBijBeeindiging != null ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm text-slate-500">
+                        <span>Totale leasesom (koopprijs + lease vergoeding)</span>
+                        <span className="font-mono">{eur(totaleLeaseInvestering)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-slate-500">
+                        <span>− Al betaald volgens schema tot einddatum</span>
+                        <span className="font-mono">{eur(totaleLeaseInvestering - openstaandBedragBijBeeindiging)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-slate-500">
+                        <span>− Verkoop-/veilingopbrengst</span>
+                        <span className="font-mono">{eur(Number(form.verkoopsom))}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-1">
+                        <span className="text-sm font-medium text-slate-700">
+                          = {openstaandBedragBijBeeindiging - Number(form.verkoopsom) >= 0 ? "Restschuld (nog te betalen)" : "Overwaarde (wordt terugbetaald)"}
+                        </span>
+                        <span className="text-sm font-mono font-semibold text-slate-900">
+                          {eur(Math.abs(openstaandBedragBijBeeindiging - Number(form.verkoopsom)))}
+                        </span>
+                      </div>
                     </div>
-                  )
-                ) : (
-                  <p className="text-xs text-slate-400">
-                    Vul hierboven bij "Soort" auto/machine in om ook een boekwinst/-verlies (voor de winstberekening)
-                    te kunnen bepalen — zonder "Soort" kent deze tool geen fiscale boekwaarde van dit leaseobject.
-                  </p>
-                )}
-                {openstaandBedragBijBeeindiging != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700" title="De totale leasesom (koopprijs + lease vergoeding) minus wat er tot de beëindiging volgens schema is betaald, vergeleken met de opbrengst — dit is GEEN winst/verliespost, alleen de afwikkeling van de financiering.">
-                      {openstaandBedragBijBeeindiging - Number(form.verkoopsom) >= 0 ? "Restschuld (nog te betalen)" : "Overwaarde (wordt terugbetaald)"}
-                    </span>
-                    <span className="text-sm font-mono font-semibold text-slate-900">
-                      {eur(Math.abs(openstaandBedragBijBeeindiging - Number(form.verkoopsom)))}
-                    </span>
-                  </div>
-                )}
-                {openstaandBedragBijBeeindiging == null && (
-                  <p className="text-xs text-slate-400">
-                    Nog niet genoeg ingevuld (koopprijs/looptijd/maandbedrag/startdatum) om de totale leasesom —
-                    en dus een eventuele restschuld/overwaarde — te kunnen berekenen.
-                  </p>
-                )}
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      Nog niet genoeg ingevuld (koopprijs/looptijd/maandbedrag/startdatum) om de totale leasesom —
+                      en dus een eventuele restschuld/overwaarde — te kunnen berekenen.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
             {canAddNext && (
