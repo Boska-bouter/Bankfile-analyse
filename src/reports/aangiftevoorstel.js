@@ -29,6 +29,10 @@ function statusTekst(status, aantalPunten) {
   if (status === "oranje") return `Berekening beschikbaar — ${aantalPunten} punt${aantalPunten === 1 ? "" : "en"} controleren`;
   return "Berekening kan worden opgesteld";
 }
+// v262 — de statuskaart (zie samenvattingHtml) kleurt mee met de status: amber bij oranje/rood
+// (er is iets om te bekijken) en een rustige, neutrale kaart bij groen (niets bijzonders te melden
+// hoeft niet dezelfde "let op"-kleur te krijgen als een dossier met echte openstaande punten).
+const STATUS_KAART_CLASS = { groen: "status-kaart-groen", oranje: "status-kaart-oranje", rood: "status-kaart-rood" };
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -340,13 +344,23 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // urencriterium (zaScenarios) vervangen de losse regels een compacte twee-scenario-tabel: dat
   // verving de eerdere twee losse prose-paragrafen verderop (zie "Indicatieve inkomstenbelasting en
   // Zvw-bijdrage" hieronder, nu ingekort tot alleen de aanvullende details).
+  // v262 — presentatie-verbetering van de indicatieve aangifteberekening (op verzoek, na een eigen
+  // voorstel): de winst en de twee uiteindelijke cijfers (indicatieve IB/Zvw) krijgen nu duidelijk
+  // meer visueel gewicht dan de tussenstappen (aftrek, MKB-vrijstelling) — voorheen stonden alle
+  // bedragen in één grid met exact dezelfde grootte, waardoor niet opviel welke twee cijfers de
+  // "uitkomst" zijn. Kerncijfers, BTW-saldo en dossierstatus/aannames staan nu ook in 3 losse
+  // kaarten in plaats van in één dicht grijs vlak (zie samenvattingHtml hieronder).
   const kerncijfersHtml = zaScenarios
     ? `
-    <div class="samenvatting-kerncijfers">
-      <div><span class="label">Omzet excl. BTW</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
-      <div><span class="label">Zakelijke kosten</span><span class="bedrag">${eur(kostenTotaal)}</span></div>
-      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
+    <div class="kerncijfers-hoofd">
+      <span class="label">Winst uit onderneming</span>
+      <span class="bedrag-groot">${eur(summary.winst)}</span>
     </div>
+    <div class="kerncijfers-stappen">
+      <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
+    </div>
+    <p class="kerncijfers-voetnoot">Urencriterium onbekend — twee scenario's, zie "Aannames/onzekerheden" hiernaast.</p>
     <table class="samenvatting-scenarios">
       <thead><tr><th>Urencriterium onbekend</th><th>Ondernemersaftrek</th><th>Belastbare winst</th><th>Indicatieve IB*</th><th>Indicatieve Zvw</th></tr></thead>
       <tbody>
@@ -354,36 +368,49 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         <tr><td>Zonder zelfstandigenaftrek</td><td class="num">€ 0</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
       </tbody>
     </table>
-    <p class="toelichting">* Ná heffingskortingen, exclusief overig inkomen. Urencriterium niet bekend — zie "Aannames/onzekerheden" hieronder en de Bijlage.</p>`
+    <p class="kerncijfers-voetnoot">* Ná heffingskortingen, exclusief overig inkomen.</p>`
     : `
-    <div class="samenvatting-kerncijfers">
-      <div><span class="label">Omzet excl. BTW</span><span class="bedrag">${eur(ib.opbrengsten.totaal)}</span></div>
-      <div><span class="label">Zakelijke kosten</span><span class="bedrag">- ${eur(kostenTotaal)}</span></div>
-      <div><span class="label">Winst uit onderneming</span><span class="bedrag">${eur(summary.winst)}</span></div>
-      <div><span class="label">Mogelijke ondernemersaftrek</span><span class="bedrag">- ${eur(ondernemersaftrekBedrag)}</span></div>
-      <div><span class="label">MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span class="bedrag">- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
-      <div><span class="label">Indicatieve belastbare winst</span><span class="bedrag">${eur(winstUitsplitsing.belastbaar)}</span></div>
-      <div><span class="label">Indicatieve IB*</span><span class="bedrag">${eur(ibEstimate.belasting)}</span></div>
-      <div><span class="label">Indicatieve Zvw</span><span class="bedrag">${eur(zvwEstimate.bijdrage)}</span></div>
+    <div class="kerncijfers-hoofd">
+      <span class="label">Winst uit onderneming</span>
+      <span class="bedrag-groot">${eur(summary.winst)}</span>
     </div>
-    <p class="toelichting">* Vóór heffingskortingen — zie "Geschatte heffingskortingen" hieronder.</p>`;
+    <div class="kerncijfers-stappen">
+      <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
+      <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
+    </div>
+    <div class="kerncijfers-stappen">
+      <div><span>Mogelijke ondernemersaftrek</span><span>- ${eur(ondernemersaftrekBedrag)}</span></div>
+      <div><span>MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span>- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
+      <div class="tussentotaal"><span>Indicatieve belastbare winst</span><span>${eur(winstUitsplitsing.belastbaar)}</span></div>
+    </div>
+    <div class="kerncijfers-resultaat">
+      <div><span class="label">Indicatieve IB*</span><span class="bedrag-groot">${eur(ibEstimate.belasting)}</span></div>
+      <div><span class="label">Indicatieve Zvw</span><span class="bedrag-groot">${eur(zvwEstimate.bijdrage)}</span></div>
+    </div>
+    <p class="kerncijfers-voetnoot">* Vóór heffingskortingen — zie "Geschatte heffingskortingen" hieronder.</p>`;
+
+  const btwKaartHtml =
+    kwartalen.length > 0
+      ? `
+  <div class="btw-kaart">
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <tbody><tr><td>Saldo</td>${kwartalen
+      .map((q) => {
+        const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+        return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+      })
+      .join("")}</tr></tbody></table>
+  </div>`
+      : "";
 
   const samenvattingHtml = `
-  <div class="samenvatting">
+  <div class="kerncijfers-kaart">
     ${kerncijfersHtml}
-    ${kwartalen.length > 0
-      ? `<table class="samenvatting-btw"><thead><tr><th>BTW</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
-      <tbody><tr><td>Saldo</td>${kwartalen
-        .map((q) => {
-          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-          return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
-        })
-        .join("")}</tr></tbody></table>`
-      : ""}
-    <div class="samenvatting-status">
-      <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}</strong> <span class="toelichting">(gegevenscontrole, geen fiscale beoordeling)</span></p>
-      ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
-    </div>
+  </div>
+  ${btwKaartHtml}
+  <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
+    <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}</strong> <span class="toelichting">(gegevenscontrole, geen fiscale beoordeling)</span></p>
+    ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
   </div>`;
 
   const overigeBedrijfskostenHtml =
@@ -661,19 +688,35 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
      kennen; vooral bij printen/opslaan-als-PDF op tablets is dit niet altijd betrouwbaar zonder
      beide varianten). */
   .rubriek, .wvr .rubriek { break-inside: avoid; page-break-inside: avoid; }
-  .samenvatting { margin: 0 0 20px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
-  .samenvatting-kerncijfers { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
-  .samenvatting-kerncijfers > div { display: flex; flex-direction: column; }
-  .samenvatting-kerncijfers .label { font-size: 9px; text-transform: uppercase; color: #64748b; }
-  .samenvatting-kerncijfers .bedrag { font-size: 15px; font-weight: bold; }
-  .samenvatting-btw { margin: 0 0 10px; }
+  /* v262 — 3 losse kaarten i.p.v. 1 dicht "samenvatting"-vlak: kerncijfers (met de winst en de
+     indicatieve IB/Zvw duidelijk groter dan de tussenstappen), het BTW-saldo, en de dossierstatus/
+     aannames — elk met eigen witruimte, zodat in één oogopslag duidelijk is wat bij elkaar hoort. */
+  .kerncijfers-kaart { margin: 0 0 12px; padding: 14px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .kerncijfers-hoofd { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+  .kerncijfers-hoofd .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+  .kerncijfers-hoofd .bedrag-groot { font-size: 22px; font-weight: bold; color: #0f172a; }
+  .kerncijfers-stappen { margin: 0 0 8px; }
+  .kerncijfers-stappen > div { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10.5px; color: #64748b; }
+  .kerncijfers-stappen > div.tussentotaal { font-weight: 600; color: #1e293b; border-top: 1px solid #f1f5f9; margin-top: 3px; padding-top: 6px; }
+  .kerncijfers-resultaat { display: flex; flex-wrap: wrap; gap: 24px; padding-top: 10px; margin-top: 4px; border-top: 1px solid #e2e8f0; }
+  .kerncijfers-resultaat > div { display: flex; flex-direction: column; }
+  .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+  .kerncijfers-resultaat .bedrag-groot { font-size: 19px; font-weight: bold; color: #0f172a; }
+  .kerncijfers-voetnoot { font-size: 9.5px; color: #94a3b8; margin: 6px 0 0; }
+  .btw-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .samenvatting-btw { margin: 0; }
   .samenvatting-btw th, .samenvatting-btw td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; }
   .samenvatting-btw th:not(:first-child), .samenvatting-btw td.num { text-align: right; }
-  .samenvatting-status ul { margin: 4px 0 0 16px; padding: 0; font-size: 10px; color: #78350f; }
-  .samenvatting-status li { margin-bottom: 2px; }
-  .samenvatting-status .toelichting { margin: 4px 0 0; font-size: 10px; color: #15803d; }
-  .samenvatting-status .aannames-kop { margin: 6px 0 0; font-size: 10px; font-weight: bold; color: #78350f; }
-  .samenvatting-scenarios { width: 100%; margin: 0 0 8px; font-size: 10px; }
+  .status-kaart { margin: 0 0 20px; padding: 12px 14px; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .status-kaart p { margin: 0; }
+  .status-kaart-groen { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .status-kaart-groen .toelichting { color: #166534; opacity: 0.85; }
+  .status-kaart-oranje, .status-kaart-rood { background: #fffbeb; border: 1px solid #fde68a; }
+  .status-kaart-oranje .toelichting, .status-kaart-rood .toelichting { color: #92400e; opacity: 0.85; }
+  .status-kaart ul { margin: 4px 0 0 16px; padding: 0; font-size: 10px; color: #78350f; }
+  .status-kaart li { margin-bottom: 2px; }
+  .status-kaart .aannames-kop { margin: 6px 0 0; font-size: 10px; font-weight: bold; color: #78350f; }
+  .samenvatting-scenarios { width: 100%; margin: 8px 0; font-size: 10px; }
   .samenvatting-scenarios th, .samenvatting-scenarios td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; text-align: left; }
   .samenvatting-scenarios th:not(:first-child), .samenvatting-scenarios td.num { text-align: right; }
   .controledoel { margin: 20px 0; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
