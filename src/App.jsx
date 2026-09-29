@@ -1757,6 +1757,10 @@ export default function App() {
       zelfstandigenaftrekBedrag: aftrek?.zelfstandigenaftrekBedrag || 0,
       startersaftrekBedrag: aftrek?.startersaftrekBedrag || 0,
       mkbVrijstellingBedrag: winstUitsplitsing.mkbVrijstellingBedrag,
+      // Toegevoegd voor de "Indicatieve aangifte"-kaart in DetailsPanel.jsx (Overzicht-tabblad,
+      // sub-tab Jaaroverzicht) — dezelfde belastbare winst als in winstUitsplitsing, alleen nog niet
+      // apart doorgegeven.
+      belastbareWinst: winstUitsplitsing.belastbaar,
     };
   }, [rechtsvorm, activeYear, yearlySummary, ondernemersaftrekPerJaar, startersaftrekStatus]);
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
@@ -3329,9 +3333,15 @@ export default function App() {
             <DetailsPanel
               year={activeYear}
               cardsByKey={dashboardCardsByKey}
-              yearlySummary={yearlySummary}
-              previousYearlySummary={previousYearlySummary}
+              aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
+              dashboardAangifteIndicatie={dashboardAangifteIndicatie}
+              winst={yearlySummary?.winst}
+              previousWinst={previousYearlySummary?.winst}
               showTrend={showJaaroverzichtTrend}
+              onShowFullCalculation={() => {
+                setShowAangifteMeerdereJaren(false);
+                setShowAangifteYearPicker(true);
+              }}
               zakCount={zakGroupForYear.items.length}
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
