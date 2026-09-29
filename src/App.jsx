@@ -49,7 +49,7 @@ import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSi
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
-import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
+import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import RollupCard from "./components/dashboard/RollupCard.jsx";
@@ -366,6 +366,8 @@ export default function App() {
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
   const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
+  const categorySectionRef = useRef(null); // Fase 2 — kaart "Categorieën" (Controleren)
+  const automatiseringSectionRef = useRef(null); // Fase 2 — kaart "Automatisering" (Instellingen)
 
   // ---- Tabbladen (v228) — de app was tot nu toe één lange scroll-pagina met een sticky navbalk die
   // alleen naar secties VERDER OP DEZELFDE PAGINA scrolde (StickyTopNav / jumpToSection hierboven).
@@ -2756,6 +2758,100 @@ export default function App() {
     btwRateCounts,
   ]);
 
+  // Fase 2 (bouwvoorstel Stijl F) — groepeert de bestaande controlerenDashboardCards/
+  // instellingenDashboardCards (dezelfde berekeningen, geen nieuwe) in precies de 5 categorieën uit
+  // het bouwvoorstel, weergegeven als SectionCard (dezelfde kaartstijl als Overzicht, fase 1)
+  // i.p.v. de oudere DashboardOverview-tegel. Een paar categorieën ("Categorieën",
+  // "Aansluiting & detail" op Controleren; "Automatisering" op Instellingen) hadden nog geen eigen
+  // kaart/telling — die krijgen hier een informatieve kaart (geen nieuw berekend aantal) die naar de
+  // bestaande sectie springt. De onderliggende panelen/componenten en hun logica blijven ongewijzigd.
+  const controlerenCardsByKey = useMemo(
+    () => Object.fromEntries(controlerenDashboardCards.map((c) => [c.key, c])),
+    [controlerenDashboardCards]
+  );
+  const instellingenCardsByKey = useMemo(
+    () => Object.fromEntries(instellingenDashboardCards.map((c) => [c.key, c])),
+    [instellingenDashboardCards]
+  );
+  // Groepeert een aantal bestaande kaarten (by key) tot 1 SectionCard: elk lid wordt 1 regel
+  // (🟢/🟠/🔴 + de bestaande waarde), de "ergste" tone van de leden bepaalt de tone van de groep, en
+  // een klik springt naar het lid dat aandacht nodig heeft (of anders het eerste lid).
+  const groupCards = (membersByKey, memberKeys, extra) => {
+    const members = memberKeys.map((k) => membersByKey[k]).filter(Boolean);
+    if (members.length === 0) return extra || null;
+    const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
+    const worstTone = members.reduce((acc, m) => (toneRank[m.tone] > toneRank[acc] ? m.tone : acc), "ok");
+    const primary = members.find((m) => m.tone === "risk") || members.find((m) => m.tone === "attention") || members[0];
+    const lines = members.flatMap((m) =>
+      m.lines
+        ? m.lines
+        : [
+            {
+              label: m.title,
+              value: `${m.tone === "ok" ? "🟢 " : m.tone === "attention" ? "🟠 " : m.tone === "risk" ? "🔴 " : ""}${m.value ?? m.subtitle ?? ""}`,
+            },
+          ]
+    );
+    return { tone: worstTone, lines, onClick: primary.onClick, hint: primary.hint };
+  };
+  const controlerenCardGroups = useMemo(() => {
+    if (transactions.length === 0) return [];
+    const g = (key, title, icon, memberKeys, extra) => {
+      const built = groupCards(controlerenCardsByKey, memberKeys, extra);
+      if (!built) return null;
+      return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
+    };
+    return [
+      g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
+      g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["personReview"]),
+      g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
+      {
+        key: "categorieen",
+        title: "Categorieën",
+        icon: <span>📊</span>,
+        tone: "neutral",
+        subtitle: "Categorieoverzicht zakelijk en privé bekijken",
+        hint: "Naar de categorieoverzichten",
+        onClick: () => jumpToSection(categorySectionRef),
+        actionLabel: "Bekijken",
+      },
+      {
+        key: "aansluitingDetail",
+        title: "Aansluiting & detail",
+        icon: <span>🔗</span>,
+        tone: "neutral",
+        subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
+        hint: "Naar de aansluitcontrole en detailtabellen",
+        onClick: () => jumpToSection(detailsSectionRef),
+        actionLabel: "Bekijken",
+      },
+    ].filter(Boolean);
+  }, [transactions.length, controlerenCardsByKey]);
+  const instellingenCardGroups = useMemo(() => {
+    if (transactions.length === 0) return [];
+    const g = (key, title, icon, memberKeys, extra) => {
+      const built = groupCards(instellingenCardsByKey, memberKeys, extra);
+      if (!built) return null;
+      return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
+    };
+    return [
+      g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
+      g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
+      g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames", "categoryPercentages"]),
+      g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"]),
+      {
+        key: "automatisering",
+        title: "Automatisering",
+        icon: <span>⚙️</span>,
+        tone: "neutral",
+        subtitle: "Categorie-/tegenpartijregels, vaste categorieën en vaste lasten",
+        hint: "Naar de automatiseringsinstellingen",
+        onClick: () => jumpToSection(automatiseringSectionRef),
+        actionLabel: "Bekijken",
+      },
+    ].filter(Boolean);
+  }, [transactions.length, instellingenCardsByKey]);
+
   // ---- Navigatie (fase 1, dashboard-restyling) — de 3 tabbladen zitten nu in AppSidebar.jsx i.p.v.
   // in een sticky bovenbalk (StickyTopNav is uitgefaseerd). v271 — voorheen (net als bij de oude
   // topNavItems) pas zichtbaar zodra er transacties geladen zijn; op verzoek blijven de tabbladen nu
@@ -3626,10 +3722,11 @@ export default function App() {
           </div>
         )}
 
-        {/* v240 — Mini-dashboard bovenaan het Controleren-tabblad, zelfde soort kaarten als op
-            Overzicht maar dan precies de items die je tijdens het controleren afloopt. */}
+        {/* Fase 2 (bouwvoorstel) — Controleren in kaartstijl: dezelfde onderliggende kaarten als
+            v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
-          <DashboardOverview title="Controleren" cards={controlerenDashboardCards} />
+          <SectionCardGrid title="Controleren" cards={controlerenCardGroups} />
         </div>
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
@@ -3763,12 +3860,11 @@ export default function App() {
           </div>
         )}
 
-        {/* v246 — Mini-dashboard bovenaan het Instellingen-tabblad, zelfde soort kaarten als op
-            Overzicht/Controleren (zie dashboardCards/controlerenDashboardCards) maar dan precies de
-            instellingen-items met een compleet/onvolledig-status: Leningen, Lease, Activa,
-            Persoonlijke aannames (urencriterium) en BTW-instellingen. */}
+        {/* Fase 2 (bouwvoorstel) — Instellingen in kaartstijl: dezelfde onderliggende kaarten als
+            v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
+            SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("instellingen")}>
-          <DashboardOverview title="Instellingen" cards={instellingenDashboardCards} />
+          <SectionCardGrid title="Instellingen" cards={instellingenCardGroups} />
         </div>
 
         {parsedFiles.length > 0 && (
@@ -4356,7 +4452,7 @@ export default function App() {
         )}
 
         {parsedFiles.length > 0 && (
-          <div style={sectionTabStyle("instellingen")}>
+          <div ref={automatiseringSectionRef} style={sectionTabStyle("instellingen")}>
             <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
           </div>
         )}
@@ -4387,7 +4483,7 @@ export default function App() {
                 {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
                     vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
                     via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd. */}
-                <div className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
+                <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
                   <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
