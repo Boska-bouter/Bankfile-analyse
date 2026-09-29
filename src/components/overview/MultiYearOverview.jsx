@@ -16,7 +16,10 @@ export default function MultiYearOverview({
   zvwStatus, setZvwGedaan, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
   kostenTotaalByYear, yearlyProgress,
 }) {
-  const [open, setOpen] = useState(false);
+  // v273 — dit paneel toont nu alleen nog in de Meerjarenoverzicht-pop-up (het permanente inline
+  // blok is in v270 verwijderd); de gebruiker hoeft de inhoud dan niet nog eens apart open te
+  // klikken, dus standaard uitgeklapt i.p.v. dichtgeklapt.
+  const [open, setOpen] = useState(true);
   const [voorbelastingModalYear, setVoorbelastingModalYear] = useState(null);
   if (years.length === 0) return null;
 

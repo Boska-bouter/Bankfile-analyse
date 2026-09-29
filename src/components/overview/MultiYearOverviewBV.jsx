@@ -14,7 +14,9 @@ export default function MultiYearOverviewBV({
   years, yearlySummaries, kostenTotaalByYear, dgaSalarisByYear, rcVerloop, evVerloop, onYearClick, onOpenHelp,
   yearlyProgress,
 }) {
-  const [open, setOpen] = useState(false);
+  // v273 — dit paneel toont nu alleen nog in de Meerjarenoverzicht-pop-up, dus standaard
+  // uitgeklapt i.p.v. dichtgeklapt (zie MultiYearOverview.jsx voor dezelfde toelichting).
+  const [open, setOpen] = useState(true);
   if (years.length === 0) return null;
 
   // v258 — zelfde dossiercontrole-statusbolletje als in MultiYearOverview.jsx (zzp-variant), zie

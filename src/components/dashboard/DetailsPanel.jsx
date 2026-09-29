@@ -81,6 +81,13 @@ export default function DetailsPanel({
       </div>
 
       <div className="border-t border-slate-100 p-5">
+        {/* v273 — voorheen werd dit hele paneel niet gerenderd zolang er geen activeYear was; nu
+            toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
+            die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
+        {!year ? (
+          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om deze gegevens te zien.</p>
+        ) : (
+          <>
         {tab === "jaaroverzicht" && (
           dashboardAangifteIndicatie ? (
             <div className="grid md:grid-cols-2 gap-4 items-start">
@@ -160,6 +167,8 @@ export default function DetailsPanel({
             <LinkOut label="Print" onClick={() => onJump("print")} />
             <LinkOut label="Indicatieve aangifteberekening" onClick={() => onJump("aangifte")} />
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

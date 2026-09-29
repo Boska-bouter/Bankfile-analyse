@@ -3418,20 +3418,19 @@ export default function App() {
             }
           />
 
-          {years.length > 0 && (
-            <div className="grid md:grid-cols-2 gap-4 items-stretch">
-              <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
-              {activeYear && (
-                <JaaroverzichtCard
-                  year={activeYear}
-                  summary={yearlySummary}
-                  previousSummary={previousYearlySummary}
-                  showTrend={showJaaroverzichtTrend}
-                  onOpenDetails={() => jumpToSection(detailsSectionRef)}
-                />
-              )}
-            </div>
-          )}
+          {/* v273 — deze rij stond volledig verborgen zolang er geen jaren/project geladen waren;
+              op verzoek toont het standaard-dashboard nu altijd deze sectie, met JaaroverzichtCard
+              in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
+          <div className="grid md:grid-cols-2 gap-4 items-stretch">
+            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+            <JaaroverzichtCard
+              year={activeYear}
+              summary={yearlySummary}
+              previousSummary={previousYearlySummary}
+              showTrend={showJaaroverzichtTrend}
+              onOpenDetails={() => jumpToSection(detailsSectionRef)}
+            />
+          </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <RollupCard
@@ -3474,26 +3473,26 @@ export default function App() {
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
               "bvSignalering", RollupCard "Naar resultaten") een zinvolle, nog bestaande sectie
               raken i.p.v. een dode scroll-target. */}
-          {activeYear && (
-            <div ref={checklistSectionRef}>
-              <DetailsPanel
-                year={activeYear}
-                cardsByKey={dashboardCardsByKey}
-                aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
-                dashboardAangifteIndicatie={dashboardAangifteIndicatie}
-                winst={yearlySummary?.winst}
-                previousWinst={previousYearlySummary?.winst}
-                showTrend={showJaaroverzichtTrend}
-                onShowFullCalculation={() => {
-                  setShowAangifteMeerdereJaren(false);
-                  setShowAangifteYearPicker(true);
-                }}
-                zakCount={zakGroupForYear.items.length}
-                priCount={priGroupForYear.items.length}
-                onJump={handleDetailsJump}
-              />
-            </div>
-          )}
+          {/* v273 — ook dit paneel toont nu altijd, met DetailsPanel zelf een lege-staat renderend
+              wanneer er nog geen activeYear is. */}
+          <div ref={checklistSectionRef}>
+            <DetailsPanel
+              year={activeYear}
+              cardsByKey={dashboardCardsByKey}
+              aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
+              dashboardAangifteIndicatie={dashboardAangifteIndicatie}
+              winst={yearlySummary?.winst}
+              previousWinst={previousYearlySummary?.winst}
+              showTrend={showJaaroverzichtTrend}
+              onShowFullCalculation={() => {
+                setShowAangifteMeerdereJaren(false);
+                setShowAangifteYearPicker(true);
+              }}
+              zakCount={zakGroupForYear.items.length}
+              priCount={priGroupForYear.items.length}
+              onJump={handleDetailsJump}
+            />
+          </div>
         </div>
 
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}

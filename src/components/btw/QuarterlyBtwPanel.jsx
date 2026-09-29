@@ -5,7 +5,9 @@ import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
 
 export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp, obIbSectionRef }) {
-  const [open, setOpen] = useState(false);
+  // v273 — dit paneel toont nu alleen nog in de BTW-per-kwartaal-pop-up, dus standaard uitgeklapt
+  // i.p.v. dichtgeklapt (zelfde reden als MultiYearOverview.jsx).
+  const [open, setOpen] = useState(true);
   const [breakdownModal, setBreakdownModal] = useState(null); // { key: "2023-Q2", veld: "netto" | "btw" }
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
