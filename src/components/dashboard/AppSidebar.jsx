@@ -1,4 +1,4 @@
-import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList } from "lucide-react";
+import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -57,6 +57,9 @@ export default function AppSidebar({
   showActies,
   onEditBasisvragen,
   onOpenAangifteberekening,
+  lastActionSnapshot,
+  onUndoLastAction,
+  onDismissLastAction,
 }) {
   return (
     // `sticky top-0 h-screen overflow-y-auto` (i.p.v. min-h-screen) zodat de zijbalk zelf de
@@ -96,6 +99,25 @@ export default function AppSidebar({
           </button>
         )}
       </div>
+
+      {/* v268 — "Laatste actie / Ongedaan maken": verplaatst vanuit een zwevend paneel rechts in
+          App.jsx naar hier, zodat het niet meer over de inhoud heen hangt. Bewust wit/opvallend
+          i.p.v. de donkere zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. */}
+      {lastActionSnapshot && (
+        <div className="mb-4 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-1">
+            <p className="text-[11px] text-slate-600 leading-tight">
+              Laatste actie: <strong>{lastActionSnapshot.label}</strong>
+            </p>
+            <button onClick={onDismissLastAction} className="text-slate-400 hover:text-slate-700 shrink-0">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <button onClick={onUndoLastAction} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
+            Ongedaan maken
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       {tabsVisible && (

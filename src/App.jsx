@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
@@ -3207,6 +3207,9 @@ export default function App() {
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
+        lastActionSnapshot={lastActionSnapshot}
+        onUndoLastAction={undoLastAction}
+        onDismissLastAction={() => setLastActionSnapshot(null)}
       />
       <input
         ref={bankFileInputRef}
@@ -3242,21 +3245,8 @@ export default function App() {
         <StickyYearNav years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
       )}
 
-      {lastActionSnapshot && (
-        <div className="fixed right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-40 rounded-xl border-2 border-slate-300 bg-white shadow-lg p-2.5 flex flex-col items-stretch gap-2 max-w-[9.5rem]">
-          <div className="flex items-start justify-between gap-1">
-            <p className="text-[11px] text-slate-600 leading-tight">
-              Laatste actie: <strong>{lastActionSnapshot.label}</strong>
-            </p>
-            <button onClick={() => setLastActionSnapshot(null)} className="text-slate-400 hover:text-slate-700 shrink-0">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <button onClick={undoLastAction} className="rounded-lg bg-teal-700 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
-            Ongedaan maken
-          </button>
-        </div>
-      )}
+      {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
+          naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
       <button
         onClick={() => setShowCategoryOverview(true)}
