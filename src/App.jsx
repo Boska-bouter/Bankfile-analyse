@@ -2745,9 +2745,11 @@ export default function App() {
   ]);
 
   // ---- Navigatie (fase 1, dashboard-restyling) — de 3 tabbladen zitten nu in AppSidebar.jsx i.p.v.
-  // in een sticky bovenbalk (StickyTopNav is uitgefaseerd); tabsVisible bepaalt of ze getoond worden
-  // (pas zodra er transacties zijn geladen), net als voorheen bij topNavItems. ----
-  const tabsVisible = transactions.length > 0;
+  // in een sticky bovenbalk (StickyTopNav is uitgefaseerd). v271 — voorheen (net als bij de oude
+  // topNavItems) pas zichtbaar zodra er transacties geladen zijn; op verzoek blijven de tabbladen nu
+  // altijd zichtbaar (ook na "Wis alles" of vóór het laden van een eerste bestand) — de tabs tonen
+  // dan gewoon een leeg/nul dashboard i.p.v. dat het hele linkermenu zijn navigatie verliest.
+  const tabsVisible = true;
 
   // Badges op de Controleren/Instellingen-tab in AppSidebar.jsx: aantal kaarten dat aandacht nodig
   // heeft (tone "attention" of "risk"), zelfde soort telling als eerder de losse tegelkleuren in
@@ -3121,6 +3123,19 @@ export default function App() {
     setIbStatus({});
     setZvwStatus({});
     setOpeningBalanceCorrections({});
+    // v271 — deze 8 velden ontbraken hier: na "Wis alles" bleven ze stilzwijgend op hun oude waarde
+    // staan (van vóór het wissen), waardoor bij het laden van een nieuw/ander dossier de wizard
+    // sommige vragen ten onrechte oversloeg (bijv. urencriterium, stap 18, wordt overgeslagen zodra
+    // zelfstandigenaftrekStatus niet leeg is) en "Persoonlijke aannames" leek al deels ingevuld met
+    // gegevens van het vorige, inmiddels gewiste dossier.
+    setZelfstandigenaftrekStatusState({});
+    setStartersaftrekStatusState({});
+    setAutoStatusState({});
+    setAutoWizardStatus(null);
+    setAutoActivaDetails({});
+    setKmVergoedingDetailsState({});
+    setHuurZakelijkPercentageStatusState({});
+    setCategoryZakelijkPercentageState({});
     setVerwachteLease(null);
     setVerwachteLening(null);
     setVerwachteAOV(null);
