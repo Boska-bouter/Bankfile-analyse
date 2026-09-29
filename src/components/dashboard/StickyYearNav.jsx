@@ -12,7 +12,9 @@ const STATUS_LABEL = {
 export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyProgress }) {
   if (years.length <= 1) return null;
   return (
-    <nav className="fixed left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-xl shadow-lg p-1 max-h-[75vh] overflow-y-auto">
+    // Fase 1, dashboard-restyling: verschoven van left-1.5/2 naar buiten de nieuwe 216px-brede
+    // AppSidebar.jsx (was: bovenaan de pagina, links van de content — nu staat daar de zijbalk).
+    <nav className="fixed left-[224px] sm:left-[228px] top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-xl shadow-lg p-1 max-h-[75vh] overflow-y-auto">
       {years.map((year) => {
         const yp = yearlyProgress[year];
         return (

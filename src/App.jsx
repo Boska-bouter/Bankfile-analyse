@@ -52,7 +52,9 @@ import { estimateVpb } from "./tax/vpb.js";
 import TodoPanel from "./components/dashboard/TodoPanel.jsx";
 import AangifteStatusBar from "./components/dashboard/AangifteStatusBar.jsx";
 import DashboardOverview from "./components/dashboard/DashboardOverview.jsx";
-import StickyTopNav from "./components/dashboard/StickyTopNav.jsx";
+import AppSidebar from "./components/dashboard/AppSidebar.jsx";
+import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
+import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import DuplicateGroupDetailModal from "./components/dashboard/DuplicateGroupDetailModal.jsx";
@@ -2713,20 +2715,22 @@ export default function App() {
     btwRateCounts,
   ]);
 
-  // ---- Sticky navbalk (v219, dashboard fase 3) — vaste snelkoppelingen naar dezelfde secties als
-  // de dashboardkaarten hierboven, maar dan altijd bereikbaar tijdens het scrollen. "Overzicht"
-  // scrollt terug naar de kaartenlaag bovenaan; de rest hergebruikt de bestaande sectie-refs. ----
-  const topNavItems = useMemo(() => {
-    if (transactions.length === 0) return [];
-    // v228 — dit was een sticky navbalk die naar bestaande secties VERDER OP DEZELFDE PAGINA
-    // scrolde (jumpToSection); nu zijn het echte tabbladen (zie activeTab hierboven) — gewoon van
-    // tabblad wisselen, zonder erbij te scrollen (een tabblad opent altijd bovenaan).
-    return [
-      { key: "overzicht", label: "Overzicht", onClick: () => setActiveTab("overzicht") },
-      { key: "controleren", label: "Controleren", onClick: () => setActiveTab("controleren") },
-      { key: "instellingen", label: "Instellingen", onClick: () => setActiveTab("instellingen") },
-    ];
-  }, [transactions.length]);
+  // ---- Navigatie (fase 1, dashboard-restyling) — de 3 tabbladen zitten nu in AppSidebar.jsx i.p.v.
+  // in een sticky bovenbalk (StickyTopNav is uitgefaseerd); tabsVisible bepaalt of ze getoond worden
+  // (pas zodra er transacties zijn geladen), net als voorheen bij topNavItems. ----
+  const tabsVisible = transactions.length > 0;
+
+  // Badges op de Controleren/Instellingen-tab in AppSidebar.jsx: aantal kaarten dat aandacht nodig
+  // heeft (tone "attention" of "risk"), zelfde soort telling als eerder de losse tegelkleuren in
+  // DashboardOverview.jsx lieten zien — nu vooraan zichtbaar in de zijbalk i.p.v. pas na openklikken.
+  const controlerenBadge = useMemo(
+    () => controlerenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").length,
+    [controlerenDashboardCards]
+  );
+  const instellingenBadge = useMemo(
+    () => instellingenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").length,
+    [instellingenDashboardCards]
+  );
 
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
@@ -3076,120 +3080,52 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-stone-50 text-slate-900 font-sans">
-      <header className="border-b border-slate-200 bg-slate-900 text-stone-50">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Bankoverzicht — Zakelijk &amp; Privé</h1>
-            {eigenNamen?.ondernemer ? (
-              <p className="text-xs text-slate-400 mt-0.5">
-                Rekeninghouder: {eigenNamen.ondernemer}{" "}
-                <button onClick={() => setShowRekeninghouderModal(true)} className="underline decoration-dotted hover:text-slate-200">
-                  wijzigen
-                </button>
-              </p>
-            ) : (
-              <button
-                onClick={() => setShowRekeninghouderModal(true)}
-                className="text-xs text-slate-400 underline decoration-dotted hover:text-slate-200 mt-0.5"
-              >
-                + Rekeninghouder invullen
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className="text-xs text-slate-400 flex items-center gap-1.5"
-              title="Automatisch opgeslagen in déze browser — geen bestand. Verdwijnt als je browsergegevens wist. Gebruik 'Project opslaan' voor een bestand dat je kunt bewaren of meenemen."
-            >
-              {saveState === "saving" && (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
-                </>
-              )}
-              {saveState === "saved" && (
-                <>
-                  <Check className="h-3 w-3 text-emerald-400" />
-                  Automatisch opgeslagen in browser{lastSavedAt ? `: ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""}
-                </>
-              )}
-              {saveState === "error" && (
-                <>
-                  <AlertCircle className="h-3 w-3 text-rose-400" /> Opslaan in browser mislukt
-                </>
-              )}
-            </span>
-            {/* v227 — "Bestand laden" stond eerst als aparte knop in de sticky navbalk (zie
-                StickyTopNav), maar hoort inhoudelijk bij de andere bestandsacties hier in de
-                header, vlak vóór "Project opslaan" — vandaar de verplaatsing. Tweede regel in
-                kleiner lettertype toont welke bestandsformaten worden geaccepteerd, zodat de
-                knoptekst zelf kort blijft. */}
-            <button
-              onClick={() => bankFileInputRef.current?.click()}
-              className="text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg px-3 py-1.5 flex flex-col items-center leading-tight"
-              title="Voeg een nieuw bank-bestand toe (CSV, XLS, MT940 of CAMT.053)"
-            >
-              <span className="flex items-center gap-1">
-                <Upload className="h-3.5 w-3.5" /> Bestand laden
-              </span>
-              <span className="text-[10px] font-normal text-teal-100">(CSV/XLS, MT940, CAMT.053)</span>
-            </button>
-            <input
-              ref={bankFileInputRef}
-              type="file"
-              multiple
-              accept=".csv,.xlsx,.xls,.940,.sta,.mt940,.swi,.txt,.xml"
-              className="hidden"
-              onChange={(e) => {
-                handleFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            {parsedFiles.length > 0 && (
-              <button
-                onClick={saveProjectFile}
-                className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
-                title="Download een projectbestand (.json) met alle transacties en instellingen — dit is het bestand om te bewaren, te delen of op een andere computer verder te werken. Anders dan de automatische opslag hierboven blijft dit bestand ook bewaard als je browsergegevens wist."
-              >
-                <Download className="h-3.5 w-3.5" /> Project opslaan
-              </button>
-            )}
-            <button
-              onClick={() => projectFileInputRef.current.click()}
-              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
-              title="Laad een eerder opgeslagen projectbestand (.json)"
-            >
-              <Upload className="h-3.5 w-3.5" /> Project laden
-            </button>
-            <input
-              ref={projectFileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) loadProjectFile(e.target.files[0]);
-                e.target.value = "";
-              }}
-            />
-            {parsedFiles.length > 0 && (
-              <button
-                onClick={clearAllData}
-                className="text-xs font-medium text-rose-700 bg-white hover:bg-rose-50 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Wis alles
-              </button>
-            )}
-            <button
-              onClick={() => setShowHelp((v) => !v)}
-              className="text-xs font-medium text-slate-800 bg-white hover:bg-slate-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1"
-            >
-              Help en uitleg
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-stone-50 text-slate-900 font-sans flex">
+      {/* Fase 1 van de dashboard-restyling: de donkere header-balk + StickyTopNav zijn vervangen
+          door deze vaste linker zijbalk (AppSidebar.jsx) — zelfde handlers/refs als voorheen,
+          alleen de plek van de knoppen is anders. Zie het bouwvoorstel-document. */}
+      <AppSidebar
+        orgName="Over Rood"
+        rekeninghouderNaam={eigenNamen?.ondernemer}
+        onEditRekeninghouder={() => setShowRekeninghouderModal(true)}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        tabsVisible={tabsVisible}
+        controlerenBadge={controlerenBadge}
+        instellingenBadge={instellingenBadge}
+        onLoadFile={() => bankFileInputRef.current?.click()}
+        onSaveProject={saveProjectFile}
+        canSaveProject={parsedFiles.length > 0}
+        onLoadProject={() => projectFileInputRef.current.click()}
+        onClearAll={clearAllData}
+        canClearAll={parsedFiles.length > 0}
+        onToggleHelp={() => setShowHelp((v) => !v)}
+        saveState={saveState}
+        lastSavedAt={lastSavedAt}
+      />
+      <input
+        ref={bankFileInputRef}
+        type="file"
+        multiple
+        accept=".csv,.xlsx,.xls,.940,.sta,.mt940,.swi,.txt,.xml"
+        className="hidden"
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={projectFileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) loadProjectFile(e.target.files[0]);
+          e.target.value = "";
+        }}
+      />
 
-      <StickyTopNav items={topNavItems} activeTab={activeTab} />
+      <div className="flex-1 min-w-0">
 
       {updateAvailable && <UpdateAvailableBanner />}
 
@@ -3223,8 +3159,22 @@ export default function App() {
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+        {/* Fase 1, dashboard-restyling: de "Dossierstatus {jaar}"-kaart (key "yearStatus") stond
+            voorheen als gelijkwaardige tegel tussen de andere dashboardCards in DashboardOverview —
+            nu prominent bovenaan in DashboardHeader (ringmeter + statusregels), de rest van de
+            (ongewijzigde) dashboardCards-data als kaartgrid eronder. Zie het bouwvoorstel: de echte
+            data is een platte lijst tegels, geen 4 categorieën zoals in de eerste mockup — hier dus
+            per tegel een eigen kaart i.p.v. een verzonnen groepering. */}
         <div style={sectionTabStyle("overzicht")}>
-          <DashboardOverview cards={dashboardCards} />
+          <DashboardHeader
+            title="Overzicht"
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+          />
+          <div className="mt-5">
+            <SectionCardGrid cards={dashboardCards.filter((c) => c.key !== "yearStatus")} />
+          </div>
         </div>
 
         {/* v258 — "Wat deze tool niet kan weten" stond ver onderaan het Overzicht-tabblad (na de
@@ -4395,6 +4345,7 @@ export default function App() {
       )}
 
       <ConfirmBanner message={confirmMessage} onConfirm={doClearAllData} onCancel={() => setConfirmMessage(null)} />
+      </div>
     </div>
   );
 }
