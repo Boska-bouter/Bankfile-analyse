@@ -247,6 +247,15 @@ function buildYearSectionBv(
   // de omzet (som van box 1a/1b per kwartaal) geeft de omzet inclusief BTW.
   const btwOverOmzetTotaal = kwartalen.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
   const omzetInclBtw = (ib.opbrengsten.totaal || 0) + btwOverOmzetTotaal;
+  // Welk tarief hoort bij de omzet incl. BTW hierboven — gebaseerd op welke van de twee
+  // btw-tarieven dit jaar daadwerkelijk verschuldigd is (niet aangenomen), zodat een dossier met
+  // uitsluitend 9%-omzet niet ten onrechte "21%" toont.
+  const btwTariefLabel = (() => {
+    const gebruikt21 = kwartalen.some((q) => (q.verschuldigdBtw21 || 0) > 0);
+    const gebruikt9 = kwartalen.some((q) => (q.verschuldigdBtw9 || 0) > 0);
+    if (gebruikt21 && gebruikt9) return "21% en 9%";
+    return gebruikt9 ? "9%" : "21%";
+  })();
 
   // v262 — zelfde drieluik als de zzp-aangifte: een kerncijfers-kaart met "Resultaat vóór Vpb" als
   // uitgelichte kop en "Resultaat ná Vpb" als uitgelicht resultaat, een losse (grijze) BTW-kaart, en
@@ -257,8 +266,8 @@ function buildYearSectionBv(
       <span class="bedrag-groot">${eur(summary.winst)}</span>
     </div>
     <div class="kerncijfers-stappen">
+      ${btwOverOmzetTotaal > 0 ? `<div><span>Omzet incl. BTW (${btwTariefLabel})</span><span>${eur(omzetInclBtw)}</span></div>` : ""}
       <div><span>Omzet excl. BTW</span><span>${eur(ib.opbrengsten.totaal)}</span></div>
-      ${btwOverOmzetTotaal > 0 ? `<div><span>Omzet incl. BTW</span><span>${eur(omzetInclBtw)}</span></div>` : ""}
       <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
     </div>
     <div class="kerncijfers-resultaat">
