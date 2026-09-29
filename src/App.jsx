@@ -365,6 +365,7 @@ export default function App() {
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
   const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
+  const incomeReviewSectionRef = useRef(null); // Fase 2 — kaart "Herkomst van geld" (Controleren)
   const categorySectionRef = useRef(null); // Fase 2 — kaart "Categorieën" (Controleren)
   const automatiseringSectionRef = useRef(null); // Fase 2 — kaart "Automatisering" (Instellingen)
 
@@ -2417,6 +2418,20 @@ export default function App() {
         },
       },
       {
+        // Fase 2 — deze stap (IncomeReviewStep, "van wie komt dit inkomen") had nog geen eigen
+        // kaart/badge, terwijl het net als de andere controlestappen hier een open punt is dat
+        // afgehandeld moet worden — hoort inhoudelijk (net als personReview) bij "Herkomst van
+        // geld" uit het bouwvoorstel.
+        key: "incomeReview",
+        title: "Herkomst van inkomsten",
+        icon: <Users className="h-3.5 w-3.5" />,
+        value: pendingIncomeReview.length,
+        subtitle: pendingIncomeReview.length > 0 ? "nog te bepalen (zakelijk/privé)" : "Niets openstaand",
+        tone: pendingIncomeReview.length > 0 ? "attention" : "ok",
+        hint: "Openstaande herkomst-van-inkomsten bekijken",
+        onClick: () => jumpToSection(incomeReviewSectionRef),
+      },
+      {
         key: "personReview",
         title: "Overboekingen aan personen",
         icon: <Users className="h-3.5 w-3.5" />,
@@ -2475,6 +2490,7 @@ export default function App() {
     transactions.length,
     controlerenImportProblemCount,
     confidenceSummary,
+    pendingIncomeReview.length,
     pendingPersonReview.length,
     pendingOverigReview.length,
     pendingDuplicateCount,
@@ -2802,7 +2818,7 @@ export default function App() {
     };
     return [
       g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
-      g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["personReview"]),
+      g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview"]),
       g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
       {
         key: "categorieen",
@@ -3945,7 +3961,7 @@ export default function App() {
         )}
 
         {transactions.length > 0 && pendingIncomeReview.length > 0 && (
-          <div style={sectionTabStyle("controleren")}>
+          <div ref={incomeReviewSectionRef} style={sectionTabStyle("controleren")}>
             <IncomeReviewStep
               items={pendingIncomeReview}
               totalCount={incomeSummary.length}
