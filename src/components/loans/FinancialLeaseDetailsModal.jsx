@@ -67,6 +67,13 @@ function formFromSegment(segment) {
     // bij soort "auto". Optioneel en standaard leeg, dus geen enkel bestaand contract heeft dit al
     // ingevuld.
     kenteken: s.kenteken ?? "",
+    // Voertuigtype (alleen bij soort "auto") en KIA-beoordeling — samen bepalen ze of dit lease-object
+    // meetelt in de KIA-grondslag (zie computeLeaseInvesteringenForYear in tax/autoBijtelling.js): KIA
+    // geldt fiscaal niet voor een personenauto (de standaardwaarde, dus elk bestaand dossier telt
+    // bewust niet mee), alleen voor een bestelauto/bedrijfsbus zonder personenvervoer. Beide optioneel
+    // en standaard leeg, zodat een bestaand contract exact hetzelfde blijft rekenen als voorheen.
+    voertuigtype: s.voertuigtype ?? "",
+    kiaStatus: s.kiaStatus ?? "",
   };
 }
 
@@ -88,6 +95,7 @@ function blankVervolgContract(vorigeSegment) {
   }
   if (vorigeSegment?.soort) form.soort = vorigeSegment.soort;
   if (vorigeSegment?.soort === "auto" && vorigeSegment.kenteken) form.kenteken = vorigeSegment.kenteken;
+  if (vorigeSegment?.soort === "auto" && vorigeSegment.voertuigtype) form.voertuigtype = vorigeSegment.voertuigtype;
   return form;
 }
 
@@ -110,6 +118,8 @@ function cleanSegment(form) {
     bijtellingspercentage: form.soort === "auto" ? n(form.bijtellingspercentage) : null,
     privegebruikMeerDan500kmPerJaar: form.soort === "auto" ? form.privegebruikMeerDan500kmPerJaar || {} : null,
     kenteken: form.soort === "auto" ? (form.kenteken || null) : null,
+    voertuigtype: form.soort === "auto" ? (form.voertuigtype || null) : null,
+    kiaStatus: form.soort ? (form.kiaStatus || null) : null,
   };
 }
 
@@ -511,6 +521,16 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 />
               </label>
               <label className="text-sm">
+                <span className="block text-xs font-medium text-slate-600 mb-1">Voertuigtype (voor KIA)</span>
+                <select
+                  value={form.voertuigtype || "personenauto"} onChange={set("voertuigtype")}
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+                >
+                  <option value="personenauto">Personenauto</option>
+                  <option value="bestelauto">Bestelauto/bedrijfsbus (geen personenvervoer mogelijk)</option>
+                </select>
+              </label>
+              <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Cataloguswaarde (voor bijtelling)</span>
                 <input
                   type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")}
@@ -592,6 +612,41 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {form.soort && (
+          <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+              Kleinschaligheidsinvesteringsaftrek (KIA)
+            </p>
+            {form.soort === "auto" && form.voertuigtype !== "bestelauto" ? (
+              <p className="text-xs text-slate-500">
+                KIA geldt fiscaal niet voor personenauto's — dit leaseobject telt niet mee in de
+                KIA-grondslag. Betreft het toch een bestelauto/bedrijfsbus waarmee geen personenvervoer
+                mogelijk is? Zet "Voertuigtype" hierboven op "Bestelauto/bedrijfsbus".
+              </p>
+            ) : (
+              <>
+                <label className="text-sm block">
+                  <span className="block text-xs font-medium text-slate-600 mb-1">KIA-beoordeling voor dit bedrijfsmiddel</span>
+                  <select
+                    value={form.kiaStatus || "controleren"}
+                    onChange={(e) => onChange({ ...form, kiaStatus: e.target.value === "controleren" ? "" : e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+                  >
+                    <option value="controleren">🟠 Handmatig controleren (standaard)</option>
+                    <option value="kwalificeert">🟢 Waarschijnlijk kwalificerend</option>
+                    <option value="uitgesloten">⚪ Niet meegenomen (sluit uit van KIA)</option>
+                  </select>
+                </label>
+                <p className="text-xs text-slate-400 mt-1">
+                  Niet elk bedrijfsmiddel kwalificeert (bijv. een drempelbedrag per object, of grond) —
+                  deze tool kent die uitzonderingen niet uit bankgegevens, dus controleer dit zelf.
+                  "Niet meegenomen" sluit dit object uit van het KIA-bedrag in het aangiftevoorstel.
+                </p>
+              </>
+            )}
           </div>
         )}
 

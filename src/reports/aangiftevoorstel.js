@@ -13,7 +13,7 @@ import { classifyContinuityGap } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
-import { computeLeaseAutoKostenVoorJaar, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
+import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "../tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
@@ -205,7 +205,15 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // dezelfde regel als hierboven bij ibEstimate: alleen relevant (en dus "aan") in het
   // ondernemersaftrekVoorJaar-pad, mét startersaftrek — anders altijd "uit" (nooit onder € 0).
   const winstUitsplitsing = computeBelastbareWinstUitsplitsing(summary.winst, year, ondernemersaftrekBedrag, ondernemersaftrekVoorJaar ? startersaftrekToegepast : false);
-  const investeringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
+  // KIA-grondslag: activaregister + financiële-lease-objecten (auto/machine) samen — zie
+  // computeLeaseInvesteringenForYear in tax/autoBijtelling.js voor waarom een geleasede personenauto
+  // daar bewust NIET in meetelt (KIA geldt daar fiscaal niet voor), en een bestelauto/machine wel.
+  const activaInvesteringenForYear = computeInvesteringenForYear(activaSummary, activaDetails || {}, year);
+  const leaseInvesteringenForYear = computeLeaseInvesteringenForYear(leaseSummary, leaseDetails, year);
+  const investeringenForYear = {
+    totaalInvestering: activaInvesteringenForYear.totaalInvestering + leaseInvesteringenForYear.totaalInvestering,
+    onvolledig: activaInvesteringenForYear.onvolledig + leaseInvesteringenForYear.onvolledig,
+  };
   const mogelijkeKia = investeringenForYear.totaalInvestering > 0 ? computeMogelijkeKia(investeringenForYear.totaalInvestering, year) : 0;
   // De "mogelijke KIA" hierboven is alleen getoond, niet verwerkt in de IB-schatting hierboven: KIA
   // is een aftrekpost op de winst zelf (vóór zelfstandigenaftrek/mkb-winstvrijstelling), dus wordt
@@ -626,9 +634,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. personenauto's, grond en woningen meestal niet, en elk bedrijfsmiddel moet minimaal ca. €450 kosten) — deze tool kent dat onderscheid niet uit bankgegevens. Controleer zelf welke investeringen hierboven daadwerkelijk kwalificeren voordat je de KIA toepast.</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze tool niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
   ` : ""}
-  ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel.</p>`}
+  ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
 
   ${algemeneGegevensHtml}`;
 }

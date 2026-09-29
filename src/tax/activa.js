@@ -113,13 +113,17 @@ export function computeActivaAfschrijvingForYear(activaSummary, activaDetails, y
 // afschrijving (die over meerdere jaren loopt) telt voor KIA het jaar van aanschaf, niet de jaren
 // erna. Activa zonder volledig ingevulde gegevens tellen niet mee in het bedrag, maar wel in de
 // "onvolledig"-teller, zodat een KIA-indicatie niet stilzwijgend een te laag investeringsbedrag
-// toont.
+// toont. Een handmatig ingevulde `kiaStatus: "uitgesloten"` (zie ActivaDetailsModal.jsx) sluit een
+// bedrijfsmiddel altijd uit — bijv. een toch niet-kwalificerend object (personenauto, te laag
+// aanschafbedrag). Zonder ingevulde kiaStatus (elk bestaand dossier) telt een activum gewoon mee,
+// exact het oude gedrag.
 export function computeInvesteringenForYear(activaSummary, activaDetails, year) {
   let totaalInvestering = 0;
   let onvolledig = 0;
   for (const activum of activaSummary) {
     const details = activaDetails[activum.key];
     if (!details || details.onbekend) { onvolledig++; continue; }
+    if (details.kiaStatus === "uitgesloten") continue;
     if (!details.aanschafwaarde || !details.aanschafdatum) { onvolledig++; continue; }
     if (new Date(details.aanschafdatum).getFullYear() === year) {
       totaalInvestering += Number(details.aanschafwaarde);

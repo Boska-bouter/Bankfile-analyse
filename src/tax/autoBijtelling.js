@@ -151,6 +151,37 @@ function groupSegmentenOpKenteken(segments) {
   return groups;
 }
 
+// KIA-grondslag vanuit financiële lease (auto/machine met "soort" ingevuld) — zelfde
+// kenteken-groepering als de afschrijving hierboven: bij een herfinanciering/vervolgcontract van
+// dezelfde auto is alleen het EERSTE (oudste) segment van de groep de daadwerkelijke aanschaf, dus
+// telt alleen dát segment (en alleen in het jaar van zijn eigen startdatum) mee als investering.
+// KIA geldt fiscaal niet voor personenauto's — alleen een lease-auto expliciet aangemerkt als
+// "bestelauto/bedrijfsbus" (voertuigtype, zie FinancialLeaseDetailsModal.jsx) telt hier mee; een
+// personenauto, of een auto zonder ingevuld voertuigtype (elk bestaand dossier — dat is het
+// gebruikelijke geval), telt bewust niet mee. Een machine kent dit onderscheid niet en telt gewoon
+// mee. Een handmatig ingevulde `kiaStatus: "uitgesloten"` sluit een object hoe dan ook uit, ook een
+// bestelauto/machine die anders zou meetellen.
+export function computeLeaseInvesteringenForYear(leaseSummary, leaseDetails, year) {
+  let totaalInvestering = 0;
+  let onvolledig = 0;
+  for (const lease of leaseSummary || []) {
+    if (lease.category !== "Lease (financieel)") continue;
+    const details = leaseDetails?.[lease.key];
+    if (!details || details.onbekend) continue;
+    const segments = Array.isArray(details.contracts) && details.contracts.length > 0 ? details.contracts : [details];
+    for (const group of groupSegmentenOpKenteken(segments)) {
+      const primary = group[0];
+      if (primary.kiaStatus === "uitgesloten") continue;
+      if (primary.soort === "auto" && primary.voertuigtype !== "bestelauto") continue; // personenauto (of onbekend) — geen KIA
+      if (!primary.koopprijs || !primary.startdatum) { onvolledig++; continue; }
+      if (new Date(primary.startdatum).getFullYear() === year) {
+        totaalInvestering += computeAanschafwaardeBedrijfsmiddel(primary);
+      }
+    }
+  }
+  return { totaalInvestering, onvolledig };
+}
+
 // Volledige uitsplitsing, voor het aangiftevoorstel, van alle financiële-lease-contracten die als
 // auto of machine zijn gekapitaliseerd (soort ingevuld), voor één specifiek jaar. Geeft `null`
 // terug als er dat jaar helemaal geen enkel contract met `soort` ingevuld is — dus voor de

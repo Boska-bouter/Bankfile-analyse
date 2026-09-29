@@ -5,6 +5,7 @@ import {
   resolveZelfstandigenaftrekStatusForYear,
 } from "../../tax/incomeTax.js";
 import { computeInvesteringenForYear } from "../../tax/activa.js";
+import { computeLeaseInvesteringenForYear } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
@@ -18,7 +19,7 @@ export default function PersoonlijkeAannamesPanel({
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
   kmVergoedingDetails, onSetKmVergoedingField,
-  activaSummary, activaDetails, onOpenHelp,
+  activaSummary, activaDetails, leaseSummary, leaseDetails, onOpenHelp,
   gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
 }) {
   const [open, setOpen] = useState(false);
@@ -51,7 +52,13 @@ export default function PersoonlijkeAannamesPanel({
   const heffingskortingen = estimateHeffingskortingen(winst, activeYear, zelfstandigenaftrekToegepast);
   const scenarios = status === "onbekend" ? estimateIncomeTaxScenarios(winst, activeYear) : null;
 
-  const { totaalInvestering, onvolledig: activaOnvolledig } = computeInvesteringenForYear(activaSummary || [], activaDetails || {}, activeYear);
+  // KIA-grondslag: activaregister + financiële-lease-objecten (auto/machine) samen — zie
+  // computeLeaseInvesteringenForYear in tax/autoBijtelling.js voor waarom een geleasede personenauto
+  // daar bewust NIET in meetelt.
+  const activaInvestering = computeInvesteringenForYear(activaSummary || [], activaDetails || {}, activeYear);
+  const leaseInvestering = computeLeaseInvesteringenForYear(leaseSummary || [], leaseDetails || {}, activeYear);
+  const totaalInvestering = activaInvestering.totaalInvestering + leaseInvestering.totaalInvestering;
+  const activaOnvolledig = activaInvestering.onvolledig + leaseInvestering.onvolledig;
   const mogelijkeKia = totaalInvestering > 0 ? computeMogelijkeKia(totaalInvestering, activeYear) : 0;
 
   const huurPercentageRaw = huurZakelijkPercentageStatus?.[activeYear];
@@ -141,16 +148,16 @@ export default function PersoonlijkeAannamesPanel({
               Mogelijke investeringsaftrek (KIA) {activeYear}: {totaalInvestering > 0 ? (
                 <strong>{eur(mogelijkeKia)}</strong>
               ) : (
-                <span className="text-slate-400">€0,00 (geen investeringen in bedrijfsmiddelen gevonden dit jaar in het Activa-paneel)</span>
+                <span className="text-slate-400">€0,00 (geen investeringen in bedrijfsmiddelen gevonden dit jaar in het Activa-paneel of bij financiële lease)</span>
               )}
               {activaOnvolledig > 0 && (
                 <span className="block mt-1 text-amber-700">
-                  ⚠ {activaOnvolledig} bedrijfsmiddel(en) nog niet (volledig) ingevuld in het Activa-paneel — de KIA hierboven is daardoor mogelijk te laag.
+                  ⚠ {activaOnvolledig} bedrijfsmiddel(en)/leaseobject(en) nog niet (volledig) ingevuld — de KIA hierboven is daardoor mogelijk te laag.
                 </span>
               )}
               {totaalInvestering > 0 && (
                 <span className="block mt-1 text-slate-400">
-                  Niet elk bedrijfsmiddel telt mee voor KIA (bijv. personenauto's en grond meestal niet) — controleer dit zelf per aanschaf. Dit is een mogelijke, geen definitieve aftrek.
+                  Een geleasede personenauto telt hier al niet mee (KIA geldt daar fiscaal niet voor); overige uitzonderingen (bijv. grond) kent deze tool niet — controleer per bedrijfsmiddel de "KIA-beoordeling". Dit is een mogelijke, geen definitieve aftrek.
                 </span>
               )}
             </p>

@@ -10,6 +10,10 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
     aanschafdatum: details?.aanschafdatum ?? activum.tx.date.toISOString().slice(0, 10),
     afschrijvingstermijnJaren: details?.afschrijvingstermijnJaren ?? "",
     restwaarde: details?.restwaarde ?? "",
+    // KIA-beoordeling (kleinschaligheidsinvesteringsaftrek) — optioneel en standaard "controleren",
+    // zodat een bestaand dossier (zonder dit veld) precies hetzelfde blijft meetellen als voorheen.
+    // Zie computeInvesteringenForYear in tax/activa.js.
+    kiaStatus: details?.kiaStatus ?? "",
   });
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -23,6 +27,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
       aanschafdatum: form.aanschafdatum || null,
       afschrijvingstermijnJaren: n(form.afschrijvingstermijnJaren),
       restwaarde: n(form.restwaarde),
+      kiaStatus: form.kiaStatus || null,
     });
     onClose();
   };
@@ -95,6 +100,26 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
           {schema.length === 0 && form.aanschafwaarde && (
             <p className="text-xs text-slate-400">Vul de afschrijvingstermijn in om het schema te berekenen.</p>
           )}
+
+          <label className="text-sm block">
+            <span className="block text-xs font-medium text-slate-600 mb-1">
+              KIA-beoordeling (kleinschaligheidsinvesteringsaftrek)
+            </span>
+            <select
+              value={form.kiaStatus || "controleren"}
+              onChange={(e) => setForm((prev) => ({ ...prev, kiaStatus: e.target.value === "controleren" ? "" : e.target.value }))}
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+            >
+              <option value="controleren">🟠 Handmatig controleren (standaard)</option>
+              <option value="kwalificeert">🟢 Waarschijnlijk kwalificerend</option>
+              <option value="uitgesloten">⚪ Niet meegenomen (sluit uit van KIA)</option>
+            </select>
+            <span className="block text-xs text-slate-400 mt-1">
+              Niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. een personenauto, grond, of een te laag
+              aanschafbedrag) — deze tool kent dat onderscheid niet uit bankgegevens. "Niet meegenomen"
+              sluit dit bedrijfsmiddel uit van het KIA-bedrag in het aangiftevoorstel.
+            </span>
+          </label>
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>

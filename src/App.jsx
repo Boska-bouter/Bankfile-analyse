@@ -4005,6 +4005,8 @@ export default function App() {
                 onSetKmVergoedingField={setKmVergoedingField}
                 activaSummary={activaSummary}
                 activaDetails={activaDetails}
+                leaseSummary={leaseSummary}
+                leaseDetails={leaseDetails}
                 gedeeldeHuur={gedeeldeHuurForActiveYear}
                 huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
                 onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
