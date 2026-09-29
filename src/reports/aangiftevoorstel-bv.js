@@ -12,7 +12,7 @@ import { estimateVpb, estimateBox2, checkGebruikelijkLoon } from "../tax/vpb.js"
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop } from "../tax/bv.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
-import { CONTINUITY_GAP_THRESHOLD } from "../importers/transactions.js";
+import { classifyContinuityGap } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
 import { computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
@@ -40,7 +40,7 @@ function categorieDetailHtml(perCategorie) {
 
 const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend");
 
-function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar) {
+function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar) {
   if (!importDiagnostics || importDiagnostics.length === 0) return "";
   const yearStart = new Date(year, 0, 1);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59);
@@ -53,7 +53,12 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
     .join("");
   const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
   const gatenHtml = gatenDitJaar.length > 0
-    ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}) — de moeite waard om na te gaan.</p>`
+    ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan €1000) — de moeite waard om na te gaan.</p>`
+    : "";
+  // v260 — €500–€999 is nog geen "gat" (dat blijft ≥€1000), maar wel meer dan de gebruikelijke
+  // afronding — een lichtere, informatieve opmerking i.p.v. de rode waarschuwing hierboven.
+  const geelGatenHtml = gatenDitJaar.length === 0 && geelGatenDitJaar?.length > 0
+    ? `<p class="toelichting">Let op: tussen ${esc(geelGatenDitJaar[0].fileA)} (t/m ${fmtDatum(geelGatenDitJaar[0].aTo)}) en ${esc(geelGatenDitJaar[0].fileB)} (vanaf ${fmtDatum(geelGatenDitJaar[0].bFrom)}) sluit het saldo niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}) — nog geen echt gat, maar wel de moeite waard om even te bekijken.</p>`
     : "";
   return `
   <h2>Algemene gegevens</h2>
@@ -62,7 +67,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
     <tbody>${bestandRows}</tbody>
   </table>
   <p class="toelichting">Aantal zakelijke transacties in ${year}: ${zakTxDitJaar}.</p>
-  ${gatenHtml}`;
+  ${gatenHtml}${geelGatenHtml}`;
 }
 
 function buildYearSectionBv(
@@ -124,9 +129,12 @@ function buildYearSectionBv(
   const ev = evVerloop[year] || { kapitaalstorting: 0, resultaatNaVpb: summary.winst - vpbEstimate.belasting, dividend: dividendDitJaar, standEindJaar: null };
 
   const gatenDitJaar = (fileContinuity || []).filter(
-    (g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
+    (g) => !g.ok && classifyContinuityGap(g.diff) === "rood" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
   );
-  const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar);
+  const geelGatenDitJaar = (fileContinuity || []).filter(
+    (g) => !g.ok && classifyContinuityGap(g.diff) === "geel" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year)
+  );
+  const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar);
 
   const zakTotals = {};
   const zakBtwByCat = {};
@@ -168,13 +176,19 @@ function buildYearSectionBv(
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
     (tx) => !tx.isMirror && tx.confidence?.level !== "override" && tx.confidence?.level !== "keyword" && tx.confidence?.level !== "heuristic"
   ).length;
-  const yearStatus = gatenDitJaar.length > 0 ? "rood" : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 ? "groen" : "oranje";
+  const yearStatus =
+    gatenDitJaar.length > 0
+      ? "rood"
+      : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
+      ? "groen"
+      : "oranje";
 
   const openPunten = [];
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
   if (yc.quartersNietAangegeven.length > 0) openPunten.push(`Nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`Nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
+  else if (geelGatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(geelGatenDitJaar[0].fileA)} en ${esc(geelGatenDitJaar[0].fileB)} sluit niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}, nog geen echt gat)`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);
   if (dgaSalarisDitJaar > 0 && !gebruikelijkLoon.voldoetVermoedelijk) openPunten.push(`DGA-salaris (${eur(dgaSalarisDitJaar)}${bijtellingPrivegebruikAuto > 0 ? ` + bijtelling auto ${eur(bijtellingPrivegebruikAuto)}` : ""}) lijkt onder het gebruikelijk loon van ${eur(gebruikelijkLoon.minimum)} te liggen`);
   if (bijtellingPrivegebruikAuto > 0) {

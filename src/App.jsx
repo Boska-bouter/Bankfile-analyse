@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, CONTINUITY_GAP_THRESHOLD } from "./importers/transactions.js";
+import { buildTransactions, checkBalanceConsistency, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
@@ -1958,16 +1958,18 @@ export default function App() {
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
       // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
       const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic").length;
-      // Een verschil van een paar cent (of zelfs een paar euro) bij een bestandsovergang is meestal
-      // gewoon een afrondingsverschil, geen teken dat er data ontbreekt — pas boven deze drempel is
-      // het de moeite waard om het als een echt gat te behandelen (zie CONTINUITY_GAP_THRESHOLD).
-      const gatDitJaar = fileContinuity.some((g) => !g.ok && Math.abs(g.diff) >= CONTINUITY_GAP_THRESHOLD && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      // v260 — drie niveaus i.p.v. één harde grens (zie classifyContinuityGap in transactions.js):
+      // tot €500 verschil bij een bestandsovergang is voor het dossier verwaarloosbaar (groen, geen
+      // invloed op de jaarstatus), €500–€999 is "geel" (zet de status op zijn minst op oranje, ook
+      // als verder alles compleet is), vanaf €1000 is het een echt gat (rood).
+      const gatDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "rood" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      const geelDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "geel" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
       let status;
       if (gatDitJaar) status = "rood";
-      else if (openPunten === 0 && onzekerDitJaar === 0) status = "groen";
+      else if (openPunten === 0 && onzekerDitJaar === 0 && !geelDitJaar) status = "groen";
       else status = "oranje";
 
-      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, openPunten, aannamesCount, werkelijkAangifteStatus };
+      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, werkelijkAangifteStatus };
     }
     return map;
   }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
@@ -2111,9 +2113,11 @@ export default function App() {
                 },
               ],
               subtitle: yearProgress?.gatDitJaar
-                ? "Gat in bestandscontinuïteit"
+                ? "Gat in bestandscontinuïteit (verschil ≥ €1000)"
                 : yearProgress?.onzekerDitJaar > 0
                 ? `${yearProgress.onzekerDitJaar} onzeker dit jaar`
+                : yearProgress?.geelDitJaar
+                ? "Saldo tussen bestanden sluit niet helemaal aan (verschil €500–€999)"
                 : null,
               tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
               hint: "Naar de aangifte-checklist voor dit jaar",
@@ -2334,14 +2338,17 @@ export default function App() {
 
   // v240 — hoeveel geladen bestanden een saldo-afwijking hebben (per bestand zelf, via
   // checkBalanceConsistency) of een echt aansluitgat hebben met het volgende bestand van dezelfde
-  // rekening (computeFileContinuity) — hetzelfde "boven de CONTINUITY_GAP_THRESHOLD" criterium als
-  // elders in de tool (kleine afrondingsverschillen tellen bewust niet mee). Gebruikt door de
-  // "Import controle"-kaart in het nieuwe mini-dashboard op het Controleren-tabblad hieronder.
+  // rekening (computeFileContinuity). Gebruikt door de "Import controle"-kaart in het mini-
+  // dashboard op het Controleren-tabblad hieronder. v260 — de twee soorten afwijking hebben elk hun
+  // eigen, losstaande drempel: de saldocontrole bínnen één bestand blijft bij €100 (ongewijzigd,
+  // zie INTRA_FILE_BALANCE_THRESHOLD), de aansluiting tússen bestanden gebruikt nu de rode grens
+  // van de drie niveaus (€1000, zie classifyContinuityGap) — een verschil van €500–€999 daar is nu
+  // "geel" (de moeite waard om te bekijken) en telt hier bewust niet meer als een telbaar probleem.
   const controlerenImportProblemCount = useMemo(() => {
     const balansProblemen = importDiagnostics.filter(
-      (d) => d.balanceCheck && !d.balanceCheck.ok && Math.abs(d.balanceCheck.diff) >= CONTINUITY_GAP_THRESHOLD
+      (d) => d.balanceCheck && !d.balanceCheck.ok && Math.abs(d.balanceCheck.diff) >= INTRA_FILE_BALANCE_THRESHOLD
     ).length;
-    const aansluitProblemen = fileContinuity.filter((c) => !c.ok && Math.abs(c.diff) >= CONTINUITY_GAP_THRESHOLD).length;
+    const aansluitProblemen = fileContinuity.filter((c) => !c.ok && classifyContinuityGap(c.diff) === "rood").length;
     return balansProblemen + aansluitProblemen;
   }, [importDiagnostics, fileContinuity]);
 

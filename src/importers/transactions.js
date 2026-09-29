@@ -150,11 +150,27 @@ export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
 // beginsaldo 1-1-2024. Puur informatief: een klein verschil is heel normaal (bank-afronding, een
 // mutatie die net over de jaargrens valt, of simpelweg twee afzonderlijke periode-exports die niet
 // exact op elkaar aansluiten) en betekent niet per se een fout in een van beide bestanden.
-// Onder dit bedrag wordt een niet-aansluitend saldo tussen twee opeenvolgende bestanden van
-// dezelfde rekening als verwaarloosbaar behandeld (meestal gewoon een afrondingsverschil, geen
-// teken dat er een periode ontbreekt) — pas erboven is het de moeite waard om als een echt gat te
-// signaleren.
-export const CONTINUITY_GAP_THRESHOLD = 100;
+//
+// v260 — was één harde grens (€100, alles daarboven "rood"/een echt gat). Op expliciet verzoek nu
+// drie niveaus, specifiek voor het aansluitverschil tussen twee bestanden bij zo'n overgang: tot
+// €500 verschil maakt voor het dossier meestal weinig uit (groen, alleen een opmerking), €500–€999
+// is de moeite waard om even te bekijken (geel), en pas vanaf €1000 telt het als een echt gat
+// (rood) dat de jaarstatus beïnvloedt en in het Aangiftevoorstel als waarschuwing verschijnt.
+export const CONTINUITY_GAP_GEEL = 500;
+export const CONTINUITY_GAP_ROOD = 1000;
+// Bestaande code die vraagt "is dit een écht gat" (de rode grens) gebruikt deze naam nog.
+export const CONTINUITY_GAP_THRESHOLD = CONTINUITY_GAP_ROOD;
+// Losstaande, ongewijzigde tolerantie voor de saldocontrole bínnen één bestand (begin- + mutaties =
+// eindsaldo van dát bestand) — een ander soort check dan de aansluiting tussen twee bestanden
+// hierboven, en bewust niet meegeschoven naar €1000 toen die grens drie niveaus kreeg.
+export const INTRA_FILE_BALANCE_THRESHOLD = 100;
+
+export function classifyContinuityGap(diff) {
+  const abs = Math.abs(diff);
+  if (abs >= CONTINUITY_GAP_ROOD) return "rood";
+  if (abs >= CONTINUITY_GAP_GEEL) return "geel";
+  return "groen";
+}
 
 export function computeFileContinuity(diagnostics, accountTypeByFile) {
   const results = [];
@@ -172,9 +188,11 @@ export function computeFileContinuity(diagnostics, accountTypeByFile) {
       if (b.from <= a.to) continue; // overlappende periodes — geen zinvol aansluitpunt
       const bOpening = b.balanceCheck.fileOpeningBalance;
       const diff = Math.round((bOpening - a.balanceCheck.last) * 100) / 100;
+      const ok = Math.abs(diff) < 0.01;
       results.push({
         type, fileA: a.fileName, fileB: b.fileName, aTo: a.to, bFrom: b.from,
-        aLastBalance: a.balanceCheck.last, bOpeningBalance: bOpening, diff, ok: Math.abs(diff) < 0.01,
+        aLastBalance: a.balanceCheck.last, bOpeningBalance: bOpening, diff, ok,
+        severity: ok ? "groen" : classifyContinuityGap(diff),
       });
     }
   }

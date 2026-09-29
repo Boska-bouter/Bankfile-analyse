@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle, Trash2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
-import { CONTINUITY_GAP_THRESHOLD } from "../../importers/transactions.js";
+import { INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "../../importers/transactions.js";
 
-// Een verschil kleiner dan CONTINUITY_GAP_THRESHOLD (€100) wordt overal elders in de tool (het
-// jaaroverzicht, de indicatieve aangifteberekening) al niet als een echt probleem behandeld — puur
-// afronding of een periodegrens die net niet exact aansluit. Deze importcontrole gebruikte tot nu
-// toe een veel strengere tolerantie (in de praktijk: exact op de cent) voor "klopt het saldo", en
-// liet daardoor iedere paar euro's afwijking al als een amber/rode waarschuwing zien — inconsistent
-// met de rest van de tool. Vanaf nu telt zo'n klein verschil hier ook als "in orde", met alleen een
-// informatieve melding erbij (geen actie nodig, wel zichtbaar).
-const isMinorDiff = (diff) => Math.abs(diff) < CONTINUITY_GAP_THRESHOLD;
+// Tolerantie voor de saldocontrole bínnen één bestand (klopt begin- + mutaties = eindsaldo van dit
+// ene bestand) — losstaand van de drie niveaus voor de aansluiting tússen bestanden bij een
+// jaarovergang (continuity, zie classifyContinuityGap in transactions.js). Onder dit bedrag is een
+// afwijking hier vrijwel altijd gewoon afronding; vroeger liet deze controle al bij een paar euro's
+// verschil een amber waarschuwing zien, terwijl de rest van de tool dat allang als verwaarloosbaar
+// behandelde.
+const isMinorDiff = (diff) => Math.abs(diff) < INTRA_FILE_BALANCE_THRESHOLD;
 
 function StatusLine({ ok, warn, children }) {
   return (
@@ -38,7 +37,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
   const anyIssue =
     diagnostics.some(
       (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff))
-    ) || continuity.some((c) => !c.ok && !isMinorDiff(c.diff));
+    ) || continuity.some((c) => !c.ok && classifyContinuityGap(c.diff) !== "groen");
   const open = openOverride === null ? anyIssue : openOverride;
 
   return (
@@ -130,20 +129,25 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
             <div className="rounded-lg bg-white border border-slate-100 p-3">
               <p className="text-xs font-semibold text-slate-700 mb-1.5">Aansluiting tussen bestanden</p>
               <ul className="space-y-1 text-xs text-slate-600">
+                {/* v260 — drie niveaus i.p.v. twee: groen tot €500 (verwaarloosbaar voor het
+                    dossier, alleen een opmerking), geel €500–€999 (de moeite waard om te bekijken),
+                    rood vanaf €1000 (telt als een echt gat, zie classifyContinuityGap). */}
                 {continuity.map((c) => {
-                  const minor = !c.ok && isMinorDiff(c.diff);
+                  const severity = c.ok ? "groen" : classifyContinuityGap(c.diff);
                   return (
-                    <StatusLine key={`${c.fileA}__${c.fileB}`} ok={c.ok || minor} warn={!c.ok && !minor}>
+                    <StatusLine key={`${c.fileA}__${c.fileB}`} ok={severity === "groen"} warn={severity === "geel"}>
                       <strong>{c.fileA}</strong> (eindigt {c.aTo.toLocaleDateString("nl-NL")}, saldo {eur(c.aLastBalance)}) →{" "}
                       <strong>{c.fileB}</strong> (begint {c.bFrom.toLocaleDateString("nl-NL")}, saldo {eur(c.bOpeningBalance)})
                       {c.ok ? (
                         " — sluit aan."
-                      ) : minor ? (
-                        <> — verschil {eur(c.diff)}. Een verschil van een paar euro is meestal gewoon afronding of een periodegrens — dit telt daarom nergens elders mee als een gemiste periode.</>
+                      ) : severity === "groen" ? (
+                        <> — verschil {eur(c.diff)}. Een verschil tot €500 is meestal gewoon afronding of een periodegrens en maakt voor het dossier weinig uit — dit telt daarom nergens elders mee als een gemiste periode.</>
+                      ) : severity === "geel" ? (
+                        <> — verschil {eur(c.diff)}. Nog geen echt gat, maar wel de moeite waard om even te bekijken.</>
                       ) : (
                         <>
-                          {" "}— verschil {eur(c.diff)}. Dat kan een periodegrens zijn die niet exact aansluit (geen
-                          probleem), of het is de moeite waard om na te gaan of er tussenin iets ontbreekt.
+                          {" "}— verschil {eur(c.diff)}. Dat is groter dan gebruikelijk (vanaf €1000) — de moeite waard
+                          om na te gaan of er tussenin iets ontbreekt.
                         </>
                       )}
                     </StatusLine>
