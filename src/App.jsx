@@ -1910,6 +1910,26 @@ export default function App() {
     if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
     return estimateVpb(yearlySummary.winst, activeYear);
   }, [rechtsvorm, activeYear, yearlySummary]);
+  // v283 — zelfde drieluik (Omzet incl. BTW / Omzet excl. BTW / Zakelijke kosten) als de
+  // "kerncijfers"-kaart in het BV-Aangiftevoorstel (reports/aangiftevoorstel-bv.js), nu ook als korte
+  // toelichting onder "Indicatieve vennootschapsbelasting" op het Jaaroverzicht. Geen nieuwe
+  // berekening: omzetExclBtw = yearlySummary.zakelijkeInkomstenNetto (zelfde definitie als "1.
+  // Opbrengsten" in het Aangiftevoorstel), omzetInclBtw = daar de over dit jaar verschuldigde BTW op
+  // de omzet (som van box 1a/1b per kwartaal, uit quarterlyBtwData) bovenop, en zakelijkeKosten wordt
+  // afgeleid uit winst = omzetExclBtw - kosten (dezelfde identiteit als het Aangiftevoorstel, dat
+  // hetzelfde totaal via een andere optelling — inkoop/afschrijving/overig/rente — uitrekent), zodat
+  // dit bedrag hier altijd exact aansluit bij "Resultaat vóór Vpb" hierboven.
+  const dashboardVpbBreakdown = useMemo(() => {
+    if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
+    const omzetExclBtw = yearlySummary.zakelijkeInkomstenNetto || 0;
+    const btwOverOmzetTotaal = quarterlyBtwData.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
+    const omzetInclBtw = omzetExclBtw + btwOverOmzetTotaal;
+    const zakelijkeKosten = omzetExclBtw - yearlySummary.winst;
+    const gebruikt21 = quarterlyBtwData.some((q) => (q.verschuldigdBtw21 || 0) > 0);
+    const gebruikt9 = quarterlyBtwData.some((q) => (q.verschuldigdBtw9 || 0) > 0);
+    const btwTariefLabel = gebruikt21 && gebruikt9 ? "21% en 9%" : gebruikt9 ? "9%" : "21%";
+    return { omzetInclBtw, omzetExclBtw, zakelijkeKosten, btwTariefLabel, toonOmzetInclBtw: btwOverOmzetTotaal > 0 };
+  }, [rechtsvorm, activeYear, yearlySummary, quarterlyBtwData]);
   // v282 — samenvatting van de holding-boekingen voor het actieve jaar, als compacte kaart (zelfde
   // vorm als aannamesCard) voor diezelfde Jaaroverzicht-sub-tab. Herhaalt bewust dezelfde
   // verschil-berekening als de rij voor dit jaar in HoldingBoekingenPanel.jsx — puur een
@@ -2402,7 +2422,13 @@ export default function App() {
               lines: [1, 2, 3, 4].map((kwartaal) => {
                 const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
                 const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0;
-                return { label: `Q${kwartaal}`, value: `${eur(Math.abs(saldo))}${saldo < 0 ? " terug" : ""}` };
+                // v283 — voorheen stond er bij een positief saldo alleen het bedrag (zonder "te
+                // betalen"), en bij een negatief saldo "terug" — op verzoek nu bij élk kwartaal
+                // expliciet "te betalen" of "te ontvangen" erachter, zodat het nooit dubbelzinnig is.
+                return {
+                  label: `Q${kwartaal}`,
+                  value: `${eur(Math.abs(saldo))} ${saldo < 0 ? "te ontvangen" : "te betalen"}`,
+                };
               }),
               subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",
               tone: quartersOpenCount > 0 ? "attention" : "ok",
@@ -2937,13 +2963,17 @@ export default function App() {
   const withExpand = (card, key, expandedContent) => {
     if (!card) return null;
     const isOpen = !!expandedCardKeys[key];
+    // v283 — "Uitklappen ↓" hernoemd naar hetzelfde "Alle …… bekijken"-patroon als de RollupCard-
+    // knoppen op tabblad "Overzicht" ("Alle controles bekijken →" e.d.), op verzoek om dit
+    // consistent te maken. "Inklappen ↑" (uitgeklapte stand) blijft ongewijzigd — dat werd niet
+    // gevraagd.
     return {
       ...card,
       expandable: true,
       expanded: isOpen,
       expandedContent,
       onClick: () => toggleCardExpand(key),
-      actionLabel: isOpen ? "Inklappen ↑" : "Uitklappen ↓",
+      actionLabel: isOpen ? "Inklappen ↑" : `Alle ${card.title} bekijken`,
     };
   };
   const controlerenCardGroups = useMemo(() => {
@@ -3074,6 +3104,40 @@ export default function App() {
           onOpenHelp={setHelpPopupChapter}
         />
       ),
+      // v283 — de "Controle overboeking zakelijk ↔ privé"-banner stond voorheen alleen ín de
+      // uitgeklapte "Aansluiting & detail"-kaart hierboven; op verzoek nu ook als eigen, altijd
+      // zichtbare "box" ernaast — zelfde berekening als voorheen in AansluitingDetailPanel.jsx (nu
+      // verwijderd, om dubbele content te voorkomen), hier alleen samengevat i.p.v. als volledige
+      // banner-tekst.
+      (() => {
+        const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
+        const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
+        const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+        const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+        const diff = Math.round((zakSum + priSum) * 100) / 100;
+        const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
+        if (zakSum === 0 && priSum === 0) return null;
+        let tone, subtitle;
+        if (zijdeOntbreekt) {
+          tone = "ok";
+          subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-rekening geladen, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
+        } else {
+          const ok = Math.abs(diff) < 0.01;
+          tone = ok ? "ok" : "attention";
+          subtitle = ok
+            ? `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
+            : `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
+        }
+        return {
+          key: "aansluitControle",
+          title: "Controle zakelijk ↔ privé",
+          icon: <span>🔁</span>,
+          tone,
+          subtitle,
+          hint: "Naar de aansluiting & detailtabellen",
+          onClick: () => jumpToSection(detailsSectionRef),
+        };
+      })(),
     ].filter(Boolean);
   }, [
     transactions.length,
@@ -4068,6 +4132,7 @@ export default function App() {
               dashboardAangifteIndicatie={dashboardAangifteIndicatie}
               rechtsvorm={rechtsvorm}
               vpbIndicatie={dashboardVpbIndicatie}
+              vpbBreakdown={dashboardVpbBreakdown}
               holdingCard={holdingSummaryCard}
               winst={yearlySummary?.winst}
               previousWinst={previousYearlySummary?.winst}

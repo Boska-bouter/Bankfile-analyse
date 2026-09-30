@@ -5,7 +5,12 @@ import { eur } from "../../utils/amounts.js";
 // IB/Zvw — die laatste twee bestaan niet voor een BV. Gebruikt dezelfde estimateVpb(...)-berekening
 // (tax/vpb.js) die ook al voor het Aangiftevoorstel-BV en het eigen-vermogen-verloop wordt gebruikt,
 // dus geen nieuwe/afwijkende rekenlogica.
-export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, showTrend, prevWinst, onShowFullCalculation }) {
+// v283 — op verzoek uitgebreid met hetzelfde drieluik (Omzet incl. BTW / Omzet excl. BTW / Zakelijke
+// kosten) als de "kerncijfers"-kaart in het BV-Aangiftevoorstel, zodat je hier meteen ziet waaruit
+// het resultaat is opgebouwd i.p.v. alleen het eindbedrag. `breakdown` is optioneel — zonder (bijv.
+// een ouder aanroepend component) toont de kaart alleen het bestaande resultaat/Vpb-blok, exact
+// zoals voorheen.
+export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, breakdown, showTrend, prevWinst, onShowFullCalculation }) {
   if (!vpbIndicatie) return null;
   const resultaatNaVpb = winst - (vpbIndicatie.belasting || 0);
   const pct = showTrend && prevWinst != null && prevWinst !== 0 ? Math.round(((winst - prevWinst) / Math.abs(prevWinst)) * 100) : null;
@@ -24,6 +29,25 @@ export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, showTren
         )}
       </div>
 
+      {breakdown && (
+        <div className="border-t border-slate-100 pt-3 space-y-1 text-[12.5px]">
+          {breakdown.toonOmzetInclBtw && (
+            <div className="flex items-center justify-between text-slate-500">
+              <span>Omzet incl. BTW ({breakdown.btwTariefLabel})</span>
+              <span>{eur(breakdown.omzetInclBtw)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-slate-500">
+            <span>Omzet excl. BTW</span>
+            <span>{eur(breakdown.omzetExclBtw)}</span>
+          </div>
+          <div className="flex items-center justify-between text-slate-500">
+            <span>Zakelijke kosten</span>
+            <span>- {eur(breakdown.zakelijkeKosten)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[12.5px]">
         <span className="text-slate-500">Geschatte Vpb</span>
         <span className="font-semibold text-slate-800">{eur(vpbIndicatie.belasting || 0)}</span>
@@ -39,6 +63,10 @@ export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, showTren
           Vpb-tarief van {year} nog niet bekend — benaderd met het dichtstbijzijnde bekende tarief.
         </p>
       )}
+
+      <p className="text-[11px] text-slate-400">
+        * Geen belastingadvies, alleen een indicatie op basis van de beschikbare bankgegevens.
+      </p>
 
       {onShowFullCalculation && (
         <button onClick={onShowFullCalculation} className="mt-auto text-left text-xs font-bold text-teal-700 hover:underline">

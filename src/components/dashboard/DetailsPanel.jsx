@@ -48,6 +48,7 @@ export default function DetailsPanel({
   dashboardAangifteIndicatie,
   rechtsvorm,
   vpbIndicatie,
+  vpbBreakdown,
   holdingCard,
   winst,
   previousWinst,
@@ -102,6 +103,7 @@ export default function DetailsPanel({
                 year={year}
                 winst={winst}
                 vpbIndicatie={vpbIndicatie}
+                breakdown={vpbBreakdown}
                 showTrend={showTrend}
                 prevWinst={previousWinst}
                 onShowFullCalculation={onShowFullCalculation}
