@@ -492,6 +492,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // gewoon gelijk is aan "totale autokosten".
   const autokostenOverigBedrag = ib.autokostenOverig.totaal || 0;
   const onttrekking = ib.leaseAutoKosten?.onttrekking || 0;
+  // De werkelijke, normale bijtelling (bijtellingspercentage × cataloguswaarde, vóór de aftopping op
+  // de totale autokosten) — op verzoek erbij getoond zodat je in één oogopslag ziet hóéveel er precies
+  // wordt afgetopt, in plaats van alleen het (mogelijk lagere) afgetopte bedrag. Bij geen aftopping
+  // (onttrekking === normaleBijtellingTotaal) is dit gewoon hetzelfde bedrag, dus dan voegt het niets
+  // toe — de tekst hieronder toont het verschil dan ook niet apart.
+  const normaleBijtelling = ib.leaseAutoKosten?.normaleBijtellingTotaal || 0;
   const heeftBijtelling = onttrekking > 0;
   const totaleAutokosten = leaseAfschrijvingAuto + autokostenOverigBedrag;
   const aftrekbareAutokosten = Math.max(0, totaleAutokosten - onttrekking);
@@ -527,7 +533,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       : `
   <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
-  <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten)</span><span class="num">- ${eur(onttrekking)}</span></div>
+  <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten${normaleBijtelling > onttrekking ? `; werkelijke bijtelling ${eur(normaleBijtelling)}` : ""})</span><span class="num">- ${eur(onttrekking)}</span></div>
   <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
   <p class="toelichting">${aftrekbareAutokosten <= 0 ? "Bij deze aftopping is per saldo niets van de autokosten dit jaar aftrekbaar. " : ""}${
         gemengdLeaseWaarschuwing
