@@ -126,7 +126,7 @@ function cleanSegment(form) {
 // Eén contractsegment — precies dezelfde velden/previews die dit venster altijd al toonde, nu
 // herbruikbaar per segment. `segmentTransactions` zijn alleen de banktransacties die (op basis van
 // de startdatum van dit én het eventuele volgende segment) bij dít contract horen.
-function LeaseContractSection({ form, onChange, segmentTransactions, title, canRemove, onRemove, canAddNext, onAddNext, precedingSegments }) {
+function LeaseContractSection({ form, onChange, segmentTransactions, title, canRemove, onRemove, canAddNext, onAddNext, precedingSegments, allSegments }) {
   const set = (field) => (e) => onChange({ ...form, [field]: e.target.value });
   const setChecked = (field) => (e) => onChange({ ...form, [field]: e.target.checked });
 
@@ -256,29 +256,62 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   const segmentBeeindigdMetOpbrengst = form.contractBeeindigd && form.verkoopsom !== "" && !!form.einddatumContract;
   const terminationEinddatum = segmentBeeindigdMetOpbrengst ? form.einddatumContract : null;
 
+  // v290 — bij een gekoppeld vervolgcontract (matchedPreceding) toonde deze preview voorheen altijd de
+  // afschrijving "als dít segment op zichzelf zou staan" (dus over de eigen, vaak veel kleinere
+  // koopprijs van het vervolgcontract, bijv. een overgesloten restbedrag) — met alleen een tekstuele
+  // toelichting eronder dat dit NIET het bedrag is dat in het aangiftevoorstel wordt gebruikt. In de
+  // praktijk werd die toelichting gemist en oogde de tabel zelf (met eigen jaartallen/bedragen tot
+  // ver in de toekomst) als een tweede, dubbele afschrijving bovenop die van het eerste contract. Om
+  // die verwarring helemaal weg te nemen, toont de tabel bij een gekoppeld vervolgcontract nu de
+  // WERKELIJKE, doorlopende afschrijving voor de hele kenteken-groep (dezelfde berekening als
+  // computeLeaseAutoKostenVoorJaar in autoBijtelling.js gebruikt voor het aangiftevoorstel: basis =
+  // koopprijs van het EERSTE/oudste segment, bevroren op de einddatum alleen als het LAATSTE segment
+  // van de groep daadwerkelijk met een verkoopopbrengst is beëindigd) — in plaats van de misleidende
+  // "op zichzelf staande" preview van alleen dit segment.
+  const kentekenGroupSegments = useMemo(() => {
+    const norm = normalizeKenteken(form.kenteken);
+    if (!norm || form.soort !== "auto") return null;
+    const matches = (allSegments || []).filter((s) => s.soort === "auto" && normalizeKenteken(s.kenteken) === norm);
+    return matches.length > 1 ? matches : null;
+  }, [form.kenteken, form.soort, allSegments]);
+
   const leaseActivumAfschrijvingPerJaar = useMemo(() => {
     if (!form.soort || !form.startdatum) return [];
-    const segment = cleanSegment(form);
-    const startYear = new Date(segment.startdatum).getFullYear();
+
+    let baseSegment = cleanSegment(form);
+    let effectiveTermination = terminationEinddatum;
+
+    if (matchedPreceding && kentekenGroupSegments) {
+      // Basis = het eerste/oudste segment van de groep (matchedPreceding is daar, via
+      // precedingSegments, altijd al op geselecteerd). Bevriezen op de einddatum mag alleen als het
+      // LAATSTE segment van de hele groep daadwerkelijk met een verkoopopbrengst is beëindigd —
+      // exact dezelfde voorwaarde als isBeeindigdMetOpbrengst in autoBijtelling.js.
+      const laatsteInGroep = kentekenGroupSegments[kentekenGroupSegments.length - 1];
+      const groepBeeindigdMetOpbrengst = !!laatsteInGroep.contractBeeindigd && laatsteInGroep.verkoopsom != null && laatsteInGroep.verkoopsom !== "" && !!laatsteInGroep.einddatumContract;
+      baseSegment = cleanSegment(matchedPreceding);
+      effectiveTermination = groepBeeindigdMetOpbrengst ? laatsteInGroep.einddatumContract : null;
+    }
+
+    const startYear = new Date(baseSegment.startdatum).getFullYear();
     // v256 — de WERKELIJKE afschrijving (computeLeaseAfschrijvingVoorJaar hieronder) kapt een
     // ingevulde termijn altijd af op minimaal 5 jaar (fiscale 20%-cap, zie
     // MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN in autoBijtelling.js) — dus moet de lusgrens hier
     // hetzelfde doen, anders toont deze preview bij bijv. 3 ingevulde jaren maar 3-4 rijen terwijl er
     // in werkelijkheid 5 jaar wordt afgeschreven, en lijkt het net of de cap niet werkt.
-    const ingevoerdeTermijn = segment.afschrijvingstermijnJaren ? Number(segment.afschrijvingstermijnJaren) : 0;
+    const ingevoerdeTermijn = baseSegment.afschrijvingstermijnJaren ? Number(baseSegment.afschrijvingstermijnJaren) : 0;
     const termijn = ingevoerdeTermijn > 0
       ? Math.max(ingevoerdeTermijn, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)
-      : (segment.soort === "auto" ? MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN : 0);
+      : (baseSegment.soort === "auto" ? MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN : 0);
     if (!(termijn > 0)) return [];
     const rows = [];
     for (let j = startYear; j <= startYear + Math.ceil(termijn); j++) {
-      const afschrijving = computeLeaseAfschrijvingVoorJaar(segment, j, terminationEinddatum);
+      const afschrijving = computeLeaseAfschrijvingVoorJaar(baseSegment, j, effectiveTermination);
       if (rows.length > 0 && afschrijving <= 0) break;
       rows.push({ jaar: j, afschrijving });
-      if (terminationEinddatum && j >= new Date(terminationEinddatum).getFullYear()) break;
+      if (effectiveTermination && j >= new Date(effectiveTermination).getFullYear()) break;
     }
     return rows;
-  }, [form, terminationEinddatum]);
+  }, [form, terminationEinddatum, matchedPreceding, kentekenGroupSegments]);
 
   // v205: boekwaarde/boekresultaat bij beëindiging — alleen te bepalen als "Soort" is ingevuld (dan
   // is er een fiscale boekwaarde om mee te vergelijken). Ter info/preview in dit venster; de
@@ -602,10 +635,10 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Berekende afschrijving per jaar</p>
             {matchedPreceding && (
               <p className="text-xs text-slate-400 mb-2">
-                Ter info: dit is de afschrijving als dít segment op zichzelf zou staan. Omdat het
-                kenteken gekoppeld is aan een eerdere contractperiode, telt in het aangiftevoorstel de
-                afschrijving mee vanaf die OORSPRONKELIJKE aanschaf/financiering (één doorlopende
-                tijdlijn per auto), niet nogmaals vanaf dit vervolgcontract.
+                Dit is de daadwerkelijke, doorlopende afschrijving voor deze auto (kenteken {form.kenteken}) —
+                hetzelfde bedrag dat in het aangiftevoorstel wordt gebruikt. De teller loopt door vanaf de
+                OORSPRONKELIJKE aanschaf/financiering uit de eerdere contractperiode; de eigen koopprijs van
+                dít vervolgcontract telt niet nogmaals mee.
               </p>
             )}
             <table className="w-full text-sm text-slate-800">
@@ -1029,6 +1062,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
               canAddNext={idx === contracts.length - 1}
               onAddNext={() => addNextContract(idx)}
               precedingSegments={contracts.slice(0, idx)}
+              allSegments={contracts}
             />
           ))}
         </div>
