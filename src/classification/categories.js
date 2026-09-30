@@ -245,6 +245,17 @@ export const DEFAULT_RULES = [
   // inkoop/uitgaven"), niet bij "Telecom & abonnementen" — dat zijn de vaste telefonie/internet-kosten.
   { name: "Streaming diensten", color: "bg-violet-100 text-violet-800", keywords: [],
     description: "Streaming-abonnement (bijv. video/muziek) dat aantoonbaar deels zakelijk gebruikt wordt — in tegenstelling tot \"Prive overige abonnementen\" (altijd 100% privé) is hier een handmatig ingesteld percentage zakelijk gebruik van toepassing. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
+  // v288 — privé-tegenhanger van "Streaming diensten" hierboven, zelfde reden als "Prive -
+  // mobiel/internet" naast "Zakelijk mobiel/internet": "Streaming diensten" zelf valt onder
+  // hoofdcategorie "Inkoop & zakelijke uitgaven" (dus standaard 100% zakelijk) en staat daardoor
+  // niet tussen de subtypes onder hoofdcategorie "Privé" in de dropdown — voor een abonnement dat je
+  // in eerste instantie als privé zou classificeren, maar waarvan een deel aantoonbaar zakelijk is,
+  // was er dus geen vindbare categorie onder "Privé" met een instelbaar percentage. Zelfde opzet:
+  // standaard 100% privé (fiscalTreatmentOf "geen"), handmatig instelbaar percentage zakelijk via
+  // tax/categorySplit.js, nooit automatisch toegekend (geen keywords — "Prive overige abonnementen"
+  // blijft de automatische standaard-bucket voor Netflix/Spotify/etc.).
+  { name: "Prive - streaming diensten", color: "bg-violet-50 text-violet-700", keywords: [],
+    description: "Streaming-abonnement dat in beginsel privé is, maar aantoonbaar deels zakelijk gebruikt wordt — de privé-tegenhanger van \"Streaming diensten\", met hetzelfde instelbare percentage zakelijk gebruik. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Software & Online diensten", color: "bg-sky-100 text-sky-800", keywords: [],
     description: "Software-/onlinedienst-abonnement dat deels zakelijk en deels privé gebruikt wordt (bijv. thuis én zakelijk). Net als \"Streaming diensten\" een handmatig ingesteld percentage zakelijk gebruik, nooit automatisch toegekend." },
   // ---- Alleen relevant bij rechtsvorm "bv" (zie App.jsx) — voor zzp/eenmanszaak blijven deze
@@ -279,7 +290,7 @@ export const CATEGORY_ORDER = [
   "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive", "Terugboeking naar zakelijk",
-  "Reiskosten (OV)", "Streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
+  "Reiskosten (OV)", "Streaming diensten", "Prive - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel/internet", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -363,7 +374,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
   "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
-  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
+  "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Prive - streaming diensten": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
@@ -567,6 +578,7 @@ export const SUBTYPE_TO_MAIN = {
   "Prive - mobiel/internet": "Privé",
   "Prive opnames": "Privé",
   "Prive overige abonnementen": "Privé",
+  "Prive - streaming diensten": "Privé",
   "Terugboeking van prive": "Privé",
   "Terugboeking naar zakelijk": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",

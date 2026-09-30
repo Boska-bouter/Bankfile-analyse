@@ -20,13 +20,15 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 
 // Alleen deze categorieën komen in aanmerking voor de %-splitsing (in overleg bevestigd) — dit zijn
 // kosten die in de praktijk vaak deels zakelijk/deels privé zijn, ongeacht welke rekening betaalt.
-// Andere kosten-/privé-categorieën (Zakelijke inkoop/uitgaven, Uitbetalen loon, Verkoop activa, Boekhouder
-// accountant & administratie, Belastingen (incl. naheffingen), Onderhoud apparatuur/machines,
-// Betaalautomaat kosten, Uitbetaling aan prive, Prive opnames, Lease (operationeel/financieel),
-// etc.) zijn typisch volledig van het ene of het andere type — daar zou een percentage-instelling
-// alleen maar voor verwarring zorgen, dus die blijven hier bewust buiten beeld. "Huur (deels
-// zakelijk)" staat er ook niet bij: die heeft al zijn eigen, aparte percentage-mechanisme (zie
-// gedeeldeHuur.js) — dit is voor de gewone "Huur"-categorie.
+// Andere kosten-/privé-categorieën (Zakelijke inkoop/uitgaven, Uitbetalen loon, Verkoop activa,
+// Belastingen (incl. naheffingen), Onderhoud apparatuur/machines, Betaalautomaat kosten, Uitbetaling
+// aan prive, Prive opnames, Lease (operationeel/financieel), etc.) zijn typisch volledig van het ene
+// of het andere type — daar zou een percentage-instelling alleen maar voor verwarring zorgen, dus
+// die blijven hier bewust buiten beeld. "Huur (deels zakelijk)" staat er ook niet bij: die heeft al
+// zijn eigen, aparte percentage-mechanisme (zie gedeeldeHuur.js) — dit is voor de gewone
+// "Huur"-categorie. "Boekhouder, accountant & administratie" stond hier eerder ook bij deze
+// uitzonderingen, maar is op verzoek (v288) alsnog aan SPLITSBARE_CATEGORIEEN toegevoegd — in de
+// praktijk wordt een boekhouder/accountant soms ook voor privézaken ingeschakeld.
 //
 // "Brandstof" en "Parkeren" horen ook in deze lijst: vrijwel elke zzp'er/BV heeft een auto, en
 // zonder deze twee categorieën zou een gemengd-gebruikte brandstof-/parkeertransactie per stuk naar
@@ -50,7 +52,16 @@ export const SPLITSBARE_CATEGORIEEN = [
   "Parkeren",
   "Huur",
   "Streaming diensten",
+  // v288 — privé-tegenhanger van "Streaming diensten" hierboven (zie categories.js), zelfde reden
+  // als "Prive - mobiel/internet": zonder eigen entry hier zou een streamingabonnement dat je onder
+  // hoofdcategorie "Privé" indeelt nooit een instelbaar percentage zakelijk gebruik kunnen krijgen.
+  "Prive - streaming diensten",
   "Software & Online diensten",
+  // v288 — op verzoek: een boekhouder/accountant/adviesbureau wordt in de praktijk soms ook voor
+  // privézaken (bijv. de aangifte IB naast de aangifte OB) ingeschakeld, dus niet per se voor 100%
+  // zakelijk — voorheen stond deze categorie bewust NIET in de lijst (zie de toelichting hierboven
+  // bij "Andere kosten-/privé-categorieën"), maar in overleg alsnog toegevoegd.
+  "Boekhouder, accountant & administratie",
 ];
 
 export function isSplitsbareCategorie(category) {
