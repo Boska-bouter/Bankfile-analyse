@@ -12,3 +12,25 @@ body {
 h1, h2, h3, h4 {
   font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
 }
+
+/* v293 — touchscreen-vriendelijker (op verzoek): overal in de app een iets grotere minimale
+   tikhoogte voor knoppen en klikbare links/items, zodat ze makkelijker te raken zijn met een vinger.
+   Bewust ÉÉN centrale regel i.p.v. los in elk van de ~140 bestanden aanpassen, en bewust alleen
+   `min-height` (geen `padding`/`min-width` en geen `!important`):
+   - `min-height` is een ONDERGRENS: knoppen die al groter zijn dan 2.5rem (de meeste met ruime
+     padding, bijv. "px-4 py-2") blijven precies zoals ze waren — geen enkel scherm verschuift dus
+     zichtbaar door deze regel, behalve bij de kleinere knoppen/links die er nu iets bovenuit komen.
+   - Bewust GEEN `!important` en geen `min-width`: veel knoppen zijn `w-full` (volle breedte van hun
+     paneel) of vaste vierkante icoon-knoppen (bijv. "h-8 w-8" voor een sluit-kruisje) — die eigen
+     Tailwind-klasse (hogere CSS-specificiteit dan dit element-selector) wint dan gewoon, dus zo'n
+     knop blijft precies zijn eigen ontworpen formaat i.p.v. breed uit te rekken of vervormd te raken.
+   - Werkt vooral goed samen met de veelgebruikte `flex items-center`-knoppen in deze app: de content
+     blijft even groot, maar wordt door de iets grotere `min-height` verticaal gecentreerd met wat meer
+     lucht erboven/eronder — precies een iets groter tikgebied, zonder tekst/iconen te vervormen. */
+button,
+a,
+[role="button"],
+summary,
+select {
+  min-height: 2.5rem;
+}
