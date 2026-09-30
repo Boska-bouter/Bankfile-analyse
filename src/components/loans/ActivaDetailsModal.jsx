@@ -55,7 +55,9 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
             <input type="text" value={form.naam} onChange={set("naam")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* v289 — was een niet-responsieve "grid-cols-2": op een smaller venster liep vooral het
+              datumveld (Aanschafdatum) hierin buiten zijn kolom en over het veld ernaast heen. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Aanschafwaarde</span>
               <input type="number" min="0" step="0.01" value={form.aanschafwaarde} onChange={set("aanschafwaarde")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />

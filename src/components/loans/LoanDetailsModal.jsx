@@ -51,7 +51,9 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
             betaling terugrekenen hoeveel rente was (aftrekbaar) en hoeveel aflossing (niet aftrekbaar). De overige
             velden zijn optioneel, puur ter controle.
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          {/* v289 — was een niet-responsieve "grid-cols-2": op een smaller venster liepen vooral de
+              datumvelden (Startdatum/Einddatum) hierin buiten hun kolom en over het veld ernaast heen. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{isLease ? "Leasebedrag" : "Leningbedrag"} (oorspronkelijk) *</span>
               <input type="number" min="0" step="0.01" value={form[bedragVeld]} onChange={set(bedragVeld)} placeholder="bijv. 25000" className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />

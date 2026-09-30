@@ -391,7 +391,13 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           Let op: "Koopprijs" is altijd <strong>exclusief BTW</strong> — de BTW vul je apart in bij "Te betalen BTW"
           hieronder.
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        {/* v289 — was een niet-responsieve "grid-cols-2" (anders dan bijv. de vergelijkbare grid bij
+            "Contract vroegtijdig beëindigd" hieronder, die al wel "grid-cols-1 sm:grid-cols-2" was):
+            op een smaller venster (bijv. een browser die niet maximaal breed openstaat) werden de
+            twee kolommen zo smal dat een invulveld — vooral een datumveld, met zijn vaste,
+            browser-eigen kalendericoon/breedte — buiten zijn eigen kolom uitstak en over het
+            veld ernaast heen ging te staan. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FIELDS_AANKOOP.map(([field, label]) => (
             <label key={field} className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
@@ -430,7 +436,10 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Leasestructuur</p>
-        <div className="grid grid-cols-2 gap-3">
+        {/* v289 — zie de toelichting bij de vorige grid hierboven (AANKOOP): dit is dezelfde
+            niet-responsieve grid, en bevat bovendien de twee datumvelden (Startdatum/Datum 1e
+            termijn) hieronder — juist een datumveld liep het snelst uit zijn kolom. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FIELDS_LEASE.map(([field, label]) => (
             <label key={field} className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
@@ -485,7 +494,10 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           eigen bedrijfsmiddel dat gekapitaliseerd en afgeschreven wordt. Laat "Soort" op "Niet ingevuld"
           staan om de bestaande berekening (alleen rente aftrekbaar) ongewijzigd te laten.
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        {/* v289 — zie de toelichting hierboven bij AANKOOP: zelfde niet-responsieve grid, en bevat
+            hier zowel het Afschrijvingstermijn-veld als straks (bij "auto") geen datumveld maar wel
+            een aantal numerieke velden die op een smal scherm evengoed buiten hun kolom konden lopen. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="text-sm">
             <span className="block text-xs font-medium text-slate-600 mb-1">Soort</span>
             <select
