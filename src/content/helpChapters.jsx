@@ -96,16 +96,26 @@ export const HELP_CHAPTERS = [
           fiscaal een eigen bedrijfsmiddel — net als bij een gewone aanschaf (zie ook "Activa (bedrijfsmiddelen) —
           afschrijving") wordt dat gekapitaliseerd en afgeschreven, los van de rente/aflossing-splitsing hierboven.
           Vul daarvoor bij het contract "Soort" (Auto of Machine/overig) in, met de afschrijvingstermijn (voor een
-          auto minimaal 5 jaar) — de aanschafwaarde wordt automatisch het gefinancierde bedrag bij aanvang van dít
-          contract. Laat "Soort" op "Niet ingevuld" staan om de oude berekening (alleen rente aftrekbaar,
+          auto minimaal 5 jaar) en optioneel de <strong>restwaarde</strong> — de verwachte waarde aan het einde van
+          de afschrijvingstermijn (bij een lease-object met een aanzienlijke eindbetaling is dat vaak niet nul).
+          Leeg betekent restwaarde €0 (volledig afschrijven), zoals voorheen — een bestaand contract zonder dit veld
+          rekent dus ongewijzigd door. De aanschafwaarde wordt automatisch het gefinancierde bedrag bij aanvang van
+          dít contract. Laat "Soort" op "Niet ingevuld" staan om de oude berekening (alleen rente aftrekbaar,
           geen afschrijving) ongewijzigd te laten — dat blijft de standaard voor elk bestaand contract.
+        </p>
+        <p>
+          Net als bij een los bedrijfsmiddel geldt ook hier de <strong>tijdklem</strong>: in het jaar van aanvang van
+          het contract wordt naar rato van de resterende maanden afgeschreven, en de "gemiste" maanden komen aan het
+          einde van de looptijd terug als een extra, deels jaar — zie ook "Activa (bedrijfsmiddelen) — afschrijving"
+          voor de volledige uitleg van dat principe.
         </p>
         <p>
           Bij "Soort: Auto" komt daar de <strong>bijtelling/onttrekking</strong> bovenop bij privégebruik van meer
           dan 500 km per jaar: cataloguswaarde en bijtellingspercentage invullen, en per jaar aanvinken of dat
           privégebruik van toepassing was. Anders dan de standaard werknemers-bijtelling wordt hier de bijtelling
           afgetopt op de werkelijke totale autokosten dat jaar — je onttrekt nooit meer dan er daadwerkelijk aan
-          autokosten is geboekt.
+          autokosten is geboekt. In het aangiftevoorstel staat, als de aftopping daadwerkelijk iets afknipt, de
+          werkelijke (ongeaftopte) bijtelling er tussen haakjes bij ter controle.
         </p>
         <p>
           <strong>Kenteken</strong> is alleen relevant als hetzelfde leasecontract halverwege de looptijd is
