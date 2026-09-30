@@ -59,6 +59,13 @@ function formFromSegment(segment) {
     // (zonder deze velden) exact hetzelfde blijft rekenen als voorheen.
     soort: s.soort ?? "",
     afschrijvingstermijnJaren: s.afschrijvingstermijnJaren ?? "",
+    // v295 — restwaarde: tot nu toe ontbrak dit veld hier (in tegenstelling tot een los activum in
+    // ActivaDetailsModal.jsx, die dit al wel had) — buildLeaseActivumFromSegment in autoBijtelling.js
+    // las hierdoor altijd restwaarde 0, ook als een geleased bedrijfsmiddel (bijv. een auto met een
+    // aanzienlijke eindbetaling/restwaarde) in werkelijkheid niet naar € 0 wordt afgeschreven. Zie de
+    // toelichting bij Restwaarde in de JSX hieronder. Optioneel en standaard leeg — elk bestaand
+    // contract (zonder dit veld) rekent dus exact hetzelfde als voorheen (restwaarde 0).
+    restwaarde: s.restwaarde ?? "",
     cataloguswaarde: s.cataloguswaarde ?? "",
     bijtellingspercentage: s.bijtellingspercentage ?? "",
     privegebruikMeerDan500kmPerJaar: s.privegebruikMeerDan500kmPerJaar ?? {},
@@ -114,6 +121,7 @@ function cleanSegment(form) {
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
     soort: form.soort || null,
     afschrijvingstermijnJaren: form.soort ? n(form.afschrijvingstermijnJaren) : null,
+    restwaarde: form.soort ? n(form.restwaarde) : null,
     cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
     bijtellingspercentage: form.soort === "auto" ? n(form.bijtellingspercentage) : null,
     privegebruikMeerDan500kmPerJaar: form.soort === "auto" ? form.privegebruikMeerDan500kmPerJaar || {} : null,
@@ -527,6 +535,11 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           eigen bedrijfsmiddel dat gekapitaliseerd en afgeschreven wordt. Laat "Soort" op "Niet ingevuld"
           staan om de bestaande berekening (alleen rente aftrekbaar) ongewijzigd te laten.
         </p>
+        <p className="text-xs text-slate-400 mb-2">
+          "Restwaarde" is de verwachte waarde aan het einde van de afschrijvingstermijn — je schrijft af
+          tot deze waarde, niet tot € 0 (bij een auto met een aanzienlijke eindbetaling/verwachte
+          restwaarde is dat vaak niet nul). Leeg = € 0 restwaarde (volledig afschrijven), zoals voorheen.
+        </p>
         {/* v289 — zie de toelichting hierboven bij AANKOOP: zelfde niet-responsieve grid, en bevat
             hier zowel het Afschrijvingstermijn-veld als straks (bij "auto") geen datumveld maar wel
             een aantal numerieke velden die op een smal scherm evengoed buiten hun kolom konden lopen. */}
@@ -551,6 +564,16 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               <input
                 type="number" min="1" step="1" value={form.afschrijvingstermijnJaren} onChange={set("afschrijvingstermijnJaren")}
                 placeholder={String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)}
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
+              />
+            </label>
+          )}
+          {form.soort && (
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-slate-600 mb-1">Restwaarde</span>
+              <input
+                type="number" min="0" step="0.01" value={form.restwaarde} onChange={set("restwaarde")}
+                placeholder="0"
                 className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
               />
             </label>
