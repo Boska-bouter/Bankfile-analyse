@@ -13,7 +13,7 @@ import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGed
 import { computeSplitsbareCategorieTotalenVoorJaar, heeftGeregistreerdeAutoOpDeZaak } from "./tax/categorySplit.js";
 import {
   estimateIncomeTax, estimateZvw, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
-  estimateZvwMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
+  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "./tax/incomeTax.js";
 import { computePeriodeMismatches, computeAllPeriodeSignals } from "./tax/periodDetection.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
@@ -1893,6 +1893,10 @@ export default function App() {
     return {
       ib: estimateIncomeTaxMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
       zvw: estimateZvwMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
+      // Toegevoegd zodat de "Indicatieve aangifte"-kaart (DetailsPanel.jsx/IndicatieveAangifteCard.jsx)
+      // onder "Totaal belasting en premies" ook laat zien wélke heffingskorting daar al in is verrekend
+      // — zonder dit veld leek "Totaal" alleen IB + Zvw te zijn, zonder de aftrek die daar al in zit.
+      heffingskortingen: estimateHeffingskortingenMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
       zelfstandigenaftrekBedrag: aftrek?.zelfstandigenaftrekBedrag || 0,
       startersaftrekBedrag: aftrek?.startersaftrekBedrag || 0,
       mkbVrijstellingBedrag: winstUitsplitsing.mkbVrijstellingBedrag,

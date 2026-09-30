@@ -8,7 +8,12 @@ import { eur } from "../../utils/amounts.js";
 // deze manier (zie App.jsx).
 export default function IndicatieveAangifteCard({ year, winst, indicatie, showTrend, prevWinst, onShowFullCalculation }) {
   if (!indicatie) return null;
-  const totaal = (indicatie.ib?.belasting || 0) + (indicatie.zvw?.bijdrage || 0);
+  // v292 — "Totaal belasting en premies" hield tot nu toe geen rekening met de heffingskorting: die
+  // verlaagt de daadwerkelijk te betalen IB (zie ook "Indicatieve IB ná heffingskortingen" in het
+  // volledige Aangiftevoorstel), dus zonder die aftrek toonde deze kaart een te hoog totaal.
+  const heffingskortingTotaal = indicatie.heffingskortingen?.totaal || 0;
+  const ibNaHeffingskorting = Math.max(0, (indicatie.ib?.belasting || 0) - heffingskortingTotaal);
+  const totaal = ibNaHeffingskorting + (indicatie.zvw?.bijdrage || 0);
   const pct = showTrend && prevWinst != null && prevWinst !== 0 ? Math.round(((winst - prevWinst) / Math.abs(prevWinst)) * 100) : null;
 
   return (
@@ -30,6 +35,12 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, showTr
             <span className="text-slate-500">Zelfstandigenaftrek</span>
             <span className="font-semibold text-slate-800">− {eur(indicatie.zelfstandigenaftrekBedrag)}</span>
           </div>
+          {indicatie.startersaftrekBedrag > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">Startersaftrek</span>
+              <span className="font-semibold text-slate-800">− {eur(indicatie.startersaftrekBedrag)}</span>
+            </div>
+          )}
           <div className="flex justify-between gap-3">
             <span className="text-slate-500">MKB-winstvrijstelling</span>
             <span className="font-semibold text-slate-800">− {eur(indicatie.mkbVrijstellingBedrag)}</span>
@@ -43,8 +54,16 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, showTr
 
       <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-[12.5px]">
         <div className="flex justify-between gap-3">
-          <span className="text-slate-500">Indicatieve IB</span>
+          <span className="text-slate-500">Indicatieve IB (vóór heffingskorting)</span>
           <span className="font-semibold text-slate-800">{eur(indicatie.ib?.belasting || 0)}</span>
+        </div>
+        <div className="flex justify-between gap-3">
+          <span className="text-slate-500">Heffingskorting</span>
+          <span className="font-semibold text-slate-800">− {eur(heffingskortingTotaal)}</span>
+        </div>
+        <div className="flex justify-between gap-3">
+          <span className="text-slate-500">Indicatieve IB ná heffingskorting</span>
+          <span className="font-semibold text-slate-800">{eur(ibNaHeffingskorting)}</span>
         </div>
         <div className="flex justify-between gap-3">
           <span className="text-slate-500">Indicatieve Zvw</span>
