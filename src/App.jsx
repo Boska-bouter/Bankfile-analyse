@@ -215,6 +215,10 @@ export default function App() {
   const [fixedCategories, setFixedCategories] = useState(DEFAULT_FIXED_CATEGORIES);
   const [ibStatus, setIbStatus] = useState({}); // { "2025": { gedaan: bool } }
   const [zvwStatus, setZvwStatus] = useState({}); // { "2025": { gedaan: bool } }
+  // v285 — BV-equivalent van ibStatus/zvwStatus hierboven: een BV kent geen IB/Zvw (dat bestaat
+  // alleen voor een zzp/eenmanszaak), maar wel een jaarlijkse Vpb-aangifte — dit vinkje vervangt
+  // ibStatus/zvwStatus in de "Werkelijke aangifte"-telling (yearlyProgress) zodra rechtsvorm "bv" is.
+  const [vpbStatus, setVpbStatus] = useState({}); // { "2025": { gedaan: bool } }
   // { "2025": "ja" | "nee" | "onbekend" } — ontbrekend jaar = niet aangegeven; wat dat dan betekent
   // hangt af van zaLegacyJaDefault hieronder.
   const [zelfstandigenaftrekStatus, setZelfstandigenaftrekStatusState] = useState({});
@@ -525,6 +529,7 @@ export default function App() {
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
     setZvwStatus(settings.zvwStatus && typeof settings.zvwStatus === "object" ? settings.zvwStatus : {});
+    setVpbStatus(settings.vpbStatus && typeof settings.vpbStatus === "object" ? settings.vpbStatus : {});
     setZelfstandigenaftrekStatusState(settings.zelfstandigenaftrekStatus && typeof settings.zelfstandigenaftrekStatus === "object" ? settings.zelfstandigenaftrekStatus : {});
     // Ontbreekt deze vlag (browseropslag van vóór deze regel bestond), dan is dit een dossier dat al
     // bestond vóór het urencriterium-standaardgedrag veranderde — behoud dan het oude gedrag
@@ -566,6 +571,10 @@ export default function App() {
   const setZvwGedaan = (year, gedaan) => {
     snapshotBeforeAction("Zvw-status aangepast");
     setZvwStatus((prev) => ({ ...prev, [year]: { gedaan } }));
+  };
+  const setVpbGedaan = (year, gedaan) => {
+    snapshotBeforeAction("Vpb-status aangepast");
+    setVpbStatus((prev) => ({ ...prev, [year]: { gedaan } }));
   };
   const setZelfstandigenaftrekStatus = (year, status) => {
     snapshotBeforeAction("Zelfstandigenaftrek-status aangepast");
@@ -753,7 +762,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
       });
@@ -766,7 +775,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
@@ -855,7 +864,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
@@ -909,6 +918,7 @@ export default function App() {
     setFixedCategories(s.fixedCategories);
     setIbStatus(s.ibStatus);
     setZvwStatus(s.zvwStatus || {});
+    setVpbStatus(s.vpbStatus || {});
     // v269 — deze 5 velden zaten al in de momentopname (snapshotBeforeAction hierboven) maar werden
     // hier nooit teruggezet: "Percentage zakelijk per categorie" en de aftrek-/auto-instellingen
     // leken daardoor ten onrechte NIET ongedaan te maken (de state bleef gewoon op de nieuwe waarde
@@ -2068,18 +2078,35 @@ export default function App() {
       const openPunten = checks.filter((c) => c.frac < 0.999).length;
 
       // ---- Werkelijke aangifte — apart signaal, telt niet mee in pct/status hierboven ----
-      let kwScore = 0;
-      for (const q of quartersForYear) {
-        const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
-        kwScore += (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0);
-      }
-      const werkelijkAangifteChecks =
+      // v285 — voorheen telde de BTW (alle kwartalen samen) hier als ÉÉN item, even zwaar als IB of
+      // Zvw afzonderlijk — een dossier met 1 van de 4 BTW-kwartalen gedaan en IB/Zvw nog niet kon zo
+      // al "deels" tonen, terwijl feitelijk pas 1 van de (in totaal) 6 aangiftes rond was. Nu telt elk
+      // afzonderlijk BTW-kwartaal als eigen item (net als IB/Zvw), zodat "X van N gedaan" hieronder
+      // klopt met het werkelijke aantal aangiftes. Bewust nog steeds gebaseerd op quartersForYear (de
+      // kwartalen die dit jaar daadwerkelijk transacties bevatten) i.p.v. altijd vaste 4 — een
+      // onvolledig eerste/laatste jaar hoeft niet alle 4 kwartalen verschuldigd te zijn. Maandaangifte
+      // (i.p.v. kwartaal) is bewust nog niet ondersteund — dat is een aparte, grotere uitbreiding
+      // (nieuwe wizardvraag + eigen maandregistratie) die nog niet is gebouwd.
+      const btwAangifteChecks =
         korRegeling === false
-          ? [{ frac: kwTotal > 0 ? kwScore / kwTotal : 1 }, { frac: ibStatus[year]?.gedaan ? 1 : 0 }, { frac: zvwStatus[year]?.gedaan ? 1 : 0 }]
+          ? quartersForYear.map((q) => {
+              const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
+              return { frac: (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0) };
+            })
+          : [];
+      // v285 — een BV kent geen IB/Zvw (dat bestaat alleen voor een zzp/eenmanszaak) maar wel een
+      // jaarlijkse Vpb-aangifte — vpbStatus vervangt ibStatus/zvwStatus hier zodra rechtsvorm "bv" is,
+      // i.p.v. dat IB/Zvw daar (nooit ingevuld, want niet van toepassing) de teller eeuwig op "deels"
+      // hielden.
+      const overigeAangifteChecks =
+        rechtsvorm === "bv"
+          ? [{ frac: vpbStatus[year]?.gedaan ? 1 : 0 }]
           : [{ frac: ibStatus[year]?.gedaan ? 1 : 0 }, { frac: zvwStatus[year]?.gedaan ? 1 : 0 }];
+      const werkelijkAangifteChecks = [...btwAangifteChecks, ...overigeAangifteChecks];
       const werkelijkAangifteDone = werkelijkAangifteChecks.filter((c) => c.frac >= 0.999).length;
+      const werkelijkAangifteTotal = werkelijkAangifteChecks.length;
       const werkelijkAangifteStatus =
-        werkelijkAangifteDone === 0 ? "niet-geregistreerd" : werkelijkAangifteDone === werkelijkAangifteChecks.length ? "gedaan" : "deels";
+        werkelijkAangifteDone === 0 ? "niet-geregistreerd" : werkelijkAangifteDone === werkelijkAangifteTotal ? "gedaan" : "deels";
 
       // ---- Indicatieve aangifte — aantal aannames dat de berekening nog bevat (v254) ----
       // Bewust dossierbreed voor leningen/lease/activa (net als instellingenDashboardCards) — een
@@ -2109,10 +2136,13 @@ export default function App() {
       else if (openPunten === 0 && onzekerDitJaar === 0 && !geelDitJaar) status = "groen";
       else status = "oranje";
 
-      map[year] = { pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, werkelijkAangifteStatus };
+      map[year] = {
+        pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount,
+        werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
+      };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
 
   // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
   // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina.
@@ -2264,13 +2294,21 @@ export default function App() {
                   value: !yearProgress || yearProgress.aannamesCount === 0 ? "🟢 Geen aannames" : `🟠 ${yearProgress.aannamesCount} ${yearProgress.aannamesCount === 1 ? "aanname" : "aannames"}`,
                 },
                 {
+                  // v285 — voorheen maar 3 vaste standen (Niet/Deels/Gedaan), ongeacht hoeveel van de
+                  // aangiftes al waren afgevinkt — nu een concreet aantal ("X van N gedaan") met een
+                  // kleur die per stap oploopt van rood (nog niks) naar groen (alles gedaan), zodat 1
+                  // van de 6 gedaan er zichtbaar anders uitziet dan 5 van de 6. N is het werkelijke
+                  // aantal verschuldigde aangiftes dit jaar (BTW-kwartalen die dit jaar transacties
+                  // hadden, plus IB+Zvw voor zzp/eenmanszaak of Vpb voor een BV — zie yearlyProgress).
                   label: "Werkelijke aangifte",
-                  value:
-                    yearProgress?.werkelijkAangifteStatus === "gedaan"
-                      ? "🟢 Gedaan"
-                      : yearProgress?.werkelijkAangifteStatus === "deels"
-                      ? "🟡 Deels geregistreerd"
-                      : "⚪ Niet geregistreerd",
+                  value: (() => {
+                    const done = yearProgress?.werkelijkAangifteDone ?? 0;
+                    const total = yearProgress?.werkelijkAangifteTotal ?? 0;
+                    if (total === 0) return "⚪ Niet van toepassing";
+                    const frac = done / total;
+                    const dot = frac === 0 ? "🔴" : frac < 0.5 ? "🟠" : frac < 1 ? "🟡" : "🟢";
+                    return `${dot} ${done} van ${total} gedaan`;
+                  })(),
                 },
               ],
               subtitle: yearProgress?.gatDitJaar
@@ -2450,16 +2488,31 @@ export default function App() {
             // v240 — vervangt de "Factuurperiode"-kaart die hier stond (die is verhuisd naar het
             // Controleren-tabblad) — zelfde stijl als "BTW-kwartalen" hierboven: een getal per
             // openstaand item (hier: IB/IH en Zvw voor {activeYear}, max. 2), i.p.v. een bedrag.
-            {
-              key: "ibZvwAangiften",
-              title: `IB/Zvw aangiften ${activeYear}`,
-              icon: <span>📮</span>,
-              value: (ibStatus[activeYear]?.gedaan ? 0 : 1) + (zvwStatus[activeYear]?.gedaan ? 0 : 1),
-              subtitle: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "Beide afgehandeld" : "nog niet afgevinkt als gedaan",
-              tone: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "ok" : "attention",
-              hint: "Naar de aangifte-checklist voor dit jaar",
-              onClick: () => jumpToSection(checklistSectionRef),
-            },
+            // v285 — deze kaart ging er tot nu toe altijd van uit dat IB/Zvw bestaan, ook voor een BV
+            // (die kent geen IB/Zvw, alleen Vpb) — daardoor stond dit voor een BV eeuwig op "1 open"
+            // (Zvw wordt nooit afgevinkt) terwijl er niets fout was. Nu voor een BV de Vpb-aangifte
+            // i.p.v. IB/Zvw.
+            rechtsvorm === "bv"
+              ? {
+                  key: "ibZvwAangiften",
+                  title: `Vpb-aangifte ${activeYear}`,
+                  icon: <span>📮</span>,
+                  value: vpbStatus[activeYear]?.gedaan ? 0 : 1,
+                  subtitle: vpbStatus[activeYear]?.gedaan ? "Afgehandeld" : "nog niet afgevinkt als gedaan",
+                  tone: vpbStatus[activeYear]?.gedaan ? "ok" : "attention",
+                  hint: "Naar de aangifte-checklist voor dit jaar",
+                  onClick: () => jumpToSection(checklistSectionRef),
+                }
+              : {
+                  key: "ibZvwAangiften",
+                  title: `IB/Zvw aangiften ${activeYear}`,
+                  icon: <span>📮</span>,
+                  value: (ibStatus[activeYear]?.gedaan ? 0 : 1) + (zvwStatus[activeYear]?.gedaan ? 0 : 1),
+                  subtitle: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "Beide afgehandeld" : "nog niet afgevinkt als gedaan",
+                  tone: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "ok" : "attention",
+                  hint: "Naar de aangifte-checklist voor dit jaar",
+                  onClick: () => jumpToSection(checklistSectionRef),
+                },
             // ---- Fase 3 (v219): situationeel, alleen als er echt een signaal is ----
             ...(rechtsvorm === "bv" && bvSignalering
               ? [
@@ -3508,10 +3561,15 @@ export default function App() {
     if (yearlyProgress[activeYear]?.status === "rood") {
       items.push("Saldo tussen twee bestanden sluit dit jaar niet aan");
     }
-    if (!ibStatus[activeYear]?.gedaan) items.push("IB/IH nog niet afgevinkt als gedaan");
-    if (!zvwStatus[activeYear]?.gedaan) items.push("Zvw nog niet afgevinkt als gedaan");
+    // v285 — een BV kent geen IB/Zvw (alleen Vpb) — zie ook yearlyProgress/werkelijkAangifteChecks.
+    if (rechtsvorm === "bv") {
+      if (!vpbStatus[activeYear]?.gedaan) items.push("Vpb-aangifte nog niet afgevinkt als gedaan");
+    } else {
+      if (!ibStatus[activeYear]?.gedaan) items.push("IB/IH nog niet afgevinkt als gedaan");
+      if (!zvwStatus[activeYear]?.gedaan) items.push("Zvw nog niet afgevinkt als gedaan");
+    }
     return items;
-  }, [activeYear, yearlyProgress, ibStatus, zvwStatus]);
+  }, [activeYear, yearlyProgress, ibStatus, zvwStatus, vpbStatus, rechtsvorm]);
 
   // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
   // state (geen nieuwe reliability-engine): Bankbestanden → Transacties → BTW → Jaarcontrole →
@@ -3656,7 +3714,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -3726,6 +3784,7 @@ export default function App() {
       setTransactionNotes(project.transactionNotes && typeof project.transactionNotes === "object" ? project.transactionNotes : {});
       setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
       setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
+      setVpbStatus(project.vpbStatus && typeof project.vpbStatus === "object" ? project.vpbStatus : {});
       setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
       // Een projectbestand zonder deze vlag is opgeslagen vóórdat deze regel bestond — behoud dan het
       // oude gedrag (onbeantwoord urencriterium-jaar = "ja") zodat een eerder gedeeld/afgedrukt cijfer
@@ -3785,6 +3844,7 @@ export default function App() {
     setFixedCategories(DEFAULT_FIXED_CATEGORIES);
     setIbStatus({});
     setZvwStatus({});
+    setVpbStatus({});
     setOpeningBalanceCorrections({});
     // v271 — deze 8 velden ontbraken hier: na "Wis alles" bleven ze stilzwijgend op hun oude waarde
     // staan (van vóór het wissen), waardoor bij het laden van een nieuw/ander dossier de wizard
@@ -3975,6 +4035,8 @@ export default function App() {
                   onYearClick={setActiveYear}
                   onOpenHelp={setHelpPopupChapter}
                   yearlyProgress={yearlyProgress}
+                  vpbStatus={vpbStatus}
+                  setVpbGedaan={setVpbGedaan}
                 />
               ) : (
                 <MultiYearOverview

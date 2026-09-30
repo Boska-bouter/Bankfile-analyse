@@ -12,7 +12,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // Aangiftevoorstel, zodat de twee rapportages nooit uit de pas kunnen lopen.
 export default function MultiYearOverviewBV({
   years, yearlySummaries, kostenTotaalByYear, dgaSalarisByYear, rcVerloop, evVerloop, onYearClick, onOpenHelp,
-  yearlyProgress,
+  yearlyProgress, vpbStatus, setVpbGedaan,
 }) {
   // v273 — dit paneel toont nu alleen nog in de Meerjarenoverzicht-pop-up, dus standaard
   // uitgeklapt i.p.v. dichtgeklapt (zie MultiYearOverview.jsx voor dezelfde toelichting).
@@ -70,6 +70,7 @@ export default function MultiYearOverviewBV({
                 <th className="text-right font-medium py-2 px-3" title="Mutatie dit jaar in de rekening-courant met de DGA">RC-mutatie</th>
                 <th className="text-right font-medium py-2 px-3">Dividend</th>
                 <th className="text-right font-medium py-2 px-3" title="Cumulatieve stand rekening-courant, alleen over de jaren in dit overzicht">RC-stand</th>
+                <th className="text-left font-medium py-2 pl-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status Vpb</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -100,6 +101,16 @@ export default function MultiYearOverviewBV({
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(rc.mutatieDitJaar)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(ev.dividend)}</td>
                     <td className="py-2 px-3 text-right font-mono font-medium whitespace-nowrap">{eurTight(rc.standEindJaar)}</td>
+                    <td className="py-2 pl-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
+                        <input
+                          type="checkbox"
+                          checked={!!vpbStatus?.[year]?.gedaan}
+                          onChange={(e) => setVpbGedaan?.(year, e.target.checked)}
+                        />
+                        Al gedaan
+                      </label>
+                    </td>
                   </tr>
                 );
               })}
