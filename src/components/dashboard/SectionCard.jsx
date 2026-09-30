@@ -36,8 +36,11 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
             {icon}
           </div>
           <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{title}</span>
-          {value != null && !lines && (
-            <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
+          {/* v284 — voorheen verborgen zodra een kaart ook `lines` toont (elke kaart met `lines` zette
+              tot nu toe geen top-level `value`, dus dit veranderde tot nu toe niets) — "BTW-kwartalen"
+              wil nu juist wél een badge (het jaartotaal) tonen NAAST de per-kwartaal regels. */}
+          {value != null && (
+            <span className={`text-xs font-bold rounded-full px-2 py-0.5 whitespace-nowrap ${tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
               {value}
             </span>
           )}

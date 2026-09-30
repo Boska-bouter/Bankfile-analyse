@@ -2419,6 +2419,18 @@ export default function App() {
               key: "btwQuarters",
               title: `BTW-kwartalen ${activeYear}`,
               icon: <span>🧾</span>,
+              // v284 — rechtsboven in de kop van deze kaart nu ook het jaartotaal (som van de 4
+              // kwartaalsaldo's), eveneens met expliciet "te betalen"/"te ontvangen" — zelfde
+              // dubbelzinnigheid-fix als bij de losse Q1-Q4-regels hieronder, maar dan voor het jaar
+              // als geheel, zodat je dat in één oogopslag ziet zonder de 4 regels bij elkaar op te
+              // hoeven tellen.
+              value: (() => {
+                const totaal = [1, 2, 3, 4].reduce((a, kwartaal) => {
+                  const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
+                  return a + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
+                }, 0);
+                return `${eur(Math.abs(totaal))} ${totaal < 0 ? "te ontvangen" : "te betalen"}`;
+              })(),
               lines: [1, 2, 3, 4].map((kwartaal) => {
                 const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
                 const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0;
