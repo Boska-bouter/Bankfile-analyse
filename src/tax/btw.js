@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
+import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE } from "../classification/categories.js";
 import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
@@ -35,6 +35,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Leningen",
   "Leningen (privé)",
   "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
+  "Gemeentelijke kosten (deels zakelijk)", // v291 — zelfde reden als "Gemeentelijke kosten" hierboven
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
   "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
@@ -65,7 +66,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 };
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
-  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
+  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)", "Webshops & online aankopen",
   "Kinderopvang", "Prive - mobiel/internet", "Prive overige abonnementen", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   // v288 — zelfde standaard-uitsluiting als de andere "Prive - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
@@ -132,7 +133,10 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
 // backwards compatible voor elke aanroep die dit argument niet meegeeft). `categoryZakelijkPercentage`
 // is de generieke tegenhanger (zie tax/categorySplit.js): dezelfde soort optionele correctie, maar
 // dan voor élke "kosten"/"geen"-categorie met een ingesteld percentage, niet alleen Huur.
-export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
+// v291 — `energieZakelijkPercentageStatus`/`gemeentelijkeKostenZakelijkPercentageStatus`: dezelfde
+// soort { jaar: percentage }-map, nu ook voor "Energie-water (deels zakelijk)" en "Gemeentelijke
+// kosten (deels zakelijk)" (zie tax/gedeeldeHuur.js) — ook hier optioneel, ontbrekend = 100%.
+export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false, energieZakelijkPercentageStatus = null, gemeentelijkeKostenZakelijkPercentageStatus = null) {
   const map = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -198,16 +202,19 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
       // hieronder) is al in `btw` verwerkt, dus hier alleen nog het bedrag zelf naar rato.
       map[key].kostenBruto += -tx.amount * factor;
       if (!voorbelastingExcluded.includes(tx.category)) {
-        // Bij "Huur (deels zakelijk)" is maar een deel van de BTW aftrekbaar als voorbelasting —
-        // het percentage-zakelijk-gebruik voor dit jaar (ontbrekend/geen status = 100%, dus
-        // volledig aftrekbaar, hetzelfde gedrag als vóór deze correctie bestond). Dit is een apart,
-        // ouder mechanisme (eigen categorie) dat naast de generieke categoryZakelijkPercentage-
-        // correctie hierboven blijft bestaan — in de praktijk is voor een gegeven transactie maar
-        // één van de twee ooit niet 100.
-        const huurPercentage = tx.category === GEDEELDE_HUUR_CATEGORIE
-          ? (huurZakelijkPercentageStatus?.[year] ?? 100)
+        // Bij "Huur (deels zakelijk)" (en, sinds v291, "Energie-water (deels zakelijk)"/
+        // "Gemeentelijke kosten (deels zakelijk)") is maar een deel van de BTW aftrekbaar als
+        // voorbelasting — het percentage-zakelijk-gebruik voor dit jaar (ontbrekend/geen status =
+        // 100%, dus volledig aftrekbaar, hetzelfde gedrag als vóór deze correctie bestond). Dit is
+        // een apart, ouder mechanisme (eigen categorieën) dat naast de generieke
+        // categoryZakelijkPercentage-correctie hierboven blijft bestaan — in de praktijk is voor een
+        // gegeven transactie maar één van de twee ooit niet 100.
+        const gedeeldeHuisvestingPercentage =
+          tx.category === GEDEELDE_HUUR_CATEGORIE ? (huurZakelijkPercentageStatus?.[year] ?? 100)
+          : tx.category === GEDEELDE_ENERGIE_CATEGORIE ? (energieZakelijkPercentageStatus?.[year] ?? 100)
+          : tx.category === GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE ? (gemeentelijkeKostenZakelijkPercentageStatus?.[year] ?? 100)
           : 100;
-        map[key].voorbelasting += -btw * (huurPercentage / 100);
+        map[key].voorbelasting += -btw * (gedeeldeHuisvestingPercentage / 100);
       }
     }
   }

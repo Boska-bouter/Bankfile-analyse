@@ -1,4 +1,4 @@
-import { fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE } from "../classification/categories.js";
+import { fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE } from "../classification/categories.js";
 import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 import { eur } from "../utils/amounts.js";
 
@@ -249,7 +249,7 @@ export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, p
 // 100% mee als voorbelasting, exact zoals voorheen. `categoryZakelijkPercentage` is de generieke
 // tegenhanger daarvan (zie categorySplit.js) — zelfde soort optionele correctie, maar dan voor élke
 // "kosten"/"geen"-categorie met een ingesteld percentage in plaats van alleen "Huur (deels zakelijk)".
-export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false) {
+export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false, energieZakelijkPercentageStatus = null, gemeentelijkeKostenZakelijkPercentageStatus = null) {
   const perQuarter = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -272,10 +272,14 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
       const effectiefVerlegd = tx.btwVerlegd != null ? tx.btwVerlegd : btwVerlegd;
       if (!effectiefVerlegd) perQuarter[key].verschuldigdBtw += btw;
     } else if (!voorbelastingExcluded.includes(tx.category)) {
-      const huurPercentage = tx.category === GEDEELDE_HUUR_CATEGORIE
-        ? (huurZakelijkPercentageStatus?.[year] ?? 100)
+      // v291 — zelfde generalisatie als in computeQuarterlyBtwForYear (btw.js): naast "Huur (deels
+      // zakelijk)" ook "Energie-water (deels zakelijk)"/"Gemeentelijke kosten (deels zakelijk)".
+      const gedeeldeHuisvestingPercentage =
+        tx.category === GEDEELDE_HUUR_CATEGORIE ? (huurZakelijkPercentageStatus?.[year] ?? 100)
+        : tx.category === GEDEELDE_ENERGIE_CATEGORIE ? (energieZakelijkPercentageStatus?.[year] ?? 100)
+        : tx.category === GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE ? (gemeentelijkeKostenZakelijkPercentageStatus?.[year] ?? 100)
         : 100;
-      perQuarter[key].voorbelasting += -btw * (huurPercentage / 100);
+      perQuarter[key].voorbelasting += -btw * (gedeeldeHuisvestingPercentage / 100);
     }
   }
   const result = {};

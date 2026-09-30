@@ -16,7 +16,7 @@ import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "../tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
-import { computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
+import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
 // De statustekst is een functie van het aantal openstaande punten (niet een vaste tekst per kleur)
@@ -106,7 +106,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
 // Alleen de winst voor een jaar — gebruikt in een pre-pass over alle te rapporteren jaren om de
 // verrekening van niet-gerealiseerde zelfstandigenaftrek (die de jaren chronologisch aan elkaar
 // koppelt) te kunnen berekenen vóórdat de eigenlijke jaarsecties worden opgebouwd.
-function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails) {
+function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
@@ -115,6 +115,10 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
     computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd)
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
+  // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
+  const gedeeldeEnergieForYear = computeGedeeldeEnergieVoorJaar(classified, year, energieZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const gedeeldeGemeentelijkeKostenForYear = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, gemeentelijkeKostenZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
   // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee (zie yearlySummary.js) — in
   // plaats daarvan telt hier de daadwerkelijk berekende afschrijving mee, exact dezelfde constructie
@@ -122,7 +126,8 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
-    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) +
+    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) -
+    (gedeeldeEnergieForYear?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKostenForYear?.nietAftrekbaarBedrag || 0) +
     (kmVergoedingForYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus).winst;
 }
@@ -147,7 +152,7 @@ function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftr
   };
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -160,6 +165,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd)
   );
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
+  // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
+  const gedeeldeEnergieForYear = computeGedeeldeEnergieVoorJaar(classified, year, energieZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const gedeeldeGemeentelijkeKostenForYear = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, gemeentelijkeKostenZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   const kmVergoedingForYear = computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year);
   // activaSummary/activaAfschrijvingForYear moeten vóór de winstCorrectie berekend worden: "Zakelijk
   // - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js, dus de
@@ -168,7 +177,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const activaSummary = computeActivaSummary(classified);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
-    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) +
+    (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) -
+    (gedeeldeEnergieForYear?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKostenForYear?.nietAftrekbaarBedrag || 0) +
     (kmVergoedingForYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
   const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, winstCorrectie, categoryZakelijkPercentage, autoStatus);
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's. Een
@@ -273,7 +283,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   );
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar);
 
-  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus);
+  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
 
   // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
   // checklist in de tool zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
@@ -532,18 +542,20 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${autoDetailHtml}`;
   })();
 
-  // Transparante uitsplitsing van "Huur (deels zakelijk)" — alleen zichtbaar zodra er dit jaar
-  // daadwerkelijk transacties in die categorie zijn (computeGedeeldeHuurVoorJaar geeft anders null
-  // terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
-  const gedeeldeHuurHtml = (() => {
-    const gh = gedeeldeHuurForYear;
-    if (!gh) return "";
-    // Alleen de eindbedragen, geen volledige tabel — zelfde reden als bij de financiële-lease-auto
-    // hierboven. Volledige uitsplitsing staat in de tool zelf.
-    return `
-  <div class="rubriek"><span>Huur (deels zakelijk) — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
-  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de tool zelf.</p>`;
-  })();
+  // Transparante uitsplitsing van "Huur (deels zakelijk)" en, sinds v291, dezelfde uitsplitsing voor
+  // "Energie-water (deels zakelijk)"/"Gemeentelijke kosten (deels zakelijk)" — elk alleen zichtbaar
+  // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
+  // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
+  const gedeeldeHuisvestingHtml = [
+    { label: "Huur (deels zakelijk)", gh: gedeeldeHuurForYear },
+    { label: "Energie-water (deels zakelijk)", gh: gedeeldeEnergieForYear },
+    { label: "Gemeentelijke kosten (deels zakelijk)", gh: gedeeldeGemeentelijkeKostenForYear },
+  ]
+    .filter(({ gh }) => !!gh)
+    .map(({ label, gh }) => `
+  <div class="rubriek"><span>${label} — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
+  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de tool zelf.</p>`)
+    .join("");
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
@@ -584,7 +596,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${autoMachineKostenHtml}
     ${overigeBedrijfskostenHtml}
     ${financieelHtml}
-    ${gedeeldeHuurHtml}
+    ${gedeeldeHuisvestingHtml}
     <div class="rubriek total"><span>Resultaat uit onderneming (winst, netto)</span><span class="num">${eur(summary.winst)}</span></div>
     ${priveHtml}
     ${belastingenHtml}
@@ -650,7 +662,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
@@ -661,7 +673,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     .filter((year) => resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) !== "onbekend")
     .map((year) => ({
       year,
-      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails),
+      winst: computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaDetails, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus),
       zelfstandigenaftrekStatus: zelfstandigenaftrekStatus?.[year],
       startersaftrekToegepast: startersaftrekStatus?.[year] === "ja",
     }));
@@ -680,7 +692,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const PAGE_BREAK_DIVIDER = '\n  <div style="page-break-before: always; break-before: page;"></div>\n';
 
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus))
     .join(PAGE_BREAK_DIVIDER);
 
   return `<!DOCTYPE html>

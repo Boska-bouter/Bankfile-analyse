@@ -24,9 +24,11 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 // Belastingen (incl. naheffingen), Onderhoud apparatuur/machines, Betaalautomaat kosten, Uitbetaling
 // aan prive, Prive opnames, Lease (operationeel/financieel), etc.) zijn typisch volledig van het ene
 // of het andere type — daar zou een percentage-instelling alleen maar voor verwarring zorgen, dus
-// die blijven hier bewust buiten beeld. "Huur (deels zakelijk)" staat er ook niet bij: die heeft al
-// zijn eigen, aparte percentage-mechanisme (zie gedeeldeHuur.js) — dit is voor de gewone
-// "Huur"-categorie. "Boekhouder, accountant & administratie" stond hier eerder ook bij deze
+// die blijven hier bewust buiten beeld. "Huur (deels zakelijk)", "Energie-water (deels zakelijk)" en
+// "Gemeentelijke kosten (deels zakelijk)" staan er ook niet bij: die hebben elk al hun eigen, aparte
+// percentage-mechanisme (zie gedeeldeHuur.js, instelbaar bij "Persoonlijke aannames") — dit hier is
+// voor de gewone "Huur"/"Energie-water"/"Gemeentelijke kosten"-categorieën zelf. "Boekhouder,
+// accountant & administratie" stond hier eerder ook bij deze
 // uitzonderingen, maar is op verzoek (v288) alsnog aan SPLITSBARE_CATEGORIEEN toegevoegd — in de
 // praktijk wordt een boekhouder/accountant soms ook voor privézaken ingeschakeld.
 //

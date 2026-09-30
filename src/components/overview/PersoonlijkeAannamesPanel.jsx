@@ -9,6 +9,59 @@ import { computeLeaseInvesteringenForYear } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
+// v291 — gedeeld blok voor Huur/Energie-water/Gemeentelijke kosten "(deels zakelijk)": drie losse
+// categorieën met elk hun eigen percentage-per-jaar-instelling (zie tax/gedeeldeHuur.js), maar
+// identieke UI — hier als één herbruikbare sub-component in plaats van drie keer dezelfde JSX.
+function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw, onSetPercentage, btwTarief, activeYear }) {
+  if (!gedeelde) return null;
+  return (
+    <div className="pt-2 border-t border-slate-200">
+      <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1">
+        Percentage zakelijk gebruik "{label}" in {activeYear}
+        {helpChapter}
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={percentageRaw ?? ""}
+          placeholder="100"
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "") { onSetPercentage(activeYear, null); return; }
+            const n = Math.max(0, Math.min(100, Number(v)));
+            onSetPercentage(activeYear, n);
+          }}
+          className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+        />
+        <span className="text-sm text-slate-500">%</span>
+      </div>
+      <p className="mt-1.5 text-xs text-slate-400">
+        Er zijn dit jaar transacties in de categorie "{label}" — alleen dit percentage daarvan telt
+        mee als aftrekbare zakelijke kosten (en, als er BTW op zit, als voorbelasting); de rest is
+        privé en telt niet mee in de winst. Leeg/niet ingevuld = 100% (volledig aftrekbaar, hetzelfde
+        als de gewone categorie).
+      </p>
+
+      <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-xs">
+        <p><span className="text-slate-500">Totaal (bruto, incl. BTW):</span> <strong>{eur(gedeelde.totaalHuurBruto)}</strong></p>
+        <p><span className="text-slate-500">Totaal (netto, excl. BTW):</span> <strong>{eur(gedeelde.totaalHuurNetto)}</strong></p>
+        <p><span className="text-slate-500">Percentage zakelijk:</span> <strong>{gedeelde.percentage}%</strong></p>
+        <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbaar bedrag:</span> <strong>{eur(gedeelde.aftrekbaarBedrag)}</strong></p>
+        <p><span className="text-slate-500">Niet-aftrekbaar (privé)deel:</span> <strong>{eur(gedeelde.nietAftrekbaarBedrag)}</strong></p>
+        {btwTarief > 0 && (
+          <>
+            <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbare voorbelasting:</span> <strong>{eur(gedeelde.aftrekbareVoorbelasting)}</strong></p>
+            <p><span className="text-slate-500">Niet-aftrekbare voorbelasting (privé):</span> <strong>{eur(gedeelde.nietAftrekbareVoorbelasting)}</strong></p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Persoonlijke fiscale aannames die de tool NIET uit bankgegevens kan afleiden: of aan het
 // urencriterium voor de zelfstandigenaftrek is voldaan, en een indicatie van heffingskortingen en
 // KIA die daarvan (en van eigen bedrijfsmiddel-investeringen) afhangen. Dit is bewust een apart,
@@ -20,7 +73,12 @@ export default function PersoonlijkeAannamesPanel({
   autoWizardStatus, onOpenAutoActivaModal,
   kmVergoedingDetails, onSetKmVergoedingField,
   activaSummary, activaDetails, leaseSummary, leaseDetails, onOpenHelp,
-  gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus, categoryBtwRates,
+  gedeeldeHuur, huurZakelijkPercentageStatus, onSetHuurZakelijkPercentageStatus,
+  // v291 — zelfde constructie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
+  // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
+  gedeeldeEnergie, energieZakelijkPercentageStatus, onSetEnergieZakelijkPercentageStatus,
+  gedeeldeGemeentelijkeKosten, gemeentelijkeKostenZakelijkPercentageStatus, onSetGemeentelijkeKostenZakelijkPercentageStatus,
+  categoryBtwRates,
 }) {
   const [open, setOpen] = useState(false);
   // Dit paneel blijft altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag hieronder
@@ -63,6 +121,12 @@ export default function PersoonlijkeAannamesPanel({
 
   const huurPercentageRaw = huurZakelijkPercentageStatus?.[activeYear];
   const huurBtwTarief = categoryBtwRates?.["Huur (deels zakelijk)"] || 0;
+  // v291 — zelfde constructie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
+  // (deels zakelijk)".
+  const energiePercentageRaw = energieZakelijkPercentageStatus?.[activeYear];
+  const energieBtwTarief = categoryBtwRates?.["Energie-water (deels zakelijk)"] || 0;
+  const gemeentelijkeKostenPercentageRaw = gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear];
+  const gemeentelijkeKostenBtwTarief = categoryBtwRates?.["Gemeentelijke kosten (deels zakelijk)"] || 0;
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
@@ -251,52 +315,33 @@ export default function PersoonlijkeAannamesPanel({
             )}
           </div>
 
-          {gedeeldeHuur && (
-            <div className="pt-2 border-t border-slate-200">
-              <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1">
-                Percentage zakelijk gebruik "Huur (deels zakelijk)" in {activeYear}
-                {onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={huurPercentageRaw ?? ""}
-                  placeholder="100"
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "") { onSetHuurZakelijkPercentageStatus(activeYear, null); return; }
-                    const n = Math.max(0, Math.min(100, Number(v)));
-                    onSetHuurZakelijkPercentageStatus(activeYear, n);
-                  }}
-                  className="w-24 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
-                />
-                <span className="text-sm text-slate-500">%</span>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-400">
-                Er zijn dit jaar transacties in de categorie "Huur (deels zakelijk)" — alleen dit percentage
-                daarvan telt mee als aftrekbare zakelijke kosten (en, als er BTW op zit, als voorbelasting); de
-                rest is privé en telt niet mee in de winst. Leeg/niet ingevuld = 100% (volledig aftrekbaar,
-                hetzelfde als gewone "Huur").
-              </p>
-
-              <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-xs">
-                <p><span className="text-slate-500">Totale huur (bruto, incl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurBruto)}</strong></p>
-                <p><span className="text-slate-500">Totale huur (netto, excl. BTW):</span> <strong>{eur(gedeeldeHuur.totaalHuurNetto)}</strong></p>
-                <p><span className="text-slate-500">Percentage zakelijk:</span> <strong>{gedeeldeHuur.percentage}%</strong></p>
-                <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbaar bedrag:</span> <strong>{eur(gedeeldeHuur.aftrekbaarBedrag)}</strong></p>
-                <p><span className="text-slate-500">Niet-aftrekbaar (privé)deel:</span> <strong>{eur(gedeeldeHuur.nietAftrekbaarBedrag)}</strong></p>
-                {huurBtwTarief > 0 && (
-                  <>
-                    <p className="pt-1 border-t border-slate-200"><span className="text-slate-500">Aftrekbare voorbelasting:</span> <strong>{eur(gedeeldeHuur.aftrekbareVoorbelasting)}</strong></p>
-                    <p><span className="text-slate-500">Niet-aftrekbare voorbelasting (privé):</span> <strong>{eur(gedeeldeHuur.nietAftrekbareVoorbelasting)}</strong></p>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+          <GedeeldeHuisvestingBlock
+            label="Huur (deels zakelijk)"
+            helpChapter={onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
+            gedeelde={gedeeldeHuur}
+            percentageRaw={huurPercentageRaw}
+            onSetPercentage={onSetHuurZakelijkPercentageStatus}
+            btwTarief={huurBtwTarief}
+            activeYear={activeYear}
+          />
+          <GedeeldeHuisvestingBlock
+            label="Energie-water (deels zakelijk)"
+            helpChapter={onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
+            gedeelde={gedeeldeEnergie}
+            percentageRaw={energiePercentageRaw}
+            onSetPercentage={onSetEnergieZakelijkPercentageStatus}
+            btwTarief={energieBtwTarief}
+            activeYear={activeYear}
+          />
+          <GedeeldeHuisvestingBlock
+            label="Gemeentelijke kosten (deels zakelijk)"
+            helpChapter={onOpenHelp && <HelpHint chapter="huur-deels-zakelijk" onOpen={onOpenHelp} />}
+            gedeelde={gedeeldeGemeentelijkeKosten}
+            percentageRaw={gemeentelijkeKostenPercentageRaw}
+            onSetPercentage={onSetGemeentelijkeKostenZakelijkPercentageStatus}
+            btwTarief={gemeentelijkeKostenBtwTarief}
+            activeYear={activeYear}
+          />
         </div>
       )}
     </section>

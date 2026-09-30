@@ -82,12 +82,19 @@ export default function CategoryPercentagePanel({
           <p className="text-xs text-slate-500 mb-3">
             Sommige kosten zijn deels zakelijk en deels privé, ongeacht van welke rekening ze betaald zijn
             (bijv. brandstof, telefonie/internet, reiskosten OV, parkeren of huur die deels privé gebruikt
-            wordt). Vul hieronder een percentage zakelijk gebruik in per categorie voor {activeYear} — de
-            transacties zelf blijven gewoon in hun eigen categorie staan, alleen het bedrag dat in de winst
-            en (voor zover van toepassing) de BTW meetelt wordt naar rato verdeeld. Leeg laten = standaard
-            (100% voor een normaal-zakelijke kostenpost, 0% voor een normaal-privé categorie) — ongewijzigd
-            gedrag. De wijziging wordt doorgevoerd zodra je het veld verlaat of op Enter drukt.
+            wordt). Vul hieronder een percentage zakelijk gebruik in per categorie voor {activeYear} — de transacties zelf blijven gewoon in hun
+            eigen categorie staan, alleen het bedrag dat in de winst en (voor zover van toepassing) de BTW
+            meetelt wordt naar rato verdeeld. Leeg laten = standaard (100% voor een normaal-zakelijke
+            kostenpost, 0% voor een normaal-privé categorie) — ongewijzigd gedrag. De wijziging wordt
+            doorgevoerd zodra je het veld verlaat of op Enter drukt.
             {onOpenHelp && <HelpHint chapter="categorie-percentage-zakelijk" onOpen={onOpenHelp} />}
+          </p>
+          <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg p-2 mb-3">
+            Heb je bijvoorbeeld één pand (loods/schuur) dat structureel deels zakelijk/deels privé gebruikt
+            wordt, met huur, energie/water en/of gemeentelijke kosten die niet in deze lijst horen te worden
+            gemiddeld met andere, volledig zakelijke of privé kosten? Wijs die transacties dan toe aan "Huur
+            (deels zakelijk)", "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)" —
+            die hebben elk hun eigen percentage, in te stellen bij "Persoonlijke aannames", niet hier.
           </p>
           {autoOpDeZaakDitJaar && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
