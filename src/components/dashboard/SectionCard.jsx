@@ -29,7 +29,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
         type={clickable ? "button" : undefined}
         onClick={onClick}
         title={hint}
-        className={`text-left flex flex-col gap-2.5 ${clickable ? "cursor-pointer" : ""}`}
+        className={`text-left flex-1 flex flex-col gap-2.5 ${clickable ? "cursor-pointer" : ""}`}
       >
         <div className="flex items-center gap-2">
           <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
