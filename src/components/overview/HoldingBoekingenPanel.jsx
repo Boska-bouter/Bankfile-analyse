@@ -9,13 +9,19 @@ import { eur } from "../../utils/amounts.js";
 // wordt berekend (Kapitaalstorting/Dividenduitkering-categorieën, via evVerloop). Een verschil is
 // geen fout — de holding kan bijvoorbeeld een dividend nog niet hebben doorgekeerd naar de DGA
 // privé — maar is wel de moeite waard om te weten.
-export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetField, evVerloop }) {
-  const [open, setOpen] = useState(false);
+// v282 — open/dicht-stand kan nu ook van buitenaf bestuurd worden (open/onToggleOpen), zodat de
+// nieuwe holding-samenvattingskaart in "Details en overzichten" (Overzicht-tabblad, Jaaroverzicht)
+// dit paneel met "Bewerken" kan openklappen en ernaartoe kan scrollen. Zonder die props valt het
+// terug op zijn eigen, ongewijzigde interne stand (voor eventueel ander gebruik).
+export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetField, evVerloop, open: openProp, onToggleOpen }) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp !== undefined ? openProp : openState;
+  const toggleOpen = onToggleOpen || (() => setOpenState((v) => !v));
   if (years.length === 0) return null;
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
+      <button onClick={toggleOpen} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span>Holding-boekingen (handmatig)</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>

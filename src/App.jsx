@@ -182,6 +182,9 @@ export default function App() {
   // de al berekende bedragen aan de kant van de werkmaatschappij (Kapitaalstorting/
   // Dividenduitkering-categorieën) — een simpele controle, geen eigen boekhouding.
   const [holdingBoekingen, setHoldingBoekingen] = useState({});
+  // v282 — open/dicht-stand van HoldingBoekingenPanel, nu hier (i.p.v. lokaal in dat paneel) zodat
+  // de holding-samenvattingskaart in DetailsPanel.jsx ("Bewerken") 'm kan openklappen.
+  const [showHoldingBoekingen, setShowHoldingBoekingen] = useState(false);
   const [excludedDuplicateFingerprints, setExcludedDuplicateFingerprints] = useState([]);
   const [dismissedDuplicateNotice, setDismissedDuplicateNotice] = useState(false);
   // v243 — null = "auto", zelfde patroon als showPersonReview/showOverigReview hieronder.
@@ -372,6 +375,7 @@ export default function App() {
   // v261 — nieuw, voor de "Percentage zakelijk/privé"-kaart in het Instellingen-dashboard.
   const categoryPercentageSectionRef = useRef(null);
   const bvSignaleringSectionRef = useRef(null); // v219 — dashboard fase 3
+  const holdingBoekingenSectionRef = useRef(null); // v282 — link vanuit de nieuwe holding-samenvattingskaart in DetailsPanel.jsx
   const detailsSectionRef = useRef(null); // v219 — sticky navbalk "Details"
   const importControleSectionRef = useRef(null); // v240 — mini-dashboard "Controleren"
   const incomeReviewSectionRef = useRef(null); // Fase 2 — kaart "Herkomst van geld" (Controleren)
@@ -1898,6 +1902,50 @@ export default function App() {
     () => (rechtsvorm === "bv" ? computeBvSignalering(activeYear, yearlySummaries, evVerloop, yearlyOpenOB, years) : null),
     [rechtsvorm, activeYear, yearlySummaries, evVerloop, yearlyOpenOB, years]
   );
+  // v282 — BV-equivalent van dashboardAangifteIndicatie hierboven, voor de "Indicatieve
+  // vennootschapsbelasting"-kaart in DetailsPanel.jsx (Overzicht-tabblad, sub-tab Jaaroverzicht).
+  // Zelfde estimateVpb(...) als evVerloop hierboven en het BV-Aangiftevoorstel — geen nieuwe/
+  // afwijkende berekening.
+  const dashboardVpbIndicatie = useMemo(() => {
+    if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
+    return estimateVpb(yearlySummary.winst, activeYear);
+  }, [rechtsvorm, activeYear, yearlySummary]);
+  // v282 — samenvatting van de holding-boekingen voor het actieve jaar, als compacte kaart (zelfde
+  // vorm als aannamesCard) voor diezelfde Jaaroverzicht-sub-tab. Herhaalt bewust dezelfde
+  // verschil-berekening als de rij voor dit jaar in HoldingBoekingenPanel.jsx — puur een
+  // samenvatting/link daarnaartoe, geen nieuwe databron.
+  const holdingSummaryCard = useMemo(() => {
+    if (rechtsvorm !== "bv" || heeftHolding !== true || !activeYear) return null;
+    const b = holdingBoekingen?.[activeYear] || {};
+    const ev = evVerloop?.[activeYear] || { kapitaalstorting: 0, dividend: 0 };
+    const kapitaalstortingHolding = b.kapitaalstorting ?? null;
+    const dividendOntvangenHolding = b.dividendOntvangen ?? null;
+    const ingevuld = kapitaalstortingHolding != null || dividendOntvangenHolding != null;
+    const kapitaalVerschil = (kapitaalstortingHolding || 0) - ev.kapitaalstorting;
+    const dividendVerschil = (dividendOntvangenHolding || 0) - ev.dividend;
+    const heeftVerschil = ingevuld && (Math.abs(kapitaalVerschil) >= 1 || Math.abs(dividendVerschil) >= 1);
+    return {
+      key: "holdingBoekingen",
+      title: `Holding-boekingen ${activeYear}`,
+      icon: <span>🏢</span>,
+      lines: [
+        { label: "Kapitaalstorting (holding)", value: kapitaalstortingHolding != null ? eur(kapitaalstortingHolding) : "— nog niet ingevuld" },
+        { label: "Dividend ontvangen (holding)", value: dividendOntvangenHolding != null ? eur(dividendOntvangenHolding) : "— nog niet ingevuld" },
+      ],
+      subtitle: !ingevuld
+        ? "Nog niet ingevuld"
+        : heeftVerschil
+        ? `Verschil met werkmaatschappij: kapitaal ${eur(kapitaalVerschil)}, dividend ${eur(dividendVerschil)}`
+        : "Sluit aan met de werkmaatschappij",
+      tone: !ingevuld ? "neutral" : heeftVerschil ? "attention" : "ok",
+      hint: "Naar de holding-boekingen",
+      onClick: () => {
+        setShowHoldingBoekingen(true);
+        jumpToSection(holdingBoekingenSectionRef);
+      },
+      actionLabel: "Bewerken",
+    };
+  }, [rechtsvorm, heeftHolding, activeYear, holdingBoekingen, evVerloop]);
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   // Is er daadwerkelijk een privérekening-BESTAND geladen in dit dossier? Zie de toelichting bij
   // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
@@ -4018,6 +4066,9 @@ export default function App() {
               cardsByKey={dashboardCardsByKey}
               aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
               dashboardAangifteIndicatie={dashboardAangifteIndicatie}
+              rechtsvorm={rechtsvorm}
+              vpbIndicatie={dashboardVpbIndicatie}
+              holdingCard={holdingSummaryCard}
               winst={yearlySummary?.winst}
               previousWinst={previousYearlySummary?.winst}
               showTrend={showJaaroverzichtTrend}
@@ -4242,8 +4293,15 @@ export default function App() {
             jumpToSection. HoldingBoekingenPanel/BvSignaleringPanel blijven wél gewoon inline staan
             (daar is niet om gevraagd). */}
                 {rechtsvorm === "bv" && heeftHolding === true && (
-                  <div className="mt-4" style={sectionTabStyle("overzicht")}>
-                    <HoldingBoekingenPanel years={years} holdingBoekingen={holdingBoekingen} onSetField={setHoldingBoekingField} evVerloop={evVerloop} />
+                  <div className="mt-4" ref={holdingBoekingenSectionRef} style={sectionTabStyle("overzicht")}>
+                    <HoldingBoekingenPanel
+                      years={years}
+                      holdingBoekingen={holdingBoekingen}
+                      onSetField={setHoldingBoekingField}
+                      evVerloop={evVerloop}
+                      open={showHoldingBoekingen}
+                      onToggleOpen={() => setShowHoldingBoekingen((v) => !v)}
+                    />
                   </div>
                 )}
 

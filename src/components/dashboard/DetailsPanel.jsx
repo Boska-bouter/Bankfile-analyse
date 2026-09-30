@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SectionCard } from "./SectionCard.jsx";
 import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
+import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
 
 // Fase 1, dashboard-restyling (Stijl F) — "Details en overzichten"-paneel onderaan het Overzicht-
 // tabblad, met sub-tabs (Jaaroverzicht/Transacties/Categorieën/Activa/Leningen/Lease/BTW/
@@ -45,6 +46,9 @@ export default function DetailsPanel({
   cardsByKey,
   aannamesCard,
   dashboardAangifteIndicatie,
+  rechtsvorm,
+  vpbIndicatie,
+  holdingCard,
   winst,
   previousWinst,
   showTrend,
@@ -89,7 +93,25 @@ export default function DetailsPanel({
         ) : (
           <>
         {tab === "jaaroverzicht" && (
-          dashboardAangifteIndicatie ? (
+          rechtsvorm === "bv" ? (
+            // v282 — BV kent geen IB/Zvw-indicatie (dat bestaat alleen in de IB), maar wél een
+            // eigen indicatieve Vpb-berekening plus (als er een holding is) de holding-boekingen
+            // voor het actieve jaar — zelfde opzet als de zzp-kant hieronder.
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+              <IndicatieveVpbCard
+                year={year}
+                winst={winst}
+                vpbIndicatie={vpbIndicatie}
+                showTrend={showTrend}
+                prevWinst={previousWinst}
+                onShowFullCalculation={onShowFullCalculation}
+              />
+              <div className="flex flex-col gap-4">
+                {CardTile(holdingCard)}
+                {CardTile(btwQuarters)}
+              </div>
+            </div>
+          ) : dashboardAangifteIndicatie ? (
             <div className="grid md:grid-cols-2 gap-4 items-start">
               <IndicatieveAangifteCard
                 year={year}
@@ -105,8 +127,6 @@ export default function DetailsPanel({
               </div>
             </div>
           ) : (
-            // Rechtsvorm "bv" kent geen IB/Zvw-indicatie op deze manier — dan alleen de
-            // beschikbare kaarten tonen (BTW per kwartaal), geen verzonnen IB-berekening.
             <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(btwQuarters)}</div>
           )
         )}
