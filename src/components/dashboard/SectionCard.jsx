@@ -1,3 +1,5 @@
+import HelpHint from "../shared/HelpHint.jsx";
+
 // Restyling (fase 1) van de dashboardtegel: zelfde databron/contract als DashboardOverview.jsx
 // ({key,title,value|lines,subtitle,tone,actionLabel,icon,onClick,hint}), nieuwe kaartstijl zoals
 // het goedgekeurde mockup-canvas (Stijl F): afgeronde witte kaart, zachtere kleuren, actieknop
@@ -15,16 +17,27 @@ const TONE = {
   risk: { border: "border-red-300", bg: "bg-red-50", dot: "bg-red-500", text: "text-red-700" },
 };
 
-export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children }) {
+export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp }) {
   const t = TONE[tone] || TONE.neutral;
   const clickable = !!onClick;
   const Wrapper = clickable ? "button" : "div";
   return (
     <div
-      className={`rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
+      className={`relative rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
         clickable ? "hover:border-slate-300" : ""
       } ${expanded ? "col-span-full" : ""}`}
     >
+      {/* v301 — op verzoek: "? uitleg" ook rechtsbovenin op de kaarten hier (Controleren/Instellingen-
+          mini-dashboard), niet alleen in de uitgeklapte panelen eronder. Staat als eigen element BUITEN
+          de <Wrapper> hieronder (die vaak zelf een <button> is, zie hierboven "onClick") — een
+          <button> binnen een <button> is ongeldige/onvoorspelbare HTML (zie ook de toelichting in
+          ClassificationConfidencePanel.jsx), dus dit zit hier als losstaand, absoluut gepositioneerd
+          knopje in de hoek in plaats van inline in de titelregel. */}
+      {helpChapter && onOpenHelp && (
+        <div className="absolute top-3 right-3 z-10">
+          <HelpHint chapter={helpChapter} onOpen={onOpenHelp} label="" />
+        </div>
+      )}
       <Wrapper
         type={clickable ? "button" : undefined}
         onClick={onClick}
@@ -35,7 +48,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
             {icon}
           </div>
-          <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{title}</span>
+          <span className={`flex-grow text-[13px] font-bold text-slate-900 truncate ${helpChapter ? "pr-4" : ""}`}>{title}</span>
           {/* v284 — voorheen verborgen zodra een kaart ook `lines` toont (elke kaart met `lines` zette
               tot nu toe geen top-level `value`, dus dit veranderde tot nu toe niets) — "BTW-kwartalen"
               wil nu juist wél een badge (het jaartotaal) tonen NAAST de per-kwartaal regels. */}
@@ -72,7 +85,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
 // Rendert een set dashboardCards (zelfde array als voorheen aan DashboardOverview gegeven) als
 // een grid van SectionCard-tegels, met dezelfde grid-stijl (afronding/kleuren) als het Overzicht-
 // mockup. `title` is optioneel — op Overzicht wordt de titel nu getoond via DashboardHeader.
-export default function SectionCardGrid({ title, cards }) {
+export default function SectionCardGrid({ title, cards, onOpenHelp }) {
   if (!cards || cards.length === 0) return null;
   return (
     <section className="space-y-3">
@@ -91,6 +104,8 @@ export default function SectionCardGrid({ title, cards }) {
             onClick={card.onClick}
             hint={card.hint}
             expanded={card.expanded}
+            helpChapter={card.helpChapter}
+            onOpenHelp={onOpenHelp}
           >
             {card.expandedContent}
           </SectionCard>

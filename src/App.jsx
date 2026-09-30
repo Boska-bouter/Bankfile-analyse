@@ -3259,6 +3259,7 @@ export default function App() {
           tone: "neutral",
           subtitle: "Categorieoverzicht zakelijk en privé bekijken",
           hint: "Naar de categorieoverzichten",
+          helpChapter: "categorieen-overzicht",
         },
         "categorieen",
         <div className="grid md:grid-cols-2 gap-4">
@@ -3352,10 +3353,10 @@ export default function App() {
   ]);
   const instellingenCardGroups = useMemo(() => {
     if (transactions.length === 0) return [];
-    const g = (key, title, icon, memberKeys, extra) => {
+    const g = (key, title, icon, memberKeys, extra, helpChapter) => {
       const built = groupCards(instellingenCardsByKey, memberKeys, extra);
       if (!built) return null;
-      return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
+      return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken", helpChapter };
     };
     return [
       withExpand(
@@ -3480,7 +3481,7 @@ export default function App() {
         </div>
       ),
       withExpand(
-        g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"]),
+        g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"], undefined, "btw-percentages"),
         "btw",
         <div ref={btwSettingsSectionRef}>
           <BtwRatesPanel
@@ -4319,6 +4320,8 @@ export default function App() {
               items={automatischeHerkenningItems}
               ctaLabel="Alle herkenningsregels bekijken"
               onCta={() => setActiveTab("instellingen")}
+              helpChapter="tegenpartijregels"
+              onOpenHelp={setHelpPopupChapter}
             />
           </div>
 
@@ -4477,7 +4480,7 @@ export default function App() {
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
-          <SectionCardGrid cards={controlerenCardGroups} />
+          <SectionCardGrid cards={controlerenCardGroups} onOpenHelp={setHelpPopupChapter} />
         </div>
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
@@ -4635,7 +4638,7 @@ export default function App() {
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("instellingen")}>
-          <SectionCardGrid cards={instellingenCardGroups} />
+          <SectionCardGrid cards={instellingenCardGroups} onOpenHelp={setHelpPopupChapter} />
         </div>
 
         {/* Op verzoek (v281) staat dit alleen nog binnen de uitgeklapte kaart "Tegenpartijen" (zie

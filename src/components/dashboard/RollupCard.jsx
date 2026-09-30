@@ -1,3 +1,5 @@
+import HelpHint from "../shared/HelpHint.jsx";
+
 // Fase 1, dashboard-restyling (Stijl F) — de 4 samenvattende categorie-kaarten bovenaan het
 // Overzicht-tabblad ("Nog te controleren"/"Nog in te stellen"/"Resultaten"/"Automatische
 // herkenning" in het mockup-canvas). Dit zijn ROLLUPS: ze tellen/lijsten dingen op die verderop al
@@ -11,15 +13,19 @@ const TONE = {
   info: { bg: "bg-violet-50", border: "border-violet-200", badge: "bg-violet-600", cta: "bg-violet-50 text-violet-700 hover:bg-violet-100" },
 };
 
-export default function RollupCard({ title, icon, tone = "info", count, items, ctaLabel, onCta }) {
+export default function RollupCard({ title, icon, tone = "info", count, items, ctaLabel, onCta, helpChapter, onOpenHelp }) {
   const t = TONE[tone] || TONE.info;
   return (
     <div className={`rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-3 shadow-sm`}>
+      {/* v301 — "? uitleg" toegevoegd op verzoek. De titelregel hier is (anders dan bij SectionCard)
+          gewoon een <div>, geen <button> — alleen de losse item-regels en de CTA eronder zijn dat —
+          dus dit kan gewoon inline in de titelregel, geen aparte absolute positionering nodig. */}
       <div className="flex items-center gap-2">
         <div className={`rounded-full ${t.bg} flex items-center justify-center shrink-0`} style={{ width: 26, height: 26 }}>
           {icon}
         </div>
         <span className="flex-grow text-[13px] font-bold text-slate-900">{title}</span>
+        {helpChapter && onOpenHelp && <HelpHint chapter={helpChapter} onOpen={onOpenHelp} label="" />}
         {count != null && (
           <span className={`text-xs font-bold rounded-full px-2 py-0.5 text-white ${t.badge}`}>{count}</span>
         )}
