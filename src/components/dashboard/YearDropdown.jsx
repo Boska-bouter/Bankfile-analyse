@@ -9,7 +9,7 @@ import { ChevronDown, Check } from "lucide-react";
 // tabbladen, die nog geen eigen DashboardHeader hebben.
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 
-export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress }) {
+export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -25,6 +25,14 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
 
   return (
     <div className="relative shrink-0" ref={ref}>
+      {/* v299 — op verzoek: naast het jaartal ook in één oogopslag zien hoeveel jaren het dossier
+          totaal beslaat, en — alleen als er ook echt een privérekening is ingeladen (showBreakdown) —
+          de uitsplitsing zakelijk/privé daaronder. Zonder privérekening is die uitsplitsing gelijk aan
+          het totaal en dus overbodig. */}
+      <div className="text-[11px] text-slate-400 text-right mb-0.5 whitespace-nowrap">
+        {years.length} {years.length === 1 ? "jaar" : "jaren"} in dossier
+        {showBreakdown ? ` · ${zakelijkYears ?? 0} zakelijk, ${priveYears ?? 0} privé` : ""}
+      </div>
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
       <button
         type="button"

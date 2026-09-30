@@ -1643,6 +1643,14 @@ export default function App() {
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
+  // v299 — op verzoek: naast het jaartal rechtsboven ook laten zien hoeveel jaren het project in
+  // totaal beslaat, en (als er ook een privérekening is ingeladen) een uitsplitsing hoeveel van die
+  // jaren zakelijke resp. privé-gegevens bevatten. Geteld via `groups` (dezelfde bron als de
+  // jaar/type-secties elders) i.p.v. accountTypeByFile, omdat een enkel bestand meerdere jaren kan
+  // beslaan — hier gaat het om "in hoeveel jaren zit minstens één zakelijke/privé-transactie", niet
+  // "hoeveel bestanden zijn er geüpload".
+  const zakelijkYearsCount = useMemo(() => new Set(groups.filter((g) => g.type === "Zakelijk").map((g) => g.year)).size, [groups]);
+  const priveYearsCount = useMemo(() => new Set(groups.filter((g) => g.type === "Prive").map((g) => g.year)).size, [groups]);
   // Kwartalen voor de wizard-stap: alleen kwartalen die al voorbij zijn (geen zin om te vragen of
   // een kwartaal dat nog loopt al is aangegeven/betaald) — én die nog GEEN status hebben. Zonder
   // deze laatste voorwaarde kwam deze stap ("Welke BTW-kwartalen zijn al aangegeven/betaald?")
@@ -4245,7 +4253,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
               )
             }
           />
@@ -4449,7 +4457,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
               )
             }
           />
@@ -4607,7 +4615,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
               )
             }
           />
