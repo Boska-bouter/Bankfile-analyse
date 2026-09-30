@@ -4241,6 +4241,8 @@ export default function App() {
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
+            werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
@@ -4443,6 +4445,8 @@ export default function App() {
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
+            werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
@@ -4599,6 +4603,8 @@ export default function App() {
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
+            werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
+            werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} />
