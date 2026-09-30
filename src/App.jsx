@@ -1643,14 +1643,24 @@ export default function App() {
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
-  // v299 — op verzoek: naast het jaartal rechtsboven ook laten zien hoeveel jaren het project in
-  // totaal beslaat, en (als er ook een privérekening is ingeladen) een uitsplitsing hoeveel van die
-  // jaren zakelijke resp. privé-gegevens bevatten. Geteld via `groups` (dezelfde bron als de
-  // jaar/type-secties elders) i.p.v. accountTypeByFile, omdat een enkel bestand meerdere jaren kan
-  // beslaan — hier gaat het om "in hoeveel jaren zit minstens één zakelijke/privé-transactie", niet
-  // "hoeveel bestanden zijn er geüpload".
-  const zakelijkYearsCount = useMemo(() => new Set(groups.filter((g) => g.type === "Zakelijk").map((g) => g.year)).size, [groups]);
-  const priveYearsCount = useMemo(() => new Set(groups.filter((g) => g.type === "Prive").map((g) => g.year)).size, [groups]);
+  // v300 — gecorrigeerd op verzoek: de eerste versie telde jaren met minstens één transactie van
+  // het TYPE "Prive" (tx.type, na classificatie) — maar een "prive opname"-boeking (en zijn
+  // spiegelboeking) op de ZAKELIJKE rekening krijgt ook type "Prive", terwijl dat jaar geen eigen
+  // privérekening-bestand heeft. Dat telde een privérekening-jaar te veel (3 i.p.v. 2 bij één
+  // zakelijk bestand 2020-2026 + twee privébestanden 2024/2025). Nu geteld via het brongegeven van
+  // elke transactie (`tx.source`, de bestandsnaam) opgezocht in `accountTypeByFile` — dus welk jaar
+  // heeft minstens één transactie UIT EEN ALS ZAKELIJK/PRIVÉ GEMARKEERD BESTAND, ongeacht hoe de
+  // transactie zelf later geclassificeerd is.
+  const zakelijkYearsCount = useMemo(() => {
+    const s = new Set();
+    for (const tx of classified) if (accountTypeByFile[tx.source] === "Zakelijk") s.add(tx.year);
+    return s.size;
+  }, [classified, accountTypeByFile]);
+  const priveYearsCount = useMemo(() => {
+    const s = new Set();
+    for (const tx of classified) if (accountTypeByFile[tx.source] === "Prive") s.add(tx.year);
+    return s.size;
+  }, [classified, accountTypeByFile]);
   // Kwartalen voor de wizard-stap: alleen kwartalen die al voorbij zijn (geen zin om te vragen of
   // een kwartaal dat nog loopt al is aangegeven/betaald) — én die nog GEEN status hebben. Zonder
   // deze laatste voorwaarde kwam deze stap ("Welke BTW-kwartalen zijn al aangegeven/betaald?")
