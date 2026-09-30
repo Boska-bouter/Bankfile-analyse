@@ -27,7 +27,7 @@ function StatusLine({ ok, warn, children }) {
 // Een korte "APK" per geüpload bestand, vóór je verder gaat met classificeren — geeft vertrouwen
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de tool blijft gewoon meteen bruikbaar.
-export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile }) {
+export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile, accountTypeByFile = {} }) {
   // v243 — null = "auto" (open zodra er een echt punt is, ingeklapt zodra alles klopt), zelfde
   // patroon als de andere Controleren-secties — een expliciete klik wint daarna, ongeacht of er
   // later nog een bestand bijkomt.
@@ -60,7 +60,21 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
             return (
               <div key={d.fileName} className="rounded-lg bg-white border border-slate-100 p-3">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <p className="text-xs font-semibold text-slate-700 flex-1">{d.fileName}</p>
+                  <p className="text-xs font-semibold text-slate-700 flex-1">
+                    {d.fileName}
+                    {/* v286 — op verzoek: welke rekening (Zakelijk/Prive) een bestand is, stond
+                        nergens bij het bestand zelf — alleen af te leiden via de wizard-instellingen
+                        elders. accountTypeByFile komt uit diezelfde bron (de basisvragen-wizard). */}
+                    {accountTypeByFile[d.fileName] && (
+                      <span
+                        className={`ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold align-middle ${
+                          accountTypeByFile[d.fileName] === "Zakelijk" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
+                        }`}
+                      >
+                        {accountTypeByFile[d.fileName]}
+                      </span>
+                    )}
+                  </p>
                   {onRemoveFile && (
                     <button
                       onClick={() => {

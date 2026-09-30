@@ -798,6 +798,10 @@ export default function App() {
     if (results.length > 0) {
       setParsedFiles((prev) => [...prev.filter((p) => !results.some((r) => r.fileName === p.fileName)), ...results]);
       setShowSetupWizard(true);
+      // v286 — op verzoek: alle uitklapbare kaarten (Controleren/Instellingen) moeten bij het laden
+      // van (nieuwe/extra) bestanden altijd weer ingeklapt beginnen, in plaats van een kaart die van
+      // eerder in de sessie nog openstond gewoon open te laten staan.
+      setExpandedCardKeys({});
     }
   };
 
@@ -1986,6 +1990,34 @@ export default function App() {
   // dossierbreed (niet per item-aantal van het actieve jaar) te bepalen of er überhaupt een
   // rekening van dat type geladen is.
   const zakelijkRekeningGeladen = useMemo(() => Object.values(accountTypeByFile).includes("Zakelijk"), [accountTypeByFile]);
+  // v286 — gedeelde berekening voor de "Controle overboeking zakelijk ↔ privé"-info (v283, eerder
+  // gedupliceerd in AansluitingDetailPanel.jsx en de losse "aansluitControle"-kaart) — nu ook
+  // hergebruikt door de nieuwe "Bestanden geladen"-kaart op Overzicht (zie dashboardCards), zodat er
+  // maar één plek is die zakSum/priSum/diff uitrekent.
+  const aansluitControleInfo = useMemo(() => {
+    const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
+    const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
+    const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+    const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
+    const diff = Math.round((zakSum + priSum) * 100) / 100;
+    const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
+    const heeftData = !(zakSum === 0 && priSum === 0);
+    let tone, subtitle;
+    if (!heeftData) {
+      tone = "neutral";
+      subtitle = "Geen overboekingen tussen zakelijk en privé gevonden dit jaar.";
+    } else if (zijdeOntbreekt) {
+      tone = "ok";
+      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-rekening geladen, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
+    } else {
+      const ok = Math.abs(diff) < 0.01;
+      tone = ok ? "ok" : "attention";
+      subtitle = ok
+        ? `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
+        : `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
+    }
+    return { zakSum, priSum, diff, zijdeOntbreekt, heeftData, tone, subtitle };
+  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen]
@@ -2513,6 +2545,25 @@ export default function App() {
                   hint: "Naar de aangifte-checklist voor dit jaar",
                   onClick: () => jumpToSection(checklistSectionRef),
                 },
+            // v286 — op verzoek: nergens was in één oogopslag te zien hoeveel bestanden zakelijk/
+            // privé geladen zijn en of die onderling matchen (overboekingen zakelijk ↔ privé) — deze
+            // kaart hergebruikt dezelfde aansluitControleInfo als de "Controle zakelijk ↔ privé"-kaart
+            // op Controleren (geen tweede berekening), plus een simpele telling uit accountTypeByFile.
+            {
+              key: "bestandenOverzicht",
+              title: "Bestanden geladen",
+              icon: <span>📁</span>,
+              lines: [
+                { label: "Zakelijk", value: `${Object.values(accountTypeByFile).filter((t) => t === "Zakelijk").length}x` },
+                { label: "Privé", value: `${Object.values(accountTypeByFile).filter((t) => t === "Prive").length}x` },
+              ],
+              subtitle: aansluitControleInfo.heeftData
+                ? aansluitControleInfo.subtitle
+                : `Geen overboekingen zakelijk ↔ privé gevonden in ${activeYear}.`,
+              tone: aansluitControleInfo.heeftData ? aansluitControleInfo.tone : "neutral",
+              hint: "Naar de aansluiting & detailtabellen",
+              onClick: () => jumpToSection(detailsSectionRef),
+            },
             // ---- Fase 3 (v219): situationeel, alleen als er echt een signaal is ----
             ...(rechtsvorm === "bv" && bvSignalering
               ? [
@@ -2563,6 +2614,9 @@ export default function App() {
     dashboardAangifteIndicatie,
     ibStatus,
     zvwStatus,
+    vpbStatus,
+    accountTypeByFile,
+    aansluitControleInfo,
     loanSummary,
     loanDetails,
     incompleteLoansCount,
@@ -3054,7 +3108,7 @@ export default function App() {
         "importKwaliteit",
         <div className="space-y-3">
           <div ref={importControleSectionRef}>
-            <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+            <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} />
           </div>
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
@@ -3173,36 +3227,18 @@ export default function App() {
       // uitgeklapte "Aansluiting & detail"-kaart hierboven; op verzoek nu ook als eigen, altijd
       // zichtbare "box" ernaast — zelfde berekening als voorheen in AansluitingDetailPanel.jsx (nu
       // verwijderd, om dubbele content te voorkomen), hier alleen samengevat i.p.v. als volledige
-      // banner-tekst.
-      (() => {
-        const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
-        const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
-        const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-        const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-        const diff = Math.round((zakSum + priSum) * 100) / 100;
-        const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
-        if (zakSum === 0 && priSum === 0) return null;
-        let tone, subtitle;
-        if (zijdeOntbreekt) {
-          tone = "ok";
-          subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-rekening geladen, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
-        } else {
-          const ok = Math.abs(diff) < 0.01;
-          tone = ok ? "ok" : "attention";
-          subtitle = ok
-            ? `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
-            : `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
-        }
-        return {
-          key: "aansluitControle",
-          title: "Controle zakelijk ↔ privé",
-          icon: <span>🔁</span>,
-          tone,
-          subtitle,
-          hint: "Naar de aansluiting & detailtabellen",
-          onClick: () => jumpToSection(detailsSectionRef),
-        };
-      })(),
+      // banner-tekst. v286 — die berekening staat nu in de gedeelde aansluitControleInfo hierboven.
+      aansluitControleInfo.heeftData
+        ? {
+            key: "aansluitControle",
+            title: "Controle zakelijk ↔ privé",
+            icon: <span>🔁</span>,
+            tone: aansluitControleInfo.tone,
+            subtitle: aansluitControleInfo.subtitle,
+            hint: "Naar de aansluiting & detailtabellen",
+            onClick: () => jumpToSection(detailsSectionRef),
+          }
+        : null,
     ].filter(Boolean);
   }, [
     transactions.length,
@@ -3237,6 +3273,7 @@ export default function App() {
     showPeriodeReview,
     priveRekeningGeladen,
     zakelijkRekeningGeladen,
+    aansluitControleInfo,
     dragState,
     expandedTable,
     fingerprintByTxId,
@@ -3797,6 +3834,10 @@ export default function App() {
       setCategoryZakelijkPercentageState(project.categoryZakelijkPercentage && typeof project.categoryZakelijkPercentage === "object" ? project.categoryZakelijkPercentage : {});
       setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
       setLoadedProjectFileName(file.name);
+      // v286 — zie ook handleFiles hierboven: alle uitklapbare kaarten beginnen ingeklapt bij het
+      // laden van een (ander) project, i.p.v. een kaart die van een vorig dossier in deze sessie nog
+      // openstond gewoon open te laten staan.
+      setExpandedCardKeys({});
     } catch (e) {
       setError(e.message || String(e));
     }
@@ -3811,6 +3852,7 @@ export default function App() {
   const doClearAllData = async () => {
     snapshotBeforeAction("Wis alles");
     setConfirmMessage(null);
+    setExpandedCardKeys({});
     setParsedFiles([]);
     setAccountTypeByFile({});
     setOverridesByCounterparty({});
@@ -4156,10 +4198,13 @@ export default function App() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* v286 — tone stond hier vast op "risk"/"attention", ook zodra er 0 open punten meer
+                waren (rood/oranje terwijl er niets meer te doen is) — nu "ok" (groen) zodra de
+                teller op 0 staat, net als de andere statuskaarten in deze app. */}
             <RollupCard
               title="Nog te controleren"
               icon={<span>⚠️</span>}
-              tone="risk"
+              tone={controlerenBadge === 0 ? "ok" : "risk"}
               count={controlerenBadge}
               items={teControlerenItems}
               ctaLabel="Alle controles bekijken"
@@ -4168,7 +4213,7 @@ export default function App() {
             <RollupCard
               title="Nog in te stellen"
               icon={<span>⚙️</span>}
-              tone="attention"
+              tone={instellingenBadge === 0 ? "ok" : "attention"}
               count={instellingenBadge}
               items={inTeStellenItems}
               ctaLabel="Alle instellingen bekijken"
@@ -4317,7 +4362,7 @@ export default function App() {
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om hier iets te controleren.</p>
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om hier iets te controleren.</p>
             </section>
           </div>
         )}
@@ -4474,7 +4519,7 @@ export default function App() {
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om hier iets in te stellen.</p>
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om hier iets in te stellen.</p>
             </section>
           </div>
         )}

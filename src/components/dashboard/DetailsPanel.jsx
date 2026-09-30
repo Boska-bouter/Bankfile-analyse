@@ -90,7 +90,7 @@ export default function DetailsPanel({
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
         {!year ? (
-          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand om deze gegevens te zien.</p>
+          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om deze gegevens te zien.</p>
         ) : (
           <>
         {tab === "jaaroverzicht" && (
@@ -134,11 +134,17 @@ export default function DetailsPanel({
         )}
 
         {tab === "transacties" && (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-slate-600">
-              {zakCount} zakelijke en {priCount} privé-transacties in {year}.
-            </p>
-            <LinkOut label="Bekijk detailoverzicht" onClick={() => onJump("details")} />
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-slate-600">
+                {zakCount} zakelijke en {priCount} privé-transacties in {year}.
+              </p>
+              <LinkOut label="Bekijk detailoverzicht" onClick={() => onJump("details")} />
+            </div>
+            {/* v286 — op verzoek: hoeveel bestanden zakelijk/privé geladen zijn stond nergens, en of
+                ze onderling matchen (overboekingen zakelijk ↔ privé) al helemaal niet op dit
+                tabblad — zelfde kaart/berekening als op Controleren ("Controle zakelijk ↔ privé"). */}
+            <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(cardsByKey.bestandenOverzicht)}</div>
           </div>
         )}
 

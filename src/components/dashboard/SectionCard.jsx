@@ -46,7 +46,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           )}
         </div>
 
-        {lines ? (
+        {lines && (
           <div className="flex flex-col gap-1.5">
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
@@ -55,9 +55,11 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
               </div>
             ))}
           </div>
-        ) : (
-          subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{subtitle}</p>
         )}
+        {/* v286 — voorheen alleen getoond als er GEEN `lines` waren; sommige kaarten (Dossierstatus,
+            Bestanden geladen) zetten beide en willen de subtitle als extra toelichting ónder de
+            regels tonen (bijv. of zakelijk/privé-overboekingen matchen), niet in plaats ervan. */}
+        {subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{subtitle}</p>}
 
         {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
       </Wrapper>
