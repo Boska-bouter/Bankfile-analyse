@@ -433,24 +433,30 @@ export default function App() {
   // dan niets: ref.current was null omdat die sectie op dat moment niet gemount was. jumpToSection
   // hieronder klapt de kaart daarom eerst automatisch in (als hij openstond) vóór het scrollen —
   // geen enkele aanroepende plek hoeft hier zelf rekening mee te houden.
+  // v281 — op verzoek staat de onderliggende sectie voor de meeste kaarten nu ALLEEN nog gemount
+  // zolang de kaart is uitgeklapt (in plaats van andersom); alleen "Categorieën" en "Aansluiting &
+  // detail" op Controleren blijven de uitzondering (die staan juist standaard zichtbaar, en
+  // verdwijnen van hun vaste plek zodra je ze uitklapt — het oude gedrag). Het derde getal hieronder
+  // geeft aan welke expandedCardKeys-stand nodig is om de sectie zichtbaar te maken: true = de kaart
+  // moet uitgeklapt zijn, false = de kaart moet ingeklapt zijn.
   const REF_COLLAPSE_KEYS = [
-    [importControleSectionRef, "importKwaliteit"],
-    [confidenceSectionRef, "importKwaliteit"],
-    [incomeReviewSectionRef, "herkomstVanGeld"],
-    [personReviewSectionRef, "herkomstVanGeld"],
-    [categorySectionRef, "categorieen"],
-    [activaSectionRef, "bedrijfsmiddelen"],
-    [leasesSectionRef, "bedrijfsmiddelen"],
-    [loansSectionRef, "bedrijfsmiddelen"],
-    [aannamesSectionRef, "persoonlijkeAannames"],
-    [categoryPercentageSectionRef, "persoonlijkeAannames"],
-    [btwSettingsSectionRef, "btw"],
-    [automatiseringSectionRef, "automatisering"],
-    [incomeRatesSectionRef, "tegenpartijen"],
-    [overigReviewSectionRef, "opschonen"],
-    [duplicatesSectionRef, "opschonen"],
-    [periodeReviewSectionRef, "opschonen"],
-    [detailsSectionRef, "aansluitingDetail"],
+    [importControleSectionRef, "importKwaliteit", true],
+    [confidenceSectionRef, "importKwaliteit", true],
+    [incomeReviewSectionRef, "herkomstVanGeld", true],
+    [personReviewSectionRef, "herkomstVanGeld", true],
+    [categorySectionRef, "categorieen", false],
+    [activaSectionRef, "bedrijfsmiddelen", true],
+    [leasesSectionRef, "bedrijfsmiddelen", true],
+    [loansSectionRef, "bedrijfsmiddelen", true],
+    [aannamesSectionRef, "persoonlijkeAannames", true],
+    [categoryPercentageSectionRef, "persoonlijkeAannames", true],
+    [btwSettingsSectionRef, "btw", true],
+    [automatiseringSectionRef, "automatisering", true],
+    [incomeRatesSectionRef, "tegenpartijen", true],
+    [overigReviewSectionRef, "opschonen", true],
+    [duplicatesSectionRef, "opschonen", true],
+    [periodeReviewSectionRef, "opschonen", true],
+    [detailsSectionRef, "aansluitingDetail", false],
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
@@ -2053,14 +2059,17 @@ export default function App() {
   //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
   //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
   const jumpToSection = (ref) => {
-    // Fase 3 — als deze ref bij een op dit moment uitgeklapte kaart hoort, staat 'ie op dit moment
-    // niet gemount (zie REF_COLLAPSE_KEYS hierboven) — eerst inklappen, dan pas (na een extra
-    // render) scrollen, anders gebeurt er niets (ref.current is null).
-    const collapseEntry = REF_COLLAPSE_KEYS.find(([r]) => r === ref);
-    const collapseKey = collapseEntry ? collapseEntry[1] : null;
-    const needsCollapse = !!(collapseKey && expandedCardKeys[collapseKey]);
-    if (needsCollapse) {
-      setExpandedCardKeys((prev) => ({ ...prev, [collapseKey]: false }));
+    // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
+    // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
+    // daarvoor benodigde stand, is de sectie op dit moment niet gemount — eerst de kaart in de juiste
+    // stand zetten, dan pas (na een extra render) scrollen, anders gebeurt er niets (ref.current is
+    // null).
+    const visibilityEntry = REF_COLLAPSE_KEYS.find(([r]) => r === ref);
+    const visibilityKey = visibilityEntry ? visibilityEntry[1] : null;
+    const requiredExpanded = visibilityEntry ? visibilityEntry[2] : null;
+    const needsToggle = !!(visibilityKey && !!expandedCardKeys[visibilityKey] !== requiredExpanded);
+    if (needsToggle) {
+      setExpandedCardKeys((prev) => ({ ...prev, [visibilityKey]: requiredExpanded }));
     }
     const entry = REF_TAB_ENTRIES.find(([r]) => r === ref);
     const targetTab = entry ? entry[1] : null;
@@ -2071,9 +2080,9 @@ export default function App() {
       setPendingScrollRef(ref);
       return;
     }
-    if (needsCollapse) {
-      // Zelfde tabblad, maar de sectie moet eerst weer gemount worden nu de kaart net is
-      // ingeklapt — via dezelfde pendingScrollRef-route als een tabwissel hierboven.
+    if (needsToggle) {
+      // Zelfde tabblad, maar de sectie moet eerst weer (op)nieuw gemount worden nu de kaart net van
+      // stand is gewisseld — via dezelfde pendingScrollRef-route als een tabwissel hierboven.
       setPendingScrollRef(ref);
       return;
     }
@@ -2901,13 +2910,17 @@ export default function App() {
         g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
         "importKwaliteit",
         <div className="space-y-3">
-          <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
-          <ClassificationConfidencePanel
-            classified={classified}
-            onOpenHelp={setHelpPopupChapter}
-            onConfirmCorrect={confirmClassificationCorrect}
-            onOpenLevel={setOpenConfidenceLevel}
-          />
+          <div ref={importControleSectionRef}>
+            <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
+          </div>
+          <div ref={confidenceSectionRef}>
+            <ClassificationConfidencePanel
+              classified={classified}
+              onOpenHelp={setHelpPopupChapter}
+              onConfirmCorrect={confirmClassificationCorrect}
+              onOpenLevel={setOpenConfidenceLevel}
+            />
+          </div>
         </div>
       ),
       withExpand(
@@ -3063,118 +3076,132 @@ export default function App() {
       withExpand(
         g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
         "tegenpartijen",
-        <TegenpartijenPanel
-          incomeBtwTarieven={incomeBtwTarieven}
-          meerdereTarievenBevestigd={meerdereTarievenBevestigd}
-          onConfirmMeerdereTarieven={() => setMeerdereTarievenBevestigd(true)}
-          businessKeywords={businessKeywords}
-          onAddBusinessKeyword={addBusinessKeyword}
-          onRemoveBusinessKeyword={removeBusinessKeyword}
-          businessIncomeEntries={businessIncomeEntries}
-          onReclassifyBusinessEntry={reclassifyBusinessEntry}
-          onSetCounterpartyBtwVerlegd={setCounterpartyBtwVerlegd}
-          btwVerlegd={btwVerlegd}
-          onSetIncomeRate={setIncomeRate}
-          expandedBusinessIncomeList={expandedBusinessIncomeList}
-          onToggleExpandBusinessIncomeList={() => setExpandedBusinessIncomeList((v) => !v)}
-          businessExpenseKeywords={businessExpenseKeywords}
-          onAddBusinessExpenseKeyword={addBusinessExpenseKeyword}
-          onRemoveBusinessExpenseKeyword={removeBusinessExpenseKeyword}
-          businessExpenseEntries={businessExpenseEntries}
-          expandedBusinessExpenseList={expandedBusinessExpenseList}
-          onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
-        />
+        <div ref={incomeRatesSectionRef}>
+          <TegenpartijenPanel
+            incomeBtwTarieven={incomeBtwTarieven}
+            meerdereTarievenBevestigd={meerdereTarievenBevestigd}
+            onConfirmMeerdereTarieven={() => setMeerdereTarievenBevestigd(true)}
+            businessKeywords={businessKeywords}
+            onAddBusinessKeyword={addBusinessKeyword}
+            onRemoveBusinessKeyword={removeBusinessKeyword}
+            businessIncomeEntries={businessIncomeEntries}
+            onReclassifyBusinessEntry={reclassifyBusinessEntry}
+            onSetCounterpartyBtwVerlegd={setCounterpartyBtwVerlegd}
+            btwVerlegd={btwVerlegd}
+            onSetIncomeRate={setIncomeRate}
+            expandedBusinessIncomeList={expandedBusinessIncomeList}
+            onToggleExpandBusinessIncomeList={() => setExpandedBusinessIncomeList((v) => !v)}
+            businessExpenseKeywords={businessExpenseKeywords}
+            onAddBusinessExpenseKeyword={addBusinessExpenseKeyword}
+            onRemoveBusinessExpenseKeyword={removeBusinessExpenseKeyword}
+            businessExpenseEntries={businessExpenseEntries}
+            expandedBusinessExpenseList={expandedBusinessExpenseList}
+            onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
+          />
+        </div>
       ),
       withExpand(
         g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
         "bedrijfsmiddelen",
         <div className="space-y-3">
-          <ActivaPanel
-            activaSummary={activaSummary}
-            activaDetails={activaDetails}
-            activeYear={activeYear}
-            onOpenModal={setActivaDetailsModalKey}
-            onMarkUnknown={markActivaUnknown}
-            onUnmarkUnknown={unmarkActivaUnknown}
-            onOpenHelp={setHelpPopupChapter}
-          />
-          <LeaseInterestPanel
-            leaseSummary={leaseSummary}
-            leaseDetails={leaseDetails}
-            confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
-            onConfirmType={confirmLeaseType}
-            onOpenModal={setLeaseDetailsModalKey}
-            onMarkUnknown={markLeaseUnknown}
-            onUnmarkUnknown={unmarkLeaseUnknown}
-            onMergeInto={mergeLeaseInto}
-            onUndoMerge={undoMergeLease}
-            leaseMerges={leaseMerges}
-            onOpenHelp={setHelpPopupChapter}
-          />
-          <LoanInterestPanel
-            loanSummary={loanSummary}
-            privateLoanSummary={privateLoanSummary}
-            loanDetails={loanDetails}
-            onOpenModal={setLoanDetailsModalKey}
-            onMarkUnknown={markLoanUnknown}
-            onUnmarkUnknown={unmarkLoanUnknown}
-            onMarkNotALoan={markLoanNotALoan}
-            onMarkAsPrive={markLoanAsPrive}
-            onMarkAsZakelijk={markLoanAsZakelijk}
-            onOpenHelp={setHelpPopupChapter}
-          />
+          <div ref={activaSectionRef}>
+            <ActivaPanel
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              activeYear={activeYear}
+              onOpenModal={setActivaDetailsModalKey}
+              onMarkUnknown={markActivaUnknown}
+              onUnmarkUnknown={unmarkActivaUnknown}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={leasesSectionRef}>
+            <LeaseInterestPanel
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+              onConfirmType={confirmLeaseType}
+              onOpenModal={setLeaseDetailsModalKey}
+              onMarkUnknown={markLeaseUnknown}
+              onUnmarkUnknown={unmarkLeaseUnknown}
+              onMergeInto={mergeLeaseInto}
+              onUndoMerge={undoMergeLease}
+              leaseMerges={leaseMerges}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={loansSectionRef}>
+            <LoanInterestPanel
+              loanSummary={loanSummary}
+              privateLoanSummary={privateLoanSummary}
+              loanDetails={loanDetails}
+              onOpenModal={setLoanDetailsModalKey}
+              onMarkUnknown={markLoanUnknown}
+              onUnmarkUnknown={unmarkLoanUnknown}
+              onMarkNotALoan={markLoanNotALoan}
+              onMarkAsPrive={markLoanAsPrive}
+              onMarkAsZakelijk={markLoanAsZakelijk}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
         </div>
       ),
       withExpand(
         g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames", "categoryPercentages"]),
         "persoonlijkeAannames",
         <div className="space-y-3">
-          <PersoonlijkeAannamesPanel
-            activeYear={activeYear}
-            winst={yearlySummary?.winst}
-            zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
-            onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
-            zaLegacyJaDefault={zaLegacyJaDefault}
-            startersaftrekStatus={startersaftrekStatus}
-            onSetStartersaftrekStatus={setStartersaftrekStatus}
-            autoStatus={autoStatus}
-            onSetAutoStatus={setAutoStatus}
-            autoWizardStatus={autoWizardStatus}
-            onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
-            kmVergoedingDetails={kmVergoedingDetails}
-            onSetKmVergoedingField={setKmVergoedingField}
-            activaSummary={activaSummary}
-            activaDetails={activaDetails}
-            leaseSummary={leaseSummary}
-            leaseDetails={leaseDetails}
-            gedeeldeHuur={gedeeldeHuurForActiveYear}
-            huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
-            onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
-            categoryBtwRates={effectiveCategoryBtwRates}
-            onOpenHelp={setHelpPopupChapter}
-          />
-          <CategoryPercentagePanel
-            activeYear={activeYear}
-            categorieTotalen={categorieTotalenActiveYear}
-            categoryZakelijkPercentage={categoryZakelijkPercentage}
-            onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-            autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
-            onOpenHelp={setHelpPopupChapter}
-          />
+          <div ref={aannamesSectionRef}>
+            <PersoonlijkeAannamesPanel
+              activeYear={activeYear}
+              winst={yearlySummary?.winst}
+              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+              zaLegacyJaDefault={zaLegacyJaDefault}
+              startersaftrekStatus={startersaftrekStatus}
+              onSetStartersaftrekStatus={setStartersaftrekStatus}
+              autoStatus={autoStatus}
+              onSetAutoStatus={setAutoStatus}
+              autoWizardStatus={autoWizardStatus}
+              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
+              kmVergoedingDetails={kmVergoedingDetails}
+              onSetKmVergoedingField={setKmVergoedingField}
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              gedeeldeHuur={gedeeldeHuurForActiveYear}
+              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
+              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
+              categoryBtwRates={effectiveCategoryBtwRates}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={categoryPercentageSectionRef}>
+            <CategoryPercentagePanel
+              activeYear={activeYear}
+              categorieTotalen={categorieTotalenActiveYear}
+              categoryZakelijkPercentage={categoryZakelijkPercentage}
+              onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
+              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
         </div>
       ),
       withExpand(
         g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"]),
         "btw",
-        <BtwRatesPanel
-          categoryBtwRates={categoryBtwRates}
-          setCategoryBtwRates={setCategoryBtwRatesWithUndo}
-          btwVerlegd={btwVerlegd}
-          setBtwVerlegd={setBtwVerlegdWithUndo}
-          korRegeling={korRegeling}
-          setKorRegeling={setKorRegelingWithUndo}
-          onOpenHelp={setHelpPopupChapter}
-        />
+        <div ref={btwSettingsSectionRef}>
+          <BtwRatesPanel
+            categoryBtwRates={categoryBtwRates}
+            setCategoryBtwRates={setCategoryBtwRatesWithUndo}
+            btwVerlegd={btwVerlegd}
+            setBtwVerlegd={setBtwVerlegdWithUndo}
+            korRegeling={korRegeling}
+            setKorRegeling={setKorRegelingWithUndo}
+            onOpenHelp={setHelpPopupChapter}
+          />
+        </div>
       ),
       withExpand(
         {
@@ -3187,7 +3214,9 @@ export default function App() {
         },
         "automatisering",
         <div className="space-y-3">
-          <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+          <div ref={automatiseringSectionRef}>
+            <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+          </div>
           <CounterpartyRulesPanel
             overridesByCounterparty={overridesByCounterparty}
             setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
@@ -4131,20 +4160,8 @@ export default function App() {
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
             controlestappen op het Controleren-tabblad.
-            Fase 3 — zodra de "Import & kwaliteit"-kaart is uitgeklapt, toont die kaart zelf al deze
-            twee panelen (zie controlerenCardGroups hierboven); hier dan even niet nogmaals tonen om
-            dubbele content op de pagina te voorkomen. Ingeklapt staan ze gewoon weer hier. */}
-        {!expandedCardKeys.importKwaliteit && (
-          <div ref={importControleSectionRef} style={sectionTabStyle("controleren")}>
-            <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} />
-          </div>
-        )}
-
-        {transactions.length > 0 && !expandedCardKeys.importKwaliteit && (
-          <div ref={confidenceSectionRef} style={sectionTabStyle("controleren")}>
-            <ClassificationConfidencePanel classified={classified} onOpenHelp={setHelpPopupChapter} onConfirmCorrect={confirmClassificationCorrect} onOpenLevel={setOpenConfidenceLevel} />
-          </div>
-        )}
+            Op verzoek (v281) staat dit alleen nog binnen de uitgeklapte kaart "Import & kwaliteit"
+            (zie controlerenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
 
         {showRekeninghouderModal && (
           <RekeninghouderModal
@@ -4290,205 +4307,28 @@ export default function App() {
           <SectionCardGrid cards={instellingenCardGroups} />
         </div>
 
-        {/* Fase 3 — verborgen zodra de kaart "Tegenpartijen" is uitgeklapt (toont dit paneel dan
-            zelf, zie instellingenCardGroups hierboven) om dubbele content te voorkomen. */}
-        {parsedFiles.length > 0 && !expandedCardKeys.tegenpartijen && (
-          <div ref={incomeRatesSectionRef} style={sectionTabStyle("instellingen")}>
-            <TegenpartijenPanel
-              incomeBtwTarieven={incomeBtwTarieven}
-              meerdereTarievenBevestigd={meerdereTarievenBevestigd}
-              onConfirmMeerdereTarieven={() => setMeerdereTarievenBevestigd(true)}
-              businessKeywords={businessKeywords}
-              onAddBusinessKeyword={addBusinessKeyword}
-              onRemoveBusinessKeyword={removeBusinessKeyword}
-              businessIncomeEntries={businessIncomeEntries}
-              onReclassifyBusinessEntry={reclassifyBusinessEntry}
-              onSetCounterpartyBtwVerlegd={setCounterpartyBtwVerlegd}
-              btwVerlegd={btwVerlegd}
-              onSetIncomeRate={setIncomeRate}
-              expandedBusinessIncomeList={expandedBusinessIncomeList}
-              onToggleExpandBusinessIncomeList={() => setExpandedBusinessIncomeList((v) => !v)}
-              businessExpenseKeywords={businessExpenseKeywords}
-              onAddBusinessExpenseKeyword={addBusinessExpenseKeyword}
-              onRemoveBusinessExpenseKeyword={removeBusinessExpenseKeyword}
-              businessExpenseEntries={businessExpenseEntries}
-              expandedBusinessExpenseList={expandedBusinessExpenseList}
-              onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
-            />
-          </div>
-        )}
+        {/* Op verzoek (v281) staat dit alleen nog binnen de uitgeklapte kaart "Tegenpartijen" (zie
+            instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
 
-        {/* Fase 3 — "Herkomst van geld" (IncomeReviewStep + de "Overboekingen aan personen"-
-            accordeon) is nu HerkomstVanGeldPanel.jsx, een zelfstandig onderdeel — verborgen zodra de
-            kaart "Herkomst van geld" is uitgeklapt (toont dit paneel dan zelf, zie
-            controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
-        {transactions.length > 0 && !expandedCardKeys.herkomstVanGeld && (
-          <div style={sectionTabStyle("controleren")}>
-            <HerkomstVanGeldPanel
-              incomeReviewRef={incomeReviewSectionRef}
-              pendingIncomeReview={pendingIncomeReview}
-              incomeSummary={incomeSummary}
-              incomeSearch={incomeSearch}
-              onIncomeSearch={setIncomeSearch}
-              onMarkIncomeSource={markIncomeSource}
-              personReviewRef={personReviewSectionRef}
-              personSummary={personSummary}
-              pendingPersonReview={pendingPersonReview}
-              showPersonReview={showPersonReview}
-              onToggleShowPersonReview={setShowPersonReview}
-              personSearch={personSearch}
-              onPersonSearch={setPersonSearch}
-              onMarkPersonSource={markPersonSource}
-              onConfirmPersonAsIs={confirmPersonAsIs}
-            />
-          </div>
-        )}
+        {/* Op verzoek (v281) staat "Herkomst van geld" (HerkomstVanGeldPanel.jsx) alleen nog binnen
+            de uitgeklapte kaart (zie controlerenCardGroups hierboven) — niet meer standaard
+            zichtbaar op de pagina. */}
 
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
 
-            {/* Fase 3 — "Opschonen" (Overig opruimen + Duplicaten + Factuurperiode) is nu
-                OpschonenPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart "Opschonen"
-                is uitgeklapt (toont dit paneel dan zelf, zie controlerenCardGroups hierboven) om
-                dubbele content te voorkomen. */}
-            {!expandedCardKeys.opschonen && (
-              <div style={sectionTabStyle("controleren")}>
-                <OpschonenPanel
-                  overigReviewRef={overigReviewSectionRef}
-                  overigSummary={overigSummary}
-                  pendingOverigReview={pendingOverigReview}
-                  showOverigReview={showOverigReview}
-                  onToggleShowOverigReview={setShowOverigReview}
-                  overigSearch={overigSearch}
-                  onOverigSearch={setOverigSearch}
-                  onMarkOverigItem={markOverigItem}
-                  onConfirmOverigAsIs={confirmOverigAsIs}
-                  onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
-                  duplicatesRef={duplicatesSectionRef}
-                  duplicateGroups={duplicateGroups}
-                  confirmedSeparateGroups={confirmedSeparateGroups}
-                  duplicatePendingBreakdown={duplicatePendingBreakdown}
-                  showDuplicateDetails={showDuplicateDetails}
-                  onToggleShowDuplicateDetails={setShowDuplicateDetails}
-                  pendingDuplicateCount={pendingDuplicateCount}
-                  onRemoveDuplicates={removeDuplicates}
-                  onDismissDuplicateNotice={() => setDismissedDuplicateNotice(true)}
-                  isDuplicateGroupRemoved={isDuplicateGroupRemoved}
-                  onShowDuplicateDetailGroup={setDuplicateDetailGroup}
-                  onRestoreDuplicateGroup={restoreDuplicateGroup}
-                  onRemoveDuplicateGroup={removeDuplicateGroup}
-                  showConfirmedSeparateDuplicates={showConfirmedSeparateDuplicates}
-                  onToggleShowConfirmedSeparateDuplicates={() => setShowConfirmedSeparateDuplicates((v) => !v)}
-                  periodeReviewRef={periodeReviewSectionRef}
-                  periodeAllSignals={periodeAllSignals}
-                  periodeMismatches={periodeMismatches}
-                  showPeriodeReview={showPeriodeReview}
-                  onToggleShowPeriodeReview={setShowPeriodeReview}
-                  onConfirmPeriodeAsIs={confirmPeriodeAsIs}
-                  onMovePeriodeToQuarter={movePeriodeToQuarter}
-                  onOpenHelp={setHelpPopupChapter}
-                />
-              </div>
-            )}
+            {/* Op verzoek (v281) staat "Opschonen" (OpschonenPanel.jsx) alleen nog binnen de
+                uitgeklapte kaart (zie controlerenCardGroups hierboven) — niet meer standaard
+                zichtbaar op de pagina. */}
 
             {/* v245 — Leningen/Lease/Activa/Persoonlijke aannames/Percentage zakelijk per categorie
                 hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten".
                 v252 — volgorde aangepast: "Rentepercentage per lening" moet direct onder "Percentage
                 zakelijk per categorie" staan, en "Lease" (als die er is) daar weer boven — dus nu
                 Activa → Persoonlijke aannames → Percentage zakelijk per categorie → Lease → Leningen. */}
-            {/* Fase 3 — verborgen zodra de kaart "Bedrijfsmiddelen & financiering" is uitgeklapt (die
-                toont dit paneel dan zelf, zie controlerenCardGroups/instellingenCardGroups hierboven)
-                om dubbele content te voorkomen. */}
-            {!expandedCardKeys.bedrijfsmiddelen && (
-              <div ref={activaSectionRef} style={sectionTabStyle("instellingen")}>
-                <ActivaPanel
-                  activaSummary={activaSummary}
-                  activaDetails={activaDetails}
-                  activeYear={activeYear}
-                  onOpenModal={setActivaDetailsModalKey}
-                  onMarkUnknown={markActivaUnknown}
-                  onUnmarkUnknown={unmarkActivaUnknown}
-                  onOpenHelp={setHelpPopupChapter}
-                />
-              </div>
-            )}
-
-            {!expandedCardKeys.persoonlijkeAannames && (
-            <>
-            <div ref={aannamesSectionRef} style={sectionTabStyle("instellingen")}>
-              <PersoonlijkeAannamesPanel
-                activeYear={activeYear}
-                winst={yearlySummary?.winst}
-                zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
-                onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
-                zaLegacyJaDefault={zaLegacyJaDefault}
-                startersaftrekStatus={startersaftrekStatus}
-                onSetStartersaftrekStatus={setStartersaftrekStatus}
-                autoStatus={autoStatus}
-                onSetAutoStatus={setAutoStatus}
-                autoWizardStatus={autoWizardStatus}
-                onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
-                kmVergoedingDetails={kmVergoedingDetails}
-                onSetKmVergoedingField={setKmVergoedingField}
-                activaSummary={activaSummary}
-                activaDetails={activaDetails}
-                leaseSummary={leaseSummary}
-                leaseDetails={leaseDetails}
-                gedeeldeHuur={gedeeldeHuurForActiveYear}
-                huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
-                onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
-                categoryBtwRates={effectiveCategoryBtwRates}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-
-            <div ref={categoryPercentageSectionRef} style={sectionTabStyle("instellingen")}>
-              <CategoryPercentagePanel
-                activeYear={activeYear}
-                categorieTotalen={categorieTotalenActiveYear}
-                categoryZakelijkPercentage={categoryZakelijkPercentage}
-                onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-                autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-            </>
-            )}
-
-            {!expandedCardKeys.bedrijfsmiddelen && (
-            <>
-            <div ref={leasesSectionRef} style={sectionTabStyle("instellingen")}>
-              <LeaseInterestPanel
-                leaseSummary={leaseSummary}
-                leaseDetails={leaseDetails}
-                confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
-                onConfirmType={confirmLeaseType}
-                onOpenModal={setLeaseDetailsModalKey}
-                onMarkUnknown={markLeaseUnknown}
-                onUnmarkUnknown={unmarkLeaseUnknown}
-                onMergeInto={mergeLeaseInto}
-                onUndoMerge={undoMergeLease}
-                leaseMerges={leaseMerges}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-
-            <div ref={loansSectionRef} style={sectionTabStyle("instellingen")}>
-              <LoanInterestPanel
-                loanSummary={loanSummary}
-                privateLoanSummary={privateLoanSummary}
-                loanDetails={loanDetails}
-                onOpenModal={setLoanDetailsModalKey}
-                onMarkUnknown={markLoanUnknown}
-                onUnmarkUnknown={unmarkLoanUnknown}
-                onMarkNotALoan={markLoanNotALoan}
-                onMarkAsPrive={markLoanAsPrive}
-                onMarkAsZakelijk={markLoanAsZakelijk}
-                onOpenHelp={setHelpPopupChapter}
-              />
-            </div>
-            </>
-            )}
+            {/* Op verzoek (v281) staan "Bedrijfsmiddelen & financiering" en "Persoonlijke aannames"
+                alleen nog binnen hun uitgeklapte kaart (zie controlerenCardGroups/
+                instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
 
             {years.length > 0 && activeYear && (
               <>
@@ -4586,53 +4426,8 @@ export default function App() {
             heffen; gebruik de Importcontrole-sectie (via de "Import controle"-kaart in het
             mini-dashboard) voor dit alles. */}
 
-        {/* Fase 3 — verborgen zodra de kaart "BTW" is uitgeklapt (toont dit paneel dan zelf). */}
-        {parsedFiles.length > 0 && !expandedCardKeys.btw && (
-          <div ref={btwSettingsSectionRef} style={sectionTabStyle("instellingen")}>
-            <BtwRatesPanel
-              categoryBtwRates={categoryBtwRates}
-              setCategoryBtwRates={setCategoryBtwRatesWithUndo}
-              btwVerlegd={btwVerlegd}
-              setBtwVerlegd={setBtwVerlegdWithUndo}
-              korRegeling={korRegeling}
-              setKorRegeling={setKorRegelingWithUndo}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-        )}
-
-        {/* Fase 3 — deze 4 panelen verborgen zodra de kaart "Automatisering" is uitgeklapt (toont ze
-            dan zelf, zie instellingenCardGroups hierboven). */}
-        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
-          <div ref={automatiseringSectionRef} style={sectionTabStyle("instellingen")}>
-            <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
-          </div>
-        )}
-
-        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
-          <div style={sectionTabStyle("instellingen")}>
-            <CounterpartyRulesPanel
-              overridesByCounterparty={overridesByCounterparty}
-              setOverridesByCounterparty={setOverridesByCounterpartyWithUndo}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-        )}
-
-        {parsedFiles.length > 0 && !expandedCardKeys.automatisering && (
-          <div style={sectionTabStyle("instellingen")}>
-            <FixedCategoriesPanel fixedCategories={fixedCategories} setFixedCategories={setFixedCategoriesWithUndo} onOpenHelp={setHelpPopupChapter} />
-          </div>
-        )}
-
-                {/* v245 — geen duidelijke, door de gebruiker genoemde bestemming voor dit paneel bij
-                    het opheffen van tabblad "Resultaten" — als invulpaneel bij "Instellingen" gezet,
-                    samen met Leningen/Lease/Activa hierboven. */}
-                {!expandedCardKeys.automatisering && (
-                <div style={sectionTabStyle("instellingen")}>
-                  <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
-                </div>
-                )}
+        {/* Op verzoek (v281) staan "BTW" en "Automatisering" alleen nog binnen hun uitgeklapte kaart
+            (zie instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
 
                 {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
                     vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
