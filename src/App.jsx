@@ -39,6 +39,7 @@ import { CategorySummaryCard, DetailTable } from "./components/overview/GroupVie
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
+import HerkomstVanGeldPanel from "./components/review/HerkomstVanGeldPanel.jsx";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
@@ -67,8 +68,11 @@ import { useVersionCheck } from "./hooks/useVersionCheck.js";
 import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
+import TegenpartijenPanel from "./components/settings/TegenpartijenPanel.jsx";
 import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
 import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
+import OpschonenPanel from "./components/review/OpschonenPanel.jsx";
+import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
@@ -432,6 +436,8 @@ export default function App() {
   const REF_COLLAPSE_KEYS = [
     [importControleSectionRef, "importKwaliteit"],
     [confidenceSectionRef, "importKwaliteit"],
+    [incomeReviewSectionRef, "herkomstVanGeld"],
+    [personReviewSectionRef, "herkomstVanGeld"],
     [categorySectionRef, "categorieen"],
     [activaSectionRef, "bedrijfsmiddelen"],
     [leasesSectionRef, "bedrijfsmiddelen"],
@@ -440,6 +446,11 @@ export default function App() {
     [categoryPercentageSectionRef, "persoonlijkeAannames"],
     [btwSettingsSectionRef, "btw"],
     [automatiseringSectionRef, "automatisering"],
+    [incomeRatesSectionRef, "tegenpartijen"],
+    [overigReviewSectionRef, "opschonen"],
+    [duplicatesSectionRef, "opschonen"],
+    [periodeReviewSectionRef, "opschonen"],
+    [detailsSectionRef, "aansluitingDetail"],
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
@@ -2899,14 +2910,66 @@ export default function App() {
           />
         </div>
       ),
-      // Fase 3 — "Herkomst van geld" en "Opschonen" bestaan (nog) uit inline secties met hun eigen,
-      // met de rest van de pagina verweven open/dicht-status (showPersonReview/showOverigReview,
-      // enz.) i.p.v. losse zelfstandige paneel-componenten — die hier nogmaals tonen zou dezelfde
-      // sectie op 2 plekken tegelijk laten reageren op precies dezelfde knoppen. Blijven daarom voor
-      // nu "Bekijken" (springen); pas uitklapbaar te maken nadat die secties zelf een eigen
-      // component zijn geworden.
-      g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview"]),
-      g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
+      withExpand(
+        g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview"]),
+        "herkomstVanGeld",
+        <HerkomstVanGeldPanel
+          incomeReviewRef={incomeReviewSectionRef}
+          pendingIncomeReview={pendingIncomeReview}
+          incomeSummary={incomeSummary}
+          incomeSearch={incomeSearch}
+          onIncomeSearch={setIncomeSearch}
+          onMarkIncomeSource={markIncomeSource}
+          personReviewRef={personReviewSectionRef}
+          personSummary={personSummary}
+          pendingPersonReview={pendingPersonReview}
+          showPersonReview={showPersonReview}
+          onToggleShowPersonReview={setShowPersonReview}
+          personSearch={personSearch}
+          onPersonSearch={setPersonSearch}
+          onMarkPersonSource={markPersonSource}
+          onConfirmPersonAsIs={confirmPersonAsIs}
+        />
+      ),
+      withExpand(
+        g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
+        "opschonen",
+        <OpschonenPanel
+          overigReviewRef={overigReviewSectionRef}
+          overigSummary={overigSummary}
+          pendingOverigReview={pendingOverigReview}
+          showOverigReview={showOverigReview}
+          onToggleShowOverigReview={setShowOverigReview}
+          overigSearch={overigSearch}
+          onOverigSearch={setOverigSearch}
+          onMarkOverigItem={markOverigItem}
+          onConfirmOverigAsIs={confirmOverigAsIs}
+          onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
+          duplicatesRef={duplicatesSectionRef}
+          duplicateGroups={duplicateGroups}
+          confirmedSeparateGroups={confirmedSeparateGroups}
+          duplicatePendingBreakdown={duplicatePendingBreakdown}
+          showDuplicateDetails={showDuplicateDetails}
+          onToggleShowDuplicateDetails={setShowDuplicateDetails}
+          pendingDuplicateCount={pendingDuplicateCount}
+          onRemoveDuplicates={removeDuplicates}
+          onDismissDuplicateNotice={() => setDismissedDuplicateNotice(true)}
+          isDuplicateGroupRemoved={isDuplicateGroupRemoved}
+          onShowDuplicateDetailGroup={setDuplicateDetailGroup}
+          onRestoreDuplicateGroup={restoreDuplicateGroup}
+          onRemoveDuplicateGroup={removeDuplicateGroup}
+          showConfirmedSeparateDuplicates={showConfirmedSeparateDuplicates}
+          onToggleShowConfirmedSeparateDuplicates={() => setShowConfirmedSeparateDuplicates((v) => !v)}
+          periodeReviewRef={periodeReviewSectionRef}
+          periodeAllSignals={periodeAllSignals}
+          periodeMismatches={periodeMismatches}
+          showPeriodeReview={showPeriodeReview}
+          onToggleShowPeriodeReview={setShowPeriodeReview}
+          onConfirmPeriodeAsIs={confirmPeriodeAsIs}
+          onMovePeriodeToQuarter={movePeriodeToQuarter}
+          onOpenHelp={setHelpPopupChapter}
+        />
+      ),
       withExpand(
         {
           key: "categorieen",
@@ -2922,16 +2985,34 @@ export default function App() {
           <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
         </div>
       ),
-      {
-        key: "aansluitingDetail",
-        title: "Aansluiting & detail",
-        icon: <span>🔗</span>,
-        tone: "neutral",
-        subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
-        hint: "Naar de aansluitcontrole en detailtabellen",
-        onClick: () => jumpToSection(detailsSectionRef),
-        actionLabel: "Bekijken",
-      },
+      withExpand(
+        {
+          key: "aansluitingDetail",
+          title: "Aansluiting & detail",
+          icon: <span>🔗</span>,
+          tone: "neutral",
+          subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
+          hint: "Naar de aansluitcontrole en detailtabellen",
+        },
+        "aansluitingDetail",
+        <AansluitingDetailPanel
+          detailsRef={detailsSectionRef}
+          zakGroupForYear={zakGroupForYear}
+          priGroupForYear={priGroupForYear}
+          priveRekeningGeladen={priveRekeningGeladen}
+          zakelijkRekeningGeladen={zakelijkRekeningGeladen}
+          dragState={dragState}
+          expandedTable={expandedTable}
+          onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
+          onRequestCategoryChange={requestCategoryChange}
+          onConfirmCorrect={confirmClassificationCorrect}
+          onRowDragStart={startRowDrag}
+          fingerprintByTxId={fingerprintByTxId}
+          transactionNotes={transactionNotes}
+          onSetNote={setTransactionNote}
+          onOpenHelp={setHelpPopupChapter}
+        />
+      ),
     ].filter(Boolean);
   }, [
     transactions.length,
@@ -2944,6 +3025,32 @@ export default function App() {
     priGroupForYear,
     effectiveCategoryBtwRates,
     btwVerlegd,
+    pendingIncomeReview,
+    incomeSummary,
+    incomeSearch,
+    personSummary,
+    pendingPersonReview,
+    showPersonReview,
+    personSearch,
+    overigSummary,
+    pendingOverigReview,
+    showOverigReview,
+    overigSearch,
+    duplicateGroups,
+    confirmedSeparateGroups,
+    duplicatePendingBreakdown,
+    showDuplicateDetails,
+    pendingDuplicateCount,
+    showConfirmedSeparateDuplicates,
+    periodeAllSignals,
+    periodeMismatches,
+    showPeriodeReview,
+    priveRekeningGeladen,
+    zakelijkRekeningGeladen,
+    dragState,
+    expandedTable,
+    fingerprintByTxId,
+    transactionNotes,
   ]);
   const instellingenCardGroups = useMemo(() => {
     if (transactions.length === 0) return [];
@@ -2953,10 +3060,31 @@ export default function App() {
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
     return [
-      // Fase 3 — "Tegenpartijen" bestaat uit 2 KeywordManager-lijsten die hun open/dicht-stand delen
-      // met een grid-layout verderop op de pagina (expandedBusinessIncomeList/...ExpenseList) — hier
-      // nogmaals tonen zou die twee weergaven laten interfereren. Blijft daarom voorlopig "Bekijken".
-      g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
+      withExpand(
+        g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
+        "tegenpartijen",
+        <TegenpartijenPanel
+          incomeBtwTarieven={incomeBtwTarieven}
+          meerdereTarievenBevestigd={meerdereTarievenBevestigd}
+          onConfirmMeerdereTarieven={() => setMeerdereTarievenBevestigd(true)}
+          businessKeywords={businessKeywords}
+          onAddBusinessKeyword={addBusinessKeyword}
+          onRemoveBusinessKeyword={removeBusinessKeyword}
+          businessIncomeEntries={businessIncomeEntries}
+          onReclassifyBusinessEntry={reclassifyBusinessEntry}
+          onSetCounterpartyBtwVerlegd={setCounterpartyBtwVerlegd}
+          btwVerlegd={btwVerlegd}
+          onSetIncomeRate={setIncomeRate}
+          expandedBusinessIncomeList={expandedBusinessIncomeList}
+          onToggleExpandBusinessIncomeList={() => setExpandedBusinessIncomeList((v) => !v)}
+          businessExpenseKeywords={businessExpenseKeywords}
+          onAddBusinessExpenseKeyword={addBusinessExpenseKeyword}
+          onRemoveBusinessExpenseKeyword={removeBusinessExpenseKeyword}
+          businessExpenseEntries={businessExpenseEntries}
+          expandedBusinessExpenseList={expandedBusinessExpenseList}
+          onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
+        />
+      ),
       withExpand(
         g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
         "bedrijfsmiddelen",
@@ -3103,6 +3231,14 @@ export default function App() {
     overridesByCounterparty,
     fixedCategories,
     classified,
+    incomeBtwTarieven,
+    meerdereTarievenBevestigd,
+    businessKeywords,
+    businessIncomeEntries,
+    expandedBusinessIncomeList,
+    businessExpenseKeywords,
+    businessExpenseEntries,
+    expandedBusinessExpenseList,
   ]);
 
   // ---- Navigatie (fase 1, dashboard-restyling) — de 3 tabbladen zitten nu in AppSidebar.jsx i.p.v.
@@ -4154,393 +4290,106 @@ export default function App() {
           <SectionCardGrid cards={instellingenCardGroups} />
         </div>
 
-        {parsedFiles.length > 0 && (
-          <div
-            ref={incomeRatesSectionRef}
-            className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}
-            style={sectionTabStyle("instellingen")}
-          >
-            {!expandedBusinessExpenseList && (
-              <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
-                <p className="text-xs text-slate-500 mb-3">
-                  Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
-                </p>
-                {(incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd && (
-                  <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
-                    <p>
-                      Je gaf in de wizard aan dat je omzet onder meerdere BTW-tarieven valt ({incomeBtwTarieven.map((t) => `${t}%`).join(", ")}).
-                      Ken hieronder per klant het juiste tarief toe (kolom "BTW-tarief") — klanten die je nog niet apart hebt ingesteld
-                      vallen op het standaardtarief.
-                    </p>
-                    <button
-                      onClick={() => setMeerdereTarievenBevestigd(true)}
-                      className="mt-2 rounded-md border border-amber-400 bg-white px-2 py-1 font-medium text-amber-800 hover:bg-amber-100"
-                    >
-                      Nagelopen, verberg deze melding
-                    </button>
-                  </div>
-                )}
-                <KeywordManager
-                  keywords={businessKeywords}
-                  onAdd={addBusinessKeyword}
-                  onRemove={removeBusinessKeyword}
-                  placeholder="Naam tegenpartij…"
-                  chipClass="bg-emerald-100 text-emerald-800"
-                  addButtonClass="bg-emerald-600 hover:bg-emerald-700"
-                  entries={businessIncomeEntries}
-                  entriesLabel="Nu herkend als Zakelijke inkomsten"
-                  onReclassify={reclassifyBusinessEntry}
-                  onSetBtwVerlegd={setCounterpartyBtwVerlegd}
-                  btwVerlegdDefault={btwVerlegd}
-                  onSetIncomeRate={setIncomeRate}
-                  isExpanded={expandedBusinessIncomeList}
-                  onToggleExpand={() => setExpandedBusinessIncomeList((v) => !v)}
-                />
-              </section>
-            )}
-            {!expandedBusinessIncomeList && (
-              <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
-                <p className="text-xs text-slate-500 mb-3">
-                  Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
-                  automatisch het label Zakelijk.
-                </p>
-                <KeywordManager
-                  keywords={businessExpenseKeywords}
-                  onAdd={addBusinessExpenseKeyword}
-                  onRemove={removeBusinessExpenseKeyword}
-                  placeholder="bijv. LeasePlan, boekhouder-naam…"
-                  chipClass="bg-teal-100 text-teal-800"
-                  addButtonClass="bg-teal-600 hover:bg-teal-700"
-                  entries={businessExpenseEntries}
-                  entriesLabel="Nu herkend als Zakelijke inkoop/uitgaven"
-                  onReclassify={reclassifyBusinessEntry}
-                  isExpanded={expandedBusinessExpenseList}
-                  onToggleExpand={() => setExpandedBusinessExpenseList((v) => !v)}
-                />
-              </section>
-            )}
+        {/* Fase 3 — verborgen zodra de kaart "Tegenpartijen" is uitgeklapt (toont dit paneel dan
+            zelf, zie instellingenCardGroups hierboven) om dubbele content te voorkomen. */}
+        {parsedFiles.length > 0 && !expandedCardKeys.tegenpartijen && (
+          <div ref={incomeRatesSectionRef} style={sectionTabStyle("instellingen")}>
+            <TegenpartijenPanel
+              incomeBtwTarieven={incomeBtwTarieven}
+              meerdereTarievenBevestigd={meerdereTarievenBevestigd}
+              onConfirmMeerdereTarieven={() => setMeerdereTarievenBevestigd(true)}
+              businessKeywords={businessKeywords}
+              onAddBusinessKeyword={addBusinessKeyword}
+              onRemoveBusinessKeyword={removeBusinessKeyword}
+              businessIncomeEntries={businessIncomeEntries}
+              onReclassifyBusinessEntry={reclassifyBusinessEntry}
+              onSetCounterpartyBtwVerlegd={setCounterpartyBtwVerlegd}
+              btwVerlegd={btwVerlegd}
+              onSetIncomeRate={setIncomeRate}
+              expandedBusinessIncomeList={expandedBusinessIncomeList}
+              onToggleExpandBusinessIncomeList={() => setExpandedBusinessIncomeList((v) => !v)}
+              businessExpenseKeywords={businessExpenseKeywords}
+              onAddBusinessExpenseKeyword={addBusinessExpenseKeyword}
+              onRemoveBusinessExpenseKeyword={removeBusinessExpenseKeyword}
+              businessExpenseEntries={businessExpenseEntries}
+              expandedBusinessExpenseList={expandedBusinessExpenseList}
+              onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
+            />
           </div>
         )}
 
-        {transactions.length > 0 && pendingIncomeReview.length > 0 && (
-          <div ref={incomeReviewSectionRef} style={sectionTabStyle("controleren")}>
-            <IncomeReviewStep
-              items={pendingIncomeReview}
-              totalCount={incomeSummary.length}
-              doneCount={incomeSummary.length - pendingIncomeReview.length}
-              search={incomeSearch}
-              onSearch={setIncomeSearch}
-              onMark={markIncomeSource}
+        {/* Fase 3 — "Herkomst van geld" (IncomeReviewStep + de "Overboekingen aan personen"-
+            accordeon) is nu HerkomstVanGeldPanel.jsx, een zelfstandig onderdeel — verborgen zodra de
+            kaart "Herkomst van geld" is uitgeklapt (toont dit paneel dan zelf, zie
+            controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
+        {transactions.length > 0 && !expandedCardKeys.herkomstVanGeld && (
+          <div style={sectionTabStyle("controleren")}>
+            <HerkomstVanGeldPanel
+              incomeReviewRef={incomeReviewSectionRef}
+              pendingIncomeReview={pendingIncomeReview}
+              incomeSummary={incomeSummary}
+              incomeSearch={incomeSearch}
+              onIncomeSearch={setIncomeSearch}
+              onMarkIncomeSource={markIncomeSource}
+              personReviewRef={personReviewSectionRef}
+              personSummary={personSummary}
+              pendingPersonReview={pendingPersonReview}
+              showPersonReview={showPersonReview}
+              onToggleShowPersonReview={setShowPersonReview}
+              personSearch={personSearch}
+              onPersonSearch={setPersonSearch}
+              onMarkPersonSource={markPersonSource}
+              onConfirmPersonAsIs={confirmPersonAsIs}
             />
           </div>
         )}
 
         {transactions.length > 0 && pendingIncomeReview.length === 0 && (
           <>
-            {personSummary.length > 0 && (() => {
-              const open = showPersonReview === null ? pendingPersonReview.length > 0 : showPersonReview;
-              return (
-                <section ref={personReviewSectionRef} className="rounded-xl border-2 border-fuchsia-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
-                  <button
-                    onClick={() => setShowPersonReview(!open)}
-                    className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left"
-                  >
-                    {pendingPersonReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-                    <span className="text-sm font-semibold">Overboekingen aan personen controleren</span>
-                    {pendingPersonReview.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingPersonReview.length}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-emerald-700">Niets openstaand</span>
-                    )}
-                    <span className="flex-1" />
-                    {open ? <ChevronDown className="h-4 w-4 text-fuchsia-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-fuchsia-400 shrink-0" />}
-                  </button>
-                  {open && (
-                    <ReviewStep
-                      items={pendingPersonReview}
-                      allItems={personSummary}
-                      allDone={pendingPersonReview.length === 0}
-                      search={personSearch}
-                      onSearch={setPersonSearch}
-                      onMark={markPersonSource}
-                      onConfirm={confirmPersonAsIs}
-                      defaultCategory="Overboekingen aan personen"
-                      confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
-                      explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
-                    />
-                  )}
-                </section>
-              );
-            })()}
 
-            {overigSummary.length > 0 && (() => {
-              const open = showOverigReview === null ? pendingOverigReview.length > 0 : showOverigReview;
-              return (
-                <section ref={overigReviewSectionRef} className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
-                  <button
-                    onClick={() => setShowOverigReview(!open)}
-                    className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left"
-                  >
-                    {pendingOverigReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-                    <span className="text-sm font-semibold">"Overig" opruimen</span>
-                    {pendingOverigReview.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingOverigReview.length}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-emerald-700">Niets openstaand</span>
-                    )}
-                    <span className="flex-1" />
-                    {open ? <ChevronDown className="h-4 w-4 text-amber-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />}
-                  </button>
-                  {open && (
-                    <ReviewStep
-                      items={pendingOverigReview}
-                      allItems={overigSummary}
-                      allDone={pendingOverigReview.length === 0}
-                      search={overigSearch}
-                      onSearch={setOverigSearch}
-                      onMark={markOverigItem}
-                      onConfirm={confirmOverigAsIs}
-                      defaultCategory="Overig"
-                      confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                      explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
-                      bulkAction={{
-                        label: `Alles wat hier nog staat (${pendingOverigReview.length}) naar "Prive opnames" (zakelijke rekening)`,
-                        confirmText: `${pendingOverigReview.length} tegenpartij(en) in "Overig" allemaal naar "Prive opnames" (Zakelijk) zetten? Dit is bedoeld voor een zakelijke rekening — gebruik dit niet als het om een privérekening gaat.`,
-                        onApply: bulkMarkOverigAsPriveOpname,
-                      }}
-                    />
-                  )}
-                </section>
-              );
-            })()}
-
-            {/* v243 — Duplicaten-sectie hiernaartoe verplaatst (stond eerder vóór "Overboekingen aan
-                personen") zodat de volgorde overeenkomt met het mini-dashboard erboven. Ook hier: niet
-                langer volledig verborgen zodra alles is afgehandeld (dismissedDuplicateNotice blijft
-                alleen bepalen of "Aangifte {jaar}" hier nog los over nagt) — in plaats daarvan altijd
-                zichtbaar zodra er ooit duplicaten of bevestigd-losse groepen zijn gevonden, ingeklapt
-                met een groen vinkje als er niets meer open staat, met de "Bekijk welke transacties"-lijst
-                nog altijd één klik verderop zodat je het bij een schoon dossier alsnog kunt naslaan.
-                v246 — drie verbeteringen: (1) de "dit zijn GEEN duplicaten"-lijst (confirmedSeparateGroups)
-                stond hier altijd volledig uitgeklapt, óók als het er honderd waren — die staat nu
-                ingeklapt onder een eigen knopje (showConfirmedSeparateDuplicates), puur ter naslag; (2) de
-                amber "aandacht nodig"-kleur/telling is nu gebaseerd op duplicatePendingBreakdown.onzeker
-                (écht zelf te beoordelen, want geen saldogegevens) i.p.v. alle nog-niet-verwijderde
-                duplicaten — zodra alle gevonden duplicaten met zekerheid zijn bevestigd op basis van het
-                saldo, is er niets meer te BEOORDELEN, dus wordt de sectie groen (met de melding dat ze
-                nog wel verwijderd moeten worden); (3) elke groep heeft nu een eigen "Verwijderen"-knop
-                i.p.v. alleen de bulk-actie, met een "Ongedaan maken" erna — diezelfde twee acties staan
-                ook in de detailweergave (originele regels bekijken), zie DuplicateGroupDetailModal. */}
-            {(duplicateGroups.length > 0 || confirmedSeparateGroups.length > 0) && (() => {
-              const needsJudgment = duplicatePendingBreakdown.onzeker > 0;
-              const open = showDuplicateDetails === null ? needsJudgment : showDuplicateDetails;
-              return (
-                <section
-                  ref={duplicatesSectionRef}
-                  className={`rounded-xl border-2 ${needsJudgment ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}
-                  style={sectionTabStyle("controleren")}
-                >
-                  <button
-                    onClick={() => setShowDuplicateDetails(!open)}
-                    className="w-full px-4 py-3 flex items-center gap-2 text-left"
-                  >
-                    {!needsJudgment && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-                    <span className={`text-sm font-semibold ${needsJudgment ? "text-amber-900" : "text-emerald-900"}`}>Duplicaten controleren</span>
-                    {needsJudgment ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {duplicatePendingBreakdown.onzeker} zelf te beoordelen
-                      </span>
-                    ) : pendingDuplicateCount > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-semibold">
-                        {pendingDuplicateCount} bevestigd — nog te verwijderen
-                      </span>
-                    ) : (
-                      <span className="text-xs text-emerald-700">Niets openstaand</span>
-                    )}
-                    <span className="flex-1" />
-                    {open ? (
-                      <ChevronDown className={`h-4 w-4 shrink-0 ${needsJudgment ? "text-amber-400" : "text-emerald-400"}`} />
-                    ) : (
-                      <ChevronRight className={`h-4 w-4 shrink-0 ${needsJudgment ? "text-amber-400" : "text-emerald-400"}`} />
-                    )}
-                  </button>
-                  {open && (
-                    <div className="px-4 pb-3 space-y-2">
-                      {pendingDuplicateCount > 0 && (
-                        <div className="flex gap-3 pb-1">
-                          <button onClick={removeDuplicates} className="text-xs font-medium text-amber-900 underline hover:no-underline">
-                            Alle {pendingDuplicateCount} nog openstaande verwijderen (bewaar de eerste van elk stel)
-                          </button>
-                          <button onClick={() => setDismissedDuplicateNotice(true)} className="text-xs text-amber-700 hover:text-amber-900">
-                            Negeren (niet meer noemen bij "Aangifte")
-                          </button>
-                        </div>
-                      )}
-                      {duplicateGroups.map((group) => {
-                        const files = [...new Set(group.map((t) => t.source))];
-                        const crossFile = files.length > 1;
-                        const first = group[0];
-                        // v237 — de certainty per transactie komt nu uit computeDuplicateInfo zelf (op
-                        // basis van het lopende saldo, wanneer beschikbaar) i.p.v. hier opnieuw
-                        // uitgerekend te worden — zie duplicates.js.
-                        const zeker = first.certainty === "duplicaat";
-                        const removedGroup = isDuplicateGroupRemoved(group);
-                        return (
-                          <div
-                            key={group[0].fingerprint}
-                            className={`rounded-lg border px-3 py-2 text-xs ${removedGroup ? "bg-emerald-50 border-emerald-200" : "bg-white border-amber-200"}`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-slate-700">
-                                {first.date.toLocaleDateString("nl-NL")} · {eur(first.amount)} · {first.counterparty || first.description || "(geen omschrijving)"}
-                                <span className="text-slate-400"> — {group.length}x</span>
-                              </p>
-                              <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
-                                <button
-                                  onClick={() => setDuplicateDetailGroup(group)}
-                                  className="text-[11px] font-medium text-amber-900 underline hover:no-underline"
-                                >
-                                  Bekijk originele regels
-                                </button>
-                                {removedGroup ? (
-                                  <button
-                                    onClick={() => restoreDuplicateGroup(group)}
-                                    className="text-[11px] font-medium text-emerald-700 underline hover:no-underline"
-                                  >
-                                    Ongedaan maken
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => removeDuplicateGroup(group)}
-                                    className="text-[11px] font-medium text-rose-700 underline hover:no-underline"
-                                  >
-                                    Verwijderen
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            {crossFile ? (
-                              <p className="mt-0.5 text-amber-700">
-                                ⚠ Komt voor in <strong>meerdere bestanden</strong>: {files.join(", ")} — waarschijnlijk overlappende exportperiodes.
-                              </p>
-                            ) : (
-                              <p className="mt-0.5 text-slate-400">Komt {group.length}x voor binnen hetzelfde bestand ({files[0]}).</p>
-                            )}
-                            {removedGroup ? (
-                              <p className="mt-0.5 font-medium text-emerald-700">✓ Verwijderd — de eerste regel van dit stel is bewaard.</p>
-                            ) : zeker ? (
-                              <p className="mt-0.5 font-medium text-red-700">
-                                ✓ Bevestigd op basis van saldo: het lopende saldo na mutatie is bij alle {group.length} regels
-                                gelijk ({eur(first.balance)}) — dat kan alleen als het écht dezelfde boeking is, dus dit is met
-                                zekerheid een dubbeling.
-                              </p>
-                            ) : (
-                              <p className="mt-0.5 text-slate-400">
-                                Geen (volledige) saldogegevens beschikbaar om dit automatisch te bevestigen — vergelijk de
-                                originele regels hierboven om zelf te beoordelen.
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {confirmedSeparateGroups.length > 0 && (
-                        <div className="rounded-lg bg-emerald-50 border border-emerald-200">
-                          <button
-                            onClick={() => setShowConfirmedSeparateDuplicates((v) => !v)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-left"
-                          >
-                            <span className="text-xs text-emerald-900">
-                              <strong>{confirmedSeparateGroups.length}x</strong> zelfde datum/bedrag/omschrijving gevonden, maar zijn{" "}
-                              <strong>geen</strong> duplicaten (saldo bevestigt: losse, echte transacties) — alleen ter info
-                            </span>
-                            <span className="flex-1" />
-                            {showConfirmedSeparateDuplicates ? (
-                              <ChevronDown className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                            ) : (
-                              <ChevronRight className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                            )}
-                          </button>
-                          {showConfirmedSeparateDuplicates && (
-                            <div className="px-3 pb-2 space-y-1.5">
-                              {confirmedSeparateGroups.map((group) => (
-                                <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-[11px] text-emerald-800">
-                                  <span>
-                                    {group[0].date.toLocaleDateString("nl-NL")} · {eur(group[0].amount)} ·{" "}
-                                    {group[0].counterparty || group[0].description || "(geen omschrijving)"} — {group.length}x
-                                  </span>
-                                  <button
-                                    onClick={() => setDuplicateDetailGroup(group)}
-                                    className="shrink-0 underline hover:no-underline whitespace-nowrap"
-                                  >
-                                    Bekijk originele regels
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
-              );
-            })()}
-
-            {/* v243 — altijd zichtbaar zodra er ooit een factuurperiode-signaal is gevonden in dit
-                dossier (periodeAllSignals), niet meer alleen bij openstaande punten (periodeMismatches)
-                — ingeklapt met groen vinkje zodra niets meer open staat, met de al-bevestigde/verplaatste
-                items nog steeds naslaanbaar via "toon toch". */}
-            {periodeAllSignals.length > 0 && (() => {
-              const open = showPeriodeReview === null ? periodeMismatches.length > 0 : showPeriodeReview;
-              const afgehandeld = periodeAllSignals.filter((s) => s.status !== "open");
-              return (
-                <section ref={periodeReviewSectionRef} className="rounded-xl border-2 border-sky-200 bg-white overflow-hidden shadow-sm" style={sectionTabStyle("controleren")}>
-                  <button
-                    onClick={() => setShowPeriodeReview(!open)}
-                    className="w-full px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2 text-left"
-                  >
-                    {periodeMismatches.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-                    <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
-                    {periodeMismatches.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {periodeMismatches.length}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-emerald-700">Geen afwijkingen (meer) openstaand</span>
-                    )}
-                    <span className="flex-1" />
-                    {open ? <ChevronDown className="h-4 w-4 text-sky-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-sky-400 shrink-0" />}
-                  </button>
-                  {open && (
-                    <>
-                      <PeriodeReviewStep items={periodeMismatches} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} onOpenHelp={setHelpPopupChapter} />
-                      {afgehandeld.length > 0 && (
-                        <div className="px-5 pb-4 space-y-1">
-                          <p className="text-xs font-medium text-slate-500">Eerder al afgehandeld ({afgehandeld.length}):</p>
-                          {afgehandeld.map((s) => (
-                            <div key={s.tx.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-500 border-t border-slate-100 pt-1.5">
-                              <span className="flex-1 min-w-[12rem]">
-                                {s.tx.date.toLocaleDateString("nl-NL")} · {eur(s.tx.amount)} · {s.tx.counterparty || s.tx.description || "(geen omschrijving)"}
-                              </span>
-                              <span>{s.boekingKwartaal} → {s.voorgesteldKwartaal}</span>
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${s.status === "verplaatst" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}`}>
-                                {s.status === "verplaatst" ? "Verplaatst" : "Bevestigd: boekingsdatum klopt"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </section>
-              );
-            })()}
+            {/* Fase 3 — "Opschonen" (Overig opruimen + Duplicaten + Factuurperiode) is nu
+                OpschonenPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart "Opschonen"
+                is uitgeklapt (toont dit paneel dan zelf, zie controlerenCardGroups hierboven) om
+                dubbele content te voorkomen. */}
+            {!expandedCardKeys.opschonen && (
+              <div style={sectionTabStyle("controleren")}>
+                <OpschonenPanel
+                  overigReviewRef={overigReviewSectionRef}
+                  overigSummary={overigSummary}
+                  pendingOverigReview={pendingOverigReview}
+                  showOverigReview={showOverigReview}
+                  onToggleShowOverigReview={setShowOverigReview}
+                  overigSearch={overigSearch}
+                  onOverigSearch={setOverigSearch}
+                  onMarkOverigItem={markOverigItem}
+                  onConfirmOverigAsIs={confirmOverigAsIs}
+                  onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
+                  duplicatesRef={duplicatesSectionRef}
+                  duplicateGroups={duplicateGroups}
+                  confirmedSeparateGroups={confirmedSeparateGroups}
+                  duplicatePendingBreakdown={duplicatePendingBreakdown}
+                  showDuplicateDetails={showDuplicateDetails}
+                  onToggleShowDuplicateDetails={setShowDuplicateDetails}
+                  pendingDuplicateCount={pendingDuplicateCount}
+                  onRemoveDuplicates={removeDuplicates}
+                  onDismissDuplicateNotice={() => setDismissedDuplicateNotice(true)}
+                  isDuplicateGroupRemoved={isDuplicateGroupRemoved}
+                  onShowDuplicateDetailGroup={setDuplicateDetailGroup}
+                  onRestoreDuplicateGroup={restoreDuplicateGroup}
+                  onRemoveDuplicateGroup={removeDuplicateGroup}
+                  showConfirmedSeparateDuplicates={showConfirmedSeparateDuplicates}
+                  onToggleShowConfirmedSeparateDuplicates={() => setShowConfirmedSeparateDuplicates((v) => !v)}
+                  periodeReviewRef={periodeReviewSectionRef}
+                  periodeAllSignals={periodeAllSignals}
+                  periodeMismatches={periodeMismatches}
+                  showPeriodeReview={showPeriodeReview}
+                  onToggleShowPeriodeReview={setShowPeriodeReview}
+                  onConfirmPeriodeAsIs={confirmPeriodeAsIs}
+                  onMovePeriodeToQuarter={movePeriodeToQuarter}
+                  onOpenHelp={setHelpPopupChapter}
+                />
+              </div>
+            )}
 
             {/* v245 — Leningen/Lease/Activa/Persoonlijke aannames/Percentage zakelijk per categorie
                 hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten".
@@ -4796,112 +4645,31 @@ export default function App() {
                 </div>
                 )}
 
-                {(() => {
-                  // Sinds v213 heet dezelfde overboeking aan elke kant anders (zie classify.js): de
-                  // zakelijke rekening gebruikt "Prive opnames" (geld weg) / "Terugboeking van prive"
-                  // (geld terug), de privérekening gebruikt daarvoor "Ontvangen van zakelijk" / "Terugboeking
-                  // naar zakelijk" — dus deze controle mag NIET meer op dezelfde categorienaam aan beide
-                  // kanten filteren (dat leverde priSum altijd 0 op, en dus een valse mismatch-melding
-                  // zodra de privérekening zelf ook geladen was). In plaats daarvan wordt per kant op de
-                  // eigen categorienamen gefilterd — de bedragen (met hun eigen teken) moeten samen nog
-                  // steeds op nul uitkomen.
-                  const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
-                  const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
-                  const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-                  const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-                  const diff = Math.round((zakSum + priSum) * 100) / 100;
-                  // v224/v233: als er in dit DOSSIER helemaal geen rekening van één van beide types
-                  // geladen is (bijv. een dossier dat alleen de zakelijke rekening bevat), is deze
-                  // controle sowieso niet uit te voeren — er is dan simpelweg niets om de zakelijke
-                  // kant tegen af te zetten. Dat is geen fout/inconsistentie (de zakelijke boekingen
-                  // kunnen prima kloppen), dus dan een neutrale melding tonen in plaats van de amber
-                  // "komt niet overeen"-waarschuwing, die anders ten onrechte een probleem suggereert.
-                  // v233-fix: dit keek eerst naar priGroupForYear/zakGroupForYear.items.length (aantal
-                  // transacties in het ACTIEVE JAAR), maar spiegelboekingen voor privé-uitgaven die via
-                  // de zakelijke rekening liepen, tellen daar ook in mee — waardoor priGroupForYear
-                  // alsnog items kon bevatten terwijl er in werkelijkheid geen privé-bestand geladen was.
-                  // Nu wordt dossierbreed gekeken of er ÜBERHAUPT een bestand van dat rekeningtype is
-                  // geladen (priveRekeningGeladen/zakelijkRekeningGeladen hierboven), ongeacht het jaar.
-                  const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
-                  if (zijdeOntbreekt) {
-                    if (zakSum === 0 && priSum === 0) return null;
-                    // v233: dit is geen probleem (er ontbreekt niets fout — het dossier bevat simpelweg
-                    // geen tegenrekening om tegen te verifiëren), dus groen/emerald in plaats van het
-                    // neutrale grijs dat eerder suggereerde dat hier nog iets te checken viel.
-                    return (
-                      <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("controleren")}>
-                        <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <p className="text-sm text-emerald-900">
-                          <strong>Controle overboeking zakelijk ↔ privé</strong>: geen {zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-
-                          rekening geladen in dit dossier, dus niet te verifiëren — dat is geen fout. De {zijdeOntbreekt === "Prive" ? "zakelijke" : "privé"}-
-                          kant toont hier {eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)} aan overboekingen, zonder dat daar iets tegenover kan staan.
-                        </p>
-                      </div>
-                    );
-                  }
-                  if (zakSum === 0 && priSum === 0) return null;
-                  const ok = Math.abs(diff) < 0.01;
-                  return (
-                    <div className={`rounded-xl border-2 px-4 py-3 flex items-start gap-3 ${ok ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50"}`} style={sectionTabStyle("controleren")}>
-                      {ok ? <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />}
-                      <p className={`text-sm ${ok ? "text-emerald-900" : "text-amber-900"}`}>
-                        <strong>Controle overboeking zakelijk ↔ privé</strong>: Zakelijk ("Prive opnames"/"Terugboeking van prive") {eur(zakSum)} tegenover Prive ("Ontvangen van zakelijk"/"Terugboeking naar zakelijk") {eur(priSum)}
-                        {ok ? " — komt overeen (samen nul, zoals het hoort)." : <> — komt <strong>niet</strong> overeen (verschil {eur(diff)}). Mogelijk staat er aan de privékant een aparte, niet-gekoppelde transactie, of ontbreekt er iets.</>}
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                <p className="text-xs text-slate-400" style={sectionTabStyle("controleren")}>
-                  Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
-                </p>
-                <div
-                  ref={detailsSectionRef}
-                  className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}
-                  style={sectionTabStyle("controleren")}
-                >
-                  {(!expandedTable || expandedTable === "Zakelijk") && (
-                    <div
-                      data-dropzone="Zakelijk"
-                      className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
-                    >
-                      <DetailTable
-                        group={zakGroupForYear}
-                        onRequestChange={requestCategoryChange}
-                        onConfirmCorrect={confirmClassificationCorrect}
-                        enableDrag
-                        onRowDragStart={startRowDrag}
-                        draggingTxId={dragState ? dragState.tx.id : null}
-                        isExpanded={expandedTable === "Zakelijk"}
-                        onToggleExpand={() => setExpandedTable((v) => (v === "Zakelijk" ? null : "Zakelijk"))}
-                        onOpenHelp={setHelpPopupChapter}
-                        fingerprintByTxId={fingerprintByTxId}
-                        transactionNotes={transactionNotes}
-                        onSetNote={setTransactionNote}
-                      />
-                    </div>
-                  )}
-                  {(!expandedTable || expandedTable === "Prive") && (
-                    <div
-                      data-dropzone="Prive"
-                      className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
-                    >
-                      <DetailTable
-                        group={priGroupForYear}
-                        onRequestChange={requestCategoryChange}
-                        onConfirmCorrect={confirmClassificationCorrect}
-                        enableDrag
-                        onRowDragStart={startRowDrag}
-                        draggingTxId={dragState ? dragState.tx.id : null}
-                        isExpanded={expandedTable === "Prive"}
-                        onToggleExpand={() => setExpandedTable((v) => (v === "Prive" ? null : "Prive"))}
-                        fingerprintByTxId={fingerprintByTxId}
-                        transactionNotes={transactionNotes}
-                        onSetNote={setTransactionNote}
-                      />
-                    </div>
-                  )}
-                </div>
+                {/* Fase 3 — "Aansluiting & detail" (banner + detailtabellen Zakelijk/Prive) is nu
+                    AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
+                    "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
+                    controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
+                {!expandedCardKeys.aansluitingDetail && (
+                  <div style={sectionTabStyle("controleren")}>
+                    <AansluitingDetailPanel
+                      detailsRef={detailsSectionRef}
+                      zakGroupForYear={zakGroupForYear}
+                      priGroupForYear={priGroupForYear}
+                      priveRekeningGeladen={priveRekeningGeladen}
+                      zakelijkRekeningGeladen={zakelijkRekeningGeladen}
+                      dragState={dragState}
+                      expandedTable={expandedTable}
+                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
+                      onRequestCategoryChange={requestCategoryChange}
+                      onConfirmCorrect={confirmClassificationCorrect}
+                      onRowDragStart={startRowDrag}
+                      fingerprintByTxId={fingerprintByTxId}
+                      transactionNotes={transactionNotes}
+                      onSetNote={setTransactionNote}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  </div>
+                )}
               </>
             )}
           </>
