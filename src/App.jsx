@@ -1531,6 +1531,12 @@ export default function App() {
   };
 
   const requestCategoryChange = (tx, patch) => {
+    // v303 — op verzoek: "type" (Zakelijk/Prive) van een transactie volgt uitsluitend het
+    // bankbestand waaruit hij is ingelezen en mag nooit meer handmatig worden aangepast (zie
+    // autoClassify in classify.js) — dit is het ene doorgeefluik waar alle categorie/type-wijzigingen
+    // doorheen gaan (detailtabel, onzekere-transacties-modal, eerdere sleepfunctie, enz.), dus hier
+    // negeren we een eventueel meegestuurd `type` altijd en behouden we het bestaande type van tx.
+    patch = { ...patch, type: tx.type };
     // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
     // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
     // uit een override teruggelezen. Een wijziging rechtstreeks op de spiegel opslaan komt dus
@@ -1591,47 +1597,11 @@ export default function App() {
     suggestSimilarIfAny(tx, patch);
   };
 
-  // ---- Slepen tussen Zakelijk en Prive (Pointer Events — werkt ook op iOS/iPad) ----
-  const [dragState, setDragState] = useState(null); // { tx, x, y, overZone }
+  // v303 — op verzoek: het type (Zakelijk/Prive) is niet meer handmatig aanpasbaar, dus de
+  // sleepfunctionaliteit tussen de Zakelijk/Prive-tabellen (die `type` wijzigde) is verwijderd.
   const [expandedTable, setExpandedTable] = useState(null); // "Zakelijk" | "Prive" | null
   const [expandedBusinessIncomeList, setExpandedBusinessIncomeList] = useState(false);
   const [expandedBusinessExpenseList, setExpandedBusinessExpenseList] = useState(false);
-  const dragStateRef = useRef(null);
-  dragStateRef.current = dragState;
-  const startRowDrag = (e, tx) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (err) {
-      /* ignore */
-    }
-    setDragState({ tx, x: e.clientX, y: e.clientY, overZone: null });
-  };
-  useEffect(() => {
-    if (!dragState) return;
-    const handleMove = (e) => {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const zoneEl = el && el.closest ? el.closest("[data-dropzone]") : null;
-      const overZone = zoneEl ? zoneEl.getAttribute("data-dropzone") : null;
-      setDragState((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY, overZone } : prev));
-    };
-    const handleUp = () => {
-      const cur = dragStateRef.current;
-      if (cur && !cur.tx.isMirror && cur.overZone && cur.overZone !== cur.tx.type) {
-        requestCategoryChange(cur.tx, { category: cur.tx.category, type: cur.overZone });
-      }
-      setDragState(null);
-    };
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-    window.addEventListener("pointercancel", handleUp);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      window.removeEventListener("pointercancel", handleUp);
-    };
-  }, [!!dragState]);
 
   const groups = useMemo(() => {
     const map = {};
@@ -3283,12 +3253,10 @@ export default function App() {
           priGroupForYear={priGroupForYear}
           priveRekeningGeladen={priveRekeningGeladen}
           zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-          dragState={dragState}
           expandedTable={expandedTable}
           onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
           onRequestCategoryChange={requestCategoryChange}
           onConfirmCorrect={confirmClassificationCorrect}
-          onRowDragStart={startRowDrag}
           fingerprintByTxId={fingerprintByTxId}
           transactionNotes={transactionNotes}
           onSetNote={setTransactionNote}
@@ -3346,7 +3314,6 @@ export default function App() {
     priveRekeningGeladen,
     zakelijkRekeningGeladen,
     aansluitControleInfo,
-    dragState,
     expandedTable,
     fingerprintByTxId,
     transactionNotes,
@@ -4786,12 +4753,10 @@ export default function App() {
                       priGroupForYear={priGroupForYear}
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-                      dragState={dragState}
                       expandedTable={expandedTable}
                       onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
                       onRequestCategoryChange={requestCategoryChange}
                       onConfirmCorrect={confirmClassificationCorrect}
-                      onRowDragStart={startRowDrag}
                       fingerprintByTxId={fingerprintByTxId}
                       transactionNotes={transactionNotes}
                       onSetNote={setTransactionNote}
@@ -4830,21 +4795,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {dragState && (
-        <div
-          className={`fixed z-50 pointer-events-none rounded-lg border-2 shadow-lg px-3 py-2 text-xs font-medium bg-white ${
-            dragState.overZone && dragState.overZone !== dragState.tx.type
-              ? dragState.overZone === "Zakelijk" ? "border-emerald-500 text-emerald-800" : "border-slate-500 text-slate-800"
-              : "border-slate-300 text-slate-500"
-          }`}
-          style={{ left: dragState.x + 12, top: dragState.y + 12, maxWidth: "16rem" }}
-        >
-          <p className="truncate font-semibold">{dragState.tx.counterparty || dragState.tx.description || "(geen omschrijving)"}</p>
-          <p className="font-mono">{eur(dragState.tx.amount)}</p>
-          {dragState.overZone && dragState.overZone !== dragState.tx.type && <p className="mt-0.5">→ naar {dragState.overZone}</p>}
-        </div>
-      )}
 
       {loanDetailsModalKey && loanSummary.find((l) => l.key === loanDetailsModalKey) && (
         <LoanDetailsModal

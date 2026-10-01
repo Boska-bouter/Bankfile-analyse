@@ -105,14 +105,12 @@ export default function UncertainTransactionsModal({
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
-                  <select
-                    value={tx.type}
-                    onChange={(e) => onRequestChange(tx, { category: tx.category, type: e.target.value })}
-                    className={`shrink-0 rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${tx.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                  <span
+                    className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${tx.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                    title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen en kan niet los worden aangepast."
                   >
-                    <option value="Prive">Prive</option>
-                    <option value="Zakelijk">Zakelijk</option>
-                  </select>
+                    {tx.type}
+                  </span>
                   <button
                     onClick={() => onConfirmCorrect(tx)}
                     className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[10px] font-medium hover:bg-emerald-100"
