@@ -762,13 +762,10 @@ export default function App() {
     setShowStartupChoice(false);
     setLoaded(true);
   };
-  const startEmpty = async () => {
-    // "Nieuw dossier" betekent hier ook echt een nieuwe lokale sessie: voorkom dat het vorige
-    // dossier na een refresh opnieuw als startproject verschijnt.
+  const startEmpty = () => {
+    // Bewust niets inladen — de eerder opgeslagen data in deze browser blijft intact totdat er
+    // weer iets nieuws wordt opgeslagen (bijv. door een bestand te uploaden).
     skipNextPersistRef.current = true;
-    pendingProjectRef.current = null;
-    await clearPersistedData();
-    await clearPersistedSettings();
     setShowStartupChoice(false);
     setLoaded(true);
   };
@@ -3565,6 +3562,7 @@ export default function App() {
     () =>
       controlerenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
+        .slice(0, 4)
         .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
     [controlerenDashboardCards]
   );
@@ -3572,6 +3570,7 @@ export default function App() {
     () =>
       instellingenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
+        .slice(0, 4)
         .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
     [instellingenDashboardCards]
   );
@@ -3986,29 +3985,30 @@ export default function App() {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
-          <h1 className="text-lg font-semibold mb-1">Vorig dossier gevonden</h1>
+          <h1 className="text-lg font-semibold mb-1">Vorig project gevonden</h1>
           <p className="text-sm text-slate-500 mb-5">
             Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}
             {pending?.settings?.eigenNamen?.ondernemer ? <> — rekeninghouder: <strong>{pending.settings.eigenNamen.ondernemer}</strong></> : null}
-            ). Wilt u daarmee verdergaan, of een nieuw dossier starten?
+            ). Wil je daarmee verdergaan, of leeg beginnen?
           </p>
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
               className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-teal-800"
             >
-              Verder met dit dossier
+              Gebruik laatste project
             </button>
             <button
               onClick={startEmpty}
               className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
             >
-              Nieuw dossier
+              Leeg beginnen
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-4">
-            "Nieuw dossier" wist het automatisch opgeslagen vorige dossier uit deze browser. Een eerder geëxporteerd
-            projectbestand blijft natuurlijk gewoon beschikbaar als bestand.
+            "Leeg beginnen" verwijdert niets: het eerder opgeslagen project blijft in deze browser bewaard en dit
+            keuzescherm verschijnt de volgende keer weer, totdat je zelf een nieuw bestand uploadt of een nieuw
+            project instelt — pas dán wordt het oude project in deze browser overschreven.
           </p>
         </div>
       </div>
@@ -4226,7 +4226,6 @@ export default function App() {
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={controlerenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4433,7 +4432,6 @@ export default function App() {
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={controlerenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4592,7 +4590,6 @@ export default function App() {
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={instellingenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
