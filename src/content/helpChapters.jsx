@@ -248,13 +248,11 @@ export const HELP_CHAPTERS = [
     titel: "Detailtabel",
     inhoud: (
       <p>
-        Categorie is direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
+        Categorie en type zijn direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
         dezelfde tegenpartij, in alle jaren (tenzij er geen bruikbare naam is, dan alleen voor die ene transactie).
-        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Prive) staat er
-        alleen ter info bij: dat volgt altijd het bankbestand waaruit de transactie is ingelezen en is bewust niet
-        los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. Gebruik de filters
-        op bedrag en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte
-        te bekijken.
+        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Sleep een transactie (aan het handvat)
+        naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom. Gebruik de filters op bedrag
+        en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte te bekijken.
       </p>
     ),
   },

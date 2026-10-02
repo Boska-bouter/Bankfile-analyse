@@ -9,18 +9,16 @@ import { DetailTable } from "../overview/GroupView.jsx";
 // SectionCard ("aansluitControle") naast "Aansluiting & detail" op het Controleren-dashboard (zie
 // computeAansluitControleCard/App.jsx) — dit paneel toont 'm daarom niet meer zelf, om dubbele
 // content te voorkomen.
-// v303 — op verzoek: het type (Zakelijk/Prive) van een transactie is niet meer handmatig aan te
-// passen (ook niet door te slepen), want dat is precies wat zichtbaar moet blijven als "verkeerde
-// rekening gebruikt". De sleep-functionaliteit (dragState/onRowDragStart/dropzones) is daarom
-// volledig verwijderd; alleen categorie blijft bewerkbaar via DetailTable.
 export default function AansluitingDetailPanel({
   detailsRef,
   zakGroupForYear,
   priGroupForYear,
+  dragState,
   expandedTable,
   onToggleExpandTable,
   onRequestCategoryChange,
   onConfirmCorrect,
+  onRowDragStart,
   fingerprintByTxId,
   transactionNotes,
   onSetNote,
@@ -28,13 +26,22 @@ export default function AansluitingDetailPanel({
 }) {
   return (
     <div className="space-y-3">
+      <p className="text-xs text-slate-400">
+        Sleep een transactie (aan het handvat <span className="inline-block align-middle">⠿</span>) naar de andere tabel om 'm van Zakelijk naar Prive te verplaatsen, of andersom.
+      </p>
       <div ref={detailsRef} className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
         {(!expandedTable || expandedTable === "Zakelijk") && (
-          <div>
+          <div
+            data-dropzone="Zakelijk"
+            className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Zakelijk" && dragState.tx.type !== "Zakelijk" ? "ring-2 ring-emerald-400" : ""}`}
+          >
             <DetailTable
               group={zakGroupForYear}
               onRequestChange={onRequestCategoryChange}
               onConfirmCorrect={onConfirmCorrect}
+              enableDrag
+              onRowDragStart={onRowDragStart}
+              draggingTxId={dragState ? dragState.tx.id : null}
               isExpanded={expandedTable === "Zakelijk"}
               onToggleExpand={() => onToggleExpandTable("Zakelijk")}
               onOpenHelp={onOpenHelp}
@@ -45,11 +52,17 @@ export default function AansluitingDetailPanel({
           </div>
         )}
         {(!expandedTable || expandedTable === "Prive") && (
-          <div>
+          <div
+            data-dropzone="Prive"
+            className={`rounded-xl transition-colors ${dragState && dragState.overZone === "Prive" && dragState.tx.type !== "Prive" ? "ring-2 ring-slate-400" : ""}`}
+          >
             <DetailTable
               group={priGroupForYear}
               onRequestChange={onRequestCategoryChange}
               onConfirmCorrect={onConfirmCorrect}
+              enableDrag
+              onRowDragStart={onRowDragStart}
+              draggingTxId={dragState ? dragState.tx.id : null}
               isExpanded={expandedTable === "Prive"}
               onToggleExpand={() => onToggleExpandTable("Prive")}
               fingerprintByTxId={fingerprintByTxId}
