@@ -104,7 +104,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
 // alleen voor deze ene transactie.
 export function DetailTable({
-  group, onRequestChange, onConfirmCorrect, enableDrag, onRowDragStart, draggingTxId, isExpanded, onToggleExpand, onOpenHelp,
+  group, onRequestChange, onConfirmCorrect, isExpanded, onToggleExpand, onOpenHelp,
   fingerprintByTxId, transactionNotes, onSetNote,
 }) {
   const [query, setQuery] = useState("");
@@ -324,14 +324,14 @@ export function DetailTable({
           <p className="text-xs font-mono text-slate-500 mb-1">Totaal getoond: {eur(filteredItems.reduce((a, t) => a + t.amount, 0))}</p>
         )}
         <p className="text-xs text-slate-400">
-          Categorie en type direct aanpasbaar — geldt meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
+          Categorie direct aanpasbaar — geldt meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
+          Type (Zakelijk/Prive) volgt altijd het bankbestand en kan niet los worden aangepast.
         </p>
       </div>
       <div className="max-h-[28rem] overflow-y-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-slate-50 text-xs text-slate-500 uppercase">
             <tr>
-              {enableDrag && <th className="px-2 py-2 w-8"></th>}
               <th className="text-left font-medium px-4 py-2">Datum</th>
               <th className="text-center font-medium px-2 py-2" title="Classificatiezekerheid — klik ✓ om een 🟡/🔴-indeling te bevestigen">OK?</th>
               <th className="text-right font-medium px-4 py-2">Bedrag</th>
@@ -346,19 +346,7 @@ export function DetailTable({
               .slice()
               .sort((a, b) => b.date - a.date)
               .map((t) => (
-                <tr key={t.id} className={`hover:bg-slate-50 ${draggingTxId === t.id ? "opacity-30" : ""}`}>
-                  {enableDrag && (
-                    <td className="px-1 py-1 text-center">
-                      {!t.isMirror && <span
-                        onPointerDown={(e) => onRowDragStart(e, t)}
-                        className="inline-flex items-center justify-center cursor-grab text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
-                        style={{ fontSize: "1.1rem", lineHeight: 1, width: "2.25rem", height: "2.25rem", touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
-                        title="Sleep naar de andere tabel om Zakelijk/Prive te wijzigen"
-                      >
-                        ⠿
-                      </span>}
-                    </td>
-                  )}
+                <tr key={t.id} className="hover:bg-slate-50">
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
                     {t.date.toLocaleDateString("nl-NL")}
                   </td>
@@ -416,14 +404,12 @@ export function DetailTable({
                         Prive <span className="text-[10px] font-normal">↔ spiegel</span>
                       </span>
                     ) : (
-                    <select
-                      value={t.type}
-                      onChange={(e) => applyChange(t, { category: t.category, type: e.target.value })}
-                      className={`rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                    <span
+                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                      title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Prive) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
                     >
-                      <option value="Prive">Prive</option>
-                      <option value="Zakelijk">Zakelijk</option>
-                    </select>
+                      {t.type}
+                    </span>
                     )}
                   </td>
                   <td
@@ -491,7 +477,7 @@ export function DetailTable({
               ))}
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan={enableDrag ? 8 : 7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
               </tr>
             )}
           </tbody>

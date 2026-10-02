@@ -188,18 +188,13 @@ export default function AangifteStatusBar({
               "Ontvangen van zakelijk"/"Terugboeking naar zakelijk" die <strong>geen spiegelboeking</strong> is — dus een losse, echte transactie in een categorie die eigenlijk bedoeld is voor geld
               dat vanuit Zakelijk overkomt.
               <span className="block mt-1 text-xs text-slate-500">
+                {/* v303 — de "Zet op Zakelijk"-knop is verwijderd: type is niet meer handmatig
+                    aanpasbaar, dus deze kon een bestaande afwijking toch niet meer herstellen. Kies
+                    bij zo'n afwijking de juiste categorie, of herlaad het bestand als het type van
+                    het bronbestand zelf niet klopt. */}
                 {checklistData.priveTransferOrphans.slice(0, 5).map((tx) => (
                   <span key={tx.id} className="flex items-center gap-2">
                     <ExpandableDescription tx={tx} className="flex-1 min-w-0" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />
-                    {onRequestChange && (
-                      <button
-                        onClick={() => onRequestChange(tx, { category: tx.category, type: "Zakelijk" })}
-                        className="shrink-0 rounded-md border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
-                        title="Klopt deze transactie eigenlijk toch bij Zakelijk? Zet 'm dan direct op type Zakelijk (categorie blijft gelijk)."
-                      >
-                        Zet op Zakelijk
-                      </button>
-                    )}
                   </span>
                 ))}
                 {checklistData.priveTransferOrphans.length > 5 && <span className="block">en {checklistData.priveTransferOrphans.length - 5} meer…</span>}
