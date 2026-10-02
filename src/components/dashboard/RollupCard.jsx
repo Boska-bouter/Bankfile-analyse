@@ -33,7 +33,7 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
 
       {items && items.length > 0 ? (
         <div className="flex flex-col">
-          {items.map((item) => (
+          {items.slice(0, 5).map((item) => (
             <button
               key={item.label}
               type="button"
@@ -47,6 +47,9 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
               </span>
             </button>
           ))}
+          {items.length > 5 && (
+            <span className="pt-1.5 text-[11px] font-medium text-slate-400">+ {items.length - 5} meer</span>
+          )}
         </div>
       ) : (
         <p className="text-[12.5px] text-slate-400">Niets openstaand</p>

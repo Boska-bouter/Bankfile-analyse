@@ -1,4 +1,4 @@
-import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
+import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, FolderPlus } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -112,6 +112,39 @@ export default function AppSidebar({
         )}
       </div>
 
+      {/* Beheer — bewust dicht bij de dossieridentiteit en vóór de navigatie: bestandsacties zijn
+          primaire workflow-acties en hoeven niet onderaan uit beeld te staan. */}
+      <div className="flex flex-col gap-2 pb-4 mb-3 border-b border-white/10">
+        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
+
+        <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
+          <Upload className="h-3.5 w-3.5 text-white shrink-0" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-bold text-white">Bankbestand toevoegen</span>
+            <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
+          </div>
+        </button>
+
+        {canSaveProject && (
+          <button onClick={onSaveProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+            <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className="text-xs font-semibold text-slate-200">Project opslaan</span>
+          </button>
+        )}
+
+        <button onClick={onLoadProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+          <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <span className="text-xs font-semibold text-slate-200">Project laden</span>
+        </button>
+
+        {canClearAll && (
+          <button onClick={onClearAll} className="flex items-center gap-2 border border-slate-600 hover:bg-white/5 rounded-xl px-3 py-2">
+            <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className="text-xs font-semibold text-slate-300">Nieuw dossier</span>
+          </button>
+        )}
+      </div>
+
       {/* Tabs */}
       {tabsVisible && (
         <div className="flex flex-col gap-1">
@@ -165,38 +198,6 @@ export default function AppSidebar({
 
       <div className="flex-grow" />
 
-      {/* Beheer: bestandsacties — zelfde handlers als voorheen in de header-balk */}
-      <div className="flex flex-col gap-2 pt-3.5 border-t border-white/10">
-        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Beheer</span>
-
-        <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
-          <Upload className="h-3.5 w-3.5 text-white shrink-0" />
-          <div className="flex flex-col leading-tight">
-            <span className="text-xs font-bold text-white">Bestand laden</span>
-            <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
-          </div>
-        </button>
-
-        {canSaveProject && (
-          <button onClick={onSaveProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
-            <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className="text-xs font-semibold text-slate-200">Project opslaan</span>
-          </button>
-        )}
-
-        <button onClick={onLoadProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
-          <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-          <span className="text-xs font-semibold text-slate-200">Project laden</span>
-        </button>
-
-        {canClearAll && (
-          <button onClick={onClearAll} className="flex items-center gap-2 border border-rose-900 hover:bg-rose-950/40 rounded-xl px-3 py-2">
-            <Trash2 className="h-3.5 w-3.5 text-rose-300 shrink-0" />
-            <span className="text-xs font-semibold text-rose-300">Wis alles</span>
-          </button>
-        )}
-      </div>
-
       {/* Autosave-status, Help, Privacy */}
       <div className="flex flex-col gap-2.5 mt-3.5 pt-3 border-t border-white/10">
         {saveState && (
@@ -209,7 +210,7 @@ export default function AppSidebar({
             {saveState === "saved" && (
               <>
                 <Check className="h-3 w-3 text-emerald-400" />
-                Opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · browser
               </>
             )}
             {saveState === "error" && (
