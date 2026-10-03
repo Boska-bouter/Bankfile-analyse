@@ -4643,6 +4643,64 @@ export default function App() {
                     jaren-selectie hoeft te maken voor de meest voorkomende situatie (het jaar waar
                     je toch al in zit). "Ander jaar/meerdere jaren kiezen" schakelt binnen hetzelfde
                     venster door naar de checkbox-lijst. */}
+
+
+
+        {/* v243 — "Controleren / Geladen files" (de losse bestand-chips) stond hier apart, met
+            grotendeels dezelfde informatie (bestandsnaam, regelaantal, saldo-check) als de
+            "Importcontrole"-sectie bovenaan dit tabblad, die dat allemaal al toont (én uitgebreider:
+            ook overgeslagen regels, ontbrekende tegenpartij en aansluiting tussen bestanden) — inclusief
+            dezelfde klik-om-te-bekijken-knop (onReviewFile). Hier weggehaald om de dubbeling op te
+            heffen; gebruik de Importcontrole-sectie (via de "Import controle"-kaart in het
+            mini-dashboard) voor dit alles. */}
+
+        {/* Op verzoek (v281) staan "BTW" en "Automatisering" alleen nog binnen hun uitgeklapte kaart
+            (zie instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
+
+                {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
+                    vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
+                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd.
+                    Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
+                {!expandedCardKeys.categorieen && (
+                <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
+                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                </div>
+                )}
+
+                {/* Fase 3 — "Aansluiting & detail" (banner + detailtabellen Zakelijk/Prive) is nu
+                    AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
+                    "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
+                    controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
+                {!expandedCardKeys.aansluitingDetail && (
+                  <div style={sectionTabStyle("controleren")}>
+                    <AansluitingDetailPanel
+                      detailsRef={detailsSectionRef}
+                      zakGroupForYear={zakGroupForYear}
+                      priGroupForYear={priGroupForYear}
+                      priveRekeningGeladen={priveRekeningGeladen}
+                      zakelijkRekeningGeladen={zakelijkRekeningGeladen}
+                      expandedTable={expandedTable}
+                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
+                      onRequestCategoryChange={requestCategoryChange}
+                      onConfirmCorrect={confirmClassificationCorrect}
+                      fingerprintByTxId={fingerprintByTxId}
+                      transactionNotes={transactionNotes}
+                      onSetNote={setTransactionNote}
+                      onOpenHelp={setHelpPopupChapter}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* Indicatieve aangifte — globale modal.
+            Belangrijk: deze modal mag niet binnen de pendingIncomeReview/transactions-rendering
+            zitten. De knop kan immers ook worden gebruikt terwijl er nog inkomsten ter controle
+            staan. In dat geval werd de state wel op true gezet, maar werd de modal helemaal niet
+            gerenderd, waardoor de knop voor de gebruiker leek niets te doen. */}
                 {showAangifteYearPicker && (
                   <div
                     className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2"
@@ -4719,58 +4777,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
-
-
-        {/* v243 — "Controleren / Geladen files" (de losse bestand-chips) stond hier apart, met
-            grotendeels dezelfde informatie (bestandsnaam, regelaantal, saldo-check) als de
-            "Importcontrole"-sectie bovenaan dit tabblad, die dat allemaal al toont (én uitgebreider:
-            ook overgeslagen regels, ontbrekende tegenpartij en aansluiting tussen bestanden) — inclusief
-            dezelfde klik-om-te-bekijken-knop (onReviewFile). Hier weggehaald om de dubbeling op te
-            heffen; gebruik de Importcontrole-sectie (via de "Import controle"-kaart in het
-            mini-dashboard) voor dit alles. */}
-
-        {/* Op verzoek (v281) staan "BTW" en "Automatisering" alleen nog binnen hun uitgeklapte kaart
-            (zie instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
-
-                {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
-                    vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
-                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd.
-                    Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
-                {!expandedCardKeys.categorieen && (
-                <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
-                </div>
-                )}
-
-                {/* Fase 3 — "Aansluiting & detail" (banner + detailtabellen Zakelijk/Prive) is nu
-                    AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
-                    "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
-                    controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
-                {!expandedCardKeys.aansluitingDetail && (
-                  <div style={sectionTabStyle("controleren")}>
-                    <AansluitingDetailPanel
-                      detailsRef={detailsSectionRef}
-                      zakGroupForYear={zakGroupForYear}
-                      priGroupForYear={priGroupForYear}
-                      priveRekeningGeladen={priveRekeningGeladen}
-                      zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-                      expandedTable={expandedTable}
-                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
-                      onRequestCategoryChange={requestCategoryChange}
-                      onConfirmCorrect={confirmClassificationCorrect}
-                      fingerprintByTxId={fingerprintByTxId}
-                      transactionNotes={transactionNotes}
-                      onSetNote={setTransactionNote}
-                      onOpenHelp={setHelpPopupChapter}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
 
         {aangiftevoorstelPreview && (
           <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={() => setAangiftevoorstelPreview(null)}>
