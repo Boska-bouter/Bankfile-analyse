@@ -6,7 +6,7 @@ import ProgressGauge from "./ProgressGauge.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal,
+  werkelijkAangifteDone, werkelijkAangifteTotal, openPoints = 0,
 }) {
   // v298 — op verzoek: de eerdere waarschuwingsregel ("Dossiercontrole ≠ aangifte gedaan") stond
   // ónder dezelfde kaart als de ring, en voegde daardoor volgens de gebruiker zelf niet genoeg toe
@@ -43,17 +43,18 @@ export default function DashboardHeader({
           {pct != null ? (
             <div className="flex items-center gap-2.5">
               <ProgressGauge pct={pct} accent={accent} label={gaugeLabel ?? `${pct}%`} />
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-[92px]">
                 <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
-                <span className="text-[11px] text-slate-400">{pct >= 100 ? "gegevens compleet" : "gegevens nog niet compleet"}</span>
+                <span className="text-sm font-bold text-slate-900">{openPoints} open punt{openPoints === 1 ? "" : "en"}</span>
+                <span className="text-[10.5px] text-slate-400">{pct}% verwerkt</span>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2.5">
               <ProgressGauge pct={0} accent="#CBD5E1" label="–" />
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-[92px]">
                 <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
-                <span className="text-[11px] text-slate-400">nog geen data</span>
+                <span className="text-sm font-semibold text-slate-500">Nog geen data</span>
               </div>
             </div>
           )}
