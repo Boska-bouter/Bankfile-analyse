@@ -162,6 +162,9 @@ function aangifteStatusTekst(status, aantalPunten) {
   return "Berekening kan worden opgesteld";
 }
 
+// V46 — zie `classified`: categorieën die in een privé-only dossier aan de zakelijke kant gespiegeld worden.
+const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven"];
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -1168,7 +1171,16 @@ export default function App() {
         mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
       }
     }
-    return mirrors.length ? [...base, ...mirrors] : base;
+    const result = mirrors.length ? [...base, ...mirrors] : base;
+    // V46 — dossier met ALLEEN privérekening(en): elke transactie met categorie "Zakelijke
+    // inkomsten"/"Zakelijke inkoop/uitgaven" is een zakelijke boeking via de privérekening. Het
+    // `type` blijft de rekening (Prive); alleen de zakelijke OVERZICHTEN (viewType) tonen ze, zodat
+    // de zakelijke kant exact de spiegel is van die categorieën op de privékant.
+    const heeftZakelijkeRekening = Object.values(accountTypeByFile).includes("Zakelijk");
+    if (heeftZakelijkeRekening) return result;
+    return result.map((tx) =>
+      !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
+    );
   }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -1667,7 +1679,7 @@ export default function App() {
   const [expandedBusinessIncomeList, setExpandedBusinessIncomeList] = useState(false);
   const [expandedBusinessExpenseList, setExpandedBusinessExpenseList] = useState(false);
 
-  const groups = useMemo(() => {
+    const groups = useMemo(() => {
     const map = {};
     for (const tx of classified) {
       const vt = tx.viewType || tx.type;
@@ -1770,6 +1782,14 @@ export default function App() {
   }, [activeYear]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
+  // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
+  // zakelijke categorie, die aan de zakelijke kant gespiegeld staan). Alleen voor weergave; controles
+  // en checklists blijven op `priGroupForYear` rekenen zodat niets dubbel geteld wordt.
+  const priGroupShown = useMemo(() => {
+    if (Object.values(accountTypeByFile).includes("Zakelijk")) return priGroupForYear;
+    const extra = zakGroupForYear.items.filter((t) => !t.isMirror);
+    return extra.length ? { ...priGroupForYear, items: [...priGroupForYear.items, ...extra].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) } : priGroupForYear;
+  }, [priGroupForYear, zakGroupForYear, accountTypeByFile]);
 
   // Zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financial lease (soort "auto"), koop, of
   // operational lease — tellen computeLeaseAutoKostenVoorJaar (autoBijtelling.js) resp.
@@ -3332,7 +3352,7 @@ export default function App() {
         "categorieen",
         <div className="grid md:grid-cols-2 gap-4">
           <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-          <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+          <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
         </div>
       ),
       withExpand(
@@ -3348,7 +3368,7 @@ export default function App() {
         <AansluitingDetailPanel
           detailsRef={detailsSectionRef}
           zakGroupForYear={zakGroupForYear}
-          priGroupForYear={priGroupForYear}
+          priGroupForYear={priGroupShown}
           priveRekeningGeladen={priveRekeningGeladen}
           zakelijkRekeningGeladen={zakelijkRekeningGeladen}
           expandedTable={expandedTable}
@@ -3387,6 +3407,7 @@ export default function App() {
     classified,
     zakGroupForYear,
     priGroupForYear,
+    priGroupShown,
     effectiveCategoryBtwRates,
     btwVerlegd,
     pendingIncomeReview,
@@ -4886,7 +4907,7 @@ export default function App() {
                 {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-                  <CategorySummaryCard group={priGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
                 </div>
                 )}
 
@@ -4899,7 +4920,7 @@ export default function App() {
                     <AansluitingDetailPanel
                       detailsRef={detailsSectionRef}
                       zakGroupForYear={zakGroupForYear}
-                      priGroupForYear={priGroupForYear}
+                      priGroupForYear={priGroupShown}
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
                       expandedTable={expandedTable}
