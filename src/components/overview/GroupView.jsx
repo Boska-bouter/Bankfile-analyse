@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, Fragment } from "react";
-import { ChevronRight, ChevronDown, Pencil, Check, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
@@ -370,6 +370,14 @@ export function DetailTable({
                   </td>
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">
+                    {t.transferLocked ? (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+                        title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
+                      >
+                        <Lock className="h-3 w-3 shrink-0" /> {t.category}
+                      </span>
+                    ) : (<>
                     <select
                       value={mainCategoryOf(t.category)}
                       onChange={(e) => applyChange(t, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || t.category, type: t.type })}
@@ -389,6 +397,7 @@ export function DetailTable({
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    </>)}
                   </td>
                   <td className="px-4 py-2">
                     {t.isMirror ? (

@@ -87,15 +87,8 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // tegelijk (zowel het ontvangen ván als het terugstorten náár zakelijk). Fiscaal verandert er
   // niets: alle vier blijven "geen" (zie CATEGORY_FISCAL_TREATMENT) en tellen voor de spiegel-/
   // saldocontrole (App.jsx/checklist.js) nog steeds als hetzelfde soort overboeking.
-  if (tx.counterpartyIban && ownAccountsElsewhere.length > 0) {
-    const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
-    if (matchedOwn && matchedOwn.accountType && matchedOwn.accountType !== accountType) {
-      if (accountType === "Zakelijk") {
-        return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
-      }
-      return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
-    }
-  }
+  const ownTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
+  if (ownTransfer) return ownTransfer;
 
   // Interne overboeking naar/van een eigen (zakelijke of privé) spaarrekening. Zo'n spaarrekening is
   // vrijwel altijd een pakketkeuze bij dezelfde bank als de betaalrekening zelf (niet iets wat je bij
@@ -367,6 +360,25 @@ function looksLikeRecognizedRefund(text, rules) {
   return rules.some((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
 }
 
+// v311 (V33) — een overboeking tussen twee eigen rekeningen van een verschillend type (zakelijk ↔ privé),
+// herkend op het rekeningnummer van de tegenrekening, is hard bewezen: de categorie ligt daarmee vast
+// (zie de vier namen hieronder, per kant/richting) en mag niet handmatig worden aangepast — anders
+// raken beide kanten van dezelfde overboeking uit balans (bijv. de zakelijke kant als "Zakelijke
+// inkomsten" terwijl de privékant als "Terugboeking naar zakelijk" blijft staan). Geeft null als dit
+// géén herkende overboeking tussen eigen rekeningen is. Een herkenning op naam (eigenNamen) is minder
+// hard bewijs en blijft daarom wel aan te passen.
+export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere = []) {
+  if (tx.outOfYearRange || !tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return null;
+  const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
+  if (!matchedOwn || !matchedOwn.accountType || matchedOwn.accountType === accountType) return null;
+  const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
+  const isIncome = tx.amount > 0;
+  if (accountType === "Zakelijk") {
+    return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
+  }
+  return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
+}
+
 function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) {
   if (!override || override.category !== "Overig") return false;
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
@@ -381,6 +393,8 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
 }
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
+  const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
+  if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
   if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return rowOverride;
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang

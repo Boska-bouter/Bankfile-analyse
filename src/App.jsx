@@ -4,7 +4,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2,
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
-import { resolveClassification } from "./classification/classify.js";
+import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
@@ -1128,7 +1128,8 @@ export default function App() {
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || []);
-      return { ...tx, ...resolved, confidence };
+      const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
+      return { ...tx, ...resolved, confidence, transferLocked };
     });
     // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
@@ -1595,6 +1596,8 @@ export default function App() {
     // doorheen gaan (detailtabel, onzekere-transacties-modal, eerdere sleepfunctie, enz.), dus hier
     // negeren we een eventueel meegestuurd `type` altijd en behouden we het bestaande type van tx.
     patch = { ...patch, type: tx.type };
+    // v311 (V33) — overboekingen tussen eigen rekeningen (herkend op IBAN) liggen vast, zie detectOwnAccountTransfer.
+    if (tx.transferLocked) return;
     // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
     // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
     // uit een override teruggelezen. Een wijziging rechtstreeks op de spiegel opslaan komt dus
@@ -1617,7 +1620,7 @@ export default function App() {
       setRowOverride(tx.id, patch);
       return;
     }
-    const matches = classified.filter((t) => !t.isMirror && keyForTx(t) === key);
+    const matches = classified.filter((t) => !t.isMirror && !t.transferLocked && keyForTx(t) === key);
     if (matches.length <= 1) {
       snapshotBeforeAction("Categorie/type aangepast");
       if (tx.id != null) setRowOverride(tx.id, patch);

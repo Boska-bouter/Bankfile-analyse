@@ -1,4 +1,4 @@
-import { X, Check } from "lucide-react";
+import { X, Check, Lock } from "lucide-react";
 import {
   MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory,
 } from "../../classification/categories.js";
@@ -86,6 +86,14 @@ export default function UncertainTransactionsModal({
                     </p>
                   </div>
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
+                  {tx.transferLocked ? (
+                    <span
+                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-[11px] font-medium cursor-help"
+                      title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."
+                    >
+                      <Lock className="h-3 w-3 shrink-0" /> {tx.category}
+                    </span>
+                  ) : (<>
                   <select
                     value={mainCategoryOf(tx.category)}
                     onChange={(e) => onRequestChange(tx, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || tx.category, type: tx.type })}
@@ -105,6 +113,7 @@ export default function UncertainTransactionsModal({
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
+                  </>)}
                   <span
                     className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${tx.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                     title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen en kan niet los worden aangepast."
