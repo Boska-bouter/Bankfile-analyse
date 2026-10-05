@@ -368,10 +368,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Heeft de zaak een auto?</p>
               <div className="flex flex-wrap gap-2">
-                {/* v256 — optie "Beide" verwijderd op verzoek: komt vrijwel nooit voor. De
-                    "=== 'beide'"-checks verderop (en in categorySplit.js/boxMapping.js/
-                    kmVergoeding.js) blijven bestaan zodat een dossier dat dit al eerder via een
-                    ouder dossierbestand had, gewoon blijft werken. */}
+                {/* V62 — geen optie "Beide"; oude dossiers met "beide" worden bij het laden omgezet naar "prive". */}
                 {[
                   { key: "geen", label: "Nee" },
                   { key: "zaak", label: "Auto op de zaak" },
@@ -387,7 +384,7 @@ export default function SetupWizardModal({
                 ))}
               </div>
 
-              {(typedNow.autoKeuze === "zaak" || typedNow.autoKeuze === "beide") && (
+              {typedNow.autoKeuze === "zaak" && (
                 <div className="pt-1">
                   <p className="text-sm text-slate-600 mb-2">Is die auto (van de zaak) gekocht, operational lease, of financial lease?</p>
                   <div className="flex flex-wrap gap-2">
@@ -421,7 +418,7 @@ export default function SetupWizardModal({
 
               <div className="flex gap-2">
                 <button
-                  disabled={!typedNow.autoKeuze || ((typedNow.autoKeuze === "zaak" || typedNow.autoKeuze === "beide") && !typedNow.autoSoort)}
+                  disabled={!typedNow.autoKeuze || (typedNow.autoKeuze === "zaak" && !typedNow.autoSoort)}
                   onClick={() => {
                     const status = typedNow.autoKeuze === "geen" ? null : typedNow.autoKeuze;
                     const soort = typedNow.autoKeuze === "prive" ? null : (typedNow.autoSoort || null);

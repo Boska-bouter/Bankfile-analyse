@@ -171,6 +171,18 @@ const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
 ];
 const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven"];
 
+// V62 — de oude keuze "beide" bestaat niet meer; een oud dossier met "beide" wordt "prive" (privéauto zakelijk gebruikt).
+function normalizeAutoStatus(v) {
+  if (!v || typeof v !== "object") return {};
+  const out = {};
+  for (const [k, x] of Object.entries(v)) out[k] = x === "beide" ? "prive" : x;
+  return out;
+}
+function normalizeAutoWizard(v) {
+  if (!v || typeof v !== "object") return v ?? null;
+  return v.status === "beide" ? { ...v, status: "prive", soort: null } : v;
+}
+
 export default function App() {
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
@@ -244,7 +256,7 @@ export default function App() {
   const [zaLegacyJaDefault, setZaLegacyJaDefault] = useState(false);
   // { "2025": "ja" | "nee" } — ontbrekend jaar = niet aangegeven, geen startersaftrek toegepast.
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
-  // { "2025": "zaak" | "prive" | "beide" } — of de auto van de zaak is (koop/operational/financial
+  // { "2025": "zaak" | "prive" } — of de auto van de zaak is (koop/operational/financial
   // lease), een privéauto zakelijk gebruikt wordt, of beide. Ontbrekend jaar = onbekend/niet
   // aangegeven — dan blijft de generieke %-splitsing (SPLITSBARE_CATEGORIEEN, zie
   // tax/categorySplit.js) op Brandstof/Parkeren gewoon bruikbaar. Dit veld bepaalt of
@@ -299,9 +311,9 @@ export default function App() {
   const [verwachteLeaseOverig, setVerwachteLeaseOverig] = useState(null);
   const [verwachteLening, setVerwachteLening] = useState(null); // zelfde vorm als verwachteLease
   const [verwachteAOV, setVerwachteAOV] = useState(null);
-  // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive"|"beide",
+  // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive",
   // soort: "koop"|"operational"|"financial"|null }. Eén keer gevraagd bij het opstarten van een
-  // dossier (net als verwachteLease/verwachteAOV hierboven), zet bij "zaak"/"prive"/"beide" de
+  // dossier (net als verwachteLease/verwachteAOV hierboven), zet bij "zaak"/"prive" de
   // standaardwaarde van autoStatus (zie hieronder) voor alle jaren in het dossier — per jaar is dat
   // daarna nog te corrigeren in "Persoonlijke aannames". Bij `soort: "financial"` verschijnt
   // aansluitend gewoon de bestaande leaseauto-vraag (stap 6) voor de contractdetails.
@@ -316,7 +328,7 @@ export default function App() {
   const [autoActivaDetails, setAutoActivaDetails] = useState({});
   const [showAutoActivaModal, setShowAutoActivaModal] = useState(false);
   // Kilometervergoeding per jaar voor een privéauto die zakelijk wordt gebruikt (autoStatus
-  // "prive"/"beide") — zie tax/kmVergoeding.js. { [jaar]: { zakelijkeKilometers, vergoedingPerKm } }.
+  // "prive") — zie tax/kmVergoeding.js. { [jaar]: { zakelijkeKilometers, vergoedingPerKm } }.
   // Standaard `{}` = niets ingevuld = geen effect op de berekening.
   const [kmVergoedingDetails, setKmVergoedingDetailsState] = useState({});
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
@@ -546,7 +558,7 @@ export default function App() {
     setVerwachteLeaseOverig(settings.verwachteLeaseOverig ?? null);
     setVerwachteLening(settings.verwachteLening ?? null);
     setVerwachteAOV(settings.verwachteAOV ?? null);
-    setAutoWizardStatus(settings.autoWizardStatus ?? null);
+    setAutoWizardStatus(normalizeAutoWizard(settings.autoWizardStatus));
     setAutoActivaDetails(settings.autoActivaDetails && typeof settings.autoActivaDetails === "object" ? settings.autoActivaDetails : {});
     setKmVergoedingDetailsState(settings.kmVergoedingDetails && typeof settings.kmVergoedingDetails === "object" ? settings.kmVergoedingDetails : {});
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
@@ -568,7 +580,7 @@ export default function App() {
     // (onbeantwoord jaar = "ja") in plaats van de nieuwe, veiligere default ("onbekend").
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
-    setAutoStatusState(settings.autoStatus && typeof settings.autoStatus === "object" ? settings.autoStatus : {});
+    setAutoStatusState(normalizeAutoStatus(settings.autoStatus));
     setHuurZakelijkPercentageStatusState(settings.huurZakelijkPercentageStatus && typeof settings.huurZakelijkPercentageStatus === "object" ? settings.huurZakelijkPercentageStatus : {});
     setEnergieZakelijkPercentageStatusState(settings.energieZakelijkPercentageStatus && typeof settings.energieZakelijkPercentageStatus === "object" ? settings.energieZakelijkPercentageStatus : {});
     setGemeentelijkeKostenZakelijkPercentageStatusState(settings.gemeentelijkeKostenZakelijkPercentageStatus && typeof settings.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? settings.gemeentelijkeKostenZakelijkPercentageStatus : {});
@@ -1032,7 +1044,7 @@ export default function App() {
     setVerwachteLeaseOverig(s.verwachteLeaseOverig ?? null);
     setVerwachteLening(s.verwachteLening ?? null);
     setVerwachteAOV(s.verwachteAOV ?? null);
-    setAutoWizardStatus(s.autoWizardStatus ?? null);
+    setAutoWizardStatus(normalizeAutoWizard(s.autoWizardStatus));
     setAutoActivaDetails(s.autoActivaDetails && typeof s.autoActivaDetails === "object" ? s.autoActivaDetails : {});
     setKmVergoedingDetailsState(s.kmVergoedingDetails && typeof s.kmVergoedingDetails === "object" ? s.kmVergoedingDetails : {});
     setHeeftVoorraad(s.heeftVoorraad ?? null);
@@ -1053,7 +1065,7 @@ export default function App() {
     // staan, alleen het paneel las hem uit alsof er niets gebeurd was).
     setZelfstandigenaftrekStatusState(s.zelfstandigenaftrekStatus || {});
     setStartersaftrekStatusState(s.startersaftrekStatus || {});
-    setAutoStatusState(s.autoStatus || {});
+    setAutoStatusState(normalizeAutoStatus(s.autoStatus));
     setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
     setEnergieZakelijkPercentageStatusState(s.energieZakelijkPercentageStatus || {});
     setGemeentelijkeKostenZakelijkPercentageStatusState(s.gemeentelijkeKostenZakelijkPercentageStatus || {});
@@ -1995,7 +2007,7 @@ export default function App() {
     () => (activeYear ? computeGedeeldeGemeentelijkeKostenVoorJaar(classified, activeYear, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd) : null),
     [classified, activeYear, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd]
   );
-  // Kilometervergoeding voor een privéauto die zakelijk gebruikt wordt (autoStatus "prive"/"beide")
+  // Kilometervergoeding voor een privéauto die zakelijk gebruikt wordt (autoStatus "prive")
   // — zie tax/kmVergoeding.js. Zelfde rechtsvorm-beperking als leaseAutoKostenForActiveYear
   // hierboven (alleen zzp/eenmanszaak; een BV/DGA heeft hiervoor een andere systematiek).
   const kmVergoedingForActiveYear = useMemo(
@@ -3140,8 +3152,6 @@ export default function App() {
                 ? "Op de zaak"
                 : autoStatusDitJaar === "prive"
                 ? "Privé zakelijk gebruikt"
-                : autoStatusDitJaar === "beide"
-                ? "Beide"
                 : autoStatusDitJaar === "geen"
                 ? "Geen auto"
                 : null;
@@ -3709,7 +3719,7 @@ export default function App() {
               categoryZakelijkPercentage={categoryZakelijkPercentage}
               huisvestingStandaardNul={priveOnlyDossier ? PRIVE_ONLY_HUISVESTING_STANDAARD_NUL : []}
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
+              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}
               onOpenHelp={setHelpPopupChapter}
               gedeeldeRijen={[
                 { label: "Huur (deels zakelijk)", gedeelde: gedeeldeHuurForActiveYear, raw: huurZakelijkPercentageStatus?.[activeYear], onSet: setHuurZakelijkPercentageStatus },
@@ -4143,7 +4153,7 @@ export default function App() {
       setVerwachteLeaseOverig(project.verwachteLeaseOverig ?? null);
       setVerwachteLening(project.verwachteLening ?? null);
       setVerwachteAOV(project.verwachteAOV ?? null);
-      setAutoWizardStatus(project.autoWizardStatus ?? null);
+      setAutoWizardStatus(normalizeAutoWizard(project.autoWizardStatus));
       setAutoActivaDetails(project.autoActivaDetails && typeof project.autoActivaDetails === "object" ? project.autoActivaDetails : {});
       setKmVergoedingDetailsState(project.kmVergoedingDetails && typeof project.kmVergoedingDetails === "object" ? project.kmVergoedingDetails : {});
       setHeeftVoorraad(project.heeftVoorraad ?? null);
@@ -4168,7 +4178,7 @@ export default function App() {
       // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
       setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
       setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
-      setAutoStatusState(project.autoStatus && typeof project.autoStatus === "object" ? project.autoStatus : {});
+      setAutoStatusState(normalizeAutoStatus(project.autoStatus));
       setHuurZakelijkPercentageStatusState(project.huurZakelijkPercentageStatus && typeof project.huurZakelijkPercentageStatus === "object" ? project.huurZakelijkPercentageStatus : {});
       setEnergieZakelijkPercentageStatusState(project.energieZakelijkPercentageStatus && typeof project.energieZakelijkPercentageStatus === "object" ? project.energieZakelijkPercentageStatus : {});
       setGemeentelijkeKostenZakelijkPercentageStatusState(project.gemeentelijkeKostenZakelijkPercentageStatus && typeof project.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? project.gemeentelijkeKostenZakelijkPercentageStatus : {});
