@@ -5,13 +5,14 @@ import { eur } from "../../utils/amounts.js";
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
-  0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Dossier opslaan",
+  20: "Bankbestanden laden", 0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Dossier opslaan",
 };
 
 export default function SetupWizardModal({
   forceRechtsvormStep = false,
   alreadyEstablished = false,
   pendingFileNames, onAccountTypeChoose,
+  loadFilesFirst = false, loadedFileNames = [], onPickFiles,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
   heeftHolding, setHeeftHolding,
@@ -69,11 +70,14 @@ export default function SetupWizardModal({
       return list;
     }
     const list = [];
+    // V38 — leeg dossier: eerst de bankbestanden laden (stap 20), daarna per bestand het rekeningtype
+    // (stap 0, wordt live verborgen zolang er geen ongetypeerd bestand is).
+    if (loadFilesFirst) { list.push(20); list.push(0); }
     // Rekeningtype (zakelijk/privé) van het/de net geladen bestand(en) eerst vragen — dat is de
     // meest concrete, direct te beantwoorden vraag over wat er nu ligt, vóórdat de (dossierbrede)
     // vragen hieronder volgen. Heeft geen invloed op de lease/lening/AOV-zoekacties verderop (die
     // zoeken sowieso los van het rekeningtype in de tekst van de al ingelezen transacties).
-    if (pendingFileNames.length > 0) list.push(0);
+    if (pendingFileNames.length > 0 && !loadFilesFirst) list.push(0);
     if (eigenNamen === null) list.push(10);
     // Rechtsvorm (en de holding-vraag die daarvan afhangt) komt bewust meteen na de naam van de
     // rekeninghouder — vóór alle andere vragen — zodat KOR/BTW-verlegd hieronder al weten of ze
@@ -122,6 +126,7 @@ export default function SetupWizardModal({
 
   const remainingSteps = initialSteps.filter((id) => {
     if (doneIds.has(id)) return false;
+    if (id === 0 && pendingFileNames.length === 0) return false; // geen ongetypeerd bestand (meer)
     if ((id === 2 || id === 3) && korRegeling === true) return false;
     if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
@@ -504,6 +509,41 @@ export default function SetupWizardModal({
               </p>
             </div>
           )}
+          {currentStepId === 20 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">
+                Laad de afschriften van een Nederlandse bank, zakelijk en privé, per jaar of over meerdere jaren.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {["CSV", "XLS / XLSX", "MT940 (.sta / .940)", "CAMT.053 (.xml)"].map((f) => (
+                  <span key={f} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">{f}</span>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                <strong>Getest met:</strong> ING (CSV), ABN AMRO (MT940), Knab (CSV). Rabobank, SNS, ASN, Bunq en andere banken
+                werken als hun export een van deze formaten heeft; die zijn niet getest.
+              </p>
+              <button
+                type="button"
+                onClick={() => onPickFiles && onPickFiles()}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800"
+              >
+                <FileSpreadsheet className="h-4 w-4" /> {loadedFileNames.length > 0 ? "Nog een bestand kiezen" : "Bestanden kiezen"}
+              </button>
+              {loadedFileNames.length > 0 && (
+                <ul className="rounded-lg border border-slate-200 divide-y divide-slate-100">
+                  {loadedFileNames.map((n) => (
+                    <li key={n} className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> <span className="truncate">{n}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-slate-400">
+                Tip: laad zowel de zakelijke als de privérekening, anders kan de tool overboekingen tussen je rekeningen niet controleren.
+              </p>
+            </div>
+          )}
           {currentStepId === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
@@ -756,7 +796,7 @@ export default function SetupWizardModal({
                 }}
                 className="text-xs text-slate-400 hover:text-slate-600"
               >
-                Later invullen
+                {currentStepId === 20 ? "Later bestanden laden" : "Later invullen"}
               </button>
             ) : (
               <span />
@@ -773,7 +813,7 @@ export default function SetupWizardModal({
               ernaast leek de auto-vraag beantwoord (de wizard ging door) terwijl autoWizardStatus in
               werkelijkheid null bleef, waardoor de leaseauto-vraag (stap 6) alsnog verscheen alsof er
               nooit "Privéauto"/"Nee" was gekozen. */}
-          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (
+          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (currentStepId !== 20 || loadedFileNames.length > 0) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"

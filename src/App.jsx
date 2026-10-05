@@ -4167,7 +4167,7 @@ export default function App() {
     if (askWizard === true) {
       setDialog({
         title: "Wizard starten?",
-        message: <p>Het nieuwe dossier is leeg. Wil je nu de basisvragen (rechtsvorm, BTW, KOR enz.) doorlopen?</p>,
+        message: <p>Het nieuwe dossier is leeg. Begin met het laden van je bankbestanden en beantwoord daarna de basisvragen (rechtsvorm, BTW, KOR enz.).</p>,
         actions: [{ label: "Wizard starten", variant: "primary", onClick: () => setManualWizardOpen(true) }],
       });
     }
@@ -4680,6 +4680,9 @@ export default function App() {
         {(showSetupWizard || manualWizardOpen) && (
           <SetupWizardModal
             forceRechtsvormStep={manualWizardOpen}
+            loadFilesFirst={parsedFiles.length === 0}
+            loadedFileNames={parsedFiles.map((f) => f.fileName)}
+            onPickFiles={() => bankFileInputRef.current?.click()}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
