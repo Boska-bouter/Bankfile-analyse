@@ -196,3 +196,16 @@ export function ibanKey(iban, amount) {
   if (!base || base.length < 8) return ""; // te kort om een echte IBAN te zijn
   return `IBAN::${base}::${amount >= 0 ? "pos" : "neg"}`;
 }
+
+// V73 — tekstmatch voor door de gebruiker opgegeven opdrachtgevers/leveranciers: leestekens en
+// meervoudige spaties tellen niet mee, zodat "Bouwbedrijf L. vd Ven BV" ook "BOUWBEDRIJF L VD VEN BV"
+// uit het bankbestand vindt (de wizard bewaart de naam zoals getypt, de bank schrijft 'm anders).
+const normTekst = (s) => ` ${String(s || "").toLowerCase().replace(/[^a-z0-9à-ÿ]+/g, " ").trim()} `;
+export function textHasKeyword(text, kw) {
+  if (!kw) return false;
+  const raw = String(kw).toLowerCase();
+  if (String(text || "").toLowerCase().includes(raw)) return true;
+  const nk = normTekst(kw);
+  if (nk.trim().length < 3) return false;
+  return normTekst(text).includes(nk);
+}

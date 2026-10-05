@@ -14,7 +14,7 @@
 //                  automatisch toekennen van "Zakelijke inkomsten" puur op basis van rekeningtype)
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
-import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
+import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
@@ -60,13 +60,13 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   // bevestiging) is door jou herkend: dat is een "keyword"-herkenning, geen schatting.
   if (tx.amount > 0 && /^Zakelijke inkomsten/.test(resolvedCategory)) {
     const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-    if ((businessKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+    if ((businessKeywords || []).some((kw) => textHasKeyword(t, kw))) {
       return { level: "keyword", label: "Herkend: door jou opgegeven als opdrachtgever" };
     }
   }
   if (tx.amount < 0 && resolvedCategory === "Zakelijke inkoop/uitgaven") {
     const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-    if ((businessExpenseKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+    if ((businessExpenseKeywords || []).some((kw) => textHasKeyword(t, kw))) {
       return { level: "keyword", label: "Herkend: door jou opgegeven als leverancier" };
     }
   }

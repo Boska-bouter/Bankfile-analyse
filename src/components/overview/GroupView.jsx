@@ -407,18 +407,18 @@ export function DetailTable({
                         className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
                         title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
                           `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
-                          "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Prive. " +
+                          "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Privé. " +
                           "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
                           "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
                       >
-                        Prive <span className="text-[10px] font-normal">↔ spiegel</span>
+                        Privé <span className="text-[10px] font-normal">↔ spiegel</span>
                       </span>
                     ) : (
                     <span
                       className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${(t.accountType || t.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
-                      title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Prive) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
+                      title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Privé) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
                     >
-                      {t.accountType || t.type}
+                      {(t.accountType || t.type) === "Prive" ? "Privé" : (t.accountType || t.type)}
                     </span>
                     )}
                   </td>

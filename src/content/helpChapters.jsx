@@ -51,8 +51,8 @@ export const HELP_CHAPTERS = [
       <p>
         Bepaalt welke categorieën als <strong>vast</strong> gelden (lopen door ongeacht omzet/activiteit, niet zomaar
         af te bouwen — huur, verzekeringen, abonnementen e.d.) en welke als <strong>variabel</strong> (bewegen mee
-        met keuzes/activiteit). Geldt voor zowel Zakelijk als Prive, en is terug te zien in het jaaroverzicht (bij
-        "Toon vast/variabel"). Inkomsten en overboekingen tussen Zakelijk/Prive tellen niet mee als kosten.
+        met keuzes/activiteit). Geldt voor zowel Zakelijk als Privé, en is terug te zien in het jaaroverzicht (bij
+        "Toon vast/variabel"). Inkomsten en overboekingen tussen Zakelijk/Privé tellen niet mee als kosten.
       </p>
     ),
   },
@@ -261,7 +261,7 @@ export const HELP_CHAPTERS = [
       <p>
         Categorie is direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
         dezelfde tegenpartij, in alle jaren (tenzij er geen bruikbare naam is, dan alleen voor die ene transactie).
-        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Prive) staat er
+        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Privé) staat er
         alleen ter info bij: dat volgt altijd het bankbestand waaruit de transactie is ingelezen en is bewust niet
         los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. Gebruik de filters
         op bedrag en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte
@@ -306,6 +306,14 @@ export const HELP_CHAPTERS = [
           <em>groep</em> — zelfde tegenpartij, zelfde bedragsrichting (ontvangen of betaald) en zelfde categorie. Dertig
           pinbetalingen bij dezelfde winkel zijn dus één punt, met erbij hoeveel transacties erachter zitten. Je
           beoordeelt de groep één keer en dat geldt voor alle bijbehorende transacties.
+        </p>
+        <p>
+          <strong>In het controlevenster</strong> (klik op "controleren" of "onduidelijk") staan de groepen gesorteerd op
+          totaalbedrag, zodat de punten met de meeste invloed bovenaan staan; je kunt ook sorteren op aantal of naam. Met
+          het categoriefilter kies je één categorie en keur je die in één keer goed ("Alles in … goedkeuren"). Losse
+          pinbetalingen zonder herkend zoekwoord staan samen in één groep die je kunt uitklappen om per transactie aan te
+          passen. Een opdrachtgever of leverancier die je zelf hebt opgegeven telt als herkend, ook als de bank de naam
+          met andere leestekens schrijft.
         </p>
         <p>
           <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah", "plus" of "spar") moeten

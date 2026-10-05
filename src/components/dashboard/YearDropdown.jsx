@@ -9,7 +9,9 @@ import { ChevronDown, Check } from "lucide-react";
 // tabbladen, die nog geen eigen DashboardHeader hebben.
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 
-export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown }) {
+const coverageNote = (c) => (c.zakelijk && c.prive ? null : c.zakelijk ? "dit jaar: alleen zakelijk geladen" : c.prive ? "dit jaar: alleen privé geladen" : null);
+
+export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -33,6 +35,11 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
         {years.length} {years.length === 1 ? "jaar" : "jaren"} in dossier
         {showBreakdown ? ` · ${zakelijkYears ?? 0} zakelijk, ${priveYears ?? 0} privé` : ""}
       </div>
+      {/* V73 — per jaar zichtbaar welke rekeningen data hebben: een jaar zonder privé- (of zakelijk) bestand
+          toont daar € 0,00, wat anders op een fout lijkt. */}
+      {showBreakdown && yearCoverage && activeYear && yearCoverage[activeYear] && coverageNote(yearCoverage[activeYear]) && (
+        <div className="text-[11px] text-amber-600 text-right mb-0.5 whitespace-nowrap">{coverageNote(yearCoverage[activeYear])}</div>
+      )}
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
       <button
         type="button"
@@ -42,7 +49,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
         {activeYear ?? "Jaar"} <ChevronDown className="h-5 w-5 text-slate-500" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1.5 z-30 w-44 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+        <div className="absolute right-0 mt-1.5 z-30 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
           {years.map((year) => {
             const status = yearlyProgress?.[year]?.status;
             return (
@@ -56,6 +63,9 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
               >
                 {status && <span>{STATUS_EMOJI[status] || "⚪"}</span>}
                 <span className="flex-1 font-medium text-slate-700">{year}</span>
+                {showBreakdown && yearCoverage?.[year] && coverageNote(yearCoverage[year]) && (
+                  <span className="text-[10px] text-amber-600" title={coverageNote(yearCoverage[year])}>{yearCoverage[year].zakelijk ? "alleen Z" : "alleen P"}</span>
+                )}
                 {year === activeYear && <Check className="h-4 w-4 text-teal-600" />}
               </button>
             );

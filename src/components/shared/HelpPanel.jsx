@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { isValidElement } from "react";
 import { HELP_CHAPTERS } from "../../content/helpChapters.jsx";
 
 const INTRO_CONTENT = (
@@ -27,6 +28,15 @@ const INTRO_CONTENT = (
   </ol>
 );
 
+// V73 — platte tekst uit een React-element halen, zodat je in de Help op inhoud kunt zoeken.
+const tekstVan = (node) => {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(tekstVan).join(" ");
+  if (isValidElement(node)) return tekstVan(node.props?.children);
+  return "";
+};
+
 // Alle uitgebreide toelichtingsteksten, gebundeld in inklapbare hoofdstukken — inclusief de
 // introductie als eerste hoofdstuk. Bij de losse plekken in de app staat een klein "?"-icoontje
 // (HelpHint) dat direct naar het juiste hoofdstuk hier springt.
@@ -41,7 +51,11 @@ export default function HelpPanel({ onClose, openChapter }) {
     });
   };
 
+  const [zoek, setZoek] = useState("");
   const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
+  const zoekTerm = zoek.trim().toLowerCase();
+  const doorzoekbaar = useMemo(() => allChapters.map((c) => ({ c, tekst: `${c.titel} ${tekstVan(c.inhoud)}`.toLowerCase() })), []);
+  const zichtbareHoofdstukken = zoekTerm ? doorzoekbaar.filter((d) => d.tekst.includes(zoekTerm)).map((d) => d.c) : allChapters;
 
   // Was een gewone (niet-zwevende) <section>, gerenderd als vaste sibling ná de hoofdinhoud van elk
   // tabblad — daardoor verscheen dit paneel gewoon inline in de pagina-flow op de plek waar dat in de
@@ -58,17 +72,30 @@ export default function HelpPanel({ onClose, openChapter }) {
             <X className="h-4 w-4" />
           </button>
         </div>
+        <div className="px-5 py-2.5 border-b border-slate-200 shrink-0">
+          <input
+            type="search"
+            value={zoek}
+            onChange={(e) => setZoek(e.target.value)}
+            placeholder="Zoek in de uitleg (bijv. lease, BTW, dossiercontrole)…"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            aria-label="Zoek in de uitleg"
+          />
+        </div>
         <div className="divide-y divide-slate-100 overflow-y-auto">
-          {allChapters.map((chapter) => (
+          {zoekTerm && zichtbareHoofdstukken.length === 0 && (
+            <p className="px-5 py-6 text-xs text-slate-400 text-center">Geen hoofdstuk gevonden voor "{zoek}".</p>
+          )}
+          {zichtbareHoofdstukken.map((chapter) => (
             <div key={chapter.key}>
               <button
                 onClick={() => toggle(chapter.key)}
                 className="w-full flex items-center justify-between gap-2 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 text-left"
               >
                 <span>{chapter.titel}</span>
-                {openKeys.has(chapter.key) ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                {openKeys.has(chapter.key) || zoekTerm ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
               </button>
-              {openKeys.has(chapter.key) && <div className="px-5 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
+              {(openKeys.has(chapter.key) || zoekTerm) && <div className="px-5 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
             </div>
           ))}
         </div>

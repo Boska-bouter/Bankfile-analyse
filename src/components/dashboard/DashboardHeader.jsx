@@ -54,7 +54,7 @@ export default function DashboardHeader({
             <div className="flex items-center gap-2.5">
               <ProgressGauge pct={pct} accent={accent} label={gaugeLabel ?? `${pct}%`} />
               <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
+                <span className="text-xs font-semibold text-slate-800">Dossiercontrole <span className="font-normal text-slate-400">· hele dossier</span></span>
                 {openPoints != null ? (
                   <>
                     <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
