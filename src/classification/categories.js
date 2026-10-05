@@ -10,6 +10,8 @@ export const DEFAULT_RULES = [
     "santander", "credit europe bank", "demir-halk bank", "anadolubank", "yapi kredi", "garantibank",
     "garanti bbva", "deutsche bank", "bnp paribas", "hsbc", "nwb bank", "bng bank", "transferwise",
     "saxo bank", "binckbank", "alex vermogensbank",
+    // V58 — rente op een (rood-)staande rekening is een bankkost (zakelijk én, via SPLIT_CATEGORY_NAMES, privé)
+    "rente buiten limiet", "debetrente", "rc afrek", "rente rekening-courant", "rente rekening courant",
   ] },
   // Let op volgorde: deze drie staan bewust VOOR de gewone Belastingen: IB/LH/OB-regels hieronder.
   // "Naheffingsaanslag omzetbelasting" bevat namelijk ook gewoon het woord "omzetbelasting" —
@@ -24,7 +26,7 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
-  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
+  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "cijfermeester", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
     "sd worx", "loket.nl", "exact online", "afas software", "salaris compleet", "salarispro", "employes", "unit4",
     "salarisonline", "payroll totaal", "tentoo", "merces", "flexpedia",
     "rsm nederland", "moore drv", "astrium accountants", "accon avm", "abab accountants", "van oers",
@@ -50,6 +52,8 @@ export const DEFAULT_RULES = [
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
+    // V58 — laden van een elektrische auto valt onder brandstof (en niet onder huisenergie via "eneco")
+    "eneco emobility", "eneco e-mobility", "emobility", "e-mobility", "laadpas", "ev charging", "newmotion",
   ] },
   { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz", "sepa green"] },
   // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor energie/water: bewust
@@ -57,11 +61,22 @@ export const DEFAULT_RULES = [
   // die structureel deels zakelijk/deels privé gebruikt wordt (zie tax/gedeeldeHuur.js).
   { name: "Energie-water (deels zakelijk)", color: "bg-yellow-100 text-yellow-800", keywords: [],
     description: "Energie/water van een aansluiting (bijv. een schuur/loods of een gedeeltelijk zakelijk gebruikte woning) waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Energie-water\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
-  { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
+  { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water", "belastingen", "bsgr", "bghu", "svhw", "belastingsamenwerking"] },
   // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor gemeentelijke kosten.
   { name: "Gemeentelijke kosten (deels zakelijk)", color: "bg-stone-200 text-stone-800", keywords: [],
     description: "Gemeentelijke kosten (bijv. OZB) voor een pand waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Gemeentelijke kosten\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
-  { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
+  { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: [
+    "stichting halm", "huur ",
+    // V58 — woningcorporaties en institutionele verhuurders (woonhuur): op een privérekening wordt dit
+    // via SPLIT_CATEGORY_NAMES automatisch "Prive - huur".
+    "amvest", "vesteda", "heimstaden", "syntrus achmea real estate", "bouwinvest", "a.s.r. real estate", "woningbeheer",
+    "woningstichting", "woonstichting", "woningcorporatie", "woningbouwvereniging", "woningbouwcorporatie",
+    "woonbron", "ymere", "rochdale", "stadgenoot", "eigen haard", " portaal ", "mitros", "havensteder",
+    "woonstad", "woonbedrijf", "wooninc", "thuisvester", "brabantwonen", "brabant wonen", "wonenbreburg", "wonen breburg",
+    "woonstede", "idealis", "de alliantie", "de woonplaats", "lefier", "nijestee", "elan wonen", "wonion", "mooiland",
+    "woonzorg nederland", "habion", "area wonen", "woonconcept", "domijn", "de goede woning", "tiwos", "stichting trudo",
+    "woonwenz", "woonpartners", "staedion", "waterland wonen", "huurpenningen",
+  ] },
   // Bewust GEEN zoekwoorden: dit subtype wordt nooit automatisch toegekend. Een deels-zakelijk
   // verhuurde schuur/loods matcht anders via de "huur "-zoekwoorden hierboven gewoon bij het
   // reguliere (100% zakelijke) "Huur" — de gebruiker moet zo'n transactie zelf, bewust, hierheen
@@ -186,7 +201,7 @@ export const DEFAULT_RULES = [
   ] },
   { name: "Lease (financieel)", color: "bg-teal-200 text-teal-900", keywords: [] },
   { name: "Marketing-website", color: "bg-green-100 text-green-800", keywords: ["google ads", "google ireland", "meta ads", "facebook ads", "facebook payments", "mailchimp", "hostnet", "versio", "transip", "strato", "canva", "linkedin ads"] },
-  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark"] },
+  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark", "q park", "yellowbrick", "mobiliteitsgelden"] },
   { name: "Prive opnames", color: "bg-amber-100 text-amber-800", keywords: ["geldautomaat", "pinopname", "contant opgenomen", " atm ", "geldmaat"] },
   { name: "Reiskosten (OV)", color: "bg-cyan-200 text-cyan-900", keywords: [
     "ns.nl", "ns-groep", "ns groep", "ovpay", "gvb", "ret", "htm", "arriva", "connexxion", "qbuzz",
@@ -226,7 +241,7 @@ export const DEFAULT_RULES = [
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
     "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb", "voogd",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
-    "arag", " das ", "bovemij", "turien & co", "vivat", "aon",
+    "arag", " das ", "bovemij", "turien & co", "vivat", "aon", "surebusiness",
   ],
     description: "Zakelijke verzekeringen. Let op: grote verzekeraars als Interpolis/Achmea/Allianz/Univé verkopen zowel zakelijke als privé-polissen — die staan daarom bij het privé-subtype \"Verzekeringen\" en moeten hier zo nodig handmatig op Zakelijk gezet worden." },
   { name: "AOV (arbeidsongeschiktheidsverzekering)", color: "bg-purple-100 text-purple-800", keywords: [

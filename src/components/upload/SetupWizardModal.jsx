@@ -4,7 +4,7 @@ import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
-  17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
+  17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium", 21: "Startersaftrek",
   20: "Bankbestanden laden", 0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Dossier opslaan",
 };
 
@@ -28,6 +28,7 @@ export default function SetupWizardModal({
   autoWizardStatus, setAutoWizardStatus,
   years, onSeedAutoStatus,
   zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus,
+  startersaftrekStatus, onSeedStartersaftrekStatus,
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
@@ -121,6 +122,8 @@ export default function SetupWizardModal({
     // staat verderop in deze lijst), dus wordt de BV-uitzondering hieronder pas live gefilterd
     // (net als bij stap 15/1/2), niet hier bij het opbouwen van de lijst.
     if (Object.keys(zelfstandigenaftrekStatus || {}).length === 0) list.push(18);
+    // V58 — startersaftrek per jaar (gebruikers moesten dit eerst zelf per jaar bij "Persoonlijke aannames" zetten).
+    if (Object.keys(startersaftrekStatus || {}).length === 0) list.push(21);
     if (korRegeling === null) list.push(1);
     if (korRegeling !== true && btwVerlegd === null) {
       list.push(2);
@@ -143,6 +146,7 @@ export default function SetupWizardModal({
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
     if ((id === 1 || id === 2) && rechtsvorm === "bv") return false; // KOR en BTW-verlegd zijn n.v.t. bij een BV (altijd gewone BTW-plicht, niet verlegd)
     if (id === 18 && rechtsvorm === "bv") return false; // zelfstandigenaftrek/urencriterium is n.v.t. bij een BV
+    if (id === 21 && rechtsvorm === "bv") return false; // startersaftrek is n.v.t. bij een BV
     // v274 — stap 6 (leaseauto) stond altijd los in de wachtrij (zie de toelichting bij stap 17
     // hierboven) om ook een leaseobject te kunnen vragen los van de auto-vraag. Maar als bij de
     // auto-vraag (stap 17) al "Nee" of "Privéauto zakelijk gebruikt" is gekozen, is er per
@@ -520,6 +524,36 @@ export default function SetupWizardModal({
               </p>
             </div>
           )}
+          {currentStepId === 21 && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">In welke jaren heb je startersaftrek toegepast?</p>
+              <p className="text-xs text-slate-400">
+                Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als je aan het urencriterium voldoet).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(years || []).map((y) => {
+                  const aan = (typedNow.starterJaren || []).includes(y);
+                  return (
+                    <button
+                      key={y}
+                      onClick={() => setTypedNow((p) => ({ ...p, starterJaren: aan ? (p.starterJaren || []).filter((j) => j !== y) : [...(p.starterJaren || []), y] }))}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {y}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { onSeedStartersaftrekStatus(years, typedNow.starterJaren || []); goNext(); }}
+                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800"
+                >
+                  {(typedNow.starterJaren || []).length > 0 ? "Doorgaan" : "Geen startersaftrek"}
+                </button>
+              </div>
+            </div>
+          )}
           {currentStepId === 20 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
@@ -820,7 +854,7 @@ export default function SetupWizardModal({
               ernaast leek de auto-vraag beantwoord (de wizard ging door) terwijl autoWizardStatus in
               werkelijkheid null bleef, waardoor de leaseauto-vraag (stap 6) alsnog verscheen alsof er
               nooit "Privéauto"/"Nee" was gekozen. */}
-          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (currentStepId !== 20 || loadedFileNames.length > 0) && (
+          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (currentStepId !== 20 || loadedFileNames.length > 0) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"

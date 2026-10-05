@@ -15,7 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch } from "./classify.js";
+import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -58,12 +58,12 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
-  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
+  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen zakelijke spaarrekening" };
   if (resolvedCategory === "Interne overboeking") return { level: "heuristic", label: "Herkend als overboeking tussen je eigen rekeningen" };
-  if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van privé spaarrekening" };
+  if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen privé-spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-  const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(r, text));
+  const matchedRule = rules.find((r) => ruleMatchesText(r, text) && !isKnownFalsePositiveRuleMatch(r, text));
   if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
 
   // De twee "laatste redmiddel"-gokken uit autoClassify() (zie classify.js) — geen enkel zoekwoord

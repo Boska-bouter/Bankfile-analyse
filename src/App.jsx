@@ -635,6 +635,17 @@ export default function App() {
       return next;
     });
   };
+  // V58 — wizardvraag: de aangevinkte jaren krijgen "ja", alle andere jaren "nee" (zodat de vraag niet
+  // opnieuw komt en "Persoonlijke aannames" geen "nog niet opgegeven" toont).
+  const seedStartersaftrekStatus = (yearsList, jaYears) => {
+    if (!yearsList || yearsList.length === 0) return;
+    snapshotBeforeAction("Startersaftrek ingesteld (wizard)");
+    setStartersaftrekStatusState((prev) => {
+      const next = { ...prev };
+      for (const y of yearsList) next[y] = (jaYears || []).includes(y) ? "ja" : "nee";
+      return next;
+    });
+  };
   const setStartersaftrekStatus = (year, status) => {
     snapshotBeforeAction("Startersaftrek-status aangepast");
     setStartersaftrekStatusState((prev) => {
@@ -1231,13 +1242,26 @@ export default function App() {
       if (!naam || gevonden) continue;
       const aangebodenKey = `${type}${idx ?? ""}`;
       if (verwachteAangeboden[aangebodenKey] === classified.length) continue;
-      const keyword = extractKeywordCandidate(naam);
+      // V58 — ook een kort woord ("Pon") telt als zoekwoord (als heel woord), en een naam waarvan alle
+      // transacties al op de doelcategorie staan ("Volkswagen Pon Financial Services" zat al via een
+      // ander woord bij lease) geldt als gevonden i.p.v. voor altijd als "nog niet gevonden" open te blijven.
+      const naamTrim = String(naam).trim().toLowerCase();
+      const keyword = extractKeywordCandidate(naam) || (naamTrim.length >= 3 ? naamTrim : "");
       if (!keyword) continue;
-      const matches = classified.filter((t) => {
-        if (t.isMirror || t.category === targetCategory) return false;
+      const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+      const hits = classified.filter((t) => {
+        if (t.isMirror) return false;
         const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-        return text.includes(keyword);
+        return kortRe ? kortRe.test(text) : text.includes(keyword);
       });
+      const matches = hits.filter((t) => t.category !== targetCategory);
+      if (matches.length === 0 && hits.length > 0) {
+        if (type === "lease") setVerwachteLease((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
+        if (type === "lease-overig") setVerwachteLeaseOverig((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
+        if (type === "lening") setVerwachteLening((prev) => prev.map((item, i) => (i === idx ? { ...item, gevonden: true } : item)));
+        if (type === "aov") setVerwachteAOV((prev) => ({ ...prev, gevonden: true }));
+        continue;
+      }
       if (matches.length > 0) {
         setVerwachteMatchSuggestie({ type, idx, naam, matches, targetCategory });
         return;
@@ -1306,15 +1330,21 @@ export default function App() {
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
   // afgeleide van een al beoordeelde boeking, geen eigen bankregel). ----
+  // V58 — geteld per GROEP (zelfde tegenpartij + teken + categorie) in plaats van per transactie: 30
+  // maandelijkse incasso's van dezelfde partij zijn één beslissing, niet dertig. Het aantal
+  // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
   const confidenceSummary = useMemo(() => {
-    let approved = 0, review = 0, unclear = 0;
+    let approved = 0, reviewTx = 0, unclearTx = 0;
+    const reviewGroups = new Set(), unclearGroups = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
-      if (tx.confidence.level === "override" || tx.confidence.level === "keyword") approved++;
-      else if (tx.confidence.level === "heuristic") review++;
-      else unclear++;
+      if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
+      const gk = `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
+      else { unclearTx++; unclearGroups.add(gk); }
     }
-    return { approved, review, unclear, needsReview: review + unclear, total: approved + review + unclear };
+    const review = reviewGroups.size, unclear = unclearGroups.size;
+    return { approved, review, unclear, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
@@ -1548,7 +1578,7 @@ export default function App() {
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
-    snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto,
+    snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
   });
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
@@ -2465,7 +2495,7 @@ export default function App() {
         value: confidenceSummary.needsReview,
         subtitle:
           confidenceSummary.needsReview > 0
-            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
+            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren (${confidenceSummary.needsReviewTx} transacties)`
             : "Alles automatisch met vertrouwen ingedeeld",
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
@@ -2898,7 +2928,7 @@ export default function App() {
         openCount: confidenceSummary.needsReview,
         subtitle:
           confidenceSummary.needsReview > 0
-            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
+            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren (${confidenceSummary.needsReviewTx} transacties)`
             : "Alles automatisch met vertrouwen ingedeeld",
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
@@ -4031,7 +4061,7 @@ export default function App() {
     if (confidenceSummary.needsReview > 0) {
       items.push({
         key: "confidence",
-        text: `${confidenceSummary.needsReview} transactie(s) met onzekere classificatie — controleren`,
+        text: `${confidenceSummary.needsReview} groep(en) (${confidenceSummary.needsReviewTx} transacties) met onzekere classificatie — controleren`,
         ref: confidenceSectionRef,
       });
     }
@@ -4886,6 +4916,8 @@ export default function App() {
             onSeedAutoStatus={seedAutoStatusForAllYears}
             zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
             onSeedZelfstandigenaftrekStatus={seedZelfstandigenaftrekStatusForAllYears}
+            startersaftrekStatus={startersaftrekStatus}
+            onSeedStartersaftrekStatus={seedStartersaftrekStatus}
             heeftVoorraad={heeftVoorraad}
             setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
             eigenNamen={eigenNamen}

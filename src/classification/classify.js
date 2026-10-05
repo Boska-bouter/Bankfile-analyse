@@ -1,5 +1,36 @@
-import { SPLIT_CATEGORY_NAMES, fiscalTreatmentOf } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
+
+
+// V58 — woordgrens voor KORTE standaardzoekwoorden. "izz" matchte "Pizza", "aldi" matchte "Kanaaldijk",
+// "avia" matchte "Transavia", "q8" matchte een betaalreferentie ("CXQ8PH"). Voor een standaardzoekwoord
+// van maximaal 5 tekens (zonder eigen omsluitende spaties) moet daarom het woord op een woordgrens
+// BEGINNEN; bij maximaal 3 tekens ook op een woordgrens EINDIGEN. Door de gebruiker zelf toegevoegde
+// zoekwoorden blijven een gewone deelstring-match (die wil bijv. "bmk" ook binnen "CollactiveBMK" vinden).
+const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
+const ALNUM_RE = /[a-z0-9à-ÿ]/;
+export function keywordInText(text, keyword) {
+  if (!keyword) return false;
+  const kw = String(keyword).toLowerCase();
+  let i = text.indexOf(kw);
+  if (i < 0) return false;
+  const trimmed = kw.trim();
+  if (kw !== trimmed || trimmed.length > 5 || !DEFAULT_KEYWORD_SET.has(kw)) return true;
+  // "apk" staat in de praktijk vaak vastgeplakt aan de garagenaam ("APKFriezenkamp") — daar geen eindgrens eisen.
+  // "cafe" zit vrijwel altijd als achtervoegsel in een samenstelling ("Grandcafe", "Eetcafe", "Cafetaria") — geen beginsgrens eisen.
+  if (trimmed === "cafe") return true;
+  const needEnd = trimmed.length <= 3 && trimmed !== "apk";
+  while (i >= 0) {
+    const before = text[i - 1] || " ";
+    const after = text[i + kw.length] || " ";
+    if (!ALNUM_RE.test(before) && (!needEnd || !ALNUM_RE.test(after))) return true;
+    i = text.indexOf(kw, i + 1);
+  }
+  return false;
+}
+export function ruleMatchesText(rule, text) {
+  return rule.keywords.some((kw) => keywordInText(text, kw));
+}
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
@@ -33,6 +64,13 @@ const FOREIGN_COUNTRY_CODES = new Set([
 
 // Exported zodat confidence.js exact dezelfde herkenning gebruikt om het vertrouwensniveau te
 // bepalen (in plaats van deze regex/lijst te dupliceren en op termijn uit de pas te laten lopen).
+// V58 — een pin-/kaartbetaling (de bank zet er "Pasvolgnr" en een terminal bij) is een betaling aan een
+// winkel/dienst, nooit een overboeking aan een persoon, ook al bestaat de naam uit 2-4 woorden
+// ("Tenax Lederw.Eindh.", "BakkerijdeVocht Trudo", "Browns Lunchclub").
+export function isCardPaymentTx(tx) {
+  return /pasvolgnr/i.test(tx.fullDescription || "") || /pasvolgnr/i.test(tx.description || "");
+}
+
 export function looksLikeForeignCardPayment(tx) {
   const check = (val) => {
     const m = (val || "").trim().match(/\b([A-Z]{3})$/);
@@ -169,7 +207,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     const findRule = (name) => rules.find((r) => r.name === name);
     const matchesRule = (name) => {
       const rule = findRule(name);
-      return !!rule && rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+      return !!rule && ruleMatchesText(rule, text);
     };
     if (matchesRule("Leningen")) {
       // Zelfde account-gebaseerde standaardgok als bij de uitgavenkant hieronder (SPLIT_CATEGORY_NAMES)
@@ -195,7 +233,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
       for (const rule of rules) {
-        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+        if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
           const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
@@ -219,7 +257,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     // generieke "Inkomsten"-emmer (die de "wie zijn je zakelijke klanten?"-review juist WEL
     // doorloopt — zie GEEN_KLANT_CATEGORIES in reviewSummaries.js) en verdient een eigen, herkenbare
     // categorie in plaats van elke keer opnieuw te moeten worden bevestigd als "geen klant".
-    if (looksLikePerson(tx.counterparty || tx.description)) {
+    if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
       return { category: "Overboeking van bekenden", type };
     }
     return { category: "Inkomsten", type };
@@ -236,7 +274,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   if (/verhuur/.test(text)) return { category: "Overig", type };
 
   for (const rule of rules) {
-    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+    if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
@@ -268,7 +306,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return { category: "Prive - vrijetijd-uitgaan-vakantie & uit eten", type };
   }
 
-  if (looksLikePerson(tx.counterparty || tx.description)) {
+  if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
     return { category: "Overboekingen aan personen", type };
   }
 
@@ -384,7 +422,7 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
 
 function looksLikeRecognizedRefund(text, rules) {
   if (!/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) return false;
-  return rules.some((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
+  return rules.some((r) => ruleMatchesText(r, text));
 }
 
 // v311 (V33) — een overboeking tussen twee eigen rekeningen van een verschillend type (zakelijk ↔ privé),
