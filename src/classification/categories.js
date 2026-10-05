@@ -146,6 +146,12 @@ export const DEFAULT_RULES = [
   ],
     description: "Fysieke en online winkelaankopen: kleding, schoenen, accessoires/sieraden, kookwinkels en huishoudwinkels." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
+  // V47 — bankkosten van een privérekening zijn geen zakelijke kosten (zie SPLIT_CATEGORY_NAMES).
+  { name: "Prive - bankkosten", color: "bg-slate-100 text-slate-700", keywords: [] },
+  // V48 — idem voor huisvestingskosten die vanaf een privérekening betaald zijn (alleen zakelijk als dat is opgegeven).
+  { name: "Prive - energie-water", color: "bg-amber-50 text-amber-700", keywords: [] },
+  { name: "Prive - gemeentelijke kosten", color: "bg-amber-50 text-amber-700", keywords: [] },
+  { name: "Prive - huur", color: "bg-amber-50 text-amber-700", keywords: [] },
   { name: "Prive overige abonnementen", color: "bg-violet-50 text-violet-700", keywords: [
     "netflix", "spotify", "videoland", "disney+", "disney plus", "hbo max", "hbomax", "npo start", "storytel",
     "npostart", "npo plus", "amazon prime", "prime video", "youtube premium", "apple music", "apple tv+",
@@ -296,6 +302,10 @@ export const GEDEELDE_HUISVESTING_CATEGORIEEN = [GEDEELDE_HUUR_CATEGORIE, GEDEEL
 
 export const SPLIT_CATEGORY_NAMES = {
   "Zakelijk mobiel/internet": "Prive - mobiel/internet",
+  "Bankkosten": "Prive - bankkosten",
+  "Energie-water": "Prive - energie-water",
+  "Gemeentelijke kosten": "Prive - gemeentelijke kosten",
+  "Huur": "Prive - huur",
   "Zakelijk overige abonnementen": "Prive overige abonnementen",
   "Leningen": "Leningen (privé)",
 };
@@ -304,7 +314,7 @@ export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)",
   "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
-  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - bankkosten", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - huur", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Streaming diensten", "Prive - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
@@ -343,7 +353,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
   "Bankkosten", "Belastingen: LH", "Belastingen: MRB", "Belastingen: ZVW",
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
   "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Boekhouder, accountant & administratie",
-  "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
+  "Prive - bankkosten", "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
   "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
 ];
@@ -389,7 +399,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
-  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
+  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen", "Prive - bankkosten": "geen", "Prive - energie-water": "geen", "Prive - gemeentelijke kosten": "geen", "Prive - huur": "geen",
   "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Prive - streaming diensten": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
@@ -594,6 +604,10 @@ export const SUBTYPE_TO_MAIN = {
   "Parkeren": "Vervoer & auto",
   "Betaalautomaat kosten": "Inkoop & zakelijke uitgaven",
   "Prive - mobiel/internet": "Privé",
+  "Prive - bankkosten": "Privé",
+  "Prive - energie-water": "Privé",
+  "Prive - gemeentelijke kosten": "Privé",
+  "Prive - huur": "Privé",
   "Prive opnames": "Privé",
   "Prive overige abonnementen": "Privé",
   "Prive - streaming diensten": "Privé",
