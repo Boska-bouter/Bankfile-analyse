@@ -44,26 +44,6 @@ export default function DashboardHeader({
           {title}
         </h1>
         {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
-        <div className="mt-4">
-        {/* v298 — eigen, losstaande kaart voor "Werkelijke aangifte" (is de aangifte zelf al bij de
-            Belastingdienst ingediend/afgevinkt als gedaan?), bewust NIET meer samen met de
-            Dossiercontrole-kaart hierboven: dat zijn twee onafhankelijke signalen (zie de toelichting
-            bovenaan dit bestand) en de eerdere gecombineerde weergave (eerst één regel ernaast, later
-            een waarschuwingstekst eronder) bleef volgens de gebruiker verwarrend. Een amber accent
-            zodra er nog iets te doen is (en dat ook daadwerkelijk verschuldigd is dit jaar) trekt de
-            aandacht zonder een aparte tekstregel nodig te hebben; verder neutraal wit/grijs. */}
-        <div
-          className={`inline-flex flex-col justify-center gap-1 rounded-2xl px-5 py-3 shadow-sm shrink-0 border ${
-            pct != null && werkelijkTotal > 0 && werkelijkFrac < 1 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"
-          }`}
-        >
-          <span className="text-xs font-semibold text-slate-800">Werkelijke aangifte</span>
-          <div className="flex items-center gap-2">
-            {werkelijkDot && <span className="text-sm leading-none">{werkelijkDot}</span>}
-            <span className="text-sm font-semibold text-slate-800">{werkelijkTekst}</span>
-          </div>
-        </div>
-        </div>
       </div>
 
       <div className="flex flex-wrap items-start gap-3">
@@ -149,6 +129,24 @@ export default function DashboardHeader({
               </div>
             </>
           )}
+        </div>
+        {/* v298 — eigen, losstaande kaart voor "Werkelijke aangifte" (is de aangifte zelf al bij de
+            Belastingdienst ingediend/afgevinkt als gedaan?), bewust NIET meer samen met de
+            Dossiercontrole-kaart hierboven: dat zijn twee onafhankelijke signalen (zie de toelichting
+            bovenaan dit bestand) en de eerdere gecombineerde weergave (eerst één regel ernaast, later
+            een waarschuwingstekst eronder) bleef volgens de gebruiker verwarrend. Een amber accent
+            zodra er nog iets te doen is (en dat ook daadwerkelijk verschuldigd is dit jaar) trekt de
+            aandacht zonder een aparte tekstregel nodig te hebben; verder neutraal wit/grijs. */}
+        <div
+          className={`flex flex-col justify-center gap-1 rounded-2xl px-5 py-3 shadow-sm shrink-0 border ${
+            pct != null && werkelijkTotal > 0 && werkelijkFrac < 1 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"
+          }`}
+        >
+          <span className="text-xs font-semibold text-slate-800">Werkelijke aangifte</span>
+          <div className="flex items-center gap-2">
+            {werkelijkDot && <span className="text-sm leading-none">{werkelijkDot}</span>}
+            <span className="text-sm font-semibold text-slate-800">{werkelijkTekst}</span>
+          </div>
         </div>
       </div>
     </div>
