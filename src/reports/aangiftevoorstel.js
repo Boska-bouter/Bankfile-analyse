@@ -586,9 +586,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   return `
   <h1>Indicatieve aangifteberekening / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
-    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} ·
-    ${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"} ·
-    op basis van beschikbare bankgegevens
+    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}<br>
+    <span>Uitgangspunten (feiten uit de basisvragen, geen aannames): ${korRegeling ? "valt onder de KOR" : btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · op basis van beschikbare bankgegevens</span>
   </p>
   ${samenvattingHtml}
 

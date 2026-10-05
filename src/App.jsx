@@ -2238,19 +2238,23 @@ export default function App() {
       // lening/lease/activum loopt meestal over meerdere jaren, dus een aparte telling per jaar zou
       // hier geen scherper beeld geven. Alleen relevant voor zzp/eenmanszaak: een BV kent het
       // urencriterium/zelfstandigenaftrek niet.
-      let aannamesCount = incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount;
+      // v308 (V31) — naast het aantal nu ook WELKE aannames het zijn, zodat de kop en het rapport kunnen
+      // tonen waar het "1 aanname" over gaat (BTW-verlegd/KOR zijn feiten uit de basisvragen, geen aanname).
+      const aannamesLabels = [];
+      if (incompleteLoansCount > 0) aannamesLabels.push(`${incompleteLoansCount === 1 ? "lening" : "leningen"} onvolledig`);
+      if (incompleteLeasesCount > 0) aannamesLabels.push(`${incompleteLeasesCount === 1 ? "leasecontract" : "leasecontracten"} onvolledig`);
+      if (incompleteActivaCount > 0) aannamesLabels.push(`activa onvolledig`);
       if (rechtsvorm !== "bv") {
         const zaRaw = zelfstandigenaftrekStatus?.[year];
-        if (zaRaw == null || zaRaw === "onbekend") aannamesCount += 1;
+        if (zaRaw == null || zaRaw === "onbekend") aannamesLabels.push("urencriterium onbekend");
       }
       const gedeeldeHuurDitJaar = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeHuurDitJaar && huurZakelijkPercentageStatus?.[year] == null) aannamesCount += 1;
-      // v291 — zelfde telling, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
-      // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
+      if (gedeeldeHuurDitJaar && huurZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk huur");
       const gedeeldeEnergieDitJaar = computeGedeeldeEnergieVoorJaar(classified, year, energieZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeEnergieDitJaar && energieZakelijkPercentageStatus?.[year] == null) aannamesCount += 1;
+      if (gedeeldeEnergieDitJaar && energieZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk energie/water");
       const gedeeldeGemeentelijkeKostenDitJaar = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeGemeentelijkeKostenDitJaar && gemeentelijkeKostenZakelijkPercentageStatus?.[year] == null) aannamesCount += 1;
+      if (gedeeldeGemeentelijkeKostenDitJaar && gemeentelijkeKostenZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk gemeentelijke kosten");
+      const aannamesCount = (incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount) + aannamesLabels.filter((l) => !/onvolledig$/.test(l)).length;
 
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
@@ -2268,7 +2272,7 @@ export default function App() {
       else status = "oranje";
 
       map[year] = {
-        pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount,
+        pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
         werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
       };
     }
@@ -2422,7 +2426,7 @@ export default function App() {
                 },
                 {
                   label: "Indicatieve aangifte",
-                  value: !yearProgress || yearProgress.aannamesCount === 0 ? "🟢 Geen aannames" : `🟠 ${yearProgress.aannamesCount} ${yearProgress.aannamesCount === 1 ? "aanname" : "aannames"}`,
+                  value: !yearProgress || yearProgress.aannamesCount === 0 ? "🟢 Geen aannames" : `🟠 ${yearProgress.aannamesCount} ${yearProgress.aannamesCount === 1 ? "aanname" : "aannames"}${yearProgress.aannamesLabels?.length > 0 && yearProgress.aannamesLabels.length <= 2 ? ` (${yearProgress.aannamesLabels.join(", ")})` : ""}`,
                 },
                 {
                   // v285 — voorheen maar 3 vaste standen (Niet/Deels/Gedaan), ongeacht hoeveel van de
