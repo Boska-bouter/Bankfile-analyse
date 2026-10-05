@@ -1,5 +1,4 @@
-// Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive" of
-// "beide" — zie de wizard-vraag "Heeft de zaak een auto?" in SetupWizardModal.jsx en de
+// Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive" — zie de wizard-vraag "Heeft de zaak een auto?" in SetupWizardModal.jsx en de
 // "Auto-status"-vraag per jaar in Persoonlijke aannames/App.jsx). Anders dan bij "auto op de zaak"
 // (financial lease/koop/operational lease, zie autoBijtelling.js/autoActiva.js) is er hier geen
 // bedrijfsmiddel om af te schrijven en geen bijtelling: de zakelijke kilometers worden vergoed
@@ -13,7 +12,7 @@
 // kmVergoedingDetails, dus geen enkele invloed op een bestaand dossier.
 export function computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, year) {
   const status = autoStatus?.[year];
-  if (status !== "prive" && status !== "beide") return null;
+  if (status !== "prive") return null;
   const details = kmVergoedingDetails?.[year];
   if (!details || !details.zakelijkeKilometers || !details.vergoedingPerKm) return null;
   const zakelijkeKilometers = Number(details.zakelijkeKilometers);
