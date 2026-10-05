@@ -92,6 +92,7 @@ export default function UncertainTransactionsModal({
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          {subtypeChoicesFor(mainCategoryOf(tx.category)).length > 1 && (
           <select
             value={displayCategory(tx.category)}
             onChange={(e) => onRequestChange(tx, { category: storedCategoryForChoice(e.target.value, tx.category), type: tx.type })}
@@ -102,6 +103,7 @@ export default function UncertainTransactionsModal({
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
+          )}
           {soortenVoor(tx.category) && (
             <select
               value={tx.category}

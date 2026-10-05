@@ -1,6 +1,7 @@
+import { useToonFijn } from "../../utils/useToonFijn.js";
 import { useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -11,6 +12,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
 // op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
 export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp }) {
+  const toonFijn = useToonFijn();
   const totals = useMemo(() => {
     const t = {};
     for (const tx of group.items) t[tx.category] = (t[tx.category] || 0) + tx.amount;
@@ -40,6 +42,10 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
+        <label className="ml-auto inline-flex items-center gap-1 text-[10px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
+          <input type="checkbox" checked={toonFijn} onChange={(e) => setToonFijn(e.target.checked)} className="h-3 w-3" />
+          fijne categorieën
+        </label>
       </h3>
       <table className="w-full text-sm">
         <thead>
@@ -396,6 +402,7 @@ export function DetailTable({
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
+                    {subtypeChoicesFor(mainCategoryOf(t.category)).length > 1 && (
                     <select
                       value={displayCategory(t.category)}
                       onChange={(e) => applyChange(t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
@@ -406,12 +413,13 @@ export function DetailTable({
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    )}
                     {soortenVoor(t.category) && (
                       <select
                         value={t.category}
                         onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
                         className="block mt-0.5 rounded-md px-1 py-0 text-[10px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-                        title="Soort — bepaalt het zakelijke percentage dat je bij Persoonlijke aannames per soort kunt instellen"
+                        title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
                       >
                         {soortenVoor(t.category).map((o) => (
                           <option key={o.key} value={o.key}>{o.label}</option>

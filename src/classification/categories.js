@@ -554,7 +554,6 @@ export function mergeCategoryRules(savedRules) {
 export const MAIN_CATEGORY_ORDER = [
   "Zakelijke inkomsten", "Huisvesting", "Vervoer & auto", "Inkoop & zakelijke uitgaven",
   "Apparatuur & inventaris", "Personeel", "Telecom & abonnementen",
-  "Boekhouding & advies",
   "Financiering", "Interne overboekingen", "Belastingen & heffingen", "Privé", "Persoonlijk & vertrouwelijk", "Nog te beoordelen",
 ];
 
@@ -592,7 +591,7 @@ export const SUBTYPE_TO_MAIN = {
   "Belastingen: Naheffingen OB voorgaande jaren": "Belastingen & heffingen",
   "Belastingen: Naheffingen LH voorgaande jaren": "Belastingen & heffingen",
   "Belastingen: Naheffingen IB voorgaande jaren": "Belastingen & heffingen",
-  "Boekhouder, accountant & administratie": "Boekhouding & advies",
+  "Boekhouder, accountant & administratie": "Inkoop & zakelijke uitgaven",
   "Boodschappen": "Privé",
   "Brandstof": "Vervoer & auto",
   "Energie-water": "Huisvesting",
@@ -620,7 +619,7 @@ export const SUBTYPE_TO_MAIN = {
   "Overboekingen aan personen": "Privé",
   "Overboeking van bekenden": "Privé",
   "Overig": "Nog te beoordelen",
-  "Onderhoud apparatuur/machines": "Apparatuur & inventaris",
+  "Onderhoud apparatuur/machines": "Inkoop & zakelijke uitgaven",
   "Parkeren": "Vervoer & auto",
   "Betaalautomaat kosten": "Inkoop & zakelijke uitgaven",
   "Prive - mobiel/internet": "Privé",
@@ -652,6 +651,8 @@ export const SUBTYPE_TO_MAIN = {
   "Webshops & online aankopen": "Privé",
   "Zakelijk - apparatuur/machines": "Apparatuur & inventaris",
   "Zakelijk mobiel/internet": "Telecom & abonnementen",
+  "Streaming diensten": "Telecom & abonnementen",
+  "Software & Online diensten": "Telecom & abonnementen",
   "Zakelijk overige abonnementen": "Telecom & abonnementen",
   "Zakelijke inkomsten": "Zakelijke inkomsten",
   "Zakelijke inkomsten 0%": "Zakelijke inkomsten",
@@ -745,30 +746,67 @@ export const PRIVE_KEUZE = [
   "Incasso, juridisch & schulden", PRIVE_WONEN, PRIVE_TELECOM, "Leningen (privé)", PRIVE_ALGEMEEN,
 ];
 
+// V82 — dezelfde weergavelaag voor de ZAKELIJKE categorieën (~55 → ~18). Het eerste lid is telkens de
+// standaardsoort. Opgeslagen categorie, herkenning, BTW, aangifte-rubrieken en Excel blijven fijn.
+const lid = (...keys) => keys.map((key) => ({ key, label: key }));
+export const ZAK_GROEPEN = {
+  "Zakelijke inkomsten": lid("Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"),
+  "Huisvesting": lid("Huur", "Huur (deels zakelijk)", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)"),
+  "Auto & vervoer": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)"),
+  "Telecom, software & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel/internet", "Streaming diensten", "Software & Online diensten"),
+  "Personeel (loon & inhuur)": lid("Personeel: overig", "Inhuur personeel", "Uitbetalen loon"),
+  "Belastingen": lid("Belastingen: overig", "Belastingen: OB", "Belastingen: LH", "Belastingen: IB", "Belastingen: ZVW", "Belastingen: IH", "Belastingen: MRB",
+    "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren"),
+  "Interne overboeking": lid("Interne overboeking: zakelijk sparen", "Interne overboeking", "Interne overboeking: privé sparen"),
+  "Inkoop & overige bedrijfskosten": lid("Zakelijke inkoop/uitgaven", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
+    "Verzekering: Zakelijk", "Onderhoud apparatuur/machines", "Marketing-website"),
+};
+
+// Alle groepen (privé + zakelijk): weergavenaam → leden.
+export const CATEGORIE_GROEPEN = { ...PRIVE_GROEPEN, ...ZAK_GROEPEN };
+// Privé-algemeen is een bak zonder soortkeuze (17 leden, geen fiscaal verschil).
+const GEEN_SOORT = new Set([PRIVE_ALGEMEEN]);
+
 const FIJN_NAAR_WEERGAVE = (() => {
   const m = {};
-  for (const [weergave, leden] of Object.entries(PRIVE_GROEPEN)) for (const l of leden) m[l.key] = weergave;
+  for (const [weergave, leden] of Object.entries(CATEGORIE_GROEPEN)) for (const l of leden) m[l.key] = weergave;
   return m;
 })();
-const STANDAARD_FIJN = { [PRIVE_WONEN]: "Prive - huur", [PRIVE_TELECOM]: "Prive - mobiel/internet", [PRIVE_ALGEMEEN]: "Prive: overig" };
+const STANDAARD_FIJN = (() => {
+  const m = {};
+  for (const [weergave, leden] of Object.entries(CATEGORIE_GROEPEN)) m[weergave] = leden[0].key;
+  return m;
+})();
 
-// Naam zoals die in keuzelijsten/overzichten getoond wordt (alle niet-privé-categorieën ongewijzigd).
+// V82 — schakelaar "fijne categorieën tonen": zet de weergavelaag uit (alles zoals vóór V76).
+let _toonFijn = false;
+const _fijnAbonnees = new Set();
+export function getToonFijn() { return _toonFijn; }
+export function setToonFijn(v) { _toonFijn = !!v; _fijnAbonnees.forEach((f) => f()); }
+export function subscribeToonFijn(f) { _fijnAbonnees.add(f); return () => _fijnAbonnees.delete(f); }
+
+// Naam zoals die in keuzelijsten/overzichten getoond wordt (alle niet-gegroepeerde categorieën ongewijzigd).
 export function displayCategory(category) {
+  if (_toonFijn) return category;
   return FIJN_NAAR_WEERGAVE[category] || category;
 }
 
-// Keuzes voor het subtype-keuzeveld: voor "Privé" de 9 samengevoegde keuzes, anders de gewone lijst.
+// Keuzes voor het subtype-keuzeveld.
 export function subtypeChoicesFor(mainCategory) {
-  return mainCategory === "Privé" ? PRIVE_KEUZE : subtypesForMainCategory(mainCategory);
+  const fijn = subtypesForMainCategory(mainCategory);
+  if (mainCategory === "Privé") {
+    return _toonFijn ? CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === "Privé") : PRIVE_KEUZE;
+  }
+  if (_toonFijn) return fijn;
+  return [...new Set(fijn.map((c) => FIJN_NAAR_WEERGAVE[c] || c))];
 }
 
 // Welke opgeslagen (fijne) categorie hoort bij een gekozen weergavenaam? Behoort de huidige categorie
-// al tot die groep, dan blijft die staan (kiezen van "Prive kosten algemeen" bij een Boodschappen-
-// transactie verandert dus niets); anders de standaardsoort van de groep.
+// al tot die groep, dan blijft die staan; anders de tegenhanger (zakelijk ↔ privé) of de standaardsoort.
 export function storedCategoryForChoice(choice, currentCategory) {
+  if (_toonFijn) return choice;
   if (displayCategory(currentCategory) === choice) return currentCategory;
-  // V77 — zakelijke tegenhanger (bijv. "Energie-water" of "Huur (deels zakelijk)") → de privé-soort die erbij hoort,
-  // zodat "Privé - wonen & vaste lasten" kiezen niet stilletjes op "Prive - huur" uitkomt.
+  // V77 — zakelijke tegenhanger (bijv. "Energie-water" of "Huur (deels zakelijk)") → de privé-soort die erbij hoort.
   const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
   const tegenhanger = SPLIT_CATEGORY_NAMES[basis];
   if (tegenhanger && displayCategory(tegenhanger) === choice) return tegenhanger;
@@ -785,12 +823,18 @@ export function categoryForMainChange(mainName, currentCategory) {
   return MAIN_CATEGORY_DEFAULT_SUBTYPE[mainName] || currentCategory;
 }
 
-// Fijne soorten (huur / energie-water / …) voor het kleine extra keuzeveld — alleen bij wonen en telecom.
+// Fijne soorten voor het kleine extra keuzeveld naast een samengevoegde keuze (huur / energie-water / …).
 export function soortenVoor(category) {
-  const w = displayCategory(category);
-  return w === PRIVE_WONEN || w === PRIVE_TELECOM ? PRIVE_GROEPEN[w] : null;
+  if (_toonFijn) return null;
+  const w = FIJN_NAAR_WEERGAVE[category];
+  if (!w || GEEN_SOORT.has(w)) return null;
+  const leden = CATEGORIE_GROEPEN[w];
+  return leden.length > 1 ? leden : null;
 }
 
+for (const [naam, leden] of Object.entries(ZAK_GROEPEN)) {
+  CATEGORY_COLOR[naam] = CATEGORY_COLOR[leden[0].key] || "bg-slate-200 text-slate-700";
+}
 CATEGORY_COLOR[PRIVE_WONEN] = CATEGORY_COLOR["Prive - huur"] || "bg-stone-200 text-stone-800";
 CATEGORY_COLOR[PRIVE_TELECOM] = CATEGORY_COLOR["Prive - mobiel/internet"] || "bg-stone-200 text-stone-800";
 CATEGORY_COLOR[PRIVE_ALGEMEEN] = CATEGORY_COLOR["Prive: overig"] || "bg-stone-100 text-stone-700";

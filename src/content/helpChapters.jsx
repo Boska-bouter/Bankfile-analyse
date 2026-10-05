@@ -256,7 +256,7 @@ export const HELP_CHAPTERS = [
   },
   {
     key: "prive-categorieen",
-    titel: "Privé-categorieën (9 keuzes)",
+    titel: "Samengevoegde categorieën (privé en zakelijk)",
     inhoud: (
       <div className="space-y-2">
         <p>
@@ -277,6 +277,19 @@ export const HELP_CHAPTERS = [
           <strong>Prive kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
           divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten zie je de
           samengevoegde naam. De Excel-export blijft de fijne categorie tonen.
+        </p>
+        <p>
+          <strong>Zakelijke categorieën</strong> zijn op dezelfde manier samengevoegd: Huisvesting (huur, energie-water,
+          gemeentelijke kosten, ook de "deels zakelijk"-varianten), Auto &amp; vervoer, Telecom, software &amp; abonnementen,
+          Personeel (loon &amp; inhuur), Belastingen, Interne overboeking en Inkoop &amp; overige bedrijfskosten (inkoop,
+          bankkosten, boekhouder, zakelijke verzekering, onderhoud apparatuur, marketing-website, betaalautomaat). Waar
+          de aangifte een verschil maakt kies je de <em>soort</em> in het kleine tweede keuzeveld. De aangifte, BTW en
+          rubrieken rekenen ongewijzigd op de fijne soort.
+        </p>
+        <p>
+          Wil je toch alle fijne categorieën zien? Zet het vinkje <strong>fijne categorieën</strong> aan in de
+          categorieënkaart (Controleren → Categorieën). Dat geldt voor alle keuzelijsten en overzichten tot je het
+          weer uitzet.
         </p>
       </div>
     ),

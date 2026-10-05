@@ -56,6 +56,7 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
+import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
 import RollupCard from "./components/dashboard/RollupCard.jsx";
@@ -187,6 +188,7 @@ function normalizeAutoWizard(v) {
 }
 
 export default function App() {
+  useToonFijn(); // V82 — herrender bij de schakelaar "fijne categorieën"
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
   const [categoryRules, setCategoryRules] = useState(DEFAULT_RULES);
