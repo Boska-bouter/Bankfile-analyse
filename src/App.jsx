@@ -4066,12 +4066,27 @@ export default function App() {
         </>
       ),
       actions: [
-        { label: "Opslaan en nieuw dossier starten", variant: "primary", onClick: () => { saveProjectFile(); doClearAllData(); } },
-        { label: "Nieuw dossier starten zonder opslaan", variant: "danger", onClick: doClearAllData },
+        { label: "Opslaan en nieuw dossier starten", variant: "primary", onClick: () => {
+          saveProjectFile();
+          // Een browser kan niet zien of het "Bewaar als"-venster is afgebroken; daarom pas wissen na bevestiging.
+          setDialog({
+            title: "Is het dossier opgeslagen?",
+            message: <p>Het dossier is aangeboden om te downloaden. Controleer of het bestand echt is opgeslagen voordat het huidige dossier wordt gesloten.</p>,
+            actions: [
+              { label: "Ja, opgeslagen — nieuw dossier starten", variant: "primary", onClick: () => doClearAllData(true) },
+              { label: "Nee, opnieuw opslaan", onClick: () => { saveProjectFile(); setDialog({
+                title: "Is het dossier opgeslagen?",
+                message: <p>Bevestig pas als het bestand echt is opgeslagen.</p>,
+                actions: [{ label: "Ja, opgeslagen — nieuw dossier starten", variant: "primary", onClick: () => doClearAllData(true) }],
+              }); } },
+            ],
+          });
+        } },
+        { label: "Nieuw dossier starten zonder opslaan", variant: "danger", onClick: () => doClearAllData(true) },
       ],
     });
   };
-  const doClearAllData = async () => {
+  const doClearAllData = async (askWizard = false) => {
     snapshotBeforeAction("Nieuw dossier");
     suppressChangeCount();
     setLastExportAt(null);
@@ -4149,6 +4164,13 @@ export default function App() {
     await clearPersistedData();
     await clearPersistedSettings();
     setSaveState("idle");
+    if (askWizard === true) {
+      setDialog({
+        title: "Wizard starten?",
+        message: <p>Het nieuwe dossier is leeg. Wil je nu de basisvragen (rechtsvorm, BTW, KOR enz.) doorlopen?</p>,
+        actions: [{ label: "Wizard starten", variant: "primary", onClick: () => setManualWizardOpen(true) }],
+      });
+    }
   };
 
   if (showStartupChoice) {
