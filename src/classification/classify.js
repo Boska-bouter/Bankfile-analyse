@@ -397,8 +397,16 @@ function looksLikeRecognizedRefund(text, rules) {
 export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere = []) {
   if (tx.outOfYearRange || !tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return null;
   const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
-  if (!matchedOwn || !matchedOwn.accountType || matchedOwn.accountType === accountType) return null;
+  if (!matchedOwn || !matchedOwn.accountType) return null;
   const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
+  // V56 — twee eigen rekeningen van HETZELFDE type (bijv. twee privérekeningen): puur heen-en-weer boeken.
+  if (matchedOwn.accountType === accountType) {
+    // Alleen als de eigen rekening van déze boeking bekend is én een ANDERE is dan de tegenrekening: meerdere
+    // bestanden van dezelfde rekening (jaar-bestanden) of bankkosten met het eigen IBAN als tegenrekening
+    // zijn géén overboeking tussen twee rekeningen.
+    if (!tx.ownAccount || ibansMatch(tx.counterpartyIban, tx.ownAccount)) return null;
+    return { category: "Interne overboeking", type };
+  }
   const isIncome = tx.amount > 0;
   if (accountType === "Zakelijk") {
     return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };

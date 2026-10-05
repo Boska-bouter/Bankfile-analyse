@@ -27,6 +27,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Overboekingen aan personen",
   "Interne overboeking: zakelijk sparen",
   "Interne overboeking: privé sparen",
+  "Interne overboeking",
   "Huur",
   "Huur (deels zakelijk)", // net als "Huur" standaard vrijgesteld — override desgewenst per dossier bij "belaste verhuur"
   "Incasso, juridisch & schulden",

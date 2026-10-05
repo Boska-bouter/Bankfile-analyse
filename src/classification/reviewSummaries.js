@@ -11,6 +11,7 @@ const GEEN_KLANT_CATEGORIES = [
   "Prive opnames", "Terugboeking van prive", // zakelijke kant (zie functie hieronder: wordt hier niet bereikt, maar voor de volledigheid)
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
   "Interne overboeking: privé sparen",
+  "Interne overboeking",
   // Geld van een bekende (zie classify.js) is per definitie ook geen klant/opdrachtgever.
   "Overboeking van bekenden",
 ];

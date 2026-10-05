@@ -82,6 +82,7 @@ import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetails
 import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModal.jsx";
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
 import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAannamesPanel.jsx";
+import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
@@ -940,6 +941,16 @@ export default function App() {
     }
     return result;
   }, [ownAccountByFile, accountTypeByFile, parsedFiles, eigenRekeningenExtra]);
+  const eigenRekeningenGeladen = useMemo(() => {
+    const seen = new Set();
+    const res = [];
+    for (const [fileName, iban] of Object.entries(ownAccountByFile)) {
+      if (!iban || !accountTypeByFile[fileName] || seen.has(normKey(iban))) continue;
+      seen.add(normKey(iban));
+      res.push({ iban, accountType: accountTypeByFile[fileName] });
+    }
+    return res;
+  }, [ownAccountByFile, accountTypeByFile]);
   const importDiagnostics = useMemo(
     () => computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections),
     [parsedFiles, allTransactions, openingBalanceCorrections]
@@ -3527,6 +3538,27 @@ export default function App() {
     };
     return [
       withExpand(
+        {
+          key: "eigenRekeningen",
+          title: "Eigen rekeningen",
+          icon: <span>🏦</span>,
+          tone: "neutral",
+          lines: [
+            { label: "Geladen", value: String(eigenRekeningenGeladen.length) },
+            { label: "Opgegeven, niet geladen", value: String((eigenRekeningenExtra || []).length) },
+          ],
+          hint: "Rekeningen die bestaan maar niet zijn geladen",
+          actionLabel: "Bekijken",
+        },
+        "eigenRekeningen",
+        <EigenRekeningenPanel
+          loadedAccounts={eigenRekeningenGeladen}
+          eigenRekeningenExtra={eigenRekeningenExtra}
+          onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
+          classified={classified}
+        />
+      ),
+      withExpand(
         g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
         "tegenpartijen",
         <div ref={incomeRatesSectionRef}>
@@ -3700,6 +3732,8 @@ export default function App() {
     ].filter(Boolean);
   }, [
     transactions.length,
+    eigenRekeningenGeladen,
+    eigenRekeningenExtra,
     instellingenCardsByKey,
     expandedCardKeys,
     activaSummary,

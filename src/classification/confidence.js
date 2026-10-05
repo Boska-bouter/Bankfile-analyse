@@ -28,6 +28,7 @@ import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch } from "./cl
 const PRIVE_TRANSFER_CATEGORIES = [
   "Prive opnames", "Terugboeking van prive", // zakelijke kant
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
+  "Interne overboeking", // V56 — tussen twee eigen rekeningen van hetzelfde type
 ];
 function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
   if (!tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return false;
@@ -58,6 +59,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
   if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
+  if (resolvedCategory === "Interne overboeking") return { level: "heuristic", label: "Herkend als overboeking tussen je eigen rekeningen" };
   if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van privé spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
