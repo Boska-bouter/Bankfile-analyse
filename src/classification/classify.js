@@ -1,5 +1,5 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf } from "./categories.js";
-import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
+import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 
 // V58 — woordgrens voor KORTE standaardzoekwoorden. "izz" matchte "Pizza", "aldi" matchte "Kanaaldijk",
@@ -202,7 +202,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // betaling van een bevestigde zakelijke klant toch op de privérekening binnen, dan blijft dat
   // zichtbaar (category "Zakelijke inkomsten", type "Prive") in plaats van stilzwijgend als
   // "Zakelijk" te worden geboekt.
-  const isBiz = businessKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+  const isBiz = businessKeywords.some((kw) => textHasKeyword(text, kw));
   if (isBiz) {
     return { category: "Zakelijke inkomsten", type };
   }
@@ -243,7 +243,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
       for (const rule of rules) {
         if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
-          const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+          const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
         }
@@ -259,7 +259,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     for (const rule of rules) {
       if (rule.name === "Prive opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
       if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
-        const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+        const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
         const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
         return { category: categoryName, type };
       }
@@ -298,7 +298,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
   for (const rule of rules) {
     if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
-      const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+      const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
       // bedrijfsuitgaven-trefwoord, geen handmatige correctie) is een privé-uitgave, ook als het
@@ -312,7 +312,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     }
   }
 
-  const explicitBizExpense = businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+  const explicitBizExpense = businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
   if (explicitBizExpense) {
     return { category: "Zakelijke inkoop/uitgaven", type };
   }

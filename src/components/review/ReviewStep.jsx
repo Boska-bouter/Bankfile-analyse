@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
-import { CATEGORY_ORDER } from "../../classification/categories.js";
+import { CATEGORY_ORDER, displayCategory, storedCategoryForChoice } from "../../classification/categories.js";
+
+// V76 — privé-categorieën samengevoegd in de keuzelijst (zie displayCategory in categories.js).
+const KEUZE_OPTIES = [...new Set(CATEGORY_ORDER.map(displayCategory))];
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
@@ -27,8 +30,8 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
         <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
         {item.description && <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400" />}
       </div>
-      <select value={category} onChange={(e) => apply(e.target.value, type)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
-        {CATEGORY_ORDER.map((c) => (
+      <select value={displayCategory(category)} onChange={(e) => apply(storedCategoryForChoice(e.target.value, category), type)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
+        {KEUZE_OPTIES.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
@@ -93,16 +96,17 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
       )}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam of bankomschrijving…" className="w-72" />
-        {bulkAction && !allDone && (
+        {!allDone && (Array.isArray(bulkAction) ? bulkAction : bulkAction ? [bulkAction] : []).map((ba) => (
           <button
+            key={ba.label}
             onClick={() => {
-              if (window.confirm(bulkAction.confirmText || "Weet je het zeker?")) bulkAction.onApply();
+              if (window.confirm(ba.confirmText || "Weet je het zeker?")) ba.onApply();
             }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 text-xs font-medium hover:bg-amber-100"
           >
-            {bulkAction.label}
+            {ba.label}
           </button>
-        )}
+        ))}
       </div>
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {filtered.map((item) => (

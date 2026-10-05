@@ -1,4 +1,4 @@
-import { normKey, counterpartyKey } from "../utils/normalization.js";
+import { normKey, counterpartyKey, textHasKeyword } from "../utils/normalization.js";
 
 // Categorieën die de classificatie (zie classify.js) al met harde zekerheid heeft bepaald als een
 // verschuiving tussen de eigen rekeningen van dezelfde rekeninghouder (IBAN-match met een eigen
@@ -32,7 +32,7 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
     if (GEEN_KLANT_CATEGORIES.includes(tx.category)) continue;
     if (kws.length > 0) {
       const text = ` ${tx.counterparty || ""} ${tx.description || ""} ${tx.fullDescription || ""}`.toLowerCase();
-      if (kws.some((kw) => text.includes(kw))) continue;
+      if (kws.some((kw) => textHasKeyword(text, kw))) continue;
     }
     const key = normKey(tx.counterparty || tx.description);
     if (!key) continue;

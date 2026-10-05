@@ -5,6 +5,7 @@ import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
+import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
@@ -366,6 +367,7 @@ export default function App() {
   const [showPersonReview, setShowPersonReview] = useState(null);
   const [showOverigReview, setShowOverigReview] = useState(null);
   const [showPeriodeReview, setShowPeriodeReview] = useState(null);
+  const [showOnverklaard, setShowOnverklaard] = useState(false);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
   const [showCategoryOverview, setShowCategoryOverview] = useState(false);
@@ -1440,6 +1442,9 @@ export default function App() {
   const bulkMarkOverigAsPriveOpname = () => {
     for (const item of pendingOverigReview) markOverigItem(item, "Prive opnames", "Zakelijk");
   };
+  const bulkMarkOverigAsWinkelsDivers = () => {
+    for (const item of pendingOverigReview) markOverigItem(item, "Winkels divers", "Prive");
+  };
   const confirmOverigAsIs = (item) => {
     snapshotBeforeAction('"Klopt zo" bevestigd');
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -1916,6 +1921,15 @@ export default function App() {
     }
     prevActiveYearRef.current = activeYear;
   }, [activeYear]);
+  const yearCoverage = useMemo(() => {
+    const c = {};
+    for (const g of groups) {
+      if (!g.items || g.items.length === 0) continue;
+      const e = (c[g.year] ||= { zakelijk: false, prive: false });
+      if (g.type === "Zakelijk") e.zakelijk = true; else e.prive = true;
+    }
+    return c;
+  }, [groups]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
   // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
@@ -2271,6 +2285,22 @@ export default function App() {
     const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
     const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
     const diff = Math.round((zakSum + priSum) * 100) / 100;
+    // V73 — welke boekingen hebben aan de andere kant géén tegenboeking (zelfde bedrag, binnen 5 dagen)?
+    // Zo toont de kaart bij een verschil waar het vandaan komt, en kun je het meteen indelen.
+    const zakTx = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category));
+    const priTx = priGroupForYear.items.filter((t) => isPriTransferCat(t.category));
+    const dagen5 = 5 * 86400000;
+    const gebruiktPri = new Set();
+    const zakZonder = [];
+    for (const z of zakTx) {
+      const m = priTx.find((q) => !gebruiktPri.has(q.id) && Math.abs(z.amount + q.amount) < 0.005 && Math.abs(z.date - q.date) <= dagen5);
+      if (m) gebruiktPri.add(m.id); else zakZonder.push(z);
+    }
+    const priZonder = priTx.filter((q) => !gebruiktPri.has(q.id));
+    const onverklaard = [
+      ...zakZonder.map((t) => ({ tx: t, kant: "Zakelijk" })),
+      ...priZonder.map((t) => ({ tx: t, kant: "Prive" })),
+    ].sort((a, b) => Math.abs(b.tx.amount) - Math.abs(a.tx.amount));
     // V71 — "geladen" is per jaar bekeken: een privébestand dat alleen 2024-2025 beslaat zegt niets
     // over 2020 — daar staat Privé dan op € 0,00 omdat er geen data is, niet omdat het niet klopt.
     const zijdeOntbreekt = !priveRekeningGeladen || priGroupForYear.items.length === 0 ? "Prive"
@@ -2282,15 +2312,15 @@ export default function App() {
       subtitle = "Geen overboekingen tussen zakelijk en privé gevonden dit jaar.";
     } else if (zijdeOntbreekt) {
       tone = "ok";
-      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
+      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Privé"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
     } else {
       const ok = Math.abs(diff) < 0.01;
       tone = ok ? "ok" : "attention";
       subtitle = ok
-        ? `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
-        : `Zakelijk ${eur(zakSum)} tegenover Prive ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
+        ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
+        : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
     }
-    return { zakSum, priSum, diff, zijdeOntbreekt, heeftData, tone, subtitle };
+    return { zakSum, priSum, diff, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard };
   }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen]);
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
@@ -3466,6 +3496,7 @@ export default function App() {
           onMarkOverigItem={markOverigItem}
           onConfirmOverigAsIs={confirmOverigAsIs}
           onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
+          onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
@@ -3545,8 +3576,9 @@ export default function App() {
             icon: <CardIcon name="repeat" />,
             tone: aansluitControleInfo.tone,
             subtitle: aansluitControleInfo.subtitle,
-            hint: "Naar de aansluiting & detailtabellen",
-            onClick: () => jumpToSection(detailsSectionRef),
+            ...(aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0
+              ? { hint: `Bekijk de ${aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking${aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}`, onClick: () => setShowOnverklaard(true) }
+              : { hint: "Naar de aansluiting & detailtabellen", onClick: () => jumpToSection(detailsSectionRef) }),
           }
         : null,
     ].filter(Boolean);
@@ -3876,6 +3908,26 @@ export default function App() {
     if (dossierOpenPoints === 0) return 100;
     return Math.min(99, Math.floor((100 * (totaal - dossierOpenPoints)) / totaal));
   }, [classified, confidenceSummary, dossierOpenPoints]);
+  // V74 — tweede ring: dezelfde berekening, maar alleen voor het gekozen jaar. Open = groepen met een
+  // onzekere indeling in dat jaar + de administratieve jaarchecks die nog openstaan (KOR, BTW-verlegd,
+  // personen/Overig beoordeeld, enz.); totaal = alle groepen van dat jaar + het aantal jaarchecks.
+  const yearRing = useMemo(() => {
+    if (!activeYear || !yearlyProgress[activeYear] || !classified.length) return null;
+    const alle = new Set(), open = new Set();
+    for (const tx of classified) {
+      if (tx.isMirror || Number(tx.year) !== Number(activeYear)) continue;
+      const gk = (tx.category === "Winkels divers" && tx.confidence.level === "heuristic" && /losse pinbetaling/i.test(tx.confidence.label || ""))
+        ? "__losse-pinbetalingen__|Winkels divers"
+        : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
+      alle.add(gk);
+      if (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") open.add(gk);
+    }
+    const adminOpen = yearlyProgress[activeYear].openPunten || 0;
+    const openN = open.size + adminOpen;
+    const totaal = Math.max(alle.size + 5, openN, 1);
+    const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
+    return { pct, open: openN, jaar: activeYear };
+  }, [classified, activeYear, yearlyProgress]);
   const dossierOpenBreakdown = [
     controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
@@ -4681,6 +4733,7 @@ export default function App() {
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4688,7 +4741,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -4806,6 +4859,16 @@ export default function App() {
           />
         )}
 
+        {showOnverklaard && (
+          <OnverklaardeOverboekingenModal
+            items={aansluitControleInfo.onverklaard}
+            diff={aansluitControleInfo.diff}
+            jaar={activeYear}
+            onRequestChange={requestCategoryChange}
+            onClose={() => setShowOnverklaard(false)}
+          />
+        )}
+
         {openConfidenceLevel && uncertainModalData && (
           <UncertainTransactionsModal
             level={openConfidenceLevel}
@@ -4889,6 +4952,7 @@ export default function App() {
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4896,7 +4960,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -5056,6 +5120,7 @@ export default function App() {
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -5063,7 +5128,7 @@ export default function App() {
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />
+                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />

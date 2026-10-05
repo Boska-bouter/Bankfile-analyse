@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import { MAIN_CATEGORY_COLOR, mainCategoryOf } from "../../classification/categories.js";
+import { MAIN_CATEGORY_COLOR, mainCategoryOf, displayCategory } from "../../classification/categories.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import HelpHint from "../shared/HelpHint.jsx";
 
@@ -76,7 +76,7 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
                       <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
                         {mainCategoryOf(r.category)}
                       </span>{" "}
-                      · {r.category} · {r.type}
+                      · {displayCategory(r.category)} · {r.type}
                     </p>
                   </div>
                   <button onClick={() => removeRule(r.key)} className="shrink-0 text-slate-400 hover:text-rose-600" title="Regel verwijderen (transacties vallen terug op automatische classificatie)">

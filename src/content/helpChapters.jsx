@@ -51,8 +51,8 @@ export const HELP_CHAPTERS = [
       <p>
         Bepaalt welke categorieën als <strong>vast</strong> gelden (lopen door ongeacht omzet/activiteit, niet zomaar
         af te bouwen — huur, verzekeringen, abonnementen e.d.) en welke als <strong>variabel</strong> (bewegen mee
-        met keuzes/activiteit). Geldt voor zowel Zakelijk als Prive, en is terug te zien in het jaaroverzicht (bij
-        "Toon vast/variabel"). Inkomsten en overboekingen tussen Zakelijk/Prive tellen niet mee als kosten.
+        met keuzes/activiteit). Geldt voor zowel Zakelijk als Privé, en is terug te zien in het jaaroverzicht (bij
+        "Toon vast/variabel"). Inkomsten en overboekingen tussen Zakelijk/Privé tellen niet mee als kosten.
       </p>
     ),
   },
@@ -255,13 +255,40 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "prive-categorieen",
+    titel: "Privé-categorieën (9 keuzes)",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Voor privé-boekingen zijn er negen keuzes in plaats van de vele fijne categorieën van vroeger. Vier horen bij
+          de koppeling met zakelijk: <strong>Prive opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
+          <strong>Terugboeking van prive</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
+          <strong>Incasso, juridisch &amp; schulden</strong> en <strong>Leningen (privé)</strong>.
+        </p>
+        <p>
+          Wat deels zakelijk kan zijn staat in twee groepen: <strong>Prive - wonen &amp; vaste lasten</strong> (huur, energie
+          en water, gemeentelijke kosten) en <strong>Prive - telecom &amp; abonnementen</strong> (mobiel/internet, overige
+          abonnementen, streaming). Bij die twee kun je de <em>soort</em> nog apart kiezen in het kleine tweede
+          keuzeveld, zodat het zakelijke percentage per soort instelbaar blijft (Persoonlijke aannames).
+        </p>
+        <p>
+          Al het overige — boodschappen, webshops, winkels divers, vrije tijd/uit eten/vakantie, medisch, kinderopvang,
+          verzekeringen, hypotheek, toeslagen, alimentatie, overboekingen aan personen, enzovoort — valt onder{" "}
+          <strong>Prive kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
+          divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten zie je de
+          samengevoegde naam. De Excel-export blijft de fijne categorie tonen.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "detailtabel",
     titel: "Detailtabel",
     inhoud: (
       <p>
         Categorie is direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
         dezelfde tegenpartij, in alle jaren (tenzij er geen bruikbare naam is, dan alleen voor die ene transactie).
-        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Prive) staat er
+        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Privé) staat er
         alleen ter info bij: dat volgt altijd het bankbestand waaruit de transactie is ingelezen en is bewust niet
         los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. Gebruik de filters
         op bedrag en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte
@@ -308,6 +335,14 @@ export const HELP_CHAPTERS = [
           beoordeelt de groep één keer en dat geldt voor alle bijbehorende transacties.
         </p>
         <p>
+          <strong>In het controlevenster</strong> (klik op "controleren" of "onduidelijk") staan de groepen gesorteerd op
+          totaalbedrag, zodat de punten met de meeste invloed bovenaan staan; je kunt ook sorteren op aantal of naam. Met
+          het categoriefilter kies je één categorie en keur je die in één keer goed ("Alles in … goedkeuren"). Losse
+          pinbetalingen zonder herkend zoekwoord staan samen in één groep die je kunt uitklappen om per transactie aan te
+          passen. Een opdrachtgever of leverancier die je zelf hebt opgegeven telt als herkend, ook als de bank de naam
+          met andere leestekens schrijft.
+        </p>
+        <p>
           <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah", "plus" of "spar") moeten
           aan het begin van een woord staan en tellen niet mee als ze midden in een ander woord zitten. Zo wordt een
           bankrekening of winkelnaam niet per ongeluk herkend op een stukje tekst. Zoekwoorden die je zelf toevoegt
@@ -337,6 +372,15 @@ export const HELP_CHAPTERS = [
           zeker is ingedeeld, plus de overige punten (instellingen, duplicaten, enz.) als open. Voorbeeld: 1.200 groepen
           waarvan er 528 nog open staan geeft ongeveer 56%. Zolang er nog open punten zijn, blijft de ring onder de
           100%; alleen als er niets meer openstaat staat er "Alles afgehandeld" en 100%.
+        </p>
+        <p>
+          Er zijn <strong>twee ringen in elkaar</strong>: de buitenste (<em>hele dossier</em>, groen) telt alle jaren samen, de
+          binnenste (oranje) geldt alleen voor het gekozen jaar. De jaarring telt de groepen van dat jaar die nog onzeker zijn, plus de jaarchecks
+          die nog openstaan (zoals KOR, BTW-verlegd en het beoordelen van personen en "Overig").
+        </p>
+        <p>
+          Bij "Overig opruimen" (Opschonen) staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive
+          opnames" (voor een zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
         <p className="text-xs text-slate-400">
           Dossiercontrole zegt alleen dat de administratie rond is. Het zegt niets over of de aangifte zelf al is

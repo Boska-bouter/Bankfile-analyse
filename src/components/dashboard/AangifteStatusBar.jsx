@@ -207,7 +207,7 @@ export default function AangifteStatusBar({
             <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
             <span>
               {checklistData.priveTransferMissingMirrors.length} zakelijke transactie{checklistData.priveTransferMissingMirrors.length === 1 ? "" : "s"} ("Prive opnames"/"Terugboeking van prive")
-              zonder spiegelboeking aan de Prive-kant — dit zou eigenlijk nooit mogen voorkomen, dus dit is de moeite van het navragen waard.
+              zonder spiegelboeking aan de Privé-kant — dit zou eigenlijk nooit mogen voorkomen, dus dit is de moeite van het navragen waard.
               <span className="block mt-1 text-xs text-slate-500">
                 {checklistData.priveTransferMissingMirrors.slice(0, 5).map((tx) => (
                   <ExpandableDescription key={tx.id} tx={tx} className="block" prefix={`${tx.date.toLocaleDateString("nl-NL")} (${eur(tx.amount)}): `} short={tx.counterparty || tx.description} />

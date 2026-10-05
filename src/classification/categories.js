@@ -707,3 +707,90 @@ export function fiscalTreatmentOf(subtype) {
 export function subtypesForMainCategory(mainCategory) {
   return CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === mainCategory);
 }
+
+// ---------------------------------------------------------------------------------------------
+// V76 — WEERGAVELAAG voor de privé-categorieën: 29 fijne categorieën → 9 zichtbare keuzes.
+// De fijne categorienamen blijven de opgeslagen waarde (tx.category) — daarop draaien de
+// herkenningsregels, de review-schermen, de %-zakelijk-splitsing en alle bestaande dossiers —
+// maar in keuzelijsten en overzichten tonen we de samengevoegde naam. Bij "wonen" en "telecom"
+// blijft de fijne soort (huur / energie-water / …) apart kiesbaar, omdat daar per soort een
+// ander percentage zakelijk kan gelden.
+// ---------------------------------------------------------------------------------------------
+export const PRIVE_WONEN = "Prive - wonen & vaste lasten";
+export const PRIVE_TELECOM = "Prive - telecom & abonnementen";
+export const PRIVE_ALGEMEEN = "Prive kosten algemeen";
+
+export const PRIVE_GROEPEN = {
+  [PRIVE_WONEN]: [
+    { key: "Prive - huur", label: "Huur" },
+    { key: "Prive - energie-water", label: "Energie & water" },
+    { key: "Prive - gemeentelijke kosten", label: "Gemeentelijke kosten" },
+  ],
+  [PRIVE_TELECOM]: [
+    { key: "Prive - mobiel/internet", label: "Mobiel & internet" },
+    { key: "Prive overige abonnementen", label: "Overige abonnementen" },
+    { key: "Prive - streaming diensten", label: "Streaming" },
+  ],
+  [PRIVE_ALGEMEEN]: [
+    "Boodschappen", "Hypotheek", "Inkomsten", "Kinderopvang", "Medische uitgaven", "Overboekingen aan personen",
+    "Overboeking van bekenden", "Prive - bankkosten", "Prive - overige kosten",
+    "Prive - vrijetijd-uitgaan-vakantie & uit eten", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
+    "Toeslagen", "Verzekeringen", "Winkels divers", "Webshops & online aankopen",
+  ].map((key) => ({ key, label: key })),
+};
+
+// De 9 zichtbare privé-keuzes (volgorde = volgorde in de keuzelijst).
+export const PRIVE_KEUZE = [
+  "Prive opnames", "Ontvangen van zakelijk", "Terugboeking van prive", "Terugboeking naar zakelijk",
+  "Incasso, juridisch & schulden", PRIVE_WONEN, PRIVE_TELECOM, "Leningen (privé)", PRIVE_ALGEMEEN,
+];
+
+const FIJN_NAAR_WEERGAVE = (() => {
+  const m = {};
+  for (const [weergave, leden] of Object.entries(PRIVE_GROEPEN)) for (const l of leden) m[l.key] = weergave;
+  return m;
+})();
+const STANDAARD_FIJN = { [PRIVE_WONEN]: "Prive - huur", [PRIVE_TELECOM]: "Prive - mobiel/internet", [PRIVE_ALGEMEEN]: "Prive: overig" };
+
+// Naam zoals die in keuzelijsten/overzichten getoond wordt (alle niet-privé-categorieën ongewijzigd).
+export function displayCategory(category) {
+  return FIJN_NAAR_WEERGAVE[category] || category;
+}
+
+// Keuzes voor het subtype-keuzeveld: voor "Privé" de 9 samengevoegde keuzes, anders de gewone lijst.
+export function subtypeChoicesFor(mainCategory) {
+  return mainCategory === "Privé" ? PRIVE_KEUZE : subtypesForMainCategory(mainCategory);
+}
+
+// Welke opgeslagen (fijne) categorie hoort bij een gekozen weergavenaam? Behoort de huidige categorie
+// al tot die groep, dan blijft die staan (kiezen van "Prive kosten algemeen" bij een Boodschappen-
+// transactie verandert dus niets); anders de standaardsoort van de groep.
+export function storedCategoryForChoice(choice, currentCategory) {
+  if (displayCategory(currentCategory) === choice) return currentCategory;
+  // V77 — zakelijke tegenhanger (bijv. "Energie-water" of "Huur (deels zakelijk)") → de privé-soort die erbij hoort,
+  // zodat "Privé - wonen & vaste lasten" kiezen niet stilletjes op "Prive - huur" uitkomt.
+  const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
+  const tegenhanger = SPLIT_CATEGORY_NAMES[basis];
+  if (tegenhanger && displayCategory(tegenhanger) === choice) return tegenhanger;
+  return STANDAARD_FIJN[choice] || choice;
+}
+
+// V77 — categorie na wisselen van hoofdcategorie: naar "Privé" houdt de privé-tegenhanger van de huidige
+// zakelijke categorie (Energie-water → Prive - energie-water, Huur → Prive - huur, ...), anders de standaardsoort.
+export function categoryForMainChange(mainName, currentCategory) {
+  if (mainName === "Privé") {
+    const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
+    if (SPLIT_CATEGORY_NAMES[basis]) return SPLIT_CATEGORY_NAMES[basis];
+  }
+  return MAIN_CATEGORY_DEFAULT_SUBTYPE[mainName] || currentCategory;
+}
+
+// Fijne soorten (huur / energie-water / …) voor het kleine extra keuzeveld — alleen bij wonen en telecom.
+export function soortenVoor(category) {
+  const w = displayCategory(category);
+  return w === PRIVE_WONEN || w === PRIVE_TELECOM ? PRIVE_GROEPEN[w] : null;
+}
+
+CATEGORY_COLOR[PRIVE_WONEN] = CATEGORY_COLOR["Prive - huur"] || "bg-stone-200 text-stone-800";
+CATEGORY_COLOR[PRIVE_TELECOM] = CATEGORY_COLOR["Prive - mobiel/internet"] || "bg-stone-200 text-stone-800";
+CATEGORY_COLOR[PRIVE_ALGEMEEN] = CATEGORY_COLOR["Prive: overig"] || "bg-stone-100 text-stone-700";
