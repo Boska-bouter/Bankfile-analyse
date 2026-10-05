@@ -81,6 +81,7 @@ export default function UncertainTransactionsModal({
                   <div className="flex-1 min-w-[9rem]">
                     <p className="font-medium truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
                     <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
+                    <p className="text-[10px] text-slate-400 font-mono select-all">Tegenrekening: {tx.counterpartyIban || "—"}</p>
                     <p className="text-[10px] text-slate-400">
                       {tx.date.toLocaleDateString("nl-NL")} · {tx.confidence.label}
                     </p>

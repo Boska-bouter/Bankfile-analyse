@@ -189,7 +189,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
       for (const rule of rules) {
-        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
+        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
           const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
@@ -226,8 +226,11 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // bijvoorbeeld een Netflix-abonnement op de zakelijke rekening zichtbaar als category "Prive
   // overige abonnementen" + type "Zakelijk" (verkeerde rekening) in plaats van stilzwijgend op
   // type "Prive" gezet te worden.
+  // v312 (V33) — "verhuur" is niet hetzelfde als "huur": eerst op Overig laten beoordelen i.p.v. gokken.
+  if (/verhuur/.test(text)) return { category: "Overig", type };
+
   for (const rule of rules) {
-    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
+    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
       const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       return { category: categoryName, type };
@@ -300,7 +303,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // Sommige regels herkennen hun trefwoord ondubbelzinnig verkeerd in een specifiek, goed te
 // herkennen tekstpatroon — dit vangt die bekende gevallen af vóórdat een trefwoordmatch wordt
 // geaccepteerd, in plaats van de trefwoordenlijst zelf onveilig smal te maken (v220).
-export function isKnownFalsePositiveRuleMatch(rule, text) {
+export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // "Betaalautomaat kosten" herkent (onder andere) de merknamen van pinbetaaldiensten (SumUp,
   // Zettle, CCV, Mollie, ...) om de eigen, door de bank in rekening gebrachte servicekosten van
   // zo'n dienst te herkennen. Diezelfde merknamen staan echter OOK op de rekening van de klant die
@@ -338,6 +341,16 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
   // substring "pay.nl" (de betaaldienst Pay.nl) — dat is een heel andere partij, en dit is gewoon een
   // OV-reis, geen betaaldienst-kostenafschrijving.
   if (rule.name === "Betaalautomaat kosten" && text.includes("ovpay")) return true;
+  // v312 (V33) — "Huur" herkent het trefwoord "huur " ook BINNEN andere woorden: "verhuur" (iets anders dan
+  // huur: de tegenpartij verhuurt zelf iets) en "inhuur" (personeel). Een voorafgaande letter betekent
+  // dat het geen losstaand "huur" is, dus geen Huur-match. Bij "verhuur" valt de transactie in
+  // autoClassify bovendien eerst op "Overig" (zie daar), zodat die bewust wordt beoordeeld.
+  if (rule.name === "Huur" && /[a-zà-ÿ]huur/.test(text)) return true;
+  // "Telecom" herkent "ziggo" (provider), maar "Ziggo Dome" is de concertzaal: een uitgaansuitgave.
+  if (text.includes("ziggo dome") && rule.name !== "Prive - vrijetijd-uitgaan-vakantie & uit eten") return true;
+  // "Betaalautomaat kosten" herkent o.a. "buckaroo" — op een zakelijke rekening zijn dat servicekosten van de
+  // betaaldienst, op een privérekening vrijwel altijd een gewone online aankoop/uitje (zie Uitgaan).
+  if (rule.name === "Betaalautomaat kosten" && accountType !== "Zakelijk" && accountType !== undefined && text.includes("buckaroo")) return true;
   // "Bankkosten" herkent (onder andere) de eigen bank op naam, voor de periodieke pakket-/
   // servicekosten die de bank zelf afschrijft. Een "Betaalverzoek"/Tikkie-achtige betaling via
   // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —

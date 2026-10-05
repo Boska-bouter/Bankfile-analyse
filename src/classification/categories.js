@@ -202,6 +202,8 @@ export const DEFAULT_RULES = [
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
     "feelgoods burgers",
+    // v312 (V33)
+    "mc donald", "mcdonalds", "buckaroo", "snack", "ziggo dome", "afas live", "disney", "ticketing payments", "ticketing",
     // Vervoer/vermaak dat bij uitjes hoort, geen eigen-vervoer-/OV-kosten (die staan al bij
     // Brandstof/Reiskosten (OV)).
     " uber", "uber ", " taxi", "taxi ", " museum ", "pretpark", "attractiepark", "bowling", "escape room",

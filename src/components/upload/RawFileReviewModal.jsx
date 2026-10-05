@@ -131,6 +131,7 @@ export default function RawFileReviewModal({
                       {tx.counterparty || <ExpandableDescription tx={tx} short="(geen omschrijving)" className="inline" />}
                       {isBreakpoint && <span className="ml-1.5 text-amber-700" title="Bij deze regel klopt het lopende saldo niet meer">⚠</span>}
                       {tx.counterparty && <ExpandableDescription tx={tx} prefix="" className="block text-[10px] text-slate-400" />}
+                      {tx.counterpartyIban && <span className="block text-[10px] font-mono text-slate-400 select-all">{tx.counterpartyIban}</span>}
                     </td>
                     <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{eur(tx.amount)}</td>
                     <td className="py-1.5 pl-2 pr-5 text-right font-mono whitespace-nowrap text-slate-500">{tx.balance != null ? eur(tx.balance) : "—"}</td>

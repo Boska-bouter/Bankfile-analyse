@@ -337,6 +337,7 @@ export function DetailTable({
               <th className="text-left font-medium px-4 py-2">Categorie</th>
               <th className="text-left font-medium px-4 py-2">Type</th>
               <th className="text-left font-medium px-4 py-2">Tegenpartij</th>
+              <th className="text-left font-medium px-4 py-2">Tegenrekening</th>
               <th className="text-left font-medium px-4 py-2">Omschrijving</th>
             </tr>
           </thead>
@@ -427,6 +428,7 @@ export function DetailTable({
                   >
                     {t.counterparty}
                   </td>
+                  <td className="px-4 py-2 font-mono text-xs text-slate-500 whitespace-nowrap select-all">{t.counterpartyIban || "—"}</td>
                   <td className="px-4 py-2 text-slate-500 max-w-sm">
                     <div
                       className={`cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words" : "max-w-[14rem] truncate"}`}
