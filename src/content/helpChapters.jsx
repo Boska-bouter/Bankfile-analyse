@@ -7,8 +7,11 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <p>
         Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op basis van het percentage per
-        categorie. Alleen van toepassing op Zakelijke transacties. Standaard staan Bankkosten, alle Belastingen, alle
-        Verzekeringen, Inhuur personeel, Prive opnames/Ontvangen van zakelijk, Huur, Overig en Overboekingen aan personen op 0%.
+        categorie. Alleen van toepassing op Zakelijke transacties. Standaard staat alles op 21% (Reiskosten OV op 9%), met
+        uitzondering van categorieën waar geen BTW op zit: Bankkosten, alle Belastingen en Gemeentelijke kosten, alle
+        Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Prive opnames/Ontvangen van zakelijk,
+        interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. Inhuur personeel
+        staat juist op 21% (een freelancer factureert normaal met BTW). Per categorie aan te passen.
       </p>
     ),
   },
@@ -120,10 +123,18 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Kenteken</strong> is alleen relevant als hetzelfde leasecontract halverwege de looptijd is
           vervangen of geherfinancierd (bijv. een nieuw contract na een tussentijdse aanpassing), terwijl het nog
-          om dezelfde auto/machine gaat. Vul dan bij elk vervolgcontract hetzelfde kenteken in als bij het vorige —
-          de tool herkent dat en telt de afschrijving en bijtelling dan maar één keer, in plaats van dubbel (eenmaal
-          per contract). Bij een afwijkende cataloguswaarde/bijtellingspercentage tussen gekoppelde contracten
-          verschijnt een niet-blokkerende waarschuwing, zodat je dat zelf kunt controleren.
+          om dezelfde auto/machine gaat. Je legt dat vast als vervolgsegment van hetzelfde contract, met hetzelfde
+          kenteken als het vorige — de tool herkent dat en telt de afschrijving en bijtelling dan maar één keer, in
+          plaats van dubbel (eenmaal per contract). Bij een afwijkende cataloguswaarde/bijtellingspercentage tussen
+          gekoppelde segmenten verschijnt een niet-blokkerende waarschuwing, zodat je dat zelf kunt controleren.
+        </p>
+        <p className="font-medium text-slate-700 pt-1">Automatisch samenvoegen van leasebetalingen</p>
+        <p>
+          Staan alle betalingen van een lease-groep op dezelfde tegenrekening (IBAN) van de leasemaatschappij, in
+          dezelfde categorie, dan voegt de tool zulke groepen automatisch samen tot één lease (bijvoorbeeld wanneer
+          de omschrijving per contractnummer of naamvariant verschilt). Dat gebeurt nooit als dat IBAN ook bij
+          andere, niet-lease betalingen voorkomt. Een automatische samenvoeging is altijd ongedaan te maken; die keuze
+          wordt onthouden. Handmatig samenvoegen kan nog steeds.
         </p>
       </div>
     ),
@@ -264,7 +275,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <p>
         Elke keer dat je in de detailtabel een categorie of type corrigeert, onthoudt de tool dat voortaan voor
-        diezelfde tegenpartij — in alle jaren. Bevat het bankbestand een tegenrekening-IBAN, dan wordt die als sleutel
+        diezelfde tegenpartij — in alle jaren. Ontvangen en betaalde bedragen worden apart onthouden: een
+        correctie op de uitgaven bij een winkel geldt dus niet automatisch voor een terugbetaling van diezelfde winkel. Bevat het bankbestand een tegenrekening-IBAN, dan wordt die als sleutel
         gebruikt in plaats van de naam: dat is stabieler, want een bank kan dezelfde rekening de ene keer "KPN B.V."
         en de andere keer "KPN Mobile" noemen, terwijl het rekeningnummer gelijk blijft. Zonder IBAN in het
         bankbestand wordt de (genormaliseerde) naam gebruikt. Een regel verwijderen laat de betrokken transacties
@@ -290,9 +302,79 @@ export const HELP_CHAPTERS = [
           ingedeeld, de 🟡/🔴-transacties zijn de moeite van het bekijken waard.
         </p>
         <p>
+          <strong>Hoe het wordt geteld:</strong> de aantallen onder "Nog te controleren" tellen per{" "}
+          <em>groep</em> — zelfde tegenpartij, zelfde bedragsrichting (ontvangen of betaald) en zelfde categorie. Dertig
+          pinbetalingen bij dezelfde winkel zijn dus één punt, met erbij hoeveel transacties erachter zitten. Je
+          beoordeelt de groep één keer en dat geldt voor alle bijbehorende transacties.
+        </p>
+        <p>
+          <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah", "plus" of "spar") moeten
+          aan het begin van een woord staan en tellen niet mee als ze midden in een ander woord zitten. Zo wordt een
+          bankrekening of winkelnaam niet per ongeluk herkend op een stukje tekst. Zoekwoorden die je zelf toevoegt
+          blijven gewoon op elke plek in de tekst werken.
+        </p>
+        <p>
           Klopt een 🟡/🔴-indeling bij nazien gewoon? Dan hoef je 'm niet te wijzigen om 'm te bevestigen — het
           "✓ Klopt zo"-knopje (in de detailtabel naast het icoontje, of hier in deze lijst) legt de huidige indeling
           vast als bevestigde regel, zonder iets te veranderen. Vanaf dan is die tegenpartij 🟢.
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: "dossiercontrole",
+    titel: "Dossiercontrole (ring en open punten)",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          De kaart bovenaan het Overzicht toont per jaar het aantal <strong>open punten</strong>: wat je nog moet
+          beoordelen (onzekere indelingen, herkomst van inkomsten, overboekingen aan personen, "Overig") plus openstaande
+          vragen bij Instellingen. Daaronder staat tussen haakjes de verdeling, bijvoorbeeld "5 controle · 1 instelling".
+          Een indeling die al 🟢 is telt niet mee.
+        </p>
+        <p>
+          De <strong>ring</strong> laat zien welk deel van de controles klaar is. Zolang er nog open punten zijn, blijft
+          de ring onder de 100% — ook als het er nog maar één is op duizenden transacties. Alleen als er niets meer
+          openstaat staat er "Alles afgehandeld" en 100%.
+        </p>
+        <p className="text-xs text-slate-400">
+          Dossiercontrole zegt alleen dat de administratie rond is. Het zegt niets over of de aangifte zelf al is
+          gedaan — dat staat apart bij "Werkelijke aangifte" — en ook niet hoeveel aannames er nog in de
+          indicatieve berekening zitten ("Indicatieve aangifte").
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: "automatische-herkenning",
+    titel: "Wat de tool automatisch herkent",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Bij het inlezen deelt de tool elke transactie in volgorde in: eigen overboekingen (op IBAN, spaarrekening of
+          eigen naam), jouw eigen zoekwoorden, terugboekingen, dan de standaardcategorieën op trefwoord, daarna een
+          persoon of buitenlandse pinbetaling, winkels zonder IBAN ("Winkels divers") en als laatste "Overig". De eerste
+          regel die past wint.
+        </p>
+        <p>
+          <strong>Retour en terugbetaling:</strong> een bijschrijving met een pasvolgnummer is een teruggeboekte
+          pinbetaling en komt in dezelfde categorie als de uitgave (bijv. een Jumbo-retour onder Boodschappen). Een
+          bijschrijving met "storno", "terugboeking", "restitutie" of "terugbetaling" krijgt de categorie van de
+          partij als die herkend wordt (of van de eerdere afschrijving die je zelf al hebt ingedeeld), anders "Overig"
+          ter beoordeling. Een geldstorting bij de Geldmaat telt niet als retour. Een
+          pinbetaling wordt nooit als "persoon" aangemerkt.
+        </p>
+        <p>
+          <strong>Privé of zakelijk:</strong> het type volgt altijd de rekening waarvan is betaald. Bankkosten,
+          energie/water, gemeentelijke kosten, huur, mobiel/abonnementen en leningen op een privérekening krijgen de
+          bijbehorende "Prive - …"-categorie, tenzij het duidelijk een zakelijke uitgave is. Brandstof, parkeren en
+          zakelijke inkoop vanaf een privérekening tellen wel mee als zakelijke kosten.
+        </p>
+        <p>
+          <strong>Voorbeelden:</strong> woningcorporaties en verhuurders vallen onder Huur, laadpassen (bijv. Eneco
+          eMobility) onder Brandstof, "rente buiten limiet" onder Bankkosten, Q-Park en Yellowbrick onder Parkeren en
+          een overboeking naar een spaarrekening onder "Interne overboeking". Mis je een partij? Corrigeer 'm één keer
+          in de detailtabel of voeg een eigen zoekwoord toe; dat geldt vanaf dan overal.
         </p>
       </div>
     ),
@@ -408,7 +490,21 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Startersaftrek</strong> — alleen mogelijk als je ook zelfstandigenaftrek krijgt, in minstens 1 van
           de 5 voorgaande jaren nog geen ondernemer was, en dit niet vaker dan 2x eerder hebt toegepast (max. 3x in
-          de eerste 5 jaar). Vast bedrag, controleer dit zelf.
+          de eerste 5 jaar). Vast bedrag, controleer dit zelf. In het stappenplan kies je per jaar of de aftrek van
+          toepassing was ("Startersaftrek"); de overige jaren worden op "nee" gezet. Dit blijft per jaar aan te
+          passen. Niet voor een BV.
+        </p>
+        <p>
+          <strong>Auto</strong> — per jaar kies je: geen auto, <em>Auto op de zaak</em> (gekocht, operational lease of
+          financial lease) of <em>Privéauto zakelijk gebruikt</em>. Bij een auto op de zaak tellen de werkelijke
+          autokosten mee met een bijtelling voor privégebruik, en vervalt de %-splitsing op Brandstof/Parkeren voor dat
+          jaar. Bij een privéauto vul je de zakelijke kilometers en de vergoeding per km in. Een combinatie van beide
+          bestaat niet als keuze; heeft een oud dossier die nog, dan wordt het bij openen omgezet naar "Privéauto
+          zakelijk gebruikt" — controleer zo'n jaar even.
+        </p>
+        <p>
+          Zijn er dat jaar transacties in "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)",
+          dan staat hier ook per categorie het percentage zakelijk gebruik, net als bij huur. Leeg betekent 100%.
         </p>
         <p>
           <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan

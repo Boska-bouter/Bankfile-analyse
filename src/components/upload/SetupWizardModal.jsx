@@ -2,11 +2,31 @@ import { useState, useEffect } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
+// V65 — de wizard is herindeeld van 17 losse vragen naar 7 schermen. Elk scherm bundelt vragen die bij
+// elkaar horen; de antwoorden worden met één "Doorgaan" vastgelegd via exact dezelfde setters als voorheen.
+//   20 Bankbestanden laden            (alleen bij een leeg dossier)
+//   31 Rekeningen en rekeninghouder   (rekeningtype per bestand, eigen naam, rechtsvorm, holding)
+//   32 Andere rekeningen              (niet geladen rekeningen + spaarrekeningen)
+//   33 Klanten en leveranciers
+//   34 Auto, lease en lening          (auto, leaseauto, overige lease, lening, voorraad)
+//   35 Aangiftevragen                 (AOV, KOR, BTW-verlegd + tarief, urencriterium)
+//   36 Fiscale jaren                  (startersaftrek, BTW-kwartalen)
+//    4 Dossier opslaan
 const STEP_LABELS = {
-  10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
-  17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium", 21: "Startersaftrek",
-  20: "Bankbestanden laden", 0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Dossier opslaan",
+  20: "Bankbestanden laden",
+  31: "Rekeningen en rekeninghouder",
+  32: "Andere rekeningen",
+  33: "Klanten en leveranciers",
+  34: "Auto, lease en lening",
+  35: "Verzekering en BTW",
+  36: "Fiscale jaren",
+  4: "Dossier opslaan",
 };
+
+const KNOP = "rounded-lg px-3 py-1.5 text-xs font-medium border";
+const KNOP_UIT = "border-slate-300 text-slate-600 hover:bg-slate-50";
+const KNOP_AAN = "bg-teal-700 text-white border-teal-700";
+const PRIMAIR = "rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-40 disabled:hover:bg-teal-700";
 
 export default function SetupWizardModal({
   forceRechtsvormStep = false,
@@ -27,19 +47,22 @@ export default function SetupWizardModal({
   verwachteAOV, setVerwachteAOV,
   autoWizardStatus, setAutoWizardStatus,
   years, onSeedAutoStatus,
-  zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus,
+  zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap,
   startersaftrekStatus, onSeedStartersaftrekStatus,
   heeftVoorraad, setHeeftVoorraad,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
   zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
   opdrachtgeversGevraagd, onAddBusinessKeywords, onAddBusinessExpenseKeywords,
+  suggesties = {},
   onClose,
 }) {
+  // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
   const [typedNow, setTypedNow] = useState({});
-  // V42 — alle bestanden waarvan in DEZE wizard het rekeningtype is (of wordt) gevraagd, ook nadat ze
-  // zijn beantwoord. `pendingFileNames` bevat alleen nog ongetypeerde bestanden, waardoor "Terug" naar
-  // stap 0 een lege vraag gaf en een gemaakte keuze niet meer te corrigeren was.
+  const zet = (patch) => setTypedNow((p) => ({ ...p, ...patch }));
+
+  // Alle bestanden waarvan in DEZE wizard het rekeningtype is (of wordt) gevraagd, ook nadat ze zijn
+  // beantwoord — zodat "Terug" een gemaakte keuze nog laat corrigeren.
   const [sessionFiles, setSessionFiles] = useState(() => [...pendingFileNames]);
   useEffect(() => {
     setSessionFiles((prev) => {
@@ -48,88 +71,46 @@ export default function SetupWizardModal({
     });
   }, [pendingFileNames.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Bevriest bij het openen welke stappen er ÜBERHAUPT relevant zijn — dat mag daarna niet meer
-  // veranderen door het beantwoorden van een vraag zelf (dat veranderde namelijk precies de
-  // voorwaarde die bepaalde of de wizard nog iets te doen had, waardoor die zichzelf verdween of
-  // bleef hangen op een net-beantwoorde stap). Een "wachtrij" van resterende stappen (in plaats
-  // van een index in een krimpende lijst) kan nooit vastlopen: elke voltooide stap wordt expliciet
-  // gemarkeerd, en de KOR=Ja-uitzondering (BTW-verlegd/kwartalen worden dan overbodig) filtert
-  // alleen toekomstige, nog niet getoonde stappen weg. Stap 5 (BTW-tarief) hoort hier om dezelfde
-  // reden al bij vanaf het begin, ook al is pas ná het antwoord op stap 2 bekend of hij relevant
-  // is (alleen bij "nee" op BTW-verlegd) — dat wordt hieronder net als de KOR-uitzondering pas
-  // live bepaald, niet bij het openen.
-  //
-  // De vragen over lease/lening/AOV/voorraad (6, 19, 7-9) staan bewust vóór alles — op het moment dat de
-  // wizard opent zijn de net geladen bestanden al ingelezen en geclassificeerd (dat gebeurt vóórdat
-  // de wizard verschijnt), dus een hier ingevulde naam kan meteen gezocht worden in de transacties
-  // die er al liggen. Ze worden alleen ÉÉN keer gevraagd (niet opnieuw bij een volgend bestand) —
-  // dat is waarom ze hier conditioneel zijn op "nog niet beantwoord" (null), in plaats van steeds
-  // opnieuw in de wachtrij te komen zoals stap 0 dat wel doet.
+  // Bij het openen bevroren: welke vragen zijn nog onbeantwoord (null) en dus relevant. Een antwoord
+  // mag dit later niet veranderen (de wizard verdween anders onder je handen). Alleen toekomstige
+  // schermen worden live gefilterd (BV, KOR) — zie remainingSteps.
+  const [needs] = useState(() => {
+    const vol = !(alreadyEstablished && !forceRechtsvormStep);
+    return {
+      naam: vol && eigenNamen === null,
+      rechtsvorm: vol && (rechtsvorm === null || forceRechtsvormStep),
+      holding: vol && heeftHolding === null,
+      andere: vol && (eigenRekeningenExtra === null || forceRechtsvormStep),
+      spaar: vol && zakelijkeSpaarRekening === null,
+      klanten: vol && opdrachtgeversGevraagd === null,
+      auto: vol && autoWizardStatus === null,
+      lease: vol && verwachteLease === null,
+      leaseOverig: vol && verwachteLeaseOverig === null,
+      lening: vol && verwachteLening === null,
+      voorraad: vol && heeftVoorraad === null,
+      aov: vol && verwachteAOV === null,
+      uren: vol && Object.keys(zelfstandigenaftrekStatus || {}).length === 0,
+      starters: vol && Object.keys(startersaftrekStatus || {}).length === 0,
+      kor: vol && korRegeling === null,
+      verlegd: vol && korRegeling !== true && btwVerlegd === null,
+      kwartalen: vol && korRegeling !== true && quartersToAsk.length > 0,
+    };
+  });
+  // De kwartalenlijst wordt bij het openen vastgezet: een aangevinkt kwartaal verdwijnt anders direct
+  // uit `quartersToAsk` (het heeft dan al een status) en de rij springt weg terwijl je nog aan het klikken bent.
+  const [kwartalenLijst] = useState(() => [...quartersToAsk]);
+
   const [initialSteps] = useState(() => {
-    // alreadyEstablished: dit is geen gloednieuw dossier maar een bestaand project waar al minstens
-    // één bestand een rekeningtype heeft (dus de dossierbrede vragen hieronder zijn ooit al gesteld,
-    // beantwoord óf bewust met "Later invullen" overgeslagen). In dat laatste geval bleef de bijbehorende
-    // state op null staan, waardoor zo'n vraag — zonder deze uitzondering — bij ÉLK nieuw geladen
-    // bestand weer terug zou komen (bijv. de zakelijke-spaarrekening- of auto-vraag). Dat is verwarrend
-    // bij een bestaand project: op expliciet verzoek wordt dan alleen nog het rekeningtype gevraagd
-    // (stap 0) plus de vaste opslag-herinnering (stap 4) — de rest geldt als al afgehandeld en is,
-    // indien alsnog nodig, gewoon te beantwoorden via "Basisvragen bewerken" (forceRechtsvormStep).
-    if (alreadyEstablished && !forceRechtsvormStep) {
-      const list = [];
-      if (pendingFileNames.length > 0) list.push(0);
-      list.push(4);
-      return list;
-    }
     const list = [];
-    // V38 — leeg dossier: eerst de bankbestanden laden (stap 20), daarna per bestand het rekeningtype
-    // (stap 0, wordt live verborgen zolang er geen ongetypeerd bestand is).
-    if (loadFilesFirst) { list.push(20); list.push(0); }
-    // Rekeningtype (zakelijk/privé) van het/de net geladen bestand(en) eerst vragen — dat is de
-    // meest concrete, direct te beantwoorden vraag over wat er nu ligt, vóórdat de (dossierbrede)
-    // vragen hieronder volgen. Heeft geen invloed op de lease/lening/AOV-zoekacties verderop (die
-    // zoeken sowieso los van het rekeningtype in de tekst van de al ingelezen transacties).
-    if (pendingFileNames.length > 0 && !loadFilesFirst) list.push(0);
-    if (eigenNamen === null) list.push(10);
-    // Rechtsvorm (en de holding-vraag die daarvan afhangt) komt bewust meteen na de naam van de
-    // rekeninghouder — vóór alle andere vragen — zodat KOR/BTW-verlegd hieronder al weten of ze
-    // relevant zijn (beide zijn niet van toepassing bij een BV, zie de live-filter verderop).
-    // forceRechtsvormStep: handmatig geopend via "Basisvragen bewerken" (in plaats van bij het
-    // laden van een nieuw bestand) — dan hoort de Rechtsvorm-vraag er altijd bij, ook als hij al
-    // eerder beantwoord is, zodat zzp/BV achteraf nog omgezet kan worden. De live-filter hieronder
-    // (op rechtsvorm) zorgt er vanzelf voor dat na een wissel de juiste vervolgvragen verschijnen.
-    if (rechtsvorm === null || forceRechtsvormStep) list.push(14);
-    if (heeftHolding === null) list.push(15);
-    // forceRechtsvormStep (handmatig geopend via "Basisvragen bewerken") hoort ook deze stap altijd
-    // weer te tonen — anders is er, zodra er ooit al een (lege of gevulde) lijst is opgeslagen, geen
-    // enkele manier meer om later alsnog een privé-tegenrekening toe te voegen of te wijzigen.
-    if (eigenRekeningenExtra === null || forceRechtsvormStep) list.push(11);
-    if (zakelijkeSpaarRekening === null) list.push(16);
-    if (opdrachtgeversGevraagd === null) { list.push(12); list.push(13); }
-    // Auto-vraag staat bewust vóór de leaseauto-vraag: bij "financial lease" als antwoord schakelt
-    // die vraag door naar stap 6 hieronder (die dan al in de wachtrij staat) voor de
-    // contractdetails, in plaats van twee keer los naar een auto/lease te vragen.
-    if (autoWizardStatus === null) list.push(17);
-    if (verwachteLease === null) list.push(6);
-    // v275 — losse, altijd gestelde vraag voor overige financiële leaseobjecten (machines,
-    // apparatuur, geen auto) — onafhankelijk van het antwoord op de auto-vraag, zodat die niet
-    // langer meelift op de (nu conditionele) leaseauto-vraag.
-    if (verwachteLeaseOverig === null) list.push(19);
-    if (verwachteLening === null) list.push(7);
-    if (verwachteAOV === null) list.push(8);
-    if (heeftVoorraad === null) list.push(9);
-    // Urencriterium is een IB/Zvw-vraag (zelfstandigenaftrek) en dus niet van toepassing bij een BV
-    // — bij het openen van de wizard is rechtsvorm echter nog niet per se al beantwoord (die vraag
-    // staat verderop in deze lijst), dus wordt de BV-uitzondering hieronder pas live gefilterd
-    // (net als bij stap 15/1/2), niet hier bij het opbouwen van de lijst.
-    if (Object.keys(zelfstandigenaftrekStatus || {}).length === 0) list.push(18);
-    // V58 — startersaftrek per jaar (gebruikers moesten dit eerst zelf per jaar bij "Persoonlijke aannames" zetten).
-    if (Object.keys(startersaftrekStatus || {}).length === 0) list.push(21);
-    if (korRegeling === null) list.push(1);
-    if (korRegeling !== true && btwVerlegd === null) {
-      list.push(2);
-      list.push(5);
-    }
-    if (korRegeling !== true && quartersToAsk.length > 0) list.push(3);
+    const vol = !(alreadyEstablished && !forceRechtsvormStep);
+    if (vol && loadFilesFirst) list.push(20);
+    // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
+    if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
+    if (needs.andere || needs.spaar) list.push(32);
+    if (needs.klanten) list.push(33);
+    if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad) list.push(34);
+    if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
+    if (needs.starters || needs.kwartalen) list.push(36);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -137,22 +118,15 @@ export default function SetupWizardModal({
   const [showStepList, setShowStepList] = useState(false);
   const [history, setHistory] = useState([]);
 
+  const isBV = rechtsvorm === "bv";
   const remainingSteps = initialSteps.filter((id) => {
-    // Stap 0 blijft/komt terug zolang er een ongetypeerd bestand is (bijv. na "Terug" naar stap 20 nog een bestand geladen).
-    if (doneIds.has(id) && !(id === 0 && pendingFileNames.length > 0)) return false;
-    if (id === 0 && sessionFiles.length === 0) return false; // geen bestanden in deze wizard
-    if ((id === 2 || id === 3) && korRegeling === true) return false;
-    if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
-    if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
-    if ((id === 1 || id === 2) && rechtsvorm === "bv") return false; // KOR en BTW-verlegd zijn n.v.t. bij een BV (altijd gewone BTW-plicht, niet verlegd)
-    if (id === 18 && rechtsvorm === "bv") return false; // zelfstandigenaftrek/urencriterium is n.v.t. bij een BV
-    if (id === 21 && rechtsvorm === "bv") return false; // startersaftrek is n.v.t. bij een BV
-    // v274 — stap 6 (leaseauto) stond altijd los in de wachtrij (zie de toelichting bij stap 17
-    // hierboven) om ook een leaseobject te kunnen vragen los van de auto-vraag. Maar als bij de
-    // auto-vraag (stap 17) al "Nee" of "Privéauto zakelijk gebruikt" is gekozen, is er per
-    // definitie geen auto van de zaak — dan is "Is er een leaseauto (financieel) in dit bedrijf?"
-    // een verwarrende herhaling i.p.v. een zinvolle vervolgvraag, dus die slaan we dan over.
-    if (id === 6 && autoWizardStatus && (autoWizardStatus.status === "prive" || autoWizardStatus.status === "geen")) return false;
+    // Scherm 31 komt terug zolang er een ongetypeerd bestand is (bijv. na "Terug" naar 20 nog een bestand geladen).
+    if (doneIds.has(id) && !(id === 31 && pendingFileNames.length > 0)) return false;
+    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !needs.holding) return false;
+    // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
+    if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || needs.uren)))) return false;
+    // Scherm 36: startersaftrek niet bij een BV; kwartalen niet bij KOR.
+    if (id === 36 && !((needs.starters && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
     return true;
   });
 
@@ -168,9 +142,6 @@ export default function SetupWizardModal({
     setHistory((prev) => [...prev, currentStepId]);
     setDoneIds((prev) => new Set([...prev, currentStepId]));
   };
-  // Terug naar de vorige vraag — haalt de laatst-voltooide stap uit doneIds, waardoor die
-  // vanzelf weer als eerste in remainingSteps verschijnt (dezelfde volgorde als initialSteps).
-  // Kan tot en met de allerlaatste stap, zolang de wizard nog open is.
   const goBack = () => {
     if (history.length === 0) return;
     const vorige = history[history.length - 1];
@@ -179,13 +150,23 @@ export default function SetupWizardModal({
   };
 
   const allTypedNow = sessionFiles.every((f) => typedNow[f]);
+  const props = {
+    typedNow, zet, needs, isBV, goNext, years: years || [],
+    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames,
+    rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd,
+    eigenNamen, setEigenNamen,
+    eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
+    onAddBusinessKeywords, onAddBusinessExpenseKeywords, suggesties,
+    autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
+    setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV,
+    onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, zelfstandigenaftrekStatus,
+    onSeedStartersaftrekStatus, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[88vh] flex flex-col">
         <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
-          {/* v307 (V30) — afbreken: per ongeluk (bijv. met een aanraakscherm) op "Basisvragen bewerken"
-              getikt, of de vragen later willen invullen. Al gegeven antwoorden blijven bewaard. */}
           <button
             type="button"
             onClick={onClose}
@@ -194,15 +175,13 @@ export default function SetupWizardModal({
           >
             <X className="h-4 w-4" /> Afbreken
           </button>
-          <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
+          <p className="text-xs text-slate-300">Scherm {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
-          {/* v306 (V28) — voortgangsbalk + uitklapbaar overzicht van alle vragen (✓ beantwoord / huidige /
-              nog open), zodat je ziet hoeveel er nog komt en niet blind door "Stap x van y" klikt. */}
           <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
             <div className="h-full bg-white/80" style={{ width: `${Math.round((doneIds.size / Math.max(initialSteps.length, 1)) * 100)}%` }} />
           </div>
           <button type="button" onClick={() => setShowStepList((v) => !v)} className="mt-1.5 text-[11px] text-teal-100 hover:text-white underline decoration-dotted">
-            {showStepList ? "Overzicht verbergen" : `Alle vragen (${Math.max(initialSteps.length - doneIds.size, 0)} nog open)`}
+            {showStepList ? "Overzicht verbergen" : `Alle schermen (${Math.max(initialSteps.length - doneIds.size, 0)} nog open)`}
           </button>
           {showStepList && (
             <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
@@ -217,340 +196,6 @@ export default function SetupWizardModal({
         </div>
 
         <div className="p-5 overflow-y-auto flex-1">
-          {currentStepId === 10 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">
-                Eigen naam (en die van je fiscaal partner)? Zo herkent de tool overboekingen naar/van jezelf als privé.
-              </p>
-              <input
-                type="text"
-                value={typedNow.eigenNaamOndernemer ?? ""}
-                onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamOndernemer: e.target.value }))}
-                placeholder="Naam rekeninghouder"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                value={typedNow.eigenNaamPartner ?? ""}
-                onChange={(e) => setTypedNow((p) => ({ ...p, eigenNaamPartner: e.target.value }))}
-                placeholder="Naam fiscaal partner (optioneel)"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-slate-400">Optioneel — je kunt dit ook later nog invullen, of overslaan.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setEigenNamen({ ondernemer: typedNow.eigenNaamOndernemer?.trim() || null, partner: typedNow.eigenNaamPartner?.trim() || null }); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800"
-                >
-                  Doorgaan
-                </button>
-              </div>
-            </div>
-          )}
-          {currentStepId === 11 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">
-                Andere eigen rekeningen die je niet laadt? Met het rekeningnummer herkent de tool overboekingen daarheen als privé.
-              </p>
-              {(() => {
-                // Bij het opnieuw openen van deze stap (bijv. via "Basisvragen bewerken", nadat
-                // deze lijst al eerder is opgeslagen) staat er in typedNow nog niets — val dan terug
-                // op de al opgeslagen eigenRekeningenExtra, zodat die niet stilzwijgend leeg lijkt en
-                // bij op "Doorgaan" klikken per ongeluk wordt overschreven met een lege lijst.
-                const huidigeLijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
-                if (huidigeLijst.length === 0) return null;
-                return (
-                  <ul className="space-y-1">
-                    {huidigeLijst.map((r, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
-                        <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {r.accountType === "Zakelijk" ? "Zakelijk" : "Privé"}</span>
-                        <button
-                          onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningenLijst: huidigeLijst.filter((_, j) => j !== i) }))}
-                          className="shrink-0 text-xs text-slate-400 hover:text-slate-700"
-                        >
-                          Verwijderen
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-              <input
-                type="text"
-                value={typedNow.eigenRekeningIban ?? ""}
-                onChange={(e) => setTypedNow((p) => ({ ...p, eigenRekeningIban: e.target.value }))}
-                placeholder="Rekeningnummer (IBAN)"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Zakelijk" }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Zakelijk" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
-                >
-                  Zakelijke rekening
-                </button>
-                <button
-                  onClick={() => setTypedNow((p) => ({ ...p, eigenRekeningType: "Prive" }))}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.eigenRekeningType === "Prive" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
-                >
-                  Privérekening
-                </button>
-                <button
-                  onClick={() => {
-                    if (!typedNow.eigenRekeningIban?.trim() && !typedNow.eigenRekeningType) return;
-                    setTypedNow((p) => ({
-                      ...p,
-                      eigenRekeningenLijst: [...(p.eigenRekeningenLijst ?? eigenRekeningenExtra ?? []), { iban: p.eigenRekeningIban?.trim() || null, accountType: p.eigenRekeningType || null }],
-                      eigenRekeningIban: "", eigenRekeningType: null,
-                    }));
-                  }}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  + Toevoegen
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Meerdere rekeningen? Klik na elke rekening op <strong>"+ Toevoegen"</strong> om 'm aan de lijst
-                hierboven te zetten, en vul daarna de volgende in.
-              </p>
-              <p className="text-xs text-slate-400">De gegevens zijn niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    let lijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
-                    if (typedNow.eigenRekeningIban?.trim() || typedNow.eigenRekeningType) {
-                      lijst = [...lijst, { iban: typedNow.eigenRekeningIban?.trim() || null, accountType: typedNow.eigenRekeningType || null }];
-                      setTypedNow((p) => ({ ...p, eigenRekeningenLijst: lijst, eigenRekeningIban: "", eigenRekeningType: null }));
-                    }
-                    setEigenRekeningenExtra(lijst);
-                    goNext();
-                  }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
-                >
-                  Doorgaan
-                </button>
-              </div>
-            </div>
-          )}
-          {currentStepId === 16 && (
-            <VerwachteNaamVraag
-              vraag="Heb je een zakelijke spaarrekening gekoppeld aan je zakelijke rekening? Dit is meestal een pakketkeuze bij dezelfde bank, dus die overboekingen staan gewoon tussen de transacties van je zakelijke rekening zelf."
-              placeholder="Naam zoals in je bankexport (bijv. Zakelijke Oranje Spaarrekening)"
-              value={typedNow.zakelijkeSpaarNaam ?? ""}
-              onChange={(v) => setTypedNow((p) => ({ ...p, zakelijkeSpaarNaam: v }))}
-              onJa={(naam) => { setZakelijkeSpaarRekening({ status: "ja", naam: naam || null }); goNext(); }}
-              onNee={() => { setZakelijkeSpaarRekening({ status: "nee", naam: null }); goNext(); }}
-            />
-          )}
-          {currentStepId === 12 && (
-            <LijstVraag
-              vraag="Wat zijn je grootste of vaste opdrachtgevers? (max. 5)"
-              toelichting="Zo kan de tool binnenkomende betalingen van deze klanten meteen als omzet herkennen, in plaats van dat je dat achteraf per klant moet bevestigen."
-              placeholder="Naam opdrachtgever"
-              maxItems={5}
-              lijst={typedNow.opdrachtgeversLijst || []}
-              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, opdrachtgeversLijst: lijst }))}
-              onKlaar={(lijst) => { onAddBusinessKeywords(lijst); goNext(); }}
-            />
-          )}
-          {currentStepId === 13 && (
-            <LijstVraag
-              vraag="En je grootste of vaste leveranciers? (optioneel)"
-              toelichting="Zelfde idee, maar dan voor vaste zakelijke uitgaven."
-              placeholder="Naam leverancier"
-              maxItems={5}
-              lijst={typedNow.leveranciersLijst || []}
-              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leveranciersLijst: lijst }))}
-              onKlaar={(lijst) => { onAddBusinessExpenseKeywords(lijst); goNext(); }}
-            />
-          )}
-          {currentStepId === 17 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Heeft de zaak een auto?</p>
-              <div className="flex flex-wrap gap-2">
-                {/* V62 — geen optie "Beide"; oude dossiers met "beide" worden bij het laden omgezet naar "prive". */}
-                {[
-                  { key: "geen", label: "Nee" },
-                  { key: "zaak", label: "Auto op de zaak" },
-                  { key: "prive", label: "Privéauto zakelijk gebruikt" },
-                ].map((opt) => (
-                  <button
-                    key={opt.key}
-                    onClick={() => setTypedNow((p) => ({ ...p, autoKeuze: opt.key, autoSoort: opt.key === "prive" ? null : p.autoSoort }))}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoKeuze === opt.key ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {typedNow.autoKeuze === "zaak" && (
-                <div className="pt-1">
-                  <p className="text-sm text-slate-600 mb-2">Is die auto (van de zaak) gekocht, operational lease, of financial lease?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { key: "koop", label: "Gekocht (eigendom)" },
-                      { key: "operational", label: "Operational lease" },
-                      { key: "financial", label: "Financial lease" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => setTypedNow((p) => ({ ...p, autoSoort: opt.key }))}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium border ${typedNow.autoSoort === opt.key ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  {typedNow.autoSoort === "koop" && (
-                    <p className="mt-2 text-xs text-slate-400">
-                      Een gekochte auto is een bedrijfsmiddel — geef 'm zo op in het Activa-paneel verderop (voor afschrijving en mogelijke KIA).
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <p className="text-xs text-slate-400">
-                Bepaalt op termijn welk fiscaal model voor autokosten geldt (bijtelling bij een auto op de zaak,
-                kilometervergoeding bij een privéauto). Per jaar nog te corrigeren in "Persoonlijke aannames"
-                als de situatie halverwege het dossier verandert.
-              </p>
-
-              <div className="flex gap-2">
-                <button
-                  disabled={!typedNow.autoKeuze || (typedNow.autoKeuze === "zaak" && !typedNow.autoSoort)}
-                  onClick={() => {
-                    const status = typedNow.autoKeuze === "geen" ? null : typedNow.autoKeuze;
-                    const soort = typedNow.autoKeuze === "prive" ? null : (typedNow.autoSoort || null);
-                    setAutoWizardStatus({ status: typedNow.autoKeuze, soort });
-                    onSeedAutoStatus(years, status);
-                    goNext();
-                  }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-40"
-                >
-                  Doorgaan
-                </button>
-              </div>
-            </div>
-          )}
-          {currentStepId === 6 && (
-            <VerwachteLijstVraag
-              vraag="Is er een leaseauto (financieel) in dit bedrijf?"
-              toelichting={
-                typedNow.autoSoort === "financial"
-                  ? "Je gaf net aan dat de auto van de zaak financial lease is — vul hieronder de gegevens in. Kunnen er meerdere zijn (bijv. nog een auto)? Voeg ze dan allemaal toe."
-                  : "Kunnen er meerdere zijn (bijv. meerdere auto's)? Voeg ze dan allemaal toe."
-              }
-              placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)"
-              lijst={typedNow.leaseLijst || []}
-              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseLijst: lijst }))}
-              onKlaar={(lijst) => { setVerwachteLease(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
-            />
-          )}
-          {currentStepId === 19 && (
-            <VerwachteLijstVraag
-              vraag="Is er nog een ander financieel leaseobject in dit bedrijf (bijv. een machine of apparatuur, geen auto)?"
-              toelichting="Kunnen er meerdere zijn? Voeg ze dan allemaal toe. Gaat het juist om een leaseauto? Die is bij de auto-vraag hiervoor al aan bod gekomen."
-              placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)"
-              lijst={typedNow.leaseOverigLijst || []}
-              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leaseOverigLijst: lijst }))}
-              onKlaar={(lijst) => { setVerwachteLeaseOverig(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
-            />
-          )}
-          {currentStepId === 7 && (
-            <VerwachteLijstVraag
-              vraag="Is er een zakelijke lening (bank, Qredits, familie, etc.)?"
-              toelichting="Kunnen er meerdere zijn? Voeg ze dan allemaal toe."
-              placeholder="Bij wie is de lening (bijv. Qredits)"
-              lijst={typedNow.leningLijst || []}
-              onChangeLijst={(lijst) => setTypedNow((p) => ({ ...p, leningLijst: lijst }))}
-              onKlaar={(lijst) => { setVerwachteLening(lijst.map((naam) => ({ naam, gevonden: false }))); goNext(); }}
-            />
-          )}
-          {currentStepId === 8 && (
-            <VerwachteNaamVraag
-              vraag="Heb je een AOV (arbeidsongeschiktheidsverzekering)?"
-              placeholder="Naam verzekeraar (bijv. Movir, Achmea)"
-              value={typedNow.aov ?? ""}
-              onChange={(v) => setTypedNow((p) => ({ ...p, aov: v }))}
-              onJa={(naam) => { setVerwachteAOV({ status: "ja", naam: naam || null }); goNext(); }}
-              onNee={() => { setVerwachteAOV({ status: "nee" }); goNext(); }}
-            />
-          )}
-          {currentStepId === 9 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Heb je voorraad in het bedrijf (goederen die je inkoopt om door te verkopen)?</p>
-              <p className="text-xs text-slate-400">
-                Alleen een signaal; er wordt nog niets automatisch berekend.
-              </p>
-              <div className="flex gap-2">
-                <button onClick={() => { setHeeftVoorraad(true); goNext(); }} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Ja</button>
-                <button onClick={() => { setHeeftVoorraad(false); goNext(); }} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Nee</button>
-              </div>
-            </div>
-          )}
-          {currentStepId === 18 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Voldoe je aan het urencriterium voor de zelfstandigenaftrek?</p>
-              <p className="text-xs text-slate-400">
-                Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies "Onbekend": dan toont de tool beide scenario's naast elkaar.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "ja"); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
-                >
-                  Ja
-                </button>
-                <button
-                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "nee"); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
-                >
-                  Nee
-                </button>
-                <button
-                  onClick={() => { onSeedZelfstandigenaftrekStatus(years, "onbekend"); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50"
-                >
-                  Onbekend — toon beide scenario's
-                </button>
-              </div>
-              <p className="text-xs text-slate-400">
-                Per jaar nog te corrigeren in "Persoonlijke aannames" als de situatie halverwege het dossier
-                verandert.
-              </p>
-            </div>
-          )}
-          {currentStepId === 21 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">In welke jaren heb je startersaftrek toegepast?</p>
-              <p className="text-xs text-slate-400">
-                Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als je aan het urencriterium voldoet).
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {(years || []).map((y) => {
-                  const aan = (typedNow.starterJaren || []).includes(y);
-                  return (
-                    <button
-                      key={y}
-                      onClick={() => setTypedNow((p) => ({ ...p, starterJaren: aan ? (p.starterJaren || []).filter((j) => j !== y) : [...(p.starterJaren || []), y] }))}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      {y}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { onSeedStartersaftrekStatus(years, typedNow.starterJaren || []); goNext(); }}
-                  className="rounded-lg px-4 py-2 text-sm font-medium bg-teal-700 text-white hover:bg-teal-800"
-                >
-                  {(typedNow.starterJaren || []).length > 0 ? "Doorgaan" : "Geen startersaftrek"}
-                </button>
-              </div>
-            </div>
-          )}
           {currentStepId === 20 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
@@ -582,218 +227,12 @@ export default function SetupWizardModal({
               </p>
             </div>
           )}
-          {currentStepId === 0 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
-              {sessionFiles.map((fileName) => {
-                const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
-                return (
-                  <div key={fileName} className="rounded-lg border border-slate-200 p-3 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
-                      <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
-                      <button
-                        onClick={() => {
-                          onAccountTypeChoose(fileName, "Zakelijk");
-                          setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" }));
-                          if (sessionFiles.every((f) => f === fileName || typedNow[f])) goNext(); // dit was de laatste — meteen door naar de volgende vraag
-                        }}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
-                      >
-                        <Building2 className="h-3.5 w-3.5" /> Zakelijk
-                      </button>
-                      <button
-                        onClick={() => {
-                          onAccountTypeChoose(fileName, "Prive");
-                          setTypedNow((p) => ({ ...p, [fileName]: "Prive" }));
-                          if (sessionFiles.every((f) => f === fileName || typedNow[f])) goNext();
-                        }}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-                      >
-                        <Home className="h-3.5 w-3.5" /> Privé
-                      </button>
-                    </div>
-                    {typedNow[fileName] && continuityMatch && (
-                      <div className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-                        {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
-                        <span>
-                          {continuityMatch.fileA === fileName ? (
-                            <>Dit bestand loopt door in <strong>{continuityMatch.fileB}</strong> — eindsaldo hier {eur(continuityMatch.aLastBalance)}, beginsaldo daar {eur(continuityMatch.bOpeningBalance)}.</>
-                          ) : (
-                            <>Dit lijkt een vervolg op <strong>{continuityMatch.fileA}</strong> — eindsaldo daar {eur(continuityMatch.aLastBalance)}, beginsaldo hier {eur(continuityMatch.bOpeningBalance)}.</>
-                          )}
-                          {!continuityMatch.ok && ` Verschil ${eur(continuityMatch.diff)} — kan een periodegrens zijn, of de moeite waard om na te gaan.${Math.abs(continuityMatch.diff) < 100 ? " Een verschil van een paar euro is meestal gewoon afronding." : ""}`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {currentStepId === 14 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Onderneem je als eenmanszaak/zzp of vanuit een BV?</p>
-              <p className="text-xs text-slate-400">
-                Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    // Omzetting van BV terug naar zzp: bij het kiezen van BV worden KOR/BTW-verlegd
-                    // hieronder stilzwijgend op "nee" gezet (niet van toepassing bij een BV) — dat is
-                    // geen echt antwoord voor de zzp-situatie, dus die moeten weer als onbeantwoord
-                    // gaan gelden. Deze wizard-sessie vraagt ze zelf niet meteen opnieuw (de
-                    // wachtrij ligt al vast bij het openen), maar de bestaande checklist/"Werk te
-                    // doen" en het BTW-instellingenpaneel signaleren daarna vanzelf dat KOR en
-                    // BTW-verlegd nog beantwoord moeten worden.
-                    if (rechtsvorm === "bv") {
-                      setKorRegeling(null);
-                      setBtwVerlegd(null);
-                    }
-                    setRechtsvorm("zzp");
-                    goNext();
-                  }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "zzp" ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Eenmanszaak/zzp
-                </button>
-                <button
-                  onClick={() => {
-                    setRechtsvorm("bv");
-                    // Een BV kent geen KOR en heeft normaliter geen BTW-verlegd-regeling nodig — deze
-                    // vragen worden hierboven al uit de wachtrij gefilterd zodra rechtsvorm "bv" is,
-                    // maar ook de onderliggende waarden zelf op "false" zetten voorkomt dat elders in
-                    // de app (aangifte-overzicht, to-do-lijst) deze nog als "nog niet beantwoord" tonen.
-                    setKorRegeling(false);
-                    setBtwVerlegd(false);
-                    goNext();
-                  }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${rechtsvorm === "bv" ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  BV
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStepId === 15 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Staat er een holding boven deze BV (een holding-werkmaatschappijstructuur)?</p>
-              <p className="text-xs text-slate-400">
-                Dit dossier volgt de bankrekening van de werkmaatschappij. Het antwoord bepaalt alleen welke toelichting de tool toont (o.a. bij winstuitkering en liquidatieverliesregeling).
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setHeeftHolding(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Ja, holding + werkmaatschappij
-                </button>
-                <button
-                  onClick={() => { setHeeftHolding(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${heeftHolding === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Nee, alleen deze BV
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStepId === 1 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Val je onder de kleineondernemersregeling (KOR)?</p>
-              <p className="text-xs text-slate-400">Bij KOR bereken je geen BTW en is er geen BTW-aangifteplicht.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setKorRegeling(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Ja, KOR
-                </button>
-                <button
-                  onClick={() => { setKorRegeling(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${korRegeling === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Nee
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStepId === 2 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Werk je met BTW-verlegd (bijv. onderaannemer in de bouw)?</p>
-              <p className="text-xs text-slate-400">
-                Standaardinstelling. Kies de situatie die het vaakst voorkomt; per klant later aan te passen bij "Zakelijke tegenpartijen (inkomsten)".
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setBtwVerlegd(true); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === true ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Ja
-                </button>
-                <button
-                  onClick={() => { setBtwVerlegd(false); goNext(); }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${btwVerlegd === false ? "bg-teal-700 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-                >
-                  Nee
-                </button>
-              </div>
-            </div>
-          )}
-
-          {currentStepId === 5 && (
-            <TarievenVraag
-              gekozen={typedNow.btwTarieven || []}
-              onChangeGekozen={(lijst) => setTypedNow((p) => ({ ...p, btwTarieven: lijst }))}
-              onKlaar={(tarieven, standaard) => { onSetIncomeBtwRateChoice?.(tarieven, standaard); goNext(); }}
-            />
-          )}
-
-          {currentStepId === 3 && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600">Welke BTW-kwartalen zijn al aangegeven en/of betaald?</p>
-              <div className="flex items-center gap-4 text-xs">
-                <span className="w-24" />
-                <button
-                  onClick={() => quartersToAsk.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "aangegeven", true))}
-                  className="text-slate-500 underline hover:text-slate-700"
-                >
-                  Alles aangegeven
-                </button>
-                <button
-                  onClick={() => quartersToAsk.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "betaald", true))}
-                  className="text-slate-500 underline hover:text-slate-700"
-                >
-                  Alles betaald
-                </button>
-              </div>
-              <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
-                {quartersToAsk.map((q) => {
-                  const key = `${q.year}-Q${q.kwartaal}`;
-                  const status = kwartaalStatus[key] || {};
-                  return (
-                    <div key={key} className="flex items-center gap-4 p-2.5 text-sm">
-                      <span className="w-24 font-medium">{q.year} — Q{q.kwartaal}</span>
-                      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <input type="checkbox" checked={!!status.aangegeven} onChange={(e) => setKwartaalStatusField(key, "aangegeven", e.target.checked)} />
-                        Aangegeven
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <input type="checkbox" checked={!!status.betaald} onChange={(e) => setKwartaalStatusField(key, "betaald", e.target.checked)} />
-                        Betaald
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-slate-400">Dit kan later altijd nog aangepast worden bij "BTW per kwartaal".</p>
-            </div>
-          )}
-
+          {currentStepId === 31 && <Scherm31 {...props} />}
+          {currentStepId === 32 && <Scherm32 {...props} />}
+          {currentStepId === 33 && <Scherm33 {...props} />}
+          {currentStepId === 34 && <Scherm34 {...props} />}
+          {currentStepId === 35 && <Scherm35 {...props} />}
+          {currentStepId === 36 && <Scherm36 {...props} />}
           {currentStepId === 4 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-700 font-medium">
@@ -827,7 +266,7 @@ export default function SetupWizardModal({
             {currentStepId !== 4 ? (
               <button
                 onClick={() => {
-                  if ((currentStepId === 12 || currentStepId === 13) && opdrachtgeversGevraagd === null) {
+                  if (currentStepId === 33 && opdrachtgeversGevraagd === null) {
                     onAddBusinessKeywords ? onAddBusinessKeywords([]) : null;
                   }
                   goNext();
@@ -840,18 +279,9 @@ export default function SetupWizardModal({
               <span />
             )}
           </div>
-          {/* Elke stap met een eigen "Ja"/"Nee"/"Doorgaan"-knop die al opslaat én doorgaat staat
-              hieronder in de uitsluitingslijst — een extra "Doorgaan" hieronder zou dubbelop zijn,
-              en erger: die knop slaat niets op, dus zou het zojuist gekozen antwoord (of getypte
-              tekst) stilletjes negeren. Stap 1 (KOR) en 2 (BTW-verlegd) hoorden hier eerder ten
-              onrechte niet bij — die hebben net als de andere Ja/Nee-stappen al hun eigen knoppen,
-              dus stond er per ongeluk een tweede, niets-opslaande "Doorgaan"-knop naast. Stap 17
-              (Auto) hoorde hier v275/v276 ook nog niet bij: die heeft zelf al een eigen "Doorgaan"-
-              knop die autoWizardStatus opslaat vóór goNext() — met deze tweede, niets-opslaande knop
-              ernaast leek de auto-vraag beantwoord (de wizard ging door) terwijl autoWizardStatus in
-              werkelijkheid null bleef, waardoor de leaseauto-vraag (stap 6) alsnog verscheen alsof er
-              nooit "Privéauto"/"Nee" was gekozen. */}
-          {![1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21].includes(currentStepId) && (currentStepId !== 0 || allTypedNow) && (currentStepId !== 20 || loadedFileNames.length > 0) && (
+          {/* Schermen 31 t/m 36 hebben een eigen "Doorgaan"-knop die de antwoorden eerst vastlegt;
+              een tweede, niets-opslaande knop hier zou dat stilletjes negeren. */}
+          {(currentStepId === 4 || (currentStepId === 20 && loadedFileNames.length > 0)) && (
             <button
               onClick={goNext}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
@@ -865,177 +295,768 @@ export default function SetupWizardModal({
   );
 }
 
-// BTW-tarief-op-omzet-vraag: een aanvinklijst van de drie mogelijke tarieven (kan er meer dan één
-// zijn — sommige zzp'ers factureren zowel 21% als 9%, of hebben daarnaast nog een vrijgestelde
-// dienst). Bij precies één aangevinkt tarief gaat de wizard meteen door; bij meerdere volgt een
-// tweede fase die vraagt welk tarief het meeste voorkomt — dat wordt het standaardtarief voor de
-// generieke "Zakelijke inkomsten"-categorie, de rest blijft als eigen categorie beschikbaar om per
-// klant/transactie te kiezen (met een latere "Werk te doen"-herinnering om dat na te lopen).
-const TARIEF_OPTIES = [
-  { waarde: "21", label: "Hoog tarief (21%)" },
-  { waarde: "9", label: "Laag tarief (9%)" },
-  { waarde: "0", label: "Vrijgesteld (0%) — bijv. bepaalde zorg-, onderwijs- of financiële diensten" },
-];
-function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
-  const [fase, setFase] = useState("kiezen"); // "kiezen" | "meestVoorkomend"
-  const toggle = (waarde) => {
-    onChangeGekozen(gekozen.includes(waarde) ? gekozen.filter((w) => w !== waarde) : [...gekozen, waarde]);
-  };
-  const doorgaan = () => {
-    if (gekozen.length === 0) return;
-    if (gekozen.length === 1) { onKlaar(gekozen, gekozen[0]); return; }
-    setFase("meestVoorkomend");
-  };
-  if (fase === "meestVoorkomend") {
-    return (
-      <div className="space-y-3">
-        <p className="text-sm text-slate-600">Welk tarief komt het meeste voor?</p>
-        <p className="text-xs text-slate-400">
-          Dit wordt het standaardtarief. Andere tarieven kies je per klant of transactie (categorie "Zakelijke inkomsten 0%/9%/21%").
-        </p>
-        <div className="flex flex-col gap-2">
-          {TARIEF_OPTIES.filter((o) => gekozen.includes(o.waarde)).map((o) => (
-            <button
-              key={o.waarde}
-              onClick={() => onKlaar(gekozen, o.waarde)}
-              className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 text-left"
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setFase("kiezen")} className="text-xs text-slate-400 hover:text-slate-600">
-          ← Tarieven aanpassen
-        </button>
-      </div>
-    );
-  }
+// ---------------------------------------------------------------------------------------------
+// Hulpcomponenten
+// ---------------------------------------------------------------------------------------------
+
+function Sectie({ titel, children, uitleg }) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de diensten die je factureert?</p>
-      <p className="text-xs text-slate-400">
-        Vink aan wat van toepassing is (meer dan één mag). Meestal 21%; 9% voor een beperkte groep; 0% voor vrijgestelde diensten (o.a. zorg, onderwijs, financieel).
-      </p>
-      <div className="flex flex-col gap-2">
-        {TARIEF_OPTIES.map((o) => (
-          <label key={o.waarde} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-            <input type="checkbox" checked={gekozen.includes(o.waarde)} onChange={() => toggle(o.waarde)} />
-            {o.label}
-          </label>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={doorgaan}
-          disabled={gekozen.length === 0}
-          className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          Doorgaan
-        </button>
-      </div>
+    <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+      <p className="text-sm font-medium text-slate-700">{titel}</p>
+      {uitleg && <p className="text-xs text-slate-400">{uitleg}</p>}
+      {children}
     </div>
   );
 }
 
-// Gedeelde vraag-vorm voor een lijstje namen (opdrachtgevers/leveranciers): typen, op "+
-// Toevoegen" klikken, herhalen, en "Klaar" om door te gaan — dezelfde opzet als bij de extra
-// eigen rekeningen, maar zonder het type-veld.
-function LijstVraag({ vraag, toelichting, placeholder, maxItems, lijst, onChangeLijst, onKlaar }) {
-  const [huidig, setHuidig] = useState("");
-  const vol = maxItems != null && lijst.length >= maxItems;
-  const voegToe = () => {
-    if (!huidig.trim() || vol) return;
-    onChangeLijst([...lijst, huidig.trim()]);
-    setHuidig("");
-  };
-  const doorgaan = () => {
-    // Vergeet nooit tekst die nog in het invoerveld staat maar niet expliciet is toegevoegd —
-    // anders lijkt het net of "Doorgaan" het gewoon negeert. Ook de lokale lijst zelf bijwerken
-    // (niet alleen wat aan onKlaar wordt doorgegeven), anders is deze tekst weer weg zodra je met
-    // "Terug" naar deze stap terugkeert.
-    const finalLijst = huidig.trim() && !vol ? [...lijst, huidig.trim()] : lijst;
-    if (finalLijst !== lijst) onChangeLijst(finalLijst);
-    onKlaar(finalLijst);
-  };
+// Ja/Nee-keuze (+ optioneel extra opties) met uitklapbare inhoud bij "Ja".
+function JaNee({ value, onChange, opties, children }) {
+  const lijst = opties || [{ k: true, l: "Ja" }, { k: false, l: "Nee" }];
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-600">{vraag}</p>
-      {toelichting && <p className="text-xs text-slate-400">{toelichting}</p>}
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {lijst.map((o) => (
+          <button key={String(o.k)} type="button" onClick={() => onChange(o.k)} className={`${KNOP} ${value === o.k ? KNOP_AAN : KNOP_UIT}`}>
+            {o.l}
+          </button>
+        ))}
+      </div>
+      {value === true && children}
+    </div>
+  );
+}
+
+// Lijst met namen (typen of uit suggesties kiezen).
+function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [] }) {
+  const [huidig, setHuidig] = useState("");
+  const vol = max != null && lijst.length >= max;
+  const voeg = (naam) => {
+    const n = (naam || "").trim();
+    if (!n || vol || lijst.some((x) => x.toLowerCase() === n.toLowerCase())) return;
+    onChange([...lijst, n]);
+  };
+  const open = suggesties.filter((s) => !lijst.some((x) => x.toLowerCase() === s.naam.toLowerCase()));
+  return (
+    <div className="space-y-2">
       {lijst.length > 0 && (
         <ul className="space-y-1">
           {lijst.map((naam, i) => (
             <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
               <span className="truncate">{naam}</span>
-              <button onClick={() => onChangeLijst(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">
-                Verwijderen
-              </button>
+              <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
             </li>
           ))}
         </ul>
       )}
       {!vol && (
-        <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={huidig}
+            onChange={(e) => setHuidig(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voeg(huidig); setHuidig(""); } }}
+            onBlur={() => { if (huidig.trim()) { voeg(huidig); setHuidig(""); } }}
+            placeholder={placeholder}
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <button type="button" onClick={() => { voeg(huidig); setHuidig(""); }} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+            + Toevoegen
+          </button>
+        </div>
+      )}
+      {open.length > 0 && !vol && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-slate-400">Gevonden in je bankdata — klik om toe te voegen:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {open.map((s) => (
+              <button key={s.naam} type="button" onClick={() => voeg(s.naam)} className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-[11px] text-teal-800 hover:bg-teal-100">
+                + {s.naam} <span className="text-teal-600">({s.count}×)</span>
+              </button>
+            ))}
+            {open.length > 1 && (
+              <button type="button" onClick={() => onChange([...lijst, ...open.map((s) => s.naam)].slice(0, max ?? 99))} className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-slate-50">
+                Alles overnemen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Zet bij "Ja" automatisch de gevonden suggesties in een nog lege lijst.
+function jaMetSuggesties(huidigeLijst, suggestieLijst, max) {
+  if (huidigeLijst && huidigeLijst.length > 0) return huidigeLijst;
+  return (suggestieLijst || []).slice(0, max ?? 3).map((s) => s.naam);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scherm 31 — rekeningen en rekeninghouder
+// ---------------------------------------------------------------------------------------------
+function Scherm31({
+  typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow,
+  rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
+}) {
+  const toonRechtsvorm = needs.rechtsvorm;
+  const toonHolding = needs.holding && rechtsvorm === "bv";
+  const klaar =
+    (sessionFiles.length === 0 || allTypedNow) &&
+    (!toonRechtsvorm || rechtsvorm != null) &&
+    (!toonHolding || heeftHolding != null);
+  const naamO = typedNow.eigenNaamOndernemer ?? eigenNamen?.ondernemer ?? "";
+  const naamP = typedNow.eigenNaamPartner ?? eigenNamen?.partner ?? "";
+  return (
+    <div className="space-y-4">
+      {sessionFiles.length > 0 && (
+        <Sectie titel="Is dit een zakelijke rekening of een privérekening?">
+          {sessionFiles.map((fileName) => {
+            const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
+            return (
+              <div key={fileName} className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
+                  <button
+                    type="button"
+                    onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); zet({ [fileName]: "Zakelijk" }); }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
+                  >
+                    <Building2 className="h-3.5 w-3.5" /> Zakelijk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { onAccountTypeChoose(fileName, "Prive"); zet({ [fileName]: "Prive" }); }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                  >
+                    <Home className="h-3.5 w-3.5" /> Privé
+                  </button>
+                </div>
+                {typedNow[fileName] && continuityMatch && (
+                  <div className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+                    {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                    <span>
+                      {continuityMatch.fileA === fileName ? (
+                        <>Dit bestand loopt door in <strong>{continuityMatch.fileB}</strong> — eindsaldo hier {eur(continuityMatch.aLastBalance)}, beginsaldo daar {eur(continuityMatch.bOpeningBalance)}.</>
+                      ) : (
+                        <>Dit lijkt een vervolg op <strong>{continuityMatch.fileA}</strong> — eindsaldo daar {eur(continuityMatch.aLastBalance)}, beginsaldo hier {eur(continuityMatch.bOpeningBalance)}.</>
+                      )}
+                      {!continuityMatch.ok && ` Verschil ${eur(continuityMatch.diff)} — kan een periodegrens zijn, of de moeite waard om na te gaan.${Math.abs(continuityMatch.diff) < 100 ? " Een verschil van een paar euro is meestal gewoon afronding." : ""}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </Sectie>
+      )}
+
+      {needs.naam && (
+        <Sectie titel="Eigen naam (en die van je fiscaal partner)" uitleg="Zo herkent de tool overboekingen naar/van jezelf als privé. Optioneel.">
+          <input
+            type="text"
+            value={naamO}
+            onChange={(e) => zet({ eigenNaamOndernemer: e.target.value })}
+            placeholder="Naam rekeninghouder"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={naamP}
+            onChange={(e) => zet({ eigenNaamPartner: e.target.value })}
+            placeholder="Naam fiscaal partner (optioneel)"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+        </Sectie>
+      )}
+
+      {toonRechtsvorm && (
+        <Sectie titel="Onderneem je als eenmanszaak/zzp of vanuit een BV?" uitleg="Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.">
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={huidig}
-              onChange={(e) => setHuidig(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); voegToe(); } }}
-              placeholder={placeholder}
-              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <button onClick={voegToe} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
+            <button
+              type="button"
+              onClick={() => {
+                // Terug van BV naar zzp: KOR/BTW-verlegd stonden bij BV stilzwijgend op "nee" — dat is geen
+                // echt antwoord voor de zzp-situatie, dus die gelden weer als onbeantwoord.
+                if (rechtsvorm === "bv") { setKorRegeling(null); setBtwVerlegd(null); }
+                setRechtsvorm("zzp");
+              }}
+              className={`${KNOP} ${rechtsvorm === "zzp" ? KNOP_AAN : KNOP_UIT}`}
+            >
+              Eenmanszaak/zzp
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRechtsvorm("bv");
+                // Een BV kent geen KOR en geen BTW-verlegd-regeling: ook de waarden zelf op "false".
+                setKorRegeling(false);
+                setBtwVerlegd(false);
+              }}
+              className={`${KNOP} ${rechtsvorm === "bv" ? KNOP_AAN : KNOP_UIT}`}
+            >
+              BV
+            </button>
+          </div>
+          {toonHolding && (
+            <div className="pt-2 space-y-1.5">
+              <p className="text-xs text-slate-600">Staat er een holding boven deze BV?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setHeeftHolding(true)} className={`${KNOP} ${heeftHolding === true ? KNOP_AAN : KNOP_UIT}`}>Ja, holding + werkmaatschappij</button>
+                <button type="button" onClick={() => setHeeftHolding(false)} className={`${KNOP} ${heeftHolding === false ? KNOP_AAN : KNOP_UIT}`}>Nee, alleen deze BV</button>
+              </div>
+            </div>
+          )}
+        </Sectie>
+      )}
+
+      <button
+        type="button"
+        disabled={!klaar}
+        onClick={() => {
+          if (needs.naam) {
+            setEigenNamen({ ondernemer: naamO.trim() || null, partner: naamP.trim() || null });
+          }
+          goNext();
+        }}
+        className={PRIMAIR}
+      >
+        Doorgaan
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scherm 32 — andere rekeningen (niet geladen) + spaarrekeningen
+// ---------------------------------------------------------------------------------------------
+const REKENING_SOORTEN = [
+  { k: "Zakelijk", spaar: false, l: "Zakelijke rekening" },
+  { k: "Prive", spaar: false, l: "Privérekening" },
+  { k: "Zakelijk", spaar: true, l: "Zakelijke spaarrekening" },
+  { k: "Prive", spaar: true, l: "Privé-spaarrekening" },
+];
+const soortLabel = (r) => REKENING_SOORTEN.find((s) => s.k === r.accountType && !!s.spaar === !!r.soort)?.l || (r.accountType === "Zakelijk" ? "Zakelijk" : "Privé");
+
+function Scherm32({ typedNow, zet, needs, goNext, eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening }) {
+  const lijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
+  const spaarGekoppeld = typedNow.spaarGekoppeld ?? (zakelijkeSpaarRekening?.status === "ja" ? true : null);
+  const spaarNaam = typedNow.zakelijkeSpaarNaam ?? zakelijkeSpaarRekening?.naam ?? "";
+  const maakEntry = () => {
+    if (!typedNow.eigenRekeningIban?.trim() && typedNow.eigenRekeningSoort == null) return null;
+    const s = REKENING_SOORTEN[typedNow.eigenRekeningSoort ?? 1];
+    return { iban: typedNow.eigenRekeningIban?.trim() || null, accountType: s.k, ...(s.spaar ? { soort: "spaar" } : {}) };
+  };
+  return (
+    <div className="space-y-4">
+      {needs.andere && (
+        <Sectie
+          titel="Andere eigen rekeningen die je niet laadt?"
+          uitleg="Met het rekeningnummer herkent de tool overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die je niet laadt kun je hier opgeven."
+        >
+          {lijst.length > 0 && (
+            <ul className="space-y-1">
+              {lijst.map((r, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
+                  <span className="truncate">{r.iban || "(geen rekeningnummer)"} — {soortLabel(r)}</span>
+                  <button type="button" onClick={() => zet({ eigenRekeningenLijst: lijst.filter((_, j) => j !== i) })} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <input
+            type="text"
+            value={typedNow.eigenRekeningIban ?? ""}
+            onChange={(e) => zet({ eigenRekeningIban: e.target.value })}
+            placeholder="Rekeningnummer (IBAN)"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            {REKENING_SOORTEN.map((s, idx) => (
+              <button key={s.l} type="button" onClick={() => zet({ eigenRekeningSoort: idx })} className={`${KNOP} ${typedNow.eigenRekeningSoort === idx ? KNOP_AAN : KNOP_UIT}`}>{s.l}</button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                const e = maakEntry();
+                if (!e) return;
+                zet({ eigenRekeningenLijst: [...lijst, e], eigenRekeningIban: "", eigenRekeningSoort: null });
+              }}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
               + Toevoegen
             </button>
           </div>
-          <p className="text-[11px] text-slate-400">
-            Kan het er meer dan één zijn? Klik na elke naam op <strong>"+ Toevoegen"</strong> om 'm aan de lijst
-            hierboven te zetten, en typ daarna de volgende.
-          </p>
-        </div>
+          <p className="text-[11px] text-slate-400">Meerdere rekeningen? Klik na elke rekening op <strong>"+ Toevoegen"</strong>.</p>
+        </Sectie>
       )}
+
+      {needs.spaar && (
+        <Sectie
+          titel="Zakelijke spaarrekening gekoppeld aan je zakelijke rekening?"
+          uitleg="Meestal een pakketkeuze bij dezelfde bank: die overboekingen staan dan gewoon tussen de transacties van je zakelijke rekening."
+        >
+          <JaNee value={spaarGekoppeld === null ? null : spaarGekoppeld} onChange={(v) => zet({ spaarGekoppeld: v })}>
+            <input
+              type="text"
+              value={spaarNaam}
+              onChange={(e) => zet({ zakelijkeSpaarNaam: e.target.value })}
+              placeholder="Naam zoals in je bankexport (bijv. Zakelijke Oranje Spaarrekening) — optioneel"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </JaNee>
+        </Sectie>
+      )}
+
+      <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
+      <button
+        type="button"
+        onClick={() => {
+          if (needs.andere) {
+            let l = lijst;
+            const e = maakEntry();
+            if (e) l = [...lijst, e];
+            setEigenRekeningenExtra(l);
+          }
+          if (needs.spaar) {
+            setZakelijkeSpaarRekening(spaarGekoppeld === true ? { status: "ja", naam: spaarNaam.trim() || null } : { status: "nee", naam: null });
+          }
+          goNext();
+        }}
+        className={PRIMAIR}
+      >
+        Doorgaan
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scherm 33 — klanten en leveranciers
+// ---------------------------------------------------------------------------------------------
+function Scherm33({ typedNow, zet, goNext, onAddBusinessKeywords, onAddBusinessExpenseKeywords, suggesties }) {
+  const klanten = typedNow.opdrachtgeversLijst || [];
+  const lev = typedNow.leveranciersLijst || [];
+  return (
+    <div className="space-y-4">
+      <Sectie
+        titel="Grootste of vaste opdrachtgevers (max. 5)"
+        uitleg="Zo herkent de tool binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat je dat achteraf per klant moet bevestigen."
+      >
+        <NaamLijst lijst={klanten} onChange={(l) => zet({ opdrachtgeversLijst: l })} placeholder="Naam opdrachtgever" max={5} suggesties={suggesties.opdrachtgevers || []} />
+      </Sectie>
+      <Sectie titel="Grootste of vaste leveranciers (max. 5, optioneel)" uitleg="Zelfde idee, maar dan voor vaste zakelijke uitgaven.">
+        <NaamLijst lijst={lev} onChange={(l) => zet({ leveranciersLijst: l })} placeholder="Naam leverancier" max={5} suggesties={suggesties.leveranciers || []} />
+      </Sectie>
       <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
-      <div className="flex gap-2">
-        <button onClick={doorgaan} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
+      <button
+        type="button"
+        onClick={() => {
+          onAddBusinessKeywords(klanten);
+          onAddBusinessExpenseKeywords(lev);
+          goNext();
+        }}
+        className={PRIMAIR}
+      >
+        Doorgaan
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Scherm 34 — auto, lease en lening
+// ---------------------------------------------------------------------------------------------
+function Scherm34({
+  typedNow, zet, needs, goNext, years,
+  autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
+  setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, suggesties,
+}) {
+  const t = typedNow;
+  const autoKeuze = t.autoKeuze ?? null;
+  // Is er per definitie geen auto van de zaak (nee / privéauto)? Dan vervalt de leaseauto-vraag.
+  const autoNu = autoKeuze ?? autoWizardStatus?.status ?? null;
+  const geenZaakAuto = autoNu === "geen" || autoNu === "prive";
+  const toonLeaseAuto = needs.lease && !geenZaakAuto;
+  const toonAuto = needs.auto;
+  const leaseAutoJa = t.leaseAutoJa ?? null;
+  const klaar =
+    (!toonAuto || (autoKeuze != null && (autoKeuze !== "zaak" || t.autoSoort))) &&
+    (!toonLeaseAuto || leaseAutoJa != null) &&
+    (!needs.leaseOverig || t.leaseOverigJa != null) &&
+    (!needs.lening || t.leningJa != null) &&
+    (!needs.voorraad || t.voorraadJa != null);
+  const alleNee = () => {
+    const patch = {};
+    if (toonLeaseAuto) { patch.leaseAutoJa = false; patch.leaseLijst = []; }
+    if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigLijst = []; }
+    if (needs.lening) { patch.leningJa = false; patch.leningLijst = []; }
+    if (needs.voorraad) patch.voorraadJa = false;
+    if (toonAuto) { patch.autoKeuze = "geen"; patch.autoSoort = null; }
+    zet(patch);
+  };
+  return (
+    <div className="space-y-4">
+      {toonAuto && (
+        <Sectie titel="Heeft de zaak een auto?" uitleg="Bepaalt welk fiscaal model voor autokosten geldt: bijtelling bij een auto op de zaak, kilometervergoeding bij een privéauto. Per jaar nog te corrigeren in Persoonlijke aannames.">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "geen", label: "Nee" },
+              { key: "zaak", label: "Auto op de zaak" },
+              { key: "prive", label: "Privéauto zakelijk gebruikt" },
+            ].map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => zet({ autoKeuze: o.key, autoSoort: o.key === "zaak" ? t.autoSoort : null })}
+                className={`${KNOP} ${autoKeuze === o.key ? KNOP_AAN : KNOP_UIT}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {autoKeuze === "zaak" && (
+            <div className="pt-1 space-y-1.5">
+              <p className="text-xs text-slate-600">Gekocht, operational lease of financial lease?</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: "koop", label: "Gekocht (eigendom)" },
+                  { key: "operational", label: "Operational lease" },
+                  { key: "financial", label: "Financial lease" },
+                ].map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    onClick={() => {
+                      const patch = { autoSoort: o.key };
+                      // Financial lease → de leaseauto-vraag hieronder staat meteen op "Ja".
+                      if (o.key === "financial" && t.leaseAutoJa == null) {
+                        patch.leaseAutoJa = true;
+                        patch.leaseLijst = jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto);
+                      }
+                      zet(patch);
+                    }}
+                    className={`${KNOP} ${t.autoSoort === o.key ? KNOP_AAN : KNOP_UIT}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              {t.autoSoort === "koop" && (
+                <p className="text-xs text-slate-400">Een gekochte auto is een bedrijfsmiddel — geef 'm zo op in het Activa-paneel verderop (voor afschrijving en mogelijke KIA).</p>
+              )}
+            </div>
+          )}
+        </Sectie>
+      )}
+
+      {toonLeaseAuto && (
+        <Sectie
+          titel="Is er een leaseauto (financieel) in dit bedrijf?"
+          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's? Voeg ze allemaal toe." : "Meerdere auto's? Voeg ze allemaal toe."}
+        >
+          <JaNee
+            value={leaseAutoJa}
+            onChange={(v) => zet({ leaseAutoJa: v, leaseLijst: v ? jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto) : [] })}
+          >
+            <NaamLijst lijst={t.leaseLijst || []} onChange={(l) => zet({ leaseLijst: l })} placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)" suggesties={suggesties.leaseAuto || []} />
+          </JaNee>
+        </Sectie>
+      )}
+
+      {needs.leaseOverig && (
+        <Sectie titel="Nog een ander financieel leaseobject (bijv. machine of apparatuur, geen auto)?">
+          <JaNee value={t.leaseOverigJa ?? null} onChange={(v) => zet({ leaseOverigJa: v, leaseOverigLijst: v ? t.leaseOverigLijst || [] : [] })}>
+            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
+          </JaNee>
+        </Sectie>
+      )}
+
+      {needs.lening && (
+        <Sectie titel="Is er een zakelijke lening (bank, Qredits, familie, etc.)?" uitleg="Meerdere? Voeg ze allemaal toe.">
+          <JaNee value={t.leningJa ?? null} onChange={(v) => zet({ leningJa: v, leningLijst: v ? jaMetSuggesties(t.leningLijst, suggesties.lening) : [] })}>
+            <NaamLijst lijst={t.leningLijst || []} onChange={(l) => zet({ leningLijst: l })} placeholder="Bij wie is de lening (bijv. Qredits)" suggesties={suggesties.lening || []} />
+          </JaNee>
+        </Sectie>
+      )}
+
+      {needs.voorraad && (
+        <Sectie titel="Heb je voorraad (goederen die je inkoopt om door te verkopen)?" uitleg="Alleen een signaal; er wordt nog niets automatisch berekend.">
+          <JaNee value={t.voorraadJa ?? null} onChange={(v) => zet({ voorraadJa: v })} />
+        </Sectie>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={!klaar}
+          onClick={() => {
+            if (toonAuto) {
+              const status = autoKeuze === "geen" ? null : autoKeuze;
+              const soort = autoKeuze === "zaak" ? t.autoSoort || null : null;
+              setAutoWizardStatus({ status: autoKeuze, soort });
+              onSeedAutoStatus(years, status);
+            }
+            if (needs.lease) {
+              const l = toonLeaseAuto && leaseAutoJa ? t.leaseLijst || [] : [];
+              setVerwachteLease(l.map((naam) => ({ naam, gevonden: false })));
+            }
+            if (needs.leaseOverig) {
+              const l = t.leaseOverigJa ? t.leaseOverigLijst || [] : [];
+              setVerwachteLeaseOverig(l.map((naam) => ({ naam, gevonden: false })));
+            }
+            if (needs.lening) {
+              const l = t.leningJa ? t.leningLijst || [] : [];
+              setVerwachteLening(l.map((naam) => ({ naam, gevonden: false })));
+            }
+            if (needs.voorraad) setHeeftVoorraad(!!t.voorraadJa);
+            goNext();
+          }}
+          className={PRIMAIR}
+        >
           Doorgaan
         </button>
+        <button type="button" onClick={alleNee} className="text-xs text-slate-500 underline hover:text-slate-700">Alles nee</button>
       </div>
     </div>
   );
 }
 
-// Zelfde lijst-opzet als LijstVraag, specifiek voor lease/lening — het verschil is puur
-// terminologie in de tekst (deze vraag gaat over "is er een X", niet over "wat zijn je grootste Y").
-function VerwachteLijstVraag({ vraag, toelichting, placeholder, lijst, onChangeLijst, onKlaar }) {
-  return <LijstVraag vraag={vraag} toelichting={toelichting} placeholder={placeholder} lijst={lijst} onChangeLijst={onChangeLijst} onKlaar={onKlaar} />;
+// ---------------------------------------------------------------------------------------------
+// Scherm 35 — AOV, KOR, BTW-verlegd (+ tarief), urencriterium
+// ---------------------------------------------------------------------------------------------
+const TARIEF_OPTIES = [
+  { waarde: "21", label: "Hoog tarief (21%)" },
+  { waarde: "9", label: "Laag tarief (9%)" },
+  { waarde: "0", label: "Vrijgesteld (0%) — bijv. bepaalde zorg-, onderwijs- of financiële diensten" },
+];
+const UREN_OPTIES = [
+  { k: "ja", l: "Ja" },
+  { k: "nee", l: "Nee" },
+  { k: "onbekend", l: "Onbekend" },
+];
+
+function Scherm35({
+  typedNow, zet, needs, isBV, goNext, years,
+  korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd, setVerwachteAOV,
+  onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, suggesties,
+}) {
+  const t = typedNow;
+  const toonKor = needs.kor && !isBV;
+  const kor = korRegeling; // direct vastgelegd bij een klik (zoals voorheen)
+  const toonVerlegd = needs.verlegd && !isBV && kor !== true;
+  const toonUren = needs.uren && !isBV;
+  const tarieven = t.btwTarieven || [];
+  const urenModus = t.urenModus ?? null; // "ja" | "nee" | "onbekend" | "perjaar"
+  const urenPerJaar = t.urenPerJaar || {};
+  const verlegd = btwVerlegd; // true/false/null
+  const tariefKlaar = verlegd !== false || (tarieven.length > 0 && (tarieven.length === 1 || t.btwStandaard));
+  const klaar =
+    (!needs.aov || t.aovJa != null) &&
+    (!toonKor || (kor !== null && kor !== undefined)) &&
+    (!toonVerlegd || (kor === true || (verlegd !== null && verlegd !== undefined && tariefKlaar))) &&
+    (!toonUren || (urenModus != null && (urenModus !== "perjaar" || years.every((y) => urenPerJaar[y]))));
+  const alleNee = () => {
+    if (needs.aov) zet({ aovJa: false, aovNaam: "" });
+    if (toonKor) setKorRegeling(false);
+    if (toonVerlegd) setBtwVerlegd(false);
+  };
+  const toggleTarief = (w) => {
+    const next = tarieven.includes(w) ? tarieven.filter((x) => x !== w) : [...tarieven, w];
+    zet({ btwTarieven: next, btwStandaard: next.length === 1 ? next[0] : next.includes(t.btwStandaard) ? t.btwStandaard : null });
+  };
+  const aovSug = suggesties.aov || [];
+  return (
+    <div className="space-y-4">
+      {needs.aov && (
+        <Sectie titel="Heb je een AOV (arbeidsongeschiktheidsverzekering)?">
+          <JaNee
+            value={t.aovJa ?? null}
+            onChange={(v) => zet({ aovJa: v, aovNaam: v ? t.aovNaam || aovSug[0]?.naam || "" : "" })}
+          >
+            <input
+              type="text"
+              value={t.aovNaam ?? ""}
+              onChange={(e) => zet({ aovNaam: e.target.value })}
+              placeholder="Naam verzekeraar (bijv. Movir, Achmea) — optioneel"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            {aovSug.length > 0 && !t.aovNaam && (
+              <p className="text-[11px] text-slate-400">Gevonden in je bankdata: {aovSug.map((s) => `${s.naam} (${s.count}×)`).join(", ")}</p>
+            )}
+          </JaNee>
+        </Sectie>
+      )}
+
+      {toonKor && (
+        <Sectie titel="Val je onder de kleineondernemersregeling (KOR)?" uitleg="Bij KOR bereken je geen BTW en is er geen BTW-aangifteplicht.">
+          <JaNee value={kor ?? null} onChange={(v) => setKorRegeling(v)} opties={[{ k: true, l: "Ja, KOR" }, { k: false, l: "Nee" }]} />
+        </Sectie>
+      )}
+
+      {toonVerlegd && kor !== true && (
+        <Sectie titel="Werk je met BTW-verlegd (bijv. onderaannemer in de bouw)?" uitleg="Standaardinstelling. Kies de situatie die het vaakst voorkomt; per klant later aan te passen bij &quot;Zakelijke tegenpartijen (inkomsten)&quot;.">
+          <JaNee value={verlegd ?? null} onChange={(v) => setBtwVerlegd(v)} />
+          {verlegd === false && (
+            <div className="pt-1 space-y-1.5">
+              <p className="text-xs text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de diensten die je factureert? (meer dan één mag)</p>
+              <div className="flex flex-col gap-1.5">
+                {TARIEF_OPTIES.map((o) => (
+                  <label key={o.waarde} className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 cursor-pointer">
+                    <input type="checkbox" checked={tarieven.includes(o.waarde)} onChange={() => toggleTarief(o.waarde)} />
+                    {o.label}
+                  </label>
+                ))}
+              </div>
+              {tarieven.length > 1 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-600">Welk tarief komt het meeste voor? Dat wordt het standaardtarief; de andere kies je per klant of transactie.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TARIEF_OPTIES.filter((o) => tarieven.includes(o.waarde)).map((o) => (
+                      <button key={o.waarde} type="button" onClick={() => zet({ btwStandaard: o.waarde })} className={`${KNOP} ${t.btwStandaard === o.waarde ? KNOP_AAN : KNOP_UIT}`}>
+                        {o.waarde}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Sectie>
+      )}
+
+      {toonUren && (
+        <Sectie
+          titel="Voldoe je aan het urencriterium voor de zelfstandigenaftrek?"
+          uitleg="Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies Onbekend: dan toont de tool beide scenario's naast elkaar."
+        >
+          <div className="space-y-1.5">
+            <p className="text-xs text-slate-600">In alle jaren ({years[0]}{years.length > 1 ? `–${years[years.length - 1]}` : ""}):</p>
+            <div className="flex flex-wrap gap-2">
+              {[...UREN_OPTIES, { k: "perjaar", l: "Per jaar verschillend" }].map((o) => (
+                <button key={o.k} type="button" onClick={() => zet({ urenModus: o.k })} className={`${KNOP} ${urenModus === o.k ? KNOP_AAN : KNOP_UIT}`}>{o.l}</button>
+              ))}
+            </div>
+          </div>
+          {urenModus === "perjaar" && (
+            <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
+              {years.map((y) => (
+                <div key={y} className="flex items-center gap-3 p-2 text-sm">
+                  <span className="w-12 font-medium">{y}</span>
+                  <div className="flex gap-1.5">
+                    {UREN_OPTIES.map((o) => (
+                      <button key={o.k} type="button" onClick={() => zet({ urenPerJaar: { ...urenPerJaar, [y]: o.k } })} className={`${KNOP} ${urenPerJaar[y] === o.k ? KNOP_AAN : KNOP_UIT}`}>{o.l}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Sectie>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={!klaar}
+          onClick={() => {
+            if (needs.aov) setVerwachteAOV(t.aovJa ? { status: "ja", naam: (t.aovNaam || "").trim() || null } : { status: "nee" });
+            if (toonVerlegd && kor !== true && verlegd === false && onSetIncomeBtwRateChoice) {
+              onSetIncomeBtwRateChoice(tarieven, tarieven.length === 1 ? tarieven[0] : t.btwStandaard);
+            }
+            if (toonUren) {
+              if (urenModus === "perjaar") {
+                if (onSeedZelfstandigenaftrekMap) onSeedZelfstandigenaftrekMap(urenPerJaar);
+                else for (const y of years) onSeedZelfstandigenaftrekStatus([y], urenPerJaar[y]);
+              } else onSeedZelfstandigenaftrekStatus(years, urenModus);
+            }
+            goNext();
+          }}
+          className={PRIMAIR}
+        >
+          Doorgaan
+        </button>
+        <button type="button" onClick={alleNee} className="text-xs text-slate-500 underline hover:text-slate-700">Alles nee (AOV, KOR, BTW-verlegd)</button>
+      </div>
+    </div>
+  );
 }
 
-// Gedeelde vraag-vorm voor lease/lening/AOV: een naam (optioneel) plus Ja/Nee. Bij "Ja" mag de
-// naam leeg blijven — de gegevens (en ook de naam zelf) mogen altijd later nog worden ingevuld,
-// dit is puur om meteen te kunnen zoeken in de net geladen transacties als de naam al bekend is.
-function VerwachteNaamVraag({ vraag, placeholder, value, onChange, onJa, onNee }) {
+// ---------------------------------------------------------------------------------------------
+// Scherm 36 — fiscale jaren: startersaftrek en BTW-kwartalen
+// ---------------------------------------------------------------------------------------------
+function Scherm36({
+  typedNow, zet, needs, isBV, goNext, years, korRegeling,
+  onSeedStartersaftrekStatus, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+}) {
+  const toonStarters = needs.starters && !isBV;
+  const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
+  const starterJaren = typedNow.starterJaren || [];
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-600">{vraag}</p>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-      />
-      <p className="text-xs text-slate-400">
-        De naam is niet verplicht — je kunt "Ja" ook zonder naam invullen, en de gegevens altijd later aanvullen.
-        Weet je de naam wel? Dan kan de tool meteen zoeken of die al in de geladen bestanden voorkomt.
-      </p>
-      <div className="flex gap-2">
-        <button onClick={() => onJa(value.trim())} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
-          Ja
-        </button>
-        <button onClick={onNee} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">
-          Nee
-        </button>
-      </div>
+    <div className="space-y-4">
+      {toonStarters && (
+        <Sectie
+          titel="In welke jaren heb je startersaftrek toegepast?"
+          uitleg="Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als je aan het urencriterium voldoet). Geen enkel jaar aangevinkt = geen startersaftrek."
+        >
+          <div className="flex flex-wrap gap-2">
+            {years.map((y) => {
+              const aan = starterJaren.includes(y);
+              return (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => zet({ starterJaren: aan ? starterJaren.filter((j) => j !== y) : [...starterJaren, y] })}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? KNOP_AAN : KNOP_UIT}`}
+                >
+                  {y}
+                </button>
+              );
+            })}
+          </div>
+        </Sectie>
+      )}
+
+      {toonKwartalen && (
+        <Sectie titel="Welke BTW-kwartalen zijn al aangegeven en/of betaald?">
+          <div className="flex items-center gap-4 text-xs">
+            <span className="w-24" />
+            <button type="button" onClick={() => kwartalenLijst.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "aangegeven", true))} className="text-slate-500 underline hover:text-slate-700">Alles aangegeven</button>
+            <button type="button" onClick={() => kwartalenLijst.forEach((q) => setKwartaalStatusField(`${q.year}-Q${q.kwartaal}`, "betaald", true))} className="text-slate-500 underline hover:text-slate-700">Alles betaald</button>
+          </div>
+          <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg max-h-64 overflow-y-auto">
+            {kwartalenLijst.map((q) => {
+              const key = `${q.year}-Q${q.kwartaal}`;
+              const status = kwartaalStatus[key] || {};
+              return (
+                <div key={key} className="flex items-center gap-4 p-2.5 text-sm">
+                  <span className="w-24 font-medium">{q.year} — Q{q.kwartaal}</span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input type="checkbox" checked={!!status.aangegeven} onChange={(e) => setKwartaalStatusField(key, "aangegeven", e.target.checked)} />
+                    Aangegeven
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input type="checkbox" checked={!!status.betaald} onChange={(e) => setKwartaalStatusField(key, "betaald", e.target.checked)} />
+                    Betaald
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-400">Dit kan later altijd nog aangepast worden bij "BTW per kwartaal".</p>
+        </Sectie>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
+          goNext();
+        }}
+        className={PRIMAIR}
+      >
+        {toonStarters && starterJaren.length === 0 ? "Geen startersaftrek — doorgaan" : "Doorgaan"}
+      </button>
     </div>
   );
 }

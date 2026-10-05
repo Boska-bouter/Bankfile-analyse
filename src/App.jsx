@@ -35,6 +35,7 @@ import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
 import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
@@ -657,6 +658,12 @@ export default function App() {
       for (const y of yearsList) next[y] = (jaYears || []).includes(y) ? "ja" : "nee";
       return next;
     });
+  };
+  // V65 — urencriterium per jaar in één keer (wizard: "Per jaar verschillend"): { [jaar]: "ja"|"nee"|"onbekend" }.
+  const seedZelfstandigenaftrekMap = (map) => {
+    if (!map || Object.keys(map).length === 0) return;
+    snapshotBeforeAction("Zelfstandigenaftrek-status ingesteld (wizard)");
+    setZelfstandigenaftrekStatusState((prev) => ({ ...prev, ...map }));
   };
   const setStartersaftrekStatus = (year, status) => {
     snapshotBeforeAction("Startersaftrek-status aangepast");
@@ -1835,6 +1842,8 @@ export default function App() {
   // een keer waren afgevinkt. Zodra een kwartaal hier ooit een status heeft gekregen (aangegeven
   // en/of betaald aangevinkt, of bewust op "nee" gelaten via de checkboxen), blijft die stap er dus
   // buiten; een kwartaal dat écht nog nooit is bekeken (bijv. een nieuw jaar) komt wél weer langs.
+  // V65 — suggesties uit de al ingelezen bankdata voor de wizard (lease, lening, AOV, klanten, leveranciers).
+  const wizardSuggesties = useMemo(() => ((showSetupWizard || manualWizardOpen) ? computeWizardSuggesties(classified) : {}), [showSetupWizard, manualWizardOpen, classified]);
   const wizardQuarters = useMemo(() => {
     const now = new Date();
     const list = [];
@@ -4926,6 +4935,8 @@ export default function App() {
             onSeedAutoStatus={seedAutoStatusForAllYears}
             zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
             onSeedZelfstandigenaftrekStatus={seedZelfstandigenaftrekStatusForAllYears}
+            onSeedZelfstandigenaftrekMap={seedZelfstandigenaftrekMap}
+            suggesties={wizardSuggesties}
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
             heeftVoorraad={heeftVoorraad}
