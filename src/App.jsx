@@ -1355,16 +1355,17 @@ export default function App() {
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
-    const reviewGroups = new Set(), unclearGroups = new Set();
+    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
+      allGroups.add(`${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`);
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       const gk = `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
       else { unclearTx++; unclearGroups.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
-    return { approved, review, unclear, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+    return { groupsTotal: allGroups.size, approved, review, unclear, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
@@ -3853,6 +3854,19 @@ export default function App() {
   );
 
   const dossierOpenPoints = controlerenBadge + instellingenBadge;
+  // V68 — het percentage in de ring volgt nu dezelfde telling als de "open punten": het deel van alle
+  // te beoordelen groepen (tegenpartij + categorie) dat al zeker is ingedeeld. Overige open punten
+  // (instellingen, duplicaten, enz.) tellen als open én als deel van het totaal. Nooit 100% zolang er
+  // iets openstaat; voorheen was dit een gemiddelde van enkele losse checks (bijv. % transacties buiten
+  // "Overig") en kon het 99% tonen bij honderden open punten.
+  const dossierPct = useMemo(() => {
+    if (!classified.length) return null;
+    const classOpen = confidenceSummary.needsReview;
+    const overige = Math.max(0, dossierOpenPoints - classOpen);
+    const totaal = Math.max(confidenceSummary.groupsTotal + overige, dossierOpenPoints, 1);
+    if (dossierOpenPoints === 0) return 100;
+    return Math.min(99, Math.floor((100 * (totaal - dossierOpenPoints)) / totaal));
+  }, [classified, confidenceSummary, dossierOpenPoints]);
   const dossierOpenBreakdown = [
     controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
@@ -4657,7 +4671,7 @@ export default function App() {
           <DashboardHeader
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
-            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4865,7 +4879,7 @@ export default function App() {
           <DashboardHeader
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
-            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -5032,7 +5046,7 @@ export default function App() {
           <DashboardHeader
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
-            pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
