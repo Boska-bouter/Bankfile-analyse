@@ -36,6 +36,16 @@ export default function SetupWizardModal({
   onClose,
 }) {
   const [typedNow, setTypedNow] = useState({});
+  // V42 — alle bestanden waarvan in DEZE wizard het rekeningtype is (of wordt) gevraagd, ook nadat ze
+  // zijn beantwoord. `pendingFileNames` bevat alleen nog ongetypeerde bestanden, waardoor "Terug" naar
+  // stap 0 een lege vraag gaf en een gemaakte keuze niet meer te corrigeren was.
+  const [sessionFiles, setSessionFiles] = useState(() => [...pendingFileNames]);
+  useEffect(() => {
+    setSessionFiles((prev) => {
+      const add = pendingFileNames.filter((f) => !prev.includes(f));
+      return add.length ? [...prev, ...add] : prev;
+    });
+  }, [pendingFileNames.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bevriest bij het openen welke stappen er ÜBERHAUPT relevant zijn — dat mag daarna niet meer
   // veranderen door het beantwoorden van een vraag zelf (dat veranderde namelijk precies de
@@ -125,8 +135,9 @@ export default function SetupWizardModal({
   const [history, setHistory] = useState([]);
 
   const remainingSteps = initialSteps.filter((id) => {
-    if (doneIds.has(id)) return false;
-    if (id === 0 && pendingFileNames.length === 0) return false; // geen ongetypeerd bestand (meer)
+    // Stap 0 blijft/komt terug zolang er een ongetypeerd bestand is (bijv. na "Terug" naar stap 20 nog een bestand geladen).
+    if (doneIds.has(id) && !(id === 0 && pendingFileNames.length > 0)) return false;
+    if (id === 0 && sessionFiles.length === 0) return false; // geen bestanden in deze wizard
     if ((id === 2 || id === 3) && korRegeling === true) return false;
     if (id === 5 && btwVerlegd !== false) return false; // alleen relevant ná een "nee" op BTW-verlegd
     if (id === 15 && rechtsvorm !== "bv") return false; // holding-vraag is alleen relevant bij BV
@@ -163,7 +174,7 @@ export default function SetupWizardModal({
     setDoneIds((prev) => { const next = new Set(prev); next.delete(vorige); return next; });
   };
 
-  const allTypedNow = pendingFileNames.every((f) => typedNow[f]);
+  const allTypedNow = sessionFiles.every((f) => typedNow[f]);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
@@ -543,7 +554,7 @@ export default function SetupWizardModal({
           {currentStepId === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Is dit een zakelijke rekening of een privérekening?</p>
-              {pendingFileNames.map((fileName) => {
+              {sessionFiles.map((fileName) => {
                 const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
                 return (
                   <div key={fileName} className="rounded-lg border border-slate-200 p-3 space-y-2">
@@ -554,7 +565,7 @@ export default function SetupWizardModal({
                         onClick={() => {
                           onAccountTypeChoose(fileName, "Zakelijk");
                           setTypedNow((p) => ({ ...p, [fileName]: "Zakelijk" }));
-                          if (pendingFileNames.length === 1) goNext(); // dit was de laatste — meteen door naar de volgende vraag
+                          if (sessionFiles.every((f) => f === fileName || typedNow[f])) goNext(); // dit was de laatste — meteen door naar de volgende vraag
                         }}
                         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
                       >
@@ -564,7 +575,7 @@ export default function SetupWizardModal({
                         onClick={() => {
                           onAccountTypeChoose(fileName, "Prive");
                           setTypedNow((p) => ({ ...p, [fileName]: "Prive" }));
-                          if (pendingFileNames.length === 1) goNext();
+                          if (sessionFiles.every((f) => f === fileName || typedNow[f])) goNext();
                         }}
                         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
                       >

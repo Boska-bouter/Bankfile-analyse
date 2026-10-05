@@ -411,19 +411,29 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
   return false;
 }
 
+// V43 — `type` volgt ALTIJD de rekening waar de transactie op staat (zie autoClassify). Overrides uit
+// oudere dossiers (of acties zoals "zakelijke tegenpartij bevestigen") konden type "Zakelijk" meegeven
+// terwijl de boeking op een privérekening staat; daardoor toonde het detailvenster "Zakelijk" bij een
+// privérekening. De categorie van de override blijft gelden, het type niet.
+function withAccountType(override, accountType) {
+  if (!override) return override;
+  const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
+  return override.type === type ? override : { ...override, type };
+}
+
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
   if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
-  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return rowOverride;
+  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(rowOverride, accountType);
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   const ibanOverride = ik && overridesByCounterparty[ik];
-  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return ibanOverride;
+  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(ibanOverride, accountType);
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return keyOverride;
+  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(keyOverride, accountType);
   // V37 — een storno/terugboeking (bijv. een teruggeboekte incasso, "Reden: Terugboeking op verzoek klant")
   // hoort bij dezelfde categorie als de oorspronkelijke afschrijving van dezelfde tegenpartij (op IBAN).
   if (tx.amount > 0 && /\b(terugboeking|storno|terugbetaling|restitutie)\b/i.test(`${tx.description} ${tx.fullDescription}`)) {
