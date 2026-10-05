@@ -873,8 +873,13 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", waarschuw);
   }, [heeftNietGeexporteerdeWijzigingen]);
 
+  // V55 — rekeningtype dat al bij "Extra bankbestand toevoegen" is gekozen (zakelijk/privé); geldt voor
+  // de eerstvolgende gekozen bestanden zodat de wizard er niet nog eens naar hoeft te vragen.
+  const pendingAccountTypeRef = useRef(null);
   const handleFiles = async (fileList) => {
     setError(null);
+    const presetType = pendingAccountTypeRef.current;
+    pendingAccountTypeRef.current = null;
     const files = Array.from(fileList).filter((f) => /\.(csv|xlsx|xls|940|sta|mt940|swi|txt|xml)$/i.test(f.name));
     const results = [];
     const failed = [];
@@ -889,6 +894,7 @@ export default function App() {
     if (failed.length > 0) setError(failed.join("\n"));
     if (results.length > 0) {
       setParsedFiles((prev) => [...prev.filter((p) => !results.some((r) => r.fileName === p.fileName)), ...results]);
+      if (presetType) setAccountTypeByFile((prev) => { const next = { ...prev }; for (const r of results) next[r.fileName] = presetType; return next; });
       setShowSetupWizard(true);
       // v286 — op verzoek: alle uitklapbare kaarten (Controleren/Instellingen) moeten bij het laden
       // van (nieuwe/extra) bestanden altijd weer ingeklapt beginnen, in plaats van een kaart die van
@@ -3632,7 +3638,7 @@ export default function App() {
         </div>
       ),
       withExpand(
-        g("zakelijkPrive", "Zakelijk / privé", <span>⚖️</span>, ["categoryPercentages"]),
+        g("zakelijkPrive", "Zakelijk-privé percentage splitsing", <span>⚖️</span>, ["categoryPercentages"]),
         "zakelijkPrive",
         <div ref={categoryPercentageSectionRef}>
             <CategoryPercentagePanel
@@ -3652,10 +3658,12 @@ export default function App() {
           </div>
       ),
       withExpand(
-        g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"], undefined, "btw-percentages"),
+        g("btw", "BTW-instellingen", <Settings className="h-3.5 w-3.5" />, ["btwSettings"], undefined, "btw-percentages"),
         "btw",
         <div ref={btwSettingsSectionRef}>
           <BtwRatesPanel
+            classified={classified}
+            activeYear={activeYear}
             categoryBtwRates={categoryBtwRates}
             setCategoryBtwRates={setCategoryBtwRatesWithUndo}
             btwVerlegd={btwVerlegd}
@@ -4368,7 +4376,17 @@ export default function App() {
         tabsVisible={tabsVisible}
         controlerenBadge={controlerenBadge}
         instellingenBadge={instellingenBadge}
-        onLoadFile={() => bankFileInputRef.current?.click()}
+        onLoadFile={() =>
+          setDialog({
+            title: "Extra bankbestand toevoegen",
+            message: <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>,
+            actions: [
+              { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
+              { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
+              { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
+            ],
+          })
+        }
         onSaveProject={saveProjectFile}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
@@ -4802,7 +4820,7 @@ export default function App() {
             forceRechtsvormStep={manualWizardOpen}
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}
-            onPickFiles={() => bankFileInputRef.current?.click()}
+            onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
