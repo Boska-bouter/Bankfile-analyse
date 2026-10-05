@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory } from "../../classification/categories.js";
 import { FIXED_BTW_RATE_CATEGORIES } from "../../tax/btw.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 // BTW-instellingen: KOR (kleineondernemersregeling), BTW-verlegd, en het percentage per
-// categorie. Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op
+// categorie. Het bankbedrag is altijd inclusief BTW — de app rekent 'm er automatisch uit op
 // basis van dit percentage. Bij KOR wordt nergens BTW berekend (zie effectiveCategoryBtwRates
 // in App.jsx), dus dit paneel is dan uitgeschakeld.
-export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling, onOpenHelp }) {
+export default function BtwRatesPanel({ classified = [], activeYear, categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling, onOpenHelp }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
+  // Aantal transacties per categorie in het actieve jaar (zonder spiegelboekingen), en per hoofdcategorie
+  // uitgesplitst naar het ingestelde tarief — zodat je ziet wat een tarief-keuze raakt.
+  const telPerCategorie = useMemo(() => {
+    const m = {};
+    for (const tx of classified) {
+      if (tx.isMirror || (activeYear && tx.year !== activeYear)) continue;
+      m[tx.category] = (m[tx.category] || 0) + 1;
+    }
+    return m;
+  }, [classified, activeYear]);
+  const tariefVan = (c) => FIXED_BTW_RATE_CATEGORIES[c] ?? categoryBtwRates[c] ?? 21;
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
@@ -24,8 +35,8 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
       {open && (
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
-            Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op basis van het percentage
-            per categorie. Alleen van toepassing op Zakelijke transacties.{" "}
+            Het bankbedrag is altijd inclusief BTW — de app rekent 'm er automatisch uit op basis van het percentage
+            per categorie. Alleen van toepassing op Zakelijke transacties. Achter elke categorie staat het aantal transacties in {activeYear || "het actieve jaar"} per tarief (0%/9%/21%).{" "}
             {onOpenHelp && <HelpHint chapter="btw-percentages" onOpen={onOpenHelp} />}
           </p>
 
@@ -82,6 +93,8 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                   const subtypes = subtypesForMainCategory(main);
                   if (subtypes.length === 0) return null;
                   const isOpen = openGroup === main;
+                  const perTarief = { 0: 0, 9: 0, 21: 0 };
+                  for (const c of subtypes) perTarief[tariefVan(c)] = (perTarief[tariefVan(c)] || 0) + (telPerCategorie[c] || 0);
                   return (
                     <div key={main} className="rounded-lg border border-slate-100">
                       <button
@@ -91,6 +104,9 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                         <span className={`rounded-md px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                           {main} <span className="opacity-60">({subtypes.length})</span>
                         </span>
+                        <span className="ml-auto text-[11px] text-slate-400 shrink-0 font-mono">
+                          0%: {perTarief[0]} · 9%: {perTarief[9]} · 21%: {perTarief[21]}
+                        </span>
                         {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
                       </button>
                       {isOpen && (
@@ -99,7 +115,12 @@ export default function BtwRatesPanel({ categoryBtwRates, setCategoryBtwRates, b
                             const vastTarief = FIXED_BTW_RATE_CATEGORIES[c];
                             return (
                               <div key={c} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
-                                <span className={`rounded-md px-2 py-0.5 text-xs font-medium truncate ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                                <span className="min-w-0 flex flex-col">
+                                  <span className={`rounded-md px-2 py-0.5 text-xs font-medium truncate ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                                  <span className="mt-0.5 px-2 text-[11px] text-slate-400 font-mono">
+                                    {(() => { const n = telPerCategorie[c] || 0; const t = tariefVan(c); return `0%: ${t === 0 ? n : 0} · 9%: ${t === 9 ? n : 0} · 21%: ${t === 21 ? n : 0}`; })()}
+                                  </span>
+                                </span>
                                 {vastTarief != null ? (
                                   <span
                                     className="text-xs text-slate-400 shrink-0 cursor-help"

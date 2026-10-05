@@ -17,8 +17,6 @@ const TABS = [
   { key: "activa", label: "Activa" },
   { key: "leningen", label: "Leningen" },
   { key: "lease", label: "Lease" },
-  { key: "btw", label: "BTW" },
-  { key: "rapportages", label: "Rapportages" },
 ];
 
 // dashboardCards-objecten dragen een `key`-veld (voor React-lijsten in SectionCardGrid) — dat mag
@@ -40,6 +38,7 @@ function LinkOut({ label, onClick }) {
     </button>
   );
 }
+
 
 export default function DetailsPanel({
   year,
@@ -66,11 +65,12 @@ export default function DetailsPanel({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="px-5 pt-4">
-        <h3 className="text-sm font-bold text-slate-900 mb-0.5">Details en overzichten</h3>
-        <p className="text-[12.5px] text-slate-500 mb-3">
-          Bekijk en beheer de volledige administratie. Gebruik de navigatie om snel naar het juiste onderdeel te gaan.
-        </p>
-        <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <h3 className="text-sm font-bold text-slate-900 mr-1">Details en overzichten</h3>
+          {/* v307 (V30) — de losse tabs "BTW" en "Rapportages" zijn vervallen; Excel en Print staan nu direct bij de kop. */}
+        </div>
+        <div className="flex items-start gap-2">
+        <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1 flex-1 min-w-0">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -83,6 +83,11 @@ export default function DetailsPanel({
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2 shrink-0 ml-auto pb-2">
+          <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
+          <LinkOut label="Print" onClick={() => onJump("print")} />
+        </div>
+        </div>
       </div>
 
       <div className="border-t border-slate-100 p-5">
@@ -90,7 +95,7 @@ export default function DetailsPanel({
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
         {!year ? (
-          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om deze gegevens te zien.</p>
+          <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
         ) : (
           <>
         {tab === "jaaroverzicht" && (
@@ -180,22 +185,6 @@ export default function DetailsPanel({
           </div>
         )}
 
-        {tab === "btw" && (
-          <div className="grid md:grid-cols-2 gap-4 items-start">
-            {CardTile(btwQuarters)}
-            <div className="flex items-center">
-              <LinkOut label="BTW-tarieven bekijken" onClick={() => onJump("btw")} />
-            </div>
-          </div>
-        )}
-
-        {tab === "rapportages" && (
-          <div className="flex flex-wrap gap-3">
-            <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
-            <LinkOut label="Print" onClick={() => onJump("print")} />
-            <LinkOut label="Indicatieve aangifteberekening" onClick={() => onJump("aangifte")} />
-          </div>
-        )}
           </>
         )}
       </div>

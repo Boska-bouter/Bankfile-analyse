@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   estimateIncomeTax, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
@@ -62,10 +62,10 @@ function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw,
   );
 }
 
-// Persoonlijke fiscale aannames die de tool NIET uit bankgegevens kan afleiden: of aan het
+// Persoonlijke fiscale aannames die de app NIET uit bankgegevens kan afleiden: of aan het
 // urencriterium voor de zelfstandigenaftrek is voldaan, en een indicatie van heffingskortingen en
 // KIA die daarvan (en van eigen bedrijfsmiddel-investeringen) afhangen. Dit is bewust een apart,
-// expliciet paneel — de tool mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
+// expliciet paneel — de app mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
 export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
@@ -80,7 +80,15 @@ export default function PersoonlijkeAannamesPanel({
   gedeeldeGemeentelijkeKosten, gemeentelijkeKostenZakelijkPercentageStatus, onSetGemeentelijkeKostenZakelijkPercentageStatus,
   categoryBtwRates,
 }) {
-  const [open, setOpen] = useState(false);
+  // v309 (V31) — het blok met o.a. de %-zakelijk-velden voor huur/energie-water/gemeentelijke kosten zat
+  // in dit standaard ingeklapte onderdeel: een openstaand veld (en de aanname in de kop) was daardoor niet
+  // te vinden. Staat er een nog niet ingevuld percentage open, dan klapt het onderdeel nu vanzelf open.
+  const percentageOpen =
+    (gedeeldeHuur && huurZakelijkPercentageStatus?.[activeYear] == null) ||
+    (gedeeldeEnergie && energieZakelijkPercentageStatus?.[activeYear] == null) ||
+    (gedeeldeGemeentelijkeKosten && gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear] == null);
+  const [open, setOpen] = useState(!!percentageOpen);
+  useEffect(() => { if (percentageOpen) setOpen(true); }, [percentageOpen, activeYear]);
   // Dit paneel blijft altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag hieronder
   // is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht of er dit
   // jaar winst is.
@@ -94,11 +102,11 @@ export default function PersoonlijkeAannamesPanel({
   if (!activeYear) return null;
 
   // Een onbeantwoord jaar mag niet stilzwijgend op "Ja" rekenen (via het "onbekend_default"-sentinel
-  // hieronder) — dat geeft de indruk dat de tool het al ongeveer goed heeft, terwijl het
+  // hieronder) — dat geeft de indruk dat de app het al ongeveer goed heeft, terwijl het
   // urencriterium juist niet uit bankgegevens is af te leiden. Voor een nieuw dossier
   // (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar naar "onbekend" (beide scenario's) —
   // zie resolveZelfstandigenaftrekStatusForYear. Voor een ouder dossier (van vóór deze regel bestond)
-  // blijft het gedrag "ja" behouden, zodat een eerder opgeslagen project niet met terugwerkende kracht
+  // blijft het gedrag "ja" behouden, zodat een eerder opgeslagen dossier niet met terugwerkende kracht
   // van berekening verandert. rawStatus (i.p.v. de geresolveerde status) bepaalt of de dropdown de
   // placeholder toont — het onderscheid tussen "nog niet gekozen" en "expliciet gekozen" blijft zo
   // zichtbaar, ook al is het gedrag al bepaald.
@@ -163,10 +171,10 @@ export default function PersoonlijkeAannamesPanel({
             </select>
             <p className="mt-1.5 text-xs text-slate-400">
               Het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) is een
-              persoonlijke voorwaarde die deze tool niet uit bankgegevens kan afleiden.{" "}
+              persoonlijke voorwaarde die deze app niet uit bankgegevens kan afleiden.{" "}
               {zaLegacyJaDefault
-                ? "Zolang je hier niets aangeeft, rekent de tool zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
-                : "Zolang je hier niets aangeeft, toont de tool voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
+                ? "Zolang je hier niets aangeeft, rekent de app zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
+                : "Zolang je hier niets aangeeft, toont de app voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
             </p>
           </div>
 
@@ -221,7 +229,7 @@ export default function PersoonlijkeAannamesPanel({
               )}
               {totaalInvestering > 0 && (
                 <span className="block mt-1 text-slate-400">
-                  Een geleasede personenauto telt hier al niet mee (KIA geldt daar fiscaal niet voor); overige uitzonderingen (bijv. grond) kent deze tool niet — controleer per bedrijfsmiddel de "KIA-beoordeling". Dit is een mogelijke, geen definitieve aftrek.
+                  Een geleasede personenauto telt hier al niet mee (KIA geldt daar fiscaal niet voor); overige uitzonderingen (bijv. grond) kent deze app niet — controleer per bedrijfsmiddel de "KIA-beoordeling". Dit is een mogelijke, geen definitieve aftrek.
                 </span>
               )}
             </p>
@@ -245,19 +253,14 @@ export default function PersoonlijkeAannamesPanel({
               <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
               <option value="prive">Privéauto zakelijk gebruikt (kilometervergoeding)</option>
             </select>
-            {/* v256 — optie "Beide" (zowel auto op de zaak als privéauto zakelijk gebruikt) verwijderd
-                uit de keuzelijst op verzoek — komt vrijwel nooit voor. Een dossier waar dit al eerder
-                was ingevuld (autoStatus "beide") blijft gewoon werken zoals het was — alle onderliggende
-                berekeningen (categorySplit.js/boxMapping.js/kmVergoeding.js) herkennen "beide" nog
-                steeds, alleen kan het niet meer opnieuw gekozen worden. */}
-            <p className="mt-1.5 text-xs text-slate-400">
+                        <p className="mt-1.5 text-xs text-slate-400">
               Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen werkelijke
               autokosten (brandstof, parkeren, verzekering, MRB) mee met een bijtellingscorrectie voor
               privégebruik, en vervalt de generieke %-splitsing op Brandstof/Parkeren voor dit jaar; bij
               "privéauto zakelijk gebruikt" geldt in plaats daarvan een kilometervergoeding voor het
               zakelijke gebruik.
             </p>
-            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
+            {(autoStatus?.[activeYear] === "zaak") &&
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
                 <button
                   onClick={onOpenAutoActivaModal}
@@ -266,14 +269,14 @@ export default function PersoonlijkeAannamesPanel({
                   Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""} auto op de zaak instellen →
                 </button>
               )}
-            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
+            {(autoStatus?.[activeYear] === "zaak") &&
               autoWizardStatus?.soort === "financial" && (
                 <p className="mt-2 text-xs text-slate-400">
                   Bij financial lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
                   het leningen/lease-overzicht), niet hier.
                 </p>
               )}
-            {(autoStatus?.[activeYear] === "prive" || autoStatus?.[activeYear] === "beide") && (
+            {(autoStatus?.[activeYear] === "prive") && (
               <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
                 <p className="text-xs font-medium text-slate-600 mb-2">
                   Kilometervergoeding privéauto zakelijk gebruik in {activeYear}
@@ -282,19 +285,19 @@ export default function PersoonlijkeAannamesPanel({
                   <label className="text-sm">
                     <span className="block text-xs font-medium text-slate-600 mb-1">Zakelijke kilometers</span>
                     <input
-                      type="number" min={0} step={1}
+                      type="text" inputMode="decimal"
                       value={kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers ?? ""}
-                      onChange={(e) => onSetKmVergoedingField(activeYear, "zakelijkeKilometers", e.target.value)}
+                      onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(activeYear, "zakelijkeKilometers", v); }}
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>
                   <label className="text-sm">
                     <span className="block text-xs font-medium text-slate-600 mb-1">Vergoeding per km (€)</span>
                     <input
-                      type="number" min={0} step={0.01}
+                      type="text" inputMode="decimal"
                       value={kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? ""}
                       placeholder="bijv. 0,23"
-                      onChange={(e) => onSetKmVergoedingField(activeYear, "vergoedingPerKm", e.target.value)}
+                      onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(activeYear, "vergoedingPerKm", v); }}
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>

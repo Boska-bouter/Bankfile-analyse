@@ -47,7 +47,7 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
         </div>
         <div className="p-5 overflow-y-auto space-y-4">
           <p className="text-xs text-slate-500">
-            Met {isLease ? "leasebedrag" : "leningbedrag"}, startdatum en rentepercentage kan de tool voor elke
+            Met {isLease ? "leasebedrag" : "leningbedrag"}, startdatum en rentepercentage kan de app voor elke
             betaling terugrekenen hoeveel rente was (aftrekbaar) en hoeveel aflossing (niet aftrekbaar). De overige
             velden zijn optioneel, puur ter controle.
           </p>

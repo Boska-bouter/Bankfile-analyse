@@ -58,16 +58,17 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  activeYear, categorieTotalen, categoryZakelijkPercentage, onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp,
+  activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
 }) {
   const [open, setOpen] = useState(false);
   const categorieen = Object.keys(categorieTotalen || {}).sort((a, b) => a.localeCompare(b));
   // Blijft ook zichtbaar zonder splitsbare categorieën als er dit jaar "auto op de zaak" is
   // aangegeven — anders verdwijnt het paneel stilletjes zodra Brandstof/Parkeren (vaak de enige
   // splitsbare categorieën in zo'n jaar) daardoor zijn uitgesloten, zonder dat duidelijk is waarom.
-  if (!activeYear || (categorieen.length === 0 && !autoOpDeZaakDitJaar)) return null;
+  const gedeeldeZichtbaar = (gedeeldeRijen || []).filter((r) => r.gedeelde);
+  if (!activeYear || (categorieen.length === 0 && !autoOpDeZaakDitJaar && gedeeldeZichtbaar.length === 0)) return null;
 
-  const aangepast = categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
+  const aangepast = gedeeldeZichtbaar.filter((r) => r.raw != null).length + categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
 
   return (
     <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
@@ -94,7 +95,8 @@ export default function CategoryPercentagePanel({
             wordt, met huur, energie/water en/of gemeentelijke kosten die niet in deze lijst horen te worden
             gemiddeld met andere, volledig zakelijke of privé kosten? Wijs die transacties dan toe aan "Huur
             (deels zakelijk)", "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)" —
-            die hebben elk hun eigen percentage, in te stellen bij "Persoonlijke aannames", niet hier.
+            die hebben elk hun eigen percentage. Dat staat hieronder bovenaan en is hetzelfde veld als bij
+            "Persoonlijke aannames" (één waarde, op beide plekken aan te passen).
           </p>
           {autoOpDeZaakDitJaar && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
@@ -104,13 +106,26 @@ export default function CategoryPercentagePanel({
             </p>
           )}
           <div className="space-y-2">
+            {/* v310 (V32) — de drie "(deels zakelijk)"-categorieën hebben een eigen opslag (per jaar, zie
+                App.jsx) maar stonden alleen bij Persoonlijke aannames; een openstaande aanname daarvan was
+                hier niet terug te vinden. Zelfde waarde, nu ook in dit overzicht aan te passen. */}
+            {gedeeldeZichtbaar.map((r) => (
+              <CategoryPercentageRow
+                key={r.label}
+                categorie={r.label}
+                totaal={r.gedeelde.totaalBruto}
+                raw={r.raw}
+                standaard={100}
+                onCommit={(percentage) => r.onSet(activeYear, percentage)}
+              />
+            ))}
             {categorieen.map((categorie) => (
               <CategoryPercentageRow
                 key={categorie}
                 categorie={categorie}
                 totaal={categorieTotalen[categorie]}
                 raw={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
-                standaard={defaultZakelijkPercentage(categorie)}
+                standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
                 onCommit={(percentage) => onSetCategoryZakelijkPercentage(categorie, activeYear, percentage)}
               />
             ))}

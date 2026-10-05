@@ -1,6 +1,6 @@
 // Financiële lease van een auto of machine, voor een zzp'er (eenmanszaak): de geleasede zaak IS een
 // eigen bedrijfsmiddel dat gekapitaliseerd en afgeschreven moet worden (in tegenstelling tot een
-// eerdere, onjuiste aanname in deze tool dat er bij financiële lease meestal geen eigen
+// eerdere, onjuiste aanname in deze app dat er bij financiële lease meestal geen eigen
 // bedrijfsmiddel is om af te schrijven — zie de (gecorrigeerde) toelichting bij "Financiële baten
 // en lasten" in boxMapping.js). Voor een geleasede AUTO komt daar ook nog bijtelling privégebruik
 // bovenop, die bij een zzp'er anders werkt dan bij een werknemer: het is feitelijk een onttrekking,
@@ -190,7 +190,7 @@ export function computeLeaseInvesteringenForYear(leaseSummary, leaseDetails, yea
 //
 // Let op de gekozen, bewuste vereenvoudiging bij MEERDERE gelijktijdig actieve auto-contracten in
 // hetzelfde jaar (bijv. twee geleasede auto's): de 5 categorieën met autokosten-transacties zijn in
-// deze tool niet per auto/contract herleidbaar (het zijn simpelweg alle transacties in die
+// deze app niet per auto/contract herleidbaar (het zijn simpelweg alle transacties in die
 // categorie, dossierbreed) — daarom wordt die pot hier ÉÉN keer meegeteld in het gecombineerde
 // totaal (niet dubbel per contract), en wordt ook de onttrekking op het GECOMBINEERDE totaal
 // afgetopt, in plaats van per auto apart. Bij één geleasede auto (het gebruikelijke geval) maakt dit

@@ -1,6 +1,6 @@
 // BV-specifieke, jaar-cumulatieve overzichten: rekening-courant-stand met de DGA en een indicatief
 // eigen-vermogen-verloop. Bouwt bewust voort op dezelfde "Route B"-classificatie als de rest van de
-// tool (fiscalTreatmentOf in categories.js) — de resultaatberekening zelf (summary.winst uit
+// app (fiscalTreatmentOf in categories.js) — de resultaatberekening zelf (summary.winst uit
 // computeYearlySummary) verandert hier niet: "DGA-salaris" en "Vergoeding/huur aan holding" lopen
 // daar al automatisch in mee als "kosten" (net als elke andere kostencategorie), en
 // "Dividenduitkering"/"Rekening-courant DGA"/"Kapitaalstorting" tellen daar terecht niet in mee
@@ -35,7 +35,7 @@ export function computeRekeningCourantVerloop(classified, years) {
 // `resultaatNaVpbPerJaar` moet per jaar worden aangeleverd (winst uit computeYearlySummary minus de
 // Vpb-schatting uit estimateVpb) — deze functie combineert dat met de balansmutaties die de winst
 // zelf niet raakt. Nadrukkelijk indicatief: een echte balans kent ook nog voorzieningen, langlopende
-// schulden en waarderingsverschillen die deze cash-basis tool niet bijhoudt (zie het bouwplan).
+// schulden en waarderingsverschillen die deze cash-basis app niet bijhoudt (zie het bouwplan).
 export function computeEigenVermogenVerloop(classified, years, resultaatNaVpbPerJaar) {
   const kapitaalPerJaar = {};
   const dividendPerJaar = {};
@@ -55,7 +55,7 @@ export function computeEigenVermogenVerloop(classified, years, resultaatNaVpbPer
   return result;
 }
 
-// Signalering "stoppen of doorgaan": puur een rode-vlag-detectie op cijfers die de tool al
+// Signalering "stoppen of doorgaan": puur een rode-vlag-detectie op cijfers die de app al
 // berekent — geen advies en geen keuze, dat blijft aan een boekhouder/jurist (zie het bouwplan,
 // "Advies bij tegenvallende cijfers"). Drie signalen, elk optioneel aanwezig:
 //  - aanhoudend verlies: het actieve jaar én het jaar ervoor allebei een negatief resultaat vóór Vpb;
@@ -63,7 +63,7 @@ export function computeEigenVermogenVerloop(classified, years, resultaatNaVpbPer
 //    het actieve jaar is negatief;
 //  - oplopende onbetaalde BTW: het nog openstaande BTW-bedrag (yearlyOpenOB) is dit jaar zowel
 //    positief (dus een schuld, geen tegoed) als hoger dan vorig jaar.
-// `sortedYears` moet oplopend gesorteerd zijn (zoals `years` elders in de tool al is) zodat het
+// `sortedYears` moet oplopend gesorteerd zijn (zoals `years` elders in de app al is) zodat het
 // "jaar ervoor" simpelweg de vorige waarde in de array is.
 export function computeBvSignalering(activeYear, yearlySummaries, evVerloop, yearlyOpenOB, sortedYears) {
   if (!activeYear || !yearlySummaries?.[activeYear]) return null;

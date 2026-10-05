@@ -96,7 +96,7 @@ export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardSta
 
 // Voegt het resultaat van computeLeaseAutoKostenVoorJaar (autoBijtelling.js, financiële lease) en
 // computeAutoActivaKostenVoorJaar hierboven (koop/operational) samen tot één object van dezelfde
-// vorm — zodat de rest van de tool (boxMapping.js, aangiftevoorstel.js, de weergave in App.jsx) maar
+// vorm — zodat de rest van de app (boxMapping.js, aangiftevoorstel.js, de weergave in App.jsx) maar
 // met ÉÉN "leaseAutoKosten"-achtig object hoeft te rekenen, ongeacht of de gebruiker een financiële
 // leaseauto heeft, een gekochte/operational-leaseauto, allebei (zou in de praktijk niet moeten
 // voorkomen, maar wordt hier gewoon correct opgeteld), of geen van beide. Geeft `null` terug als

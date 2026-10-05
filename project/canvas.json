@@ -1,0 +1,118 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {
+      "h": 920,
+      "is_interactive": true,
+      "title": "A — Deep Teal (ringmeter)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "StyleB.dc.html": {
+      "h": 920,
+      "is_interactive": true,
+      "title": "B — Midnight Indigo (boogmeter)",
+      "w": 1440,
+      "x": 1600,
+      "y": 0
+    },
+    "StyleC.dc.html": {
+      "h": 920,
+      "is_interactive": true,
+      "title": "C — Warm Graphite (capsulemeter)",
+      "w": 1440,
+      "x": 3200,
+      "y": 0
+    },
+    "StyleD.dc.html": {
+      "h": 920,
+      "is_interactive": true,
+      "title": "D — Licht, uitgewerkt op basis van optie B (echte tabs + aangiftestatus)",
+      "w": 1440,
+      "x": 1600,
+      "y": 1100
+    },
+    "StyleE.dc.html": {
+      "h": 920,
+      "is_interactive": true,
+      "title": "E — Grijstint, tabs links (O/C/I), herschikte kaarten",
+      "w": 1440,
+      "x": 3200,
+      "y": 1100
+    },
+    "StyleF.dc.html": {
+      "h": 1300,
+      "is_interactive": true,
+      "title": "F — Overzicht (incl. Beheer-acties in zijbalk)",
+      "w": 1440,
+      "x": 0,
+      "y": 2100
+    },
+    "StyleF-Controleren.dc.html": {
+      "h": 1980,
+      "is_interactive": true,
+      "title": "F — Tabblad Controleren (volledig, o.b.v. echte app)",
+      "w": 1440,
+      "x": 1600,
+      "y": 2100
+    },
+    "StyleF-Instellingen.dc.html": {
+      "h": 1980,
+      "is_interactive": true,
+      "title": "F — Tabblad Instellingen (volledig, o.b.v. echte app)",
+      "w": 1440,
+      "x": 3200,
+      "y": 2100
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-29T10:08:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "n1": {
+      "kind": "title1",
+      "maxW": 3200,
+      "text": "Bankoverzicht — dashboard stijlvoorstellen",
+      "w": 240,
+      "x": 0,
+      "y": -150
+    },
+    "n2": {
+      "text": "Nieuw voorstel: licht i.p.v. donker, echte 3 tabbladen, IB/Zvw-aangiftestatus toegevoegd, PRO-badge weg",
+      "w": 240,
+      "x": 1600,
+      "y": 950
+    },
+    "n3": {
+      "text": "Tabs links (O/C/I), IB/Zvw-aangifte als kleine box naast BTW, leningen/lease verplaatst naar Instellingen (hier i.p.v. 'Te controleren' + 'Overboeking naar privé'), grijstint achtergrond met gekleurde kaarten i.p.v. wit",
+      "w": 240,
+      "x": 3200,
+      "y": 950
+    },
+    "n4": {
+      "text": "Uitwerking van je aangeleverde referentie: donkere, compacte zijbalk met alleen de 3 echte tabbladen (icoon+tekst) + Beheer-acties (Bestand laden, Project opslaan/laden, Wis alles, Help en uitleg) onderin, rekeninghouder+wijzigen bovenin. Controleren en Instellingen zijn nu volledig uitgewerkt met ALLE echte onderdelen uit de app (zie hiernaast), niet meer de verkorte lijst van eerder.",
+      "w": 340,
+      "x": 0,
+      "y": 1980
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "StyleB.dc.html",
+    "StyleC.dc.html",
+    "StyleD.dc.html",
+    "StyleE.dc.html",
+    "StyleF.dc.html",
+    "StyleF-Controleren.dc.html",
+    "StyleF-Instellingen.dc.html"
+  ],
+  "pages": [],
+  "title": "Bankoverzicht dashboard — stijlvoorstellen"
+}

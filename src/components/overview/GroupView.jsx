@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, Fragment } from "react";
-import { ChevronRight, ChevronDown, Pencil, Check, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
@@ -154,7 +154,8 @@ export function DetailTable({
     setEditingNoteTxId(null);
   };
 
-  const applyChange = (tx, patch) => onRequestChange(tx, patch);
+  // V53 — met een actieve zoekopdracht geldt een wijziging voor wat het zoekwoord vindt (niet voor alles met dezelfde IBAN).
+  const applyChange = (tx, patch) => onRequestChange(tx, patch, { searchQuery: query.trim() });
 
   const confidenceCounts = useMemo(() => {
     let heuristic = 0;
@@ -324,8 +325,7 @@ export function DetailTable({
           <p className="text-xs font-mono text-slate-500 mb-1">Totaal getoond: {eur(filteredItems.reduce((a, t) => a + t.amount, 0))}</p>
         )}
         <p className="text-xs text-slate-400">
-          Categorie direct aanpasbaar — geldt meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
-          Type (Zakelijk/Prive) volgt altijd het bankbestand en kan niet los worden aangepast.
+          Categorie geldt voor alle jaren van dezelfde tegenpartij. Type volgt het bankbestand.
         </p>
       </div>
       <div className="max-h-[28rem] overflow-y-auto">
@@ -338,6 +338,7 @@ export function DetailTable({
               <th className="text-left font-medium px-4 py-2">Categorie</th>
               <th className="text-left font-medium px-4 py-2">Type</th>
               <th className="text-left font-medium px-4 py-2">Tegenpartij</th>
+              <th className="text-left font-medium px-4 py-2">Tegenrekening</th>
               <th className="text-left font-medium px-4 py-2">Omschrijving</th>
             </tr>
           </thead>
@@ -371,6 +372,14 @@ export function DetailTable({
                   </td>
                   <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
                   <td className="px-4 py-2">
+                    {t.transferLocked ? (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+                        title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
+                      >
+                        <Lock className="h-3 w-3 shrink-0" /> {t.category}
+                      </span>
+                    ) : (<>
                     <select
                       value={mainCategoryOf(t.category)}
                       onChange={(e) => applyChange(t, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || t.category, type: t.type })}
@@ -390,6 +399,7 @@ export function DetailTable({
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    </>)}
                   </td>
                   <td className="px-4 py-2">
                     {t.isMirror ? (
@@ -405,10 +415,10 @@ export function DetailTable({
                       </span>
                     ) : (
                     <span
-                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${(t.accountType || t.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                       title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Prive) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
                     >
-                      {t.type}
+                      {t.accountType || t.type}
                     </span>
                     )}
                   </td>
@@ -419,6 +429,7 @@ export function DetailTable({
                   >
                     {t.counterparty}
                   </td>
+                  <td className="px-4 py-2 font-mono text-xs text-slate-500 whitespace-nowrap select-all">{t.counterpartyIban || "—"}</td>
                   <td className="px-4 py-2 text-slate-500 max-w-sm">
                     <div
                       className={`cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words" : "max-w-[14rem] truncate"}`}

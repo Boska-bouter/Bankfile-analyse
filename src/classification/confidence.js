@@ -15,7 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch } from "./classify.js";
+import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -28,13 +28,14 @@ import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch } from "./cl
 const PRIVE_TRANSFER_CATEGORIES = [
   "Prive opnames", "Terugboeking van prive", // zakelijke kant
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
+  "Interne overboeking", // V56 — tussen twee eigen rekeningen van hetzelfde type
 ];
 function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
   if (!tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return false;
   return ownAccountsElsewhere.some((o) => o.accountType && ibansMatch(tx.counterpartyIban, o.iban));
 }
 
-export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = []) {
+export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = [], businessKeywords = [], businessExpenseKeywords = []) {
   // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
   // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
   // isStaleOverigForZakelijkSpaar in classify.js) wijkt resolvedCategory af van de opgeslagen
@@ -55,13 +56,29 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     return { level: "keyword", label: "Automatisch herkend: overboeking naar/van eigen andere rekening (IBAN)" };
   }
 
+  // V67 — een tegenpartij die je zelf als opdrachtgever/leverancier hebt opgegeven (wizard of eerdere
+  // bevestiging) is door jou herkend: dat is een "keyword"-herkenning, geen schatting.
+  if (tx.amount > 0 && /^Zakelijke inkomsten/.test(resolvedCategory)) {
+    const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+    if ((businessKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+      return { level: "keyword", label: "Herkend: door jou opgegeven als opdrachtgever" };
+    }
+  }
+  if (tx.amount < 0 && resolvedCategory === "Zakelijke inkoop/uitgaven") {
+    const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+    if ((businessExpenseKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+      return { level: "keyword", label: "Herkend: door jou opgegeven als leverancier" };
+    }
+  }
+
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
-  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van zakelijke spaarrekening" };
-  if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "heuristic", label: "Herkend als overboeking naar/van privé spaarrekening" };
+  if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen zakelijke spaarrekening" };
+  if (resolvedCategory === "Interne overboeking") return { level: "heuristic", label: "Herkend als overboeking tussen je eigen rekeningen" };
+  if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen privé-spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-  const matchedRule = rules.find((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(r, text));
+  const matchedRule = rules.find((r) => ruleMatchesText(r, text) && !isKnownFalsePositiveRuleMatch(r, text));
   if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
 
   // De twee "laatste redmiddel"-gokken uit autoClassify() (zie classify.js) — geen enkel zoekwoord

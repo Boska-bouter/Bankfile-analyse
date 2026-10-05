@@ -36,7 +36,7 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
           <p className="text-xs text-slate-500 mb-3">
             Machines, gereedschap en inventaris die je hebt gekocht ("Zakelijk - apparatuur/machines") mogen niet in
             één keer als kosten worden afgetrokken — vul hier de afschrijvingstermijn en restwaarde in, dan berekent
-            de tool zelf hoeveel er per jaar mag worden afgeschreven.{" "}
+            de app zelf hoeveel er per jaar mag worden afgeschreven.{" "}
             {onOpenHelp && <HelpHint chapter="activa-afschrijving" onOpen={onOpenHelp} />}
           </p>
           <div className="space-y-3">

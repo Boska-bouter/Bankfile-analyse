@@ -12,7 +12,7 @@
 // (gewone) categorie fiscaal onjuist — vandaar drie losse, elk apart aan te vinken categorieën in
 // plaats van één gedeeld percentage. computeGedeeldeHuisvestingVoorJaar hieronder is de generieke
 // berekening; de drie category-specifieke functies zijn dunne wrappers eromheen, zodat de rest van
-// de tool (App.jsx/btw.js/yearlySummary.js/aangiftevoorstel.js) gewoon per categorie zijn eigen
+// de app (App.jsx/btw.js/yearlySummary.js/aangiftevoorstel.js) gewoon per categorie zijn eigen
 // percentage-status-map en resultaat blijft doorgeven, net als voorheen bij Huur alleen.
 import { computeBtw } from "./btw.js";
 import { GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE, GEDEELDE_HUISVESTING_CATEGORIEEN } from "../classification/categories.js";

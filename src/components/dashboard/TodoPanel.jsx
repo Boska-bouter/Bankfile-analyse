@@ -9,7 +9,7 @@ import { Pencil, Trash2, X, Check } from "lucide-react";
 // vaste jaarnavigatie links (StickyYearNav), die dezelfde yearlyProgress-data toont.
 //
 // Sommige punten (de "verwachte lease/lening/AOV" uit de wizard) horen bij geen concrete plek in
-// de tool om naartoe te springen — die blijven anders voor altijd open als de naam een tikfout
+// de app om naartoe te springen — die blijven anders voor altijd open als de naam een tikfout
 // bevat of toch niet relevant blijkt. Zulke items geven `onRename`/`onRemove` mee, waarmee ze hier
 // direct te corrigeren of te verwijderen zijn, zonder terug de wizard in te hoeven (die de vraag
 // toch maar één keer stelt).

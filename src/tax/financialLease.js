@@ -1,6 +1,6 @@
 // Nieuwe, realistische invoer voor financiële lease: in plaats van dat de gebruiker zelf een
 // rentepercentage moet weten (wat bij een leasecontract meestal niet met dat woord genoemd wordt),
-// vult die de aankoop- en leasestructuur in zoals die op een leasecontract staat, en leidt de tool
+// vult die de aankoop- en leasestructuur in zoals die op een leasecontract staat, en leidt de app
 // daaruit het jaarlijkse rentepercentage af.
 
 // Sectie 1 — wat er daadwerkelijk gefinancierd moet worden.
@@ -31,7 +31,7 @@ export function computeOnbetaaldGedeelteKoop(details) {
 //     dat drukt de afschrijving ten onrechte omlaag. Zie buildLeaseActivumFromSegment in
 //     tax/autoBijtelling.js voor waar dit gebruikt wordt.
 //
-// `koopprijs` is in deze tool altijd EXCLUSIEF BTW.
+// `koopprijs` is in deze app altijd EXCLUSIEF BTW.
 export function computeAanschafwaardeBedrijfsmiddel(details) {
   const n = (v) => (v === "" || v == null ? 0 : Number(v));
   return n(details?.koopprijs);
@@ -117,7 +117,7 @@ export function computeFinancialLeaseRate(details) {
     else hi = mid;
   }
   const annualRate = (lo + hi) / 2;
-  return annualRate * 100; // jaarlijks percentage, zoals de rest van de tool dat al gebruikt
+  return annualRate * 100; // jaarlijks percentage, zoals de rest van de app dat al gebruikt
 }
 
 // Genereert het volledige, theoretische betaalschema voor de hele looptijd — op basis van wat er
@@ -307,7 +307,7 @@ export function stripExtraBedrag1eTermijnUitTransacties(segment, segTx) {
 
 // v206: sommige leasetermijnen worden soms van een andere bankrekening betaald die niet in dit
 // dossier is geïmporteerd (bijv. een privérekening, of een rekening bij een andere bank) — zonder
-// correctie zou de tool dan ten onrechte denken dat die termijnen nooit zijn betaald, met een te hoog
+// correctie zou de app dan ten onrechte denken dat die termijnen nooit zijn betaald, met een te hoog
 // berekend openstaande saldo (en dus rente/aflossing/restschuld-bij-beëindiging) tot gevolg.
 // `segment.handmatigBetaaldTotEnMet` (optioneel, een datum) laat de gebruiker bevestigen dat ALLE
 // termijnen tot en met die datum zijn betaald, ook als ze niet als banktransactie in dit dossier
@@ -337,7 +337,7 @@ export function mergeHandmatigeTermijnen(segment, segTx) {
 // enige contract) blijft gewoon werken, of — als er meerdere opeenvolgende contracten zijn — een
 // `contracts`-array met per contract exact dezelfde velden als voorheen (inclusief een eigen
 // `contractBeeindigd`/`einddatumContract` als dat contract op zijn beurt weer is opgevolgd).
-// getLeaseSegments() maakt dat verschil voor de rest van de tool onzichtbaar: die geeft altijd een
+// getLeaseSegments() maakt dat verschil voor de rest van de app onzichtbaar: die geeft altijd een
 // array van contracten terug, ook als het er maar één is.
 // Normaliseert een kenteken voor vergelijking tussen contractsegmenten (zie autoBijtelling.js en
 // FinancialLeaseDetailsModal.jsx): hoofdletterongevoelig en zonder spaties/streepjes, zodat

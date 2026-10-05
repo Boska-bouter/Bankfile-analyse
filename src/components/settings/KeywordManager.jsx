@@ -62,8 +62,9 @@ export default function KeywordManager({
           {showEntries && (
             <div className={`${isExpanded ? "max-h-[32rem]" : "max-h-64"} overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg`}>
               {entries.map((item) => (
-                <div key={item.key} className="flex items-center gap-2 p-2.5">
-                  <div className="flex-1 min-w-0">
+                <div key={item.key} className="flex flex-wrap items-center gap-2 p-2.5">
+                  {/* v307 (V30) — wrap + min-breedte: op een smal scherm (tablet) persten de drie keuzelijsten (shrink-0) de naam-kolom tot 0 breed, waardoor de naam van de tegenpartij verdween. */}
+                  <div className="flex-1 min-w-[14rem] basis-full sm:basis-0">
                     <p className="text-xs font-medium truncate">{item.name}</p>
                     <p className="text-[10px] text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
                     {item.description && (

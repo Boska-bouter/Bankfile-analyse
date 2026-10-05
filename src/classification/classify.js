@@ -1,5 +1,36 @@
-import { SPLIT_CATEGORY_NAMES } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
+
+
+// V58 — woordgrens voor KORTE standaardzoekwoorden. "izz" matchte "Pizza", "aldi" matchte "Kanaaldijk",
+// "avia" matchte "Transavia", "q8" matchte een betaalreferentie ("CXQ8PH"). Voor een standaardzoekwoord
+// van maximaal 5 tekens (zonder eigen omsluitende spaties) moet daarom het woord op een woordgrens
+// BEGINNEN; bij maximaal 3 tekens ook op een woordgrens EINDIGEN. Door de gebruiker zelf toegevoegde
+// zoekwoorden blijven een gewone deelstring-match (die wil bijv. "bmk" ook binnen "CollactiveBMK" vinden).
+const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
+const ALNUM_RE = /[a-z0-9à-ÿ]/;
+export function keywordInText(text, keyword) {
+  if (!keyword) return false;
+  const kw = String(keyword).toLowerCase();
+  let i = text.indexOf(kw);
+  if (i < 0) return false;
+  const trimmed = kw.trim();
+  if (kw !== trimmed || trimmed.length > 5 || !DEFAULT_KEYWORD_SET.has(kw)) return true;
+  // "apk" staat in de praktijk vaak vastgeplakt aan de garagenaam ("APKFriezenkamp") — daar geen eindgrens eisen.
+  // "cafe" zit vrijwel altijd als achtervoegsel in een samenstelling ("Grandcafe", "Eetcafe", "Cafetaria") — geen beginsgrens eisen.
+  if (trimmed === "cafe") return true;
+  const needEnd = trimmed.length <= 3 && trimmed !== "apk";
+  while (i >= 0) {
+    const before = text[i - 1] || " ";
+    const after = text[i + kw.length] || " ";
+    if (!ALNUM_RE.test(before) && (!needEnd || !ALNUM_RE.test(after))) return true;
+    i = text.indexOf(kw, i + 1);
+  }
+  return false;
+}
+export function ruleMatchesText(rule, text) {
+  return rule.keywords.some((kw) => keywordInText(text, kw));
+}
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
@@ -15,6 +46,15 @@ export function defaultTypeForCategory(category) {
 // "overboeking aan een persoon" (de naam bevat vaak toevallig 2-3 hoofdlettertermen, waardoor hij
 // anders door looksLikePerson zou worden opgepikt) — het is puur geld dat binnen de eigen
 // zakelijke sfeer verschuift.
+// V66 — door de gebruiker opgegeven namen van gekoppelde spaarrekeningen. Zakelijke namen staan er
+// gewoon in; privé-namen met het voorvoegsel "prive:". Elke naam geldt alleen voor het eigen rekeningtype.
+function spaarKeywordsVoor(accountType, lijst) {
+  const prive = accountType !== "Zakelijk";
+  return (lijst || [])
+    .filter((kw) => kw && kw.startsWith("prive:") === prive)
+    .map((kw) => (prive ? kw.slice(6) : kw))
+    .filter(Boolean);
+}
 const ZAKELIJK_SPAAR_KEYWORDS = ["spaarrekening", "zakelijk sparen", "vermogenssparen", "flexibel sparen"];
 
 // Landcodes zoals banken die aan het einde van de tegenpartijnaam zetten bij een buitenlandse pin-/
@@ -33,6 +73,13 @@ const FOREIGN_COUNTRY_CODES = new Set([
 
 // Exported zodat confidence.js exact dezelfde herkenning gebruikt om het vertrouwensniveau te
 // bepalen (in plaats van deze regex/lijst te dupliceren en op termijn uit de pas te laten lopen).
+// V58 — een pin-/kaartbetaling (de bank zet er "Pasvolgnr" en een terminal bij) is een betaling aan een
+// winkel/dienst, nooit een overboeking aan een persoon, ook al bestaat de naam uit 2-4 woorden
+// ("Tenax Lederw.Eindh.", "BakkerijdeVocht Trudo", "Browns Lunchclub").
+export function isCardPaymentTx(tx) {
+  return /pasvolgnr/i.test(tx.fullDescription || "") || /pasvolgnr/i.test(tx.description || "");
+}
+
 export function looksLikeForeignCardPayment(tx) {
   const check = (val) => {
     const m = (val || "").trim().match(/\b([A-Z]{3})$/);
@@ -87,15 +134,8 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // tegelijk (zowel het ontvangen ván als het terugstorten náár zakelijk). Fiscaal verandert er
   // niets: alle vier blijven "geen" (zie CATEGORY_FISCAL_TREATMENT) en tellen voor de spiegel-/
   // saldocontrole (App.jsx/checklist.js) nog steeds als hetzelfde soort overboeking.
-  if (tx.counterpartyIban && ownAccountsElsewhere.length > 0) {
-    const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
-    if (matchedOwn && matchedOwn.accountType && matchedOwn.accountType !== accountType) {
-      if (accountType === "Zakelijk") {
-        return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
-      }
-      return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
-    }
-  }
+  const ownTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
+  if (ownTransfer) return ownTransfer;
 
   // Interne overboeking naar/van een eigen (zakelijke of privé) spaarrekening. Zo'n spaarrekening is
   // vrijwel altijd een pakketkeuze bij dezelfde bank als de betaalrekening zelf (niet iets wat je bij
@@ -112,7 +152,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // gebruiker zelf opgegeven `zakelijkeSpaarKeywords` (wizardvraag "zakelijke spaarrekening") is
   // expliciet over de ZAKELIJKE rekening en telt dus alleen mee aan die kant.
   const isEigenSpaarrekeningTekst = ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) ||
-    (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)));
+    spaarKeywordsVoor(accountType, zakelijkeSpaarKeywords).some((kw) => text.includes(kw));
   if (isEigenSpaarrekeningTekst) {
     return { category: accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
   }
@@ -121,7 +161,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // situatie waarin de tegenrekening-IBAN ontbreekt of naar een rekening wijst die je niet zelf
   // hebt geladen (zie ook de "eigen rekening (niet geladen)"-vraag in de wizard, die hetzelfde
   // via IBAN afvangt). Minder hard bewijs dan een IBAN-match, maar wel een bewust door de
-  // gebruiker zelf opgegeven naam — geen gok van de tool.
+  // gebruiker zelf opgegeven naam — geen gok van de app.
   // v223: `eigenNamen` bevat sinds nu de volledige, genormaliseerde naam (voorletter(s) + achternaam
   // samen, bijv. "r meijer") in plaats van alléén de kale achternaam (App.jsx/normalizePersonName) —
   // een bare achternaam bleek in de praktijk ook te matchen op de rekening van naamgenoten/
@@ -133,7 +173,13 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // die wél op leestekens als "b.v."/".nl" steunen).
   const textForEigenNaam = text.replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ");
   if (eigenNamen.length > 0) {
-    const matchedNaam = eigenNamen.find((naam) => naam && textForEigenNaam.includes(naam));
+    // V37 — de naam telt alleen als die in de NAAM van de tegenpartij staat. Staat er wél een andere
+    // tegenpartij (bijv. Amvest) en komt de eigen naam alleen voor in de mededelingen (bijv. "…ARC FUND
+    // R. Meijer en J.M. Wintermans"), dan is het géén overboeking van/naar jezelf. Alleen als de
+    // tegenpartijnaam leeg is, kijken we nog naar de volledige tekst.
+    const cpNorm = String(tx.counterparty || "").toLowerCase().replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const nameHaystack = cpNorm ? ` ${cpNorm} ` : textForEigenNaam;
+    const matchedNaam = eigenNamen.find((naam) => naam && nameHaystack.includes(naam));
     if (matchedNaam) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
@@ -170,7 +216,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     const findRule = (name) => rules.find((r) => r.name === name);
     const matchesRule = (name) => {
       const rule = findRule(name);
-      return !!rule && rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+      return !!rule && ruleMatchesText(rule, text);
     };
     if (matchesRule("Leningen")) {
       // Zelfde account-gebaseerde standaardgok als bij de uitgavenkant hieronder (SPLIT_CATEGORY_NAMES)
@@ -196,13 +242,27 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
       for (const rule of rules) {
-        if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
+        if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
           const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
         }
       }
       return { category: "Overig", type };
+    }
+  }
+
+  // V59 — een bijschrijving met een pasvolgnummer is een teruggeboekte pinbetaling (retour, onjuiste
+  // afschrijving): die hoort bij dezelfde categorie als de uitgave (bijv. Jumbo-retour → Boodschappen),
+  // niet bij "Inkomsten". Alleen voor trefwoorden uit de standaard-/eigen categorielijsten.
+  if (isIncome && isCardPaymentTx(tx)) {
+    for (const rule of rules) {
+      if (rule.name === "Prive opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
+      if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+        const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+        const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+        return { category: categoryName, type };
+      }
     }
   }
 
@@ -220,7 +280,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     // generieke "Inkomsten"-emmer (die de "wie zijn je zakelijke klanten?"-review juist WEL
     // doorloopt — zie GEEN_KLANT_CATEGORIES in reviewSummaries.js) en verdient een eigen, herkenbare
     // categorie in plaats van elke keer opnieuw te moeten worden bevestigd als "geen klant".
-    if (looksLikePerson(tx.counterparty || tx.description)) {
+    if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
       return { category: "Overboeking van bekenden", type };
     }
     return { category: "Inkomsten", type };
@@ -233,10 +293,21 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // bijvoorbeeld een Netflix-abonnement op de zakelijke rekening zichtbaar als category "Prive
   // overige abonnementen" + type "Zakelijk" (verkeerde rekening) in plaats van stilzwijgend op
   // type "Prive" gezet te worden.
+  // v312 (V33) — "verhuur" is niet hetzelfde als "huur": eerst op Overig laten beoordelen i.p.v. gokken.
+  if (/verhuur/.test(text)) return { category: "Overig", type };
+
   for (const rule of rules) {
-    if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text)) {
+    if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
-      const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+      let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+      // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
+      // bedrijfsuitgaven-trefwoord, geen handmatige correctie) is een privé-uitgave, ook als het
+      // trefwoord op een gewone "kosten"-categorie past (Marketing, OV, boekhouder, ...). Auto-,
+      // lening- en lease-categorieën blijven buiten schot: daar bepaalt de wizard/de aparte
+      // berekening wat zakelijk is.
+      if (!isBizExpense && accountType === "Prive" && categoryName === rule.name && fiscalTreatmentOf(categoryName) === "kosten" && !PRIVE_REKENING_BEHOUD_CATEGORIEEN.includes(categoryName)) {
+        categoryName = "Prive - overige kosten";
+      }
       return { category: categoryName, type };
     }
   }
@@ -258,7 +329,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return { category: "Prive - vrijetijd-uitgaan-vakantie & uit eten", type };
   }
 
-  if (looksLikePerson(tx.counterparty || tx.description)) {
+  if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
     return { category: "Overboekingen aan personen", type };
   }
 
@@ -307,7 +378,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // Sommige regels herkennen hun trefwoord ondubbelzinnig verkeerd in een specifiek, goed te
 // herkennen tekstpatroon — dit vangt die bekende gevallen af vóórdat een trefwoordmatch wordt
 // geaccepteerd, in plaats van de trefwoordenlijst zelf onveilig smal te maken (v220).
-export function isKnownFalsePositiveRuleMatch(rule, text) {
+export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // "Betaalautomaat kosten" herkent (onder andere) de merknamen van pinbetaaldiensten (SumUp,
   // Zettle, CCV, Mollie, ...) om de eigen, door de bank in rekening gebrachte servicekosten van
   // zo'n dienst te herkennen. Diezelfde merknamen staan echter OOK op de rekening van de klant die
@@ -345,6 +416,16 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
   // substring "pay.nl" (de betaaldienst Pay.nl) — dat is een heel andere partij, en dit is gewoon een
   // OV-reis, geen betaaldienst-kostenafschrijving.
   if (rule.name === "Betaalautomaat kosten" && text.includes("ovpay")) return true;
+  // v312 (V33) — "Huur" herkent het trefwoord "huur " ook BINNEN andere woorden: "verhuur" (iets anders dan
+  // huur: de tegenpartij verhuurt zelf iets) en "inhuur" (personeel). Een voorafgaande letter betekent
+  // dat het geen losstaand "huur" is, dus geen Huur-match. Bij "verhuur" valt de transactie in
+  // autoClassify bovendien eerst op "Overig" (zie daar), zodat die bewust wordt beoordeeld.
+  if (rule.name === "Huur" && /[a-zà-ÿ]huur/.test(text)) return true;
+  // "Telecom" herkent "ziggo" (provider), maar "Ziggo Dome" is de concertzaal: een uitgaansuitgave.
+  if (text.includes("ziggo dome") && rule.name !== "Prive - vrijetijd-uitgaan-vakantie & uit eten") return true;
+  // "Betaalautomaat kosten" herkent o.a. "buckaroo" — op een zakelijke rekening zijn dat servicekosten van de
+  // betaaldienst, op een privérekening vrijwel altijd een gewone online aankoop/uitje (zie Uitgaan).
+  if (rule.name === "Betaalautomaat kosten" && accountType !== "Zakelijk" && accountType !== undefined && text.includes("buckaroo")) return true;
   // "Bankkosten" herkent (onder andere) de eigen bank op naam, voor de periodieke pakket-/
   // servicekosten die de bank zelf afschrijft. Een "Betaalverzoek"/Tikkie-achtige betaling via
   // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —
@@ -354,7 +435,7 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
   // "afas" — dat matcht óók op "AFAS Live" (de concertzaal in Amsterdam-Zuidoost, gesponsord door
   // hetzelfde bedrijf), een heel gewone privé-uitgave (kaartje/consumptie), geen boekhoudpakket-
   // factuur. Bewust hier afgevangen (en niet louter door het standaard-trefwoord in categories.js aan
-  // te scherpen naar "afas software"): een al opgeslagen project neemt zijn EIGEN, op het moment van
+  // te scherpen naar "afas software"): een al opgeslagen dossier neemt zijn EIGEN, op het moment van
   // opslaan bewaarde trefwoordenlijst mee en voegt die samen met de (nieuwe) standaardlijst (zie
   // mergeCategoryRules) — de kale "afas" blijft daardoor ook na deze wijziging nog meekomen bij een
   // ouder, al geladen project, tenzij hij hier expliciet wordt uitgesloten.
@@ -364,14 +445,41 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
 
 function looksLikeRecognizedRefund(text, rules) {
   if (!/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) return false;
-  return rules.some((r) => r.keywords.some((kw) => kw && text.includes(kw.toLowerCase())));
+  return rules.some((r) => ruleMatchesText(r, text));
+}
+
+// v311 (V33) — een overboeking tussen twee eigen rekeningen van een verschillend type (zakelijk ↔ privé),
+// herkend op het rekeningnummer van de tegenrekening, is hard bewezen: de categorie ligt daarmee vast
+// (zie de vier namen hieronder, per kant/richting) en mag niet handmatig worden aangepast — anders
+// raken beide kanten van dezelfde overboeking uit balans (bijv. de zakelijke kant als "Zakelijke
+// inkomsten" terwijl de privékant als "Terugboeking naar zakelijk" blijft staan). Geeft null als dit
+// géén herkende overboeking tussen eigen rekeningen is. Een herkenning op naam (eigenNamen) is minder
+// hard bewijs en blijft daarom wel aan te passen.
+export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere = []) {
+  if (tx.outOfYearRange || !tx.counterpartyIban || !ownAccountsElsewhere || ownAccountsElsewhere.length === 0) return null;
+  const matchedOwn = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
+  if (!matchedOwn || !matchedOwn.accountType) return null;
+  const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
+  // V56 — twee eigen rekeningen van HETZELFDE type (bijv. twee privérekeningen): puur heen-en-weer boeken.
+  if (matchedOwn.accountType === accountType) {
+    // Alleen als de eigen rekening van déze boeking bekend is én een ANDERE is dan de tegenrekening: meerdere
+    // bestanden van dezelfde rekening (jaar-bestanden) of bankkosten met het eigen IBAN als tegenrekening
+    // zijn géén overboeking tussen twee rekeningen.
+    if (!tx.ownAccount || ibansMatch(tx.counterpartyIban, tx.ownAccount)) return null;
+    return { category: "Interne overboeking", type };
+  }
+  const isIncome = tx.amount > 0;
+  if (accountType === "Zakelijk") {
+    return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
+  }
+  return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
 }
 
 function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) {
   if (!override || override.category !== "Overig") return false;
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   if (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw))) return true;
-  if (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw))) return true;
+  if (spaarKeywordsVoor(accountType, zakelijkeSpaarKeywords).some((kw) => text.includes(kw))) return true;
   if (tx.counterpartyIban && ownAccountsElsewhere && ownAccountsElsewhere.length > 0) {
     const matched = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
     if (matched && matched.accountType && matched.accountType !== accountType) return true;
@@ -380,16 +488,54 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
   return false;
 }
 
+// V45 — `type` is ALTIJD het type van de rekening waar de boeking op staat (nooit door een override te
+// wijzigen). Een override uit een oud dossier (of "bevestig als zakelijke klant") kon wel type "Zakelijk"
+// meegeven voor een boeking op een privérekening; dat gebruikten de overzichten om zo'n boeking als
+// zakelijk te tonen. Die uitkomst bewaren we apart in `viewType` (alleen voor die zakelijke overzichten:
+// groepering, BTW-kwartalen, tellingen) — `type` zelf blijft de rekening.
+function withAccountType(override, accountType) {
+  if (!override) return override;
+  const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
+  return { ...override, type, viewType: override.type || type };
+}
+
+// V50 — categorieën die op een privérekening NIET automatisch naar "Prive - overige kosten" gaan.
+const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
+  "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop/uitgaven",
+];
+
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
+  const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
+  if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
-  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return rowOverride;
+  if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(rowOverride, accountType);
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   const ibanOverride = ik && overridesByCounterparty[ik];
-  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return ibanOverride;
+  if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(ibanOverride, accountType);
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return keyOverride;
+  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(keyOverride, accountType);
+  // V37 — een storno/terugboeking (bijv. een teruggeboekte incasso, "Reden: Terugboeking op verzoek klant")
+  // hoort bij dezelfde categorie als de oorspronkelijke afschrijving van dezelfde tegenpartij (op IBAN).
+  if (tx.amount > 0 && /\b(terugboeking|storno|terugbetaling|restitutie)\b/i.test(`${tx.description} ${tx.fullDescription}`)) {
+    const negIban = tx.counterpartyIban && overridesByCounterparty[ibanKey(tx.counterpartyIban, -1)];
+    const negKey = overridesByCounterparty[counterpartyKey(tx.counterparty || tx.description, -1)];
+    let negPrefix = null;
+    if (!negIban && !negKey) {
+      // Dezelfde partij onder een langere naam (bijv. "Amvest" ↔ "AMVEST RCF CUSTODIANFGR1"): vergelijk op beginwoord.
+      const cpBase = counterpartyKey(tx.counterparty || tx.description, -1).replace(/::neg$/, "");
+      for (const k of Object.keys(overridesByCounterparty)) {
+        if (!k.endsWith("::neg")) continue;
+        const base = k.slice(0, -5);
+        if (base.length >= 4 && cpBase.startsWith(base + " ")) { negPrefix = overridesByCounterparty[k]; break; }
+      }
+    }
+    const mirror = negIban || negKey || negPrefix;
+    if (mirror && mirror.category && mirror.category !== "Overig" && !isStaleOverigForKnownTransfer(mirror, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) {
+      return { ...mirror, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+  }
   return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
 }

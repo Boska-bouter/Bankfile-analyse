@@ -10,11 +10,47 @@ import { computeLoanSummary, computeLeaseSummary } from "../tax/loanAmortization
 // hergebruikte/gecachte "ruwe" (nog niet samengevoegde) lijst per ongeluk mee-muteren, met een
 // dubbeltelling tot gevolg zodra dezelfde ruwe lijst een volgende keer weer als basis dient (zie
 // rawLeaseSummary hieronder, die nodig is om een samenvoeging weer ongedaan te kunnen maken).
+// V58 — automatische samenvoeging: dezelfde leasemaatschappij verschijnt in de bank onder wisselende
+// namen (Volkswagen Leasing → VWPFS → Volkswagen Pon Financial Services), maar altijd met dezelfde
+// tegenrekening (IBAN). Groepen die uitsluitend over één en dezelfde IBAN lopen worden daarom
+// automatisch samengevoegd — behalve als die IBAN ook bij niet-lease-transacties voorkomt (dan is het
+// een betaalprovider als Mollie/Adyen met meerdere partijen erachter) en behalve groepen die al op een
+// specifiek contractnummer zijn gesplitst ("contract::…"). Handmatig loskoppelen blijft kunnen: dat
+// legt `null` vast in leaseMergedInto, en dat wint van de automatische samenvoeging.
+function normIban(v) { return String(v || "").replace(/\s+/g, "").toUpperCase(); }
+export function computeAutoLeaseMerges(rawLeaseSummary, classified, leaseDetails) {
+  const isLease = (c) => c === "Lease (financieel)" || c === "Lease (operationeel)";
+  const nonLeaseIbans = new Set();
+  for (const tx of classified) {
+    if (tx.isMirror || !tx.counterpartyIban || isLease(tx.category)) continue;
+    nonLeaseIbans.add(normIban(tx.counterpartyIban));
+  }
+  const byIban = {};
+  for (const l of rawLeaseSummary) {
+    if (l.key.startsWith("contract::")) continue;
+    if (!l.transactions.every((t) => t.counterpartyIban)) continue;
+    const ibans = new Set(l.transactions.map((t) => normIban(t.counterpartyIban)));
+    if (ibans.size !== 1) continue;
+    const iban = [...ibans][0];
+    if (nonLeaseIbans.has(iban)) continue;
+    (byIban[`${iban}|${l.category}`] ??= []).push(l);
+  }
+  const merges = {};
+  const hasDetails = (l) => (leaseDetails && leaseDetails[l.key] && Object.keys(leaseDetails[l.key]).length > 0 ? 1 : 0);
+  for (const group of Object.values(byIban)) {
+    if (group.length < 2) continue;
+    const target = [...group].sort((a, b) => (hasDetails(b) - hasDetails(a)) || (b.count - a.count))[0];
+    for (const l of group) if (l !== target) merges[l.key] = target.key;
+  }
+  return merges;
+}
+
 function applyLeaseMerges(leaseSummary, leaseMergedInto) {
   if (!leaseMergedInto || Object.keys(leaseMergedInto).length === 0) return leaseSummary;
   const byKey = Object.fromEntries(leaseSummary.map((l) => [l.key, { ...l, transactions: [...l.transactions] }]));
   const merged = new Set();
   for (const [sourceKey, targetKey] of Object.entries(leaseMergedInto)) {
+    if (!targetKey) continue; // null = bewust niet (automatisch) samenvoegen
     const source = byKey[sourceKey];
     const target = byKey[targetKey];
     if (!source || !target || merged.has(sourceKey)) continue;
@@ -31,7 +67,7 @@ function applyLeaseMerges(leaseSummary, leaseMergedInto) {
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
 export function useLoansAndLease({
   classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
-  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto,
+  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {},
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
   // Leningen die eerder expliciet als privé zijn aangemerkt ("Leningen (privé)") — apart
@@ -44,23 +80,35 @@ export function useLoansAndLease({
   // eerder samengevoegde bron-lease heette (die is in leaseSummary hieronder niet meer zichtbaar,
   // want die lijst toont juist het resultaat NA samenvoeging).
   const rawLeaseSummary = useMemo(() => computeLeaseSummary(classified), [classified]);
+  const autoLeaseMerges = useMemo(
+    () => computeAutoLeaseMerges(rawLeaseSummary, classified, leaseDetails),
+    [rawLeaseSummary, classified, leaseDetails]
+  );
+  // Handmatige keuzes (ook de expliciete `null` = loskoppelen) gaan altijd vóór de automatische.
+  const effectiveLeaseMerges = useMemo(() => {
+    const merged = { ...autoLeaseMerges };
+    for (const [k, v] of Object.entries(leaseMergedInto || {})) {
+      if (v) merged[k] = v; else delete merged[k];
+    }
+    return merged;
+  }, [autoLeaseMerges, leaseMergedInto]);
   const leaseSummary = useMemo(
-    () => applyLeaseMerges(rawLeaseSummary, leaseMergedInto),
-    [rawLeaseSummary, leaseMergedInto]
+    () => applyLeaseMerges(rawLeaseSummary, effectiveLeaseMerges),
+    [rawLeaseSummary, effectiveLeaseMerges]
   );
   // Overzicht van actieve samenvoegingen, met de namen erbij (voor de "Loskoppelen"-knop in de
   // UI) — filtert automatisch samenvoegingen weg waarvan bron of doel niet meer bestaat (bijv. na
   // het wijzigen van classificatieregels, waardoor een lease-groep is opgesplitst of verdwenen).
   const leaseMerges = useMemo(() => {
     const rawByKey = Object.fromEntries(rawLeaseSummary.map((l) => [l.key, l]));
-    return Object.entries(leaseMergedInto || {})
-      .filter(([sourceKey, targetKey]) => rawByKey[sourceKey] && rawByKey[targetKey])
+    return Object.entries(effectiveLeaseMerges || {})
+      .filter(([sourceKey, targetKey]) => targetKey && rawByKey[sourceKey] && rawByKey[targetKey])
       .map(([sourceKey, targetKey]) => ({
         sourceKey, targetKey,
         sourceName: rawByKey[sourceKey].name,
         targetName: rawByKey[targetKey].name,
       }));
-  }, [rawLeaseSummary, leaseMergedInto]);
+  }, [rawLeaseSummary, effectiveLeaseMerges]);
 
   const setLoanDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leninggegevens aangepast");
@@ -111,7 +159,9 @@ export function useLoansAndLease({
     snapshotBeforeAction("Lease-samenvoeging ongedaan gemaakt");
     setLeaseMergedInto((prev) => {
       const next = { ...prev };
-      delete next[sourceKey];
+      // Was dit een automatische samenvoeging? Dan `null` vastleggen, anders komt hij meteen terug.
+      if (autoLeaseMerges[sourceKey]) next[sourceKey] = null;
+      else delete next[sourceKey];
       return next;
     });
   };

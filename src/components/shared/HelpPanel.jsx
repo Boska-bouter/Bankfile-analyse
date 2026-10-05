@@ -6,29 +6,29 @@ const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">1.</span>
-      Upload je bank-bestand(en) hieronder (CSV, Excel, MT940 of CAMT.053). De tool splitst transacties automatisch in Zakelijk en Prive, en deelt ze in categorieën in.
+      Start een nieuw dossier: het stappenplan stelt eerst een paar vragen (rekening, rechtsvorm, BTW, auto, lease, urencriterium, startersaftrek) en laadt dan je bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt transacties automatisch in Zakelijk/Prive en in categorieën in.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">2.</span>
-      Klopt een indeling niet? Pas 'm aan in de detailtabel — dat onthoudt de tool voortaan voor dezelfde tegenpartij, in alle jaren.
+      Klopt een indeling niet? Pas 'm aan in de detailtabel of bij Controleren — dat onthoudt de app voortaan voor dezelfde tegenpartij, in alle jaren.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">3.</span>
-      Bovenaan verschijnt "Werk te doen" zodra er iets openstaat — klik erop om er direct naartoe te springen.
+      De kaart "Dossiercontrole" bovenaan toont hoeveel open punten er nog zijn (en een ring die pas 100% haalt als alles klaar is). Onder Controleren loop je die punten na; onder Instellingen staan de dossiervragen en aannames.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">4.</span>
-      Onder elk jaar vind je de aangifte-checklist, het BTW-kwartaaloverzicht, het aangiftevoorstel, en (bij meerdere jaren) een meerjarenoverzicht.
+      Per jaar vind je de aangifte-checklist, het BTW-kwartaaloverzicht, het aangiftevoorstel, en (bij meerdere jaren) een meerjarenoverzicht.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Alles wordt automatisch bewaard in deze browser — gebruik "Project opslaan" om ook een back-upbestand te downloaden.
+      Alles wordt lokaal in deze browser verwerkt en automatisch bewaard — er gaat niets naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden.
     </li>
   </ol>
 );
 
 // Alle uitgebreide toelichtingsteksten, gebundeld in inklapbare hoofdstukken — inclusief de
-// introductie als eerste hoofdstuk. Bij de losse plekken in de tool staat een klein "?"-icoontje
+// introductie als eerste hoofdstuk. Bij de losse plekken in de app staat een klein "?"-icoontje
 // (HelpHint) dat direct naar het juiste hoofdstuk hier springt.
 export default function HelpPanel({ onClose, openChapter }) {
   const [openKeys, setOpenKeys] = useState(() => new Set(["intro", ...(openChapter ? [openChapter] : [])]));
@@ -41,7 +41,7 @@ export default function HelpPanel({ onClose, openChapter }) {
     });
   };
 
-  const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze tool", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
+  const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
 
   // Was een gewone (niet-zwevende) <section>, gerenderd als vaste sibling ná de hoofdinhoud van elk
   // tabblad — daardoor verscheen dit paneel gewoon inline in de pagina-flow op de plek waar dat in de

@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Stijl F — Donkere zijbalk + licht dashboard (Overzicht)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',sans-serif;background:#F4F5F9}
+a{color:#B45309}a:hover{color:#92400E}
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 1300px; box-sizing: border-box; background: #F4F5F9; display: flex; color: #1E2233; overflow: hidden;">
+
+  <!-- Zijbalk: de 3 echte tabbladen + beheeracties onderin -->
+  <div style="width: 216px; flex-shrink: 0; background: #16203A; display: flex; flex-direction: column; padding: 22px 14px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px 6px 6px;">
+      <div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #E8B44C, #C89530); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: #211705;">B</span>
+      </div>
+      <div style="display: flex; flex-direction: column; min-width: 0;">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 14.5px; font-weight: 700; color: #FFFFFF; white-space: nowrap;">Bankoverzicht</span>
+        <span style="font-size: 10px; color: #7C86A8; white-space: nowrap;">Over Rood</span>
+      </div>
+    </div>
+    <div style="padding: 8px 6px 18px 6px; border-bottom: 1px solid #232D4C; margin-bottom: 16px;">
+      <span style="font-size: 11px; color: #8992B4;">Rekeninghouder: </span>
+      <span style="font-size: 11px; color: #DDE1F0; font-weight: 600;">J. van Schaik</span>
+      <span style="font-size: 10.5px; color: #6B86D4; text-decoration: underline; margin-left: 4px; cursor: pointer;">wijzigen</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(232,180,76,0.14); border-left: 3px solid #E8B44C;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3.5L17 9.5V16C17 16.5 16.5 17 16 17H4C3.5 17 3 16.5 3 16V9.5Z" stroke="#E8B44C" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">Overzicht</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="#8992B4" stroke-width="1.5"/><path d="M12.7 12.7L17 17" stroke="#8992B4" stroke-width="1.5" stroke-linecap="round"/><path d="M6.2 8.6L8 10.3L11 6.8" stroke="#8992B4" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size: 13px; font-weight: 500; color: #A9B0CC;">Controleren</span>
+        <span style="margin-left: auto; background: #DC2626; color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px;">8</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.6" stroke="#8992B4" stroke-width="1.4"/><path d="M10 3V4.6M10 15.4V17M17 10H15.4M4.6 10H3M15 5L13.9 6.1M6.1 13.9L5 15M15 15L13.9 13.9M6.1 6.1L5 5" stroke="#8992B4" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span style="font-size: 13px; font-weight: 500; color: #A9B0CC;">Instellingen</span>
+        <span style="margin-left: auto; background: #D97706; color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px;">6</span>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1;"></div>
+
+    <!-- Nieuw: bestandsbeheer-acties, verplaatst hierheen vanuit de bovenste balk van de echte app -->
+    <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid #232D4C;">
+      <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: #6B759C; text-transform: uppercase; padding: 0 2px 2px 2px;">Beheer</span>
+
+      <div style="display: flex; align-items: center; gap: 9px; background: #0F766E; border-radius: 12px; padding: 9px 12px;">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 11V3M8 3L5 6M8 3L11 6" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11V12.5C3 13 3.4 13.5 4 13.5H12C12.6 13.5 13 13 13 12.5V11" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Bestand laden</span>
+          <span style="font-size: 9.5px; color: rgba(255,255,255,0.75);">CSV/XLS, MT940, CAMT.053</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 9px; background: #1E2A4A; border: 1px solid #2C3A61; border-radius: 12px; padding: 8px 12px;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 3V9.5M8 9.5L5.5 7M8 9.5L10.5 7" stroke="#C7CCE4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11V12.2C3 12.6 3.4 13 3.8 13H12.2C12.6 13 13 12.6 13 12.2V11" stroke="#C7CCE4" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span style="font-size: 12px; font-weight: 600; color: #DDE1F0;">Project opslaan</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 9px; background: #1E2A4A; border: 1px solid #2C3A61; border-radius: 12px; padding: 8px 12px;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M8 9.5V3M8 3L5.5 5.5M8 3L10.5 5.5" stroke="#C7CCE4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 11V12.2C3 12.6 3.4 13 3.8 13H12.2C12.6 13 13 12.6 13 12.2V11" stroke="#C7CCE4" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span style="font-size: 12px; font-weight: 600; color: #DDE1F0;">Project laden</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 9px; background: transparent; border: 1px solid #4A2530; border-radius: 12px; padding: 8px 12px;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M3.5 4.5H12.5M6 4.5V3.2C6 2.9 6.2 2.7 6.5 2.7H9.5C9.8 2.7 10 2.9 10 3.2V4.5M6.5 7V11M9.5 7V11M4.5 4.5L5 12.5C5 12.9 5.4 13.3 5.8 13.3H10.2C10.6 13.3 11 12.9 11 12.5L11.5 4.5" stroke="#E27C8D" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size: 12px; font-weight: 600; color: #E27C8D;">Wis alles</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #232D4C;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="#7C86A8" stroke-width="1.3"/><path d="M8 5.3V8.3L10 9.6" stroke="#7C86A8" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span style="font-size: 11.5px; color: #A9B0CC;">Help en uitleg</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2L13.5 4V7.5C13.5 11 11.2 13.6 8 14.5C4.8 13.6 2.5 11 2.5 7.5V4L8 2Z" stroke="#7C86A8" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <span style="font-size: 11.5px; color: #7C86A8;">Privacy &amp; beveiliging</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 7px; height: 7px; border-radius: 999px; background: #4ADE9E; flex-shrink: 0;"></span>
+        <span style="font-size: 11px; color: #5C6690;">Uw gegevens blijven lokaal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; padding: 28px 34px; gap: 20px; overflow: hidden;">
+
+    <!-- Header -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;">
+      <div>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: #1E2233;">Overzicht</h1>
+        <p style="margin: 6px 0 0 0; font-size: 13.5px; color: #6B7094;">Hier zie je in één oogopslag de status van je administratie en wat er nog aandacht nodig heeft.</p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 18px; background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 18px; padding: 12px 20px; box-shadow: 0 1px 2px rgba(30,34,51,0.04);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="position: relative; width: 46px; height: 46px;">
+              <svg width="46" height="46" viewBox="0 0 46 46">
+                <circle cx="23" cy="23" r="18" fill="none" stroke="#EAECF5" stroke-width="6"/>
+                <circle cx="23" cy="23" r="18" fill="none" stroke="{{accent}}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ringCirc}}" stroke-dashoffset="{{ringOffset}}" transform="rotate(-90 23 23)"/>
+              </svg>
+              <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">{{pctLabel}}</div>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 12.5px; font-weight: 600;">Dossiercontrole</span>
+              <span style="font-size: 11px; color: #B45309;">4 punten nog aandacht</span>
+            </div>
+          </div>
+
+          <div style="width: 1px; align-self: stretch; background: #E4E6F0;"></div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 30px; height: 30px; border-radius: 999px; background: rgba(15,118,110,0.1); display: flex; align-items: center; justify-content: center;">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 3H10L13 6V13.5C13 13.8 12.8 14 12.5 14H4C3.7 14 3.5 13.8 3.5 13.5V3.5C3.5 3.2 3.7 3 4 3Z" stroke="#0F766E" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 12.5px; font-weight: 600;">Indicatieve aangifte</span>
+              <span style="font-size: 11px; color: #16A34A;">Compleet ✓</span>
+            </div>
+          </div>
+
+          <div style="width: 1px; align-self: stretch; background: #E4E6F0;"></div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 30px; height: 30px; border-radius: 999px; background: #EEF0F5; display: flex; align-items: center; justify-content: center;">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 2.5L9.5 14L7.7 9.3L2 8Z" stroke="#8B90A8" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 12.5px; font-weight: 600;">Werkelijke aangifte</span>
+              <span style="font-size: 11px; color: #8B90A8;">Niet geregistreerd</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 999px; padding: 8px 14px;">
+          <span style="font-size: 13px; font-weight: 600;">2025</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="#6B7094" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info + jaaroverzicht -->
+    <div style="display: flex; gap: 18px;">
+      <div style="flex: 1.4 1 0; background: #EAF2FE; border: 1px solid #D6E6FB; border-radius: 20px; padding: 18px 22px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 26px; height: 26px; border-radius: 999px; background: #3B82F6; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+          <span style="color: #fff; font-size: 13px; font-weight: 700;">i</span>
+        </div>
+        <div style="flex-grow: 1;">
+          <span style="font-size: 14px; font-weight: 700; color: #1E2233;">Wat deze tool niet kan weten</span>
+          <p style="margin: 5px 0 10px 0; font-size: 12.5px; color: #52597A; line-height: 1.5;">De tool werkt met bankgegevens, maar kan niet alles weten. Denk aan:</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px;">
+            <span style="font-size: 12px; color: #3D4361;">• Contante uitgaven</span>
+            <span style="font-size: 12px; color: #3D4361;">• Andere bankrekeningen</span>
+            <span style="font-size: 12px; color: #3D4361;">• Privébetalingen buiten deze rekening</span>
+            <span style="font-size: 12px; color: #3D4361;">• Voorraad</span>
+            <span style="font-size: 12px; color: #3D4361;">• Openstaande facturen</span>
+            <span style="font-size: 12px; color: #3D4361;">• Andere fiscale gegevens</span>
+          </div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #CBE0FA; border-radius: 999px; padding: 8px 16px; font-size: 12px; font-weight: 600; color: #2563EB; white-space: nowrap; flex-shrink: 0;">Meer informatie →</div>
+      </div>
+
+      <div style="flex: 1 1 0; background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 20px; padding: 18px 22px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <span style="font-size: 14px; font-weight: 700;">Jaaroverzicht 2025</span>
+          <span style="font-size: 12px; color: #16A34A; font-weight: 600;">Bekijk details →</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 11px; color: #6B7094;">Omzet</span>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700;">€ 62.679</span>
+            <span style="font-size: 10.5px; color: #16A34A;">↑ 9% t.o.v. 2024</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 11px; color: #6B7094;">Kosten</span>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700;">€ 13.009</span>
+            <span style="font-size: 10.5px; color: #16A34A;">↑ 4% t.o.v. 2024</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 11px; color: #6B7094;">Winst</span>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700;">€ 49.670</span>
+            <span style="font-size: 10.5px; color: #16A34A;">↑ 11% t.o.v. 2024</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 categoriekaarten -->
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 26px; height: 26px; border-radius: 999px; background: rgba(220,38,38,0.1); display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2L15 14H1L8 2Z" stroke="#DC2626" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.5V9.3" stroke="#DC2626" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.4" r="0.7" fill="#DC2626"/></svg>
+          </div>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700;">Nog te controleren</span>
+          <span style="background: #DC2626; color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px;">8</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Transacties controleren</span><span style="font-size: 12px; color: #6B7094;">3 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Mogelijke duplicaten</span><span style="font-size: 12px; color: #6B7094;">2 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Periodecontrole</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Overige aandachtspunten</span><span style="font-size: 12px; color: #6B7094;">2 →</span></div>
+        </div>
+        <div style="margin-top: 2px; text-align: center; background: rgba(220,38,38,0.08); color: #DC2626; border-radius: 999px; padding: 8px; font-size: 12px; font-weight: 700;">Alle controles bekijken →</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 26px; height: 26px; border-radius: 999px; background: rgba(217,119,6,0.1); display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.6" stroke="#D97706" stroke-width="1.4"/><path d="M8 2V3.2M8 12.8V14M14 8H12.8M3.2 8H2M12.2 3.8L11.4 4.6M4.6 11.4L3.8 12.2M12.2 12.2L11.4 11.4M4.6 4.6L3.8 3.8" stroke="#D97706" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </div>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700;">Nog in te stellen</span>
+          <span style="background: #D97706; color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px;">6</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Persoonlijke aannames</span><span style="font-size: 12px; color: #6B7094;">2 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Lease</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Leningen &amp; rente</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Zakelijk/privé percentages</span><span style="font-size: 12px; color: #6B7094;">2 →</span></div>
+        </div>
+        <div style="margin-top: 2px; text-align: center; background: rgba(217,119,6,0.08); color: #D97706; border-radius: 999px; padding: 8px; font-size: 12px; font-weight: 700;">Alle instellingen bekijken →</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 26px; height: 26px; border-radius: 999px; background: rgba(22,163,74,0.1); display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 14V9M6 14V5M10 14V7M14 14V3" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700;">Resultaten</span>
+          <span style="background: #16A34A; color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px;">3</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Meerjarenoverzicht</span><span style="font-size: 12px; color: #6B7094;">→</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">BTW-aangifte per kwartaal</span><span style="font-size: 12px; color: #6B7094;">→</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Indicatieve aangifteberekening</span><span style="font-size: 12px; color: #6B7094;">→</span></div>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <div style="margin-top: 2px; text-align: center; background: rgba(22,163,74,0.08); color: #16A34A; border-radius: 999px; padding: 8px; font-size: 12px; font-weight: 700;">Naar resultaten →</div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 26px; height: 26px; border-radius: 999px; background: rgba(124,58,237,0.1); display: flex; align-items: center; justify-content: center;">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#7C3AED" stroke-width="1.4"/><path d="M8 5V8L10 9.5" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700;">Automatische herkenning</span>
+          <span style="background: #7C3AED; color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px;">5</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Categorieregels</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Tegenpartijregels</span><span style="font-size: 12px; color: #6B7094;">2 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Variabele kosten</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 12px; color: #3D4361;">Zakelijke relaties</span><span style="font-size: 12px; color: #6B7094;">1 →</span></div>
+        </div>
+        <div style="margin-top: 2px; text-align: center; background: rgba(124,58,237,0.08); color: #7C3AED; border-radius: 999px; padding: 8px; font-size: 12px; font-weight: 700;">Alle herkenningsregels bekijken →</div>
+      </div>
+    </div>
+
+    <!-- Details en overzichten -->
+    <div>
+      <span style="font-size: 15px; font-weight: 700;">Details en overzichten</span>
+      <p style="margin: 4px 0 12px 0; font-size: 12.5px; color: #6B7094;">Bekijk en beheer de volledige administratie. Gebruik de navigatie om snel naar het juiste onderdeel te gaan.</p>
+
+      <div style="background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 22px; padding: 18px 22px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; gap: 4px; border-bottom: 1px solid #EEF0F5; padding-bottom: 12px; overflow-x: auto;">
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: #EAF2FE; color: #2563EB; white-space: nowrap;">Jaaroverzicht</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Transacties</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Categorieën</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Activa</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Leningen</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Lease</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">BTW</div>
+          <div style="padding: 7px 14px; border-radius: 999px; font-size: 12.5px; color: #6B7094; white-space: nowrap;">Rapportages</div>
+        </div>
+
+        <div style="display: flex; gap: 18px;">
+          <div style="flex: 1.15 1 0; background: #F7F8FB; border: 1px solid #ECEEF4; border-radius: 18px; padding: 18px 20px;">
+            <span style="font-size: 13.5px; font-weight: 700;">Indicatieve aangifte 2025</span>
+            <div style="display: flex; justify-content: space-between; margin-top: 12px;">
+              <div>
+                <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px;">
+                  <span style="font-size: 11px; color: #6B7094;">Winst uit onderneming</span>
+                  <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700;">€ 49.670</span>
+                  <span style="font-size: 10.5px; color: #16A34A;">↑ 11% t.o.v. 2024</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; min-width: 220px;">
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #6B7094;">Zelfstandigenaftrek</span><span style="font-size: 12px; font-weight: 600;">− € 5.030</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #6B7094;">MKB-winstvrijstelling</span><span style="font-size: 12px; font-weight: 600;">− € 6.250</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #6B7094;">Belastbare winst</span><span style="font-size: 12px; font-weight: 600;">€ 38.390</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #6B7094;">Indicatieve IB</span><span style="font-size: 12px; font-weight: 600;">€ 14.177</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #6B7094;">Indicatieve Zvw</span><span style="font-size: 12px; font-weight: 600;">€ 2.085</span></div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E4E6F0;">
+              <span style="font-size: 13px; font-weight: 700;">Totaal belasting en premies</span>
+              <span style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;">€ 16.262</span>
+            </div>
+            <div style="margin-top: 12px; display: inline-block; background: #FFFFFF; border: 1px solid #E4E6F0; border-radius: 999px; padding: 8px 16px; font-size: 12px; font-weight: 600;">Toon volledige berekening →</div>
+          </div>
+
+          <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 16px;">
+            <div style="background: #EAF2FE; border: 1px solid #D6E6FB; border-radius: 18px; padding: 16px 18px;">
+              <span style="font-size: 12.5px; font-weight: 700; color: #1E2233;">Relevante aannames</span>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Urencriterium</span><span style="font-size: 11.5px; font-weight: 600; color: #8B90A8;">Onbekend</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Auto</span><span style="font-size: 11.5px; font-weight: 600;">Zakelijke km: 2.500</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Priveauto vergoeding</span><span style="font-size: 11.5px; font-weight: 600;">€ 0,25 / km</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">KIA</span><span style="font-size: 11.5px; font-weight: 600;">Mogelijk</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Lease</span><span style="font-size: 11.5px; font-weight: 600;">1 contract (1 nog controleren)</span></div>
+              </div>
+              <div style="margin-top: 10px; text-align: center; background: #FFFFFF; border: 1px solid #CBE0FA; border-radius: 999px; padding: 7px; font-size: 11.5px; font-weight: 600; color: #2563EB;">Instellingen bekijken →</div>
+            </div>
+
+            <div style="background: #F7F8FB; border: 1px solid #ECEEF4; border-radius: 18px; padding: 16px 18px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 12.5px; font-weight: 700;">BTW per kwartaal</span>
+                <span style="font-size: 11px; color: #2563EB; font-weight: 600;">Bekijk details →</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px; margin-top: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Q1 2025</span><span style="font-size: 10.5px; font-weight: 700; color: #16A34A; background: rgba(22,163,74,0.1); border-radius: 999px; padding: 2px 8px;">Compleet</span><span style="font-size: 12px; font-weight: 600;">€ 2.480</span></div>
+                <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Q2 2025</span><span style="font-size: 10.5px; font-weight: 700; color: #16A34A; background: rgba(22,163,74,0.1); border-radius: 999px; padding: 2px 8px;">Compleet</span><span style="font-size: 12px; font-weight: 600;">€ 2.615</span></div>
+                <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Q3 2025</span><span style="font-size: 10.5px; font-weight: 700; color: #D97706; background: rgba(217,119,6,0.1); border-radius: 999px; padding: 2px 8px;">Nog niet ingediend</span><span style="font-size: 12px; font-weight: 600;">€ 2.102</span></div>
+                <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11.5px; color: #45507A;">Q4 2025</span><span style="font-size: 10.5px; font-weight: 700; color: #8B90A8; background: #EEF0F5; border-radius: 999px; padding: 2px 8px;">Nog niet gestart</span><span style="font-size: 12px; font-weight: 600;">€ 0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"pctKlaar":{"editor":"range","default":87,"min":0,"max":100,"step":1,"section":"Meter"},"accent":{"editor":"color","default":"#16A34A","options":["#16A34A","#0F766E","#D97706","#2563EB"],"section":"Kleur"},"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const pct = this.props.pctKlaar ?? 87;
+    const accent = this.props.accent ?? '#16A34A';
+    const r = 18;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - pct / 100);
+    return {
+      pctLabel: pct + '%',
+      accent,
+      ringCirc: circ,
+      ringOffset: offset,
+    };
+  }
+}
+</script>
+</body>
+</html>

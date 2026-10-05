@@ -17,7 +17,7 @@ const TONE = {
   risk: { border: "border-red-300", bg: "bg-red-50", dot: "bg-red-500", text: "text-red-700" },
 };
 
-export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp }) {
+export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp, inGrid }) {
   const t = TONE[tone] || TONE.neutral;
   const clickable = !!onClick;
   const Wrapper = clickable ? "button" : "div";
@@ -25,7 +25,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
     <div
       className={`relative rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
         clickable ? "hover:border-slate-300" : ""
-      } ${expanded ? "col-span-full" : ""}`}
+      } ${expanded ? "ring-2 ring-teal-600/40" : ""}`}
     >
       {/* v301 — op verzoek: "? uitleg" ook rechtsbovenin op de kaarten hier (Controleren/Instellingen-
           mini-dashboard), niet alleen in de uitgeklapte panelen eronder. Staat als eigen element BUITEN
@@ -77,7 +77,9 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
         {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
       </Wrapper>
 
-      {expanded && children && <div className="pt-1 mt-1 border-t border-slate-100">{children}</div>}
+      {/* v312 (V33) — de uitgeklapte inhoud staat niet meer in de kaart zelf (die de overige kaarten naar
+          beneden duwde) maar in SectionCardGrid, onder het hele rooster van kaarten. */}
+      {!inGrid && expanded && children && <div className="pt-1 mt-1 border-t border-slate-100">{children}</div>}
     </div>
   );
 }
@@ -106,11 +108,16 @@ export default function SectionCardGrid({ title, cards, onOpenHelp }) {
             expanded={card.expanded}
             helpChapter={card.helpChapter}
             onOpenHelp={onOpenHelp}
-          >
-            {card.expandedContent}
-          </SectionCard>
+            inGrid
+          />
         ))}
       </div>
+      {cards.filter((c) => c.expanded && c.expandedContent).map((card) => (
+        <div key={`open-${card.key}`} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="text-[13px] font-bold text-slate-900 mb-3">{card.title}</h3>
+          {card.expandedContent}
+        </div>
+      ))}
     </section>
   );
 }

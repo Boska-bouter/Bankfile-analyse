@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onClose }) {
-  const { tx, patch, matchCount, matchYears, viaIban } = pending;
+  const { tx, patch, matchCount, matchYears, viaIban, keywordQuery } = pending;
   const [selectedYears, setSelectedYears] = useState(matchYears);
   const isConfirmOnly = patch.category === tx.category && patch.type === tx.type;
 
@@ -19,8 +19,11 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
         </div>
         <div className="p-4 text-sm text-slate-600 space-y-3">
           <p>
-            Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met
-            hetzelfde teken.{" "}
+            {keywordQuery ? (
+              <>Er zijn {matchCount} transacties (incl. deze) waarin <strong>"{keywordQuery}"</strong> voorkomt, met hetzelfde teken.</>
+            ) : (
+              <>Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met hetzelfde teken.</>
+            )}{" "}
             {isConfirmOnly ? (
               <>Ook voor die transacties bevestigen dat <strong>{patch.category}</strong> ({patch.type}) klopt?</>
             ) : (
@@ -28,6 +31,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
             )}{" "}
             Alleen deze ene transactie {isConfirmOnly ? "bevestigen" : "aanpassen"}, of ook de andere?
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}
+            {keywordQuery && <span className="block mt-1 text-xs text-slate-400">Gekozen op je zoekwoord, niet op rekeningnummer.</span>}
           </p>
           <div className="space-y-2">
             <button
@@ -40,7 +44,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               onClick={onApplyAllYears}
               className="w-full text-left rounded-lg border border-slate-300 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-50"
             >
-              Deze tegenpartij — alle jaren ({matchYears.join(", ")})
+              {keywordQuery ? `Alle ${matchCount} transacties met "${keywordQuery}"` : "Deze tegenpartij"} — alle jaren ({matchYears.join(", ")})
             </button>
           </div>
           {matchYears.length > 1 && (

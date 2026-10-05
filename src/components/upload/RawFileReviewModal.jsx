@@ -6,8 +6,8 @@ import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 // Toont alle ruwe, ingelezen regels van 1 bestand (dus vóór classificatie) in een los venster —
 // voor als het saldo niet klopt en je wilt narekenen waar het misgaat. Een regel uitsluiten
-// verbergt 'm voortaan overal in de tool (net als bij dubbele transacties) — de keuze wordt
-// onthouden in het projectbestand, niet in de brondata zelf.
+// verbergt 'm voortaan overal in de app (net als bij dubbele transacties) — de keuze wordt
+// onthouden in het dossierbestand, niet in de brondata zelf.
 //
 // Standaard op BESTANDSVOLGORDE gesorteerd (niet op datum) — dat is exact de volgorde waarin de
 // bank de regels aanlevert, dus 1-op-1 te vergelijken met het originele bestand. Handig omdat het
@@ -123,7 +123,7 @@ export default function RawFileReviewModal({
                 return (
                   <tr key={tx.id} className={`border-b border-slate-50 ${isExcluded ? "opacity-40" : ""} ${isBreakpoint ? "bg-amber-50" : ""}`}>
                     <td className="py-1.5 pl-5 pr-2">
-                      <input type="checkbox" checked={isExcluded} onChange={() => toggleRow(tx)} title="Aanvinken om deze regel overal in de tool uit te sluiten" />
+                      <input type="checkbox" checked={isExcluded} onChange={() => toggleRow(tx)} title="Aanvinken om deze regel overal in de app uit te sluiten" />
                     </td>
                     <td className="py-1.5 px-2 font-mono text-slate-300 whitespace-nowrap">{i + 1}</td>
                     <td className="py-1.5 px-2 font-mono whitespace-nowrap">{tx.date.toLocaleDateString("nl-NL")}</td>
@@ -131,6 +131,7 @@ export default function RawFileReviewModal({
                       {tx.counterparty || <ExpandableDescription tx={tx} short="(geen omschrijving)" className="inline" />}
                       {isBreakpoint && <span className="ml-1.5 text-amber-700" title="Bij deze regel klopt het lopende saldo niet meer">⚠</span>}
                       {tx.counterparty && <ExpandableDescription tx={tx} prefix="" className="block text-[10px] text-slate-400" />}
+                      {tx.counterpartyIban && <span className="block text-[10px] font-mono text-slate-400 select-all">{tx.counterpartyIban}</span>}
                     </td>
                     <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{eur(tx.amount)}</td>
                     <td className="py-1.5 pl-2 pr-5 text-right font-mono whitespace-nowrap text-slate-500">{tx.balance != null ? eur(tx.balance) : "—"}</td>

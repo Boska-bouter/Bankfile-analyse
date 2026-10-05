@@ -37,7 +37,7 @@ export function detectPeriodeInDescription(description) {
 export function computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides) {
   const results = [];
   for (const tx of classified) {
-    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || tx.type !== "Zakelijk") continue;
+    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || (tx.viewType || tx.type) !== "Zakelijk") continue;
     if (reviewedPeriodeKeys.includes(tx.id) || periodeQuarterOverrides[tx.id] !== undefined) continue;
     const periode = detectPeriodeInDescription(tx.fullDescription || tx.description);
     if (!periode) continue;
@@ -67,7 +67,7 @@ export function computePeriodeMismatches(classified, reviewedPeriodeKeys, period
 export function computeAllPeriodeSignals(classified, reviewedPeriodeKeys, periodeQuarterOverrides) {
   const results = [];
   for (const tx of classified) {
-    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || tx.type !== "Zakelijk") continue;
+    if (tx.category !== "Zakelijke inkomsten" || tx.isMirror || (tx.viewType || tx.type) !== "Zakelijk") continue;
     const periode = detectPeriodeInDescription(tx.fullDescription || tx.description);
     if (!periode) continue;
     const startQ = Math.ceil((periode.start.getMonth() + 1) / 3);

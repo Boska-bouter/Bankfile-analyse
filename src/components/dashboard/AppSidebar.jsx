@@ -1,4 +1,4 @@
-import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
+import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -54,6 +54,7 @@ export default function AppSidebar({
   onToggleHelp,
   saveState,
   lastSavedAt,
+  projectStatus,
   showActies,
   onEditBasisvragen,
   onOpenAangifteberekening,
@@ -70,7 +71,7 @@ export default function AppSidebar({
     // env(safe-area-inset-top), voor de klok/statusbalk bovenin) en onderin ruimte voor de
     // taakbalk/dock van een laptop. viewport-fit=cover + apple-mobile-web-app-status-bar-style
     // "black-translucent" staan al in index.html, dus de env(safe-area-inset-*)-waarden werken
-    // zodra de tool als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
+    // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
       className="w-[216px] shrink-0 bg-[#16203A] flex flex-col px-3.5 sticky top-0 h-screen overflow-y-auto"
@@ -121,6 +122,44 @@ export default function AppSidebar({
         </div>
       )}
 
+      {/* v304 (V26) — Dossier: de bestandsacties horen bij het dossier dat openstaat (cliënt + jaar),
+          niet onderaan bij "Beheer" — maar staan bewust ónder de navigatie, zodat Overzicht/
+          Controleren/Instellingen als meest gebruikte onderdeel bovenaan blijven. "Bestand laden" heet
+          nu "Bankbestand toevoegen" (het voegt toe aan het dossier, het vervangt niets) en "Wis alles"
+          is "Nieuw dossier" (met keuzevenster, zie clearAllData in App.jsx). */}
+      <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
+        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
+
+        {canClearAll && (
+          <button onClick={onClearAll} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
+            <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className={`text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
+          </button>
+        )}
+
+        {canSaveProject && (
+          <button onClick={onSaveProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+            <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className="text-xs font-semibold text-slate-200">Dossier opslaan</span>
+          </button>
+        )}
+
+        <button onClick={onLoadProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+          <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <span className="text-xs font-semibold text-slate-200">Dossier laden</span>
+        </button>
+
+        {canSaveProject && (
+        <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
+          <Upload className="h-3.5 w-3.5 text-white shrink-0" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-bold text-white">Extra bankbestand toevoegen</span>
+            <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
+          </div>
+        </button>
+        )}
+      </div>
+
       {/* v267 — Acties: verplaatst vanuit de oude "Jaar:.../Excel/Print/Basisvragen"-rij boven het
           (nu verwijderde) Aangifte-statusblok — zelfde handlers als voorheen. */}
       {showActies && (
@@ -165,42 +204,35 @@ export default function AppSidebar({
 
       <div className="flex-grow" />
 
-      {/* Beheer: bestandsacties — zelfde handlers als voorheen in de header-balk */}
-      <div className="flex flex-col gap-2 pt-3.5 border-t border-white/10">
-        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Beheer</span>
-
-        <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
-          <Upload className="h-3.5 w-3.5 text-white shrink-0" />
-          <div className="flex flex-col leading-tight">
-            <span className="text-xs font-bold text-white">Bestand laden</span>
-            <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
-          </div>
-        </button>
-
-        {canSaveProject && (
-          <button onClick={onSaveProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
-            <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className="text-xs font-semibold text-slate-200">Project opslaan</span>
-          </button>
-        )}
-
-        <button onClick={onLoadProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
-          <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-          <span className="text-xs font-semibold text-slate-200">Project laden</span>
-        </button>
-
-        {canClearAll && (
-          <button onClick={onClearAll} className="flex items-center gap-2 border border-rose-900 hover:bg-rose-950/40 rounded-xl px-3 py-2">
-            <Trash2 className="h-3.5 w-3.5 text-rose-300 shrink-0" />
-            <span className="text-xs font-semibold text-rose-300">Wis alles</span>
-          </button>
-        )}
-      </div>
-
       {/* Autosave-status, Help, Privacy */}
       <div className="flex flex-col gap-2.5 mt-3.5 pt-3 border-t border-white/10">
+        {/* v305 (V27) — dossierbestand-status, bewust los van de autosave hieronder: de browseropslag is
+            géén dossierbestand. Amber zodra er wijzigingen zijn die nog niet zijn geëxporteerd. */}
+        {projectStatus?.hasData && (() => {
+          const tijd = (d) => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+          const { changes, lastExportAt, loadedName } = projectStatus;
+          const dirty = changes > 0;
+          const tekst = dirty
+            ? `${changes} wijziging${changes === 1 ? "" : "en"} ${
+                lastExportAt ? `sinds export ${tijd(lastExportAt)}` : loadedName ? "sinds het laden van het dossierbestand" : "· nog niet als dossierbestand opgeslagen"
+              }`
+            : lastExportAt
+            ? `Dossierbestand opgeslagen ${tijd(lastExportAt)}`
+            : loadedName
+            ? "Dossierbestand geladen"
+            : "Nog geen dossierbestand opgeslagen";
+          return (
+            <div
+              className={`flex items-start gap-1.5 text-[10.5px] ${dirty ? "text-amber-300" : "text-slate-500"}`}
+              title="Dossierbestand = het exportbestand (Dossier opslaan). Dit staat los van de automatische browseropslag hieronder."
+            >
+              {dirty ? <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <FileSpreadsheet className="h-3 w-3 mt-0.5 shrink-0" />}
+              <span>{tekst}</span>
+            </div>
+          );
+        })()}
         {saveState && (
-          <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — geen bestand.">
+          <div className="flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
@@ -208,8 +240,10 @@ export default function AppSidebar({
             )}
             {saveState === "saved" && (
               <>
-                <Check className="h-3 w-3 text-emerald-400" />
-                Opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                <Check className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                <span>
+                  Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · browser
+                </span>
               </>
             )}
             {saveState === "error" && (

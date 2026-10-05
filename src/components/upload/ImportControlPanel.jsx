@@ -7,7 +7,7 @@ import { INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "../../impor
 // ene bestand) — losstaand van de drie niveaus voor de aansluiting tússen bestanden bij een
 // jaarovergang (continuity, zie classifyContinuityGap in transactions.js). Onder dit bedrag is een
 // afwijking hier vrijwel altijd gewoon afronding; vroeger liet deze controle al bij een paar euro's
-// verschil een amber waarschuwing zien, terwijl de rest van de tool dat allang als verwaarloosbaar
+// verschil een amber waarschuwing zien, terwijl de rest van de app dat allang als verwaarloosbaar
 // behandelde.
 const isMinorDiff = (diff) => Math.abs(diff) < INTRA_FILE_BALANCE_THRESHOLD;
 
@@ -26,7 +26,7 @@ function StatusLine({ ok, warn, children }) {
 
 // Een korte "APK" per geüpload bestand, vóór je verder gaat met classificeren — geeft vertrouwen
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
-// extra stap te zijn: de rest van de tool blijft gewoon meteen bruikbaar.
+// extra stap te zijn: de rest van de app blijft gewoon meteen bruikbaar.
 export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile, accountTypeByFile = {} }) {
   // v243 — null = "auto" (open zodra er een echt punt is, ingeklapt zodra alles klopt), zelfde
   // patroon als de andere Controleren-secties — een expliciete klik wint daarna, ongeacht of er

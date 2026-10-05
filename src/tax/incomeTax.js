@@ -36,7 +36,7 @@ export const IB_MAX_YEAR = 2026;
 // zelfstandigenaftrekToegepast: standaard true (bestaand gedrag, ongewijzigd voor oude projecten).
 // Zelfstandigenaftrek is een persoonlijke aftrek die alleen mag worden toegepast als aan het
 // urencriterium (doorgaans: minimaal 1225 uur per jaar aan de onderneming besteed) is voldaan —
-// dat weet deze tool niet uit bankgegevens. Zet dit expliciet op false om het scenario "geen
+// dat weet deze app niet uit bankgegevens. Zet dit expliciet op false om het scenario "geen
 // zelfstandigenaftrek" te berekenen (bijv. omdat niet aan het urencriterium is voldaan).
 function computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast = true) {
   const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
@@ -62,7 +62,7 @@ export function estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast = tr
 }
 
 // Berekent zowel het scenario mét als zónder zelfstandigenaftrek — voor gebruik wanneer niet
-// bekend is of aan het urencriterium is voldaan ("Onbekend"), zodat de tool geen schijnzekerheid
+// bekend is of aan het urencriterium is voldaan ("Onbekend"), zodat de app geen schijnzekerheid
 // geeft door zomaar één van de twee te kiezen.
 export function estimateIncomeTaxScenarios(winst, year) {
   return {
@@ -73,11 +73,11 @@ export function estimateIncomeTaxScenarios(winst, year) {
 
 // Een jaar waarvoor het urencriterium nooit is aangegeven mag niet zomaar stilzwijgend "mét
 // zelfstandigenaftrek" geven (zie `zaStatus !== "nee"` in reports/aangiftevoorstel.js en
-// PersoonlijkeAannamesPanel.jsx) — dat oogt voor een gebruiker als "niets ingevuld, dus de tool heeft
+// PersoonlijkeAannamesPanel.jsx) — dat oogt voor een gebruiker als "niets ingevuld, dus de app heeft
 // het wel ongeveer goed", terwijl het urencriterium juist NIET uit bankgegevens is af te leiden (de
 // Belastingdienst koppelt de zelfstandigenaftrek er direct aan). Dit stille "Ja"-gedrag geldt daarom
 // alleen nog voor dossiers die al bestonden vóórdat deze regel werd ingevoerd (`zaLegacyJaDefault` —
-// zie App.jsx/loadProjectFile, resulteert hier in "ja"), zodat een eerder opgeslagen project niet met
+// zie App.jsx/loadProjectFile, resulteert hier in "ja"), zodat een eerder opgeslagen dossier niet met
 // terugwerkende kracht andere cijfers toont; voor een gloednieuw dossier resulteert een onbeantwoord
 // jaar in "onbekend" (beide scenario's naast elkaar, net als bij een expliciete "Onbekend"-keuze) —
 // de veiligere aanname zolang niemand het urencriterium heeft bevestigd. Een expliciet gezet jaar
@@ -133,7 +133,7 @@ export const STARTERSAFTREK_BEDRAG = 2123;
 // kon worden benut omdat de winst te laag was. Mag tot 9 jaar later alsnog worden verrekend, in een
 // jaar waarin (a) wél aan het urencriterium is voldaan (zelfstandigenaftrekStatus !== "nee") én
 // (b) de winst hoger is dan de normale zelfstandigenaftrek van dat jaar (er dus "ruimte" is). Deze
-// tool houdt dit zelf bij (in plaats van de aanslagbiljetten van eerdere jaren) — reken dit na als
+// app houdt dit zelf bij (in plaats van de aanslagbiljetten van eerdere jaren) — reken dit na als
 // er al eerdere jaren buiten dit rapport vielen.
 //
 // jarenData: array van { year, winst, zelfstandigenaftrekStatus: "ja"|"nee"|undefined,
@@ -262,7 +262,7 @@ export function estimateHeffingskortingenMetOndernemersaftrek(winst, year, onder
 // ---------------------------------------------------------------------------------------------
 // Beide kortingen zijn wettelijk afhankelijk van meer dan alleen de winst uit onderneming: de
 // algemene heffingskorting van het volledige verzamelinkomen (box 1+2+3) en eventueel een fiscale
-// partner, de arbeidskorting alleen van het (positieve) arbeidsinkomen. Deze tool kent alleen de
+// partner, de arbeidskorting alleen van het (positieve) arbeidsinkomen. Deze app kent alleen de
 // winst uit onderneming uit de bankgegevens — geen overig inkomen, geen box 2/3, geen partner, en
 // gaat er daarom bewust van uit dat:
 // - de winst uit onderneming het enige inkomen is (geen loon, uitkering, of ander box 1/2/3-inkomen),
@@ -336,7 +336,7 @@ export const ARBEIDSKORTING_BY_YEAR = {
 };
 
 // Grondslag: arbeidsinkomen — voor een zzp'er/eenmanszaak is dit de winst uit onderneming vóór
-// zelfstandigenaftrek en mkb-winstvrijstelling (dus de ruwe "winst" zoals de tool die al elders
+// zelfstandigenaftrek en mkb-winstvrijstelling (dus de ruwe "winst" zoals de app die al elders
 // gebruikt), niet de belastbare winst ná die aftrekken.
 export function computeArbeidskorting(arbeidsinkomen, year) {
   if (!arbeidsinkomen || arbeidsinkomen <= 0) return 0;
@@ -368,7 +368,7 @@ export function estimateHeffingskortingen(winst, year, zelfstandigenaftrekToegep
 // Kleinschaligheidsinvesteringsaftrek (KIA) — GROVE INDICATIE.
 // ---------------------------------------------------------------------------------------------
 // Niet elke aanschaf van een bedrijfsmiddel telt mee (bijv. personenauto's, grond en woningen zijn
-// doorgaans uitgesloten, en elk bedrijfsmiddel moet minimaal ca. €450 kosten) — deze tool kent dat
+// doorgaans uitgesloten, en elk bedrijfsmiddel moet minimaal ca. €450 kosten) — deze app kent dat
 // onderscheid niet uit bankgegevens, dus dit is uitdrukkelijk een "mogelijke KIA", geen definitieve
 // aftrek. Bron: gepubliceerde KIA-tabel van de Belastingdienst. Check jaarlijks op belastingdienst.nl
 // of deze bedragen nog kloppen.

@@ -90,7 +90,7 @@ export function printReport(groups) {
     (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches);
   if (isStandaloneApp) {
     window.alert(
-      "Printen lukt helaas niet vanuit de app-versie op je beginscherm — dit is een bekende beperking van iOS zelf, niet van deze tool.\n\n" +
+      "Printen lukt helaas niet vanuit de app-versie op je beginscherm — dit is een bekende beperking van iOS zelf, niet van deze app.\n\n" +
         "Open dezelfde link rechtstreeks in je browser (niet via het app-icoon) en print daarvandaan, of gebruik de Excel-knop."
     );
     return;

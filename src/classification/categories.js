@@ -10,6 +10,8 @@ export const DEFAULT_RULES = [
     "santander", "credit europe bank", "demir-halk bank", "anadolubank", "yapi kredi", "garantibank",
     "garanti bbva", "deutsche bank", "bnp paribas", "hsbc", "nwb bank", "bng bank", "transferwise",
     "saxo bank", "binckbank", "alex vermogensbank",
+    // V58 — rente op een (rood-)staande rekening is een bankkost (zakelijk én, via SPLIT_CATEGORY_NAMES, privé)
+    "rente buiten limiet", "debetrente", "rc afrek", "rente rekening-courant", "rente rekening courant",
   ] },
   // Let op volgorde: deze drie staan bewust VOOR de gewone Belastingen: IB/LH/OB-regels hieronder.
   // "Naheffingsaanslag omzetbelasting" bevat namelijk ook gewoon het woord "omzetbelasting" —
@@ -24,7 +26,7 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
-  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
+  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "cijfermeester", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
     "sd worx", "loket.nl", "exact online", "afas software", "salaris compleet", "salarispro", "employes", "unit4",
     "salarisonline", "payroll totaal", "tentoo", "merces", "flexpedia",
     "rsm nederland", "moore drv", "astrium accountants", "accon avm", "abab accountants", "van oers",
@@ -50,6 +52,8 @@ export const DEFAULT_RULES = [
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
+    // V58 — laden van een elektrische auto valt onder brandstof (en niet onder huisenergie via "eneco")
+    "eneco emobility", "eneco e-mobility", "emobility", "e-mobility", "laadpas", "ev charging", "newmotion",
   ] },
   { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz", "sepa green"] },
   // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor energie/water: bewust
@@ -57,11 +61,22 @@ export const DEFAULT_RULES = [
   // die structureel deels zakelijk/deels privé gebruikt wordt (zie tax/gedeeldeHuur.js).
   { name: "Energie-water (deels zakelijk)", color: "bg-yellow-100 text-yellow-800", keywords: [],
     description: "Energie/water van een aansluiting (bijv. een schuur/loods of een gedeeltelijk zakelijk gebruikte woning) waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Energie-water\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
-  { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water"] },
+  { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water", "belastingen", "bsgr", "bghu", "svhw", "belastingsamenwerking"] },
   // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor gemeentelijke kosten.
   { name: "Gemeentelijke kosten (deels zakelijk)", color: "bg-stone-200 text-stone-800", keywords: [],
     description: "Gemeentelijke kosten (bijv. OZB) voor een pand waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Gemeentelijke kosten\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
-  { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: ["stichting halm", "huur "] },
+  { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: [
+    "stichting halm", "huur ",
+    // V58 — woningcorporaties en institutionele verhuurders (woonhuur): op een privérekening wordt dit
+    // via SPLIT_CATEGORY_NAMES automatisch "Prive - huur".
+    "amvest", "vesteda", "heimstaden", "syntrus achmea real estate", "bouwinvest", "a.s.r. real estate", "woningbeheer",
+    "woningstichting", "woonstichting", "woningcorporatie", "woningbouwvereniging", "woningbouwcorporatie",
+    "woonbron", "ymere", "rochdale", "stadgenoot", "eigen haard", " portaal ", "mitros", "havensteder",
+    "woonstad", "woonbedrijf", "wooninc", "thuisvester", "brabantwonen", "brabant wonen", "wonenbreburg", "wonen breburg",
+    "woonstede", "idealis", "de alliantie", "de woonplaats", "lefier", "nijestee", "elan wonen", "wonion", "mooiland",
+    "woonzorg nederland", "habion", "area wonen", "woonconcept", "domijn", "de goede woning", "tiwos", "stichting trudo",
+    "woonwenz", "woonpartners", "staedion", "waterland wonen", "huurpenningen",
+  ] },
   // Bewust GEEN zoekwoorden: dit subtype wordt nooit automatisch toegekend. Een deels-zakelijk
   // verhuurde schuur/loods matcht anders via de "huur "-zoekwoorden hierboven gewoon bij het
   // reguliere (100% zakelijke) "Huur" — de gebruiker moet zo'n transactie zelf, bewust, hierheen
@@ -117,7 +132,7 @@ export const DEFAULT_RULES = [
   { name: "Partneralimentatie", color: "bg-rose-100 text-rose-800", keywords: [
     "partneralimentatie", "partneralimentie",
   ],
-    description: "Fiscaal anders dan de meeste privé-categorieën: bij de betaler is dit een persoonsgebonden aftrekpost (box 1), bij de ontvanger belast inkomen. Deze tool berekent dat niet mee in de IB-schatting (die is alleen op de winst uit onderneming gebaseerd) — betrek dit apart bij de daadwerkelijke aangifte." },
+    description: "Fiscaal anders dan de meeste privé-categorieën: bij de betaler is dit een persoonsgebonden aftrekpost (box 1), bij de ontvanger belast inkomen. Deze app berekent dat niet mee in de IB-schatting (die is alleen op de winst uit onderneming gebaseerd) — betrek dit apart bij de daadwerkelijke aangifte." },
   { name: "Kinderalimentatie", color: "bg-rose-50 text-rose-700", keywords: [
     "kinderalimentatie", "lbio", "onderhoudsbijdrage",
   ],
@@ -146,6 +161,15 @@ export const DEFAULT_RULES = [
   ],
     description: "Fysieke en online winkelaankopen: kleding, schoenen, accessoires/sieraden, kookwinkels en huishoudwinkels." },
   { name: "Prive - mobiel/internet", color: "bg-indigo-50 text-indigo-700", keywords: [] },
+  // V47 — bankkosten van een privérekening zijn geen zakelijke kosten (zie SPLIT_CATEGORY_NAMES).
+  // V56 — heen-en-weer boeken tussen twee eigen rekeningen van hetzelfde type (herkend op IBAN).
+  { name: "Interne overboeking", color: "bg-cyan-100 text-cyan-800", keywords: [] },
+  { name: "Prive - bankkosten", color: "bg-slate-100 text-slate-700", keywords: [] },
+  // V48 — idem voor huisvestingskosten die vanaf een privérekening betaald zijn (alleen zakelijk als dat is opgegeven).
+  { name: "Prive - energie-water", color: "bg-amber-50 text-amber-700", keywords: [] },
+  { name: "Prive - gemeentelijke kosten", color: "bg-amber-50 text-amber-700", keywords: [] },
+  { name: "Prive - overige kosten", color: "bg-slate-100 text-slate-700", keywords: [] },
+  { name: "Prive - huur", color: "bg-amber-50 text-amber-700", keywords: [] },
   { name: "Prive overige abonnementen", color: "bg-violet-50 text-violet-700", keywords: [
     "netflix", "spotify", "videoland", "disney+", "disney plus", "hbo max", "hbomax", "npo start", "storytel",
     "npostart", "npo plus", "amazon prime", "prime video", "youtube premium", "apple music", "apple tv+",
@@ -177,7 +201,7 @@ export const DEFAULT_RULES = [
   ] },
   { name: "Lease (financieel)", color: "bg-teal-200 text-teal-900", keywords: [] },
   { name: "Marketing-website", color: "bg-green-100 text-green-800", keywords: ["google ads", "google ireland", "meta ads", "facebook ads", "facebook payments", "mailchimp", "hostnet", "versio", "transip", "strato", "canva", "linkedin ads"] },
-  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark"] },
+  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark", "q park", "yellowbrick", "mobiliteitsgelden"] },
   { name: "Prive opnames", color: "bg-amber-100 text-amber-800", keywords: ["geldautomaat", "pinopname", "contant opgenomen", " atm ", "geldmaat"] },
   { name: "Reiskosten (OV)", color: "bg-cyan-200 text-cyan-900", keywords: [
     "ns.nl", "ns-groep", "ns groep", "ovpay", "gvb", "ret", "htm", "arriva", "connexxion", "qbuzz",
@@ -202,6 +226,8 @@ export const DEFAULT_RULES = [
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
     "feelgoods burgers",
+    // v312 (V33)
+    "mc donald", "mcdonalds", "buckaroo", "snack", "ziggo dome", "afas live", "disney", "ticketing payments", "ticketing",
     // Vervoer/vermaak dat bij uitjes hoort, geen eigen-vervoer-/OV-kosten (die staan al bij
     // Brandstof/Reiskosten (OV)).
     " uber", "uber ", " taxi", "taxi ", " museum ", "pretpark", "attractiepark", "bowling", "escape room",
@@ -215,7 +241,7 @@ export const DEFAULT_RULES = [
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
     "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb", "voogd",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
-    "arag", " das ", "bovemij", "turien & co", "vivat", "aon",
+    "arag", " das ", "bovemij", "turien & co", "vivat", "aon", "surebusiness",
   ],
     description: "Zakelijke verzekeringen. Let op: grote verzekeraars als Interpolis/Achmea/Allianz/Univé verkopen zowel zakelijke als privé-polissen — die staan daarom bij het privé-subtype \"Verzekeringen\" en moeten hier zo nodig handmatig op Zakelijk gezet worden." },
   { name: "AOV (arbeidsongeschiktheidsverzekering)", color: "bg-purple-100 text-purple-800", keywords: [
@@ -294,6 +320,10 @@ export const GEDEELDE_HUISVESTING_CATEGORIEEN = [GEDEELDE_HUUR_CATEGORIE, GEDEEL
 
 export const SPLIT_CATEGORY_NAMES = {
   "Zakelijk mobiel/internet": "Prive - mobiel/internet",
+  "Bankkosten": "Prive - bankkosten",
+  "Energie-water": "Prive - energie-water",
+  "Gemeentelijke kosten": "Prive - gemeentelijke kosten",
+  "Huur": "Prive - huur",
   "Zakelijk overige abonnementen": "Prive overige abonnementen",
   "Leningen": "Leningen (privé)",
 };
@@ -301,8 +331,8 @@ export const SPLIT_CATEGORY_NAMES = {
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
-  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
+  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - bankkosten", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - huur", "Prive - overige kosten", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Streaming diensten", "Prive - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
@@ -326,6 +356,7 @@ export const CATEGORY_COLOR = Object.fromEntries([
   ["Overboeking van bekenden", "bg-fuchsia-50 text-fuchsia-700"],
   ["Interne overboeking: zakelijk sparen", "bg-cyan-100 text-cyan-800"],
   ["Interne overboeking: privé sparen", "bg-cyan-50 text-cyan-700"],
+  ["Interne overboeking", "bg-cyan-100 text-cyan-800"],
   ["Overig", "bg-slate-200 text-slate-700"],
   ...DEFAULT_RULES.map((r) => [r.name, r.color]),
 ]);
@@ -341,7 +372,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
   "Bankkosten", "Belastingen: LH", "Belastingen: MRB", "Belastingen: ZVW",
   "Energie-water", "Gemeentelijke kosten", "Huur", "Hypotheek", "Kinderopvang",
   "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Boekhouder, accountant & administratie",
-  "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
+  "Prive - bankkosten", "Prive - mobiel/internet", "Prive overige abonnementen", "Uitbetalen loon",
   "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen",
   "Zakelijk mobiel/internet", "Zakelijk overige abonnementen",
 ];
@@ -349,7 +380,7 @@ export const DEFAULT_FIXED_CATEGORIES = [
 export const INCOME_TRANSFER_CATEGORIES = [
   "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Inkomsten", "Verkoop activa", "Toeslagen",
   "Prive opnames", "Ontvangen van zakelijk", "Terugboeking van prive", "Terugboeking naar zakelijk",
-  "Overboekingen aan personen", "Overboeking van bekenden", "Inkomsten/betalingen niet dit jaar", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen",
+  "Overboekingen aan personen", "Overboeking van bekenden", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen",
 ];
 
 // Route B (zie gesprek): telt een transactie mee als zakelijke omzet/kostenpost in W&V/BTW? Dat
@@ -382,12 +413,12 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Belastingen: Naheffingen IB voorgaande jaren": "geen",
   // Transfers/boekwinst/nog-te-beoordelen — geen gewone omzet of kostenpost
   "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen",
-  "Interne overboeking: zakelijk sparen": "geen", "Interne overboeking: privé sparen": "geen",
+  "Interne overboeking": "geen", "Interne overboeking: zakelijk sparen": "geen", "Interne overboeking: privé sparen": "geen",
   // Alles met hoofdcategorie "Privé" of "Persoonlijk & vertrouwelijk": nooit een kostenpost,
   // ongeacht tx.type — dit was precies het gat waardoor "Prive: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
-  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen",
+  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Prive - mobiel/internet": "geen", "Prive - bankkosten": "geen", "Prive - energie-water": "geen", "Prive - gemeentelijke kosten": "geen", "Prive - huur": "geen", "Prive - overige kosten": "geen",
   "Prive opnames": "geen", "Prive overige abonnementen": "geen", "Prive - streaming diensten": "geen", "Terugboeking van prive": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Prive - vrijetijd-uitgaan-vakantie & uit eten": "geen",
   "Prive: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
@@ -469,7 +500,7 @@ export function migrateLegacyCategoryName(name) {
 // dan de re-render triggert die de bijgewerkte lijst oppikt.
 // mainCategory is optioneel: alleen relevant bij een door de gebruiker zelf toegevoegde categorie
 // waarbij Zakelijk/Privé is gekozen (zie CategoryRulesPanel). Zonder expliciete keuze — bijv. bij
-// een oudere, al bestaande custom categorie uit een eerder opgeslagen project — blijft het oude
+// een oudere, al bestaande custom categorie uit een eerder opgeslagen dossier — blijft het oude
 // gedrag intact: mainCategoryOf/fiscalTreatmentOf vallen dan terug op hun standaardwaarde.
 export function registerCategory(name, color, mainCategory) {
   if (!CATEGORY_ORDER.includes(name)) {
@@ -485,7 +516,7 @@ export function registerCategory(name, color, mainCategory) {
   }
 }
 
-// Merget een opgeslagen categoryRules-array (uit storage of een projectbestand) met
+// Merget een opgeslagen categoryRules-array (uit storage of een dossierbestand) met
 // DEFAULT_RULES op naam, met behoud van custom categorieën die niet in DEFAULT_RULES zitten.
 export function mergeCategoryRules(savedRules) {
   const rawSaved = Array.isArray(savedRules) ? savedRules : [];
@@ -497,7 +528,7 @@ export function mergeCategoryRules(savedRules) {
     // ander overschrijft.
     const matches = saved.filter((r) => r.name === defRule.name);
     if (matches.length === 0) return defRule;
-    // Samenvoegen met de HUIDIGE standaardlijst (niet vervangen): een opgeslagen project bevat
+    // Samenvoegen met de HUIDIGE standaardlijst (niet vervangen): een opgeslagen dossier bevat
     // een momentopname van de zoekwoorden op het moment van opslaan. Zouden we die snapshot
     // domweg laten winnen, dan verdwijnen nieuwe standaard-zoekwoorden die nadien zijn toegevoegd
     // zodra een ouder project weer wordt geladen — precies het "Winkels divers is leeg"-effect.
@@ -544,7 +575,7 @@ export const MAIN_CATEGORY_COLOR = {
   "Nog te beoordelen": "bg-slate-200 text-slate-700",
 };
 
-// Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de tool
+// Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de app
 // zelf herkent op naam (zakelijke inkomsten, spiegelboekingen zoals "Prive opnames"/"Uitbetaling
 // aan prive"/"Terugboeking van prive", "Overboekingen aan personen", "Overig") blijven onder de
 // motorkap gewoon dat subtype — alleen hun WEERGAVE valt hier onder een bredere hoofdcategorie.
@@ -578,6 +609,7 @@ export const SUBTYPE_TO_MAIN = {
   "Inkomsten/betalingen niet dit jaar": "Zakelijke inkomsten",
   "Interne overboeking: zakelijk sparen": "Interne overboekingen",
   "Interne overboeking: privé sparen": "Interne overboekingen",
+  "Interne overboeking": "Interne overboekingen",
   "Kinderopvang": "Privé",
   "Medische uitgaven": "Privé",
   "Lease (operationeel)": "Vervoer & auto",
@@ -592,6 +624,11 @@ export const SUBTYPE_TO_MAIN = {
   "Parkeren": "Vervoer & auto",
   "Betaalautomaat kosten": "Inkoop & zakelijke uitgaven",
   "Prive - mobiel/internet": "Privé",
+  "Prive - bankkosten": "Privé",
+  "Prive - energie-water": "Privé",
+  "Prive - gemeentelijke kosten": "Privé",
+  "Prive - huur": "Privé",
+  "Prive - overige kosten": "Privé",
   "Prive opnames": "Privé",
   "Prive overige abonnementen": "Privé",
   "Prive - streaming diensten": "Privé",

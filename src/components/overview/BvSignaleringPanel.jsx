@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
 // Toont, alléén als computeBvSignalering (src/tax/bv.js) een rode vlag geeft, informatieve tekst
 // over de drie routes bij een niet-levensvatbare BV — turboliquidatie, gewone ontbinding/vereffening,
 // eigen aangifte faillissement — plus de meld-betalingsonmacht-waarschuwing en een verwijzing naar de
-// liquidatieverliesregeling. Nadrukkelijk geen advies en geen keuze: de tool signaleert op basis van
+// liquidatieverliesregeling. Nadrukkelijk geen advies en geen keuze: de app signaleert op basis van
 // cijfers die hij al berekent, maar de beslissing (en de precieze uitvoering) is aan een boekhouder of
 // jurist. Zie het bouwplan, sectie "Advies bij tegenvallende cijfers: stoppen of doorgaan", voor de
 // bronnen achter deze tekst (KVK, Ondernemersplein, Jongbloed Fiscaal Juristen).
@@ -25,7 +25,7 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
       {open && (
         <div className="px-4 pb-4 text-xs text-rose-900 space-y-3">
           <p className="italic text-rose-700">
-            Dit is geen advies en geen keuze — dat is aan een boekhouder of jurist. Deze tool laat alleen zien
+            Dit is geen advies en geen keuze — dat is aan een boekhouder of jurist. Deze app laat alleen zien
             welke routes er in Nederland bestaan als de cijfers van een BV niet meer verbeteren.
           </p>
           <div>

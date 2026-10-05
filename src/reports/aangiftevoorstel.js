@@ -37,7 +37,7 @@ const STATUS_KAART_CLASS = { groen: "status-kaart-groen", oranje: "status-kaart-
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Eén rij in de winst-en-verliesrekening-stijl weergave — optioneel met toelichting en een
-// uitsplitsing naar categorie eronder (zodat het bedrag terug te vinden is in de tool zelf).
+// uitsplitsing naar categorie eronder (zodat het bedrag terug te vinden is in de app zelf).
 function rubriekBlok(nr, naam, totaal, toelichting, perCategorie) {
   if (!totaal) return "";
   return `
@@ -57,7 +57,7 @@ function rubriekBlokAltijd(nr, naam, totaal, toelichting, perCategorie) {
 }
 
 // Uitsplitsing per categorie onder een rubriek — zodat een bedrag in dit document direct terug te
-// vinden is bij de gelijknamige categorie in de tool zelf (zie ook het categorieoverzicht onderaan).
+// vinden is bij de gelijknamige categorie in de app zelf (zie ook het categorieoverzicht onderaan).
 function categorieDetailHtml(perCategorie) {
   if (!perCategorie || perCategorie.length === 0) return "";
   return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
@@ -67,7 +67,7 @@ const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend
 
 // "Algemene gegevens" — welke bestanden, welke periode en hoeveel transacties aan dit jaar ten
 // grondslag liggen, en of er bekende gaten in de bestandscontinuïteit zijn rond dit jaar. Puur
-// samengesteld uit data die de tool al had (importdiagnostiek/bestandscontinuïteit) — geen nieuwe
+// samengesteld uit data die de app al had (importdiagnostiek/bestandscontinuïteit) — geen nieuwe
 // administratie, alleen zichtbaar gemaakt.
 function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar) {
   if (!importDiagnostics || importDiagnostics.length === 0) return "";
@@ -82,7 +82,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
     })
     .join("");
 
-  const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
+  const zakTxDitJaar = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && !tx.isMirror && tx.year === year).length;
 
   const gatenHtml = gatenDitJaar.length > 0
     ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan €1000) — de moeite waard om na te gaan of daar nog een bestand bij hoort.</p>`
@@ -184,7 +184,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's. Een
   // onbeantwoord jaar (zaStatusRaw null) valt terug op resolveZelfstandigenaftrekStatusForYear —
   // "ja" voor een dossier dat al bestond vóór deze regel werd ingevoerd (zaLegacyJaDefault, zodat
-  // eerder opgeslagen projecten dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor
+  // eerder opgeslagen dossieren dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor
   // een nieuw dossier.
   const zaStatusRaw = zelfstandigenaftrekStatus?.[year];
   const zaStatus = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault);
@@ -230,7 +230,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // hier een VOLLEDIG los, tweede scenario
   // doorgerekend op (winst − mogelijke KIA) — de bestaande ibEstimate/zvwEstimate/heffingskortingen
   // hierboven (op de winst ZONDER KIA) blijven het hoofdcijfer, ongewijzigd: niet elk bedrijfsmiddel
-  // kwalificeert voor KIA (personenauto's, grond, een drempel per bedrijfsmiddel — deze tool kent dat
+  // kwalificeert voor KIA (personenauto's, grond, een drempel per bedrijfsmiddel — deze app kent dat
   // onderscheid niet uit bankgegevens), dus "ná KIA" is expliciet een scenario, geen vaststaand
   // bedrag. Bij mogelijkeKia === 0 zijn beide scenario's vanzelf aan elkaar gelijk.
   const winstNaKia = summary.winst - mogelijkeKia;
@@ -253,7 +253,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
   // (netto, exclusief BTW, zelfde sumCatNetto-conventie als de rest van boxMapping.js) — geen nieuwe
   // berekening, puur een andere weergave van precies dezelfde bedragen. "Andere externe kosten" heeft
-  // in deze tool (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
+  // in deze app (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
   const inkoopkostenBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Zakelijke inkoop/uitgaven")?.totaal || 0;
   const uitbesteedWerkBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Inhuur personeel")?.totaal || 0;
   const andereExterneKostenBedrag = 0;
@@ -286,12 +286,12 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
 
   // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
-  // checklist in de tool zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
-  // anders beweert dan wat je in de tool ook al ziet. IB-status (het "afgevinkt"-vinkje) telt
+  // checklist in de app zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
+  // anders beweert dan wat je in de app ook al ziet. IB-status (het "afgevinkt"-vinkje) telt
   // bewust niet mee — dat is een persoonlijke herinnering, geen signaal over de betrouwbaarheid
   // van deze reconstructie.
-  const zakItemsChecklist = classified.filter((tx) => tx.type === "Zakelijk" && tx.year === year);
-  const priItemsChecklist = classified.filter((tx) => tx.type === "Prive" && tx.year === year);
+  const zakItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && tx.year === year);
+  const priItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Prive" && tx.year === year);
   const priveRekeningGeladen = Object.values(accountTypeByFile || {}).includes("Prive");
   const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {}, priveRekeningGeladen);
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
@@ -371,7 +371,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   // Compact fiscaal dashboard bovenaan, met élke stap van winst → belastbare winst → IB/Zvw als
   // eigen regel (in plaats van alleen het eindresultaat) — zodat in één oogopslag duidelijk is wat
-  // de tool ongeveer als aangifte verwacht. Bij "onbekend" urencriterium (zaScenarios) vervangen de
+  // de app ongeveer als aangifte verwacht. Bij "onbekend" urencriterium (zaScenarios) vervangen de
   // losse regels een compacte twee-scenario-tabel (zie "Indicatieve inkomstenbelasting en
   // Zvw-bijdrage" hieronder, met alleen de aanvullende details).
   // v262 — presentatie-verbetering van de indicatieve aangifteberekening (op verzoek, na een eigen
@@ -425,13 +425,13 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     kwartalen.length > 0
       ? `
   <div class="btw-kaart">
-    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
     <tbody><tr><td>Saldo</td>${kwartalen
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
         return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
       })
-      .join("")}</tr></tbody></table>
+      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
       : "";
 
@@ -469,7 +469,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ? `
   <div class="rubriek"><span>5. Financiële baten en lasten</span><span class="num">${eur(financieelTotaalRente)}</span></div>
   <p class="toelichting">Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
-          ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de tool.` : ""
+          ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de app.` : ""
         }${
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
@@ -537,9 +537,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
   <p class="toelichting">${aftrekbareAutokosten <= 0 ? "Bij deze aftopping is per saldo niets van de autokosten dit jaar aftrekbaar. " : ""}${
         gemengdLeaseWaarschuwing
-          ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de tool berekent deze nu tegen de afschrijving van auto én machine samen. "
+          ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de app berekent deze nu tegen de afschrijving van auto én machine samen. "
           : ""
-      }${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de tool zelf.</p>`;
+      }${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de app zelf.</p>`;
 
     const totaalAutoMachine = machineBedrag + (heeftBijtelling ? aftrekbareAutokosten : totaleAutokosten);
     return `
@@ -560,7 +560,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     .filter(({ gh }) => !!gh)
     .map(({ label, gh }) => `
   <div class="rubriek"><span>${label} — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
-  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de tool zelf.</p>`)
+  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de app zelf.</p>`)
     .join("");
 
   const priveHtml =
@@ -574,7 +574,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const belastingenHtml = rubriekBlok(null, ib.belastingenGeenKostenpost.naam, ib.belastingenGeenKostenpost.totaal, ib.belastingenGeenKostenpost.toelichting, ib.belastingenGeenKostenpost.perCategorie);
   const verkoopActivaHtml = rubriekBlok(
     null, "Verkoop activa", ib.verkoopActivaTotal,
-    "Kan een boekwinst of -verlies opleveren — deze tool kent de boekwaarde niet en berekent dat niet automatisch."
+    "Kan een boekwinst of -verlies opleveren — deze app kent de boekwaarde niet en berekent dat niet automatisch."
   );
   const nogNietIngedeeldHtml =
     ib.nogNietIngedeeld.length > 0
@@ -586,9 +586,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   return `
   <h1>Indicatieve aangifteberekening / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
-    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} ·
-    ${korRegeling ? "Valt onder de KOR" : btwVerlegd ? "BTW-verlegd van toepassing" : "Gewone BTW-plicht"} ·
-    op basis van beschikbare bankgegevens
+    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}<br>
+    <span>Uitgangspunten (feiten uit de basisvragen, geen aannames): ${korRegeling ? "valt onder de KOR" : btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · op basis van beschikbare bankgegevens</span>
   </p>
   ${samenvattingHtml}
 
@@ -613,22 +612,22 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${!korRegeling && kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
   <table>
-    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}<th class="num">Totaal jaar</th></tr></thead>
     <tbody>
-      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}</tr>
-      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}</tr>
-      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}</tr>
-      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}</tr>
+      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto21 - q.verschuldigdBtw21), 0))}</strong></td></tr>
+      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto9 - q.verschuldigdBtw9), 0))}</strong></td></tr>
+      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBrutoVerlegd), 0))}</strong></td></tr>
+      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
           return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
         })
-        .join("")}</tr>
+        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}
-  <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de tool zelf terugvinden.</p>
+  <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de app zelf terugvinden.</p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
   <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw. Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.</p>
@@ -662,7 +661,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze tool niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
   ` : ""}
   ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
 
@@ -784,7 +783,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     dezelfde volgorde als de IB-aangifte zelf.
   </div>
   <div class="onzekerheden">
-    <strong>Wat deze tool niet kan weten</strong>
+    <strong>Wat deze app niet kan weten</strong>
     <p>Deze reconstructie is gebaseerd op uitsluitend de banktransacties. Een aantal dingen dat voor de aangifte
     relevant kan zijn, staat niet (of niet volledig) op een bankrekening, en zit dus niet in dit overzicht:</p>
     <ul>
@@ -802,7 +801,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     zichtbaar te maken wat wél en niet uit de bankgegevens kan worden vastgesteld.</p>
   </div>
   <div class="disclaimer">
-    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze tool —
+    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze app —
     geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat
     je aangifte doet.
   </div>
@@ -839,8 +838,8 @@ function buildBijlageToelichtingenHtml() {
     afgetrokken — dit zijn bedrijfsmiddelen (activa) die over de gebruiksduur afgeschreven moeten
     worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Zodra bedrijfsmiddelen zijn
     geregistreerd bij "Activa" (aanschafwaarde, -datum, afschrijvingstermijn, restwaarde) gebruikt
-    deze tool de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
-    ingevuld, dan berekent deze tool geen afschrijvingsschema en staat het bruto aanschafbedrag in de
+    deze app de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
+    ingevuld, dan berekent deze app geen afschrijvingsschema en staat het bruto aanschafbedrag in de
     jaarsectie alleen ter herkenning.
   </p>
 
@@ -903,20 +902,20 @@ function buildBijlageToelichtingenHtml() {
     is een balansmutatie (aflossing), GEEN kostenpost, en telt dus niet mee in de winst hierboven. Is de
     opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de leasemaatschappij aan
     je terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit al in punt 1 verwerkt).
-    Deze tool berekent de openstaande hoofdsom op basis van de daadwerkelijke bankbetalingen tot aan de
+    Deze app berekent de openstaande hoofdsom op basis van de daadwerkelijke bankbetalingen tot aan de
     einddatum — dit kan afwijken van wat de leasemaatschappij zelf als afkoopsom rekent (bijv. bij
     afwijkende voorwaarden bij vroegtijdige beëindiging), dus controleer dit bedrag altijd bij de
     leasemaatschappij zelf.
   </p>
   <p class="toelichting" style="color:#b45309;">
-    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze tool geen fiscale
+    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze app geen fiscale
     boekwaarde van het object, en kan dus ook geen boekresultaat worden bepaald — alleen de
     restschuld/overwaarde wordt dan getoond.
   </p>
   <p class="toelichting">
     Zijn (een deel van) de leasetermijnen betaald vanaf een rekening die niet in dit dossier is
     geïmporteerd, geef dan bij het leasecontract onder "Termijnen van een andere rekening" aan tot en
-    met welke datum alle termijnen zijn betaald — anders denkt deze tool ten onrechte dat die termijnen
+    met welke datum alle termijnen zijn betaald — anders denkt deze app ten onrechte dat die termijnen
     nooit zijn betaald, met een te hoog berekend openstaande saldo (en dus een onjuiste
     restschuld/overwaarde bij verkoop) tot gevolg.
   </p>
@@ -937,18 +936,18 @@ function buildBijlageToelichtingenHtml() {
     controleer zelf of dat hier van toepassing is. Kan de zelfstandigenaftrek in een jaar niet (of niet
     volledig) worden benut omdat de winst te laag is, dan wordt het niet-gerealiseerde deel
     gereserveerd om tot 9 jaar later alsnog te verrekenen, mits in dit rapport ook een later jaar met
-    voldoende winst wordt meegenomen (deze tool verrekent dit automatisch tussen de jaren die samen in
+    voldoende winst wordt meegenomen (deze app verrekent dit automatisch tussen de jaren die samen in
     één rapport zijn opgenomen).
   </p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — algemeen</h2>
   <p class="toelichting">
     Deze schatting gaat uit van het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de
-    onderneming besteed) voor de zelfstandigenaftrek — geef in de tool aan ("Persoonlijke aannames
-    voor IB") of daaraan is voldaan zodra dat bekend is; zonder die aangave rekent de tool voorlopig
+    onderneming besteed) voor de zelfstandigenaftrek — geef in de app aan ("Persoonlijke aannames
+    voor IB") of daaraan is voldaan zodra dat bekend is; zonder die aangave rekent de app voorlopig
     mét zelfstandigenaftrek. De IB-schatting is exclusief heffingskortingen en overig inkomen (die
     volgen apart hieronder in de jaarsectie). Zijn de belastingschijven of het Zvw-percentage van een
-    jaar nog niet officieel bekend, dan benadert de tool die met de dichtstbijzijnde bekende
+    jaar nog niet officieel bekend, dan benadert de app die met de dichtstbijzijnde bekende
     schijven/het dichtstbijzijnde bekende percentage. Dit is in alle gevallen een indicatie, geen
     belastingadvies — vergelijk het altijd met wat daadwerkelijk is aangegeven/betaald.
   </p>

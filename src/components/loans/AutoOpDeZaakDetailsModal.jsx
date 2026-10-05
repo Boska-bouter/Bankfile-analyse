@@ -154,7 +154,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
             </div>
             <p className="text-xs text-slate-400">
               Het bijtellingspercentage hangt af van CO₂-uitstoot/brandstofsoort en datum eerste toelating, en kan
-              per jaar verschillen — deze tool vult dat niet automatisch in. Geldt hier voor alle jaren tot je dit
+              per jaar verschillen — deze app vult dat niet automatisch in. Geldt hier voor alle jaren tot je dit
               veld aanpast; wijzigt het percentage tussentijds, pas het dan hier aan (dit werkt met terugwerkende
               kracht op alle jaren van dit dossier, niet alleen vanaf het moment van wijzigen — controleer dit zelf
               per jaar als het bijtellingsregime van deze auto is gewijzigd).

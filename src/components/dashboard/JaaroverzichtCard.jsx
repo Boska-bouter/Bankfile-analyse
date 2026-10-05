@@ -1,6 +1,6 @@
 import { eur } from "../../utils/amounts.js";
 
-// Fase 1, dashboard-restyling (Stijl F) — de "Jaaroverzicht {jaar}"-kaart naast de "Wat deze tool
+// Fase 1, dashboard-restyling (Stijl F) — de "Jaaroverzicht {jaar}"-kaart naast de "Wat deze app
 // niet kan weten"-banner in het mockup-canvas: omzet/kosten/winst met een %-vergelijking t.o.v. het
 // vorige jaar. Gebruikt dezelfde yearlySummaries-data die al bestond (voor de "Resultaat"-tegel en
 // het Meerjarenoverzicht) — geen nieuwe berekening. De %-vergelijking wordt alleen getoond als ZOWEL
@@ -53,7 +53,7 @@ export default function JaaroverzichtCard({ year, summary, previousSummary, show
         )}
       </div>
       {!hasSummary && (
-        <p className="text-xs text-slate-400 italic -mt-1">Laad een bankbestand om cijfers te zien</p>
+        <p className="text-xs text-slate-400 italic -mt-1">Start een nieuw dossier of laad een dossier om cijfers te zien</p>
       )}
       <div className="grid grid-cols-3 gap-4">
         <div>

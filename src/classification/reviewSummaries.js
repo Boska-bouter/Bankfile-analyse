@@ -11,6 +11,7 @@ const GEEN_KLANT_CATEGORIES = [
   "Prive opnames", "Terugboeking van prive", // zakelijke kant (zie functie hieronder: wordt hier niet bereikt, maar voor de volledigheid)
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
   "Interne overboeking: privé sparen",
+  "Interne overboeking",
   // Geld van een bekende (zie classify.js) is per definitie ook geen klant/opdrachtgever.
   "Overboeking van bekenden",
 ];
@@ -19,13 +20,20 @@ const GEEN_KLANT_CATEGORIES = [
 // klant, of loondienst/privé-inkomen?". Bestanden die op rekeningniveau al als "Zakelijk" zijn
 // aangemerkt slaan deze vraag over (dat is al beantwoord), net als transacties die de classificatie
 // al met zekerheid als eigen-rekening-verschuiving heeft herkend (zie GEEN_KLANT_CATEGORIES).
-export function computeIncomeSummary(classified, accountTypeByFile) {
+export function computeIncomeSummary(classified, accountTypeByFile, businessKeywords = []) {
   const map = {};
+  // V67 — een tegenpartij die je zelf al als opdrachtgever hebt opgegeven (wizard of eerdere bevestiging)
+  // hoeft niet nogmaals bevestigd: dezelfde tekstmatch als in classify.js (autoClassify).
+  const kws = (businessKeywords || []).map((k) => String(k || "").toLowerCase()).filter(Boolean);
   for (const tx of classified) {
     if (tx.isMirror) continue;
     if (tx.amount <= 0) continue;
     if (accountTypeByFile[tx.source] === "Zakelijk") continue;
     if (GEEN_KLANT_CATEGORIES.includes(tx.category)) continue;
+    if (kws.length > 0) {
+      const text = ` ${tx.counterparty || ""} ${tx.description || ""} ${tx.fullDescription || ""}`.toLowerCase();
+      if (kws.some((kw) => text.includes(kw))) continue;
+    }
     const key = normKey(tx.counterparty || tx.description);
     if (!key) continue;
     if (!map[key]) {

@@ -54,7 +54,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
       return `<tr><td>${esc(d.fileName)}</td><td>${esc(type)}</td><td>${fmtDatum(d.from)} — ${fmtDatum(d.to)}</td><td class="num">${d.importedCount}</td></tr>`;
     })
     .join("");
-  const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
+  const zakTxDitJaar = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && !tx.isMirror && tx.year === year).length;
   const gatenHtml = gatenDitJaar.length > 0
     ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan €1000) — de moeite waard om na te gaan.</p>`
     : "";
@@ -179,8 +179,8 @@ function buildYearSectionBv(
     })
     .join("");
 
-  const zakItemsChecklist = classified.filter((tx) => tx.type === "Zakelijk" && tx.year === year);
-  const priItemsChecklist = classified.filter((tx) => tx.type === "Prive" && tx.year === year);
+  const zakItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && tx.year === year);
+  const priItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Prive" && tx.year === year);
   const priveRekeningGeladen = Object.values(accountTypeByFile || {}).includes("Prive");
   const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {}, priveRekeningGeladen);
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
@@ -231,7 +231,7 @@ function buildYearSectionBv(
   // "Overige autokosten" (MRB, verzekering, brandstof, parkeren, onderhoud) staat niet standaard in
   // ib.overigeBedrijfskosten (dat schuift bij de zzp-aangifte naar de "Auto's en machines"-post, zie
   // aangiftevoorstel.js) — de BV-aangifte heeft die post niet (geen bijtellingsmechanisme voor een
-  // BV/DGA-auto in deze tool), dus hier gewoon meetellen als vanouds.
+  // BV/DGA-auto in deze app), dus hier gewoon meetellen als vanouds.
   const overigeBedrijfskostenMetAuto = ib.autokostenOverig.totaal > 0
     ? [ib.autokostenOverig, ...ib.overigeBedrijfskosten]
     : ib.overigeBedrijfskosten;
@@ -280,13 +280,13 @@ function buildYearSectionBv(
     kwartalen.length > 0
       ? `
   <div class="btw-kaart">
-    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
     <tbody><tr><td>Saldo</td>${kwartalen
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
         return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
       })
-      .join("")}</tr></tbody></table>
+      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
       : "";
 
@@ -317,7 +317,7 @@ function buildYearSectionBv(
       ? `
   <div class="rubriek"><span>5. Financiële baten en lasten</span><span class="num">${eur(financieelTotaalRente)}</span></div>
   <p class="toelichting">${ib.financieleBatenLasten.toelichting} Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
-          ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de tool.` : ""
+          ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de app.` : ""
         }${
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
@@ -353,7 +353,7 @@ function buildYearSectionBv(
   <p class="toelichting">
     Het cumulatieve eigen vermogen begint bij het eerste jaar in dít rapport, niet noodzakelijk bij de
     oprichtingsdatum van de BV — jaren van vóór de geselecteerde periode tellen hier niet in mee. Rekening-courant
-    boven ca. €500.000 kent aparte regels (excessief lenen bij eigen vennootschap) die deze tool niet toetst.
+    boven ca. €500.000 kent aparte regels (excessief lenen bij eigen vennootschap) die deze app niet toetst.
   </p>
   ${dgaSalarisDitJaar > 0 || bijtellingPrivegebruikAuto > 0 ? `<p class="toelichting">Gebruikelijk-loonregeling: DGA-salaris ${eur(dgaSalarisDitJaar)}${
     bijtellingPrivegebruikAuto > 0 ? ` + bijtelling privégebruik auto ${eur(bijtellingPrivegebruikAuto)} (loon in natura) = ${eur(dgaSalarisDitJaar + bijtellingPrivegebruikAuto)}` : ""
@@ -362,7 +362,7 @@ function buildYearSectionBv(
   }</p>` : ""}
   ${dividendDitJaar > 0 ? `<p class="toelichting">${
     heeftHolding
-      ? `Je gaf aan dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze tool niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
+      ? `Je gaf aan dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze app niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
       : `Geschatte box 2-belasting van de DGA over deze dividenduitkering: <strong>${eur(box2Estimate.belasting)}</strong>${box2Estimate.geëxtrapoleerd ? " (box 2-tarief van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende tarief)" : ""} — geen belastingadvies.`
   }</p>` : ""}`;
 
@@ -399,25 +399,25 @@ function buildYearSectionBv(
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* Resultaat vóór Vpb blijft ${eur(summary.winst)} — de KIA is een aftrekpost op de Vpb-grondslag, geen correctie op het bedrijfsresultaat zelf. Vpb vóór mogelijke KIA: ${eur(vpbEstimate.belasting)}. Vpb ná mogelijke KIA: ${eur(vpbEstimateNaKia.belasting)}.</strong></p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze tool niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
   ` : ""}
   ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
 
   ${kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
   <table>
-    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}<th class="num">Totaal jaar</th></tr></thead>
     <tbody>
-      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}</tr>
-      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}</tr>
-      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}</tr>
-      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}</tr>
+      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto21 - q.verschuldigdBtw21), 0))}</strong></td></tr>
+      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto9 - q.verschuldigdBtw9), 0))}</strong></td></tr>
+      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBrutoVerlegd), 0))}</strong></td></tr>
+      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
           return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
         })
-        .join("")}</tr>
+        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>
@@ -430,6 +430,10 @@ function buildYearSectionBv(
       <th class="num">Uitgaven</th><th class="num">Voorbelasting (5b)</th><th class="num">Saldo</th>
     </tr></thead>
     <tbody>${kwartaalRows}</tbody>
+    <tfoot><tr class="total"><td>Totaal jaar</td>
+      ${["omzetBruto21", "verschuldigdBtw21", "omzetBruto9", "verschuldigdBtw9", "omzetBrutoVerlegd", "kostenBruto", "voorbelasting"].map((k) => `<td class="num">${eur(kwartalen.reduce((a, q) => a + (q[k] || 0), 0))}</td>`).join("")}
+      ${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug te vragen"}</strong></td>`; })()}
+    </tr></tfoot>
   </table>` : ""}
 
   <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
@@ -469,8 +473,8 @@ function buildBijlageToelichtingenHtmlBv() {
     afgetrokken — dit zijn bedrijfsmiddelen (activa) die over de gebruiksduur afgeschreven moeten
     worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Zodra bedrijfsmiddelen zijn
     geregistreerd bij "Activa" (aanschafwaarde, -datum, afschrijvingstermijn, restwaarde) gebruikt
-    deze tool de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
-    ingevuld, dan berekent deze tool geen afschrijvingsschema en staat het bruto aanschafbedrag in de
+    deze app de daadwerkelijk berekende afschrijving voor het betreffende jaar; is dat nog niet
+    ingevuld, dan berekent deze app geen afschrijvingsschema en staat het bruto aanschafbedrag in de
     jaarsectie alleen ter herkenning.
   </p>
 
@@ -487,7 +491,7 @@ function buildBijlageToelichtingenHtmlBv() {
     Rijdt de DGA meer dan 500 km privé per jaar in een geleasede auto van de BV, dan geldt in plaats
     daarvan de normale bijtelling privégebruik auto (bijtellingspercentage × cataloguswaarde) zoals bij
     een gewone werknemer: dit is loon in natura bij de DGA persoonlijk, geen correctie op de winst of de
-    Vpb van de BV. Deze tool telt die bijtelling daarom mee bij het DGA-salaris voor de
+    Vpb van de BV. Deze app telt die bijtelling daarom mee bij het DGA-salaris voor de
     gebruikelijk-loonregeling (zie "Rekening-courant, kapitaal en dividend" in de jaarsectie) en meldt
     dit als open punt — controleer of de bijtelling daadwerkelijk in de loonaangifte/loonheffing van de
     DGA is verwerkt.
@@ -524,20 +528,20 @@ function buildBijlageToelichtingenHtmlBv() {
     dat is een balansmutatie (aflossing), GEEN kostenpost, en telt dus niet mee in de winst hierboven.
     Is de opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de
     leasemaatschappij aan de BV terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit
-    al in punt 1 verwerkt). Deze tool berekent de openstaande hoofdsom op basis van de daadwerkelijke
+    al in punt 1 verwerkt). Deze app berekent de openstaande hoofdsom op basis van de daadwerkelijke
     bankbetalingen tot aan de einddatum — dit kan afwijken van wat de leasemaatschappij zelf als
     afkoopsom rekent (bijv. bij afwijkende voorwaarden bij vroegtijdige beëindiging), dus controleer dit
     bedrag altijd bij de leasemaatschappij zelf.
   </p>
   <p class="toelichting" style="color:#b45309;">
-    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze tool geen fiscale
+    ⚠ Zonder "Soort" (auto/machine) ingevuld bij dit leasecontract kent deze app geen fiscale
     boekwaarde van het object, en kan dus ook geen boekresultaat worden bepaald — alleen de
     restschuld/overwaarde wordt dan getoond.
   </p>
   <p class="toelichting">
     Zijn (een deel van) de leasetermijnen betaald vanaf een rekening die niet in dit dossier is
     geïmporteerd, geef dan bij het leasecontract onder "Termijnen van een andere rekening" aan tot en
-    met welke datum alle termijnen zijn betaald — anders denkt deze tool ten onrechte dat die termijnen
+    met welke datum alle termijnen zijn betaald — anders denkt deze app ten onrechte dat die termijnen
     nooit zijn betaald, met een te hoog berekend openstaande saldo (en dus een onjuiste
     restschuld/overwaarde bij verkoop) tot gevolg.
   </p>
@@ -643,7 +647,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
   <div class="bv-melding">
-    <strong>De BV-tak van deze tool is nog in ontwikkeling.</strong> Deze reconstructie neemt geen holdingstructuur,
+    <strong>De BV-tak van deze app is nog in ontwikkeling.</strong> Deze reconstructie neemt geen holdingstructuur,
     fiscale eenheid of meerdere aandeelhouders mee, en de balans is beperkt tot rekening-courant en een indicatief
     eigen-vermogen-verloop (geen volledige jaarrekening). Gebruik dit als hulpmiddel, niet als vervanging van je
     boekhouder of accountant.
@@ -659,7 +663,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     klopt.
   </div>
   <div class="onzekerheden">
-    <strong>Wat deze tool niet kan weten</strong>
+    <strong>Wat deze app niet kan weten</strong>
     <p>Deze reconstructie is gebaseerd op uitsluitend de banktransacties van de werkmaatschappij. Een aantal dingen
     dat voor de jaarrekening/aangifte relevant is, staat niet (of niet volledig) op deze bankrekening:</p>
     <ul>
@@ -672,7 +676,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     </ul>
   </div>
   <div class="disclaimer">
-    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze tool —
+    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze app —
     geen officiële aangifte, geen jaarrekening en geen belastingadvies. Controleer de cijfers altijd zelf of met je
     boekhouder/accountant voordat je aangifte doet.
   </div>

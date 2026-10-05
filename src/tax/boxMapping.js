@@ -75,7 +75,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     naam, categorieen: cats, totaal: sumCatNetto(cats), toelichting, perCategorie: perCategorieVanNetto(cats),
   });
 
-  // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive"/"beide",
+  // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive",
   // zie tax/kmVergoeding.js) — komt NIET uit een categorie/banktransactie (het is een notionele
   // aftrekpost), dus geen rubriekNetto maar een los samengesteld object in dezelfde vorm. Alleen
   // aanwezig (en dus alleen zichtbaar) zodra er daadwerkelijk een bedrag > 0 is.
@@ -141,7 +141,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       toelichting:
         activaAfschrijvingForYear
           ? "Dit is de berekende afschrijving voor dit jaar op basis van de ingevulde gegevens bij Activa — niet het bruto aanschafbedrag (dat mag niet in één keer als kosten worden afgetrokken)."
-          : "Dit mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Deze tool berekent geen afschrijvingsschema totdat je dit invult bij \"Activa\" — het bruto aanschafbedrag staat hier tot dan alleen ter herkenning.",
+          : "Dit mag niet in één keer als kosten worden afgetrokken — dit zijn bedrijfsmiddelen die over de gebruiksduur afgeschreven moeten worden (aanschafwaarde minus restwaarde, verdeeld over de jaren). Deze app berekent geen afschrijvingsschema totdat je dit invult bij \"Activa\" — het bruto aanschafbedrag staat hier tot dan alleen ter herkenning.",
     },
     // Volledige uitsplitsing van gekapitaliseerde financiële-lease-auto's/machines (afschrijving,
     // lease-rente, gecategoriseerde autokosten, en bij een auto met privégebruik >500km/jaar ook de
