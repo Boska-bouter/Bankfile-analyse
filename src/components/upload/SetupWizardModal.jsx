@@ -117,6 +117,7 @@ export default function SetupWizardModal({
     return list;
   });
   const [doneIds, setDoneIds] = useState(() => new Set());
+  const [showStepList, setShowStepList] = useState(false);
   const [history, setHistory] = useState([]);
 
   const remainingSteps = initialSteps.filter((id) => {
@@ -165,6 +166,24 @@ export default function SetupWizardModal({
         <div className="px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
           <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
+          {/* v306 (V28) — voortgangsbalk + uitklapbaar overzicht van alle vragen (✓ beantwoord / huidige /
+              nog open), zodat je ziet hoeveel er nog komt en niet blind door "Stap x van y" klikt. */}
+          <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
+            <div className="h-full bg-white/80" style={{ width: `${Math.round((doneIds.size / Math.max(initialSteps.length, 1)) * 100)}%` }} />
+          </div>
+          <button type="button" onClick={() => setShowStepList((v) => !v)} className="mt-1.5 text-[11px] text-teal-100 hover:text-white underline decoration-dotted">
+            {showStepList ? "Overzicht verbergen" : `Alle vragen (${Math.max(initialSteps.length - doneIds.size, 0)} nog open)`}
+          </button>
+          {showStepList && (
+            <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+              {initialSteps.map((id) => (
+                <li key={id} className={`flex items-center gap-1 truncate ${id === currentStepId ? "font-semibold text-white" : doneIds.has(id) ? "text-teal-100" : "text-teal-200/70"}`}>
+                  {doneIds.has(id) ? <Check className="h-3 w-3 shrink-0" /> : <span className="inline-block h-3 w-3 shrink-0 text-center leading-3">{id === currentStepId ? "›" : "·"}</span>}
+                  <span className="truncate">{STEP_LABELS[id]}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="p-5 overflow-y-auto flex-1">

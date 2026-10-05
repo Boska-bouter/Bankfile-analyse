@@ -54,6 +54,7 @@ import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
+import CardIcon from "./components/shared/CardIcon.jsx";
 import RollupCard from "./components/dashboard/RollupCard.jsx";
 import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
 import DetailsPanel, { IndicatieSection } from "./components/dashboard/DetailsPanel.jsx";
@@ -2053,7 +2054,7 @@ export default function App() {
     return {
       key: "holdingBoekingen",
       title: `Holding-boekingen ${activeYear}`,
-      icon: <span>🏢</span>,
+      icon: <CardIcon name="building" />,
       lines: [
         { label: "Kapitaalstorting (holding)", value: kapitaalstortingHolding != null ? eur(kapitaalstortingHolding) : "— nog niet ingevuld" },
         { label: "Dividend ontvangen (holding)", value: dividendOntvangenHolding != null ? eur(dividendOntvangenHolding) : "— nog niet ingevuld" },
@@ -2413,7 +2414,7 @@ export default function App() {
             {
               key: "yearStatus",
               title: `Dossierstatus ${activeYear}`,
-              icon: <span>📋</span>,
+              icon: <CardIcon name="list" />,
               lines: [
                 {
                   label: "Dossiercontrole",
@@ -2467,7 +2468,7 @@ export default function App() {
               // privé/kasstroomsignaal (Tekort/Over — dekt de winst de privé-uitgaven + belasting?).
               key: "result",
               title: `Resultaat ${activeYear}`,
-              icon: <span>€</span>,
+              icon: <CardIcon name="euro" />,
               lines: [
                 { label: "Fiscaal resultaat", value: yearlySummary ? `Winst ${eur(yearlySummary.winst)}` : "—" },
                 {
@@ -2506,7 +2507,7 @@ export default function App() {
                   {
                     key: "ibZvw",
                     title: `IB & Zvw ${activeYear} (indicatief)`,
-                    icon: <span>🧮</span>,
+                    icon: <CardIcon name="calc" />,
                     // v239 — losse bedragen (geen opgeteld totaal) — zie "lines" in DashboardOverview.jsx.
                     lines: [
                       { label: "IB", value: eur(dashboardAangifteIndicatie.ib.belasting) },
@@ -2519,7 +2520,7 @@ export default function App() {
                   {
                     key: "aftrekposten",
                     title: "Aftrekposten (indicatief)",
-                    icon: <span>➖</span>,
+                    icon: <CardIcon name="minus" />,
                     lines: [
                       { label: "Zelfstandigenaftrek", value: eur(dashboardAangifteIndicatie.zelfstandigenaftrekBedrag) },
                       { label: "MKB-winstvrijstelling", value: eur(dashboardAangifteIndicatie.mkbVrijstellingBedrag) },
@@ -2534,7 +2535,7 @@ export default function App() {
             {
               key: "loans",
               title: "Leningen",
-              icon: <span>📄</span>,
+              icon: <CardIcon name="doc" />,
               value: loanSummary.length,
               // v242 — 3 aparte kleurtoestanden i.p.v. 2 ("attention" dekte zowel "1 van de 3 nog
               // onvolledig" als "geen enkele lening heeft gegevens" met dezelfde amber kleur): "goed"
@@ -2564,7 +2565,7 @@ export default function App() {
             {
               key: "leases",
               title: "Lease",
-              icon: <span>🚗</span>,
+              icon: <CardIcon name="car" />,
               value: leaseSummary.length,
               subtitle:
                 incompleteLeasesCount > 0
@@ -2586,7 +2587,7 @@ export default function App() {
               // zonder transacties (nog) telt hier als € 0,00, niet als ontbrekend.
               key: "btwQuarters",
               title: `BTW-kwartalen ${activeYear}`,
-              icon: <span>🧾</span>,
+              icon: <CardIcon name="receipt" />,
               // v284 — rechtsboven in de kop van deze kaart nu ook het jaartotaal (som van de 4
               // kwartaalsaldo's), eveneens met expliciet "te betalen"/"te ontvangen" — zelfde
               // dubbelzinnigheid-fix als bij de losse Q1-Q4-regels hieronder, maar dan voor het jaar
@@ -2626,7 +2627,7 @@ export default function App() {
               ? {
                   key: "ibZvwAangiften",
                   title: `Vpb-aangifte ${activeYear}`,
-                  icon: <span>📮</span>,
+                  icon: <CardIcon name="mail" />,
                   value: vpbStatus[activeYear]?.gedaan ? 0 : 1,
                   subtitle: vpbStatus[activeYear]?.gedaan ? "Afgehandeld" : "nog niet afgevinkt als gedaan",
                   tone: vpbStatus[activeYear]?.gedaan ? "ok" : "attention",
@@ -2636,7 +2637,7 @@ export default function App() {
               : {
                   key: "ibZvwAangiften",
                   title: `IB/Zvw aangiften ${activeYear}`,
-                  icon: <span>📮</span>,
+                  icon: <CardIcon name="mail" />,
                   value: (ibStatus[activeYear]?.gedaan ? 0 : 1) + (zvwStatus[activeYear]?.gedaan ? 0 : 1),
                   subtitle: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "Beide afgehandeld" : "nog niet afgevinkt als gedaan",
                   tone: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "ok" : "attention",
@@ -2650,7 +2651,7 @@ export default function App() {
             {
               key: "bestandenOverzicht",
               title: "Bestanden geladen",
-              icon: <span>📁</span>,
+              icon: <CardIcon name="folder" />,
               lines: [
                 { label: "Zakelijk", value: `${Object.values(accountTypeByFile).filter((t) => t === "Zakelijk").length}x` },
                 { label: "Privé", value: `${Object.values(accountTypeByFile).filter((t) => t === "Prive").length}x` },
@@ -2906,7 +2907,7 @@ export default function App() {
       {
         key: "loans",
         title: "Leningen",
-        icon: <span>📄</span>,
+        icon: <CardIcon name="doc" />,
         value: loanSummary.length,
         openCount: incompleteLoansCount,
         subtitle:
@@ -2932,7 +2933,7 @@ export default function App() {
       {
         key: "leases",
         title: "Lease",
-        icon: <span>🚗</span>,
+        icon: <CardIcon name="car" />,
         value: leaseSummary.length,
         openCount: incompleteLeasesCount,
         subtitle:
@@ -2949,7 +2950,7 @@ export default function App() {
       {
         key: "activa",
         title: "Activa (afschrijving)",
-        icon: <span>🏷️</span>,
+        icon: <CardIcon name="tag" />,
         value: activaSummary.length,
         openCount: incompleteActivaCount,
         subtitle:
@@ -3003,7 +3004,7 @@ export default function App() {
                 key: "aannames",
                 title: `Persoonlijke aannames ${activeYear}`,
                 openCount: missing,
-                icon: <span>🧑</span>,
+                icon: <CardIcon name="user" />,
                 lines: [
                   {
                     label: "Urencriterium",
@@ -3037,7 +3038,7 @@ export default function App() {
               {
                 key: "categoryPercentages",
                 title: "Percentage zakelijk/privé",
-                icon: <span>➗</span>,
+                icon: <CardIcon name="divide" />,
                 value: `${percentageAangepast}/${categorieenSplitsbaar.length}`,
                 subtitle:
                   categorieenSplitsbaar.length === 0
@@ -3099,7 +3100,7 @@ export default function App() {
             {
               key: "businessIncomeEntries",
               title: "Zakelijke tegenpartijen",
-              icon: <span>🤝</span>,
+              icon: <CardIcon name="handshake" />,
               value: businessIncomeEntries.length,
               subtitle: businessIncomeEntries.length === 1 ? "klant herkend" : "klanten herkend",
               tone: "neutral",
@@ -3112,7 +3113,7 @@ export default function App() {
             {
               key: "businessExpenseEntries",
               title: "Zakelijke inkoop/uitgaven",
-              icon: <span>📦</span>,
+              icon: <CardIcon name="package" />,
               value: businessExpenseEntries.length,
               subtitle: businessExpenseEntries.length === 1 ? "leverancier herkend" : "leveranciers herkend",
               tone: "neutral",
@@ -3296,7 +3297,7 @@ export default function App() {
         {
           key: "categorieen",
           title: "Categorieën",
-          icon: <span>📊</span>,
+          icon: <CardIcon name="chart" />,
           tone: "neutral",
           subtitle: "Categorieoverzicht zakelijk en privé bekijken",
           hint: "Naar de categorieoverzichten",
@@ -3312,7 +3313,7 @@ export default function App() {
         {
           key: "aansluitingDetail",
           title: "Aansluiting & detail",
-          icon: <span>🔗</span>,
+          icon: <CardIcon name="link" />,
           tone: "neutral",
           subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
           hint: "Naar de aansluitcontrole en detailtabellen",
@@ -3343,7 +3344,7 @@ export default function App() {
         ? {
             key: "aansluitControle",
             title: "Controle zakelijk ↔ privé",
-            icon: <span>🔁</span>,
+            icon: <CardIcon name="repeat" />,
             tone: aansluitControleInfo.tone,
             subtitle: aansluitControleInfo.subtitle,
             hint: "Naar de aansluiting & detailtabellen",
@@ -3537,7 +3538,7 @@ export default function App() {
         {
           key: "automatisering",
           title: "Automatisering",
-          icon: <span>⚙️</span>,
+          icon: <CardIcon name="settings" />,
           tone: "neutral",
           subtitle: "Categorie-/tegenpartijregels, vaste categorieën en vaste lasten",
           hint: "Naar de automatiseringsinstellingen",
@@ -4250,11 +4251,11 @@ export default function App() {
           gebied van een tablet komt te zitten. */}
       <button
         onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-1.5 sm:right-2 z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        className="fixed right-1.5 sm:right-2 z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
         title="Snel opzoeken: alle categorieën en subtypes"
       >
-        <ListTree className="h-5 w-5 shrink-0" />
+        <ListTree className="h-4 w-4 shrink-0" />
         <span className="hidden sm:inline">Categorieën</span>
       </button>
 
@@ -4365,11 +4366,11 @@ export default function App() {
             const target = previousTabRef.current && previousTabRef.current !== activeTab ? previousTabRef.current : "overzicht";
             setActiveTab(target);
           }}
-          className="fixed left-[224px] sm:left-[228px] z-[70] inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white shadow-lg px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="fixed left-[224px] sm:left-[228px] z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
           style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
           title="Terug naar vorig tabblad"
         >
-          <ArrowLeft className="h-5 w-5 shrink-0" />
+          <ArrowLeft className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Terug</span>
         </button>
       )}
@@ -4418,7 +4419,7 @@ export default function App() {
                 teller op 0 staat, net als de andere statuskaarten in deze app. */}
             <RollupCard
               title="Nog te controleren"
-              icon={<span>⚠️</span>}
+              icon={<CardIcon name="warning" />}
               tone={controlerenBadge === 0 ? "ok" : "risk"}
               count={controlerenBadge}
               items={teControlerenItems}
@@ -4427,7 +4428,7 @@ export default function App() {
             />
             <RollupCard
               title="Nog in te stellen"
-              icon={<span>⚙️</span>}
+              icon={<CardIcon name="settings" />}
               tone={instellingenBadge === 0 ? "ok" : "attention"}
               count={instellingenBadge}
               items={inTeStellenItems}
@@ -4436,7 +4437,7 @@ export default function App() {
             />
             <RollupCard
               title="Resultaten"
-              icon={<span>📊</span>}
+              icon={<CardIcon name="chart" />}
               tone="ok"
               items={resultatenItems}
               ctaLabel="Naar resultaten"
@@ -4444,7 +4445,7 @@ export default function App() {
             />
             <RollupCard
               title="Automatische herkenning"
-              icon={<span>🔁</span>}
+              icon={<CardIcon name="repeat" />}
               tone="info"
               items={automatischeHerkenningItems}
               ctaLabel="Alle herkenningsregels bekijken"
