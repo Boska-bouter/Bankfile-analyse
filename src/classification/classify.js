@@ -411,14 +411,15 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
   return false;
 }
 
-// V43 — `type` volgt ALTIJD de rekening waar de transactie op staat (zie autoClassify). Overrides uit
-// oudere dossiers (of acties zoals "zakelijke tegenpartij bevestigen") konden type "Zakelijk" meegeven
-// terwijl de boeking op een privérekening staat; daardoor toonde het detailvenster "Zakelijk" bij een
-// privérekening. De categorie van de override blijft gelden, het type niet.
+// V45 — `type` is ALTIJD het type van de rekening waar de boeking op staat (nooit door een override te
+// wijzigen). Een override uit een oud dossier (of "bevestig als zakelijke klant") kon wel type "Zakelijk"
+// meegeven voor een boeking op een privérekening; dat gebruikten de overzichten om zo'n boeking als
+// zakelijk te tonen. Die uitkomst bewaren we apart in `viewType` (alleen voor die zakelijke overzichten:
+// groepering, BTW-kwartalen, tellingen) — `type` zelf blijft de rekening.
 function withAccountType(override, accountType) {
   if (!override) return override;
   const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
-  return override.type === type ? override : { ...override, type };
+  return { ...override, type, viewType: override.type || type };
 }
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {

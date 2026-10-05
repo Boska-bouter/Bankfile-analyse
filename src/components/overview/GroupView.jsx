@@ -414,10 +414,10 @@ export function DetailTable({
                       </span>
                     ) : (
                     <span
-                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${t.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${(t.accountType || t.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                       title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Prive) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
                     >
-                      {t.type}
+                      {t.accountType || t.type}
                     </span>
                     )}
                   </td>

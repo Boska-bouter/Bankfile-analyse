@@ -1129,7 +1129,10 @@ export default function App() {
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || []);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
-      return { ...tx, ...resolved, confidence, transferLocked };
+      // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
+      // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
+      // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
+      return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
     // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
@@ -1667,8 +1670,9 @@ export default function App() {
   const groups = useMemo(() => {
     const map = {};
     for (const tx of classified) {
-      const key = `${tx.type} ${tx.year}`;
-      if (!map[key]) map[key] = { label: `${tx.type === "Zakelijk" ? "Zakelijk" : "Prive"} ${tx.year}`, type: tx.type, year: tx.year, items: [] };
+      const vt = tx.viewType || tx.type;
+      const key = `${vt} ${tx.year}`;
+      if (!map[key]) map[key] = { label: `${vt === "Zakelijk" ? "Zakelijk" : "Prive"} ${tx.year}`, type: vt, year: tx.year, items: [] };
       map[key].items.push(tx);
     }
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));

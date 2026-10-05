@@ -116,10 +116,10 @@ export default function UncertainTransactionsModal({
                   </select>
                   </>)}
                   <span
-                    className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${tx.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                    className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${(tx.accountType || tx.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                     title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen en kan niet los worden aangepast."
                   >
-                    {tx.type}
+                    {tx.accountType || tx.type}
                   </span>
                   <button
                     onClick={() => onConfirmCorrect(tx)}

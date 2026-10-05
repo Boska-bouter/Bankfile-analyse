@@ -82,7 +82,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
     })
     .join("");
 
-  const zakTxDitJaar = classified.filter((tx) => tx.type === "Zakelijk" && !tx.isMirror && tx.year === year).length;
+  const zakTxDitJaar = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && !tx.isMirror && tx.year === year).length;
 
   const gatenHtml = gatenDitJaar.length > 0
     ? `<p class="toelichting" style="color:#b45309;">⚠ Mogelijk ontbreekt een periode: tussen ${esc(gatenDitJaar[0].fileA)} (t/m ${fmtDatum(gatenDitJaar[0].aTo)}) en ${esc(gatenDitJaar[0].fileB)} (vanaf ${fmtDatum(gatenDitJaar[0].bFrom)}) sluit het saldo niet aan (verschil ${eur(gatenDitJaar[0].diff)}, groter dan €1000) — de moeite waard om na te gaan of daar nog een bestand bij hoort.</p>`
@@ -290,8 +290,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // anders beweert dan wat je in de tool ook al ziet. IB-status (het "afgevinkt"-vinkje) telt
   // bewust niet mee — dat is een persoonlijke herinnering, geen signaal over de betrouwbaarheid
   // van deze reconstructie.
-  const zakItemsChecklist = classified.filter((tx) => tx.type === "Zakelijk" && tx.year === year);
-  const priItemsChecklist = classified.filter((tx) => tx.type === "Prive" && tx.year === year);
+  const zakItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Zakelijk" && tx.year === year);
+  const priItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Prive" && tx.year === year);
   const priveRekeningGeladen = Object.values(accountTypeByFile || {}).includes("Prive");
   const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {}, priveRekeningGeladen);
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(

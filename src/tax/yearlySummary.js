@@ -189,7 +189,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
 export function computeVolledigeJaren(classified) {
   const kwartalenPerJaar = {};
   for (const tx of classified) {
-    if (tx.type !== "Zakelijk" || tx.isMirror) continue;
+    if ((tx.viewType || tx.type) !== "Zakelijk" || tx.isMirror) continue;
     const [y, m] = tx.month.split("-");
     const kwartaal = Math.ceil(Number(m) / 3);
     if (!kwartalenPerJaar[y]) kwartalenPerJaar[y] = new Set();
