@@ -2269,7 +2269,10 @@ export default function App() {
     const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
     const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
     const diff = Math.round((zakSum + priSum) * 100) / 100;
-    const zijdeOntbreekt = !priveRekeningGeladen ? "Prive" : !zakelijkRekeningGeladen ? "Zakelijk" : null;
+    // V71 — "geladen" is per jaar bekeken: een privébestand dat alleen 2024-2025 beslaat zegt niets
+    // over 2020 — daar staat Privé dan op € 0,00 omdat er geen data is, niet omdat het niet klopt.
+    const zijdeOntbreekt = !priveRekeningGeladen || priGroupForYear.items.length === 0 ? "Prive"
+      : !zakelijkRekeningGeladen || zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
     const heeftData = !(zakSum === 0 && priSum === 0);
     let tone, subtitle;
     if (!heeftData) {
@@ -2277,7 +2280,7 @@ export default function App() {
       subtitle = "Geen overboekingen tussen zakelijk en privé gevonden dit jaar.";
     } else if (zijdeOntbreekt) {
       tone = "ok";
-      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-rekening geladen, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
+      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Prive"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
     } else {
       const ok = Math.abs(diff) < 0.01;
       tone = ok ? "ok" : "attention";
