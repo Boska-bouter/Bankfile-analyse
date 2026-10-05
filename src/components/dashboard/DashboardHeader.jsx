@@ -128,14 +128,14 @@ export default function DashboardHeader({
           {dossierLines.length > 0 ? (
             <>
               <div className="w-px self-stretch bg-slate-200" />
-              <div className="flex flex-col gap-1.5 self-stretch justify-between">
+              <div className="flex flex-col gap-1.5">
                 {dossierLines.map((line) => (
                   <div key={line.label} className="flex items-center gap-2 text-xs">
                     <span className="text-slate-500 w-[120px] shrink-0">{line.label}</span>
                     <span className="font-semibold text-slate-800">{line.value}</span>
                   </div>
                 ))}
-                {yearControl && <div className="mt-2 flex flex-col items-start">{yearControl}</div>}
+                {yearControl && <div className="mt-2">{yearControl}</div>}
               </div>
             </>
           ) : (

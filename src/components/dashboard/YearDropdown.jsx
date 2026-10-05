@@ -26,11 +26,12 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
   if (!years || years.length === 0) return null;
 
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <div className="relative shrink-0 flex items-center gap-4" ref={ref}>
       {/* v299 — op verzoek: naast het jaartal ook in één oogopslag zien hoeveel jaren het dossier
           totaal beslaat, en — alleen als er ook echt een privérekening is ingeladen (showBreakdown) —
           de uitsplitsing zakelijk/privé daaronder. Zonder privérekening is die uitsplitsing gelijk aan
           het totaal en dus overbodig. */}
+      <div className="flex flex-col">
       <div className="text-[11px] text-slate-400 text-left mb-0.5 whitespace-nowrap">
         {years.length} {years.length === 1 ? "jaar" : "jaren"} in dossier
         {showBreakdown ? ` · ${zakelijkYears ?? 0} zakelijk, ${priveYears ?? 0} privé` : ""}
@@ -40,6 +41,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
       {showBreakdown && yearCoverage && activeYear && yearCoverage[activeYear] && coverageNote(yearCoverage[activeYear]) && (
         <div className="text-[11px] text-amber-600 text-left mb-0.5 whitespace-nowrap">{coverageNote(yearCoverage[activeYear])}</div>
       )}
+      </div>
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
       <button
         type="button"
@@ -49,7 +51,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
         {activeYear ?? "Jaar"} <ChevronDown className="h-5 w-5 text-slate-500" />
       </button>
       {open && (
-        <div className="absolute left-0 mt-1.5 z-30 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+        <div className="absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
           {years.map((year) => {
             const status = yearlyProgress?.[year]?.status;
             return (
