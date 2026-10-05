@@ -57,7 +57,7 @@ import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
 import RollupCard from "./components/dashboard/RollupCard.jsx";
 import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
-import DetailsPanel, { IndicatieSection } from "./components/dashboard/DetailsPanel.jsx";
+import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
 import YearDropdown from "./components/dashboard/YearDropdown.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
@@ -4454,22 +4454,6 @@ export default function App() {
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
-
-          <IndicatieSection
-            year={activeYear}
-            rechtsvorm={rechtsvorm}
-            dashboardAangifteIndicatie={dashboardAangifteIndicatie}
-            vpbIndicatie={dashboardVpbIndicatie}
-            vpbBreakdown={dashboardVpbBreakdown}
-            winst={yearlySummary?.winst}
-            previousWinst={previousYearlySummary?.winst}
-            showTrend={showJaaroverzichtTrend}
-            aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
-            onShowFullCalculation={() => {
-              setShowAangifteMeerdereJaren(false);
-              setShowAangifteYearPicker(true);
-            }}
-          />
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/

@@ -42,39 +42,6 @@ function LinkOut({ label, onClick }) {
 }
 
 
-// v305 (V27) — de indicatieve aangifte (IB) / Vpb (BV) stond verstopt in "Details en overzichten" >
-// Jaaroverzicht; dit is het resultaat waar de gebruiker het dossier voor opbouwt en staat nu direct
-// onder de vier samenvattende kaarten. De persoonlijke aannames zijn een compacte statusregel
-// (klik → detail) i.p.v. een volle kaart.
-export function IndicatieSection({ year, rechtsvorm, dashboardAangifteIndicatie, vpbIndicatie, vpbBreakdown, winst, previousWinst, showTrend, onShowFullCalculation, aannamesCard }) {
-  if (!year) return null;
-  if (rechtsvorm === "bv") {
-    return (
-      <IndicatieveVpbCard year={year} winst={winst} vpbIndicatie={vpbIndicatie} breakdown={vpbBreakdown} showTrend={showTrend} prevWinst={previousWinst} onShowFullCalculation={onShowFullCalculation} />
-    );
-  }
-  if (!dashboardAangifteIndicatie) return null;
-  const open = aannamesCard?.openCount || 0;
-  return (
-    <div className="space-y-2">
-      <IndicatieveAangifteCard year={year} winst={winst} indicatie={dashboardAangifteIndicatie} showTrend={showTrend} prevWinst={previousWinst} onShowFullCalculation={onShowFullCalculation} />
-      {aannamesCard && (
-        <button
-          onClick={aannamesCard.onClick}
-          className={`w-full text-left rounded-xl border px-4 py-2.5 text-sm flex flex-wrap items-center gap-x-3 gap-y-1 ${
-            open === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"
-          } hover:brightness-95`}
-        >
-          <span className="font-semibold">Aannames {year}</span>
-          <span>{open === 0 ? "Alles opgegeven" : `${open} ${open === 1 ? "aanname" : "aannames"} nog niet opgegeven`}</span>
-          <span className="text-xs opacity-80">{(aannamesCard.lines || []).map((l) => `${l.label}: ${String(l.value).replace(/^\S+\s/, "")}`).join(" · ")}</span>
-          <span className="ml-auto text-xs font-bold">Bekijk →</span>
-        </button>
-      )}
-    </div>
-  );
-}
-
 export default function DetailsPanel({
   year,
   cardsByKey,
@@ -126,9 +93,38 @@ export default function DetailsPanel({
           <>
         {tab === "jaaroverzicht" && (
           rechtsvorm === "bv" ? (
+            // v282 — BV kent geen IB/Zvw-indicatie (dat bestaat alleen in de IB), maar wél een
+            // eigen indicatieve Vpb-berekening plus (als er een holding is) de holding-boekingen
+            // voor het actieve jaar — zelfde opzet als de zzp-kant hieronder.
             <div className="grid md:grid-cols-2 gap-4 items-start">
-              {CardTile(holdingCard)}
-              {CardTile(btwQuarters)}
+              <IndicatieveVpbCard
+                year={year}
+                winst={winst}
+                vpbIndicatie={vpbIndicatie}
+                breakdown={vpbBreakdown}
+                showTrend={showTrend}
+                prevWinst={previousWinst}
+                onShowFullCalculation={onShowFullCalculation}
+              />
+              <div className="flex flex-col gap-4">
+                {CardTile(holdingCard)}
+                {CardTile(btwQuarters)}
+              </div>
+            </div>
+          ) : dashboardAangifteIndicatie ? (
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+              <IndicatieveAangifteCard
+                year={year}
+                winst={winst}
+                indicatie={dashboardAangifteIndicatie}
+                showTrend={showTrend}
+                prevWinst={previousWinst}
+                onShowFullCalculation={onShowFullCalculation}
+              />
+              <div className="flex flex-col gap-4">
+                {CardTile(aannamesCard)}
+                {CardTile(btwQuarters)}
+              </div>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(btwQuarters)}</div>
