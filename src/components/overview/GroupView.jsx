@@ -154,7 +154,8 @@ export function DetailTable({
     setEditingNoteTxId(null);
   };
 
-  const applyChange = (tx, patch) => onRequestChange(tx, patch);
+  // V53 — met een actieve zoekopdracht geldt een wijziging voor wat het zoekwoord vindt (niet voor alles met dezelfde IBAN).
+  const applyChange = (tx, patch) => onRequestChange(tx, patch, { searchQuery: query.trim() });
 
   const confidenceCounts = useMemo(() => {
     let heuristic = 0;

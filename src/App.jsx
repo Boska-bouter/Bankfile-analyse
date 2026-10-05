@@ -20,7 +20,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, extractKeywordCandidate, normalizePersonName, ibansMatch } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -1473,11 +1473,34 @@ export default function App() {
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte, zowel bij het opslaan van een
   // correctie als bij het zoeken naar "vergelijkbare transacties van dezelfde tegenpartij".
-  const keyForTx = (tx) => ibanKey(tx.counterpartyIban, tx.amount) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
+  // V53 — een IBAN is alleen een goede tegenpartij-sleutel als er (vrijwel) maar één partij achter zit.
+  // Tussenpersonen (Mollie/Adyen/"via Stichting ...", ING-betaalverzoek) delen één IBAN voor tientallen
+  // verschillende bedrijven; daar bepaalde de IBAN ten onrechte dat een wijziging voor IWG ook voor
+  // alle andere winkels gold. Is minder dan 90% van de transacties met dezelfde IBAN (+teken) van
+  // dezelfde partij (eerste woord van de naam), dan gebruiken we de naam als sleutel.
+  const ibanExclusiveMap = useMemo(() => {
+    const per = {};
+    for (const tx of transactions) {
+      const ik = ibanKey(tx.counterpartyIban, tx.amount);
+      if (!ik) continue;
+      const w = (normKey(tx.counterparty || tx.description || "").split(" ")[0]) || "";
+      const e = (per[ik] ||= { n: 0, w: {} });
+      e.n++;
+      e.w[w] = (e.w[w] || 0) + 1;
+    }
+    const res = {};
+    for (const [k, e] of Object.entries(per)) res[k] = Math.max(...Object.values(e.w)) / e.n >= 0.9;
+    return res;
+  }, [transactions]);
+  const exclusiveIbanKey = (iban, amount) => {
+    const ik = ibanKey(iban, amount);
+    return ik && ibanExclusiveMap[ik] !== false ? ik : "";
+  };
+  const keyForTx = (tx) => exclusiveIbanKey(tx.counterpartyIban, tx.amount) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
 
   const setCounterpartyOverride = (counterparty, amount, patch, iban) => {
     snapshotBeforeAction("Categorie/type aangepast");
-    const key = (iban && ibanKey(iban, amount)) || counterpartyKey(counterparty, amount);
+    const key = (iban && exclusiveIbanKey(iban, amount)) || counterpartyKey(counterparty, amount);
     if (!key) return;
     setOverridesByCounterparty((prev) => ({
       ...prev,
@@ -1599,7 +1622,7 @@ export default function App() {
       setOverridesByCounterparty((prev) => {
         const next = { ...prev };
         for (const tx of withoutId) {
-          const key = (tx.counterpartyIban && ibanKey(tx.counterpartyIban, tx.amount)) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
+          const key = (tx.counterpartyIban && exclusiveIbanKey(tx.counterpartyIban, tx.amount)) || counterpartyKey(tx.counterparty || tx.description, tx.amount);
           if (!key) continue;
           next[key] = {
             ...(next[key] || {}),
@@ -1614,7 +1637,7 @@ export default function App() {
     }
   };
 
-  const requestCategoryChange = (tx, patch) => {
+  const requestCategoryChange = (tx, patch, opts) => {
     // v303 — op verzoek: "type" (Zakelijk/Prive) van een transactie volgt uitsluitend het
     // bankbestand waaruit hij is ingelezen en mag nooit meer handmatig worden aangepast (zie
     // autoClassify in classify.js) — dit is het ene doorgeefluik waar alle categorie/type-wijzigingen
@@ -1636,8 +1659,22 @@ export default function App() {
       // alleen de categorie over en behoud het type van de originele boeking. Anders zou een
       // categoriewijziging op de spiegel (die type "Prive" meestuurt) de zakelijke originele
       // boeking ongemerkt naar Prive omzetten.
-      if (original) return requestCategoryChange(original, { ...patch, type: original.type });
+      if (original) return requestCategoryChange(original, { ...patch, type: original.type }, opts);
       return;
+    }
+    // V53 — actieve zoekopdracht in de detailtabel: de reikwijdte is wat het zoekwoord vindt, niet de IBAN.
+    const sq = (opts?.searchQuery || "").toLowerCase();
+    if (sq && tx.id != null) {
+      const kwMatches = classified.filter(
+        (t) =>
+          !t.isMirror && !t.transferLocked && (t.amount >= 0) === (tx.amount >= 0) &&
+          `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(sq)
+      );
+      if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
+        const matchYears = [...new Set(kwMatches.map((t) => t.year))].sort((a, b) => a - b);
+        setPendingCategoryChange({ tx, patch, key: null, matchCount: kwMatches.length, matchYears, viaIban: false, keywordQuery: opts.searchQuery, matchIds: kwMatches.map((t) => t.id) });
+        return;
+      }
     }
     const key = keyForTx(tx);
     if (!key) {
@@ -1664,16 +1701,29 @@ export default function App() {
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
+  const applyRowsOverride = (ids, patch, tx) => {
+    snapshotBeforeAction("Categorie/type aangepast (zoekwoord)");
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = { ...(next[id] || {}), ...patch };
+      return next;
+    });
+    setPendingCategoryChange(null);
+    suggestSimilarIfAny(tx, patch);
+  };
   const applyPendingToAllYears = () => {
-    const { tx, patch } = pendingCategoryChange;
+    const { tx, patch, matchIds } = pendingCategoryChange;
+    if (matchIds) return applyRowsOverride(matchIds, patch, tx);
     setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
   const applyPendingToYears = (selectedYears) => {
-    const { tx, key, patch } = pendingCategoryChange;
+    const { tx, key, patch, matchIds } = pendingCategoryChange;
     snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
-    const idsToPatch = classified.filter((t) => !t.isMirror && keyForTx(t) === key && selectedYears.includes(t.year)).map((t) => t.id);
+    const idsToPatch = matchIds
+      ? classified.filter((t) => matchIds.includes(t.id) && selectedYears.includes(t.year)).map((t) => t.id)
+      : classified.filter((t) => !t.isMirror && keyForTx(t) === key && selectedYears.includes(t.year)).map((t) => t.id);
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const id of idsToPatch) next[id] = { ...(next[id] || {}), ...patch };
