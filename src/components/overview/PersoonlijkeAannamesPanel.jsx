@@ -245,6 +245,11 @@ export default function PersoonlijkeAannamesPanel({
               <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
               <option value="prive">Privéauto zakelijk gebruikt (kilometervergoeding)</option>
             </select>
+            {/* v256 — optie "Beide" (zowel auto op de zaak als privéauto zakelijk gebruikt) verwijderd
+                uit de keuzelijst op verzoek — komt vrijwel nooit voor. Een dossier waar dit al eerder
+                was ingevuld (autoStatus "beide") blijft gewoon werken zoals het was — alle onderliggende
+                berekeningen (categorySplit.js/boxMapping.js/kmVergoeding.js) herkennen "beide" nog
+                steeds, alleen kan het niet meer opnieuw gekozen worden. */}
             <p className="mt-1.5 text-xs text-slate-400">
               Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen werkelijke
               autokosten (brandstof, parkeren, verzekering, MRB) mee met een bijtellingscorrectie voor
@@ -252,7 +257,7 @@ export default function PersoonlijkeAannamesPanel({
               "privéauto zakelijk gebruikt" geldt in plaats daarvan een kilometervergoeding voor het
               zakelijke gebruik.
             </p>
-            {autoStatus?.[activeYear] === "zaak" &&
+            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
                 <button
                   onClick={onOpenAutoActivaModal}
@@ -261,14 +266,14 @@ export default function PersoonlijkeAannamesPanel({
                   Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""} auto op de zaak instellen →
                 </button>
               )}
-            {autoStatus?.[activeYear] === "zaak" &&
+            {(autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide") &&
               autoWizardStatus?.soort === "financial" && (
                 <p className="mt-2 text-xs text-slate-400">
                   Bij financial lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
                   het leningen/lease-overzicht), niet hier.
                 </p>
               )}
-            {autoStatus?.[activeYear] === "prive" && (
+            {(autoStatus?.[activeYear] === "prive" || autoStatus?.[activeYear] === "beide") && (
               <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
                 <p className="text-xs font-medium text-slate-600 mb-2">
                   Kilometervergoeding privéauto zakelijk gebruik in {activeYear}

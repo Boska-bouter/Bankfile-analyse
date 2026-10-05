@@ -13,7 +13,6 @@ import { computeOnbetaaldGedeelteKoop, computeAanschafwaardeBedrijfsmiddel, comp
 import { computeAfschrijvingPerJaar } from "./activa.js";
 import { computeFinancialLeaseAmortizationMultiSegment, groupAmortizationByYear } from "./loanAmortization.js";
 import { computeBtw } from "./btw.js";
-import { effectiveZakelijkPercentage } from "./categorySplit.js";
 
 // Fiscale ondergrens voor de afschrijvingstermijn van een bedrijfsmiddel: de Belastingdienst staat
 // voor de normale fiscale afschrijving maximaal 20% van de aanschafwaarde per jaar toe, dus nooit
@@ -21,22 +20,6 @@ import { effectiveZakelijkPercentage } from "./categorySplit.js";
 // machine of overig bedrijfsmiddel), niet alleen voor een auto. De naam van de constante blijft
 // "AUTO" (elders al gebruikt, o.a. tax/autoActiva.js) ook al is de toepassing breder.
 export const MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN = 5;
-// Bijtelling/onttrekking wordt bij een auto die niet het hele kalenderjaar beschikbaar is naar rato
-// van de daadwerkelijke beschikbaarheidsdagen berekend. Dit voorkomt een volledige jaarbijtelling
-// wanneer een auto pas later in het jaar op de zaak komt of tussentijds wordt beëindigd.
-export function computeAutoBeschikbaarheidsfactor(startdatum, einddatum, year) {
-  const yearStart = new Date(year, 0, 1);
-  const yearEnd = new Date(year, 11, 31);
-  const start = startdatum ? new Date(startdatum) : yearStart;
-  const end = einddatum ? new Date(einddatum) : yearEnd;
-  const from = start > yearStart ? start : yearStart;
-  const to = end < yearEnd ? end : yearEnd;
-  if (to < from) return 0;
-  const dagen = Math.floor((to - from) / 86400000) + 1;
-  const jaarDagen = ((new Date(year + 1, 0, 1) - yearStart) / 86400000);
-  return Math.max(0, Math.min(1, dagen / jaarDagen));
-}
-
 
 // Exact de 5 categorieën die de gebruiker heeft bevestigd voor "totale autokosten" — bewust NIET
 // "Lease (operationeel)" of "Reiskosten (OV)", die zijn iets anders.
@@ -112,17 +95,13 @@ export function computeAutoPrivegebruikOnttrekking(totaleAutokosten, cataloguswa
 // overal netto. Bij categorieën met 0% BTW (het gebruikelijke geval voor bijv. Belastingen: MRB)
 // maakt dit niets uit; bij een categorie mét BTW (bijv. Brandstof, Onderhoud) zou een bruto bedrag de
 // aftopping op "totale autokosten" te hoog laten uitvallen.
-export function sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd, categoryZakelijkPercentage = null, autoStatus = null) {
+export function sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
-  const nettoTotaal = (classified || [])
-    .filter((tx) => !tx.isMirror && tx.year === year && AUTOKOSTEN_CATEGORIEN.includes(tx.category))
-    .reduce((a, tx) => {
-      const percentage = (tx.category === "Brandstof" || tx.category === "Parkeren")
-        ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, true)
-        : 100;
-      return a + nettoOf(tx) * (percentage / 100);
-    }, 0);
-  return Math.max(0, -nettoTotaal);
+  return Math.abs(
+    (classified || [])
+      .filter((tx) => !tx.isMirror && tx.year === year && AUTOKOSTEN_CATEGORIEN.includes(tx.category))
+      .reduce((a, tx) => a + nettoOf(tx), 0)
+  );
 }
 
 // Lease-rente van precies één leasecontract (één item uit leaseSummary) voor één jaar — zelfde
@@ -216,8 +195,8 @@ export function computeLeaseInvesteringenForYear(leaseSummary, leaseDetails, yea
 // totaal (niet dubbel per contract), en wordt ook de onttrekking op het GECOMBINEERDE totaal
 // afgetopt, in plaats van per auto apart. Bij één geleasede auto (het gebruikelijke geval) maakt dit
 // geen verschil met een per-contract-berekening.
-export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd, categoryZakelijkPercentage = null, autoStatus = null) {
-  const autokostenTransactieTotaal = sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus);
+export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd) {
+  const autokostenTransactieTotaal = sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd);
   const contracten = [];
   let afschrijvingTotaal = 0;
   let leaseRenteTotaal = 0;
@@ -343,8 +322,7 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
         bijtellingspercentage = primary.bijtellingspercentage || null;
         if (privegebruikMeerDan500km && cataloguswaarde && bijtellingspercentage) {
           heeftAutoMetPrivegebruik = true;
-          const beschikbaarheidsfactor = computeAutoBeschikbaarheidsfactor(primary.startdatum, terminationEinddatum, year);
-          normaleBijtelling = (Number(bijtellingspercentage) / 100) * Number(cataloguswaarde) * beschikbaarheidsfactor;
+          normaleBijtelling = (Number(bijtellingspercentage) / 100) * Number(cataloguswaarde);
           normaleBijtellingTotaal += normaleBijtelling;
         }
       }

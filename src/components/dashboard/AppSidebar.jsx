@@ -1,4 +1,4 @@
-import { Upload, Download, Trash2, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, FolderPlus } from "lucide-react";
+import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -112,9 +112,21 @@ export default function AppSidebar({
         )}
       </div>
 
-      {/* Beheer — bewust dicht bij de dossieridentiteit en vóór de navigatie: bestandsacties zijn
-          primaire workflow-acties en hoeven niet onderaan uit beeld te staan. */}
-      <div className="flex flex-col gap-2 pb-4 mb-3 border-b border-white/10">
+      {/* Tabs */}
+      {tabsVisible && (
+        <div className="flex flex-col gap-1">
+          <TabItem tabKey="overzicht" active={activeTab === "overzicht"} onClick={() => onSelectTab("overzicht")} />
+          <TabItem tabKey="controleren" active={activeTab === "controleren"} badge={controlerenBadge} onClick={() => onSelectTab("controleren")} />
+          <TabItem tabKey="instellingen" active={activeTab === "instellingen"} badge={instellingenBadge} onClick={() => onSelectTab("instellingen")} />
+        </div>
+      )}
+
+      {/* v304 (V26) — Dossier: de bestandsacties horen bij het dossier dat openstaat (cliënt + jaar),
+          niet onderaan bij "Beheer" — maar staan bewust ónder de navigatie, zodat Overzicht/
+          Controleren/Instellingen als meest gebruikte onderdeel bovenaan blijven. "Bestand laden" heet
+          nu "Bankbestand toevoegen" (het voegt toe aan het dossier, het vervangt niets) en "Wis alles"
+          is "Nieuw dossier" (met keuzevenster, zie clearAllData in App.jsx). */}
+      <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
         <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
@@ -144,15 +156,6 @@ export default function AppSidebar({
           </button>
         )}
       </div>
-
-      {/* Tabs */}
-      {tabsVisible && (
-        <div className="flex flex-col gap-1">
-          <TabItem tabKey="overzicht" active={activeTab === "overzicht"} onClick={() => onSelectTab("overzicht")} />
-          <TabItem tabKey="controleren" active={activeTab === "controleren"} badge={controlerenBadge} onClick={() => onSelectTab("controleren")} />
-          <TabItem tabKey="instellingen" active={activeTab === "instellingen"} badge={instellingenBadge} onClick={() => onSelectTab("instellingen")} />
-        </div>
-      )}
 
       {/* v267 — Acties: verplaatst vanuit de oude "Jaar:.../Excel/Print/Basisvragen"-rij boven het
           (nu verwijderde) Aangifte-statusblok — zelfde handlers als voorheen. */}
@@ -201,7 +204,7 @@ export default function AppSidebar({
       {/* Autosave-status, Help, Privacy */}
       <div className="flex flex-col gap-2.5 mt-3.5 pt-3 border-t border-white/10">
         {saveState && (
-          <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — geen bestand.">
+          <div className="flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen projectbestand. Gebruik 'Project opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
@@ -209,8 +212,10 @@ export default function AppSidebar({
             )}
             {saveState === "saved" && (
               <>
-                <Check className="h-3 w-3 text-emerald-400" />
-                Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · browser
+                <Check className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
+                <span>
+                  Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · browser
+                </span>
               </>
             )}
             {saveState === "error" && (

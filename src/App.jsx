@@ -27,7 +27,7 @@ import {
   loadPersistedSettings, persistSettings, clearPersistedSettings,
 } from "./storage/projectStorage.js";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
-import ConfirmBanner from "./components/shared/ConfirmBanner.jsx";
+import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
@@ -284,9 +284,9 @@ export default function App() {
   const [verwachteLeaseOverig, setVerwachteLeaseOverig] = useState(null);
   const [verwachteLening, setVerwachteLening] = useState(null); // zelfde vorm als verwachteLease
   const [verwachteAOV, setVerwachteAOV] = useState(null);
-  // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive",
+  // null=nog niet gevraagd (wizard toont de vraag) | { status: "geen"|"zaak"|"prive"|"beide",
   // soort: "koop"|"operational"|"financial"|null }. Eén keer gevraagd bij het opstarten van een
-  // dossier (net als verwachteLease/verwachteAOV hierboven), zet bij "zaak"/"prive" de
+  // dossier (net als verwachteLease/verwachteAOV hierboven), zet bij "zaak"/"prive"/"beide" de
   // standaardwaarde van autoStatus (zie hieronder) voor alle jaren in het dossier — per jaar is dat
   // daarna nog te corrigeren in "Persoonlijke aannames". Bij `soort: "financial"` verschijnt
   // aansluitend gewoon de bestaande leaseauto-vraag (stap 6) voor de contractdetails.
@@ -301,7 +301,7 @@ export default function App() {
   const [autoActivaDetails, setAutoActivaDetails] = useState({});
   const [showAutoActivaModal, setShowAutoActivaModal] = useState(false);
   // Kilometervergoeding per jaar voor een privéauto die zakelijk wordt gebruikt (autoStatus
-  // "prive") — zie tax/kmVergoeding.js. { [jaar]: { zakelijkeKilometers, vergoedingPerKm } }.
+  // "prive"/"beide") — zie tax/kmVergoeding.js. { [jaar]: { zakelijkeKilometers, vergoedingPerKm } }.
   // Standaard `{}` = niets ingevuld = geen effect op de berekening.
   const [kmVergoedingDetails, setKmVergoedingDetailsState] = useState({});
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
@@ -359,7 +359,7 @@ export default function App() {
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
-  const [confirmMessage, setConfirmMessage] = useState(null);
+  const [dialog, setDialog] = useState(null); // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Project opslaan"
@@ -541,7 +541,7 @@ export default function App() {
     // (onbeantwoord jaar = "ja") in plaats van de nieuwe, veiligere default ("onbekend").
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
-    setAutoStatusState(settings.autoStatus && typeof settings.autoStatus === "object" ? Object.fromEntries(Object.entries(settings.autoStatus).map(([y, v]) => [y, v === "beide" ? null : v]).filter(([, v]) => v)) : {});
+    setAutoStatusState(settings.autoStatus && typeof settings.autoStatus === "object" ? settings.autoStatus : {});
     setHuurZakelijkPercentageStatusState(settings.huurZakelijkPercentageStatus && typeof settings.huurZakelijkPercentageStatus === "object" ? settings.huurZakelijkPercentageStatus : {});
     setEnergieZakelijkPercentageStatusState(settings.energieZakelijkPercentageStatus && typeof settings.energieZakelijkPercentageStatus === "object" ? settings.energieZakelijkPercentageStatus : {});
     setGemeentelijkeKostenZakelijkPercentageStatusState(settings.gemeentelijkeKostenZakelijkPercentageStatus && typeof settings.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? settings.gemeentelijkeKostenZakelijkPercentageStatus : {});
@@ -762,13 +762,12 @@ export default function App() {
     setShowStartupChoice(false);
     setLoaded(true);
   };
-  const startEmpty = async () => {
-    // "Nieuw dossier" betekent hier ook echt een nieuwe lokale sessie: voorkom dat het vorige
-    // dossier na een refresh opnieuw als startproject verschijnt.
+  const startEmpty = () => {
+    // Bewust niets wissen — de eerder opgeslagen data in deze browser blijft intact totdat er
+    // weer iets nieuws wordt opgeslagen (bijv. door een bestand toe te voegen). (v304: een
+    // tussentijdse versie wiste hier de browseropslag zonder bevestiging — dat is teruggedraaid:
+    // één klik naast "Verder met dit dossier" mag nooit een niet-geëxporteerd dossier vernietigen.)
     skipNextPersistRef.current = true;
-    pendingProjectRef.current = null;
-    await clearPersistedData();
-    await clearPersistedSettings();
     setShowStartupChoice(false);
     setLoaded(true);
   };
@@ -957,7 +956,7 @@ export default function App() {
     // staan, alleen het paneel las hem uit alsof er niets gebeurd was).
     setZelfstandigenaftrekStatusState(s.zelfstandigenaftrekStatus || {});
     setStartersaftrekStatusState(s.startersaftrekStatus || {});
-    setAutoStatusState(Object.fromEntries(Object.entries(s.autoStatus || {}).map(([y, v]) => [y, v === "beide" ? null : v]).filter(([, v]) => v)));
+    setAutoStatusState(s.autoStatus || {});
     setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
     setEnergieZakelijkPercentageStatusState(s.energieZakelijkPercentageStatus || {});
     setGemeentelijkeKostenZakelijkPercentageStatusState(s.gemeentelijkeKostenZakelijkPercentageStatus || {});
@@ -1768,8 +1767,8 @@ export default function App() {
     () =>
       activeYear && rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd)
           )
         : null,
     [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus]
@@ -1791,7 +1790,7 @@ export default function App() {
     () => (activeYear ? computeGedeeldeGemeentelijkeKostenVoorJaar(classified, activeYear, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd) : null),
     [classified, activeYear, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd]
   );
-  // Kilometervergoeding voor een privéauto die zakelijk gebruikt wordt (autoStatus "prive")
+  // Kilometervergoeding voor een privéauto die zakelijk gebruikt wordt (autoStatus "prive"/"beide")
   // — zie tax/kmVergoeding.js. Zelfde rechtsvorm-beperking als leaseAutoKostenForActiveYear
   // hierboven (alleen zzp/eenmanszaak; een BV/DGA heeft hiervoor een andere systematiek).
   const kmVergoedingForActiveYear = useMemo(
@@ -1833,8 +1832,8 @@ export default function App() {
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const leaseAutoKosten = rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
           )
         : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
@@ -1912,8 +1911,8 @@ export default function App() {
       const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
       const leaseAutoKosten = rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
           )
         : null;
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
@@ -2920,6 +2919,8 @@ export default function App() {
                 ? "Op de zaak"
                 : autoStatusDitJaar === "prive"
                 ? "Privé zakelijk gebruikt"
+                : autoStatusDitJaar === "beide"
+                ? "Beide"
                 : autoStatusDitJaar === "geen"
                 ? "Geen auto"
                 : null;
@@ -3442,7 +3443,7 @@ export default function App() {
               categorieTotalen={categorieTotalenActiveYear}
               categoryZakelijkPercentage={categoryZakelijkPercentage}
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-              autoOpDeZaakDitJaar={!!activeYear && autoStatus?.[activeYear] === "zaak"}
+              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak" || autoStatus?.[activeYear] === "beide")}
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
@@ -3877,7 +3878,7 @@ export default function App() {
       // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
       setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
       setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
-      setAutoStatusState(project.autoStatus && typeof project.autoStatus === "object" ? Object.fromEntries(Object.entries(project.autoStatus).map(([y, v]) => [y, v === "beide" ? null : v]).filter(([, v]) => v)) : {});
+      setAutoStatusState(project.autoStatus && typeof project.autoStatus === "object" ? project.autoStatus : {});
       setHuurZakelijkPercentageStatusState(project.huurZakelijkPercentageStatus && typeof project.huurZakelijkPercentageStatus === "object" ? project.huurZakelijkPercentageStatus : {});
       setEnergieZakelijkPercentageStatusState(project.energieZakelijkPercentageStatus && typeof project.energieZakelijkPercentageStatus === "object" ? project.energieZakelijkPercentageStatus : {});
       setGemeentelijkeKostenZakelijkPercentageStatusState(project.gemeentelijkeKostenZakelijkPercentageStatus && typeof project.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? project.gemeentelijkeKostenZakelijkPercentageStatus : {});
@@ -3893,15 +3894,72 @@ export default function App() {
     }
   };
 
-  // ---- Wis alles ----
+  // ---- Project laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
+  // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
+  // ongedaan maken. Nu: keuzevenster mét namen van beide dossiers, optioneel eerst opslaan, en een
+  // momentopname zodat "Ongedaan maken" het vorige dossier terugzet.
+  const requestLoadProject = (file) => {
+    if (parsedFiles.length === 0) {
+      loadProjectFile(file);
+      return;
+    }
+    const replace = () => {
+      snapshotBeforeAction("Project geladen");
+      loadProjectFile(file);
+    };
+    setDialog({
+      title: "Huidig dossier vervangen?",
+      message: (
+        <>
+          <p>
+            <span className="text-slate-400">Huidig dossier: </span>
+            <strong className="text-slate-700">{eigenNamen?.ondernemer || "zonder naam"}</strong> · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}
+          </p>
+          <p>
+            <span className="text-slate-400">Nieuw project: </span>
+            <strong className="text-slate-700 break-all">{file.name}</strong>
+          </p>
+          <p className="text-xs text-slate-400 pt-1">
+            Wijzigingen die je niet als projectbestand hebt opgeslagen gaan hiermee uit beeld. Via "Ongedaan maken" in de
+            zijbalk kun je dit direct terugdraaien.
+          </p>
+        </>
+      ),
+      actions: [
+        { label: "Huidig dossier opslaan en vervangen", variant: "primary", onClick: () => { saveProjectFile(); replace(); } },
+        { label: "Vervangen zonder opslaan", variant: "danger", onClick: replace },
+      ],
+    });
+  };
+
+  // ---- Nieuw dossier (voorheen "Wis alles") ----
+  // v304 — zelfde handeling als voorheen (alles leegmaken, met momentopname voor "Ongedaan maken"),
+  // maar benoemd zoals een professional ernaar kijkt (klaar met cliënt A, nu cliënt B) en met de
+  // kans om eerst een projectbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
+  // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   const clearAllData = () => {
-    setConfirmMessage(
-      "Alle geüploade bestanden, rekeningtypes en correcties verwijderen? Dit kan niet ongedaan worden gemaakt zodra je bevestigt."
-    );
+    setDialog({
+      title: "Nieuw dossier starten?",
+      message: (
+        <>
+          <p>
+            Het huidige dossier ({eigenNamen?.ondernemer || "zonder naam"} · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}) wordt
+            gesloten: bestanden, rekeningtypes, correcties en instellingen worden leeggemaakt.
+          </p>
+          <p className="text-xs text-slate-400 pt-1">
+            Niet als projectbestand opgeslagen gegevens gaan verloren. Direct daarna kun je dit nog terugdraaien via
+            "Ongedaan maken" in de zijbalk.
+          </p>
+        </>
+      ),
+      actions: [
+        { label: "Opslaan en nieuw dossier starten", variant: "primary", onClick: () => { saveProjectFile(); doClearAllData(); } },
+        { label: "Nieuw dossier starten zonder opslaan", variant: "danger", onClick: doClearAllData },
+      ],
+    });
   };
   const doClearAllData = async () => {
-    snapshotBeforeAction("Wis alles");
-    setConfirmMessage(null);
+    snapshotBeforeAction("Nieuw dossier");
     setExpandedCardKeys({});
     setParsedFiles([]);
     setAccountTypeByFile({});
@@ -3981,15 +4039,29 @@ export default function App() {
   if (showStartupChoice) {
     const pending = pendingProjectRef.current;
     const fileCount = pending ? pending.parsedFiles.length : 0;
+    const pendingFileNames = pending ? pending.parsedFiles.map((f) => f.fileName).filter(Boolean) : [];
+    const ondernemer = pending?.settings?.eigenNamen?.ondernemer;
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">Vorig dossier gevonden</h1>
-          <p className="text-sm text-slate-500 mb-5">
-            Er staat op dit apparaat nog een eerder project klaar ({fileCount} bestand{fileCount === 1 ? "" : "en"}
-            {pending?.settings?.eigenNamen?.ondernemer ? <> — rekeninghouder: <strong>{pending.settings.eigenNamen.ondernemer}</strong></> : null}
-            ). Wilt u daarmee verdergaan, of een nieuw dossier starten?
+          <p className="text-sm text-slate-500 mb-3">
+            Er staat op dit apparaat nog een eerder dossier klaar. Wil je daarmee verdergaan, of een nieuw dossier starten?
           </p>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 mb-5 text-sm">
+            <p className="font-semibold text-slate-800">
+              {ondernemer || "Dossier zonder naam"}
+              <span className="font-normal text-slate-500"> · {fileCount} bankbestand{fileCount === 1 ? "" : "en"}</span>
+            </p>
+            {pendingFileNames.length > 0 && (
+              <ul className="mt-1 text-xs text-slate-500 space-y-0.5">
+                {pendingFileNames.slice(0, 4).map((n) => (
+                  <li key={n} className="truncate">{n}</li>
+                ))}
+                {pendingFileNames.length > 4 && <li>+ {pendingFileNames.length - 4} meer</li>}
+              </ul>
+            )}
+          </div>
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
@@ -4005,8 +4077,9 @@ export default function App() {
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-4">
-            "Nieuw dossier" wist het automatisch opgeslagen vorige dossier uit deze browser. Een eerder geëxporteerd
-            projectbestand blijft natuurlijk gewoon beschikbaar als bestand.
+            "Nieuw dossier" verwijdert niets: het vorige dossier blijft in deze browser bewaard en dit keuzescherm
+            verschijnt de volgende keer weer, totdat je zelf een nieuw bestand toevoegt — pas dán wordt het
+            oude dossier in deze browser overschreven.
           </p>
         </div>
       </div>
@@ -4071,8 +4144,9 @@ export default function App() {
         accept=".json"
         className="hidden"
         onChange={(e) => {
-          if (e.target.files && e.target.files[0]) loadProjectFile(e.target.files[0]);
+          const gekozen = e.target.files && e.target.files[0];
           e.target.value = "";
+          if (gekozen) requestLoadProject(gekozen);
         }}
       />
 
@@ -4224,7 +4298,6 @@ export default function App() {
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={controlerenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4431,7 +4504,6 @@ export default function App() {
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={controlerenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4590,7 +4662,6 @@ export default function App() {
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
-            openPoints={instellingenBadge}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4840,7 +4911,7 @@ export default function App() {
         />
       )}
 
-      <ConfirmBanner message={confirmMessage} onConfirm={doClearAllData} onCancel={() => setConfirmMessage(null)} />
+      <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
       </div>
     </div>
   );

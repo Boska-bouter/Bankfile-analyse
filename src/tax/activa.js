@@ -23,11 +23,8 @@
 export function computeAfschrijvingPerJaar(activum, year) {
   const aanschafwaarde = Number(activum.aanschafwaarde);
   const restwaarde = activum.restwaarde === "" || activum.restwaarde == null ? 0 : Number(activum.restwaarde);
-  const ingevoerdTermijn = Number(activum.afschrijvingstermijnJaren);
-  // Fiscale afschrijving is voor normale bedrijfsmiddelen gemaximeerd op 20% van de aanschafwaarde per jaar.
-  // Een kortere ingevoerde termijn mag daarom niet leiden tot een hogere jaarlijkse afschrijving.
-  const termijn = Math.max(ingevoerdTermijn, 5);
-  if (!(aanschafwaarde > 0) || !(ingevoerdTermijn > 0) || !activum.aanschafdatum) return null;
+  const termijn = Number(activum.afschrijvingstermijnJaren);
+  if (!(aanschafwaarde > 0) || !(termijn > 0) || !activum.aanschafdatum) return null;
 
   const aanschafdatum = new Date(activum.aanschafdatum);
   const aanschafjaar = aanschafdatum.getFullYear();
@@ -71,9 +68,8 @@ export function computeAfschrijvingPerJaar(activum, year) {
 // je in één keer ziet of de berekening klopt (net als bij de leaseschema's).
 export function computeAfschrijvingSchema(activum) {
   const aanschafwaarde = Number(activum.aanschafwaarde);
-  const ingevoerdTermijn = Number(activum.afschrijvingstermijnJaren);
-  const termijn = Math.max(ingevoerdTermijn, 5);
-  if (!(aanschafwaarde > 0) || !(ingevoerdTermijn > 0) || !activum.aanschafdatum) return [];
+  const termijn = Number(activum.afschrijvingstermijnJaren);
+  if (!(aanschafwaarde > 0) || !(termijn > 0) || !activum.aanschafdatum) return [];
   const aanschafjaar = new Date(activum.aanschafdatum).getFullYear();
   const rows = [];
   for (let j = aanschafjaar; j <= aanschafjaar + Math.ceil(termijn); j++) {
@@ -106,9 +102,6 @@ export function computeActivaAfschrijvingForYear(activaSummary, activaDetails, y
     const details = activaDetails[activum.key];
     if (!details || details.onbekend) { onvolledig++; continue; }
     if (!details.aanschafwaarde || !details.aanschafdatum || !details.afschrijvingstermijnJaren) { onvolledig++; continue; }
-    // Bedrijfsmiddelen met een fiscale aanschafwaarde onder €450 worden direct ten laste van de
-    // winst gebracht; daarover mag hier geen aanvullende afschrijving ontstaan.
-    if (Number(details.aanschafwaarde) < 450) continue;
     const r = computeAfschrijvingPerJaar(details, year);
     if (r) totaalAfschrijving += r.afschrijving;
   }

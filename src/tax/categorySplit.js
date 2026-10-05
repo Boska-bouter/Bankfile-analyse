@@ -74,16 +74,39 @@ export function defaultZakelijkPercentage(category) {
   return fiscalTreatmentOf(category) === "kosten" ? 100 : 0;
 }
 
-// Brandstof/Parkeren zijn splitsbaar bij een privéauto en wanneer de autosituatie nog onbekend is.
-// Zodra de gebruiker "Auto op de zaak" kiest, lopen deze kosten volledig via het zakelijke
-// automodel en wordt de generieke %-splitsing hier niet toegepast; het privégebruik loopt dan
-// via de bijtelling/onttrekkingscorrectie.
+// Brandstof/Parkeren zijn WEL splitsbaar (zie SPLITSBARE_CATEGORIEEN), behalve in een jaar waarin
+// de gebruiker heeft aangegeven dat de auto op de zaak staat (autoStatus "zaak" of
+// "beide" — zie autoStatus in App.jsx, ingesteld via de wizard of "Persoonlijke aannames"). In dat
+// geval hoort het privégebruik via de aparte bijtelling/onttrekkings-correctie te lopen (zie
+// autoBijtelling.js) — een generiek %-zakelijk op dezelfde transacties zou daar in tegenspraak mee
+// zijn (dubbele/tegenstrijdige correctie op dezelfde kosten). Bij "Privéauto zakelijk gebruikt",
+// "Beide" (de PRIVÉAUTO-transacties, zie hieronder) of "Onbekend" blijft de generieke splitsing
+// gewoon bruikbaar — "Beide" sluit hier alleen uit omdat de tool niet uit banktransacties kan
+// afleiden welke brandstof/parkeer-transactie bij de zaaks-auto hoort en welke bij de privéauto
+// (zie ook de toelichting bij "Beide" in het stappenplan) — zonder dat onderscheid is volledig
+// uitsluiten de veiligere kant (voorkomt dat een deel van de zaaks-auto-kosten alsnog via de
+// generieke %-splitsing wordt teruggedraaid).
 const AUTO_SPLIT_UITSLUITING = ["Brandstof", "Parkeren"];
 
 function autoOpDeZaak(year, autoStatus) {
-  return autoStatus?.[year] === "zaak";
+  const status = autoStatus?.[year];
+  return status === "zaak" || status === "beide";
 }
 
+// Zowel computeLeaseAutoKostenVoorJaar (financial lease, zie autoBijtelling.js) als
+// computeAutoActivaKostenVoorJaar (koop/operational lease, zie autoActiva.js) tellen 100% van
+// Brandstof/Parkeren mee zodra er zo'n auto-op-de-zaak geregistreerd staat — voor ELK jaar, ongeacht
+// wat `autoStatus` voor dat jaar zegt (geen van beide functies kijkt daarnaar). Zonder deze functie
+// zou de generieke %-splitsing hierboven dezelfde Brandstof/Parkeren-transacties in een jaar met
+// `autoStatus` nog op "Onbekend" tegelijk nog eens apart (en tegenstrijdig) kunnen verdelen. Deze
+// functie detecteert alle drie de situaties rechtstreeks vanuit dezelfde bronnen en dezelfde
+// voorwaarden als die twee berekenfuncties zelf gebruiken (leaseSummary/leaseDetails met
+// `soort === "auto"` voor financial lease; autoWizardStatus.soort "koop"/"operational" mét ingevulde
+// autoActivaDetails voor de andere twee — zie combineAutoKosten in autoActiva.js, die om precies
+// dezelfde reden "financial lease OF koop/operational, ongeacht welke" samenvoegt) — bewust zonder
+// jaarfilter: geen van beide brondfuncties filtert zijn resultaat op jaar, dus moet de generieke
+// splitsing deze twee categorieën voor ELK jaar mijden zodra één van de drie autovormen ergens in het
+// dossier geregistreerd staat, niet alleen de jaren binnen de looptijd van dat ene contract.
 export function heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus) {
   for (const lease of leaseSummary || []) {
     if (lease.category !== "Lease (financieel)") continue;
@@ -145,7 +168,7 @@ export function computeSplitsbareCategorieTotalenVoorJaar(classified, year, auto
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     if (!isSplitsbareCategorie(tx.category)) continue;
-    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && !autoSplitBlijftBeschikbaar(year, autoStatus, heeftLeaseAuto) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) continue;
+    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) continue;
     netto[tx.category] = (netto[tx.category] || 0) + tx.amount;
   }
   const totalen = {};

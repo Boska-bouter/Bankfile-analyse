@@ -75,7 +75,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     naam, categorieen: cats, totaal: sumCatNetto(cats), toelichting, perCategorie: perCategorieVanNetto(cats),
   });
 
-  // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive",
+  // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive"/"beide",
   // zie tax/kmVergoeding.js) — komt NIET uit een categorie/banktransactie (het is een notionele
   // aftrekpost), dus geen rubriekNetto maar een los samengesteld object in dezelfde vorm. Alleen
   // aanwezig (en dus alleen zichtbaar) zodra er daadwerkelijk een bedrag > 0 is.
