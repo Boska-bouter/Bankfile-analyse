@@ -58,7 +58,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  activeYear, categorieTotalen, categoryZakelijkPercentage, onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
+  activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
 }) {
   const [open, setOpen] = useState(false);
   const categorieen = Object.keys(categorieTotalen || {}).sort((a, b) => a.localeCompare(b));
@@ -125,7 +125,7 @@ export default function CategoryPercentagePanel({
                 categorie={categorie}
                 totaal={categorieTotalen[categorie]}
                 raw={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
-                standaard={defaultZakelijkPercentage(categorie)}
+                standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
                 onCommit={(percentage) => onSetCategoryZakelijkPercentage(categorie, activeYear, percentage)}
               />
             ))}
