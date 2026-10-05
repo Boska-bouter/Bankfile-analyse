@@ -3,7 +3,7 @@
 // (die vast aan de zijkant hangt en over jaren wisselt) is dit een horizontale balk direct onder de
 // header, die naar bestaande secties VERDER OP DEZELFDE PAGINA scrollt — geen aparte route/tab, dus
 // terug-navigeren (bijv. via de browser) laat de rest van de pagina gewoon staan.
-// v227 — de "Bestand laden"-knop (v226) is verhuisd naar de header zelf, naast "Project opslaan"
+// v227 — de "Bestand laden"-knop (v226) is verhuisd naar de header zelf, naast "Dossier opslaan"
 // (samen met de andere bestandsacties), dus deze balk toont weer alleen de sectie-navigatie.
 // v228 — dit was een scroll-naar-sectie-navbalk; de knoppen zijn nu echte tabblad-schakelaars
 // (item.onClick wisselt activeTab in App.jsx), dus deze balk toont voortaan ook welk tabblad actief

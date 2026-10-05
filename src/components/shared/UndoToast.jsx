@@ -3,7 +3,7 @@ import { Check, X } from "lucide-react";
 
 // v305 (V27) — tijdelijke "Ongedaan maken"-melding voor kleine acties (een categorie, een status, een
 // toelichting…). Voorheen stond voor élke actie een opvallende witte kaart permanent in de zijbalk;
-// dat is alleen gepast voor grote, ingrijpende acties (Nieuw dossier, Project geladen, duplicaten
+// dat is alleen gepast voor grote, ingrijpende acties (Nieuw dossier, Dossier geladen, duplicaten
 // verwijderen e.d. — die houden die kaart, zie isBigUndoLabel in App.jsx).
 //
 // De melding verdwijnt na `duration` ms (en daarmee ook de mogelijkheid om die ene actie ongedaan te

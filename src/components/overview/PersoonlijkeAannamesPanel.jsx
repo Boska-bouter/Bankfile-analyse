@@ -98,7 +98,7 @@ export default function PersoonlijkeAannamesPanel({
   // urencriterium juist niet uit bankgegevens is af te leiden. Voor een nieuw dossier
   // (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar naar "onbekend" (beide scenario's) —
   // zie resolveZelfstandigenaftrekStatusForYear. Voor een ouder dossier (van vóór deze regel bestond)
-  // blijft het gedrag "ja" behouden, zodat een eerder opgeslagen project niet met terugwerkende kracht
+  // blijft het gedrag "ja" behouden, zodat een eerder opgeslagen dossier niet met terugwerkende kracht
   // van berekening verandert. rawStatus (i.p.v. de geresolveerde status) bepaalt of de dropdown de
   // placeholder toont — het onderscheid tussen "nog niet gekozen" en "expliciet gekozen" blijft zo
   // zichtbaar, ook al is het gedrag al bepaald.

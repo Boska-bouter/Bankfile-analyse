@@ -22,7 +22,7 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Alles wordt automatisch bewaard in deze browser — gebruik "Project opslaan" om ook een back-upbestand te downloaden.
+      Alles wordt automatisch bewaard in deze browser — gebruik "Dossier opslaan" om ook een back-upbestand te downloaden.
     </li>
   </ol>
 );

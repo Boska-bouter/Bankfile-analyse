@@ -469,7 +469,7 @@ export function migrateLegacyCategoryName(name) {
 // dan de re-render triggert die de bijgewerkte lijst oppikt.
 // mainCategory is optioneel: alleen relevant bij een door de gebruiker zelf toegevoegde categorie
 // waarbij Zakelijk/Privé is gekozen (zie CategoryRulesPanel). Zonder expliciete keuze — bijv. bij
-// een oudere, al bestaande custom categorie uit een eerder opgeslagen project — blijft het oude
+// een oudere, al bestaande custom categorie uit een eerder opgeslagen dossier — blijft het oude
 // gedrag intact: mainCategoryOf/fiscalTreatmentOf vallen dan terug op hun standaardwaarde.
 export function registerCategory(name, color, mainCategory) {
   if (!CATEGORY_ORDER.includes(name)) {
@@ -485,7 +485,7 @@ export function registerCategory(name, color, mainCategory) {
   }
 }
 
-// Merget een opgeslagen categoryRules-array (uit storage of een projectbestand) met
+// Merget een opgeslagen categoryRules-array (uit storage of een dossierbestand) met
 // DEFAULT_RULES op naam, met behoud van custom categorieën die niet in DEFAULT_RULES zitten.
 export function mergeCategoryRules(savedRules) {
   const rawSaved = Array.isArray(savedRules) ? savedRules : [];
@@ -497,7 +497,7 @@ export function mergeCategoryRules(savedRules) {
     // ander overschrijft.
     const matches = saved.filter((r) => r.name === defRule.name);
     if (matches.length === 0) return defRule;
-    // Samenvoegen met de HUIDIGE standaardlijst (niet vervangen): een opgeslagen project bevat
+    // Samenvoegen met de HUIDIGE standaardlijst (niet vervangen): een opgeslagen dossier bevat
     // een momentopname van de zoekwoorden op het moment van opslaan. Zouden we die snapshot
     // domweg laten winnen, dan verdwijnen nieuwe standaard-zoekwoorden die nadien zijn toegevoegd
     // zodra een ouder project weer wordt geladen — precies het "Winkels divers is leeg"-effect.

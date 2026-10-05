@@ -77,7 +77,7 @@ export function estimateIncomeTaxScenarios(winst, year) {
 // het wel ongeveer goed", terwijl het urencriterium juist NIET uit bankgegevens is af te leiden (de
 // Belastingdienst koppelt de zelfstandigenaftrek er direct aan). Dit stille "Ja"-gedrag geldt daarom
 // alleen nog voor dossiers die al bestonden vóórdat deze regel werd ingevoerd (`zaLegacyJaDefault` —
-// zie App.jsx/loadProjectFile, resulteert hier in "ja"), zodat een eerder opgeslagen project niet met
+// zie App.jsx/loadProjectFile, resulteert hier in "ja"), zodat een eerder opgeslagen dossier niet met
 // terugwerkende kracht andere cijfers toont; voor een gloednieuw dossier resulteert een onbeantwoord
 // jaar in "onbekend" (beide scenario's naast elkaar, net als bij een expliciete "Onbekend"-keuze) —
 // de veiligere aanname zolang niemand het urencriterium heeft bevestigd. Een expliciet gezet jaar

@@ -17,8 +17,6 @@ const TABS = [
   { key: "activa", label: "Activa" },
   { key: "leningen", label: "Leningen" },
   { key: "lease", label: "Lease" },
-  { key: "btw", label: "BTW" },
-  { key: "rapportages", label: "Rapportages" },
 ];
 
 // dashboardCards-objecten dragen een `key`-veld (voor React-lijsten in SectionCardGrid) — dat mag
@@ -67,7 +65,12 @@ export default function DetailsPanel({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="px-5 pt-4">
-        <h3 className="text-sm font-bold text-slate-900 mb-2">Details en overzichten</h3>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <h3 className="text-sm font-bold text-slate-900 mr-1">Details en overzichten</h3>
+          {/* v307 (V30) — de losse tabs "BTW" en "Rapportages" zijn vervallen; Excel en Print staan nu direct bij de kop. */}
+          <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
+          <LinkOut label="Print" onClick={() => onJump("print")} />
+        </div>
         <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1">
           {TABS.map((t) => (
             <button
@@ -88,7 +91,7 @@ export default function DetailsPanel({
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
         {!year ? (
-          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om deze gegevens te zien.</p>
+          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om deze gegevens te zien.</p>
         ) : (
           <>
         {tab === "jaaroverzicht" && (
@@ -178,22 +181,6 @@ export default function DetailsPanel({
           </div>
         )}
 
-        {tab === "btw" && (
-          <div className="grid md:grid-cols-2 gap-4 items-start">
-            {CardTile(btwQuarters)}
-            <div className="flex items-center">
-              <LinkOut label="BTW-tarieven bekijken" onClick={() => onJump("btw")} />
-            </div>
-          </div>
-        )}
-
-        {tab === "rapportages" && (
-          <div className="flex flex-wrap gap-3">
-            <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
-            <LinkOut label="Print" onClick={() => onJump("print")} />
-            <LinkOut label="Indicatieve aangifteberekening" onClick={() => onJump("aangifte")} />
-          </div>
-        )}
           </>
         )}
       </div>

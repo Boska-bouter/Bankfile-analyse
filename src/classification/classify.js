@@ -354,7 +354,7 @@ export function isKnownFalsePositiveRuleMatch(rule, text) {
   // "afas" — dat matcht óók op "AFAS Live" (de concertzaal in Amsterdam-Zuidoost, gesponsord door
   // hetzelfde bedrijf), een heel gewone privé-uitgave (kaartje/consumptie), geen boekhoudpakket-
   // factuur. Bewust hier afgevangen (en niet louter door het standaard-trefwoord in categories.js aan
-  // te scherpen naar "afas software"): een al opgeslagen project neemt zijn EIGEN, op het moment van
+  // te scherpen naar "afas software"): een al opgeslagen dossier neemt zijn EIGEN, op het moment van
   // opslaan bewaarde trefwoordenlijst mee en voegt die samen met de (nieuwe) standaardlijst (zie
   // mergeCategoryRules) — de kale "afas" blijft daardoor ook na deze wijziging nog meekomen bij een
   // ouder, al geladen project, tenzij hij hier expliciet wordt uitgesloten.

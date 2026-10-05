@@ -184,7 +184,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // Zelfstandigenaftrek: "nee" berekent zonder, "onbekend" toont zo dadelijk beide scenario's. Een
   // onbeantwoord jaar (zaStatusRaw null) valt terug op resolveZelfstandigenaftrekStatusForYear —
   // "ja" voor een dossier dat al bestond vóór deze regel werd ingevoerd (zaLegacyJaDefault, zodat
-  // eerder opgeslagen projecten dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor
+  // eerder opgeslagen dossieren dezelfde cijfers blijven tonen), "onbekend" (beide scenario's) voor
   // een nieuw dossier.
   const zaStatusRaw = zelfstandigenaftrekStatus?.[year];
   const zaStatus = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault);

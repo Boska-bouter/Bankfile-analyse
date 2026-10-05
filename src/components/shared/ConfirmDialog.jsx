@@ -1,5 +1,5 @@
 // v304 (V26) — algemeen keuzevenster met meerdere acties, voor beslissingen die meer vragen dan
-// OK/Annuleren: "Project laden" (huidig dossier vervangen?) en "Nieuw dossier" (eerst opslaan?).
+// OK/Annuleren: "Dossier laden" (huidig dossier vervangen?) en "Nieuw dossier" (eerst opslaan?).
 // Net als ConfirmBanner bewust een eigen venster i.p.v. window.confirm() — die werkt onbetrouwbaar
 // in de app-op-beginscherm-modus op iOS.
 //

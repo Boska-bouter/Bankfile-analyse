@@ -28,7 +28,7 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
           <p className="text-sm text-slate-600">
             Wat is je eigen naam (en die van je fiscaal partner, indien van toepassing)? Zo herkent de tool een
             overboeking naar/van jezelf als privé, ook als de tegenrekening niet is geladen. Deze naam staat ook
-            bovenin de tool en in de bestandsnaam bij "Project opslaan".
+            bovenin de tool en in de bestandsnaam bij "Dossier opslaan".
           </p>
           <input
             type="text"

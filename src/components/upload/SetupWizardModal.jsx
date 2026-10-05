@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle } from "lucide-react";
+import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
 const STEP_LABELS = {
   10: "Eigen naam", 11: "Andere eigen rekening", 16: "Zakelijk sparen", 12: "Grootste opdrachtgevers", 13: "Grootste leveranciers",
   17: "Auto", 6: "Leaseauto", 19: "Leaseobjecten (overig)", 7: "Zakelijke lening", 8: "AOV", 9: "Voorraad", 18: "Urencriterium",
-  0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Project opslaan",
+  0: "Rekening", 14: "Rechtsvorm", 15: "Holdingstructuur", 1: "KOR", 2: "BTW-verlegd", 5: "BTW-tarief op facturen", 3: "BTW-kwartalen", 4: "Dossier opslaan",
 };
 
 export default function SetupWizardModal({
@@ -113,7 +113,7 @@ export default function SetupWizardModal({
       list.push(5);
     }
     if (korRegeling !== true && quartersToAsk.length > 0) list.push(3);
-    list.push(4); // altijd als laatste: herinnering om het project op te slaan
+    list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
   const [doneIds, setDoneIds] = useState(() => new Set());
@@ -163,7 +163,17 @@ export default function SetupWizardModal({
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
+        <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
+          {/* v307 (V30) — afbreken: per ongeluk (bijv. met een aanraakscherm) op "Basisvragen bewerken"
+              getikt, of de vragen later willen invullen. Al gegeven antwoorden blijven bewaard. */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-50 hover:bg-white/15"
+            title="Afbreken — al gegeven antwoorden blijven bewaard"
+          >
+            <X className="h-4 w-4" /> Afbreken
+          </button>
           <p className="text-xs text-slate-300">Stap {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
           {/* v306 (V28) — voortgangsbalk + uitklapbaar overzicht van alle vragen (✓ beantwoord / huidige /
@@ -341,7 +351,7 @@ export default function SetupWizardModal({
                 {/* v256 — optie "Beide" verwijderd op verzoek: komt vrijwel nooit voor. De
                     "=== 'beide'"-checks verderop (en in categorySplit.js/boxMapping.js/
                     kmVergoeding.js) blijven bestaan zodat een dossier dat dit al eerder via een
-                    ouder projectbestand had, gewoon blijft werken. */}
+                    ouder dossierbestand had, gewoon blijft werken. */}
                 {[
                   { key: "geen", label: "Nee" },
                   { key: "zaak", label: "Auto op de zaak" },
@@ -709,20 +719,20 @@ export default function SetupWizardModal({
           {currentStepId === 4 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-700 font-medium">
-                Niet vergeten: sla je project op, anders gaan je correcties en aanpassingen verloren.
+                Niet vergeten: sla je dossier op, anders gaan je correcties en aanpassingen verloren.
               </p>
               <p className="text-sm text-slate-600">
                 Je instellingen en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als je de browsergegevens of websitegegevens wist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
               </p>
               <p className="text-sm text-slate-600">
-                Een <strong>project opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met je boekhouder. Sla na elke sessie op.
+                Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met je boekhouder. Sla na elke sessie op.
               </p>
               {onSaveProject && (
                 <button
                   onClick={onSaveProject}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
-                  Project nu opslaan
+                  Dossier nu opslaan
                 </button>
               )}
             </div>

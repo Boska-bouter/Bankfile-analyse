@@ -7,7 +7,7 @@ import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 // Toont alle ruwe, ingelezen regels van 1 bestand (dus vóór classificatie) in een los venster —
 // voor als het saldo niet klopt en je wilt narekenen waar het misgaat. Een regel uitsluiten
 // verbergt 'm voortaan overal in de tool (net als bij dubbele transacties) — de keuze wordt
-// onthouden in het projectbestand, niet in de brondata zelf.
+// onthouden in het dossierbestand, niet in de brondata zelf.
 //
 // Standaard op BESTANDSVOLGORDE gesorteerd (niet op datum) — dat is exact de volgorde waarin de
 // bank de regels aanlevert, dus 1-op-1 te vergelijken met het originele bestand. Handig omdat het

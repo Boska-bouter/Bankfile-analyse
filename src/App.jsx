@@ -105,7 +105,7 @@ import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 // Indicatieve aangifteberekening (zzp en BV) uit diezelfde tax/-berekeningen.
 // ---------------------------------------------------------------------------
 
-// Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een projectbestand. Ontbreekt
+// Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een dossierbestand. Ontbreekt
 // het veld helemaal (een bestand/instellingen van vóór deze functie bestond) dan is dat altijd een
 // bestaand zzp-dossier — direct "zzp", nooit de nieuwe vraag. Staat het veld er al wel (ook al is
 // de waarde nog null, dus nog niet beantwoord), dan wordt die waarde gerespecteerd.
@@ -172,7 +172,7 @@ export default function App() {
   const [btwVerlegd, setBtwVerlegd] = useState(null); // null = nog niet gevraagd
   const [korRegeling, setKorRegeling] = useState(null); // null = nog niet gevraagd
   // null = nog niet gevraagd (nieuw project); "zzp" | "bv". Bij het laden van bestaande
-  // instellingen/projectbestanden die dit veld nog niet kennen (van vóór deze functie), wordt dit
+  // instellingen/dossierbestanden die dit veld nog niet kennen (van vóór deze functie), wordt dit
   // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
   // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
   const [rechtsvorm, setRechtsvorm] = useState(null);
@@ -227,7 +227,7 @@ export default function App() {
   // Een onbeantwoord urencriterium-jaar stilzwijgend met "ja" (zelfstandigenaftrek toegepast) laten
   // rekenen is veilig voor bestaande dossiers wier cijfers daarmee niet met terugwerkende kracht
   // veranderen, maar geeft een verkeerde indruk aan een gebruiker die nog niets heeft ingevuld.
-  // true = dit gedrag behouden (default bij het LADEN van een projectbestand van vóór deze regel
+  // true = dit gedrag behouden (default bij het LADEN van een dossierbestand van vóór deze regel
   // bestond, zie loadProjectFile hieronder); false = een
   // onbeantwoord jaar toont voortaan beide scenario's naast elkaar, net als een expliciete
   // "Onbekend"-keuze — de default voor een gloednieuw dossier (nog nooit een project geladen).
@@ -357,8 +357,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
-  // v305 (V27) — projectbestand-status, los van de automatische browseropslag hierboven: hoeveel
-  // wijzigingen er zijn sinds het dossier voor het laatst als projectbestand is geëxporteerd (of
+  // v305 (V27) — dossierbestand-status, los van de automatische browseropslag hierboven: hoeveel
+  // wijzigingen er zijn sinds het dossier voor het laatst als dossierbestand is geëxporteerd (of
   // geladen), en wanneer dat was. Zie de teller-effect onder de autosave verderop.
   const [changesSinceExport, setChangesSinceExport] = useState(0);
   const [lastExportAt, setLastExportAt] = useState(null);
@@ -366,7 +366,7 @@ export default function App() {
   const suppressChangeCount = () => {
     // Laden/leegmaken/hervatten verandert veel state tegelijk — dat is geen "wijziging" van de
     // gebruiker. Een tijdvenster (i.p.v. een vlag) zodat het niet blijft hangen als er toevallig
-    // niets daadwerkelijk verandert (bijv. hetzelfde projectbestand twee keer laden).
+    // niets daadwerkelijk verandert (bijv. hetzelfde dossierbestand twee keer laden).
     suppressChangeCountUntilRef.current = Date.now() + 1500;
   };
   const [lastSavedAt, setLastSavedAt] = useState(null); // Date — wanneer de automatische browseropslag voor het laatst is gelukt
@@ -376,7 +376,7 @@ export default function App() {
   const [dialog, setDialog] = useState(null); // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   const projectFileInputRef = useRef(null);
-  const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Project opslaan"
+  const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
   const confidenceSectionRef = useRef(null);
@@ -496,10 +496,10 @@ export default function App() {
   const effectiveCategoryBtwRates = korRegeling ? EMPTY_BTW_RATES : categoryBtwRates;
 
   const applySettingsToState = (settings) => {
-    // De bestandsnaam van het laatst opgeslagen/geladen projectbestand hoort hier ook bij hersteld
+    // De bestandsnaam van het laatst opgeslagen/geladen dossierbestand hoort hier ook bij hersteld
     // te worden — anders "vergeet" de tool die naam zodra de sessie hervat wordt vanuit de
     // automatische browseropslag (bijv. na een tool-update of het herstarten van de browser), en
-    // valt "Project opslaan" onterecht terug op de standaardnaam in plaats van door te tellen op de
+    // valt "Dossier opslaan" onterecht terug op de standaardnaam in plaats van door te tellen op de
     // bestandsnaam die al in gebruik was.
     setLoadedProjectFileName(settings.loadedProjectFileName ?? null);
     setAccountTypeByFile(settings.accountTypeByFile || {});
@@ -746,7 +746,7 @@ export default function App() {
     setPendingCategoryPercentage(null);
   };
 
-  // ---- Eerder opgeslagen project laden bij openen — met keuze i.p.v. automatisch ----
+  // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
   const pendingProjectRef = useRef(null);
   useEffect(() => {
@@ -847,7 +847,7 @@ export default function App() {
   ]);
 
   // v305 (V27) — waarschuwing bij het sluiten/verversen van de pagina zolang er wijzigingen zijn die
-  // nog niet als projectbestand zijn geëxporteerd. (De automatische browseropslag blijft gewoon
+  // nog niet als dossierbestand zijn geëxporteerd. (De automatische browseropslag blijft gewoon
   // bestaan; dit is voor wie op een ander apparaat/browser verder wil of de browserdata wist.)
   const heeftNietGeexporteerdeWijzigingen = changesSinceExport > 0 && parsedFiles.length > 0;
   useEffect(() => {
@@ -956,7 +956,7 @@ export default function App() {
   // v305 (V27) — alleen deze ingrijpende acties houden de opvallende, blijvende "Ongedaan maken"-
   // kaart in de zijbalk; alle kleine acties krijgen een tijdelijke melding (UndoToast.jsx).
   const isBigUndoLabel = (label) =>
-    /^(Nieuw dossier|Project geladen|Duplicaten verwijderen|Alle transacties|Bestand ")/.test(label || "");
+    /^(Nieuw dossier|Dossier geladen|Duplicaten verwijderen|Alle transacties|Bestand ")/.test(label || "");
   const undoLastAction = () => {
     if (!lastActionSnapshot) return;
     const s = lastActionSnapshot.state;
@@ -3872,7 +3872,7 @@ export default function App() {
     incomeBtwTarieven, meerdereTarievenBevestigd,
   ]);
 
-  // ---- Project opslaan als downloadbaar bestand ----
+  // ---- Dossier opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
     const project = buildProjectFile({
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
@@ -3890,7 +3890,7 @@ export default function App() {
     setLastExportAt(new Date());
   };
 
-  // ---- Project laden vanaf een bestand ----
+  // ---- Dossier laden vanaf een bestand ----
   const loadProjectFile = async (file) => {
     try {
       const project = await readProjectFile(file);
@@ -3919,10 +3919,10 @@ export default function App() {
       setPeriodeQuarterOverrides(project.periodeQuarterOverrides && typeof project.periodeQuarterOverrides === "object" ? project.periodeQuarterOverrides : {});
       setReviewedPeriodeKeys(Array.isArray(project.reviewedPeriodeKeys) ? project.reviewedPeriodeKeys : []);
       setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
-      // Oudere projectbestanden bewaarden alleen een simpel rentepercentage per lening
+      // Oudere dossierbestanden bewaarden alleen een simpel rentepercentage per lening
       // ("loanInterestRates"), zonder de volledige leningbedrag/startdatum-gegevens. Die
       // vullen we hier aan in loanDetails (alleen als daar nog geen rente in staat), zodat
-      // een ouder projectbestand niet zomaar de eerder ingevulde rente verliest.
+      // een ouder dossierbestand niet zomaar de eerder ingevulde rente verliest.
       if (project.loanInterestRates && typeof project.loanInterestRates === "object") {
         setLoanDetails((prev) => {
           const merged = { ...prev };
@@ -3958,7 +3958,7 @@ export default function App() {
       setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
       setVpbStatus(project.vpbStatus && typeof project.vpbStatus === "object" ? project.vpbStatus : {});
       setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
-      // Een projectbestand zonder deze vlag is opgeslagen vóórdat deze regel bestond — behoud dan het
+      // Een dossierbestand zonder deze vlag is opgeslagen vóórdat deze regel bestond — behoud dan het
       // oude gedrag (onbeantwoord urencriterium-jaar = "ja") zodat een eerder gedeeld/afgedrukt cijfer
       // niet met terugwerkende kracht verandert. Alleen een bestand dat de vlag al draagt volgt de
       // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
@@ -3980,7 +3980,7 @@ export default function App() {
     }
   };
 
-  // ---- Project laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
+  // ---- Dossier laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
   // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
   // ongedaan maken. Nu: keuzevenster mét namen van beide dossiers, optioneel eerst opslaan, en een
   // momentopname zodat "Ongedaan maken" het vorige dossier terugzet.
@@ -3990,7 +3990,7 @@ export default function App() {
       return;
     }
     const replace = () => {
-      snapshotBeforeAction("Project geladen");
+      snapshotBeforeAction("Dossier geladen");
       loadProjectFile(file);
     };
     setDialog({
@@ -4002,11 +4002,11 @@ export default function App() {
             <strong className="text-slate-700">{eigenNamen?.ondernemer || "zonder naam"}</strong> · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}
           </p>
           <p>
-            <span className="text-slate-400">Nieuw project: </span>
+            <span className="text-slate-400">Nieuw dossier: </span>
             <strong className="text-slate-700 break-all">{file.name}</strong>
           </p>
           <p className="text-xs text-slate-400 pt-1">
-            Wijzigingen die je niet als projectbestand hebt opgeslagen gaan hiermee uit beeld. Via "Ongedaan maken" in de
+            Wijzigingen die je niet als dossierbestand hebt opgeslagen gaan hiermee uit beeld. Via "Ongedaan maken" in de
             zijbalk kun je dit direct terugdraaien.
           </p>
         </>
@@ -4021,7 +4021,7 @@ export default function App() {
   // ---- Nieuw dossier (voorheen "Wis alles") ----
   // v304 — zelfde handeling als voorheen (alles leegmaken, met momentopname voor "Ongedaan maken"),
   // maar benoemd zoals een professional ernaar kijkt (klaar met cliënt A, nu cliënt B) en met de
-  // kans om eerst een projectbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
+  // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   const clearAllData = () => {
     setDialog({
@@ -4033,7 +4033,7 @@ export default function App() {
             gesloten: bestanden, rekeningtypes, correcties en instellingen worden leeggemaakt.
           </p>
           <p className="text-xs text-slate-400 pt-1">
-            Niet als projectbestand opgeslagen gegevens gaan verloren. Direct daarna kun je dit nog terugdraaien via
+            Niet als dossierbestand opgeslagen gegevens gaan verloren. Direct daarna kun je dit nog terugdraaien via
             "Ongedaan maken" in de zijbalk.
           </p>
         </>
@@ -4580,7 +4580,7 @@ export default function App() {
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om hier iets te controleren.</p>
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om hier iets te controleren.</p>
             </section>
           </div>
         )}
@@ -4741,7 +4741,7 @@ export default function App() {
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen project (links onder bij "Beheer") om hier iets in te stellen.</p>
+              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om hier iets in te stellen.</p>
             </section>
           </div>
         )}

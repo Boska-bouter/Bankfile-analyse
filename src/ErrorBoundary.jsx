@@ -34,7 +34,7 @@ export class ErrorBoundary extends React.Component {
           </h1>
           <p style={{ fontSize: "0.875rem", color: "#7f1d1d", marginBottom: "16px" }}>
             De pagina kon niet (volledig) geladen worden. Maak hier een screenshot van en stuur die door —
-            dit is precies de informatie die nodig is om de oorzaak te vinden. Je opgeslagen project in deze browser
+            dit is precies de informatie die nodig is om de oorzaak te vinden. Je opgeslagen dossier in deze browser
             is niet aangetast; een pagina-herlaadknop hieronder probeert het gewoon opnieuw.
           </p>
           <button
