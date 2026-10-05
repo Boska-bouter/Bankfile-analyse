@@ -290,19 +290,19 @@ export default function PersoonlijkeAannamesPanel({
                   <label className="text-sm">
                     <span className="block text-xs font-medium text-slate-600 mb-1">Zakelijke kilometers</span>
                     <input
-                      type="number" min={0} step={1}
+                      type="text" inputMode="decimal"
                       value={kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers ?? ""}
-                      onChange={(e) => onSetKmVergoedingField(activeYear, "zakelijkeKilometers", e.target.value)}
+                      onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(activeYear, "zakelijkeKilometers", v); }}
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>
                   <label className="text-sm">
                     <span className="block text-xs font-medium text-slate-600 mb-1">Vergoeding per km (€)</span>
                     <input
-                      type="number" min={0} step={0.01}
+                      type="text" inputMode="decimal"
                       value={kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? ""}
                       placeholder="bijv. 0,23"
-                      onChange={(e) => onSetKmVergoedingField(activeYear, "vergoedingPerKm", e.target.value)}
+                      onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(activeYear, "vergoedingPerKm", v); }}
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>

@@ -488,7 +488,7 @@ export default function App() {
     [leasesSectionRef, "bedrijfsmiddelen", true],
     [loansSectionRef, "bedrijfsmiddelen", true],
     [aannamesSectionRef, "persoonlijkeAannames", true],
-    [categoryPercentageSectionRef, "persoonlijkeAannames", true],
+    [categoryPercentageSectionRef, "zakelijkPrive", true],
     [btwSettingsSectionRef, "btw", true],
     [automatiseringSectionRef, "automatisering", true],
     [incomeRatesSectionRef, "tegenpartijen", true],
@@ -689,7 +689,8 @@ export default function App() {
       const huidig = { ...(next[year] || {}) };
       if (waarde === "" || waarde == null) delete huidig[veld];
       else huidig[veld] = waarde;
-      if (!Number(huidig.zakelijkeKilometers) && !Number(huidig.vergoedingPerKm)) delete next[year];
+      // V52 — alleen weggooien als beide velden echt leeg zijn; "0" of "0," moet kunnen blijven staan terwijl je typt.
+      if (huidig.zakelijkeKilometers == null && huidig.vergoedingPerKm == null) delete next[year];
       else next[year] = huidig;
       return next;
     });
@@ -3543,7 +3544,7 @@ export default function App() {
         </div>
       ),
       withExpand(
-        g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames", "categoryPercentages"]),
+        g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames"]),
         "persoonlijkeAannames",
         <div className="space-y-3">
           <div ref={aannamesSectionRef}>
@@ -3578,7 +3579,12 @@ export default function App() {
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
-          <div ref={categoryPercentageSectionRef}>
+        </div>
+      ),
+      withExpand(
+        g("zakelijkPrive", "Zakelijk / privé", <span>⚖️</span>, ["categoryPercentages"]),
+        "zakelijkPrive",
+        <div ref={categoryPercentageSectionRef}>
             <CategoryPercentagePanel
               activeYear={activeYear}
               categorieTotalen={categorieTotalenActiveYear}
@@ -3594,7 +3600,6 @@ export default function App() {
               ]}
             />
           </div>
-        </div>
       ),
       withExpand(
         g("btw", "BTW", <Settings className="h-3.5 w-3.5" />, ["btwSettings"], undefined, "btw-percentages"),
@@ -4052,6 +4057,7 @@ export default function App() {
       // laden van een (ander) project, i.p.v. een kaart die van een vorig dossier in deze sessie nog
       // openstond gewoon open te laten staan.
       setExpandedCardKeys({});
+      setActiveTab("overzicht"); // V52 — na laden altijd beginnen op Overzicht
     } catch (e) {
       setError(e.message || String(e));
     }
@@ -4061,38 +4067,49 @@ export default function App() {
   // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
   // ongedaan maken. Nu: keuzevenster mét namen van beide dossiers, optioneel eerst opslaan, en een
   // momentopname zodat "Ongedaan maken" het vorige dossier terugzet.
-  const requestLoadProject = (file) => {
-    if (parsedFiles.length === 0) {
-      loadProjectFile(file);
-      return;
-    }
-    const replace = () => {
-      snapshotBeforeAction("Dossier geladen");
-      loadProjectFile(file);
-    };
+  // V52 — volgorde omgedraaid: eerst de vraag of het HUIDIGE dossier moet worden opgeslagen, pas daarna
+  // het kiezen van het te laden dossier (voorheen eerst kiezen, dan pas vragen).
+  const openProjectPicker = () => projectFileInputRef.current?.click();
+  const startLoadProject = () => {
+    if (parsedFiles.length === 0) { openProjectPicker(); return; }
     setDialog({
-      title: "Huidig dossier vervangen?",
+      title: "Huidig dossier opslaan?",
       message: (
         <>
           <p>
             <span className="text-slate-400">Huidig dossier: </span>
             <strong className="text-slate-700">{eigenNamen?.ondernemer || "zonder naam"}</strong> · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}
           </p>
-          <p>
-            <span className="text-slate-400">Nieuw dossier: </span>
-            <strong className="text-slate-700 break-all">{file.name}</strong>
-          </p>
           <p className="text-xs text-slate-400 pt-1">
-            Wijzigingen die je niet als dossierbestand hebt opgeslagen gaan hiermee uit beeld. Via "Ongedaan maken" in de
-            zijbalk kun je dit direct terugdraaien.
+            Hierna kies je het dossier dat je wilt laden. Dat vervangt het huidige dossier; niet opgeslagen wijzigingen gaan uit
+            beeld. Via "Ongedaan maken" in de zijbalk kun je dit direct terugdraaien.
           </p>
         </>
       ),
       actions: [
-        { label: "Huidig dossier opslaan en vervangen", variant: "primary", onClick: () => { saveProjectFile(); replace(); } },
-        { label: "Vervangen zonder opslaan", variant: "danger", onClick: replace },
+        { label: "Opslaan en daarna dossier kiezen", variant: "primary", onClick: () => {
+          saveProjectFile();
+          // Een browser kan niet zien of het "Bewaar als"-venster is afgebroken; daarom eerst bevestigen.
+          setDialog({
+            title: "Is het dossier opgeslagen?",
+            message: <p>Het dossier is aangeboden om te downloaden. Controleer of het bestand echt is opgeslagen voordat je een ander dossier kiest.</p>,
+            actions: [
+              { label: "Ja, opgeslagen — dossier kiezen", variant: "primary", onClick: openProjectPicker },
+              { label: "Nee, opnieuw opslaan", onClick: () => { saveProjectFile(); setDialog({
+                title: "Is het dossier opgeslagen?",
+                message: <p>Bevestig pas als het bestand echt is opgeslagen.</p>,
+                actions: [{ label: "Ja, opgeslagen — dossier kiezen", variant: "primary", onClick: openProjectPicker }],
+              }); } },
+            ],
+          });
+        } },
+        { label: "Niet opslaan, dossier kiezen", variant: "danger", onClick: openProjectPicker },
       ],
     });
+  };
+  const requestLoadProject = (file) => {
+    if (parsedFiles.length > 0) snapshotBeforeAction("Dossier geladen");
+    loadProjectFile(file);
   };
 
   // ---- Nieuw dossier (voorheen "Wis alles") ----
@@ -4102,7 +4119,7 @@ export default function App() {
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   const clearAllData = () => {
     // Leeg dossier (bijv. net een nieuw dossier gestart en de wizard afgebroken): niets om te wissen, dus direct de wizard.
-    if (parsedFiles.length === 0) { setManualWizardOpen(true); return; }
+    if (parsedFiles.length === 0) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
     setDialog({
       title: "Nieuw dossier starten?",
       message: (
@@ -4140,6 +4157,7 @@ export default function App() {
   };
   const doClearAllData = async (askWizard = false) => {
     snapshotBeforeAction("Nieuw dossier");
+    setActiveTab("overzicht"); // V52 — nieuw dossier begint altijd op Overzicht
     suppressChangeCount();
     setLastExportAt(null);
     setExpandedCardKeys({});
@@ -4303,7 +4321,7 @@ export default function App() {
         onLoadFile={() => bankFileInputRef.current?.click()}
         onSaveProject={saveProjectFile}
         canSaveProject={parsedFiles.length > 0}
-        onLoadProject={() => projectFileInputRef.current.click()}
+        onLoadProject={startLoadProject}
         onClearAll={clearAllData}
         canClearAll
         onToggleHelp={() => setShowHelp((v) => !v)}

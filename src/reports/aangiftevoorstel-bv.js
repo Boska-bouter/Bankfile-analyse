@@ -280,13 +280,13 @@ function buildYearSectionBv(
     kwartalen.length > 0
       ? `
   <div class="btw-kaart">
-    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
     <tbody><tr><td>Saldo</td>${kwartalen
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
         return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
       })
-      .join("")}</tr></tbody></table>
+      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
       : "";
 
@@ -406,18 +406,18 @@ function buildYearSectionBv(
   ${kwartalen.length > 0 ? `
   <h2>BTW per kwartaal</h2>
   <table>
-    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}</tr></thead>
+    <thead><tr><th>Aangifterubriek</th>${kwartalen.map((q) => `<th class="num">Q${q.kwartaal}</th>`).join("")}<th class="num">Totaal jaar</th></tr></thead>
     <tbody>
-      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}</tr>
-      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}</tr>
-      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}</tr>
-      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}</tr>
+      <tr><td>1a Omzet 21%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto21 - q.verschuldigdBtw21)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto21 - q.verschuldigdBtw21), 0))}</strong></td></tr>
+      <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto9 - q.verschuldigdBtw9), 0))}</strong></td></tr>
+      <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBrutoVerlegd), 0))}</strong></td></tr>
+      <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
           return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
         })
-        .join("")}</tr>
+        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>
@@ -430,6 +430,10 @@ function buildYearSectionBv(
       <th class="num">Uitgaven</th><th class="num">Voorbelasting (5b)</th><th class="num">Saldo</th>
     </tr></thead>
     <tbody>${kwartaalRows}</tbody>
+    <tfoot><tr class="total"><td>Totaal jaar</td>
+      ${["omzetBruto21", "verschuldigdBtw21", "omzetBruto9", "verschuldigdBtw9", "omzetBrutoVerlegd", "kostenBruto", "voorbelasting"].map((k) => `<td class="num">${eur(kwartalen.reduce((a, q) => a + (q[k] || 0), 0))}</td>`).join("")}
+      ${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug te vragen"}</strong></td>`; })()}
+    </tr></tfoot>
   </table>` : ""}
 
   <h2>Categorieoverzicht — Zakelijk (bijlage, alle categorieën)</h2>
