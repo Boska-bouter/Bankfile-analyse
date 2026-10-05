@@ -2421,7 +2421,7 @@ export default function App() {
       else status = "oranje";
 
       map[year] = {
-        pct: Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
+        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
         werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
       };
     }

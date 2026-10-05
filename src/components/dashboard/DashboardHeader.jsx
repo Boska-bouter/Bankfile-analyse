@@ -5,9 +5,11 @@ import ProgressGauge from "./ProgressGauge.jsx";
 // kaart die voorheen tussen de andere dashboardCards stond: dezelfde data (yearProgress), nu
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
-  title, subtitle, pct, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
+  title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
   werkelijkAangifteDone, werkelijkAangifteTotal, openPoints, openBreakdown,
 }) {
+  // V59 — 100% mag nooit getoond worden zolang er open punten zijn (afronding of een andere telbron dan de badges).
+  const pct = pctIn != null && openPoints != null && openPoints > 0 ? Math.min(pctIn, 99) : pctIn;
   // v305 (V27) — "Dossiercontrole" toont als hoofdinformatie het aantal CONCRETE open punten (zie
   // openPointsOf in App.jsx), het percentage is secundair: "87%" zegt een professional niet wát er
   // nog moet gebeuren, "4 open punten · 3 controle · 1 instelling" wel. De losse statusregel

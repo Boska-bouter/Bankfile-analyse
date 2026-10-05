@@ -243,6 +243,20 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     }
   }
 
+  // V59 — een bijschrijving met een pasvolgnummer is een teruggeboekte pinbetaling (retour, onjuiste
+  // afschrijving): die hoort bij dezelfde categorie als de uitgave (bijv. Jumbo-retour → Boodschappen),
+  // niet bij "Inkomsten". Alleen voor trefwoorden uit de standaard-/eigen categorielijsten.
+  if (isIncome && isCardPaymentTx(tx)) {
+    for (const rule of rules) {
+      if (rule.name === "Prive opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
+      if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+        const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
+        const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+        return { category: categoryName, type };
+      }
+    }
+  }
+
   if (isIncome && /factuur(nr|nummer)?/i.test(text)) {
     return { category: "Zakelijke inkomsten", type };
   }
