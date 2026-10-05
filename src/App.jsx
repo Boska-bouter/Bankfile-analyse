@@ -1188,7 +1188,7 @@ export default function App() {
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
       );
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || []);
+      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
@@ -1390,7 +1390,7 @@ export default function App() {
   };
 
   // ---- Inkomstenbronnen-review ----
-  const incomeSummary = useMemo(() => computeIncomeSummary(classified, accountTypeByFile), [classified, accountTypeByFile]);
+  const incomeSummary = useMemo(() => computeIncomeSummary(classified, accountTypeByFile, businessKeywords), [classified, accountTypeByFile, businessKeywords]);
   const pendingIncomeReview = useMemo(() => incomeSummary.filter((i) => !reviewedIncomeKeys.includes(i.key)), [incomeSummary, reviewedIncomeKeys]);
   const markIncomeSource = (item, choice) => {
     if (choice === "zakelijk") {

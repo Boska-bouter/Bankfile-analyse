@@ -35,7 +35,7 @@ function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
   return ownAccountsElsewhere.some((o) => o.accountType && ibansMatch(tx.counterpartyIban, o.iban));
 }
 
-export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = []) {
+export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = [], businessKeywords = [], businessExpenseKeywords = []) {
   // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
   // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
   // isStaleOverigForZakelijkSpaar in classify.js) wijkt resolvedCategory af van de opgeslagen
@@ -54,6 +54,21 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   if (PRIVE_TRANSFER_CATEGORIES.includes(resolvedCategory) && isOwnAccountTransferMatch(tx, ownAccountsElsewhere)) {
     return { level: "keyword", label: "Automatisch herkend: overboeking naar/van eigen andere rekening (IBAN)" };
+  }
+
+  // V67 — een tegenpartij die je zelf als opdrachtgever/leverancier hebt opgegeven (wizard of eerdere
+  // bevestiging) is door jou herkend: dat is een "keyword"-herkenning, geen schatting.
+  if (tx.amount > 0 && /^Zakelijke inkomsten/.test(resolvedCategory)) {
+    const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+    if ((businessKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+      return { level: "keyword", label: "Herkend: door jou opgegeven als opdrachtgever" };
+    }
+  }
+  if (tx.amount < 0 && resolvedCategory === "Zakelijke inkoop/uitgaven") {
+    const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+    if ((businessExpenseKeywords || []).some((kw) => kw && t.includes(String(kw).toLowerCase()))) {
+      return { level: "keyword", label: "Herkend: door jou opgegeven als leverancier" };
+    }
   }
 
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
