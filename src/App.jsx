@@ -1768,8 +1768,8 @@ export default function App() {
     () =>
       activeYear && rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
           )
         : null,
     [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus]
@@ -1833,8 +1833,8 @@ export default function App() {
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const leaseAutoKosten = rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
           )
         : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
@@ -1912,8 +1912,8 @@ export default function App() {
       const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
       const leaseAutoKosten = rechtsvorm !== "bv"
         ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
+            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus),
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd, categoryZakelijkPercentage, autoStatus)
           )
         : null;
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;

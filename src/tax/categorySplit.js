@@ -90,7 +90,15 @@ const AUTO_SPLIT_UITSLUITING = ["Brandstof", "Parkeren"];
 
 function autoOpDeZaak(year, autoStatus) {
   const status = autoStatus?.[year];
-  return status === "zaak" || status === "beide";
+  return status === "zaak";
+}
+
+// Bij "Beide" zijn er zowel een auto op de zaak als een privéauto. Voor Brandstof/Parkeren
+// moet het ingestelde percentage daarom juist wél worden gebruikt om de banktransacties over beide
+// auto's te verdelen. Bij uitsluitend "zaak" blijven deze categorieën 100% zakelijk; bij een
+// geregistreerde auto zonder "Beide"-keuze blijft de veilige 100%-standaard gelden.
+function autoSplitBlijftBeschikbaar(year, autoStatus, heeftLeaseAuto) {
+  return autoStatus?.[year] === "beide";
 }
 
 // Zowel computeLeaseAutoKostenVoorJaar (financial lease, zie autoBijtelling.js) als
@@ -127,7 +135,7 @@ export function heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, auto
 // staat van vóór dat autoStatus werd ingesteld.
 export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false) {
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
-  if (AUTO_SPLIT_UITSLUITING.includes(category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
+  if (AUTO_SPLIT_UITSLUITING.includes(category) && !autoSplitBlijftBeschikbaar(year, autoStatus, heeftLeaseAuto) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
     return defaultZakelijkPercentage(category);
   }
   const override = categoryZakelijkPercentage?.[category]?.[year];
@@ -168,7 +176,7 @@ export function computeSplitsbareCategorieTotalenVoorJaar(classified, year, auto
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     if (!isSplitsbareCategorie(tx.category)) continue;
-    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) continue;
+    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && !autoSplitBlijftBeschikbaar(year, autoStatus, heeftLeaseAuto) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) continue;
     netto[tx.category] = (netto[tx.category] || 0) + tx.amount;
   }
   const totalen = {};

@@ -59,7 +59,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
               datumveld (Aanschafdatum) hierin buiten zijn kolom en over het veld ernaast heen. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="text-sm">
-              <span className="block text-xs font-medium text-slate-600 mb-1">Aanschafwaarde</span>
+              <span className="block text-xs font-medium text-slate-600 mb-1">Fiscale aanschafwaarde</span>
               <input type="number" min="0" step="0.01" value={form.aanschafwaarde} onChange={set("aanschafwaarde")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
@@ -75,6 +75,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
               <input type="number" min="0" step="0.01" value={form.restwaarde} onChange={set("restwaarde")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
           </div>
+          <p className="text-xs text-slate-400">Vul de fiscale aanschafwaarde in: exclusief aftrekbare btw. Niet-aftrekbare btw hoort wel bij de aanschafwaarde. Bedrijfsmiddelen onder €450 kunnen direct als kosten worden verwerkt.</p>
 
           {schema.length > 0 && (
             <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">

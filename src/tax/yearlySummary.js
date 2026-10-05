@@ -145,7 +145,12 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     // telt de aanschaf dit jaar terecht nergens in de winst mee, precies zoals het Aangiftevoorstel
     // dat al liet zien ("dit mag niet in één keer als kosten worden afgetrokken").
     const isApparatuurActivum = tx.category === "Zakelijk - apparatuur/machines";
-    if (behandeling !== "financiering" && !isApparatuurActivum) {
+    // Bedrijfsmiddelen met een fiscale aanschafwaarde onder €450 mogen in beginsel direct als
+    // kosten worden verwerkt. Voor deze categorie gebruiken we het bedrag exclusief aftrekbare BTW
+    // als praktische fiscale toets; niet-aftrekbare BTW blijft onderdeel van de aanschafwaarde.
+    const fiscaleAanschafwaarde = Math.abs(bedrag) - (voorbelastingExcluded.includes(tx.category) ? 0 : Math.abs(btw));
+    const kleinBedrijfsmiddelDirect = isApparatuurActivum && fiscaleAanschafwaarde < 450;
+    if (behandeling !== "financiering" && (!isApparatuurActivum || kleinBedrijfsmiddelDirect)) {
       zakBruto += bedrag;
       zakBtwTotaal += btw;
     }
@@ -164,7 +169,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // omzet hierboven, en dezelfde definitie als in het Aangiftevoorstel (computeIbBoxMapping) —
       // exclusief financiering én exclusief een apparatuur/machine-aanschaf (die tellen hier bewust
       // niet mee, alleen hun rente resp. afschrijving via renteAftrekbaar/winstCorrectie hieronder).
-      if (behandeling === "kosten" && !isApparatuurActivum) zakelijkeKostenNetto += -(bedrag - btw);
+      if (behandeling === "kosten" && (!isApparatuurActivum || kleinBedrijfsmiddelDirect)) zakelijkeKostenNetto += -(bedrag - btw);
     }
     if (tx.category === "Zakelijke inkoop/uitgaven") zakelijkeUitgaven += -bedrag;
     if (bedrag < 0) {

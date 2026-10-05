@@ -9,8 +9,9 @@
 // `autoActivaDetails` niet is ingevuld (of `autoWizardStatus.soort` niet "koop"/"operational" is) —
 // dus voor ieder bestaand dossier verandert er niets.
 import { computeAfschrijvingPerJaar } from "./activa.js";
-import { AUTOKOSTEN_CATEGORIEN, computeAutoPrivegebruikOnttrekking, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "./autoBijtelling.js";
+import { AUTOKOSTEN_CATEGORIEN, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN, computeAutoBeschikbaarheidsfactor } from "./autoBijtelling.js";
 import { computeBtw } from "./btw.js";
+import { effectiveZakelijkPercentage } from "./categorySplit.js";
 
 // Bij een operational-leaseauto is de maandelijkse lease-vergoeding zelf de grootste (en vaak
 // enige) "autokosten"-post — die staat in de categorie "Lease (operationeel)" en telt normaal al
@@ -24,13 +25,17 @@ const AUTOKOSTEN_CATEGORIEN_OPERATIONAL_LEASE = [...AUTOKOSTEN_CATEGORIEN, "Leas
 // Zelfde berekening als sumAutokostenTransactiesVoorJaar in autoBijtelling.js, maar met een eigen
 // (langere) categorielijst voor operational lease — vandaar hier opnieuw, in plaats van hergebruik
 // met een hardcoded lijst.
-function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen) {
+function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen, categoryZakelijkPercentage = null, autoStatus = null) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
-  return Math.abs(
-    (classified || [])
-      .filter((tx) => !tx.isMirror && tx.year === year && categorieen.includes(tx.category))
-      .reduce((a, tx) => a + nettoOf(tx), 0)
-  );
+  const nettoTotaal = (classified || [])
+    .filter((tx) => !tx.isMirror && tx.year === year && categorieen.includes(tx.category))
+    .reduce((a, tx) => {
+      const percentage = (tx.category === "Brandstof" || tx.category === "Parkeren")
+        ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, true)
+        : 100;
+      return a + nettoOf(tx) * (percentage / 100);
+    }, 0);
+  return Math.max(0, -nettoTotaal);
 }
 
 // Vertaalt de ingevulde "koop"-gegevens naar een activum compatibel met computeAfschrijvingPerJaar —
@@ -51,7 +56,7 @@ function buildKoopActivum(details) {
 // gekochte of operational-leaseauto op de zaak. Geeft `null` als de wizard geen "koop"/"operational"
 // heeft aangegeven, of als er nog niets is ingevuld in AutoOpDeZaakDetailsModal — dus zolang dat
 // scherm niet gebruikt is, verandert er niets aan de bestaande berekening.
-export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd) {
+export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd, categoryZakelijkPercentage = null, autoStatus = null) {
   const soort = autoWizardStatus?.soort;
   if (soort !== "koop" && soort !== "operational") return null;
   const details = autoActivaDetails;
@@ -65,15 +70,18 @@ export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardSta
   })() : 0;
 
   const categorieen = soort === "operational" ? AUTOKOSTEN_CATEGORIEN_OPERATIONAL_LEASE : AUTOKOSTEN_CATEGORIEN;
-  const autokostenTransactieTotaal = sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen);
+  const autokostenTransactieTotaal = sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen, categoryZakelijkPercentage, autoStatus);
   const totaleAutokosten = afschrijving + autokostenTransactieTotaal;
 
   const privegebruikMeerDan500km = !!details.privegebruikMeerDan500kmPerJaar?.[year];
   let onttrekking = 0;
   let normaleBijtelling = 0;
   if (privegebruikMeerDan500km && details.cataloguswaarde && details.bijtellingspercentage) {
-    normaleBijtelling = (Number(details.bijtellingspercentage) / 100) * Number(details.cataloguswaarde);
-    onttrekking = computeAutoPrivegebruikOnttrekking(totaleAutokosten, details.cataloguswaarde, details.bijtellingspercentage);
+    // Een gekochte/operational-leaseauto kan eveneens midden in het jaar beschikbaar komen of eindigen.
+    // Gebruik dezelfde dagpro-rata als bij financial lease.
+    const factor = computeAutoBeschikbaarheidsfactor(details.aanschafdatum, details.einddatum, year);
+    normaleBijtelling = (Number(details.bijtellingspercentage) / 100) * Number(details.cataloguswaarde) * factor;
+    onttrekking = Math.min(normaleBijtelling, totaleAutokosten);
   }
   const nettoAftrekbareAutokosten = totaleAutokosten - onttrekking;
 

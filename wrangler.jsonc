@@ -2,7 +2,6 @@
   // Trigger-commentaar: forceert een nieuwe commit zodat Cloudflare een verse build start
   // vanuit de main-branch (nu correct ingesteld als standaardbranch).
   "name": "bankfile-analyse",
-  "previews": {},
   "compatibility_date": "2026-09-17",
   "assets": {
     "directory": "./dist",
