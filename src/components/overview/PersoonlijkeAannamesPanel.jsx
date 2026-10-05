@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   estimateIncomeTax, estimateIncomeTaxScenarios, estimateHeffingskortingen, computeMogelijkeKia,
@@ -80,7 +80,15 @@ export default function PersoonlijkeAannamesPanel({
   gedeeldeGemeentelijkeKosten, gemeentelijkeKostenZakelijkPercentageStatus, onSetGemeentelijkeKostenZakelijkPercentageStatus,
   categoryBtwRates,
 }) {
-  const [open, setOpen] = useState(false);
+  // v309 (V31) — het blok met o.a. de %-zakelijk-velden voor huur/energie-water/gemeentelijke kosten zat
+  // in dit standaard ingeklapte onderdeel: een openstaand veld (en de aanname in de kop) was daardoor niet
+  // te vinden. Staat er een nog niet ingevuld percentage open, dan klapt het onderdeel nu vanzelf open.
+  const percentageOpen =
+    (gedeeldeHuur && huurZakelijkPercentageStatus?.[activeYear] == null) ||
+    (gedeeldeEnergie && energieZakelijkPercentageStatus?.[activeYear] == null) ||
+    (gedeeldeGemeentelijkeKosten && gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear] == null);
+  const [open, setOpen] = useState(!!percentageOpen);
+  useEffect(() => { if (percentageOpen) setOpen(true); }, [percentageOpen, activeYear]);
   // Dit paneel blijft altijd zichtbaar zodra er een actief jaar is — de auto-status-vraag hieronder
   // is relevant voor vrijwel elk dossier (bijna iedere zzp'er/BV heeft een auto), ongeacht of er dit
   // jaar winst is.

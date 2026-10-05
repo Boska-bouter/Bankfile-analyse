@@ -3000,9 +3000,17 @@ export default function App() {
             // niet van toepassing" (zie PersoonlijkeAannamesPanel.jsx) — telt daarom niet mee als
             // "nog niet opgegeven".
             const startersaftrekAan = startersaftrekStatus?.[activeYear] === "ja";
+            // v309 (V31) — de deels-zakelijke percentages (huur, energie-water, gemeentelijke kosten) tellen al
+            // mee als aanname in de kop; nu staan ze ook als regel in deze kaart (alleen als dit jaar van toepassing).
+            const gedeeldeLijnen = [
+              { label: "% zakelijk huur", gedeelde: gedeeldeHuurForActiveYear, status: huurZakelijkPercentageStatus?.[activeYear] },
+              { label: "% zakelijk energie-water", gedeelde: gedeeldeEnergieForActiveYear, status: energieZakelijkPercentageStatus?.[activeYear] },
+              { label: "% zakelijk gemeentelijke kosten", gedeelde: gedeeldeGemeentelijkeKostenForActiveYear, status: gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear] },
+            ].filter((l) => l.gedeelde);
             const missing =
               (zelfstandigenaftrekStatusDitJaar === "onbekend" ? 1 : 0) +
-              (autoLabel == null ? 1 : 0);
+              (autoLabel == null ? 1 : 0) +
+              gedeeldeLijnen.filter((l) => l.status == null).length;
             return [
               {
                 key: "aannames",
@@ -3021,6 +3029,7 @@ export default function App() {
                   },
                   { label: "Startersaftrek", value: startersaftrekAan ? "🟢 Ja" : "⚪ Nee" },
                   { label: "Auto", value: autoLabel ? `🟢 ${autoLabel}` : "🟠 Niet opgegeven" },
+                  ...gedeeldeLijnen.map((l) => ({ label: l.label, value: l.status == null ? "🟠 Niet opgegeven" : `🟢 ${l.status}%` })),
                 ],
                 subtitle: missing === 0 ? "Alles opgegeven" : `${missing} ${missing === 1 ? "item" : "items"} nog niet opgegeven`,
                 tone: missing === 0 ? "ok" : "attention",
@@ -3139,6 +3148,12 @@ export default function App() {
     incompleteLeasesCount,
     activaSummary,
     incompleteActivaCount,
+    gedeeldeHuurForActiveYear,
+    gedeeldeEnergieForActiveYear,
+    gedeeldeGemeentelijkeKostenForActiveYear,
+    huurZakelijkPercentageStatus,
+    energieZakelijkPercentageStatus,
+    gemeentelijkeKostenZakelijkPercentageStatus,
     rechtsvorm,
     activeYear,
     zelfstandigenaftrekStatus,
