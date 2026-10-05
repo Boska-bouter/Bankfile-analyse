@@ -1,4 +1,4 @@
-import { SPLIT_CATEGORY_NAMES } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, fiscalTreatmentOf } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch } from "../utils/normalization.js";
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
@@ -238,7 +238,15 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   for (const rule of rules) {
     if (rule.keywords.some((kw) => kw && text.includes(kw.toLowerCase())) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => kw && text.includes(kw.toLowerCase()));
-      const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+      let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
+      // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
+      // bedrijfsuitgaven-trefwoord, geen handmatige correctie) is een privé-uitgave, ook als het
+      // trefwoord op een gewone "kosten"-categorie past (Marketing, OV, boekhouder, ...). Auto-,
+      // lening- en lease-categorieën blijven buiten schot: daar bepaalt de wizard/de aparte
+      // berekening wat zakelijk is.
+      if (!isBizExpense && accountType === "Prive" && categoryName === rule.name && fiscalTreatmentOf(categoryName) === "kosten" && !PRIVE_REKENING_BEHOUD_CATEGORIEEN.includes(categoryName)) {
+        categoryName = "Prive - overige kosten";
+      }
       return { category: categoryName, type };
     }
   }
@@ -421,6 +429,11 @@ function withAccountType(override, accountType) {
   const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
   return { ...override, type, viewType: override.type || type };
 }
+
+// V50 — categorieën die op een privérekening NIET automatisch naar "Prive - overige kosten" gaan.
+const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
+  "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop/uitgaven",
+];
 
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);

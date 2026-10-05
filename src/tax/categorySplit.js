@@ -64,6 +64,10 @@ export const SPLITSBARE_CATEGORIEEN = [
   // zakelijk — voorheen stond deze categorie bewust NIET in de lijst (zie de toelichting hierboven
   // bij "Andere kosten-/privé-categorieën"), maar in overleg alsnog toegevoegd.
   "Boekhouder, accountant & administratie",
+  // V49 — huisvesting: gewone energie/gemeentelijke kosten (zakelijke rekening) en de privé-tegenhangers
+  // voor kosten vanaf een privérekening (standaard 0% zakelijk) waren niet instelbaar. "Huur" stond er al.
+  "Energie-water", "Gemeentelijke kosten",
+  "Prive - huur", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - overige kosten",
 ];
 
 export function isSplitsbareCategorie(category) {
