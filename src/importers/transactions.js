@@ -21,10 +21,17 @@ export function buildTransactions(parsedFiles) {
         amount = Math.abs(amount) * (isAf && !isBij ? -1 : 1);
       }
       const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
-      const counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
+      let counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
       const ownAccount = mapping.ownAccount ? normalizeIban(r[mapping.ownAccount]) : "";
       const description = mapping.description ? String(r[mapping.description] || "").trim() : "";
       const fullDescription = mapping.fullDescription ? String(r[mapping.fullDescription] || "").trim() : description;
+      // V37 — ING zet bij o.a. incasso-stornoboekingen de tegenrekening niet in de kolom "Tegenrekening"
+      // maar alleen in de mededelingen ("... IBAN: NL32ABNA0442706820 Kenmerk: ..."). Zonder
+      // terugvaller miste zo'n boeking zijn IBAN (en dus de koppeling met de oorspronkelijke boeking).
+      if (!counterpartyIban && mapping.counterpartyIban) {
+        const m = /\bIBAN:\s*([A-Z]{2}\d{2}[A-Z0-9]{10,30})/i.exec(`${fullDescription} ${description}`);
+        if (m) counterpartyIban = normalizeIban(m[1]);
+      }
       const balance = mapping.balance ? parseEuroNumber(r[mapping.balance]) : NaN;
       fileTx.push({
         id: id++,

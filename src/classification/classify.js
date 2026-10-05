@@ -126,7 +126,13 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // die wél op leestekens als "b.v."/".nl" steunen).
   const textForEigenNaam = text.replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ");
   if (eigenNamen.length > 0) {
-    const matchedNaam = eigenNamen.find((naam) => naam && textForEigenNaam.includes(naam));
+    // V37 — de naam telt alleen als die in de NAAM van de tegenpartij staat. Staat er wél een andere
+    // tegenpartij (bijv. Amvest) en komt de eigen naam alleen voor in de mededelingen (bijv. "…ARC FUND
+    // R. Meijer en J.M. Wintermans"), dan is het géén overboeking van/naar jezelf. Alleen als de
+    // tegenpartijnaam leeg is, kijken we nog naar de volledige tekst.
+    const cpNorm = String(tx.counterparty || "").toLowerCase().replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    const nameHaystack = cpNorm ? ` ${cpNorm} ` : textForEigenNaam;
+    const matchedNaam = eigenNamen.find((naam) => naam && nameHaystack.includes(naam));
     if (matchedNaam) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
@@ -418,5 +424,25 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
   if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return keyOverride;
+  // V37 — een storno/terugboeking (bijv. een teruggeboekte incasso, "Reden: Terugboeking op verzoek klant")
+  // hoort bij dezelfde categorie als de oorspronkelijke afschrijving van dezelfde tegenpartij (op IBAN).
+  if (tx.amount > 0 && /\b(terugboeking|storno|terugbetaling|restitutie)\b/i.test(`${tx.description} ${tx.fullDescription}`)) {
+    const negIban = tx.counterpartyIban && overridesByCounterparty[ibanKey(tx.counterpartyIban, -1)];
+    const negKey = overridesByCounterparty[counterpartyKey(tx.counterparty || tx.description, -1)];
+    let negPrefix = null;
+    if (!negIban && !negKey) {
+      // Dezelfde partij onder een langere naam (bijv. "Amvest" ↔ "AMVEST RCF CUSTODIANFGR1"): vergelijk op beginwoord.
+      const cpBase = counterpartyKey(tx.counterparty || tx.description, -1).replace(/::neg$/, "");
+      for (const k of Object.keys(overridesByCounterparty)) {
+        if (!k.endsWith("::neg")) continue;
+        const base = k.slice(0, -5);
+        if (base.length >= 4 && cpBase.startsWith(base + " ")) { negPrefix = overridesByCounterparty[k]; break; }
+      }
+    }
+    const mirror = negIban || negKey || negPrefix;
+    if (mirror && mirror.category && mirror.category !== "Overig" && !isStaleOverigForKnownTransfer(mirror, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) {
+      return { ...mirror, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
+    }
+  }
   return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
 }
