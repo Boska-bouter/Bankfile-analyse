@@ -190,8 +190,7 @@ export default function SetupWizardModal({
           {currentStepId === 10 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
-                Wat is je eigen naam (en die van je fiscaal partner, indien van toepassing)? Zo herkent de tool een
-                overboeking naar/van jezelf als privé, ook als de tegenrekening niet is geladen.
+                Eigen naam (en die van je fiscaal partner)? Zo herkent de tool overboekingen naar/van jezelf als privé.
               </p>
               <input
                 type="text"
@@ -221,9 +220,7 @@ export default function SetupWizardModal({
           {currentStepId === 11 && (
             <div className="space-y-3">
               <p className="text-sm text-slate-600">
-                Heb je nog andere eigen rekeningen (bijv. een privérekening, of nog een zakelijke rekening) die je niet
-                gaat laden? Met het rekeningnummer kan de tool een overboeking daarheen alsnog herkennen als privé.
-                Je kunt er meerdere toevoegen.
+                Andere eigen rekeningen die je niet laadt? Met het rekeningnummer herkent de tool overboekingen daarheen als privé.
               </p>
               {(() => {
                 // Bij het opnieuw openen van deze stap (bijv. via "Basisvragen bewerken", nadat
@@ -457,8 +454,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Heb je voorraad in het bedrijf (goederen die je inkoopt om door te verkopen)?</p>
               <p className="text-xs text-slate-400">
-                Dit werkt fiscaal anders dan afschrijving — de tool gebruikt dit alleen als signaal, er wordt nog niets
-                automatisch berekend.
+                Alleen een signaal; er wordt nog niets automatisch berekend.
               </p>
               <div className="flex gap-2">
                 <button onClick={() => { setHeeftVoorraad(true); goNext(); }} className="rounded-lg px-4 py-2 text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50">Ja</button>
@@ -470,10 +466,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Voldoe je aan het urencriterium voor de zelfstandigenaftrek?</p>
               <p className="text-xs text-slate-400">
-                Minimaal 1.225 uur per jaar besteed aan de onderneming (en meer dan de helft van je totale
-                werktijd, tenzij je pas start). Bepaalt of de zelfstandigenaftrek (en de startersaftrek) worden
-                meegerekend. Weet je het nog niet zeker? Kies dan "Onbekend" — de tool toont dan beide scenario's
-                (mét en zonder) naast elkaar, zodat je zelf kunt vergelijken.
+                Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies "Onbekend": dan toont de tool beide scenario's naast elkaar.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -555,8 +548,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Onderneem je als eenmanszaak/zzp of vanuit een BV?</p>
               <p className="text-xs text-slate-400">
-                Dit bepaalt welke belastingberekening de tool laat zien: inkomstenbelasting (IB) en Zvw voor een
-                eenmanszaak, of vennootschapsbelasting (Vpb) voor een BV. Dit kan later nog aangepast worden.
+                Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.
               </p>
               <div className="flex gap-2">
                 <button
@@ -602,11 +594,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Staat er een holding boven deze BV (een holding-werkmaatschappijstructuur)?</p>
               <p className="text-xs text-slate-400">
-                Bij zo'n structuur zit het ondernemersrisico in de werkmaatschappij, en worden activa en opgebouwde
-                reserves meestal in de holding ondergebracht (zekerstelling bij een eventueel faillissement van de
-                werkmaatschappij). Dit dossier blijft de bankrekening van de werkmaatschappij volgen — een eigen
-                holding-dossier met eigen bankbestanden is nog in ontwikkeling. Dit antwoord bepaalt nu alleen welke
-                toelichting de tool laat zien (bijv. bij een winstuitkering en de liquidatieverliesregeling).
+                Dit dossier volgt de bankrekening van de werkmaatschappij. Het antwoord bepaalt alleen welke toelichting de tool toont (o.a. bij winstuitkering en liquidatieverliesregeling).
               </p>
               <div className="flex gap-2">
                 <button
@@ -650,9 +638,7 @@ export default function SetupWizardModal({
             <div className="space-y-3">
               <p className="text-sm text-slate-600">Werk je met BTW-verlegd (bijv. onderaannemer in de bouw)?</p>
               <p className="text-xs text-slate-400">
-                Dit is de standaardinstelling. Werk je met sommige klanten met BTW-verlegd en factureer je anderen
-                gewoon met 21% BTW? Kies hier de situatie die het vaakst voorkomt — per klant is dit later nog aan te
-                passen bij "Zakelijke tegenpartijen (inkomsten)".
+                Standaardinstelling. Kies de situatie die het vaakst voorkomt; per klant later aan te passen bij "Zakelijke tegenpartijen (inkomsten)".
               </p>
               <div className="flex gap-2">
                 <button
@@ -726,18 +712,10 @@ export default function SetupWizardModal({
                 Niet vergeten: sla je project op, anders gaan je correcties en aanpassingen verloren.
               </p>
               <p className="text-sm text-slate-600">
-                Alles wat je in deze tool instelt — rekeningtypes, categorieën, "Klopt zo"-bevestigingen, zelf
-                toegevoegde trefwoorden, KOR/BTW-instellingen — wordt bewaard in het geheugen van déze browser op dit
-                apparaat. Dat geldt voor tablets en laptops, en voor de meest gangbare browsers (Safari, Edge, Chrome,
-                Firefox, Opera). Het overleeft een herstart van je apparaat prima, maar gaat verloren zodra je op "Wis
-                alles" klikt, of wanneer je de browsergeschiedenis en websitegegevens wist (in veel browsers is dat
-                één en dezelfde knop, ook al lijkt het om alleen je surfgeschiedenis te gaan).
+                Je instellingen en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als je de browsergegevens of websitegegevens wist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
               </p>
               <p className="text-sm text-slate-600">
-                Een <strong>project opslaan</strong> maakt hier een apart bestand van, los van de browser — dat
-                bestand overleeft dus ook een cache-wis, een nieuw apparaat, of het overzetten naar iemand anders (bijv.
-                je boekhouder). Sla vooral geregeld op, niet pas aan het eind — bijvoorbeeld na elke sessie waarin je
-                een aantal correcties hebt gedaan.
+                Een <strong>project opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met je boekhouder. Sla na elke sessie op.
               </p>
               {onSaveProject && (
                 <button
@@ -825,9 +803,7 @@ function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
       <div className="space-y-3">
         <p className="text-sm text-slate-600">Welk tarief komt het meeste voor?</p>
         <p className="text-xs text-slate-400">
-          Dat wordt het standaardtarief. De minder vaak voorkomende tarieven blijven gewoon beschikbaar als eigen
-          categorie ("Zakelijke inkomsten 0%/9%/21%") om per klant of transactie te kiezen bij "Zakelijke
-          tegenpartijen (inkomsten)" — de tool herinnert je er straks aan om dat na te lopen.
+          Dit wordt het standaardtarief. Andere tarieven kies je per klant of transactie (categorie "Zakelijke inkomsten 0%/9%/21%").
         </p>
         <div className="flex flex-col gap-2">
           {TARIEF_OPTIES.filter((o) => gekozen.includes(o.waarde)).map((o) => (
@@ -850,9 +826,7 @@ function TarievenVraag({ gekozen, onChangeGekozen, onKlaar }) {
     <div className="space-y-3">
       <p className="text-sm text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de diensten die je factureert?</p>
       <p className="text-xs text-slate-400">
-        Vink aan wat van toepassing is — kan er meer dan één zijn. De meeste diensten vallen onder het hoge tarief
-        (21%) — het lage tarief (9%) geldt voor een beperkte groep diensten/producten, en een klein aantal diensten
-        (bijv. bepaalde zorg-, onderwijs- of financiële diensten) is helemaal vrijgesteld (0%).
+        Vink aan wat van toepassing is (meer dan één mag). Meestal 21%; 9% voor een beperkte groep; 0% voor vrijgestelde diensten (o.a. zorg, onderwijs, financieel).
       </p>
       <div className="flex flex-col gap-2">
         {TARIEF_OPTIES.map((o) => (

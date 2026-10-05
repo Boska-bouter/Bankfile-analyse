@@ -16,8 +16,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
       <div className="flex-1">
         <p className="text-sm font-bold text-slate-900">Wat deze tool niet kan weten</p>
         <p className="text-[13px] text-slate-600 mt-0.5">
-          De tool werkt met bankgegevens, maar kan niet alles weten. Denk aan contante uitgaven, openstaande facturen
-          en andere fiscale gegevens die niet uit de bank blijken.
+          Alleen bankgegevens: contante uitgaven, openstaande facturen en andere fiscale gegevens ontbreken.
         </p>
         <button
           onClick={() => setOpen(true)}

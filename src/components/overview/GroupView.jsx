@@ -324,8 +324,7 @@ export function DetailTable({
           <p className="text-xs font-mono text-slate-500 mb-1">Totaal getoond: {eur(filteredItems.reduce((a, t) => a + t.amount, 0))}</p>
         )}
         <p className="text-xs text-slate-400">
-          Categorie direct aanpasbaar — geldt meteen voor alle transacties van dezelfde tegenpartij, in alle jaren.
-          Type (Zakelijk/Prive) volgt altijd het bankbestand en kan niet los worden aangepast.
+          Categorie geldt voor alle jaren van dezelfde tegenpartij. Type volgt het bankbestand.
         </p>
       </div>
       <div className="max-h-[28rem] overflow-y-auto">
