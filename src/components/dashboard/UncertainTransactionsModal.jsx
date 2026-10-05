@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X, Check, Lock } from "lucide-react";
 import {
-  MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, soortenVoor,
+  MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor,
 } from "../../classification/categories.js";
 import { counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
@@ -85,7 +85,7 @@ export default function UncertainTransactionsModal({
         ) : (<>
           <select
             value={mainCategoryOf(tx.category)}
-            onChange={(e) => onRequestChange(tx, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || tx.category, type: tx.type })}
+            onChange={(e) => onRequestChange(tx, { category: categoryForMainChange(e.target.value, tx.category), type: tx.type })}
             className={`shrink-0 rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
           >
             {MAIN_CATEGORY_ORDER.map((c) => (

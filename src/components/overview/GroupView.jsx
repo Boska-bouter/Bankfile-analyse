@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -389,7 +389,7 @@ export function DetailTable({
                     ) : (<>
                     <select
                       value={mainCategoryOf(t.category)}
-                      onChange={(e) => applyChange(t, { category: MAIN_CATEGORY_DEFAULT_SUBTYPE[e.target.value] || t.category, type: t.type })}
+                      onChange={(e) => applyChange(t, { category: categoryForMainChange(e.target.value, t.category), type: t.type })}
                       className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
                     >
                       {MAIN_CATEGORY_ORDER.map((c) => (

@@ -767,7 +767,22 @@ export function subtypeChoicesFor(mainCategory) {
 // transactie verandert dus niets); anders de standaardsoort van de groep.
 export function storedCategoryForChoice(choice, currentCategory) {
   if (displayCategory(currentCategory) === choice) return currentCategory;
+  // V77 — zakelijke tegenhanger (bijv. "Energie-water" of "Huur (deels zakelijk)") → de privé-soort die erbij hoort,
+  // zodat "Privé - wonen & vaste lasten" kiezen niet stilletjes op "Prive - huur" uitkomt.
+  const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
+  const tegenhanger = SPLIT_CATEGORY_NAMES[basis];
+  if (tegenhanger && displayCategory(tegenhanger) === choice) return tegenhanger;
   return STANDAARD_FIJN[choice] || choice;
+}
+
+// V77 — categorie na wisselen van hoofdcategorie: naar "Privé" houdt de privé-tegenhanger van de huidige
+// zakelijke categorie (Energie-water → Prive - energie-water, Huur → Prive - huur, ...), anders de standaardsoort.
+export function categoryForMainChange(mainName, currentCategory) {
+  if (mainName === "Privé") {
+    const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
+    if (SPLIT_CATEGORY_NAMES[basis]) return SPLIT_CATEGORY_NAMES[basis];
+  }
+  return MAIN_CATEGORY_DEFAULT_SUBTYPE[mainName] || currentCategory;
 }
 
 // Fijne soorten (huur / energie-water / …) voor het kleine extra keuzeveld — alleen bij wonen en telecom.
