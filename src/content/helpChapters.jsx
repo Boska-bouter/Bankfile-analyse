@@ -346,6 +346,15 @@ export const HELP_CHAPTERS = [
           waarvan er 528 nog open staan geeft ongeveer 56%. Zolang er nog open punten zijn, blijft de ring onder de
           100%; alleen als er niets meer openstaat staat er "Alles afgehandeld" en 100%.
         </p>
+        <p>
+          Er zijn <strong>twee ringen in elkaar</strong>: de buitenste (<em>hele dossier</em>, groen) telt alle jaren samen, de
+          binnenste (oranje) geldt alleen voor het gekozen jaar. De jaarring telt de groepen van dat jaar die nog onzeker zijn, plus de jaarchecks
+          die nog openstaan (zoals KOR, BTW-verlegd en het beoordelen van personen en "Overig").
+        </p>
+        <p>
+          Bij "Overig opruimen" (Opschonen) staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive
+          opnames" (voor een zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
+        </p>
         <p className="text-xs text-slate-400">
           Dossiercontrole zegt alleen dat de administratie rond is. Het zegt niets over of de aangifte zelf al is
           gedaan — dat staat apart bij "Werkelijke aangifte" — en ook niet hoeveel aannames er nog in de

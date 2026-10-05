@@ -93,16 +93,17 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
       )}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam of bankomschrijving…" className="w-72" />
-        {bulkAction && !allDone && (
+        {!allDone && (Array.isArray(bulkAction) ? bulkAction : bulkAction ? [bulkAction] : []).map((ba) => (
           <button
+            key={ba.label}
             onClick={() => {
-              if (window.confirm(bulkAction.confirmText || "Weet je het zeker?")) bulkAction.onApply();
+              if (window.confirm(ba.confirmText || "Weet je het zeker?")) ba.onApply();
             }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 text-xs font-medium hover:bg-amber-100"
           >
-            {bulkAction.label}
+            {ba.label}
           </button>
-        )}
+        ))}
       </div>
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {filtered.map((item) => (

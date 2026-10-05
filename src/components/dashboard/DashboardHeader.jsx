@@ -1,4 +1,5 @@
 import ProgressGauge from "./ProgressGauge.jsx";
+import ConcentricGauge from "./ConcentricGauge.jsx";
 
 // Kop van het Overzicht-tabblad (fase 1 van de dashboard-restyling) — titel + subtitel links,
 // een statuskaart met ringmeter + statusregels rechts. Vervangt de losse "Dossierstatus {jaar}"-
@@ -6,7 +7,7 @@ import ProgressGauge from "./ProgressGauge.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal, openPoints, openBreakdown,
+  werkelijkAangifteDone, werkelijkAangifteTotal, openPoints, openBreakdown, yearRing,
 }) {
   // V59 — 100% mag nooit getoond worden zolang er open punten zijn (afronding of een andere telbron dan de badges).
   const pct = pctIn != null && openPoints != null && openPoints > 0 ? Math.min(pctIn, 99) : pctIn;
@@ -37,7 +38,7 @@ export default function DashboardHeader({
   const werkelijkTekst =
     pct == null ? "nog geen data" : werkelijkTotal === 0 ? "Niet van toepassing" : `${werkelijkDone} van ${werkelijkTotal} gedaan`;
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div className="flex flex-col 2xl:flex-row 2xl:items-start 2xl:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>
           {title}
@@ -45,12 +46,39 @@ export default function DashboardHeader({
         {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
 
-      <div className="flex items-start gap-3 shrink-0">
+      <div className="flex flex-wrap items-start gap-3">
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
         <div className="flex items-center gap-5 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm shrink-0">
           {pct != null ? (
+            yearRing ? (
+              <div className="flex items-center gap-3">
+                <ConcentricGauge outerPct={pct} innerPct={yearRing.pct} outerColor={accent} />
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
+                  <div className="flex items-start gap-1.5">
+                    <span className="mt-1 rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-xs text-slate-500">Hele dossier · <strong className="text-slate-800">{pct}%</strong></span>
+                      <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
+                        {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
+                      </span>
+                      {heeftOpenPunten && openBreakdown && <span className="text-[10.5px] text-slate-400">{openBreakdown}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <span className="mt-1 rounded-full shrink-0" style={{ background: "#F59E0B", width: 8, height: 8 }} />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-xs text-slate-500">{yearRing.jaar} · <strong className="text-slate-800">{yearRing.pct}%</strong></span>
+                      <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
+                        {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="flex items-center gap-2.5">
               <ProgressGauge pct={pct} accent={accent} label={gaugeLabel ?? `${pct}%`} />
               <div className="flex flex-col">
@@ -67,6 +95,7 @@ export default function DashboardHeader({
                 )}
               </div>
             </div>
+            )
           ) : (
             <div className="flex items-center gap-2.5">
               <ProgressGauge pct={0} accent="#CBD5E1" label="–" />

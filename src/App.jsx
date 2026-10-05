@@ -1442,6 +1442,9 @@ export default function App() {
   const bulkMarkOverigAsPriveOpname = () => {
     for (const item of pendingOverigReview) markOverigItem(item, "Prive opnames", "Zakelijk");
   };
+  const bulkMarkOverigAsWinkelsDivers = () => {
+    for (const item of pendingOverigReview) markOverigItem(item, "Winkels divers", "Prive");
+  };
   const confirmOverigAsIs = (item) => {
     snapshotBeforeAction('"Klopt zo" bevestigd');
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -3493,6 +3496,7 @@ export default function App() {
           onMarkOverigItem={markOverigItem}
           onConfirmOverigAsIs={confirmOverigAsIs}
           onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
+          onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
@@ -3904,6 +3908,26 @@ export default function App() {
     if (dossierOpenPoints === 0) return 100;
     return Math.min(99, Math.floor((100 * (totaal - dossierOpenPoints)) / totaal));
   }, [classified, confidenceSummary, dossierOpenPoints]);
+  // V74 — tweede ring: dezelfde berekening, maar alleen voor het gekozen jaar. Open = groepen met een
+  // onzekere indeling in dat jaar + de administratieve jaarchecks die nog openstaan (KOR, BTW-verlegd,
+  // personen/Overig beoordeeld, enz.); totaal = alle groepen van dat jaar + het aantal jaarchecks.
+  const yearRing = useMemo(() => {
+    if (!activeYear || !yearlyProgress[activeYear] || !classified.length) return null;
+    const alle = new Set(), open = new Set();
+    for (const tx of classified) {
+      if (tx.isMirror || Number(tx.year) !== Number(activeYear)) continue;
+      const gk = (tx.category === "Winkels divers" && tx.confidence.level === "heuristic" && /losse pinbetaling/i.test(tx.confidence.label || ""))
+        ? "__losse-pinbetalingen__|Winkels divers"
+        : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
+      alle.add(gk);
+      if (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") open.add(gk);
+    }
+    const adminOpen = yearlyProgress[activeYear].openPunten || 0;
+    const openN = open.size + adminOpen;
+    const totaal = Math.max(alle.size + 5, openN, 1);
+    const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
+    return { pct, open: openN, jaar: activeYear };
+  }, [classified, activeYear, yearlyProgress]);
   const dossierOpenBreakdown = [
     controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
@@ -4709,6 +4733,7 @@ export default function App() {
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4927,6 +4952,7 @@ export default function App() {
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -5094,6 +5120,7 @@ export default function App() {
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
+            yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
