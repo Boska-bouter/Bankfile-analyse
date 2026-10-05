@@ -95,7 +95,7 @@ export default function DetailsPanel({
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
         {!year ? (
-          <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om deze gegevens te zien.</p>
+          <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
         ) : (
           <>
         {tab === "jaaroverzicht" && (

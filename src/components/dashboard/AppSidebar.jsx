@@ -131,9 +131,9 @@ export default function AppSidebar({
         <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         {canClearAll && (
-          <button onClick={onClearAll} className="flex items-center gap-2 border border-slate-600 hover:bg-white/5 rounded-xl px-3 py-2">
+          <button onClick={onClearAll} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
             <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className="text-xs font-semibold text-slate-300">Nieuw dossier</span>
+            <span className={`text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
           </button>
         )}
 
@@ -149,13 +149,15 @@ export default function AppSidebar({
           <span className="text-xs font-semibold text-slate-200">Dossier laden</span>
         </button>
 
+        {canSaveProject && (
         <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
           <Upload className="h-3.5 w-3.5 text-white shrink-0" />
           <div className="flex flex-col leading-tight">
-            <span className="text-xs font-bold text-white">{canSaveProject ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen"}</span>
+            <span className="text-xs font-bold text-white">Extra bankbestand toevoegen</span>
             <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
           </div>
         </button>
+        )}
       </div>
 
       {/* v267 — Acties: verplaatst vanuit de oude "Jaar:.../Excel/Print/Basisvragen"-rij boven het

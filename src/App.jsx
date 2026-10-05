@@ -4051,6 +4051,8 @@ export default function App() {
   // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   const clearAllData = () => {
+    // Leeg dossier (bijv. net een nieuw dossier gestart en de wizard afgebroken): niets om te wissen, dus direct de wizard.
+    if (parsedFiles.length === 0) { setManualWizardOpen(true); return; }
     setDialog({
       title: "Nieuw dossier starten?",
       message: (
@@ -4253,7 +4255,7 @@ export default function App() {
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={() => projectFileInputRef.current.click()}
         onClearAll={clearAllData}
-        canClearAll={parsedFiles.length > 0}
+        canClearAll
         onToggleHelp={() => setShowHelp((v) => !v)}
         saveState={saveState}
         lastSavedAt={lastSavedAt}
@@ -4434,7 +4436,7 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
@@ -4629,7 +4631,7 @@ export default function App() {
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om hier iets te controleren.</p>
+              <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets te controleren.</p>
             </section>
           </div>
         )}
@@ -4642,7 +4644,7 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
@@ -4793,7 +4795,7 @@ export default function App() {
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
             <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Laad eerst een bankbestand of een eerder opgeslagen dossier (links onder bij "Beheer") om hier iets in te stellen.</p>
+              <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets in te stellen.</p>
             </section>
           </div>
         )}
@@ -4805,7 +4807,7 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}

@@ -91,7 +91,7 @@ export default function DashboardHeader({
               <div className="w-px self-stretch bg-slate-200" />
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-400 italic">Laad een bankbestand om te beginnen</span>
+                  <span className="text-slate-400 italic">Start een nieuw dossier (links) om te beginnen</span>
                 </div>
               </div>
             </>

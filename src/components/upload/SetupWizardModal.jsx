@@ -519,10 +519,6 @@ export default function SetupWizardModal({
                   <span key={f} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">{f}</span>
                 ))}
               </div>
-              <p className="text-xs text-slate-500">
-                <strong>Getest met:</strong> ING (CSV), ABN AMRO (MT940), Knab (CSV). Rabobank, SNS, ASN, Bunq en andere banken
-                werken als hun export een van deze formaten heeft; die zijn niet getest.
-              </p>
               <button
                 type="button"
                 onClick={() => onPickFiles && onPickFiles()}
