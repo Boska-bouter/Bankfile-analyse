@@ -5,6 +5,7 @@ import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
+import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
 import { scoreClassification } from "./classification/confidence.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
@@ -1183,7 +1184,7 @@ export default function App() {
   }, [zakelijkeSpaarRekening]);
 
   const classified = useMemo(() => {
-    const base = transactions.map((tx) => {
+    const base0 = transactions.map((tx) => {
       const resolved = resolveClassification(
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
@@ -1195,6 +1196,7 @@ export default function App() {
       // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
+    const base = koppelDoorsluisOverboekingen(base0, Object.values(accountTypeByFile).includes("Zakelijk"));
     // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
