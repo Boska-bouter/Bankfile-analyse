@@ -46,7 +46,7 @@ export function computeWizardSuggesties(classified) {
     opdrachtgevers: topNamen(zakelijk.filter((tx) => tx.amount > 0 && OMZET_CATEGORIEEN.has(tx.category)), { max: 6 }),
     // Alleen echte inkoop/onderaanneming: geen energie, supermarkt, telecom, boekhouder of software
     // (die zijn algemene bedrijfskosten, geen leveranciers). Onherkende uitgaven ("Overig") horen er wel
-    // bij, want dat zijn vaak leveranciers die de tool nog niet kent.
+    // bij, want dat zijn vaak leveranciers die de app nog niet kent.
     leveranciers: topNamen(
       zakelijk.filter((tx) => tx.amount < 0 && LEVERANCIER_CATEGORIEEN.has(tx.category) && !LEASE_NAAM.test(tx.counterparty || "")),
       { max: 6 }

@@ -620,7 +620,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         {form.soort === "auto" && (
           <p className="text-xs text-slate-400 -mt-1">
             Het bijtellingspercentage hangt af van CO₂-uitstoot/brandstofsoort en datum eerste toelating, en kan
-            per jaar verschillen — deze tool vult dat niet automatisch in. Geldt hier voor de hele looptijd van dit
+            per jaar verschillen — deze app vult dat niet automatisch in. Geldt hier voor de hele looptijd van dit
             contract-segment; wijzigt het percentage tussentijds (bijv. door een ander bijtellingsregime), voeg dan
             een nieuw contract toe vanaf die datum (zie "Contract vroegtijdig beëindigd/vervangen" hieronder).
           </p>
@@ -710,7 +710,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 </label>
                 <p className="text-xs text-slate-400 mt-1">
                   Niet elk bedrijfsmiddel kwalificeert (bijv. een drempelbedrag per object, of grond) —
-                  deze tool kent die uitzonderingen niet uit bankgegevens, dus controleer dit zelf.
+                  deze app kent die uitzonderingen niet uit bankgegevens, dus controleer dit zelf.
                   "Niet meegenomen" sluit dit object uit van het KIA-bedrag in het aangiftevoorstel.
                 </p>
               </>
@@ -819,7 +819,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         <p className="text-xs text-slate-400 mb-2">
           Zijn er termijnen betaald vanaf een rekening die niet in dit dossier is geïmporteerd (bijv.
           een privérekening of een rekening bij een andere bank)? Vul hieronder in tot en met welke
-          datum alle termijnen zijn betaald — de tool vult dan alleen de daadwerkelijk ontbrekende
+          datum alle termijnen zijn betaald — de app vult dan alleen de daadwerkelijk ontbrekende
           termijnen (op basis van het contractschema) synthetisch aan, zodat de rente, het openstaande
           saldo en (bij een latere verkoop/veiling) de restschuld/overwaarde kloppen. Een termijn die al
           als banktransactie in dit dossier is gevonden, telt niet dubbel.
@@ -952,7 +952,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                   ) : (
                     <p className="text-xs text-slate-400">
                       Vul hierboven bij "Soort" auto/machine in om ook een boekwinst/-verlies (voor de winstberekening)
-                      te kunnen bepalen — zonder "Soort" kent deze tool geen fiscale boekwaarde van dit leaseobject.
+                      te kunnen bepalen — zonder "Soort" kent deze app geen fiscale boekwaarde van dit leaseobject.
                     </p>
                   )}
                 </div>
@@ -1064,7 +1064,7 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
         <div className="p-5 overflow-y-auto space-y-5">
           <p className="text-xs text-slate-500">
             Vul de aankoop- en leasestructuur in zoals die op het leasecontract staat — het jaarlijkse
-            rentepercentage berekent de tool daaruit vanzelf, in plaats van dat je dat zelf moet opzoeken.
+            rentepercentage berekent de app daaruit vanzelf, in plaats van dat je dat zelf moet opzoeken.
             De lease vergoeding is de financieringskost bovenop het onbetaalde koopbedrag: samen vormen ze
             het totaal dat je terugbetaalt via de maandbedragen en de eventuele eindbetaling.
             {contracts.length > 1 && (

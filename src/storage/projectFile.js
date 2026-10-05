@@ -22,7 +22,7 @@ export function buildProjectFile(state) {
 }
 
 // Downloadt het dossierbestand als .json — hergebruikt dezelfde blob-downloadmethode als de
-// rest van de tool (Excel-export, rapporten), die betrouwbaar werkt zonder browser-specifieke
+// rest van de app (Excel-export, rapporten), die betrouwbaar werkt zonder browser-specifieke
 // "Opslaan als"-API's nodig te hebben.
 // Maakt een naam geschikt als (deel van een) bestandsnaam — verwijdert tekens die op Windows/
 // macOS/iOS niet in bestandsnamen mogen, en houdt spaties/liggende streepjes leesbaar.
@@ -68,7 +68,7 @@ export async function readProjectFile(file) {
     throw new Error("Kon het dossierbestand niet lezen. Controleer of dit het juiste bestand is.");
   }
   if (!parsed || parsed.type !== PROJECT_FILE_TYPE) {
-    throw new Error("Dit lijkt geen geldig dossierbestand van deze tool te zijn.");
+    throw new Error("Dit lijkt geen geldig dossierbestand van deze app te zijn.");
   }
   return parsed;
 }

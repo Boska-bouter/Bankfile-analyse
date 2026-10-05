@@ -205,7 +205,7 @@ export function computeFileContinuity(diagnostics, accountTypeByFile) {
 }
 
 // Herkent een IBAN-achtige reeks in de bestandsnaam zelf (landcode + 2 controlecijfers + minstens
-// 10 tekens) — veel bankexports (en deze tool zelf, bij een eerdere download) noemen het bestand
+// 10 tekens) — veel bankexports (en deze app zelf, bij een eerdere download) noemen het bestand
 // naar het rekeningnummer, bijv. "2025NL63INGB0008292483_2025-01-01_2025-12-31.940". Alleen als
 // fallback gebruikt, dus de kans dat een toevallige cijferreeks in de bestandsnaam hiermee verward
 // wordt is verwaarloosbaar (een IBAN-patroon is te specifiek om per ongeluk te ontstaan).

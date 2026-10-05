@@ -132,7 +132,7 @@ export const DEFAULT_RULES = [
   { name: "Partneralimentatie", color: "bg-rose-100 text-rose-800", keywords: [
     "partneralimentatie", "partneralimentie",
   ],
-    description: "Fiscaal anders dan de meeste privé-categorieën: bij de betaler is dit een persoonsgebonden aftrekpost (box 1), bij de ontvanger belast inkomen. Deze tool berekent dat niet mee in de IB-schatting (die is alleen op de winst uit onderneming gebaseerd) — betrek dit apart bij de daadwerkelijke aangifte." },
+    description: "Fiscaal anders dan de meeste privé-categorieën: bij de betaler is dit een persoonsgebonden aftrekpost (box 1), bij de ontvanger belast inkomen. Deze app berekent dat niet mee in de IB-schatting (die is alleen op de winst uit onderneming gebaseerd) — betrek dit apart bij de daadwerkelijke aangifte." },
   { name: "Kinderalimentatie", color: "bg-rose-50 text-rose-700", keywords: [
     "kinderalimentatie", "lbio", "onderhoudsbijdrage",
   ],
@@ -575,7 +575,7 @@ export const MAIN_CATEGORY_COLOR = {
   "Nog te beoordelen": "bg-slate-200 text-slate-700",
 };
 
-// Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de tool
+// Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de app
 // zelf herkent op naam (zakelijke inkomsten, spiegelboekingen zoals "Prive opnames"/"Uitbetaling
 // aan prive"/"Terugboeking van prive", "Overboekingen aan personen", "Overig") blijven onder de
 // motorkap gewoon dat subtype — alleen hun WEERGAVE valt hier onder een bredere hoofdcategorie.

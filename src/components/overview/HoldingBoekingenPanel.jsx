@@ -29,9 +29,9 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
         <div className="px-4 pb-4 space-y-3">
           <p className="text-xs text-slate-500">
             Vul hier in wat er dit jaar daadwerkelijk bij de holding is binnengekomen (dividend, vergoeding) of door
-            de holding is gestort — de tool vergelijkt dit met de kapitaalstorting/dividenduitkering die al
+            de holding is gestort — de app vergelijkt dit met de kapitaalstorting/dividenduitkering die al
             berekend zijn uit de banktransacties van de werkmaatschappij hierboven. Geen bankimport voor de
-            holding zelf — dat is nog niet beschikbaar in deze tool.
+            holding zelf — dat is nog niet beschikbaar in deze app.
           </p>
           <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">

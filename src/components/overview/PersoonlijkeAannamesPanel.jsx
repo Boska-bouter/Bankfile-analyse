@@ -62,10 +62,10 @@ function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw,
   );
 }
 
-// Persoonlijke fiscale aannames die de tool NIET uit bankgegevens kan afleiden: of aan het
+// Persoonlijke fiscale aannames die de app NIET uit bankgegevens kan afleiden: of aan het
 // urencriterium voor de zelfstandigenaftrek is voldaan, en een indicatie van heffingskortingen en
 // KIA die daarvan (en van eigen bedrijfsmiddel-investeringen) afhangen. Dit is bewust een apart,
-// expliciet paneel — de tool mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
+// expliciet paneel — de app mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
 export default function PersoonlijkeAannamesPanel({
   activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
@@ -102,7 +102,7 @@ export default function PersoonlijkeAannamesPanel({
   if (!activeYear) return null;
 
   // Een onbeantwoord jaar mag niet stilzwijgend op "Ja" rekenen (via het "onbekend_default"-sentinel
-  // hieronder) — dat geeft de indruk dat de tool het al ongeveer goed heeft, terwijl het
+  // hieronder) — dat geeft de indruk dat de app het al ongeveer goed heeft, terwijl het
   // urencriterium juist niet uit bankgegevens is af te leiden. Voor een nieuw dossier
   // (zaLegacyJaDefault=false) resolvet een onbeantwoord jaar naar "onbekend" (beide scenario's) —
   // zie resolveZelfstandigenaftrekStatusForYear. Voor een ouder dossier (van vóór deze regel bestond)
@@ -171,10 +171,10 @@ export default function PersoonlijkeAannamesPanel({
             </select>
             <p className="mt-1.5 text-xs text-slate-400">
               Het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) is een
-              persoonlijke voorwaarde die deze tool niet uit bankgegevens kan afleiden.{" "}
+              persoonlijke voorwaarde die deze app niet uit bankgegevens kan afleiden.{" "}
               {zaLegacyJaDefault
-                ? "Zolang je hier niets aangeeft, rekent de tool zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
-                : "Zolang je hier niets aangeeft, toont de tool voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
+                ? "Zolang je hier niets aangeeft, rekent de app zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
+                : "Zolang je hier niets aangeeft, toont de app voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
             </p>
           </div>
 
@@ -229,7 +229,7 @@ export default function PersoonlijkeAannamesPanel({
               )}
               {totaalInvestering > 0 && (
                 <span className="block mt-1 text-slate-400">
-                  Een geleasede personenauto telt hier al niet mee (KIA geldt daar fiscaal niet voor); overige uitzonderingen (bijv. grond) kent deze tool niet — controleer per bedrijfsmiddel de "KIA-beoordeling". Dit is een mogelijke, geen definitieve aftrek.
+                  Een geleasede personenauto telt hier al niet mee (KIA geldt daar fiscaal niet voor); overige uitzonderingen (bijv. grond) kent deze app niet — controleer per bedrijfsmiddel de "KIA-beoordeling". Dit is een mogelijke, geen definitieve aftrek.
                 </span>
               )}
             </p>

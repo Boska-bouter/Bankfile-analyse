@@ -71,7 +71,7 @@ export default function AppSidebar({
     // env(safe-area-inset-top), voor de klok/statusbalk bovenin) en onderin ruimte voor de
     // taakbalk/dock van een laptop. viewport-fit=cover + apple-mobile-web-app-status-bar-style
     // "black-translucent" staan al in index.html, dus de env(safe-area-inset-*)-waarden werken
-    // zodra de tool als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
+    // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
       className="w-[216px] shrink-0 bg-[#16203A] flex flex-col px-3.5 sticky top-0 h-screen overflow-y-auto"

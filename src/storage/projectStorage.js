@@ -21,7 +21,7 @@ export function installStoragePolyfill() {
 }
 
 // Automatische per-browser opslag van de geüploade bestanden — dezelfde sleutel als de
-// originele tool gebruikte ("bankoverzicht:data"), zodat een eerder opgeslagen dossier in deze
+// originele app gebruikte ("bankoverzicht:data"), zodat een eerder opgeslagen dossier in deze
 // browser blijft werken na de migratie. Los van het downloadbare dossierbestand (zie
 // projectFile.js) — dit hier gebeurt automatisch, op de achtergrond, bij elke wijziging.
 const DATA_KEY = "bankoverzicht:data";
@@ -59,7 +59,7 @@ export async function clearPersistedData() {
 }
 
 // Instellingen (rekeningtype per bestand, correcties, categorieregels, ...) worden apart van de
-// geüploade bestanden bewaard — zelfde opzet als de originele tool ("bankoverzicht:settings").
+// geüploade bestanden bewaard — zelfde opzet als de originele app ("bankoverzicht:settings").
 const SETTINGS_KEY = "bankoverzicht:settings";
 
 export async function loadPersistedSettings() {

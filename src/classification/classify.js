@@ -161,7 +161,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // situatie waarin de tegenrekening-IBAN ontbreekt of naar een rekening wijst die je niet zelf
   // hebt geladen (zie ook de "eigen rekening (niet geladen)"-vraag in de wizard, die hetzelfde
   // via IBAN afvangt). Minder hard bewijs dan een IBAN-match, maar wel een bewust door de
-  // gebruiker zelf opgegeven naam — geen gok van de tool.
+  // gebruiker zelf opgegeven naam — geen gok van de app.
   // v223: `eigenNamen` bevat sinds nu de volledige, genormaliseerde naam (voorletter(s) + achternaam
   // samen, bijv. "r meijer") in plaats van alléén de kale achternaam (App.jsx/normalizePersonName) —
   // een bare achternaam bleek in de praktijk ook te matchen op de rekening van naamgenoten/

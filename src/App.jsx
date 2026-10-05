@@ -283,7 +283,7 @@ export default function App() {
   // kosten) is dan standaard 100% privé (0% zakelijk) tot er expliciet een percentage is ingesteld.
   // `categoryZakelijkPercentage` blijft de ruwe, opgeslagen invoer; de berekeningen gebruiken
   // `categoryZakelijkPercentageEff`.
-  // "Correctie privé-uitgaven" is verwijderd (overbodig geworden na Route B: de tool signaleert nu
+  // "Correctie privé-uitgaven" is verwijderd (overbodig geworden na Route B: de app signaleert nu
   // zelf al wanneer zakelijke kosten vanaf de privérekening zijn betaald).
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
@@ -523,8 +523,8 @@ export default function App() {
 
   const applySettingsToState = (settings) => {
     // De bestandsnaam van het laatst opgeslagen/geladen dossierbestand hoort hier ook bij hersteld
-    // te worden — anders "vergeet" de tool die naam zodra de sessie hervat wordt vanuit de
-    // automatische browseropslag (bijv. na een tool-update of het herstarten van de browser), en
+    // te worden — anders "vergeet" de app die naam zodra de sessie hervat wordt vanuit de
+    // automatische browseropslag (bijv. na een app-update of het herstarten van de browser), en
     // valt "Dossier opslaan" onterecht terug op de standaardnaam in plaats van door te tellen op de
     // bestandsnaam die al in gebruik was.
     setLoadedProjectFileName(settings.loadedProjectFileName ?? null);
@@ -1358,9 +1358,13 @@ export default function App() {
     const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
-      allGroups.add(`${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`);
+      // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
+      // geen beslissingen per winkel: ze vormen samen ÉÉN controlepunt (de transacties zelf blijven
+      // in de lijst "Classificatie zekerheid" staan).
+      const losseWinkel = tx.category === "Winkels divers" && tx.confidence.level === "heuristic" && /losse pinbetaling/i.test(tx.confidence.label || "");
+      const gk = losseWinkel ? "__losse-pinbetalingen__|Winkels divers" : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
+      allGroups.add(gk);
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
-      const gk = `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
       else { unclearTx++; unclearGroups.add(gk); }
     }
@@ -1625,7 +1629,7 @@ export default function App() {
   // Een 🟡/🔴-classificatie die bij nazien gewoon klopt: dit legt 'm vast als bevestigde regel
   // (net als een echte correctie, alleen met dezelfde categorie/type als nu al gold) — voortaan
   // dus 🟢. Loopt bewust via dezelfde requestCategoryChange-vraag als een echte wijziging: bij
-  // meerdere vergelijkbare transacties vraagt de tool of dit voor alle jaren moet gelden, of voor
+  // meerdere vergelijkbare transacties vraagt de app of dit voor alle jaren moet gelden, of voor
   // zelf gekozen jaren.
   // Zoekt, na een net bevestigde/gecorrigeerde tegenpartij, naar andere 🟡/🔴-transacties die op
   // dezelfde tegenpartij lijken (bijv. "Coolblue.nl" na het corrigeren van "Coolblue") — zodat je
@@ -1990,7 +1994,7 @@ export default function App() {
   // zolang geen enkel leasecontract een "soort" heeft ingevuld, dus geen enkele invloed op
   // bestaande dossiers. Bewust alleen voor een zzp-dossier (rechtsvorm !== "bv") — de
   // onttrekkingsberekening hier is de IB-regel voor een eenmanszaak; een BV/DGA heeft een heel
-  // andere bijtellingssystematiek (via de loonheffing), die deze tool niet nabootst.
+  // andere bijtellingssystematiek (via de loonheffing), die deze app niet nabootst.
   const leaseAutoKostenForActiveYear = useMemo(
     () =>
       activeYear && rechtsvorm !== "bv"
@@ -2159,7 +2163,7 @@ export default function App() {
   }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails]);
   // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
   // BV-Aangiftevoorstel), maar hier al altijd bijgehouden — dezelfde Route B-redenering als de rest
-  // van de tool: deze categorieën bestaan niet in een zzp-dossier, dus deze waarden zijn dan gewoon
+  // van de app: deze categorieën bestaan niet in een zzp-dossier, dus deze waarden zijn dan gewoon
   // allemaal 0/leeg en hebben geen enkele invloed op de zzp-weergave.
   const dgaSalarisByYear = useMemo(() => {
     const map = {};
@@ -2676,7 +2680,7 @@ export default function App() {
             // naast de "Resultaat"-kaart hierboven: IB+Zvw in 1 box, de drie aftrekposten in de andere.
             // Alleen bij zzp/eenmanszaak (rechtsvorm !== "bv") — een BV kent deze posten niet op deze
             // manier. Beide klikken door naar dezelfde "Indicatieve aangifteberekening" als elders in
-            // de tool, waar de volledige, preciezere uitsplitsing (incl. het "onbekend"-urencriterium-
+            // de app, waar de volledige, preciezere uitsplitsing (incl. het "onbekend"-urencriterium-
             // scenario) te zien is — deze kaarten zijn bewust een vereenvoudigde samenvatting.
             ...(rechtsvorm !== "bv" && dashboardAangifteIndicatie
               ? [

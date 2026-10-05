@@ -5,7 +5,7 @@ import { Info, X } from "lucide-react";
 // hele lijst zichtbaar — in de goedgekeurde mockup is dit een compacte blauwe banner (korte intro +
 // "Meer informatie"-knop). Op verzoek: "Meer informatie" klapte de lijst tot nu toe inline open
 // (schoof de rest van het dashboard, o.a. de Jaaroverzicht-kaart ernaast, omlaag) — dat opent nu als
-// pop-up, zoals de losse "?"-uitleg elders in de tool, i.p.v. inline te verschuiven.
+// pop-up, zoals de losse "?"-uitleg elders in de app, i.p.v. inline te verschuiven.
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
   const [open, setOpen] = useState(false);
   return (
@@ -14,7 +14,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
         <Info className="h-4 w-4" />
       </div>
       <div className="flex-1">
-        <p className="text-sm font-bold text-slate-900">Wat deze tool niet kan weten</p>
+        <p className="text-sm font-bold text-slate-900">Wat deze app niet kan weten</p>
         <p className="text-[13px] text-slate-600 mt-0.5">
           Alleen bankgegevens: contante uitgaven, openstaande facturen en andere fiscale gegevens ontbreken.
         </p>
@@ -29,7 +29,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={() => setOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0 rounded-t-xl">
-              <p className="text-sm font-semibold text-slate-800">Wat deze tool niet kan weten</p>
+              <p className="text-sm font-semibold text-slate-800">Wat deze app niet kan weten</p>
               <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 shrink-0">
                 <X className="h-4 w-4" />
               </button>

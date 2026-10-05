@@ -46,7 +46,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
         </div>
         <div className="p-5 overflow-y-auto space-y-4">
           <p className="text-xs text-slate-500">
-            Vul aan met wat de Belastingdienst nodig heeft om de jaarlijkse afschrijving te berekenen — de tool
+            Vul aan met wat de Belastingdienst nodig heeft om de jaarlijkse afschrijving te berekenen — de app
             rekent daarna zelf de lineaire afschrijving per jaar uit, inclusief de "tijdklem" in het jaar van aanschaf.
           </p>
 
@@ -118,7 +118,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
             </select>
             <span className="block text-xs text-slate-400 mt-1">
               Niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. een personenauto, grond, of een te laag
-              aanschafbedrag) — deze tool kent dat onderscheid niet uit bankgegevens. "Niet meegenomen"
+              aanschafbedrag) — deze app kent dat onderscheid niet uit bankgegevens. "Niet meegenomen"
               sluit dit bedrijfsmiddel uit van het KIA-bedrag in het aangiftevoorstel.
             </span>
           </label>

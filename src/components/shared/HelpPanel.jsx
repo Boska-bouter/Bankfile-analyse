@@ -6,11 +6,11 @@ const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">1.</span>
-      Start een nieuw dossier: het stappenplan stelt eerst een paar vragen (rekening, rechtsvorm, BTW, auto, lease, urencriterium, startersaftrek) en laadt dan je bankbestanden (CSV, Excel, MT940 of CAMT.053). De tool deelt transacties automatisch in Zakelijk/Prive en in categorieën in.
+      Start een nieuw dossier: het stappenplan stelt eerst een paar vragen (rekening, rechtsvorm, BTW, auto, lease, urencriterium, startersaftrek) en laadt dan je bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt transacties automatisch in Zakelijk/Prive en in categorieën in.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">2.</span>
-      Klopt een indeling niet? Pas 'm aan in de detailtabel of bij Controleren — dat onthoudt de tool voortaan voor dezelfde tegenpartij, in alle jaren.
+      Klopt een indeling niet? Pas 'm aan in de detailtabel of bij Controleren — dat onthoudt de app voortaan voor dezelfde tegenpartij, in alle jaren.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">3.</span>
@@ -28,7 +28,7 @@ const INTRO_CONTENT = (
 );
 
 // Alle uitgebreide toelichtingsteksten, gebundeld in inklapbare hoofdstukken — inclusief de
-// introductie als eerste hoofdstuk. Bij de losse plekken in de tool staat een klein "?"-icoontje
+// introductie als eerste hoofdstuk. Bij de losse plekken in de app staat een klein "?"-icoontje
 // (HelpHint) dat direct naar het juiste hoofdstuk hier springt.
 export default function HelpPanel({ onClose, openChapter }) {
   const [openKeys, setOpenKeys] = useState(() => new Set(["intro", ...(openChapter ? [openChapter] : [])]));
@@ -41,7 +41,7 @@ export default function HelpPanel({ onClose, openChapter }) {
     });
   };
 
-  const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze tool", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
+  const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
 
   // Was een gewone (niet-zwevende) <section>, gerenderd als vaste sibling ná de hoofdinhoud van elk
   // tabblad — daardoor verscheen dit paneel gewoon inline in de pagina-flow op de plek waar dat in de

@@ -234,7 +234,7 @@ export default function SetupWizardModal({
                 </ul>
               )}
               <p className="text-xs text-slate-400">
-                Tip: laad zowel de zakelijke als de privérekening, anders kan de tool overboekingen tussen je rekeningen niet controleren.
+                Tip: laad zowel de zakelijke als de privérekening, anders kan de app overboekingen tussen je rekeningen niet controleren.
               </p>
             </div>
           )}
@@ -463,7 +463,7 @@ function Scherm31({
       )}
 
       {needs.naam && (
-        <Sectie titel="Eigen naam (en die van je fiscaal partner)" uitleg="Zo herkent de tool overboekingen naar/van jezelf als privé. Optioneel.">
+        <Sectie titel="Eigen naam (en die van je fiscaal partner)" uitleg="Zo herkent de app overboekingen naar/van jezelf als privé. Optioneel.">
           <input
             type="text"
             value={naamO}
@@ -568,7 +568,7 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
       {needs.andere && (
         <Sectie
           titel="Andere eigen rekeningen die je niet laadt?"
-          uitleg="Met het rekeningnummer herkent de tool overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die je niet laadt kun je hier opgeven."
+          uitleg="Met het rekeningnummer herkent de app overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die je niet laadt kun je hier opgeven."
         >
           {lijst.length > 0 && (
             <ul className="space-y-1">
@@ -681,7 +681,7 @@ function Scherm33({ typedNow, zet, goNext, onAddBusinessKeywords, onAddBusinessE
     <div className="space-y-4">
       <Sectie
         titel="Grootste of vaste opdrachtgevers (max. 5)"
-        uitleg="Zo herkent de tool binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat je dat achteraf per klant moet bevestigen."
+        uitleg="Zo herkent de app binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat je dat achteraf per klant moet bevestigen."
       >
         <NaamLijst lijst={klanten} onChange={(l) => zet({ opdrachtgeversLijst: l })} placeholder="Naam opdrachtgever" max={5} suggesties={suggesties.opdrachtgevers || []} />
       </Sectie>
@@ -968,7 +968,7 @@ function Scherm35({
       {toonUren && (
         <Sectie
           titel="Voldoe je aan het urencriterium voor de zelfstandigenaftrek?"
-          uitleg="Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies Onbekend: dan toont de tool beide scenario's naast elkaar."
+          uitleg="Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies Onbekend: dan toont de app beide scenario's naast elkaar."
         >
           <div className="space-y-1.5">
             <p className="text-xs text-slate-600">In alle jaren ({years[0]}{years.length > 1 ? `–${years[years.length - 1]}` : ""}):</p>

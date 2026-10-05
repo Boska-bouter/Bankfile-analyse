@@ -5,7 +5,7 @@ import { FIXED_BTW_RATE_CATEGORIES } from "../../tax/btw.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 // BTW-instellingen: KOR (kleineondernemersregeling), BTW-verlegd, en het percentage per
-// categorie. Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op
+// categorie. Het bankbedrag is altijd inclusief BTW — de app rekent 'm er automatisch uit op
 // basis van dit percentage. Bij KOR wordt nergens BTW berekend (zie effectiveCategoryBtwRates
 // in App.jsx), dus dit paneel is dan uitgeschakeld.
 export default function BtwRatesPanel({ classified = [], activeYear, categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling, onOpenHelp }) {
@@ -35,7 +35,7 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
       {open && (
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
-            Het bankbedrag is altijd inclusief BTW — de tool rekent 'm er automatisch uit op basis van het percentage
+            Het bankbedrag is altijd inclusief BTW — de app rekent 'm er automatisch uit op basis van het percentage
             per categorie. Alleen van toepassing op Zakelijke transacties. Achter elke categorie staat het aantal transacties in {activeYear || "het actieve jaar"} per tarief (0%/9%/21%).{" "}
             {onOpenHelp && <HelpHint chapter="btw-percentages" onOpen={onOpenHelp} />}
           </p>

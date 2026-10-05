@@ -2,7 +2,7 @@
 // die de Belastingdienst nodig heeft om de jaarlijkse afschrijving te berekenen: aanschafwaarde,
 // aanschafdatum, afschrijvingstermijn (in jaren) en restwaarde. Rekent lineair af (het gangbare,
 // standaard afschrijvingsstelsel) — versneld/vrij afschrijven is een uitzondering die de aangifte
-// zelf apart moet aangeven, niet iets wat deze tool aanneemt.
+// zelf apart moet aangeven, niet iets wat deze app aanneemt.
 
 // Jaarlijkse afschrijving = (aanschafwaarde − restwaarde) / termijn in jaren. In het jaar van
 // aanschaf zelf mag je alleen afschrijven naar rato van de resterende maanden van dat jaar (de

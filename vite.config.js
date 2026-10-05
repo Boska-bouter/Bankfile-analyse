@@ -11,7 +11,7 @@ import path from "path";
 const buildId = String(Date.now());
 
 // base: "/Bankfile-analyse/" is alleen nodig voor GitHub Pages (https://<user>.github.io/<repo>/)
-// — daar draait de tool namelijk onder een submap. Cloudflare draait diezelfde build op de root
+// — daar draait de app namelijk onder een submap. Cloudflare draait diezelfde build op de root
 // van een eigen domein (bankfile-analyse.<account>.workers.dev/), waar dat submap-pad juist alle
 // JS/CSS-bestanden onvindbaar zou maken (leidt tot een lege pagina). GitHub Actions zet altijd
 // automatisch de omgevingsvariabele GITHUB_ACTIONS=true — daarmee kan één en dezelfde build-stap
