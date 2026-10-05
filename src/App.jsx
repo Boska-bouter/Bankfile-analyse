@@ -1178,7 +1178,8 @@ export default function App() {
   // autoClassify werkt sowieso al, dit is puur een aanvulling voor een afwijkende naamgeving.
   const zakelijkeSpaarKeywords = useMemo(() => {
     const naam = zakelijkeSpaarRekening?.naam;
-    return naam ? [naam.toLowerCase()] : [];
+    const priveNaam = zakelijkeSpaarRekening?.priveNaam;
+    return [naam ? naam.toLowerCase() : null, priveNaam ? `prive:${priveNaam.toLowerCase()}` : null].filter(Boolean);
   }, [zakelijkeSpaarRekening]);
 
   const classified = useMemo(() => {

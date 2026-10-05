@@ -1,8 +1,8 @@
 // V65 — suggesties voor de wizard, afgeleid uit de al ingelezen en geclassificeerde transacties:
 // "gevonden in je bankdata". Alleen een hulpmiddel om niet te hoeven typen; niets wordt zonder
 // bevestiging in het dossier gezet.
-import { ZERO_BTW_CATEGORIES } from "../tax/btw.js";
 
+const LEVERANCIER_CATEGORIEEN = new Set(["Zakelijke inkoop/uitgaven", "Inhuur personeel", "Zakelijk - apparatuur/machines", "Overig"]);
 const OMZET_CATEGORIEEN = new Set(["Zakelijke inkomsten", "Inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"]);
 
 // Zelfde partij onder iets andere schrijfwijze (hoofdletters, punten, afgekapte naam) wordt één suggestie.
@@ -44,8 +44,11 @@ export function computeWizardSuggesties(classified) {
     lening: topNamen(uit("Leningen"), { max: 3, perAantal: true }),
     aov: topNamen(uit("AOV (arbeidsongeschiktheidsverzekering)"), { max: 2, perAantal: true }),
     opdrachtgevers: topNamen(zakelijk.filter((tx) => tx.amount > 0 && OMZET_CATEGORIEEN.has(tx.category)), { max: 6 }),
+    // Alleen echte inkoop/onderaanneming: geen energie, supermarkt, telecom, boekhouder of software
+    // (die zijn algemene bedrijfskosten, geen leveranciers). Onherkende uitgaven ("Overig") horen er wel
+    // bij, want dat zijn vaak leveranciers die de tool nog niet kent.
     leveranciers: topNamen(
-      zakelijk.filter((tx) => tx.amount < 0 && tx.category && !ZERO_BTW_CATEGORIES.has(tx.category) && !/^(Prive|Belastingen|Interne|Overboek|Lease)/.test(tx.category) && !LEASE_NAAM.test(tx.counterparty || "")),
+      zakelijk.filter((tx) => tx.amount < 0 && LEVERANCIER_CATEGORIEEN.has(tx.category) && !LEASE_NAAM.test(tx.counterparty || "")),
       { max: 6 }
     ),
   };

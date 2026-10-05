@@ -46,6 +46,15 @@ export function defaultTypeForCategory(category) {
 // "overboeking aan een persoon" (de naam bevat vaak toevallig 2-3 hoofdlettertermen, waardoor hij
 // anders door looksLikePerson zou worden opgepikt) — het is puur geld dat binnen de eigen
 // zakelijke sfeer verschuift.
+// V66 — door de gebruiker opgegeven namen van gekoppelde spaarrekeningen. Zakelijke namen staan er
+// gewoon in; privé-namen met het voorvoegsel "prive:". Elke naam geldt alleen voor het eigen rekeningtype.
+function spaarKeywordsVoor(accountType, lijst) {
+  const prive = accountType !== "Zakelijk";
+  return (lijst || [])
+    .filter((kw) => kw && kw.startsWith("prive:") === prive)
+    .map((kw) => (prive ? kw.slice(6) : kw))
+    .filter(Boolean);
+}
 const ZAKELIJK_SPAAR_KEYWORDS = ["spaarrekening", "zakelijk sparen", "vermogenssparen", "flexibel sparen"];
 
 // Landcodes zoals banken die aan het einde van de tegenpartijnaam zetten bij een buitenlandse pin-/
@@ -143,7 +152,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // gebruiker zelf opgegeven `zakelijkeSpaarKeywords` (wizardvraag "zakelijke spaarrekening") is
   // expliciet over de ZAKELIJKE rekening en telt dus alleen mee aan die kant.
   const isEigenSpaarrekeningTekst = ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw)) ||
-    (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw)));
+    spaarKeywordsVoor(accountType, zakelijkeSpaarKeywords).some((kw) => text.includes(kw));
   if (isEigenSpaarrekeningTekst) {
     return { category: accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
   }
@@ -470,7 +479,7 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
   if (!override || override.category !== "Overig") return false;
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   if (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw))) return true;
-  if (accountType === "Zakelijk" && zakelijkeSpaarKeywords.some((kw) => kw && text.includes(kw))) return true;
+  if (spaarKeywordsVoor(accountType, zakelijkeSpaarKeywords).some((kw) => text.includes(kw))) return true;
   if (tx.counterpartyIban && ownAccountsElsewhere && ownAccountsElsewhere.length > 0) {
     const matched = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
     if (matched && matched.accountType && matched.accountType !== accountType) return true;

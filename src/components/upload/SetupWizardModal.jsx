@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
@@ -82,6 +82,8 @@ export default function SetupWizardModal({
       holding: vol && heeftHolding === null,
       andere: vol && (eigenRekeningenExtra === null || forceRechtsvormStep),
       spaar: vol && zakelijkeSpaarRekening === null,
+      // Privé-spaarrekening: ook voor een dossier waar alleen de zakelijke spaarvraag al beantwoord was.
+      spaarPrive: vol && (zakelijkeSpaarRekening == null || zakelijkeSpaarRekening.priveStatus === undefined),
       klanten: vol && opdrachtgeversGevraagd === null,
       auto: vol && autoWizardStatus === null,
       lease: vol && verwachteLease === null,
@@ -93,12 +95,20 @@ export default function SetupWizardModal({
       starters: vol && Object.keys(startersaftrekStatus || {}).length === 0,
       kor: vol && korRegeling === null,
       verlegd: vol && korRegeling !== true && btwVerlegd === null,
-      kwartalen: vol && korRegeling !== true && quartersToAsk.length > 0,
+      // Niet op quartersToAsk.length bij het openen baseren: in een leeg dossier (bestanden laden in de
+      // wizard zelf) zijn de jaren dan nog niet bekend. De lijst zelf wordt hieronder live opgebouwd.
+      kwartalen: vol && korRegeling !== true,
     };
   });
-  // De kwartalenlijst wordt bij het openen vastgezet: een aangevinkt kwartaal verdwijnt anders direct
-  // uit `quartersToAsk` (het heeft dan al een status) en de rij springt weg terwijl je nog aan het klikken bent.
-  const [kwartalenLijst] = useState(() => [...quartersToAsk]);
+  // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt
+  // dan vastgezet: een aangevinkt kwartaal verdwijnt anders direct uit `quartersToAsk` (het heeft dan
+  // al een status) en de rij springt weg terwijl je nog aan het klikken bent.
+  const [kwartalenLijst, setKwartalenLijst] = useState(() => [...quartersToAsk]);
+  const kwartalenVast = useRef(false);
+  const quartersKey = quartersToAsk.map((q) => `${q.year}-${q.kwartaal}`).join(",");
+  useEffect(() => {
+    if (!kwartalenVast.current) setKwartalenLijst([...quartersToAsk]);
+  }, [quartersKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [initialSteps] = useState(() => {
     const list = [];
@@ -106,7 +116,7 @@ export default function SetupWizardModal({
     if (vol && loadFilesFirst) list.push(20);
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
     if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
-    if (needs.andere || needs.spaar) list.push(32);
+    if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
     if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
@@ -136,6 +146,7 @@ export default function SetupWizardModal({
 
   if (remainingSteps.length === 0) return null;
   const currentStepId = remainingSteps[0];
+  if (currentStepId === 36) kwartalenVast.current = true;
   const isLastStep = remainingSteps.length === 1;
 
   const goNext = () => {
@@ -538,7 +549,12 @@ const REKENING_SOORTEN = [
 ];
 const soortLabel = (r) => REKENING_SOORTEN.find((s) => s.k === r.accountType && !!s.spaar === !!r.soort)?.l || (r.accountType === "Zakelijk" ? "Zakelijk" : "Privé");
 
-function Scherm32({ typedNow, zet, needs, goNext, eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening }) {
+function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening }) {
+  // De privé-spaarvraag is alleen zinvol als er een privérekening is geladen.
+  const priveGeladen = sessionFiles.some((f) => typedNow[f] === "Prive");
+  const toonPriveSpaar = needs.spaarPrive && priveGeladen;
+  const priveGekoppeld = typedNow.priveSpaarGekoppeld ?? (zakelijkeSpaarRekening?.priveStatus === "ja" ? true : null);
+  const priveSpaarNaam = typedNow.priveSpaarNaam ?? zakelijkeSpaarRekening?.priveNaam ?? "";
   const lijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
   const spaarGekoppeld = typedNow.spaarGekoppeld ?? (zakelijkeSpaarRekening?.status === "ja" ? true : null);
   const spaarNaam = typedNow.zakelijkeSpaarNaam ?? zakelijkeSpaarRekening?.naam ?? "";
@@ -608,6 +624,23 @@ function Scherm32({ typedNow, zet, needs, goNext, eigenRekeningenExtra, setEigen
         </Sectie>
       )}
 
+      {toonPriveSpaar && (
+        <Sectie
+          titel="Privé-spaarrekening gekoppeld aan je privérekening?"
+          uitleg="Een spaarrekening die bij je privérekening hoort (bijv. een Oranje Spaarrekening): overboekingen daarheen zijn geen uitgave maar interne overboekingen."
+        >
+          <JaNee value={priveGekoppeld === null ? null : priveGekoppeld} onChange={(v) => zet({ priveSpaarGekoppeld: v })}>
+            <input
+              type="text"
+              value={priveSpaarNaam}
+              onChange={(e) => zet({ priveSpaarNaam: e.target.value })}
+              placeholder="Naam zoals in je bankexport (bijv. Oranje Spaarrekening) — optioneel"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </JaNee>
+        </Sectie>
+      )}
+
       <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
       <button
         type="button"
@@ -618,8 +651,15 @@ function Scherm32({ typedNow, zet, needs, goNext, eigenRekeningenExtra, setEigen
             if (e) l = [...lijst, e];
             setEigenRekeningenExtra(l);
           }
-          if (needs.spaar) {
-            setZakelijkeSpaarRekening(spaarGekoppeld === true ? { status: "ja", naam: spaarNaam.trim() || null } : { status: "nee", naam: null });
+          if (needs.spaar || toonPriveSpaar) {
+            const vorig = zakelijkeSpaarRekening || {};
+            const zak = needs.spaar
+              ? (spaarGekoppeld === true ? { status: "ja", naam: spaarNaam.trim() || null } : { status: "nee", naam: null })
+              : { status: vorig.status ?? "nee", naam: vorig.naam ?? null };
+            const prive = toonPriveSpaar
+              ? (priveGekoppeld === true ? { priveStatus: "ja", priveNaam: priveSpaarNaam.trim() || null } : { priveStatus: "nee", priveNaam: null })
+              : { priveStatus: vorig.priveStatus, priveNaam: vorig.priveNaam };
+            setZakelijkeSpaarRekening({ ...zak, ...prive });
           }
           goNext();
         }}
