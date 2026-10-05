@@ -1,5 +1,6 @@
 import { X, Lock } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
+import { displayCategory } from "../../classification/categories.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 // V73 — bij een verschil in "Controle zakelijk ↔ privé": toont precies welke boekingen aan de andere
@@ -33,7 +34,7 @@ export default function OnverklaardeOverboekingenModal({ items, diff, jaar, onRe
                       <p className="font-medium truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
                       <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
                       <p className="text-[10px] text-slate-400 font-mono select-all">
-                        {tx.date.toLocaleDateString("nl-NL")} · {tx.category} · {tx.counterpartyIban || "geen tegenrekening"}
+                        {tx.date.toLocaleDateString("nl-NL")} · {displayCategory(tx.category)} · {tx.counterpartyIban || "geen tegenrekening"}
                       </p>
                     </div>
                     <span className="shrink-0 font-mono text-slate-700 w-24 text-right">{eur(tx.amount)}</span>

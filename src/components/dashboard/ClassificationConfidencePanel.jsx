@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { CATEGORY_COLOR } from "../../classification/categories.js";
+import { CATEGORY_COLOR, displayCategory } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
@@ -83,7 +83,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                     <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
                     <p className="text-[10px] text-slate-400">{tx.confidence.label}</p>
                   </div>
-                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[tx.category] || "bg-slate-200 text-slate-700"}`}>{tx.category}</span>
+                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(tx.category)}</span>
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (
                     <button

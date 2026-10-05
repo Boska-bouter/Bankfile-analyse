@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X, Check, Lock } from "lucide-react";
 import {
-  MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory,
+  MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, soortenVoor,
 } from "../../classification/categories.js";
 import { counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
@@ -44,12 +44,12 @@ export default function UncertainTransactionsModal({
 
   const categorieen = useMemo(() => {
     const c = new Map();
-    for (const g of groepen) c.set(g.eerste.category, (c.get(g.eerste.category) || 0) + 1);
+    for (const g of groepen) c.set(displayCategory(g.eerste.category), (c.get(displayCategory(g.eerste.category)) || 0) + 1);
     return [...c.entries()].sort((x, y) => y[1] - x[1]);
   }, [groepen]);
 
   const getoond = useMemo(() => {
-    const l = groepen.filter((g) => !catFilter || g.eerste.category === catFilter);
+    const l = groepen.filter((g) => !catFilter || displayCategory(g.eerste.category) === catFilter);
     const cmp = sortering === "aantal" ? (x, y) => y.txs.length - x.txs.length
       : sortering === "naam" ? (x, y) => x.naam.localeCompare(y.naam, "nl")
       : (x, y) => y.abs - x.abs;
@@ -80,7 +80,7 @@ export default function UncertainTransactionsModal({
             className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-[11px] font-medium cursor-help"
             title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."
           >
-            <Lock className="h-3 w-3 shrink-0" /> {tx.category}
+            <Lock className="h-3 w-3 shrink-0" /> {displayCategory(tx.category)}
           </span>
         ) : (<>
           <select
@@ -93,15 +93,25 @@ export default function UncertainTransactionsModal({
             ))}
           </select>
           <select
-            value={tx.category}
-            onChange={(e) => onRequestChange(tx, { category: e.target.value, type: tx.type })}
+            value={displayCategory(tx.category)}
+            onChange={(e) => onRequestChange(tx, { category: storedCategoryForChoice(e.target.value, tx.category), type: tx.type })}
             className="shrink-0 rounded-md border border-slate-300 px-1.5 py-1 text-[10px] max-w-[8rem]"
             title="Subtype (bepaalt BTW-percentage en vast/variabel)"
           >
-            {subtypesForMainCategory(mainCategoryOf(tx.category)).map((s) => (
+            {subtypeChoicesFor(mainCategoryOf(tx.category)).map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
+          {soortenVoor(tx.category) && (
+            <select
+              value={tx.category}
+              onChange={(e) => onRequestChange(tx, { category: e.target.value, type: tx.type })}
+              className="shrink-0 rounded-md border border-slate-200 px-1.5 py-1 text-[10px] text-slate-500 max-w-[7rem]"
+              title="Soort — bepaalt het zakelijke percentage per soort"
+            >
+              {soortenVoor(tx.category).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          )}
         </>)}
         <span
           className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${(tx.accountType || tx.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}

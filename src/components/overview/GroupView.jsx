@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory } from "../../classification/categories.js";
+import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -52,7 +52,14 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
         </thead>
         <tbody>
           {MAIN_CATEGORY_ORDER.filter((c) => c in mainTotals).map((c) => {
-            const subtypesPresent = subtypesForMainCategory(c).filter((s) => s in totals);
+            // V76 — privé-subtypes worden samengevoegd tot hun weergavenaam (9 i.p.v. 29 rijen).
+            const subRows = {};
+            for (const s of subtypesForMainCategory(c).filter((x) => x in totals)) {
+              const d = displayCategory(s);
+              const r = (subRows[d] ||= { amount: 0, btw: 0 });
+              r.amount += totals[s]; r.btw += btwByCategory[s] || 0;
+            }
+            const subtypesPresent = Object.keys(subRows);
             const canExpand = subtypesPresent.length > 1;
             const isOpen = expandedMain === c;
             return (
@@ -77,9 +84,9 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                       <td className="py-1 pl-6">
                         <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
-                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s])}</td>
-                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(btwByCategory[s] || 0)}</td>
-                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(totals[s] - (btwByCategory[s] || 0))}</td>
+                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
+                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
+                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(subRows[s].amount - subRows[s].btw)}</td>
                     </tr>
                   ))}
               </Fragment>
@@ -172,7 +179,7 @@ export function DetailTable({
     for (const t of group.items) {
       if (t.counterparty) names.add(t.counterparty);
       names.add(mainCategoryOf(t.category));
-      names.add(t.category);
+      names.add(displayCategory(t.category));
     }
     return [...names];
   }, [group.items]);
@@ -182,7 +189,7 @@ export function DetailTable({
     const q = query.trim().toLowerCase();
     if (q) {
       rows = rows.filter((t) =>
-        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${mainCategoryOf(t.category)}`.toLowerCase().includes(q)
+        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${displayCategory(t.category)} ${mainCategoryOf(t.category)}`.toLowerCase().includes(q)
       );
     }
     const min = amountMin.trim() === "" ? null : Math.abs(parseFloat(amountMin));
@@ -377,7 +384,7 @@ export function DetailTable({
                         className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
                         title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
                       >
-                        <Lock className="h-3 w-3 shrink-0" /> {t.category}
+                        <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
                       </span>
                     ) : (<>
                     <select
@@ -390,15 +397,27 @@ export function DetailTable({
                       ))}
                     </select>
                     <select
-                      value={t.category}
-                      onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
+                      value={displayCategory(t.category)}
+                      onChange={(e) => applyChange(t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
                       className="block mt-1 rounded-md px-1 py-0 text-[10px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
                       title="Subtype (bepaalt BTW-percentage en vast/variabel)"
                     >
-                      {subtypesForMainCategory(mainCategoryOf(t.category)).map((s) => (
+                      {subtypeChoicesFor(mainCategoryOf(t.category)).map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    {soortenVoor(t.category) && (
+                      <select
+                        value={t.category}
+                        onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
+                        className="block mt-0.5 rounded-md px-1 py-0 text-[10px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+                        title="Soort — bepaalt het zakelijke percentage dat je bij Persoonlijke aannames per soort kunt instellen"
+                      >
+                        {soortenVoor(t.category).map((o) => (
+                          <option key={o.key} value={o.key}>{o.label}</option>
+                        ))}
+                      </select>
+                    )}
                     </>)}
                   </td>
                   <td className="px-4 py-2">

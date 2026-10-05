@@ -255,6 +255,33 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "prive-categorieen",
+    titel: "Privé-categorieën (9 keuzes)",
+    inhoud: (
+      <div className="space-y-2">
+        <p>
+          Voor privé-boekingen zijn er negen keuzes in plaats van de vele fijne categorieën van vroeger. Vier horen bij
+          de koppeling met zakelijk: <strong>Prive opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
+          <strong>Terugboeking van prive</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
+          <strong>Incasso, juridisch &amp; schulden</strong> en <strong>Leningen (privé)</strong>.
+        </p>
+        <p>
+          Wat deels zakelijk kan zijn staat in twee groepen: <strong>Prive - wonen &amp; vaste lasten</strong> (huur, energie
+          en water, gemeentelijke kosten) en <strong>Prive - telecom &amp; abonnementen</strong> (mobiel/internet, overige
+          abonnementen, streaming). Bij die twee kun je de <em>soort</em> nog apart kiezen in het kleine tweede
+          keuzeveld, zodat het zakelijke percentage per soort instelbaar blijft (Persoonlijke aannames).
+        </p>
+        <p>
+          Al het overige — boodschappen, webshops, winkels divers, vrije tijd/uit eten/vakantie, medisch, kinderopvang,
+          verzekeringen, hypotheek, toeslagen, alimentatie, overboekingen aan personen, enzovoort — valt onder{" "}
+          <strong>Prive kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
+          divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten zie je de
+          samengevoegde naam. De Excel-export blijft de fijne categorie tonen.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "detailtabel",
     titel: "Detailtabel",
     inhoud: (
