@@ -6,8 +6,13 @@ import ProgressGauge from "./ProgressGauge.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal,
+  werkelijkAangifteDone, werkelijkAangifteTotal, openPoints, openBreakdown,
 }) {
+  // v305 (V27) — "Dossiercontrole" toont als hoofdinformatie het aantal CONCRETE open punten (zie
+  // openPointsOf in App.jsx), het percentage is secundair: "87%" zegt een professional niet wát er
+  // nog moet gebeuren, "4 open punten · 3 controle · 1 instelling" wel. De losse statusregel
+  // "Dossiercontrole: Compleet/Nog niet compleet" rechts is daarom vervallen: naast "25 open punten"
+  // zou "Compleet" elkaar tegenspreken.
   // v298 — op verzoek: de eerdere waarschuwingsregel ("Dossiercontrole ≠ aangifte gedaan") stond
   // ónder dezelfde kaart als de ring, en voegde daardoor volgens de gebruiker zelf niet genoeg toe
   // ("erg onduidelijk"). In plaats van een tekstregel toe te voegen die uitlegt dat de twee dingen
@@ -18,7 +23,10 @@ export default function DashboardHeader({
   // moet gebeuren, los van hoe vol de ring links staat. statusLines wordt hier gefilterd zodat een
   // eventuele "Werkelijke aangifte"-regel daarin (uit dashboardCards "yearStatus") niet dubbel
   // verschijnt naast de nieuwe rechterkaart.
-  const dossierLines = (statusLines || []).filter((l) => l.label !== "Werkelijke aangifte");
+  const dossierLines = (statusLines || []).filter(
+    (l) => l.label !== "Werkelijke aangifte" && !(openPoints != null && l.label === "Dossiercontrole")
+  );
+  const heeftOpenPunten = openPoints != null && openPoints > 0;
   const werkelijkTotal = werkelijkAangifteTotal ?? 0;
   const werkelijkDone = werkelijkAangifteDone ?? 0;
   const werkelijkFrac = werkelijkTotal > 0 ? werkelijkDone / werkelijkTotal : 0;
@@ -45,7 +53,16 @@ export default function DashboardHeader({
               <ProgressGauge pct={pct} accent={accent} label={gaugeLabel ?? `${pct}%`} />
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
-                <span className="text-[11px] text-slate-400">{pct >= 100 ? "gegevens compleet" : "gegevens nog niet compleet"}</span>
+                {openPoints != null ? (
+                  <>
+                    <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
+                      {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
+                    </span>
+                    <span className="text-[10.5px] text-slate-400">{heeftOpenPunten && openBreakdown ? openBreakdown : `${pct}% verwerkt`}</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-slate-400">{pct >= 100 ? "gegevens compleet" : "gegevens nog niet compleet"}</span>
+                )}
               </div>
             </div>
           ) : (

@@ -54,6 +54,7 @@ export default function AppSidebar({
   onToggleHelp,
   saveState,
   lastSavedAt,
+  projectStatus,
   showActies,
   onEditBasisvragen,
   onOpenAangifteberekening,
@@ -203,6 +204,31 @@ export default function AppSidebar({
 
       {/* Autosave-status, Help, Privacy */}
       <div className="flex flex-col gap-2.5 mt-3.5 pt-3 border-t border-white/10">
+        {/* v305 (V27) — projectbestand-status, bewust los van de autosave hieronder: de browseropslag is
+            géén projectbestand. Amber zodra er wijzigingen zijn die nog niet zijn geëxporteerd. */}
+        {projectStatus?.hasData && (() => {
+          const tijd = (d) => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+          const { changes, lastExportAt, loadedName } = projectStatus;
+          const dirty = changes > 0;
+          const tekst = dirty
+            ? `${changes} wijziging${changes === 1 ? "" : "en"} ${
+                lastExportAt ? `sinds export ${tijd(lastExportAt)}` : loadedName ? "sinds het laden van het projectbestand" : "· nog niet als projectbestand opgeslagen"
+              }`
+            : lastExportAt
+            ? `Projectbestand opgeslagen ${tijd(lastExportAt)}`
+            : loadedName
+            ? "Projectbestand geladen"
+            : "Nog geen projectbestand opgeslagen";
+          return (
+            <div
+              className={`flex items-start gap-1.5 text-[10.5px] ${dirty ? "text-amber-300" : "text-slate-500"}`}
+              title="Projectbestand = het exportbestand (Project opslaan). Dit staat los van de automatische browseropslag hieronder."
+            >
+              {dirty ? <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <FileSpreadsheet className="h-3 w-3 mt-0.5 shrink-0" />}
+              <span>{tekst}</span>
+            </div>
+          );
+        })()}
         {saveState && (
           <div className="flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen projectbestand. Gebruik 'Project opslaan' voor een bestand.">
             {saveState === "saving" && (

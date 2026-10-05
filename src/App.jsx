@@ -28,6 +28,7 @@ import {
 } from "./storage/projectStorage.js";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
+import UndoToast from "./components/shared/UndoToast.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
@@ -55,7 +56,7 @@ import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import RollupCard from "./components/dashboard/RollupCard.jsx";
 import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
-import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
+import DetailsPanel, { IndicatieSection } from "./components/dashboard/DetailsPanel.jsx";
 import YearDropdown from "./components/dashboard/YearDropdown.jsx";
 import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
@@ -355,6 +356,18 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
+  // v305 (V27) — projectbestand-status, los van de automatische browseropslag hierboven: hoeveel
+  // wijzigingen er zijn sinds het dossier voor het laatst als projectbestand is geëxporteerd (of
+  // geladen), en wanneer dat was. Zie de teller-effect onder de autosave verderop.
+  const [changesSinceExport, setChangesSinceExport] = useState(0);
+  const [lastExportAt, setLastExportAt] = useState(null);
+  const suppressChangeCountUntilRef = useRef(0);
+  const suppressChangeCount = () => {
+    // Laden/leegmaken/hervatten verandert veel state tegelijk — dat is geen "wijziging" van de
+    // gebruiker. Een tijdvenster (i.p.v. een vlag) zodat het niet blijft hangen als er toevallig
+    // niets daadwerkelijk verandert (bijv. hetzelfde projectbestand twee keer laden).
+    suppressChangeCountUntilRef.current = Date.now() + 1500;
+  };
   const [lastSavedAt, setLastSavedAt] = useState(null); // Date — wanneer de automatische browseropslag voor het laatst is gelukt
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -747,6 +760,7 @@ export default function App() {
         // Niets om te kiezen — gewoon meteen starten, eventuele losse instellingen (zonder
         // bestanden) mogen alsnog ingeladen worden.
         skipNextPersistRef.current = true;
+        suppressChangeCount();
         if (pendingSettings) applySettingsToState(pendingSettings);
         setLoaded(true);
       }
@@ -755,6 +769,7 @@ export default function App() {
   const resumeLastProject = () => {
     const pending = pendingProjectRef.current;
     skipNextPersistRef.current = true;
+    suppressChangeCount();
     if (pending) {
       setParsedFiles(pending.parsedFiles);
       if (pending.settings) applySettingsToState(pending.settings);
@@ -768,6 +783,7 @@ export default function App() {
     // tussentijdse versie wiste hier de browseropslag zonder bevestiging — dat is teruggedraaid:
     // één klik naast "Verder met dit dossier" mag nooit een niet-geëxporteerd dossier vernietigen.)
     skipNextPersistRef.current = true;
+    suppressChangeCount();
     setShowStartupChoice(false);
     setLoaded(true);
   };
@@ -807,6 +823,41 @@ export default function App() {
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     loaded,
   ]);
+
+  // v305 (V27) — telt wijzigingen sinds de laatste export. Zelfde afhankelijkheden als de autosave
+  // hierboven, maar bewust zonder loadedProjectFileName (die verandert bij het exporteren zelf).
+  useEffect(() => {
+    if (!loaded) return;
+    if (Date.now() < suppressChangeCountUntilRef.current) {
+      suppressChangeCountUntilRef.current = 0;
+      setChangesSinceExport(0);
+      return;
+    }
+    setChangesSinceExport((n) => n + 1);
+  }, [
+    parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
+    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
+    businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
+    kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+  ]);
+
+  // v305 (V27) — waarschuwing bij het sluiten/verversen van de pagina zolang er wijzigingen zijn die
+  // nog niet als projectbestand zijn geëxporteerd. (De automatische browseropslag blijft gewoon
+  // bestaan; dit is voor wie op een ander apparaat/browser verder wil of de browserdata wist.)
+  const heeftNietGeexporteerdeWijzigingen = changesSinceExport > 0 && parsedFiles.length > 0;
+  useEffect(() => {
+    if (!heeftNietGeexporteerdeWijzigingen) return;
+    const waarschuw = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", waarschuw);
+    return () => window.removeEventListener("beforeunload", waarschuw);
+  }, [heeftNietGeexporteerdeWijzigingen]);
 
   const handleFiles = async (fileList) => {
     setError(null);
@@ -901,6 +952,10 @@ export default function App() {
       },
     });
   };
+  // v305 (V27) — alleen deze ingrijpende acties houden de opvallende, blijvende "Ongedaan maken"-
+  // kaart in de zijbalk; alle kleine acties krijgen een tijdelijke melding (UndoToast.jsx).
+  const isBigUndoLabel = (label) =>
+    /^(Nieuw dossier|Project geladen|Duplicaten verwijderen|Alle transacties|Bestand ")/.test(label || "");
   const undoLastAction = () => {
     if (!lastActionSnapshot) return;
     const s = lastActionSnapshot.state;
@@ -2705,6 +2760,7 @@ export default function App() {
         title: "Import controle",
         icon: <FileSpreadsheet className="h-3.5 w-3.5" />,
         value: controlerenImportProblemCount,
+        openCount: controlerenImportProblemCount,
         subtitle: controlerenImportProblemCount > 0 ? "bestand(en) met saldo-afwijking" : "Alle saldi kloppen",
         tone: controlerenImportProblemCount > 0 ? "attention" : "ok",
         hint: "Naar de importcontrole",
@@ -2715,6 +2771,7 @@ export default function App() {
         title: "Classificatie zekerheid",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
         value: confidenceSummary.needsReview,
+        openCount: confidenceSummary.needsReview,
         subtitle:
           confidenceSummary.needsReview > 0
             ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren`
@@ -2735,6 +2792,7 @@ export default function App() {
         title: "Herkomst van inkomsten",
         icon: <Users className="h-3.5 w-3.5" />,
         value: pendingIncomeReview.length,
+        openCount: pendingIncomeReview.length,
         subtitle: pendingIncomeReview.length > 0 ? "nog te bepalen (zakelijk/privé)" : "Niets openstaand",
         tone: pendingIncomeReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande herkomst-van-inkomsten bekijken",
@@ -2745,6 +2803,7 @@ export default function App() {
         title: "Overboekingen aan personen",
         icon: <Users className="h-3.5 w-3.5" />,
         value: pendingPersonReview.length,
+        openCount: pendingPersonReview.length,
         subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande overboekingen aan personen bekijken",
@@ -2758,6 +2817,7 @@ export default function App() {
         title: '"Overig" opruimen',
         icon: <HelpCircle className="h-3.5 w-3.5" />,
         value: pendingOverigReview.length,
+        openCount: pendingOverigReview.length,
         subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",
         tone: pendingOverigReview.length > 0 ? "attention" : "ok",
         hint: 'Openstaande "Overig"-tegenpartijen bekijken',
@@ -2771,6 +2831,9 @@ export default function App() {
         title: "Duplicaten",
         icon: <Copy className="h-3.5 w-3.5" />,
         value: pendingDuplicateCount,
+        // Open punt = wat je zelf nog moet beoordelen (de toon van de kaart volgt dezelfde regel);
+        // "alle bevestigd — nog te verwijderen" is een opruimactie, geen open controlepunt.
+        openCount: duplicatePendingBreakdown.onzeker,
         subtitle:
           duplicatePendingBreakdown.onzeker > 0
             ? `${duplicatePendingBreakdown.onzeker} zelf te beoordelen`
@@ -2789,6 +2852,7 @@ export default function App() {
         title: "Factuurperiode",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
         value: periodeMismatches.length,
+        openCount: periodeMismatches.length,
         subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
         tone: periodeMismatches.length > 0 ? "attention" : "ok",
         hint: "Naar de factuurperiode-controle",
@@ -2844,6 +2908,7 @@ export default function App() {
         title: "Leningen",
         icon: <span>📄</span>,
         value: loanSummary.length,
+        openCount: incompleteLoansCount,
         subtitle:
           loanSummary.length === 0
             ? "Geen gevonden"
@@ -2869,6 +2934,7 @@ export default function App() {
         title: "Lease",
         icon: <span>🚗</span>,
         value: leaseSummary.length,
+        openCount: incompleteLeasesCount,
         subtitle:
           incompleteLeasesCount > 0
             ? `🟠 ${incompleteLeasesCount} ${incompleteLeasesCount === 1 ? "contract heeft" : "contracten hebben"} nog ontbrekende gegevens`
@@ -2885,6 +2951,7 @@ export default function App() {
         title: "Activa (afschrijving)",
         icon: <span>🏷️</span>,
         value: activaSummary.length,
+        openCount: incompleteActivaCount,
         subtitle:
           activaSummary.length === 0
             ? "Geen gevonden"
@@ -2935,6 +3002,7 @@ export default function App() {
               {
                 key: "aannames",
                 title: `Persoonlijke aannames ${activeYear}`,
+                openCount: missing,
                 icon: <span>🧑</span>,
                 lines: [
                   {
@@ -2997,6 +3065,7 @@ export default function App() {
                   title: "BTW-instellingen",
                   icon: <Settings className="h-3.5 w-3.5" />,
                   value: "!",
+                  openCount: (korRegeling === null ? 1 : 0) + (btwVerlegd === null ? 1 : 0),
                   subtitle: korRegeling === null ? "KOR-vraag nog niet beantwoord" : "BTW-verlegd-vraag nog niet beantwoord",
                   tone: "attention",
                   hint: "Naar de BTW-instellingen",
@@ -3542,17 +3611,29 @@ export default function App() {
   // dan gewoon een leeg/nul dashboard i.p.v. dat het hele linkermenu zijn navigatie verliest.
   const tabsVisible = true;
 
-  // Badges op de Controleren/Instellingen-tab in AppSidebar.jsx: aantal kaarten dat aandacht nodig
-  // heeft (tone "attention" of "risk"), zelfde soort telling als eerder de losse tegelkleuren in
-  // DashboardOverview.jsx lieten zien — nu vooraan zichtbaar in de zijbalk i.p.v. pas na openklikken.
+  // Badges op de Controleren/Instellingen-tab in AppSidebar.jsx en de "open punten" in de
+  // dashboardkop (v305, V27): het aantal CONCRETE open punten — de som van `openCount` over de kaarten
+  // die aandacht vragen (tone "attention"/"risk") — niet meer het aantal kaarten. Voorheen kon
+  // "Controleren 1" betekenen: 1 kaart, terwijl er 25 inkomsten te beoordelen waren. Een kaart zonder
+  // eigen `openCount` telt als 1 punt.
+  const openPointsOf = (c) =>
+    c.tone === "attention" || c.tone === "risk" ? (typeof c.openCount === "number" ? c.openCount : 1) : 0;
   const controlerenBadge = useMemo(
-    () => controlerenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").length,
+    () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
     [controlerenDashboardCards]
   );
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").length,
+    () => instellingenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
     [instellingenDashboardCards]
   );
+
+  const dossierOpenPoints = controlerenBadge + instellingenBadge;
+  const dossierOpenBreakdown = [
+    controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
+    instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   // Fase 1, dashboard-restyling (Stijl F) — de 4 samenvattende categorie-kaarten bovenaan Overzicht
   // ("Nog te controleren"/"Nog in te stellen"/"Resultaten"/"Automatische herkenning" in het mockup).
@@ -3564,14 +3645,14 @@ export default function App() {
     () =>
       controlerenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
+        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
     [controlerenDashboardCards]
   );
   const inTeStellenItems = useMemo(
     () =>
       instellingenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: c.value, onClick: c.onClick })),
+        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
     [instellingenDashboardCards]
   );
   const resultatenItems = useMemo(
@@ -3804,12 +3885,16 @@ export default function App() {
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
+    setChangesSinceExport(0);
+    setLastExportAt(new Date());
   };
 
   // ---- Project laden vanaf een bestand ----
   const loadProjectFile = async (file) => {
     try {
       const project = await readProjectFile(file);
+      suppressChangeCount();
+      setLastExportAt(null);
       setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
       setAccountTypeByFile(project.accountTypeByFile || {});
       setOverridesByCounterparty(migrateOverridesCategories(project.overridesByCounterparty));
@@ -3960,6 +4045,8 @@ export default function App() {
   };
   const doClearAllData = async () => {
     snapshotBeforeAction("Nieuw dossier");
+    suppressChangeCount();
+    setLastExportAt(null);
     setExpandedCardKeys({});
     setParsedFiles([]);
     setAccountTypeByFile({});
@@ -4120,10 +4207,11 @@ export default function App() {
         onToggleHelp={() => setShowHelp((v) => !v)}
         saveState={saveState}
         lastSavedAt={lastSavedAt}
+        projectStatus={{ hasData: parsedFiles.length > 0, changes: changesSinceExport, lastExportAt, loadedName: loadedProjectFileName }}
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
-        lastActionSnapshot={lastActionSnapshot}
+        lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
         onDismissLastAction={() => setLastActionSnapshot(null)}
       />
@@ -4298,6 +4386,8 @@ export default function App() {
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            openPoints={activeYear ? dossierOpenPoints : null}
+            openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4363,6 +4453,22 @@ export default function App() {
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
+
+          <IndicatieSection
+            year={activeYear}
+            rechtsvorm={rechtsvorm}
+            dashboardAangifteIndicatie={dashboardAangifteIndicatie}
+            vpbIndicatie={dashboardVpbIndicatie}
+            vpbBreakdown={dashboardVpbBreakdown}
+            winst={yearlySummary?.winst}
+            previousWinst={previousYearlySummary?.winst}
+            showTrend={showJaaroverzichtTrend}
+            aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
+            onShowFullCalculation={() => {
+              setShowAangifteMeerdereJaren(false);
+              setShowAangifteYearPicker(true);
+            }}
+          />
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
@@ -4504,6 +4610,8 @@ export default function App() {
             title="Controleren"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            openPoints={activeYear ? dossierOpenPoints : null}
+            openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4662,6 +4770,8 @@ export default function App() {
             title="Instellingen"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Laad een bankbestand om te beginnen"}
             pct={activeYear ? yearlyProgress[activeYear]?.pct : null}
+            openPoints={activeYear ? dossierOpenPoints : null}
+            openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
@@ -4912,6 +5022,11 @@ export default function App() {
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
+      <UndoToast
+        snapshot={lastActionSnapshot && !isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
+        onUndo={undoLastAction}
+        onDismiss={() => setLastActionSnapshot(null)}
+      />
       </div>
     </div>
   );
