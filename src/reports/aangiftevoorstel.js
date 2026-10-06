@@ -287,6 +287,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar);
 
   const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+  // Alle vier kwartalen tonen, ook als er in een kwartaal niets te betalen of terug te vragen is (dan € 0,00).
+  const kwartalenVol = kwartalen.length ? [1, 2, 3, 4].map((n) => kwartalen.find((q) => q.kwartaal === n) || { kwartaal: n, verschuldigdBtw21: 0, verschuldigdBtw9: 0, voorbelasting: 0 }) : [];
 
   // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
   // checklist in de app zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
@@ -428,11 +430,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     kwartalen.length > 0
       ? `
   <div class="btw-kaart">
-    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
-    <tbody><tr><td>Saldo</td>${kwartalen
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalenVol.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
+    <tbody><tr><td>Saldo</td>${kwartalenVol
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-        return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+        return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
       })
       .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
@@ -560,16 +562,37 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ib.leaseAutoKosten && ib.leaseAutoKosten.leaseRenteTotaal > 0
         ? ` Rente op de auto-lease (${eur(ib.leaseAutoKosten.leaseRenteTotaal)}) staat bij "Financiële baten en lasten", niet hier — dat is een financieringskost, geen autokostenpost, en telt niet mee in deze aftopping.`
         : "";
+    // Korte, duidelijke tekst WAT er bij de auto als aftrek is verrekend (op verzoek): per situatie.
+    const kmDec = (n) => Number(n).toFixed(2).replace(".", ",");
+    const autoContracten = (ib.leaseAutoKosten?.contracten || []).filter((c) => c.soort === "auto");
+    const bronnen = new Set(autoContracten.map((c) => c.bron));
+    const bijtellingTekst = (c) => (c.privegebruikMeerDan500km
+      ? `privégebruik > 500 km: bijtelling ${c.bijtellingspercentage ? c.bijtellingspercentage + "% van " + eur(c.cataloguswaarde) + " " : ""}in mindering gebracht${onttrekking < normaleBijtelling && normaleBijtelling > 0 ? " (afgetopt op de autokosten)" : ""}`
+      : "privégebruik ≤ 500 km: geen bijtelling");
+    const autoUitleg = [];
+    if (autoStatus?.[year] === "prive" && autoContracten.length === 0) {
+      autoUitleg.push(kmVergoedingForYear
+        ? `Privéauto zakelijk gebruikt: ${kmVergoedingForYear.zakelijkeKilometers} km × € ${kmDec(kmVergoedingForYear.vergoedingPerKm)} per km = ${eur(kmVergoedingForYear.bedrag)} aftrek (bij Overige bedrijfskosten); werkelijke autokosten tellen niet mee.`
+        : "Privéauto zakelijk gebruikt, maar geen kilometers ingevuld — daardoor nog geen autoaftrek.");
+    }
+    for (const c of autoContracten) {
+      if (c.bron === "financieel") autoUitleg.push(`Financial lease${c.leaseName ? " (" + c.leaseName + ")" : ""}: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
+      else if (c.bron === "operational") autoUitleg.push(`Operational lease: leasetermijnen en autokosten zijn volledig aftrekbaar; ${bijtellingTekst(c)}.`);
+      else if (c.bron === "koop") autoUitleg.push(`Auto in eigendom: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
+    }
+    const autoUitlegHtml = autoUitleg.length ? `<p class="toelichting"><strong>Verrekend als aftrek:</strong> ${autoUitleg.join(" ")}</p>` : "";
     const autoDetailHtml = !heeftBijtelling
       ? `
   <div class="subrubriek"><span>Auto — autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
-  ${totaleAutokosten > 0 ? `<p class="toelichting">Volledig aftrekbaar — er is dit jaar geen bijtelling wegens privégebruik van toepassing.${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
+  ${autoUitlegHtml}
+  ${totaleAutokosten > 0 ? `<p class="toelichting">${autoUitleg.length ? "" : "Volledig aftrekbaar — geen bijtelling van toepassing. "}${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
       : `
   <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
   <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten${normaleBijtelling > onttrekking ? `; werkelijke bijtelling ${eur(normaleBijtelling)}` : ""})</span><span class="num">- ${eur(onttrekking)}</span></div>
   <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
+  ${autoUitlegHtml}
   <p class="toelichting">${aftrekbareAutokosten <= 0 ? "Bij deze aftopping is per saldo niets van de autokosten dit jaar aftrekbaar. " : ""}${
         gemengdLeaseWaarschuwing
           ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de app berekent deze nu tegen de afschrijving van auto én machine samen. "
@@ -656,7 +679,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-          return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+          return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
         })
         .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>

@@ -82,6 +82,7 @@ export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardSta
   // weergave, ongeacht of de auto financieel geleased, gekocht, of operational geleased is.
   const contracten = [{
     leaseKey: "auto-op-de-zaak", leaseName: soort === "koop" ? "Auto (eigendom)" : "Auto (operational lease)", soort: "auto",
+    bron: soort,
     afschrijving, leaseRente: 0, cataloguswaarde: details.cataloguswaarde || null, bijtellingspercentage: details.bijtellingspercentage || null,
     privegebruikMeerDan500km, normaleBijtelling, kenteken: null, aantalGekoppeldeSegmenten: 1,
   }];

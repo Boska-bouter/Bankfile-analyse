@@ -250,9 +250,9 @@ export function DetailTable({
   return (
     <div className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <div className="p-4 border-b border-slate-100">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detail ({filteredItems.length} van {group.items.length})</h3>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Detail ({filteredItems.length} van {group.items.length})</h3>
             {onOpenHelp && <HelpHint chapter="detailtabel" onOpen={onOpenHelp} />}
             {onToggleExpand && (
               <button onClick={onToggleExpand} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700" title={isExpanded ? "Terug naar naast elkaar" : "Deze tabel over de volle breedte tonen"}>
@@ -264,8 +264,12 @@ export function DetailTable({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" suggestions={searchSuggestions} />
+          <div className="flex-1 min-w-0">
+            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-full" suggestions={searchSuggestions} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <div className="contents">
             <div className="relative shrink-0" ref={amountWrapRef}>
               <button
                 ref={amountFilterBtnRef}

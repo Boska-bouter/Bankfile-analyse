@@ -6,7 +6,7 @@ import { eur } from "../../utils/amounts.js";
 // alleen groter en met de extra regels (Belastbare winst, Totaal) die de mockup toont. Alleen
 // relevant bij zzp/eenmanszaak (rechtsvorm !== "bv"); voor een BV bestaat deze doorrekening niet op
 // deze manier (zie App.jsx).
-export default function IndicatieveAangifteCard({ year, winst, indicatie, showTrend, prevWinst, onShowFullCalculation }) {
+export default function IndicatieveAangifteCard({ year, winst, indicatie, breakdown, showTrend, prevWinst, onShowFullCalculation }) {
   if (!indicatie) return null;
   // v292 — "Totaal belasting en premies" hield tot nu toe geen rekening met de heffingskorting: die
   // verlaagt de daadwerkelijk te betalen IB (zie ook "Indicatieve IB ná heffingskortingen" in het
@@ -20,7 +20,24 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, showTr
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col gap-4">
       <h4 className="text-sm font-bold text-slate-900">Indicatieve aangifte {year}</h4>
 
-      <div className="grid grid-cols-2 gap-3">
+      {breakdown && (
+        <div className="space-y-1 text-[12.5px] text-slate-500">
+          <div className="flex items-center justify-between">
+            <span>Omzet bruto (incl. BTW{breakdown.toonOmzetInclBtw ? `, ${breakdown.btwTariefLabel}` : ""})</span>
+            <span className="font-semibold text-slate-800">{eur(breakdown.omzetInclBtw)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Omzet netto (excl. BTW)</span>
+            <span className="font-semibold text-slate-800">{eur(breakdown.omzetExclBtw)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Zakelijke kosten (netto)</span>
+            <span className="font-semibold text-slate-800">− {eur(breakdown.zakelijkeKosten)}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
         <div>
           <p className="text-[11px] text-slate-400">Winst uit onderneming</p>
           <p className="text-xl font-bold text-slate-900">{eur(winst)}</p>

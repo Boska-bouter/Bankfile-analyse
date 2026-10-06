@@ -329,6 +329,7 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
 
       contracten.push({
         leaseKey: lease.key, leaseName: lease.name, soort: primary.soort,
+        bron: "financieel",
         afschrijving, leaseRente, cataloguswaarde, bijtellingspercentage, privegebruikMeerDan500km, normaleBijtelling,
         // Alleen relevant voor weergave/toelichting in het aangiftevoorstel: is dit een gecombineerde
         // rij van meerdere aan elkaar gekoppelde contractsegmenten (zelfde kenteken)?
