@@ -1,3 +1,4 @@
+import { APP_RELEASE } from "../../version.js";
 import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
@@ -265,6 +266,7 @@ export default function AppSidebar({
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="text-[11px] text-slate-500">Uw gegevens blijven lokaal</span>
         </div>
+        <div className="text-[10.5px] text-slate-500" title="Versie van de app">Release {APP_RELEASE}</div>
       </div>
     </div>
   );
