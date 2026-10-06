@@ -27,6 +27,8 @@ import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
   loadPersistedSettings, persistSettings, clearPersistedSettings,
 } from "./storage/projectStorage.js";
+import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossier/dossierMigraties.js";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
 import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
@@ -111,52 +113,6 @@ import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 // Indicatieve aangifteberekening (zzp en BV) uit diezelfde tax/-berekeningen.
 // ---------------------------------------------------------------------------
 
-// Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een dossierbestand. Ontbreekt
-// het veld helemaal (een bestand/instellingen van vóór deze functie bestond) dan is dat altijd een
-// bestaand zzp-dossier — direct "zzp", nooit de nieuwe vraag. Staat het veld er al wel (ook al is
-// de waarde nog null, dus nog niet beantwoord), dan wordt die waarde gerespecteerd.
-function resolveRechtsvorm(obj) {
-  if (!obj || !Object.prototype.hasOwnProperty.call(obj, "rechtsvorm")) return "zzp";
-  return typeof obj.rechtsvorm === "string" ? obj.rechtsvorm : null;
-}
-
-// Zelfde migratie-redenering als resolveRechtsvorm hierboven: ontbreekt het veld helemaal (een
-// bestand van vóór deze vraag bestond), dan is er nooit een holding-vraag gesteld — behandel dat
-// als "nee" (nooit meer vragen). Staat het veld er al wel (ook al is de waarde nog null, dus nog
-// niet beantwoord), dan wordt die waarde gerespecteerd.
-function resolveHeeftHolding(obj) {
-  if (!obj || !Object.prototype.hasOwnProperty.call(obj, "heeftHolding")) return false;
-  return typeof obj.heeftHolding === "boolean" ? obj.heeftHolding : null;
-}
-
-// mergeCategoryRules/mergeBtwRates migreren een oude categorienaam (bijv. "Boekhouder & advies" →
-// "Boekhouder, accountant & administratie") al voor de categorieregels en de BTW-tarieven, maar
-// overridesByCounterparty/overridesByRow zijn losse, per-transactie opgeslagen keuzes die dezelfde
-// oude naam net zo goed nog letterlijk kunnen bevatten (bijv. een handmatige override die vóór de
-// hernoeming is gezet). Zonder deze migratie blijven die transacties voor altijd onder de oude,
-// niet meer bestaande naam hangen — ze vallen dan uit de win-en-verliesrekening in "Nog niet
-// ingedeeld", ook al is er geen categorisatieprobleem, alleen een verouderde naam.
-function migrateOverridesCategories(overrides) {
-  if (!overrides || typeof overrides !== "object") return overrides || {};
-  const out = {};
-  for (const [key, val] of Object.entries(overrides)) {
-    if (!val || typeof val !== "object" || !val.category) {
-      out[key] = val;
-      continue;
-    }
-    // "Terugboeking van prive" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
-    // (geld terug náár zakelijk) — sindsdien heet dat aan de privékant "Terugboeking naar zakelijk"
-    // (zie classify.js), zodat de twee kanten van deze boeking niet meer dezelfde naam delen. De
-    // generieke migrateLegacyCategoryName hieronder kan deze migratie niet doen (die kent geen
-    // `type`), dus dit specifieke geval eerst, vóór de generieke hernoeming.
-    const category = val.category === "Terugboeking van prive" && val.type === "Prive"
-      ? "Terugboeking naar zakelijk"
-      : migrateLegacyCategoryName(val.category);
-    out[key] = { ...val, category };
-  }
-  return out;
-}
-
 // V46 — zie `classified`: categorieën die in een privé-only dossier aan de zakelijke kant gespiegeld worden.
 // Alle %-splitsbare kostencategorieën behalve de auto-categorieën (die volgen de wizard).
 const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
@@ -164,18 +120,6 @@ const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
   "Software & Online diensten", "Boekhouder, accountant & administratie",
 ];
 const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven"];
-
-// V62 — de oude keuze "beide" bestaat niet meer; een oud dossier met "beide" wordt "prive" (privéauto zakelijk gebruikt).
-function normalizeAutoStatus(v) {
-  if (!v || typeof v !== "object") return {};
-  const out = {};
-  for (const [k, x] of Object.entries(v)) out[k] = x === "beide" ? "prive" : x;
-  return out;
-}
-function normalizeAutoWizard(v) {
-  if (!v || typeof v !== "object") return v ?? null;
-  return v.status === "beide" ? { ...v, status: "prive", soort: null } : v;
-}
 
 export default function App() {
   useToonFijn(); // V82 — herrender bij de schakelaar "fijne categorieën"
@@ -4183,100 +4127,31 @@ export default function App() {
   };
 
   // ---- Dossier laden vanaf een bestand ----
-  const loadProjectFile = async (file) => {
-    try {
-      const project = await readProjectFile(file);
-      suppressChangeCount();
-      setLastExportAt(null);
-      setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
-      setAccountTypeByFile(project.accountTypeByFile || {});
-      setOverridesByCounterparty(migrateOverridesCategories(project.overridesByCounterparty));
-      setOverridesByRow(migrateOverridesCategories(project.overridesByRow));
-      if (Array.isArray(project.categoryRules)) setCategoryRules(mergeCategoryRules(project.categoryRules));
-      setCategoryBtwRates(mergeBtwRates(project.categoryBtwRates, project.btwRatesVersion, migrateLegacyCategoryName));
-      setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
-      setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
-      setRechtsvorm(resolveRechtsvorm(project));
-      setHeeftHolding(resolveHeeftHolding(project));
-      setHoldingBoekingen(project.holdingBoekingen && typeof project.holdingBoekingen === "object" ? project.holdingBoekingen : {});
-      setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
-      setDismissedDuplicateNotice(!!project.dismissedDuplicateNotice);
-      setBusinessKeywords(Array.isArray(project.businessKeywords) ? project.businessKeywords : []);
-      setBusinessExpenseKeywords(Array.isArray(project.businessExpenseKeywords) ? project.businessExpenseKeywords : []);
-      setReviewedIncomeKeys(Array.isArray(project.reviewedIncomeKeys) ? project.reviewedIncomeKeys : []);
-      setReviewedPersonKeys(Array.isArray(project.reviewedPersonKeys) ? project.reviewedPersonKeys : []);
-      setReviewedOverigKeys(Array.isArray(project.reviewedOverigKeys) ? project.reviewedOverigKeys : []);
-      setKwartaalStatus(project.kwartaalStatus && typeof project.kwartaalStatus === "object" ? project.kwartaalStatus : {});
-      setVoorbelastingExcluded(Array.isArray(project.voorbelastingExcluded) ? project.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
-      setPeriodeQuarterOverrides(project.periodeQuarterOverrides && typeof project.periodeQuarterOverrides === "object" ? project.periodeQuarterOverrides : {});
-      setReviewedPeriodeKeys(Array.isArray(project.reviewedPeriodeKeys) ? project.reviewedPeriodeKeys : []);
-      setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
-      // Oudere dossierbestanden bewaarden alleen een simpel rentepercentage per lening
-      // ("loanInterestRates"), zonder de volledige leningbedrag/startdatum-gegevens. Die
-      // vullen we hier aan in loanDetails (alleen als daar nog geen rente in staat), zodat
-      // een ouder dossierbestand niet zomaar de eerder ingevulde rente verliest.
-      if (project.loanInterestRates && typeof project.loanInterestRates === "object") {
-        setLoanDetails((prev) => {
-          const merged = { ...prev };
-          for (const [key, rate] of Object.entries(project.loanInterestRates)) {
-            if (merged[key]?.rente == null) merged[key] = { ...(merged[key] || {}), rente: Number(rate) };
-          }
-          return merged;
-        });
-      }
-      setLeaseDetails(project.leaseDetails && typeof project.leaseDetails === "object" ? project.leaseDetails : {});
-      setLeaseMergedInto(project.leaseMergedInto && typeof project.leaseMergedInto === "object" ? project.leaseMergedInto : {});
-      setActivaDetails(project.activaDetails && typeof project.activaDetails === "object" ? project.activaDetails : {});
-      setVerwachteLease(project.verwachteLease ?? null);
-      setVerwachteLeaseOverig(project.verwachteLeaseOverig ?? null);
-      setVerwachteLening(project.verwachteLening ?? null);
-      setVerwachteAOV(project.verwachteAOV ?? null);
-      setAutoWizardStatus(normalizeAutoWizard(project.autoWizardStatus));
-      setAutoActivaDetails(project.autoActivaDetails && typeof project.autoActivaDetails === "object" ? project.autoActivaDetails : {});
-      setKmVergoedingDetailsState(project.kmVergoedingDetails && typeof project.kmVergoedingDetails === "object" ? project.kmVergoedingDetails : {});
-      setHeeftVoorraad(project.heeftVoorraad ?? null);
-      setEigenNamen(project.eigenNamen ?? null);
-      setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
-      setZakelijkeSpaarRekening(project.zakelijkeSpaarRekening ?? null);
-      setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
-      setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
-      setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
-      setVerwachteAangeboden(project.verwachteAangeboden && typeof project.verwachteAangeboden === "object" ? project.verwachteAangeboden : {});
-      setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
-      setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
-      setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
-      setTransactionNotes(project.transactionNotes && typeof project.transactionNotes === "object" ? project.transactionNotes : {});
-      setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
-      setZvwStatus(project.zvwStatus && typeof project.zvwStatus === "object" ? project.zvwStatus : {});
-      setVpbStatus(project.vpbStatus && typeof project.vpbStatus === "object" ? project.vpbStatus : {});
-      setZelfstandigenaftrekStatusState(project.zelfstandigenaftrekStatus && typeof project.zelfstandigenaftrekStatus === "object" ? project.zelfstandigenaftrekStatus : {});
-      // Een dossierbestand zonder deze vlag is opgeslagen vóórdat deze regel bestond — behoud dan het
-      // oude gedrag (onbeantwoord urencriterium-jaar = "ja") zodat een eerder gedeeld/afgedrukt cijfer
-      // niet met terugwerkende kracht verandert. Alleen een bestand dat de vlag al draagt volgt de
-      // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
-      setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
-      setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
-      setAutoStatusState(normalizeAutoStatus(project.autoStatus));
-      setHuurZakelijkPercentageStatusState(project.huurZakelijkPercentageStatus && typeof project.huurZakelijkPercentageStatus === "object" ? project.huurZakelijkPercentageStatus : {});
-      setEnergieZakelijkPercentageStatusState(project.energieZakelijkPercentageStatus && typeof project.energieZakelijkPercentageStatus === "object" ? project.energieZakelijkPercentageStatus : {});
-      setGemeentelijkeKostenZakelijkPercentageStatusState(project.gemeentelijkeKostenZakelijkPercentageStatus && typeof project.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? project.gemeentelijkeKostenZakelijkPercentageStatus : {});
-      setCategoryZakelijkPercentageState(project.categoryZakelijkPercentage && typeof project.categoryZakelijkPercentage === "object" ? project.categoryZakelijkPercentage : {});
-      setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
-      setLoadedProjectFileName(file.name);
-      // v286 — zie ook handleFiles hierboven: alle uitklapbare kaarten beginnen ingeklapt bij het
-      // laden van een (ander) project, i.p.v. een kaart die van een vorig dossier in deze sessie nog
-      // openstond gewoon open te laten staan.
-      setExpandedCardKeys({});
-      setActiveTab("overzicht"); // V52 — na laden altijd beginnen op Overzicht
-      // V89 — "ga verder waar je was": positie bij het laatste opslaan, alleen als die niet gewoon Overzicht was
-      const rp = project.resumePositie;
-      setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") ? rp : null);
-      setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
-      setMaxStappen(0);
-    } catch (e) {
-      setError(e.message || String(e));
-    }
+  const dossierCtx = {
+    suppressChangeCount, snapshotBeforeAction,
+    setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
+    setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
+    setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
+    setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys,
+    setDialog, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra,
+    setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints,
+    setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding,
+    setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus,
+    setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus,
+    setLastExportAt, setLeaseDetails, setLeaseDetailsModalKey, setLeaseMergedInto,
+    setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey, setManualWizardOpen,
+    setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections,
+    setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
+    setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
+    setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState,
+    setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
+    setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
+    setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
+    setZvwStatus,
   };
+  const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
+  const doClearAllData = (askWizard = false) => wisDossier(dossierCtx, askWizard);
 
   // ---- Dossier laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
   // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
@@ -4296,93 +4171,6 @@ export default function App() {
   // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
-  const doClearAllData = async (askWizard = false) => {
-    snapshotBeforeAction("Nieuw dossier");
-    setActiveTab("overzicht"); // V52 — nieuw dossier begint altijd op Overzicht
-    suppressChangeCount();
-    setLastExportAt(null);
-    setExpandedCardKeys({});
-    setParsedFiles([]);
-    setAccountTypeByFile({});
-    setOverridesByCounterparty({});
-    setOverridesByRow({});
-    setCategoryRules(DEFAULT_RULES);
-    setCategoryBtwRates(DEFAULT_BTW_RATES);
-    setBtwVerlegd(null);
-    setKorRegeling(null);
-    setRechtsvorm(null);
-    setHeeftHolding(null);
-    setHoldingBoekingen({});
-    setExcludedDuplicateFingerprints([]);
-    setDismissedDuplicateNotice(false);
-    setExcludedManualFingerprints([]);
-    setTransactionNotes({});
-    setReviewFileModal(null);
-    setBusinessKeywords([]);
-    setBusinessExpenseKeywords([]);
-    setReviewedIncomeKeys([]);
-    setReviewedPersonKeys([]);
-    setReviewedOverigKeys([]);
-    setKwartaalStatus({});
-    setVoorbelastingExcluded(DEFAULT_VOORBELASTING_EXCLUDED);
-    setPeriodeQuarterOverrides({});
-    setReviewedPeriodeKeys([]);
-    setLoanDetails({});
-    setLeaseDetails({});
-    setLeaseMergedInto({});
-    setActivaDetails({});
-    setConfirmedLeaseTypeKeys([]);
-    setFixedCategories(DEFAULT_FIXED_CATEGORIES);
-    setIbStatus({});
-    setZvwStatus({});
-    setVpbStatus({});
-    setOpeningBalanceCorrections({});
-    // v271 — deze 8 velden ontbraken hier: na "Wis alles" bleven ze stilzwijgend op hun oude waarde
-    // staan (van vóór het wissen), waardoor bij het laden van een nieuw/ander dossier de wizard
-    // sommige vragen ten onrechte oversloeg (bijv. urencriterium, stap 18, wordt overgeslagen zodra
-    // zelfstandigenaftrekStatus niet leeg is) en "Persoonlijke aannames" leek al deels ingevuld met
-    // gegevens van het vorige, inmiddels gewiste dossier.
-    setZelfstandigenaftrekStatusState({});
-    setStartersaftrekStatusState({});
-    setAutoStatusState({});
-    setAutoWizardStatus(null);
-    setAutoActivaDetails({});
-    setKmVergoedingDetailsState({});
-    setHuurZakelijkPercentageStatusState({});
-    setCategoryZakelijkPercentageState({});
-    setVerwachteLease(null);
-    setVerwachteLeaseOverig(null);
-    setVerwachteLening(null);
-    setVerwachteAOV(null);
-    setHeeftVoorraad(null);
-    setEigenNamen(null);
-    setEigenRekeningenExtra(null);
-    setZakelijkeSpaarRekening(null);
-    setOpdrachtgeversGevraagd(null);
-    setIncomeBtwTarieven(null);
-    setMeerdereTarievenBevestigd(false);
-    setVerwachteMatchSuggestie(null);
-    setVerwachteAangeboden({});
-    setLoanDetailsModalKey(null);
-    setLeaseDetailsModalKey(null);
-    setActivaDetailsModalKey(null);
-    setAangiftevoorstelPreview(null);
-    setShowAangifteYearPicker(false);
-    setSelectedAangifteYears([]);
-    setActiveYear(null);
-    setLoadedProjectFileName(null);
-    setError(null);
-    await clearPersistedData();
-    await clearPersistedSettings();
-    setSaveState("idle");
-    if (askWizard === true) {
-      setDialog({
-        title: "Wizard starten?",
-        message: <p>Het nieuwe dossier is leeg. Begin met het laden van je bankbestanden en beantwoord daarna de basisvragen (rechtsvorm, BTW, KOR enz.).</p>,
-        actions: [{ label: "Wizard starten", variant: "primary", onClick: () => setManualWizardOpen(true) }],
-      });
-    }
-  };
   const { startLoadProject, clearAllData } = useDossierDialogen({
     parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
     setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
