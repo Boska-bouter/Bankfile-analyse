@@ -3527,48 +3527,8 @@ export default function App() {
           onOpenHelp={setHelpPopupChapter}
         />
       ),
-      withExpand(
-        {
-          key: "categorieen",
-          title: "Categorieën",
-          icon: <CardIcon name="chart" />,
-          tone: "neutral",
-          subtitle: "Categorieoverzicht zakelijk en privé bekijken",
-          hint: "Naar de categorieoverzichten",
-          helpChapter: "categorieen-overzicht",
-        },
-        "categorieen",
-        <div className="grid md:grid-cols-2 gap-4">
-          <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-          <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
-        </div>
-      ),
-      withExpand(
-        {
-          key: "aansluitingDetail",
-          title: "Aansluiting & detail",
-          icon: <CardIcon name="link" />,
-          tone: "neutral",
-          subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
-          hint: "Naar de aansluitcontrole en detailtabellen",
-        },
-        "aansluitingDetail",
-        <AansluitingDetailPanel
-          detailsRef={detailsSectionRef}
-          zakGroupForYear={zakGroupForYear}
-          priGroupForYear={priGroupShown}
-          priveRekeningGeladen={priveRekeningGeladen}
-          zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-          expandedTable={expandedTable}
-          onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
-          onRequestCategoryChange={requestCategoryChange}
-          onConfirmCorrect={confirmClassificationCorrect}
-          fingerprintByTxId={fingerprintByTxId}
-          transactionNotes={transactionNotes}
-          onSetNote={setTransactionNote}
-          onOpenHelp={setHelpPopupChapter}
-        />
-      ),
+      // V86 — de kaarten "Categorieën" en "Aansluiting & detail" zijn vervallen: hun inhoud (categorie-
+      // overzichten + detailtabellen) staat al standaard zichtbaar onder deze kaarten.
       // v283 — de "Controle overboeking zakelijk ↔ privé"-banner stond voorheen alleen ín de
       // uitgeklapte "Aansluiting & detail"-kaart hierboven; op verzoek nu ook als eigen, altijd
       // zichtbare "box" ernaast — zelfde berekening als voorheen in AansluitingDetailPanel.jsx (nu
