@@ -49,6 +49,7 @@ export default function DetailsPanel({
   rechtsvorm,
   vpbIndicatie,
   vpbBreakdown,
+  omzetBreakdown,
   holdingCard,
   belastingTotaal,
   winst,
@@ -126,6 +127,7 @@ export default function DetailsPanel({
                 year={year}
                 winst={winst}
                 indicatie={dashboardAangifteIndicatie}
+                breakdown={omzetBreakdown}
                 showTrend={showTrend}
                 prevWinst={previousWinst}
                 onShowFullCalculation={onShowFullCalculation}

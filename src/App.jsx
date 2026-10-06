@@ -2279,7 +2279,7 @@ export default function App() {
   // hetzelfde totaal via een andere optelling — inkoop/afschrijving/overig/rente — uitrekent), zodat
   // dit bedrag hier altijd exact aansluit bij "Resultaat vóór Vpb" hierboven.
   const dashboardVpbBreakdown = useMemo(() => {
-    if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
+    if (!activeYear || !yearlySummary) return null;
     const omzetExclBtw = yearlySummary.zakelijkeInkomstenNetto || 0;
     const btwOverOmzetTotaal = quarterlyBtwData.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
     const omzetInclBtw = omzetExclBtw + btwOverOmzetTotaal;
@@ -4899,6 +4899,7 @@ export default function App() {
               rechtsvorm={rechtsvorm}
               vpbIndicatie={dashboardVpbIndicatie}
               vpbBreakdown={dashboardVpbBreakdown}
+              omzetBreakdown={dashboardVpbBreakdown}
               holdingCard={holdingSummaryCard}
               belastingTotaal={belastingTotaalJaar}
               winst={yearlySummary?.winst}
