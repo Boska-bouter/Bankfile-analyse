@@ -4825,12 +4825,7 @@ export default function App() {
               </div>
               <div className="h-1.5 bg-teal-900/40"><div className="h-full bg-emerald-300 transition-all" style={{ width: `${pct}%` }} /></div>
             </div>
-          ) : (
-            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-3 text-white shadow-lg">
-              <span className="text-base font-bold">✓ Alles afgehandeld <span className="font-normal text-sm">— er staan geen open punten meer</span></span>
-              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-white text-emerald-800 font-bold px-5 py-1.5 text-sm">Naar Overzicht →</button>
-            </div>
-          );
+          ) : null; // V25 — alles afgehandeld: geen balk meer; hij komt vanzelf terug zodra er weer open punten zijn
         })()}
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
             platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan
