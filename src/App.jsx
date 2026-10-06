@@ -32,6 +32,8 @@ import { useControlerenDashboardCards } from "./cards/useControlerenDashboardCar
 import { useInstellingenDashboardCards } from "./cards/useInstellingenDashboardCards.jsx";
 import { useControlerenCardGroups } from "./cards/useControlerenCardGroups.jsx";
 import { useInstellingenCardGroups } from "./cards/useInstellingenCardGroups.jsx";
+import { useYearlyProgress } from "./calc/useYearlyProgress.jsx";
+import { useClassified } from "./calc/useClassified.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossier/dossierMigraties.js";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
@@ -1127,67 +1129,11 @@ export default function App() {
     return [naam ? naam.toLowerCase() : null, priveNaam ? `prive:${priveNaam.toLowerCase()}` : null].filter(Boolean);
   }, [zakelijkeSpaarRekening]);
 
-  const classified = useMemo(() => {
-    const base0 = transactions.map((tx) => {
-      const resolved = resolveClassification(
-        tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
-        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
-      );
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
-      const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
-      // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
-      // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
-      // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
-      return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
-    });
-    const base = koppelDoorsluisOverboekingen(base0, Object.values(accountTypeByFile).includes("Zakelijk"));
-    // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
-    // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
-    // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
-    // zakelijk en privé in beide richtingen klopt, zonder de oorspronkelijke boeking te veranderen.
-    // Alleen als de bijbehorende privérekening niet zelf ook geladen is: staat die er wél bij, dan
-    // heeft die eigen transactie via de eigen-rekening-herkenning hierboven al zijn eigen kant van
-    // dezelfde overboeking gekregen — een spiegel zou die dan dubbel tellen.
-    // `isLoadedFile` (zie ownAccountsElsewhereByFile hierboven) is hier bewust vereist: een via de
-    // wizard opgegeven, maar nog niet geladen rekening levert nog GEEN eigen transactie op de andere
-    // kant op — zonder deze voorwaarde werd de spiegel voor zo'n rekening ten onrechte óók
-    // onderdrukt, waardoor het bedrag nergens meer zichtbaar was (geen spiegel én geen echte
-    // transactie) totdat die rekening alsnog werd geladen.
-    // v220: naast de specifieke IBAN-koppeling hieronder ook een generieke vangnet-check — is er
-    // ÜBERHAUPT een privérekening-bestand in dit dossier geladen, dan is een spiegelboeking zo goed
-    // als altijd overbodig (dit project volgt precies één ondernemer met hooguit een handvol eigen
-    // rekeningen). Zonder dit vangnet bleef de spiegel ten onrechte bestaan zodra de IBAN-koppeling
-    // om wat voor reden dan ook niet rond kwam (bijv. het bankbestand van de privérekening vermeldt
-    // zijn eigen rekeningnummer niet op een manier die computeOwnAccountByFile herkent) — met een
-    // reëel geladen privérekening-bestand ernaast leverde dat dan EXACT dezelfde overboeking dubbel
-    // op: één keer als de echte, correct geclassificeerde privé-transactie, en één keer als
-    // spiegelboeking die (per ongeluk) nog de zakelijke categorienaam ("Prive opnames"/"Terugboeking
-    // van prive") droeg. Dit vangnet kiest bewust voor "geen spiegel" boven "misschien dubbel".
-    const anyPriveFileLoaded = parsedFiles.some((pf) => accountTypeByFile[pf.fileName] === "Prive");
-    const mirrors = [];
-    for (const tx of base) {
-      const otherSideAlsoLoaded =
-        anyPriveFileLoaded || (ownAccountsElsewhereByFile[tx.source] || []).some((o) => o.accountType === "Prive" && o.isLoadedFile);
-      if (
-        (tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
-        tx.type === "Zakelijk" && !otherSideAlsoLoaded
-      ) {
-        // viewType expliciet "Prive": de spiegel hoort in het PRIVÉ-overzicht. Zonder dit erfde hij viewType "Zakelijk" van het origineel
-        // (via de spread) en viel hij in het zakelijke overzicht tegen de opname weg (netto € 0,00).
-        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", viewType: "Prive", isMirror: true });
-      }
-    }
-    const result = mirrors.length ? [...base, ...mirrors] : base;
-    // V46 — dossier met ALLEEN privérekening(en): elke transactie met categorie "Zakelijke
-    // inkomsten"/"Zakelijke inkoop/uitgaven" is een zakelijke boeking via de privérekening. Het
-    // `type` blijft de rekening (Prive); alleen de zakelijke OVERZICHTEN (viewType) tonen ze, zodat
-    // de zakelijke kant exact de spiegel is van die categorieën op de privékant.
-    const heeftZakelijkeRekening = Object.values(accountTypeByFile).includes("Zakelijk");
-    if (heeftZakelijkeRekening) return result;
-    return result.map((tx) =>
-      !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
-    );
-  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
+  const classified = useClassified({
+    ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
+    eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
+    transactions, zakelijkeSpaarKeywords,
+  });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
   // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
@@ -2386,129 +2332,14 @@ export default function App() {
   // geldig, expliciet "nee/n.v.t." — geen open vraag) en het generieke "percentage zakelijk per
   // categorie"-systeem (te generiek om zonder ruis te tellen; huur (deels zakelijk) heeft wél een
   // eigen status-veld en telt daarom wel mee).
-  const yearlyProgress = useMemo(() => {
-    const map = {};
-    for (const year of years) {
-      const zakItems = (groups.find((g) => g.year === year && g.type === "Zakelijk") || { items: [] }).items;
-      const priItems = (groups.find((g) => g.year === year && g.type === "Prive") || { items: [] }).items;
-      const allYearItems = [...zakItems, ...priItems];
-      const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
-      const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen);
-      const checks = [];
-
-      const personKeysThisYear = new Set(
-        allYearItems.filter((tx) => tx.category === "Overboekingen aan personen" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
-      );
-      if (personKeysThisYear.size > 0) {
-        const done = [...personKeysThisYear].filter((k) => reviewedPersonKeys.includes(k)).length;
-        checks.push({ frac: done / personKeysThisYear.size });
-      }
-      const overigKeysThisYear = new Set(
-        allYearItems.filter((tx) => tx.category === "Overig" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
-      );
-      if (overigKeysThisYear.size > 0) {
-        const done = [...overigKeysThisYear].filter((k) => reviewedOverigKeys.includes(k)).length;
-        checks.push({ frac: done / overigKeysThisYear.size });
-      }
-      // V90 — "Overig" dat je bewust met "Klopt zo" hebt bevestigd telt als gecategoriseerd (het eigen
-      // Overig-check hierboven bewaakt dat al per tegenpartij); anders bleef dit jaar altijd 1 punt open.
-      const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear].every((k) => reviewedOverigKeys.includes(k));
-      checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
-      checks.push({ frac: korRegeling !== null ? 1 : 0 });
-      const kwTotal = quartersForYear.length;
-      if (korRegeling === false) {
-        checks.push({ frac: btwVerlegd !== null ? 1 : 0 });
-      }
-      // avgFrac/pct/openPunten hieronder zijn zuiver DOSSIERCONTROLE (administratief) — of de
-      // aangiften al daadwerkelijk gedaan/betaald zijn, telt hier bewust niet meer mee (zie
-      // werkelijkAangifteChecks verderop).
-      const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
-      const openPunten = checks.filter((c) => c.frac < 0.999).length;
-
-      // ---- Werkelijke aangifte — apart signaal, telt niet mee in pct/status hierboven ----
-      // v285 — voorheen telde de BTW (alle kwartalen samen) hier als ÉÉN item, even zwaar als IB of
-      // Zvw afzonderlijk — een dossier met 1 van de 4 BTW-kwartalen gedaan en IB/Zvw nog niet kon zo
-      // al "deels" tonen, terwijl feitelijk pas 1 van de (in totaal) 6 aangiftes rond was. Nu telt elk
-      // afzonderlijk BTW-kwartaal als eigen item (net als IB/Zvw), zodat "X van N gedaan" hieronder
-      // klopt met het werkelijke aantal aangiftes. Bewust nog steeds gebaseerd op quartersForYear (de
-      // kwartalen die dit jaar daadwerkelijk transacties bevatten) i.p.v. altijd vaste 4 — een
-      // onvolledig eerste/laatste jaar hoeft niet alle 4 kwartalen verschuldigd te zijn. Maandaangifte
-      // (i.p.v. kwartaal) is bewust nog niet ondersteund — dat is een aparte, grotere uitbreiding
-      // (nieuwe wizardvraag + eigen maandregistratie) die nog niet is gebouwd.
-      const btwAangifteChecks =
-        korRegeling === false
-          ? quartersForYear.map((q) => {
-              const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
-              return {
-                frac: (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0),
-                label: `BTW Q${q.kwartaal}`, doel: "btw",
-                detail: s.aangegeven && s.betaald ? "aangegeven en betaald" : s.aangegeven ? "aangegeven, nog niet betaald" : s.betaald ? "betaald, nog niet aangegeven" : "nog niet aangegeven",
-              };
-            })
-          : [];
-      // v285 — een BV kent geen IB/Zvw (dat bestaat alleen voor een zzp/eenmanszaak) maar wel een
-      // jaarlijkse Vpb-aangifte — vpbStatus vervangt ibStatus/zvwStatus hier zodra rechtsvorm "bv" is,
-      // i.p.v. dat IB/Zvw daar (nooit ingevuld, want niet van toepassing) de teller eeuwig op "deels"
-      // hielden.
-      const overigeAangifteChecks =
-        rechtsvorm === "bv"
-          ? [{ frac: vpbStatus[year]?.gedaan ? 1 : 0, label: "Vpb", doel: "meerjaren", detail: vpbStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" }]
-          : [
-              { frac: ibStatus[year]?.gedaan ? 1 : 0, label: "Inkomstenbelasting (IB)", doel: "meerjaren", detail: ibStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" },
-              { frac: zvwStatus[year]?.gedaan ? 1 : 0, label: "Zvw-bijdrage", doel: "meerjaren", detail: zvwStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" },
-            ];
-      const werkelijkAangifteChecks = [...btwAangifteChecks, ...overigeAangifteChecks];
-      const werkelijkAangifteDone = werkelijkAangifteChecks.filter((c) => c.frac >= 0.999).length;
-      const werkelijkAangifteTotal = werkelijkAangifteChecks.length;
-      const werkelijkAangifteStatus =
-        werkelijkAangifteDone === 0 ? "niet-geregistreerd" : werkelijkAangifteDone === werkelijkAangifteTotal ? "gedaan" : "deels";
-
-      // ---- Indicatieve aangifte — aantal aannames dat de berekening nog bevat (v254) ----
-      // Bewust dossierbreed voor leningen/lease/activa (net als instellingenDashboardCards) — een
-      // lening/lease/activum loopt meestal over meerdere jaren, dus een aparte telling per jaar zou
-      // hier geen scherper beeld geven. Alleen relevant voor zzp/eenmanszaak: een BV kent het
-      // urencriterium/zelfstandigenaftrek niet.
-      // v308 (V31) — naast het aantal nu ook WELKE aannames het zijn, zodat de kop en het rapport kunnen
-      // tonen waar het "1 aanname" over gaat (BTW-verlegd/KOR zijn feiten uit de basisvragen, geen aanname).
-      const aannamesLabels = [];
-      if (incompleteLoansCount > 0) aannamesLabels.push(`${incompleteLoansCount === 1 ? "lening" : "leningen"} onvolledig`);
-      if (incompleteLeasesCount > 0) aannamesLabels.push(`${incompleteLeasesCount === 1 ? "leasecontract" : "leasecontracten"} onvolledig`);
-      if (incompleteActivaCount > 0) aannamesLabels.push(`activa onvolledig`);
-      if (rechtsvorm !== "bv") {
-        const zaRaw = zelfstandigenaftrekStatus?.[year];
-        if (zaRaw == null || zaRaw === "onbekend") aannamesLabels.push("urencriterium onbekend");
-      }
-      const gedeeldeHuurDitJaar = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeHuurDitJaar && huurZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk huur");
-      const gedeeldeEnergieDitJaar = computeGedeeldeEnergieVoorJaar(classified, year, energieZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeEnergieDitJaar && energieZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk energie/water");
-      const gedeeldeGemeentelijkeKostenDitJaar = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      if (gedeeldeGemeentelijkeKostenDitJaar && gemeentelijkeKostenZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk gemeentelijke kosten");
-      const aannamesCount = (incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount) + aannamesLabels.filter((l) => !/onvolledig$/.test(l)).length;
-
-      // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
-      // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
-      // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
-      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic" && !bevestigdInBulkVenster(tx)).length;
-      // v260 — drie niveaus i.p.v. één harde grens (zie classifyContinuityGap in transactions.js):
-      // tot €500 verschil bij een bestandsovergang is voor het dossier verwaarloosbaar (groen, geen
-      // invloed op de jaarstatus), €500–€999 is "geel" (zet de status op zijn minst op oranje, ook
-      // als verder alles compleet is), vanaf €1000 is het een echt gat (rood).
-      const gatDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "rood" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
-      const geelDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "geel" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
-      let status;
-      if (gatDitJaar) status = "rood";
-      else if (openPunten === 0 && onzekerDitJaar === 0 && !geelDitJaar) status = "groen";
-      else status = "oranje";
-
-      map[year] = {
-        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
-        werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
-        werkelijkAangifteItems: werkelijkAangifteChecks.map((c) => ({ label: c.label, detail: c.detail, doel: c.doel, done: c.frac >= 0.999 })),
-      };
-    }
-    return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
+  const yearlyProgress = useYearlyProgress({
+    autoStatus, bevestigdInBulkVenster, btwVerlegd, categoryZakelijkPercentageEff, classified,
+    effectiveCategoryBtwRates, energieZakelijkPercentageStatus, fileContinuity, gemeentelijkeKostenZakelijkPercentageStatus, groups,
+    heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibStatus, incompleteActivaCount, incompleteLeasesCount,
+    incompleteLoansCount, korRegeling, kwartaalStatus, periodeQuarterOverrides, priveRekeningGeladen,
+    rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus,
+    years, zelfstandigenaftrekStatus, zvwStatus,
+  });
 
   // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
   // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina.
