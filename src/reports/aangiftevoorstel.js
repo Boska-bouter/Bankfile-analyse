@@ -287,6 +287,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar);
 
   const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+  // Alle vier kwartalen tonen, ook als er in een kwartaal niets te betalen of terug te vragen is (dan € 0,00).
+  const kwartalenVol = kwartalen.length ? [1, 2, 3, 4].map((n) => kwartalen.find((q) => q.kwartaal === n) || { kwartaal: n, verschuldigdBtw21: 0, verschuldigdBtw9: 0, voorbelasting: 0 }) : [];
 
   // Dossierstatus + openstaande punten — hergebruikt dezelfde signalen als de live Aangifte-
   // checklist in de app zelf (computeChecklistLikeDataForYear), zodat het rapport nooit iets
@@ -428,11 +430,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     kwartalen.length > 0
       ? `
   <div class="btw-kaart">
-    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalen.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
-    <tbody><tr><td>Saldo</td>${kwartalen
+    <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalenVol.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
+    <tbody><tr><td>Saldo</td>${kwartalenVol
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-        return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+        return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
       })
       .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
@@ -656,7 +658,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
-          return `<td class="num">${eur(Math.abs(saldo))} ${saldo >= 0 ? "te betalen" : "terug"}</td>`;
+          return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
         })
         .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
