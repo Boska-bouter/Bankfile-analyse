@@ -29,22 +29,6 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
-    key: "factuurperiode",
-    titel: "Factuurperiode vs. boekingskwartaal",
-    inhoud: (
-      <p>
-        Bij het factuurstelsel is BTW verschuldigd op de <strong>factuurdatum</strong>, niet de datum waarop het geld
-        binnenkomt — bij het kasstelsel juist andersom. De app gebruikt standaard de boekingsdatum voor de indeling
-        in kwartalen, maar herkent ook periode-notaties in de bank-omschrijving (bijv. "20250301-20250331" of
-        vergelijkbare varianten met streepjes/punten). Valt zo'n herkende periode in een ander kwartaal dan de
-        boekingsdatum, dan verschijnt dit als suggestie bij "Werk te doen" — nooit automatisch: je kiest zelf per
-        post of het kwartaal aangepast moet worden (bijv. bij factuurstelsel) of dat de boekingsdatum al klopt (bijv.
-        bij kasstelsel). Een bevestigde verplaatsing raakt alleen de indeling in "BTW-aangifte per kwartaal" — de
-        rest van de app (jaaroverzicht, categorieën, de boekingsdatum zelf) blijft ongewijzigd.
-      </p>
-    ),
-  },
-  {
     key: "vaste-variabele-kosten",
     titel: "Vaste/variabele kosten",
     inhoud: (

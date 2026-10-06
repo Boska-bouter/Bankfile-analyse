@@ -1,12 +1,11 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import ReviewStep from "./ReviewStep.jsx";
-import PeriodeReviewStep from "./PeriodeReviewStep.jsx";
 import { eur } from "../../utils/amounts.js";
 
 // Fase 3 — was drie los-inline accordeons in App.jsx ("Overig" opruimen, Duplicaten controleren,
-// Factuurperiode vs. boekingskwartaal), nu een zelfstandig onderdeel (bouwvoorstel-kaart
+// — de Factuurperiode-controle is vervallen), nu een zelfstandig onderdeel (bouwvoorstel-kaart
 // "Opschonen") zodat het geheel ook binnen de SectionCard kan worden uitgeklapt. Elke accordeon
-// houdt zijn eigen open/dicht-stand aan (showOverigReview/showDuplicateDetails/showPeriodeReview,
+// houdt zijn eigen open/dicht-stand aan (showOverigReview/showDuplicateDetails,
 // via props) — ongewijzigd gedrag, nu alleen in een eigen bestand.
 export default function OpschonenPanel({
   overigReviewRef,
@@ -39,20 +38,11 @@ export default function OpschonenPanel({
   showConfirmedSeparateDuplicates,
   onToggleShowConfirmedSeparateDuplicates,
 
-  periodeReviewRef,
-  periodeAllSignals,
-  periodeMismatches,
-  showPeriodeReview,
-  onToggleShowPeriodeReview,
-  onConfirmPeriodeAsIs,
-  onMovePeriodeToQuarter,
   onOpenHelp,
 }) {
   const overigOpen = showOverigReview === null ? pendingOverigReview.length > 0 : showOverigReview;
   const needsJudgment = duplicatePendingBreakdown.onzeker > 0;
   const duplicatesOpen = showDuplicateDetails === null ? needsJudgment : showDuplicateDetails;
-  const periodeOpen = showPeriodeReview === null ? periodeMismatches.length > 0 : showPeriodeReview;
-  const periodeAfgehandeld = periodeAllSignals.filter((s) => s.status !== "open");
 
   return (
     <div className="space-y-3">
@@ -225,45 +215,6 @@ export default function OpschonenPanel({
                 </div>
               )}
             </div>
-          )}
-        </section>
-      )}
-
-      {periodeAllSignals.length > 0 && (
-        <section ref={periodeReviewRef} className="rounded-xl border-2 border-sky-200 bg-white overflow-hidden shadow-sm">
-          <button onClick={() => onToggleShowPeriodeReview(!periodeOpen)} className="w-full px-4 py-3 bg-sky-50 text-sky-900 flex items-center gap-2 text-left">
-            {periodeMismatches.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-            <span className="text-sm font-semibold">Factuurperiode vs. boekingskwartaal controleren</span>
-            {periodeMismatches.length > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {periodeMismatches.length}
-              </span>
-            ) : (
-              <span className="text-xs text-emerald-700">Geen afwijkingen (meer) openstaand</span>
-            )}
-            <span className="flex-1" />
-            {periodeOpen ? <ChevronDown className="h-4 w-4 text-sky-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-sky-400 shrink-0" />}
-          </button>
-          {periodeOpen && (
-            <>
-              <PeriodeReviewStep items={periodeMismatches} onConfirm={onConfirmPeriodeAsIs} onMove={onMovePeriodeToQuarter} onOpenHelp={onOpenHelp} />
-              {periodeAfgehandeld.length > 0 && (
-                <div className="px-5 pb-4 space-y-1">
-                  <p className="text-xs font-medium text-slate-500">Eerder al afgehandeld ({periodeAfgehandeld.length}):</p>
-                  {periodeAfgehandeld.map((s) => (
-                    <div key={s.tx.id} className="flex flex-wrap items-center gap-2 text-xs text-slate-500 border-t border-slate-100 pt-1.5">
-                      <span className="flex-1 min-w-[12rem]">
-                        {s.tx.date.toLocaleDateString("nl-NL")} · {eur(s.tx.amount)} · {s.tx.counterparty || s.tx.description || "(geen omschrijving)"}
-                      </span>
-                      <span>{s.boekingKwartaal} → {s.voorgesteldKwartaal}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${s.status === "verplaatst" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}`}>
-                        {s.status === "verplaatst" ? "Verplaatst" : "Bevestigd: boekingsdatum klopt"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
           )}
         </section>
       )}
