@@ -482,7 +482,7 @@ export default function App() {
     [loansSectionRef, "controleren"],
     [leasesSectionRef, "controleren"],
     [activaSectionRef, "controleren"],
-    [aannamesSectionRef, "instellingen"],
+    [aannamesSectionRef, "controleren"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
     [categoryPercentageSectionRef, "instellingen"],
@@ -512,7 +512,7 @@ export default function App() {
     [activaSectionRef, "bedrijfsmiddelen", true],
     [leasesSectionRef, "bedrijfsmiddelen", true],
     [loansSectionRef, "bedrijfsmiddelen", true],
-    [aannamesSectionRef, "persoonlijkeAannames", true],
+    [aannamesSectionRef, "bedrijfsmiddelen", true],
     [categoryPercentageSectionRef, "zakelijkPrive", true],
     [btwSettingsSectionRef, "btw", true],
     [automatiseringSectionRef, "automatisering", true],
@@ -3622,7 +3622,21 @@ export default function App() {
       // verwijderd, om dubbele content te voorkomen), hier alleen samengevat i.p.v. als volledige
       // banner-tekst. v286 — die berekening staat nu in de gedeelde aansluitControleInfo hierboven.
       withExpand(
-        (() => { const bb = groupCards(instellingenCardsByKey, ["loans", "leases", "activa"]); return bb ? { key: "bedrijfsmiddelen", title: "Bedrijfsmiddelen & financiering", icon: <span>🏷️</span>, tone: bb.tone, lines: bb.lines, onClick: bb.onClick, hint: bb.hint, actionLabel: "Bekijken" } : null; })(),
+        (() => {
+          const bb = groupCards(instellingenCardsByKey, ["loans", "leases", "activa"]);
+          const aan = instellingenCardsByKey.aannames;
+          if (!bb && !aan) return null;
+          const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
+          const aanTone = aan ? aan.tone : "ok";
+          const tone = !bb ? aanTone : toneRank[aanTone] > toneRank[bb.tone] ? aanTone : bb.tone;
+          const aanOpen = aan && typeof aan.openCount === "number" ? aan.openCount : 0;
+          const lines = [
+            ...(bb ? bb.lines : []),
+            ...(aan ? [{ label: "Aannames", value: aanOpen > 0 ? `🟠 ${aanOpen} open` : "🟢 Alles opgegeven" }] : []),
+          ];
+          const primary = bb && (bb.tone === "attention" || bb.tone === "risk") ? bb : aan && aanOpen > 0 ? aan : bb || aan;
+          return { key: "bedrijfsmiddelen", title: "Bedrijfsmiddelen & aannames", icon: <span>🏷️</span>, tone, lines, onClick: primary.onClick, hint: primary.hint, actionLabel: "Bekijken" };
+        })(),
         "bedrijfsmiddelen",
         <div className="space-y-3">
           <div ref={activaSectionRef}>
@@ -3665,6 +3679,38 @@ export default function App() {
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
+          <div ref={aannamesSectionRef}>
+            <PersoonlijkeAannamesPanel
+              activeYear={activeYear}
+              winst={yearlySummary?.winst}
+              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+              zaLegacyJaDefault={zaLegacyJaDefault}
+              startersaftrekStatus={startersaftrekStatus}
+              onSetStartersaftrekStatus={setStartersaftrekStatus}
+              autoStatus={autoStatus}
+              onSetAutoStatus={setAutoStatus}
+              autoWizardStatus={autoWizardStatus}
+              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
+              kmVergoedingDetails={kmVergoedingDetails}
+              onSetKmVergoedingField={setKmVergoedingField}
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              gedeeldeHuur={gedeeldeHuurForActiveYear}
+              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
+              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
+              gedeeldeEnergie={gedeeldeEnergieForActiveYear}
+              energieZakelijkPercentageStatus={energieZakelijkPercentageStatus}
+              onSetEnergieZakelijkPercentageStatus={setEnergieZakelijkPercentageStatus}
+              gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear}
+              gemeentelijkeKostenZakelijkPercentageStatus={gemeentelijkeKostenZakelijkPercentageStatus}
+              onSetGemeentelijkeKostenZakelijkPercentageStatus={setGemeentelijkeKostenZakelijkPercentageStatus}
+              categoryBtwRates={effectiveCategoryBtwRates}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
         </div>
       ),
     ].filter(Boolean);
@@ -3673,6 +3719,7 @@ export default function App() {
     controlerenCardsByKey,
     instellingenCardsByKey,
     activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, loanSummary, privateLoanSummary, loanDetails,
+    zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
     expandedCardKeys,
     importDiagnostics,
     fileContinuity,
@@ -3763,44 +3810,6 @@ export default function App() {
             expandedBusinessExpenseList={expandedBusinessExpenseList}
             onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
           />
-        </div>
-      ),
-      withExpand(
-        g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames"]),
-        "persoonlijkeAannames",
-        <div className="space-y-3">
-          <div ref={aannamesSectionRef}>
-            <PersoonlijkeAannamesPanel
-              activeYear={activeYear}
-              winst={yearlySummary?.winst}
-              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
-              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
-              zaLegacyJaDefault={zaLegacyJaDefault}
-              startersaftrekStatus={startersaftrekStatus}
-              onSetStartersaftrekStatus={setStartersaftrekStatus}
-              autoStatus={autoStatus}
-              onSetAutoStatus={setAutoStatus}
-              autoWizardStatus={autoWizardStatus}
-              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
-              kmVergoedingDetails={kmVergoedingDetails}
-              onSetKmVergoedingField={setKmVergoedingField}
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              leaseSummary={leaseSummary}
-              leaseDetails={leaseDetails}
-              gedeeldeHuur={gedeeldeHuurForActiveYear}
-              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
-              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
-              gedeeldeEnergie={gedeeldeEnergieForActiveYear}
-              energieZakelijkPercentageStatus={energieZakelijkPercentageStatus}
-              onSetEnergieZakelijkPercentageStatus={setEnergieZakelijkPercentageStatus}
-              gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear}
-              gemeentelijkeKostenZakelijkPercentageStatus={gemeentelijkeKostenZakelijkPercentageStatus}
-              onSetGemeentelijkeKostenZakelijkPercentageStatus={setGemeentelijkeKostenZakelijkPercentageStatus}
-              categoryBtwRates={effectiveCategoryBtwRates}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
         </div>
       ),
       withExpand(
@@ -3928,7 +3937,7 @@ export default function App() {
   const openPointsOf = (c) =>
     c.tone === "attention" || c.tone === "risk" ? (typeof c.openCount === "number" ? c.openCount : 1) : 0;
   // V90 — Lease/Leningen/Activa zijn te controleren data (BTW/aftrek/kosten), geen instellingen: tellen bij Controleren
-  const VERPLAATST_NAAR_CONTROLEREN = ["loans", "leases", "activa"];
+  const VERPLAATST_NAAR_CONTROLEREN = ["loans", "leases", "activa", "aannames"];
   const controlerenBadge = useMemo(
     () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0) + instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
     [controlerenDashboardCards, instellingenDashboardCards]
@@ -4015,7 +4024,7 @@ export default function App() {
   // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
   // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
   const [overgeslagenStappen, setOvergeslagenStappen] = useState([]);
-  const stapVolgorde = ["importControle", "leases", "loans", "activa", "duplicates", "incomeReview", "personReview", "overigReview", "confidence", "periode"];
+  const stapVolgorde = ["importControle", "leases", "loans", "activa", "aannames", "duplicates", "incomeReview", "personReview", "overigReview", "confidence", "periode"];
   const alleStappen = useMemo(() => {
     const lijst = [...teControlerenItems, ...inTeStellenItems];
     const rang = (k) => { const i = stapVolgorde.indexOf(k); return i === -1 ? 99 : i; };

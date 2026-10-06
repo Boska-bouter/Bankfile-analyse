@@ -7,7 +7,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 //  - onderaan: één regel snelkoppelingen naar resultaten en herkenningsregels.
 // Geen nieuwe databron: dezelfde items als voorheen (teControlerenItems/inTeStellenItems/...).
 export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen, volgende: volgendeIn, onOverslaan, controleCount, instellingCount, snelkoppelingen, onOpenHelp, hervat }) {
-  const alle = stappen.map((i) => ({ ...i, soort: i.key === "aannames" || i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
+  const alle = stappen.map((i) => ({ ...i, soort: i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
   const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
 
