@@ -9,7 +9,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // basis van dit percentage. Bij KOR wordt nergens BTW berekend (zie effectiveCategoryBtwRates
 // in App.jsx), dus dit paneel is dan uitgeschakeld.
 export default function BtwRatesPanel({ classified = [], activeYear, categoryBtwRates, setCategoryBtwRates, btwVerlegd, setBtwVerlegd, korRegeling, setKorRegeling, onOpenHelp }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [openGroup, setOpenGroup] = useState(null);
   // Aantal transacties per categorie in het actieve jaar (zonder spiegelboekingen), en per hoofdcategorie
   // uitgesplitst naar het ingestelde tarief — zodat je ziet wat een tarief-keuze raakt.
