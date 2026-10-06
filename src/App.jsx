@@ -46,6 +46,8 @@ import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
+import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
+import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -151,17 +153,6 @@ function migrateOverridesCategories(overrides) {
     out[key] = { ...val, category };
   }
   return out;
-}
-
-// Dezelfde statustekst als in het gegenereerde rapport (reports/aangiftevoorstel.js, functie
-// statusTekst) — géén apart statussysteem, alleen dezelfde bestaande yearlyProgress-status (afgeleid
-// uit categorisatie/onzekere transacties/bestandsgaten) ook zichtbaar vóórdat je het rapport
-// genereert. "Groen" betekent hier uitdrukkelijk alleen dat
-// de gegevenscontrole voldoende compleet is — niet dat de aangifte fiscaal correct is.
-function aangifteStatusTekst(status, aantalPunten) {
-  if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
-  if (status === "oranje") return `Berekening beschikbaar — ${aantalPunten} punt${aantalPunten === 1 ? "" : "en"} controleren`;
-  return "Berekening kan worden opgesteld";
 }
 
 // V46 — zie `classified`: categorieën die in een privé-only dossier aan de zakelijke kant gespiegeld worden.
@@ -5310,106 +5301,28 @@ export default function App() {
             staan. In dat geval werd de state wel op true gezet, maar werd de modal helemaal niet
             gerenderd, waardoor de knop voor de gebruiker leek niets te doen. */}
                 {showAangifteYearPicker && (
-                  <div
-                    className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2"
-                    onClick={() => setShowAangifteYearPicker(false)}
-                  >
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
-                      {!showAangifteMeerdereJaren ? (
-                        <>
-                          <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
-                          {yearlyProgress[activeYear] && (
-                            <div>
-                              <p className="text-sm flex items-center gap-1.5">
-                                <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearlyProgress[activeYear].status]}</span>
-                                <span className="font-medium">
-                                  {aangifteStatusTekst(yearlyProgress[activeYear].status, aangifteOpenPunten.length)}
-                                </span>
-                              </p>
-                              <p className="text-xs text-slate-400 mt-0.5">Gegevenscontrole, geen fiscale beoordeling.</p>
-                            </div>
-                          )}
-                          {aangifteOpenPunten.length > 0 && (
-                            <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
-                              {aangifteOpenPunten.map((p, i) => (
-                                <li key={i}>{p}</li>
-                              ))}
-                            </ul>
-                          )}
-                          <div className="flex gap-2 flex-wrap pt-1">
-                            <button
-                              onClick={() => exportAangiftevoorstel([activeYear])}
-                              className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
-                            >
-                              Berekening bekijken
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (selectedAangifteYears.length === 0) setSelectedAangifteYears([activeYear]);
-                                setShowAangifteMeerdereJaren(true);
-                              }}
-                              className="text-xs text-slate-400 hover:text-slate-600 underline"
-                            >
-                              Ander jaar/meerdere jaren kiezen
-                            </button>
-                            <button onClick={() => setShowAangifteYearPicker(false)} className="text-xs text-slate-400 hover:text-slate-600">
-                              Annuleren
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
-                          <div className="flex flex-wrap gap-3 mb-3">
-                            {years.map((year) => (
-                              <label key={year} className="inline-flex items-center gap-1.5 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedAangifteYears.includes(year)}
-                                  onChange={(e) => setSelectedAangifteYears((prev) => (e.target.checked ? [...prev, year].sort() : prev.filter((y) => y !== year)))}
-                                />
-                                {year}
-                              </label>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => exportAangiftevoorstel()} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
-                              Berekening tonen
-                            </button>
-                            <button onClick={() => setShowAangifteMeerdereJaren(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                              Terug
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  <AangifteYearPickerModal
+                    onClose={() => setShowAangifteYearPicker(false)}
+                    activeYear={activeYear}
+                    years={years}
+                    yearProgress={yearlyProgress[activeYear]}
+                    aangifteOpenPunten={aangifteOpenPunten}
+                    meerdereJaren={showAangifteMeerdereJaren}
+                    setMeerdereJaren={setShowAangifteMeerdereJaren}
+                    selectedYears={selectedAangifteYears}
+                    setSelectedYears={setSelectedAangifteYears}
+                    onExport={exportAangiftevoorstel}
+                  />
                 )}
 
         {aangiftevoorstelPreview && (
-          <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={() => setAangiftevoorstelPreview(null)}>
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
-                <p className="text-sm font-semibold">Indicatieve aangifteberekening {selectedAangifteYears.join(", ")}</p>
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={downloadAangiftevoorstelPreview} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
-                    <Download className="h-4 w-4" /> Downloaden
-                  </button>
-                  <button
-                    onClick={printAangiftevoorstelPreview}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
-                    title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
-                  >
-                    <Printer className="h-4 w-4" /> Printen
-                  </button>
-                  <button onClick={() => setAangiftevoorstelPreview(null)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                    Sluiten
-                  </button>
-                </div>
-              </div>
-              <iframe srcDoc={aangiftevoorstelPreview} title="Voorbeeld aangiftevoorstel" className="w-full bg-white flex-1" style={{ border: "none" }} />
-            </div>
-          </div>
+          <AangifteVoorstelPreviewModal
+            html={aangiftevoorstelPreview}
+            years={selectedAangifteYears}
+            onDownload={downloadAangiftevoorstelPreview}
+            onPrint={printAangiftevoorstelPreview}
+            onClose={() => setAangiftevoorstelPreview(null)}
+          />
         )}
       </main>
 
