@@ -4013,6 +4013,30 @@ export default function App() {
     return lijst.map((it, idx) => ({ it, idx })).sort((a, b) => rang(a.it.key) - rang(b.it.key) || a.idx - b.idx).map((x) => x.it);
   }, [teControlerenItems, inTeStellenItems]);
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
+  // V22 — een uitgeklapte Controleren-kaart klapt vanzelf in zodra de LAATSTE open stap erin is afgerond
+  // (bijv. Overig opruimen → 0 open en de rest van "Herkomst & opschonen" ook klaar). Alleen bij de overgang
+  // "had open punten → geen open punten meer"; bij het laden van een dossier of een al-groene kaart gebeurt niets.
+  const STAP_GROEPEN = {
+    importKwaliteit: ["importControle", "confidence"],
+    herkomstOpschonen: ["incomeReview", "personReview", "overigReview", "duplicates"],
+    bedrijfsmiddelen: ["loans", "leases", "activa"],
+    aannamesPercentages: ["aannames"],
+  };
+  const vorigeOpenGroepenRef = useRef(null);
+  useEffect(() => {
+    const open = new Set(Object.entries(STAP_GROEPEN).filter(([, keys]) => alleStappen.some((st) => keys.includes(st.key))).map(([g]) => g));
+    const vorige = vorigeOpenGroepenRef.current;
+    vorigeOpenGroepenRef.current = open;
+    if (!vorige) return;
+    const klaar = [...vorige].filter((g) => !open.has(g));
+    if (klaar.length === 0) return;
+    setExpandedCardKeys((prev) => {
+      if (!klaar.some((g) => prev[g])) return prev;
+      const next = { ...prev };
+      for (const g of klaar) if (next[g]) next[g] = false;
+      return next;
+    });
+  }, [alleStappen]);
   const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
   // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
   const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
