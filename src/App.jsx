@@ -1406,6 +1406,7 @@ export default function App() {
   };
   const jumpToPersonenFromModal = () => {
     setOpenConfidenceLevel(null);
+    if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
     setShowPersonReview(true);
     jumpToSection(personReviewSectionRef);
   };
@@ -2591,6 +2592,9 @@ export default function App() {
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
+          // V90 — "Overboekingen aan personen" verschijnt pas als de herkomst van inkomsten is beantwoord;
+          // zolang die nog openstaat, ga je eerst daarheen (anders gebeurde er niets).
+          if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
           setShowPersonReview(true);
           jumpToSection(personReviewSectionRef);
         },
@@ -2933,7 +2937,7 @@ export default function App() {
   }, [
     transactions.length,
     confidenceSummary,
-    pendingPersonReview.length,
+    pendingPersonReview.length, pendingIncomeReview.length,
     pendingOverigReview.length,
     pendingDuplicateCount,
     duplicatePendingBreakdown,
@@ -3040,6 +3044,7 @@ export default function App() {
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
+          if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
           setShowPersonReview(true);
           jumpToSection(personReviewSectionRef);
         },
@@ -3949,7 +3954,7 @@ export default function App() {
   // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
   // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
   const [overgeslagenStappen, setOvergeslagenStappen] = useState([]);
-  const stapVolgorde = ["importControle", "leases", "loans", "activa"];
+  const stapVolgorde = ["importControle", "leases", "loans", "activa", "duplicates", "incomeReview", "personReview", "overigReview", "confidence", "periode"];
   const alleStappen = useMemo(() => {
     const lijst = [...teControlerenItems, ...inTeStellenItems];
     const rang = (k) => { const i = stapVolgorde.indexOf(k); return i === -1 ? 99 : i; };
