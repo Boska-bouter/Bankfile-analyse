@@ -94,7 +94,7 @@ import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
-import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./reports/aangiftevoorstel-bv.js";
+import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
@@ -1233,7 +1233,9 @@ export default function App() {
         (tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
         tx.type === "Zakelijk" && !otherSideAlsoLoaded
       ) {
-        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
+        // viewType expliciet "Prive": de spiegel hoort in het PRIVÉ-overzicht. Zonder dit erfde hij viewType "Zakelijk" van het origineel
+        // (via de spread) en viel hij in het zakelijke overzicht tegen de opname weg (netto € 0,00).
+        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", viewType: "Prive", isMirror: true });
       }
     }
     const result = mirrors.length ? [...base, ...mirrors] : base;
@@ -1555,7 +1557,7 @@ export default function App() {
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding)
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus })
       : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
@@ -2083,10 +2085,17 @@ export default function App() {
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
   );
+  // V23 — BV: afschrijving (en boekresultaat bij beëindiging) van een financiële-lease-auto/machine telt ook op de
+  // kaart mee in de winst — zelfde bedrag als in het BV-rapport (computeBvWinstInvoer in aangiftevoorstel-bv.js).
+  const bvLeaseAutoWinstCorrectieActiveYear = useMemo(
+    () => (activeYear && rechtsvorm === "bv" ? computeBvWinstInvoer(activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, {}).leaseAutoWinstCorrectie : 0),
+    [activeYear, rechtsvorm, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails]
+  );
   const winstCorrectieActiveYear =
     (leaseAutoKostenForActiveYear?.winstCorrectie || 0) - (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) -
     (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0) +
-    (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
+    (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0) +
+    (bvLeaseAutoWinstCorrectieActiveYear || 0);
   const yearlySummary = useMemo(
     () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed) : null),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed]
