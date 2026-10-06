@@ -1,5 +1,5 @@
 import { useToonFijn } from "../../utils/useToonFijn.js";
-import { useMemo, useRef, useState, Fragment } from "react";
+import { useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
@@ -130,6 +130,20 @@ export function DetailTable({
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFilterAlign, setDateFilterAlign] = useState("right"); // "right" | "left"
   const dateFilterBtnRef = useRef(null);
+  const amountWrapRef = useRef(null);
+  const dateWrapRef = useRef(null);
+  // V83 — een open filtervenster sluit zodra je buiten het venster klikt/tikt (en dus ook als je een ander
+  // filter opent); er is zo nooit meer dan één venster tegelijk open.
+  useEffect(() => {
+    if (!showAmountFilter && !showDateFilter) return undefined;
+    const onOutside = (e) => {
+      if (showAmountFilter && amountWrapRef.current && !amountWrapRef.current.contains(e.target)) setShowAmountFilter(false);
+      if (showDateFilter && dateWrapRef.current && !dateWrapRef.current.contains(e.target)) setShowDateFilter(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return () => { document.removeEventListener("mousedown", onOutside); document.removeEventListener("touchstart", onOutside); };
+  }, [showAmountFilter, showDateFilter]);
 
   // Deze twee filterknoppen openen een klein, absoluut gepositioneerd venstertje eronder. Bij een
   // rechts-uitgelijnd venster (het gebruikelijke geval — de knop staat meestal niet aan de uiterste
@@ -252,10 +266,10 @@ export function DetailTable({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" suggestions={searchSuggestions} />
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" ref={amountWrapRef}>
               <button
                 ref={amountFilterBtnRef}
-                onClick={() => openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter)}
+                onClick={() => { setShowDateFilter(false); openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter); }}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   amountMin || amountMax || amountSign !== "beide" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -283,10 +297,10 @@ export function DetailTable({
                 </div>
               )}
             </div>
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" ref={dateWrapRef}>
               <button
                 ref={dateFilterBtnRef}
-                onClick={() => openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter)}
+                onClick={() => { setShowAmountFilter(false); openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter); }}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   dateFrom || dateTo ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -299,11 +313,11 @@ export function DetailTable({
                   <div className="space-y-2">
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Van</label>
-                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Tot en met</label>
-                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                   </div>
                   {(dateFrom || dateTo) && (
