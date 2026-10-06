@@ -68,7 +68,7 @@ export default function DashboardHeader({
                     </div>
                   </div>
                   <div className="flex items-start gap-1.5">
-                    <span className="mt-1 rounded-full shrink-0" style={{ background: "#F59E0B", width: 8, height: 8 }} />
+                    <span className="mt-1 rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
                     <div className="flex flex-col leading-tight">
                       <span className="text-xs text-slate-500">{yearRing.jaar} · <strong className="text-slate-800">{yearRing.pct}%</strong></span>
                       <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>

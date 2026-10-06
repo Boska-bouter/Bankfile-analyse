@@ -14,7 +14,7 @@ function Ring({ cx, r, sw, pct, color }) {
   );
 }
 
-export default function ConcentricGauge({ outerPct, innerPct, outerColor = "#0F766E", innerColor = "#F59E0B", size = 78 }) {
+export default function ConcentricGauge({ outerPct, innerPct, outerColor = "#0F766E", innerColor = "#2563EB", size = 78 }) {
   const sw = 7, gap = 3, cx = size / 2;
   const rOuter = (size - sw) / 2;
   const rInner = rOuter - sw - gap;

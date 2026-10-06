@@ -24,10 +24,10 @@ function TabItem({ tabKey, active, badge, onClick }) {
       type="button"
       onClick={onClick}
       className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${
-        active ? "bg-amber-400/10 border-l-[3px] border-amber-400" : "border-l-[3px] border-transparent hover:bg-white/5"
+        active ? "bg-sky-400/10 border-l-[3px] border-sky-400" : "border-l-[3px] border-transparent hover:bg-white/5"
       }`}
     >
-      <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#E8B44C" : "#8992B4" }} />
+      <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#7DD3FC" : "#8992B4" }} />
       <span className={`text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
       {!!badge && (
         <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
