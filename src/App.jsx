@@ -2500,7 +2500,11 @@ export default function App() {
         korRegeling === false
           ? quartersForYear.map((q) => {
               const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
-              return { frac: (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0) };
+              return {
+                frac: (s.aangegeven ? 0.5 : 0) + (s.betaald ? 0.5 : 0),
+                label: `BTW Q${q.kwartaal}`, doel: "btw",
+                detail: s.aangegeven && s.betaald ? "aangegeven en betaald" : s.aangegeven ? "aangegeven, nog niet betaald" : s.betaald ? "betaald, nog niet aangegeven" : "nog niet aangegeven",
+              };
             })
           : [];
       // v285 — een BV kent geen IB/Zvw (dat bestaat alleen voor een zzp/eenmanszaak) maar wel een
@@ -2509,8 +2513,11 @@ export default function App() {
       // hielden.
       const overigeAangifteChecks =
         rechtsvorm === "bv"
-          ? [{ frac: vpbStatus[year]?.gedaan ? 1 : 0 }]
-          : [{ frac: ibStatus[year]?.gedaan ? 1 : 0 }, { frac: zvwStatus[year]?.gedaan ? 1 : 0 }];
+          ? [{ frac: vpbStatus[year]?.gedaan ? 1 : 0, label: "Vpb", doel: "meerjaren", detail: vpbStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" }]
+          : [
+              { frac: ibStatus[year]?.gedaan ? 1 : 0, label: "Inkomstenbelasting (IB)", doel: "meerjaren", detail: ibStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" },
+              { frac: zvwStatus[year]?.gedaan ? 1 : 0, label: "Zvw-bijdrage", doel: "meerjaren", detail: zvwStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" },
+            ];
       const werkelijkAangifteChecks = [...btwAangifteChecks, ...overigeAangifteChecks];
       const werkelijkAangifteDone = werkelijkAangifteChecks.filter((c) => c.frac >= 0.999).length;
       const werkelijkAangifteTotal = werkelijkAangifteChecks.length;
@@ -2558,6 +2565,7 @@ export default function App() {
       map[year] = {
         pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
         werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
+        werkelijkAangifteItems: werkelijkAangifteChecks.map((c) => ({ label: c.label, detail: c.detail, doel: c.doel, done: c.frac >= 0.999 })),
       };
     }
     return map;
@@ -4387,7 +4395,7 @@ export default function App() {
   // het kiezen van het te laden dossier (voorheen eerst kiezen, dan pas vragen).
   const openProjectPicker = () => projectFileInputRef.current?.click();
   const startLoadProject = () => {
-    if (parsedFiles.length === 0) { openProjectPicker(); return; }
+    if (parsedFiles.length === 0 || changesSinceExport === 0) { openProjectPicker(); return; }
     setDialog({
       title: "Huidig dossier opslaan?",
       message: (
@@ -4396,9 +4404,9 @@ export default function App() {
             <span className="text-slate-400">Huidig dossier: </span>
             <strong className="text-slate-700">{eigenNamen?.ondernemer || "zonder naam"}</strong> · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}
           </p>
+          {wijzigingWaarschuwing()}
           <p className="text-xs text-slate-400 pt-1">
-            Hierna kies je het dossier dat je wilt laden. Dat vervangt het huidige dossier; niet opgeslagen wijzigingen gaan uit
-            beeld. Via "Ongedaan maken" in de zijbalk kun je dit direct terugdraaien.
+            Hierna kies je het dossier dat je wilt laden. Dat vervangt het huidige dossier. Via "Ongedaan maken" in de zijbalk kun je dit direct terugdraaien.
           </p>
         </>
       ),
@@ -4433,9 +4441,19 @@ export default function App() {
   // maar benoemd zoals een professional ernaar kijkt (klaar met cliënt A, nu cliënt B) en met de
   // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
+  // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
+  const wijzigingWaarschuwing = () => (
+    <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      ⚠ Er {changesSinceExport === 1 ? "is 1 wijziging" : `zijn ${changesSinceExport} wijzigingen`} sinds{" "}
+      {lastExportAt ? `de laatste opslag (${new Date(lastExportAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })})` : loadedProjectFileName ? `het laden van "${loadedProjectFileName}"` : "het starten van dit dossier (nog niet als bestand opgeslagen)"}.
+      Als je niet opslaat, zijn deze wijzigingen weg.
+    </p>
+  );
   const clearAllData = () => {
     // Leeg dossier (bijv. net een nieuw dossier gestart en de wizard afgebroken): niets om te wissen, dus direct de wizard.
     if (parsedFiles.length === 0) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
+    // Niets gewijzigd sinds de laatste opslag/het laden: geen vraag nodig (het dossier is al in een bestand te vinden).
+    if (changesSinceExport === 0) { doClearAllData(true); return; }
     setDialog({
       title: "Nieuw dossier starten?",
       message: (
@@ -4444,9 +4462,9 @@ export default function App() {
             Het huidige dossier ({eigenNamen?.ondernemer || "zonder naam"} · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}) wordt
             gesloten: bestanden, rekeningtypes, correcties en instellingen worden leeggemaakt.
           </p>
+          {wijzigingWaarschuwing()}
           <p className="text-xs text-slate-400 pt-1">
-            Niet als dossierbestand opgeslagen gegevens gaan verloren. Direct daarna kun je dit nog terugdraaien via
-            "Ongedaan maken" in de zijbalk.
+            Direct daarna kun je dit nog terugdraaien via "Ongedaan maken" in de zijbalk.
           </p>
         </>
       ),
@@ -4853,6 +4871,8 @@ export default function App() {
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
+            werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -5051,6 +5071,8 @@ export default function App() {
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
+            werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -5219,6 +5241,8 @@ export default function App() {
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
+            werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
                 <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
