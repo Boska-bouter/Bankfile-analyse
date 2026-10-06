@@ -2241,6 +2241,26 @@ export default function App() {
     if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
     return estimateVpb(yearlySummary.winst, activeYear);
   }, [rechtsvorm, activeYear, yearlySummary]);
+  // V16 — optelling onderaan "Details en overzichten": BTW (4 kwartalen) + IB na heffingskorting + Zvw
+  // (zzp) of Vpb (BV). Positief = te betalen, negatief = terug te krijgen.
+  const belastingTotaalJaar = useMemo(() => {
+    if (!activeYear) return null;
+    const btw = korRegeling ? 0 : [1, 2, 3, 4].reduce((acc, k) => {
+      const q = quarterlyBtwData.find((item) => item.kwartaal === k);
+      return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
+    }, 0);
+    let delen = [{ label: "BTW", bedrag: btw }];
+    if (rechtsvorm === "bv") {
+      if (!dashboardVpbIndicatie) return null;
+      delen.push({ label: "Vpb", bedrag: dashboardVpbIndicatie.belasting || 0 });
+    } else {
+      if (!dashboardAangifteIndicatie) return null;
+      const hk = dashboardAangifteIndicatie.heffingskortingen?.totaal || 0;
+      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (dashboardAangifteIndicatie.ib?.belasting || 0) - hk) });
+      delen.push({ label: "Zvw", bedrag: dashboardAangifteIndicatie.zvw?.bijdrage || 0 });
+    }
+    return { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) };
+  }, [activeYear, korRegeling, quarterlyBtwData, rechtsvorm, dashboardVpbIndicatie, dashboardAangifteIndicatie]);
   // v283 — zelfde drieluik (Omzet incl. BTW / Omzet excl. BTW / Zakelijke kosten) als de
   // "kerncijfers"-kaart in het BV-Aangiftevoorstel (reports/aangiftevoorstel-bv.js), nu ook als korte
   // toelichting onder "Indicatieve vennootschapsbelasting" op het Jaaroverzicht. Geen nieuwe
@@ -4860,6 +4880,7 @@ export default function App() {
               vpbIndicatie={dashboardVpbIndicatie}
               vpbBreakdown={dashboardVpbBreakdown}
               holdingCard={holdingSummaryCard}
+              belastingTotaal={belastingTotaalJaar}
               winst={yearlySummary?.winst}
               previousWinst={previousYearlySummary?.winst}
               showTrend={showJaaroverzichtTrend}
