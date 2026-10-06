@@ -131,7 +131,7 @@ export const HELP_CHAPTERS = [
         <p>
           Een machine, gereedschap of ander bedrijfsmiddel mag je niet in één keer als kosten aftrekken — de aanschaf
           moet over de gebruiksduur worden <strong>afgeschreven</strong>. Elke transactie in de categorie{" "}
-          "Zakelijk - apparatuur/machines" verschijnt hier automatisch als los item (niet per leverancier gegroepeerd,
+          "Apparatuur &amp; inventaris" verschijnt hier automatisch als los item (niet per leverancier gegroepeerd,
           want dezelfde leverancier kan op verschillende data totaal verschillende bedrijfsmiddelen leveren).
         </p>
         <p>
@@ -250,22 +250,22 @@ export const HELP_CHAPTERS = [
           <strong>Incasso, juridisch &amp; schulden</strong> en <strong>Leningen (privé)</strong>.
         </p>
         <p>
-          Wat deels zakelijk kan zijn staat in twee groepen: <strong>Prive - wonen &amp; vaste lasten</strong> (huur, energie
-          en water, gemeentelijke kosten) en <strong>Prive - telecom &amp; abonnementen</strong> (mobiel/internet, overige
+          Wat deels zakelijk kan zijn staat in twee groepen: <strong>Privé - wonen &amp; vaste lasten</strong> (huur, energie
+          en water, gemeentelijke kosten) en <strong>Privé - telecom &amp; abonnementen</strong> (mobiel/internet, overige
           abonnementen, streaming). Bij die twee kun je de <em>soort</em> nog apart kiezen in het kleine tweede
           keuzeveld, zodat het zakelijke percentage per soort instelbaar blijft (Persoonlijke aannames).
         </p>
         <p>
           Al het overige — boodschappen, webshops, winkels divers, vrije tijd/uit eten/vakantie, medisch, kinderopvang,
           verzekeringen, hypotheek, toeslagen, alimentatie, overboekingen aan personen, enzovoort — valt onder{" "}
-          <strong>Prive kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
+          <strong>Privé kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
           divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten zie je de
           samengevoegde naam. De Excel-export blijft de fijne categorie tonen.
         </p>
         <p>
           <strong>Zakelijke categorieën</strong> zijn op dezelfde manier samengevoegd: Huisvesting (huur, energie-water,
-          gemeentelijke kosten, ook de "deels zakelijk"-varianten), Auto &amp; vervoer, Telecom, software &amp; abonnementen,
-          Personeel (loon &amp; inhuur), Belastingen, Interne overboeking en Inkoop &amp; overige bedrijfskosten (inkoop,
+          gemeentelijke kosten, ook de "deels zakelijk"-varianten), Vervoer &amp; auto, Telecom &amp; abonnementen,
+          Personeel, Belastingen &amp; heffingen, Interne overboekingen en Inkoop &amp; zakelijke uitgaven (inkoop,
           bankkosten, boekhouder, zakelijke verzekering, onderhoud apparatuur, marketing-website, betaalautomaat). Waar
           de aangifte een verschil maakt kies je de <em>soort</em> in het kleine tweede keuzeveld. De aangifte, BTW en
           rubrieken rekenen ongewijzigd op de fijne soort.

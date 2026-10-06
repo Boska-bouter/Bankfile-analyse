@@ -565,7 +565,6 @@ export const MAIN_CATEGORY_COLOR = {
   "Apparatuur & inventaris": "bg-orange-50 text-orange-700",
   "Personeel": "bg-indigo-200 text-indigo-900",
   "Telecom & abonnementen": "bg-indigo-100 text-indigo-800",
-  "Boekhouding & advies": "bg-purple-100 text-purple-800",
   "Financiering": "bg-teal-200 text-teal-900",
   "Interne overboekingen": "bg-cyan-100 text-cyan-800",
   "Belastingen & heffingen": "bg-fuchsia-200 text-fuchsia-900",
@@ -680,7 +679,6 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Apparatuur & inventaris": "Zakelijk - apparatuur/machines",
   "Personeel": "Personeel: overig",
   "Telecom & abonnementen": "Zakelijk overige abonnementen",
-  "Boekhouding & advies": "Boekhouder, accountant & administratie",
   "Financiering": "Leningen",
   "Interne overboekingen": "Interne overboeking: zakelijk sparen",
   "Belastingen & heffingen": "Belastingen: overig",
@@ -717,9 +715,9 @@ export function subtypesForMainCategory(mainCategory) {
 // blijft de fijne soort (huur / energie-water / …) apart kiesbaar, omdat daar per soort een
 // ander percentage zakelijk kan gelden.
 // ---------------------------------------------------------------------------------------------
-export const PRIVE_WONEN = "Prive - wonen & vaste lasten";
-export const PRIVE_TELECOM = "Prive - telecom & abonnementen";
-export const PRIVE_ALGEMEEN = "Prive kosten algemeen";
+export const PRIVE_WONEN = "Privé - wonen & vaste lasten";
+export const PRIVE_TELECOM = "Privé - telecom & abonnementen";
+export const PRIVE_ALGEMEEN = "Privé kosten algemeen";
 
 export const PRIVE_GROEPEN = {
   [PRIVE_WONEN]: [
@@ -750,15 +748,16 @@ export const PRIVE_KEUZE = [
 // standaardsoort. Opgeslagen categorie, herkenning, BTW, aangifte-rubrieken en Excel blijven fijn.
 const lid = (...keys) => keys.map((key) => ({ key, label: key }));
 export const ZAK_GROEPEN = {
+  "Apparatuur & inventaris": lid("Zakelijk - apparatuur/machines"),
   "Zakelijke inkomsten": lid("Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"),
   "Huisvesting": lid("Huur", "Huur (deels zakelijk)", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)"),
-  "Auto & vervoer": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)"),
-  "Telecom, software & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel/internet", "Streaming diensten", "Software & Online diensten"),
-  "Personeel (loon & inhuur)": lid("Personeel: overig", "Inhuur personeel", "Uitbetalen loon"),
-  "Belastingen": lid("Belastingen: overig", "Belastingen: OB", "Belastingen: LH", "Belastingen: IB", "Belastingen: ZVW", "Belastingen: IH", "Belastingen: MRB",
+  "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)"),
+  "Telecom & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel/internet", "Streaming diensten", "Software & Online diensten"),
+  "Personeel": lid("Personeel: overig", "Inhuur personeel", "Uitbetalen loon"),
+  "Belastingen & heffingen": lid("Belastingen: overig", "Belastingen: OB", "Belastingen: LH", "Belastingen: IB", "Belastingen: ZVW", "Belastingen: IH", "Belastingen: MRB",
     "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren"),
-  "Interne overboeking": lid("Interne overboeking: zakelijk sparen", "Interne overboeking", "Interne overboeking: privé sparen"),
-  "Inkoop & overige bedrijfskosten": lid("Zakelijke inkoop/uitgaven", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
+  "Interne overboekingen": lid("Interne overboeking: zakelijk sparen", "Interne overboeking", "Interne overboeking: privé sparen"),
+  "Inkoop & zakelijke uitgaven": lid("Zakelijke inkoop/uitgaven", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
     "Verzekering: Zakelijk", "Onderhoud apparatuur/machines", "Marketing-website"),
 };
 

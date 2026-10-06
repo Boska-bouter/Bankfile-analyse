@@ -56,9 +56,9 @@ export default function CategoryOverviewModal({ onClose }) {
               <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                 {main}
               </span>
-              {subtypes.length > 1 || subtypes[0] !== main ? (
+              {subtypes.filter((s) => s !== main).length > 0 ? (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {subtypes.map((s) => (
+                  {subtypes.filter((s) => s !== main).map((s) => (
                     <span key={s} className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[s] || "bg-slate-100 text-slate-600"}`}>
                       {s}
                     </span>
