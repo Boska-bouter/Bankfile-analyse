@@ -4754,6 +4754,8 @@ export default function App() {
                 </div>
                 <span className="shrink-0 flex items-center gap-3">
                   {overgeslagenStappen.length > 0 && <button type="button" onClick={() => setOvergeslagenStappen([])} className="text-xs text-teal-100 underline">Overgeslagen terugzetten</button>}
+                  {!volgende && <button type="button" onClick={() => setActiveTab("overzicht")} className="rounded-full bg-white text-teal-800 font-bold px-5 py-1.5 text-sm hover:bg-teal-50">Naar Overzicht →</button>}
+                  {volgende && <button type="button" onClick={() => setActiveTab("overzicht")} className="text-xs text-teal-100 underline">Terug naar Overzicht</button>}
                   {volgende && <button type="button" onClick={stapOverslaan} className="rounded-full border border-teal-200 text-white font-semibold px-3.5 py-1.5 text-sm hover:bg-teal-600">Overslaan</button>}
                   {volgende && <button type="button" onClick={volgende.onClick} className="rounded-full bg-white text-teal-800 font-bold px-5 py-1.5 text-sm hover:bg-teal-50">Ga →</button>}
                 </span>
