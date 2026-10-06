@@ -562,16 +562,37 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ib.leaseAutoKosten && ib.leaseAutoKosten.leaseRenteTotaal > 0
         ? ` Rente op de auto-lease (${eur(ib.leaseAutoKosten.leaseRenteTotaal)}) staat bij "Financiële baten en lasten", niet hier — dat is een financieringskost, geen autokostenpost, en telt niet mee in deze aftopping.`
         : "";
+    // Korte, duidelijke tekst WAT er bij de auto als aftrek is verrekend (op verzoek): per situatie.
+    const kmDec = (n) => Number(n).toFixed(2).replace(".", ",");
+    const autoContracten = (ib.leaseAutoKosten?.contracten || []).filter((c) => c.soort === "auto");
+    const bronnen = new Set(autoContracten.map((c) => c.bron));
+    const bijtellingTekst = (c) => (c.privegebruikMeerDan500km
+      ? `privégebruik > 500 km: bijtelling ${c.bijtellingspercentage ? c.bijtellingspercentage + "% van " + eur(c.cataloguswaarde) + " " : ""}in mindering gebracht${onttrekking < normaleBijtelling && normaleBijtelling > 0 ? " (afgetopt op de autokosten)" : ""}`
+      : "privégebruik ≤ 500 km: geen bijtelling");
+    const autoUitleg = [];
+    if (autoStatus?.[year] === "prive" && autoContracten.length === 0) {
+      autoUitleg.push(kmVergoedingForYear
+        ? `Privéauto zakelijk gebruikt: ${kmVergoedingForYear.zakelijkeKilometers} km × € ${kmDec(kmVergoedingForYear.vergoedingPerKm)} per km = ${eur(kmVergoedingForYear.bedrag)} aftrek (bij Overige bedrijfskosten); werkelijke autokosten tellen niet mee.`
+        : "Privéauto zakelijk gebruikt, maar geen kilometers ingevuld — daardoor nog geen autoaftrek.");
+    }
+    for (const c of autoContracten) {
+      if (c.bron === "financieel") autoUitleg.push(`Financial lease${c.leaseName ? " (" + c.leaseName + ")" : ""}: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
+      else if (c.bron === "operational") autoUitleg.push(`Operational lease: leasetermijnen en autokosten zijn volledig aftrekbaar; ${bijtellingTekst(c)}.`);
+      else if (c.bron === "koop") autoUitleg.push(`Auto in eigendom: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
+    }
+    const autoUitlegHtml = autoUitleg.length ? `<p class="toelichting"><strong>Verrekend als aftrek:</strong> ${autoUitleg.join(" ")}</p>` : "";
     const autoDetailHtml = !heeftBijtelling
       ? `
   <div class="subrubriek"><span>Auto — autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
-  ${totaleAutokosten > 0 ? `<p class="toelichting">Volledig aftrekbaar — er is dit jaar geen bijtelling wegens privégebruik van toepassing.${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
+  ${autoUitlegHtml}
+  ${totaleAutokosten > 0 ? `<p class="toelichting">${autoUitleg.length ? "" : "Volledig aftrekbaar — geen bijtelling van toepassing. "}${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
       : `
   <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
   <div class="subrubriek"><span>Auto — bijtelling privégebruik (afgetopt op de totale autokosten${normaleBijtelling > onttrekking ? `; werkelijke bijtelling ${eur(normaleBijtelling)}` : ""})</span><span class="num">- ${eur(onttrekking)}</span></div>
   <div class="subrubriek"><span>Auto — aftrekbare autokosten</span><span class="num">${eur(aftrekbareAutokosten)}</span></div>
+  ${autoUitlegHtml}
   <p class="toelichting">${aftrekbareAutokosten <= 0 ? "Bij deze aftopping is per saldo niets van de autokosten dit jaar aftrekbaar. " : ""}${
         gemengdLeaseWaarschuwing
           ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de app berekent deze nu tegen de afschrijving van auto én machine samen. "
