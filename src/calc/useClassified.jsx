@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { SPLIT_CATEGORY_NAMES } from "../classification/categories.js";
 import { detectOwnAccountTransfer, resolveClassification } from "../classification/classify.js";
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
@@ -8,12 +9,12 @@ export function useClassified(p) {
   const {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage,
   } = p;
 
   return useMemo(() => {
     const base0 = transactions.map((tx) => {
-      const resolved = resolveClassification(
+      let resolved = resolveClassification(
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
       );
@@ -22,6 +23,16 @@ export function useClassified(p) {
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
       // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
+      // Oudere dossiers hebben voor privé-boekingen soms nog de zakelijke fijne categorie als handmatige keuze
+      // ("Huur", "Energie-water", …). Blijft de boeking privé en staat het %-zakelijk van die categorie in
+      // dat jaar uitdrukkelijk op 0 (dus: geen bedrag verschuift), dan krijgt hij de privé-tegenhanger
+      // ("Prive - huur", …) zoals nieuwe boekingen. Is er een percentage > 0 of niets ingesteld, dan blijft
+      // alles ongewijzigd, zodat er nooit een bedrag stilzwijgend verspringt.
+      const tegenhanger = SPLIT_CATEGORY_NAMES[resolved.category];
+      if (tegenhanger && resolved.type === "Prive" && accountTypeByFile[tx.source] !== "Zakelijk") {
+        const pct = (c) => categoryZakelijkPercentage?.[c]?.[tx.year];
+        if (pct(resolved.category) === 0 && !(pct(tegenhanger) > 0)) resolved = { ...resolved, category: tegenhanger };
+      }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
     const base = koppelDoorsluisOverboekingen(base0, Object.values(accountTypeByFile).includes("Zakelijk"));
@@ -71,5 +82,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
+  }, [transactions, categoryZakelijkPercentage, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
 }

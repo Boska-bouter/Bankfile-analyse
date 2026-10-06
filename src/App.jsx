@@ -34,6 +34,19 @@ import { useControlerenCardGroups } from "./cards/useControlerenCardGroups.jsx";
 import { useInstellingenCardGroups } from "./cards/useInstellingenCardGroups.jsx";
 import { useYearlyProgress } from "./calc/useYearlyProgress.jsx";
 import { useClassified } from "./calc/useClassified.jsx";
+import { useYearlySummaries } from "./calc/useYearlySummaries.jsx";
+import { useDashboardAangifteIndicatie } from "./calc/useDashboardAangifteIndicatie.jsx";
+import { useKostenTotaalByYear } from "./calc/useKostenTotaalByYear.jsx";
+import { useBelastingTotaalJaar } from "./calc/useBelastingTotaalJaar.jsx";
+import { useHoldingSummaryCard } from "./calc/useHoldingSummaryCard.jsx";
+import { useAansluitControleInfo } from "./calc/useAansluitControleInfo.jsx";
+import { useAutomatischeHerkenningItems } from "./calc/useAutomatischeHerkenningItems.jsx";
+import { useAangifteOpenPunten } from "./calc/useAangifteOpenPunten.jsx";
+import { useWorkflowSteps } from "./calc/useWorkflowSteps.jsx";
+import { useAlleStappen } from "./calc/useAlleStappen.jsx";
+import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByFile.jsx";
+import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
+import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossier/dossierMigraties.js";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
@@ -887,37 +900,9 @@ export default function App() {
   // rekeningtype) — gebruikt om overboekingen tussen je eigen rekeningen te herkennen, ongeacht
   // bankformaat. Alleen bestanden waarvan het rekeningtype al bekend is tellen mee (anders is niet
   // te bepalen of het bijv. "Terugboeking van prive" of "Uitbetaling aan prive" zou moeten zijn).
-  const ownAccountsElsewhereByFile = useMemo(() => {
-    const entries = Object.entries(ownAccountByFile)
-      .filter(([fileName]) => accountTypeByFile[fileName])
-      .map(([fileName, iban]) => ({ fileName, iban, accountType: accountTypeByFile[fileName], isLoadedFile: true }));
-    // Handmatig opgegeven eigen rekeningen die je (nog) niet hebt geladen (zie de wizard-vraag) —
-    // tellen voor élk geladen bestand mee, niet gekoppeld aan een specifiek fileName. Er kunnen er
-    // meerdere zijn (bijv. een extra zakelijke rekening én twee privérekeningen). Is zo'n rekening
-    // inmiddels ALSNOG als eigen bestand geladen (de wizard-invoer is dan achterhaald, maar wordt
-    // nergens automatisch opgeruimd), dan die dubbele/verouderde entry hier negeren — anders staat
-    // dezelfde rekening tweemaal in de lijst. Op zich onschadelijk zolang het rekeningtype gelijk
-    // blijft (find/some hieronder gebruiken toch maar de eerste match), maar wél verwarrend, en een
-    // reëel risico zodra iemand het rekeningtype van het echte bestand nog aanpast zonder aan deze
-    // oude wizard-invoer te denken.
-    // `isLoadedFile: false` — dit is bewust ANDERS dan de "entries" hierboven: een via de wizard
-    // opgegeven rekening is nog GEEN geladen bestand, dus de daadwerkelijke tegenboeking staat nog
-    // nergens in de data. De spiegelboeking hieronder (zie "classified") moet dit onderscheid kennen
-    // — anders verdwijnt het geld van zo'n nog-niet-geladen rekening stilzwijgend uit het overzicht
-    // (geen spiegel én geen echte transactie), in plaats van gewoon zichtbaar te blijven totdat die
-    // rekening ook echt geladen wordt.
-    const extra = (eigenRekeningenExtra || [])
-      .filter((r) => r.iban && !entries.some((e) => ibansMatch(e.iban, r.iban)))
-      .map((r) => ({ iban: r.iban, accountType: r.accountType, isLoadedFile: false }));
-    const result = {};
-    for (const pf of parsedFiles) {
-      result[pf.fileName] = [
-        ...entries.filter((e) => e.fileName !== pf.fileName).map((e) => ({ iban: e.iban, accountType: e.accountType, isLoadedFile: true })),
-        ...extra,
-      ];
-    }
-    return result;
-  }, [ownAccountByFile, accountTypeByFile, parsedFiles, eigenRekeningenExtra]);
+  const ownAccountsElsewhereByFile = useOwnAccountsElsewhereByFile({
+    accountTypeByFile, eigenRekeningenExtra, ownAccountByFile, parsedFiles,
+  });
   const eigenRekeningenGeladen = useMemo(() => {
     const seen = new Set();
     const res = [];
@@ -1132,7 +1117,7 @@ export default function App() {
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -2006,36 +1991,13 @@ export default function App() {
     () => (yearlySummary ? estimateZvw(yearlySummary.winst, activeYear) : { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false }),
     [yearlySummary, activeYear]
   );
-  const yearlySummaries = useMemo(() => {
-    const map = {};
-    for (const y of years) {
-      const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
-      const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-      const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
-      const leaseAutoKosten = rechtsvorm !== "bv"
-        ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
-          )
-        : null;
-      const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
-      // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
-      const gedeeldeEnergie = computeGedeeldeEnergieVoorJaar(classified, y, energieZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      const gedeeldeGemeentelijkeKosten = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, y, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
-      const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
-      // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js — de
-      // daadwerkelijk berekende afschrijving moet daarom hier worden meegeteld, exact dezelfde
-      // constructie als de financiële-lease-afschrijving.
-      const activaAfschrijving = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
-      const winstCorrectie =
-        (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) -
-        (gedeeldeEnergie?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKosten?.nietAftrekbaarBedrag || 0) +
-        (kmVergoeding?.bedrag || 0) + (activaAfschrijving?.totaalAfschrijving || 0);
-      map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed);
-    }
-    return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaSummary, activaDetails]);
+  const yearlySummaries = useYearlySummaries({
+    activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
+    btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, energieZakelijkPercentageStatus,
+    fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, kmVergoedingDetails,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    voorbelastingExcluded, years,
+  });
   // v237 — Zelfde reserve-keten (niet-gerealiseerde zelfstandigenaftrek over de jaren heen) en
   // dezelfde "...MetOndernemersaftrek"-functies als het volledige Aangiftevoorstel-rapport
   // (reports/aangiftevoorstel.js), nu ook lichtgewicht herbruikt voor de dashboardkaarten "IB & Zvw"
@@ -2046,71 +2008,24 @@ export default function App() {
   // hier behandeld als "ja" (in plaats van beide scenario's apart te tonen) — te veel nuance voor een
   // compacte kaart; de volledige, preciezere uitsplitsing (incl. beide scenario's) staat in de
   // "Indicatieve aangifteberekening" zelf, waar deze kaarten ook naartoe doorklikken.
-  const ondernemersaftrekPerJaar = useMemo(() => {
-    if (rechtsvorm === "bv" || years.length === 0) return {};
-    const jarenData = years.map((y) => ({
-      year: y,
-      winst: yearlySummaries[y]?.winst || 0,
-      zelfstandigenaftrekStatus: resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, y, zaLegacyJaDefault),
-      startersaftrekToegepast: startersaftrekStatus?.[y] === "ja",
-    }));
-    return computeOndernemersaftrekMetReserve(jarenData);
-  }, [rechtsvorm, years, yearlySummaries, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus]);
-  const dashboardAangifteIndicatie = useMemo(() => {
-    if (rechtsvorm === "bv" || !activeYear || !yearlySummary) return null;
-    const aftrek = ondernemersaftrekPerJaar[activeYear];
-    const startersaftrekToegepastDitJaar = startersaftrekStatus?.[activeYear] === "ja";
-    const ondernemersaftrekBedrag = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
-    const winstUitsplitsing = computeBelastbareWinstUitsplitsing(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar);
-    return {
-      ib: estimateIncomeTaxMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
-      zvw: estimateZvwMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
-      // Toegevoegd zodat de "Indicatieve aangifte"-kaart (DetailsPanel.jsx/IndicatieveAangifteCard.jsx)
-      // onder "Totaal belasting en premies" ook laat zien wélke heffingskorting daar al in is verrekend
-      // — zonder dit veld leek "Totaal" alleen IB + Zvw te zijn, zonder de aftrek die daar al in zit.
-      heffingskortingen: estimateHeffingskortingenMetOndernemersaftrek(yearlySummary.winst, activeYear, ondernemersaftrekBedrag, startersaftrekToegepastDitJaar),
-      zelfstandigenaftrekBedrag: aftrek?.zelfstandigenaftrekBedrag || 0,
-      startersaftrekBedrag: aftrek?.startersaftrekBedrag || 0,
-      mkbVrijstellingBedrag: winstUitsplitsing.mkbVrijstellingBedrag,
-      // Toegevoegd voor de "Indicatieve aangifte"-kaart in DetailsPanel.jsx (Overzicht-tabblad,
-      // sub-tab Jaaroverzicht) — dezelfde belastbare winst als in winstUitsplitsing, alleen nog niet
-      // apart doorgegeven.
-      belastbareWinst: winstUitsplitsing.belastbaar,
-    };
-  }, [rechtsvorm, activeYear, yearlySummary, ondernemersaftrekPerJaar, startersaftrekStatus]);
+  const ondernemersaftrekPerJaar = useOndernemersaftrekPerJaar({
+    rechtsvorm, startersaftrekStatus, yearlySummaries, years, zaLegacyJaDefault,
+    zelfstandigenaftrekStatus,
+  });
+  const dashboardAangifteIndicatie = useDashboardAangifteIndicatie({
+    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus, yearlySummary,
+  });
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
   // afschrijving (berekend als Activa is ingevuld, anders het bruto aanschafbedrag ter herkenning)
   // + overige bedrijfskosten + aftrekbare rente. Bewust NIET zelf opnieuw berekend vanuit
   // computeYearlySummary — dat zou de kans op verschil met het Aangiftevoorstel juist vergroten.
-  const kostenTotaalByYear = useMemo(() => {
-    const map = {};
-    for (const y of years) {
-      const zakItemsVoorJaar = classified.filter((tx) => !tx.isMirror && tx.year === y && fiscalTreatmentOf(tx.category) !== "geen");
-      const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
-      const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-      const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
-      const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
-      const leaseAutoKosten = rechtsvorm !== "bv"
-        ? combineAutoKosten(
-            computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd)
-          )
-        : null;
-      const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
-      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentageEff, autoStatus, kmVergoeding);
-      map[y] =
-        (ib.inkoopkosten.totaal || 0) +
-        (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
-        (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) +
-        (ib.autokostenOverig.totaal || 0) +
-        ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
-        ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
-        renteAftrekbaar -
-        (ib.leaseAutoKosten?.onttrekking || 0);
-    }
-    return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails]);
+  const kostenTotaalByYear = useKostenTotaalByYear({
+    activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
+    btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, kmVergoedingDetails,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    years,
+  });
   // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
   // BV-Aangiftevoorstel), maar hier al altijd bijgehouden — dezelfde Route B-redenering als de rest
   // van de app: deze categorieën bestaan niet in een zzp-dossier, dus deze waarden zijn dan gewoon
@@ -2145,24 +2060,10 @@ export default function App() {
   }, [rechtsvorm, activeYear, yearlySummary]);
   // V16 — optelling onderaan "Details en overzichten": BTW (4 kwartalen) + IB na heffingskorting + Zvw
   // (zzp) of Vpb (BV). Positief = te betalen, negatief = terug te krijgen.
-  const belastingTotaalJaar = useMemo(() => {
-    if (!activeYear) return null;
-    const btw = korRegeling ? 0 : [1, 2, 3, 4].reduce((acc, k) => {
-      const q = quarterlyBtwData.find((item) => item.kwartaal === k);
-      return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
-    }, 0);
-    let delen = [{ label: "BTW", bedrag: btw }];
-    if (rechtsvorm === "bv") {
-      if (!dashboardVpbIndicatie) return null;
-      delen.push({ label: "Vpb", bedrag: dashboardVpbIndicatie.belasting || 0 });
-    } else {
-      if (!dashboardAangifteIndicatie) return null;
-      const hk = dashboardAangifteIndicatie.heffingskortingen?.totaal || 0;
-      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (dashboardAangifteIndicatie.ib?.belasting || 0) - hk) });
-      delen.push({ label: "Zvw", bedrag: dashboardAangifteIndicatie.zvw?.bijdrage || 0 });
-    }
-    return { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) };
-  }, [activeYear, korRegeling, quarterlyBtwData, rechtsvorm, dashboardVpbIndicatie, dashboardAangifteIndicatie]);
+  const belastingTotaalJaar = useBelastingTotaalJaar({
+    activeYear, dashboardAangifteIndicatie, dashboardVpbIndicatie, korRegeling, quarterlyBtwData,
+    rechtsvorm,
+  });
   // v283 — zelfde drieluik (Omzet incl. BTW / Omzet excl. BTW / Zakelijke kosten) als de
   // "kerncijfers"-kaart in het BV-Aangiftevoorstel (reports/aangiftevoorstel-bv.js), nu ook als korte
   // toelichting onder "Indicatieve vennootschapsbelasting" op het Jaaroverzicht. Geen nieuwe
@@ -2172,53 +2073,17 @@ export default function App() {
   // afgeleid uit winst = omzetExclBtw - kosten (dezelfde identiteit als het Aangiftevoorstel, dat
   // hetzelfde totaal via een andere optelling — inkoop/afschrijving/overig/rente — uitrekent), zodat
   // dit bedrag hier altijd exact aansluit bij "Resultaat vóór Vpb" hierboven.
-  const dashboardVpbBreakdown = useMemo(() => {
-    if (!activeYear || !yearlySummary) return null;
-    const omzetExclBtw = yearlySummary.zakelijkeInkomstenNetto || 0;
-    const btwOverOmzetTotaal = quarterlyBtwData.reduce((a, q) => a + (q.verschuldigdBtw21 || 0) + (q.verschuldigdBtw9 || 0), 0);
-    const omzetInclBtw = omzetExclBtw + btwOverOmzetTotaal;
-    const zakelijkeKosten = omzetExclBtw - yearlySummary.winst;
-    const gebruikt21 = quarterlyBtwData.some((q) => (q.verschuldigdBtw21 || 0) > 0);
-    const gebruikt9 = quarterlyBtwData.some((q) => (q.verschuldigdBtw9 || 0) > 0);
-    const btwTariefLabel = gebruikt21 && gebruikt9 ? "21% en 9%" : gebruikt9 ? "9%" : "21%";
-    return { omzetInclBtw, omzetExclBtw, zakelijkeKosten, btwTariefLabel, toonOmzetInclBtw: btwOverOmzetTotaal > 0 };
-  }, [rechtsvorm, activeYear, yearlySummary, quarterlyBtwData]);
+  const dashboardVpbBreakdown = useDashboardVpbBreakdown({
+    activeYear, quarterlyBtwData, rechtsvorm, yearlySummary,
+  });
   // v282 — samenvatting van de holding-boekingen voor het actieve jaar, als compacte kaart (zelfde
   // vorm als aannamesCard) voor diezelfde Jaaroverzicht-sub-tab. Herhaalt bewust dezelfde
   // verschil-berekening als de rij voor dit jaar in HoldingBoekingenPanel.jsx — puur een
   // samenvatting/link daarnaartoe, geen nieuwe databron.
-  const holdingSummaryCard = useMemo(() => {
-    if (rechtsvorm !== "bv" || heeftHolding !== true || !activeYear) return null;
-    const b = holdingBoekingen?.[activeYear] || {};
-    const ev = evVerloop?.[activeYear] || { kapitaalstorting: 0, dividend: 0 };
-    const kapitaalstortingHolding = b.kapitaalstorting ?? null;
-    const dividendOntvangenHolding = b.dividendOntvangen ?? null;
-    const ingevuld = kapitaalstortingHolding != null || dividendOntvangenHolding != null;
-    const kapitaalVerschil = (kapitaalstortingHolding || 0) - ev.kapitaalstorting;
-    const dividendVerschil = (dividendOntvangenHolding || 0) - ev.dividend;
-    const heeftVerschil = ingevuld && (Math.abs(kapitaalVerschil) >= 1 || Math.abs(dividendVerschil) >= 1);
-    return {
-      key: "holdingBoekingen",
-      title: `Holding-boekingen ${activeYear}`,
-      icon: <CardIcon name="building" />,
-      lines: [
-        { label: "Kapitaalstorting (holding)", value: kapitaalstortingHolding != null ? eur(kapitaalstortingHolding) : "— nog niet ingevuld" },
-        { label: "Dividend ontvangen (holding)", value: dividendOntvangenHolding != null ? eur(dividendOntvangenHolding) : "— nog niet ingevuld" },
-      ],
-      subtitle: !ingevuld
-        ? "Nog niet ingevuld"
-        : heeftVerschil
-        ? `Verschil met werkmaatschappij: kapitaal ${eur(kapitaalVerschil)}, dividend ${eur(dividendVerschil)}`
-        : "Sluit aan met de werkmaatschappij",
-      tone: !ingevuld ? "neutral" : heeftVerschil ? "attention" : "ok",
-      hint: "Naar de holding-boekingen",
-      onClick: () => {
-        setShowHoldingBoekingen(true);
-        jumpToSection(holdingBoekingenSectionRef);
-      },
-      actionLabel: "Bewerken",
-    };
-  }, [rechtsvorm, heeftHolding, activeYear, holdingBoekingen, evVerloop]);
+  const holdingSummaryCard = useHoldingSummaryCard({
+    activeYear, evVerloop, heeftHolding, holdingBoekingen, holdingBoekingenSectionRef,
+    jumpToSection: (...a) => jumpToSection(...a), rechtsvorm, setShowHoldingBoekingen,
+  });
   const volledigeJaren = useMemo(() => computeVolledigeJaren(classified), [classified]);
   // Is er daadwerkelijk een privérekening-BESTAND geladen in dit dossier? Zie de toelichting bij
   // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
@@ -2233,49 +2098,9 @@ export default function App() {
   // gedupliceerd in AansluitingDetailPanel.jsx en de losse "aansluitControle"-kaart) — nu ook
   // hergebruikt door de nieuwe "Bestanden geladen"-kaart op Overzicht (zie dashboardCards), zodat er
   // maar één plek is die zakSum/priSum/diff uitrekent.
-  const aansluitControleInfo = useMemo(() => {
-    const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
-    const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
-    const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-    const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
-    const diff = Math.round((zakSum + priSum) * 100) / 100;
-    // V73 — welke boekingen hebben aan de andere kant géén tegenboeking (zelfde bedrag, binnen 5 dagen)?
-    // Zo toont de kaart bij een verschil waar het vandaan komt, en kun je het meteen indelen.
-    const zakTx = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category));
-    const priTx = priGroupForYear.items.filter((t) => isPriTransferCat(t.category));
-    const dagen5 = 5 * 86400000;
-    const gebruiktPri = new Set();
-    const zakZonder = [];
-    for (const z of zakTx) {
-      const m = priTx.find((q) => !gebruiktPri.has(q.id) && Math.abs(z.amount + q.amount) < 0.005 && Math.abs(z.date - q.date) <= dagen5);
-      if (m) gebruiktPri.add(m.id); else zakZonder.push(z);
-    }
-    const priZonder = priTx.filter((q) => !gebruiktPri.has(q.id));
-    const onverklaard = [
-      ...zakZonder.map((t) => ({ tx: t, kant: "Zakelijk" })),
-      ...priZonder.map((t) => ({ tx: t, kant: "Prive" })),
-    ].sort((a, b) => Math.abs(b.tx.amount) - Math.abs(a.tx.amount));
-    // V71 — "geladen" is per jaar bekeken: een privébestand dat alleen 2024-2025 beslaat zegt niets
-    // over 2020 — daar staat Privé dan op € 0,00 omdat er geen data is, niet omdat het niet klopt.
-    const zijdeOntbreekt = !priveRekeningGeladen || priGroupForYear.items.length === 0 ? "Prive"
-      : !zakelijkRekeningGeladen || zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
-    const heeftData = !(zakSum === 0 && priSum === 0);
-    let tone, subtitle;
-    if (!heeftData) {
-      tone = "neutral";
-      subtitle = "Geen overboekingen tussen zakelijk en privé gevonden dit jaar.";
-    } else if (zijdeOntbreekt) {
-      tone = "ok";
-      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Privé"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
-    } else {
-      const ok = Math.abs(diff) < 0.01;
-      tone = ok ? "ok" : "attention";
-      subtitle = ok
-        ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`
-        : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diff)}).`;
-    }
-    return { zakSum, priSum, diff, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard };
-  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen]);
+  const aansluitControleInfo = useAansluitControleInfo({
+    priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen,
+  });
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
     [zakGroupForYear, priGroupForYear, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen]
@@ -2694,11 +2519,9 @@ export default function App() {
   // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
   const [overgeslagenStappen, setOvergeslagenStappen] = useState([]);
   const stapVolgorde = ["importControle", "leases", "loans", "activa", "aannames", "duplicates", "incomeReview", "personReview", "overigReview", "confidence"];
-  const alleStappen = useMemo(() => {
-    const lijst = [...teControlerenItems, ...inTeStellenItems];
-    const rang = (k) => { const i = stapVolgorde.indexOf(k); return i === -1 ? 99 : i; };
-    return lijst.map((it, idx) => ({ it, idx })).sort((a, b) => rang(a.it.key) - rang(b.it.key) || a.idx - b.idx).map((x) => x.it);
-  }, [teControlerenItems, inTeStellenItems]);
+  const alleStappen = useAlleStappen({
+    inTeStellenItems, stapVolgorde, teControlerenItems,
+  });
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // V22 — een uitgeklapte Controleren-kaart klapt vanzelf in zodra de LAATSTE open stap erin is afgerond
   // (bijv. Overig opruimen → 0 open en de rest van "Herkomst & opschonen" ook klaar). Alleen bij de overgang
@@ -2732,15 +2555,9 @@ export default function App() {
   useEffect(() => { if (alleStappen.length > maxStappen) setMaxStappen(alleStappen.length); }, [alleStappen.length, maxStappen]);
   const stappenKlaar = Math.max(0, maxStappen - alleStappen.length);
 
-  const automatischeHerkenningItems = useMemo(() => {
-    const incomeCard = instellingenDashboardCards.find((c) => c.key === "businessIncomeEntries");
-    const expenseCard = instellingenDashboardCards.find((c) => c.key === "businessExpenseEntries");
-    return [
-      { label: "Categorieregels", count: categoryRules.length },
-      incomeCard && { label: "Zakelijke klanten herkend", count: incomeCard.value, onClick: incomeCard.onClick },
-      expenseCard && { label: "Zakelijke inkoop/uitgaven", count: expenseCard.value, onClick: expenseCard.onClick },
-    ].filter(Boolean);
-  }, [instellingenDashboardCards, categoryRules]);
+  const automatischeHerkenningItems = useAutomatischeHerkenningItems({
+    categoryRules, instellingenDashboardCards,
+  });
 
   // Jaaroverzicht-kaart (omzet/kosten/winst) — %-vergelijking t.o.v. vorig jaar alleen tonen als
   // beide jaren "volledig" zijn (zelfde voorwaarde als het bestaande Meerjarenoverzicht hanteert).
@@ -2785,42 +2602,18 @@ export default function App() {
   // Korte bullet-lijst voor de "Aangiftevoorstel"-tussenstap. Bevat bewust NIET meer de punten die
   // de Aangifte-checklist hieronder al met (meer) detail toont (Overig-transacties, BTW-kwartalen,
   // ontbrekende spiegelboeking) — dat stond dubbel. Hier staat alleen wat de checklist niet laat zien.
-  const aangifteOpenPunten = useMemo(() => {
-    if (!activeYear) return [];
-    const items = [];
-    if (yearlyProgress[activeYear]?.status === "rood") {
-      items.push("Saldo tussen twee bestanden sluit dit jaar niet aan");
-    }
-    // v285 — een BV kent geen IB/Zvw (alleen Vpb) — zie ook yearlyProgress/werkelijkAangifteChecks.
-    if (rechtsvorm === "bv") {
-      if (!vpbStatus[activeYear]?.gedaan) items.push("Vpb-aangifte nog niet afgevinkt als gedaan");
-    } else {
-      if (!ibStatus[activeYear]?.gedaan) items.push("IB/IH nog niet afgevinkt als gedaan");
-      if (!zvwStatus[activeYear]?.gedaan) items.push("Zvw nog niet afgevinkt als gedaan");
-    }
-    return items;
-  }, [activeYear, yearlyProgress, ibStatus, zvwStatus, vpbStatus, rechtsvorm]);
+  const aangifteOpenPunten = useAangifteOpenPunten({
+    activeYear, ibStatus, rechtsvorm, vpbStatus, yearlyProgress,
+    zvwStatus,
+  });
 
   // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
   // state (geen nieuwe reliability-engine): Bankbestanden → Transacties → BTW → Jaarcontrole →
   // Aangiftevoorstel. "Jaarcontrole" hergebruikt letterlijk yearlyProgress[activeYear].status.
-  const workflowSteps = useMemo(() => {
-    if (!activeYear) return [];
-    const filesDone = parsedFiles.length > 0;
-    const txDone = checklistData.categorizedPct === 100;
-    let btwState;
-    if (korRegeling === null) btwState = "todo";
-    else if (korRegeling === true) btwState = "done";
-    else if (btwVerlegd === null || checklistData.quartersOpen.length > 0) btwState = "oranje";
-    else btwState = "done";
-    return [
-      { label: "Bankbestanden", state: filesDone ? "done" : "todo" },
-      { label: "Transacties", state: txDone ? "done" : "oranje" },
-      { label: "BTW", state: btwState },
-      { label: "Jaarcontrole", state: yearlyProgress[activeYear]?.status || "oranje" },
-      { label: "Indicatieve aangifteberekening", state: "todo" },
-    ];
-  }, [activeYear, parsedFiles.length, checklistData, korRegeling, btwVerlegd, yearlyProgress]);
+  const workflowSteps = useWorkflowSteps({
+    activeYear, btwVerlegd, checklistData, korRegeling, parsedFiles,
+    yearlyProgress,
+  });
 
   // ---- "Werk te doen" — bundelt de belangrijkste openstaande signalen ----
   const todoItems = useTodoItems({
