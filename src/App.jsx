@@ -27,6 +27,7 @@ import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
   loadPersistedSettings, persistSettings, clearPersistedSettings,
 } from "./storage/projectStorage.js";
+import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
@@ -4382,43 +4383,6 @@ export default function App() {
   // V52 — volgorde omgedraaid: eerst de vraag of het HUIDIGE dossier moet worden opgeslagen, pas daarna
   // het kiezen van het te laden dossier (voorheen eerst kiezen, dan pas vragen).
   const openProjectPicker = () => projectFileInputRef.current?.click();
-  const startLoadProject = () => {
-    if (parsedFiles.length === 0 || changesSinceExport === 0) { openProjectPicker(); return; }
-    setDialog({
-      title: "Huidig dossier opslaan?",
-      message: (
-        <>
-          <p>
-            <span className="text-slate-400">Huidig dossier: </span>
-            <strong className="text-slate-700">{eigenNamen?.ondernemer || "zonder naam"}</strong> · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}
-          </p>
-          {wijzigingWaarschuwing()}
-          <p className="text-xs text-slate-400 pt-1">
-            Hierna kies je het dossier dat je wilt laden. Dat vervangt het huidige dossier. Via "Ongedaan maken" in de zijbalk kun je dit direct terugdraaien.
-          </p>
-        </>
-      ),
-      actions: [
-        { label: "Opslaan en daarna dossier kiezen", variant: "primary", onClick: () => {
-          saveProjectFile();
-          // Een browser kan niet zien of het "Bewaar als"-venster is afgebroken; daarom eerst bevestigen.
-          setDialog({
-            title: "Is het dossier opgeslagen?",
-            message: <p>Het dossier is aangeboden om te downloaden. Controleer of het bestand echt is opgeslagen voordat je een ander dossier kiest.</p>,
-            actions: [
-              { label: "Ja, opgeslagen — dossier kiezen", variant: "primary", onClick: openProjectPicker },
-              { label: "Nee, opnieuw opslaan", onClick: () => { saveProjectFile(); setDialog({
-                title: "Is het dossier opgeslagen?",
-                message: <p>Bevestig pas als het bestand echt is opgeslagen.</p>,
-                actions: [{ label: "Ja, opgeslagen — dossier kiezen", variant: "primary", onClick: openProjectPicker }],
-              }); } },
-            ],
-          });
-        } },
-        { label: "Niet opslaan, dossier kiezen", variant: "danger", onClick: openProjectPicker },
-      ],
-    });
-  };
   const requestLoadProject = (file) => {
     if (parsedFiles.length > 0) snapshotBeforeAction("Dossier geladen");
     loadProjectFile(file);
@@ -4430,53 +4394,6 @@ export default function App() {
   // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
-  const wijzigingWaarschuwing = () => (
-    <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-      ⚠ Er {changesSinceExport === 1 ? "is 1 wijziging" : `zijn ${changesSinceExport} wijzigingen`} sinds{" "}
-      {lastExportAt ? `de laatste opslag (${new Date(lastExportAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })})` : loadedProjectFileName ? `het laden van "${loadedProjectFileName}"` : "het starten van dit dossier (nog niet als bestand opgeslagen)"}.
-      Als je niet opslaat, zijn deze wijzigingen weg.
-    </p>
-  );
-  const clearAllData = () => {
-    // Leeg dossier (bijv. net een nieuw dossier gestart en de wizard afgebroken): niets om te wissen, dus direct de wizard.
-    if (parsedFiles.length === 0) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
-    // Niets gewijzigd sinds de laatste opslag/het laden: geen vraag nodig (het dossier is al in een bestand te vinden).
-    if (changesSinceExport === 0) { doClearAllData(true); return; }
-    setDialog({
-      title: "Nieuw dossier starten?",
-      message: (
-        <>
-          <p>
-            Het huidige dossier ({eigenNamen?.ondernemer || "zonder naam"} · {parsedFiles.length} bankbestand{parsedFiles.length === 1 ? "" : "en"}) wordt
-            gesloten: bestanden, rekeningtypes, correcties en instellingen worden leeggemaakt.
-          </p>
-          {wijzigingWaarschuwing()}
-          <p className="text-xs text-slate-400 pt-1">
-            Direct daarna kun je dit nog terugdraaien via "Ongedaan maken" in de zijbalk.
-          </p>
-        </>
-      ),
-      actions: [
-        { label: "Opslaan en nieuw dossier starten", variant: "primary", onClick: () => {
-          saveProjectFile();
-          // Een browser kan niet zien of het "Bewaar als"-venster is afgebroken; daarom pas wissen na bevestiging.
-          setDialog({
-            title: "Is het dossier opgeslagen?",
-            message: <p>Het dossier is aangeboden om te downloaden. Controleer of het bestand echt is opgeslagen voordat het huidige dossier wordt gesloten.</p>,
-            actions: [
-              { label: "Ja, opgeslagen — nieuw dossier starten", variant: "primary", onClick: () => doClearAllData(true) },
-              { label: "Nee, opnieuw opslaan", onClick: () => { saveProjectFile(); setDialog({
-                title: "Is het dossier opgeslagen?",
-                message: <p>Bevestig pas als het bestand echt is opgeslagen.</p>,
-                actions: [{ label: "Ja, opgeslagen — nieuw dossier starten", variant: "primary", onClick: () => doClearAllData(true) }],
-              }); } },
-            ],
-          });
-        } },
-        { label: "Nieuw dossier starten zonder opslaan", variant: "danger", onClick: () => doClearAllData(true) },
-      ],
-    });
-  };
   const doClearAllData = async (askWizard = false) => {
     snapshotBeforeAction("Nieuw dossier");
     setActiveTab("overzicht"); // V52 — nieuw dossier begint altijd op Overzicht
@@ -4564,6 +4481,10 @@ export default function App() {
       });
     }
   };
+  const { startLoadProject, clearAllData } = useDossierDialogen({
+    parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
+    setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
+  });
 
   if (showStartupChoice) {
     const pending = pendingProjectRef.current;
