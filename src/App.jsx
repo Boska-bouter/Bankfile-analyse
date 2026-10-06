@@ -479,9 +479,9 @@ export default function App() {
     [quarterlyBtwSectionRef, "overzicht"],
     [obIbSectionRef, "overzicht"],
     [bvSignaleringSectionRef, "overzicht"],
-    [loansSectionRef, "instellingen"],
-    [leasesSectionRef, "instellingen"],
-    [activaSectionRef, "instellingen"],
+    [loansSectionRef, "controleren"],
+    [leasesSectionRef, "controleren"],
+    [activaSectionRef, "controleren"],
     [aannamesSectionRef, "instellingen"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
@@ -3488,9 +3488,29 @@ export default function App() {
     };
     return [
       withExpand(
-        g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
+        (() => {
+          const basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          if (!basis || !aansluitControleInfo.heeftData) return basis;
+          const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
+          const bol = aansluitControleInfo.tone === "ok" ? "🟢 " : aansluitControleInfo.tone === "attention" ? "🟠 " : aansluitControleInfo.tone === "risk" ? "🔴 " : "";
+          return {
+            ...basis,
+            tone: toneRank[aansluitControleInfo.tone] > toneRank[basis.tone] ? aansluitControleInfo.tone : basis.tone,
+            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: `${bol}${aansluitControleInfo.tone === "ok" ? "Klopt" : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet gekoppeld` : "Controleren"}` }],
+          };
+        })(),
         "importKwaliteit",
         <div className="space-y-3">
+          {aansluitControleInfo.heeftData && (
+            <div className={`rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2 ${aansluitControleInfo.tone === "attention" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
+              <span><strong>Controle zakelijk ↔ privé:</strong> {aansluitControleInfo.subtitle}</span>
+              {aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0 ? (
+                <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking{aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}</button>
+              ) : (
+                <button type="button" onClick={() => jumpToSection(detailsSectionRef)} className="text-xs underline">Naar de detailtabellen</button>
+              )}
+            </div>
+          )}
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} />
           </div>
@@ -3572,22 +3592,58 @@ export default function App() {
       // zichtbare "box" ernaast — zelfde berekening als voorheen in AansluitingDetailPanel.jsx (nu
       // verwijderd, om dubbele content te voorkomen), hier alleen samengevat i.p.v. als volledige
       // banner-tekst. v286 — die berekening staat nu in de gedeelde aansluitControleInfo hierboven.
-      aansluitControleInfo.heeftData
-        ? {
-            key: "aansluitControle",
-            title: "Controle zakelijk ↔ privé",
-            icon: <CardIcon name="repeat" />,
-            tone: aansluitControleInfo.tone,
-            subtitle: aansluitControleInfo.subtitle,
-            ...(aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0
-              ? { hint: `Bekijk de ${aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking${aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}`, onClick: () => setShowOnverklaard(true) }
-              : { hint: "Naar de aansluiting & detailtabellen", onClick: () => jumpToSection(detailsSectionRef) }),
-          }
-        : null,
+      withExpand(
+        (() => { const bb = groupCards(instellingenCardsByKey, ["loans", "leases", "activa"]); return bb ? { key: "bedrijfsmiddelen", title: "Bedrijfsmiddelen & financiering", icon: <span>🏷️</span>, tone: bb.tone, lines: bb.lines, onClick: bb.onClick, hint: bb.hint, actionLabel: "Bekijken" } : null; })(),
+        "bedrijfsmiddelen",
+        <div className="space-y-3">
+          <div ref={activaSectionRef}>
+            <ActivaPanel
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              activeYear={activeYear}
+              onOpenModal={setActivaDetailsModalKey}
+              onMarkUnknown={markActivaUnknown}
+              onUnmarkUnknown={unmarkActivaUnknown}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={leasesSectionRef}>
+            <LeaseInterestPanel
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+              onConfirmType={confirmLeaseType}
+              onOpenModal={setLeaseDetailsModalKey}
+              onMarkUnknown={markLeaseUnknown}
+              onUnmarkUnknown={unmarkLeaseUnknown}
+              onMergeInto={mergeLeaseInto}
+              onUndoMerge={undoMergeLease}
+              leaseMerges={leaseMerges}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={loansSectionRef}>
+            <LoanInterestPanel
+              loanSummary={loanSummary}
+              privateLoanSummary={privateLoanSummary}
+              loanDetails={loanDetails}
+              onOpenModal={setLoanDetailsModalKey}
+              onMarkUnknown={markLoanUnknown}
+              onUnmarkUnknown={unmarkLoanUnknown}
+              onMarkNotALoan={markLoanNotALoan}
+              onMarkAsPrive={markLoanAsPrive}
+              onMarkAsZakelijk={markLoanAsZakelijk}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+        </div>
+      ),
     ].filter(Boolean);
   }, [
     transactions.length,
     controlerenCardsByKey,
+    instellingenCardsByKey,
+    activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, loanSummary, privateLoanSummary, loanDetails,
     expandedCardKeys,
     importDiagnostics,
     fileContinuity,
@@ -3678,52 +3734,6 @@ export default function App() {
             expandedBusinessExpenseList={expandedBusinessExpenseList}
             onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
           />
-        </div>
-      ),
-      withExpand(
-        g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
-        "bedrijfsmiddelen",
-        <div className="space-y-3">
-          <div ref={activaSectionRef}>
-            <ActivaPanel
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              activeYear={activeYear}
-              onOpenModal={setActivaDetailsModalKey}
-              onMarkUnknown={markActivaUnknown}
-              onUnmarkUnknown={unmarkActivaUnknown}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-          <div ref={leasesSectionRef}>
-            <LeaseInterestPanel
-              leaseSummary={leaseSummary}
-              leaseDetails={leaseDetails}
-              confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
-              onConfirmType={confirmLeaseType}
-              onOpenModal={setLeaseDetailsModalKey}
-              onMarkUnknown={markLeaseUnknown}
-              onUnmarkUnknown={unmarkLeaseUnknown}
-              onMergeInto={mergeLeaseInto}
-              onUndoMerge={undoMergeLease}
-              leaseMerges={leaseMerges}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-          <div ref={loansSectionRef}>
-            <LoanInterestPanel
-              loanSummary={loanSummary}
-              privateLoanSummary={privateLoanSummary}
-              loanDetails={loanDetails}
-              onOpenModal={setLoanDetailsModalKey}
-              onMarkUnknown={markLoanUnknown}
-              onUnmarkUnknown={unmarkLoanUnknown}
-              onMarkNotALoan={markLoanNotALoan}
-              onMarkAsPrive={markLoanAsPrive}
-              onMarkAsZakelijk={markLoanAsZakelijk}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
         </div>
       ),
       withExpand(
@@ -3888,12 +3898,14 @@ export default function App() {
   // eigen `openCount` telt als 1 punt.
   const openPointsOf = (c) =>
     c.tone === "attention" || c.tone === "risk" ? (typeof c.openCount === "number" ? c.openCount : 1) : 0;
+  // V90 — Lease/Leningen/Activa zijn te controleren data (BTW/aftrek/kosten), geen instellingen: tellen bij Controleren
+  const VERPLAATST_NAAR_CONTROLEREN = ["loans", "leases", "activa"];
   const controlerenBadge = useMemo(
-    () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
-    [controlerenDashboardCards]
+    () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0) + instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
+    [controlerenDashboardCards, instellingenDashboardCards]
   );
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
     [instellingenDashboardCards]
   );
 
@@ -3944,18 +3956,16 @@ export default function App() {
   // businessIncomeEntries/businessExpenseEntries) — geen nieuwe berekening, alleen samengevat en
   // doorklikbaar. Zie RollupCard.jsx.
   const dashboardCardsByKey = useMemo(() => Object.fromEntries(dashboardCards.map((c) => [c.key, c])), [dashboardCards]);
+  const stapItem = (c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick });
   const teControlerenItems = useMemo(
-    () =>
-      controlerenDashboardCards
-        .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
-    [controlerenDashboardCards]
+    () => [
+      ...controlerenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").map(stapItem),
+      ...instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key) && (c.tone === "attention" || c.tone === "risk")).map(stapItem),
+    ],
+    [controlerenDashboardCards, instellingenDashboardCards]
   );
   const inTeStellenItems = useMemo(
-    () =>
-      instellingenDashboardCards
-        .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key) && (c.tone === "attention" || c.tone === "risk")).map(stapItem),
     [instellingenDashboardCards]
   );
   const resultatenItems = useMemo(
