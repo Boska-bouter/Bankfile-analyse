@@ -56,6 +56,7 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
+import TabNavBar from "./components/shared/TabNavBar.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -456,8 +457,10 @@ export default function App() {
   // (onSelectTab, jumpToSection, enz.) blijven ongewijzigd werken.
   const previousTabRef = useRef("overzicht");
   const activeTabTrackerRef = useRef("overzicht");
+  const [previousTab, setPreviousTab] = useState("overzicht"); // V84 — state, zodat de navigatiebalk direct klopt
   useEffect(() => {
     previousTabRef.current = activeTabTrackerRef.current;
+    setPreviousTab(activeTabTrackerRef.current);
     activeTabTrackerRef.current = activeTab;
   }, [activeTab]);
   // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
@@ -4705,25 +4708,9 @@ export default function App() {
         </div>
       )}
 
-      {/* v267 — Floating "terug"-knop: springt naar het vorige tabblad, of naar Overzicht ("home") als er
-          geen vorig tabblad bekend is. Links onderin geplaatst, weg van de bestaande "Categorieën"-
-          knop en het ongedaan-maken-paneel (die beide rechts staan). */}
-      {activeTab !== "overzicht" && (
-        <button
-          onClick={() => {
-            const target = previousTabRef.current && previousTabRef.current !== activeTab ? previousTabRef.current : "overzicht";
-            setActiveTab(target);
-          }}
-          className="fixed left-[224px] sm:left-[228px] z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
-          title="Terug naar vorig tabblad"
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Terug</span>
-        </button>
-      )}
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+        {/* V84 — vervangt de zwevende "Terug"-knop linksonder */}
+        <TabNavBar activeTab={activeTab} previousTab={previousTab} onGo={setActiveTab} />
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
             platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan
             de info-banner + Jaaroverzicht-kaart naast elkaar, dan de 4 rollup-categoriekaarten, dan
