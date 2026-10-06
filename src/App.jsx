@@ -1362,9 +1362,14 @@ export default function App() {
   // V58 — geteld per GROEP (zelfde tegenpartij + teken + categorie) in plaats van per transactie: 30
   // maandelijkse incasso's van dezelfde partij zijn één beslissing, niet dertig. Het aantal
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
+  const bevestigdInBulkVenster = (tx) => {
+    if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    return !!k && (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
+  };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
-    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set();
+    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -1374,24 +1379,26 @@ export default function App() {
       const gk = losseWinkel ? "__losse-pinbetalingen__|Winkels divers" : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       allGroups.add(gk);
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
+      // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
+      if (bevestigdInBulkVenster(tx)) { approved++; continue; }
       if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
-      else { unclearTx++; unclearGroups.add(gk); }
+      else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
-    return { groupsTotal: allGroups.size, approved, review, unclear, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
-  }, [classified]);
+    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+  }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
   // bij (die twee categorieën leveren per definitie nooit 🟢 op), dus die tellen we apart en
   // wijzen we liever naar de daarvoor bedoelde review-vensters dan dat we ze hier dupliceren. ----
   const uncertainModalData = useMemo(() => {
     if (!openConfidenceLevel) return null;
-    const all = classified.filter((tx) => !tx.isMirror && tx.confidence.level === openConfidenceLevel);
+    const all = classified.filter((tx) => !tx.isMirror && tx.confidence.level === openConfidenceLevel && !bevestigdInBulkVenster(tx));
     const overigCount = all.filter((tx) => tx.category === "Overig").length;
     const personenCount = all.filter((tx) => tx.category === "Overboekingen aan personen").length;
     const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
     return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
-  }, [classified, openConfidenceLevel]);
+  }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
@@ -2567,7 +2574,7 @@ export default function App() {
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
@@ -3000,7 +3007,7 @@ export default function App() {
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
