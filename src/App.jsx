@@ -31,7 +31,6 @@ import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storag
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
-import HelpHint from "./components/shared/HelpHint.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
@@ -43,14 +42,12 @@ import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import HerkomstVanGeldPanel from "./components/review/HerkomstVanGeldPanel.jsx";
-import PeriodeSignaal from "./components/btw/PeriodeSignaal.jsx";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
-import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
-import MultiYearOverview from "./components/overview/MultiYearOverview.jsx";
-import MultiYearOverviewBV from "./components/overview/MultiYearOverviewBV.jsx";
+import MultiYearModal from "./components/modals/MultiYearModal.jsx";
+import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
@@ -4726,101 +4723,49 @@ export default function App() {
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
       {showMultiYearModal && (
-        <div
-          className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3"
-          onClick={() => setShowMultiYearModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-semibold text-slate-800">Meerjarenoverzicht</h2>
-              <button onClick={() => setShowMultiYearModal(false)} className="text-slate-400 hover:text-slate-700 shrink-0">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-5 py-4 overflow-y-auto">
-              {rechtsvorm === "bv" ? (
-                <MultiYearOverviewBV
-                  years={years}
-                  yearlySummaries={yearlySummaries}
-                  kostenTotaalByYear={kostenTotaalByYear}
-                  dgaSalarisByYear={dgaSalarisByYear}
-                  rcVerloop={rcVerloop}
-                  evVerloop={evVerloop}
-                  onYearClick={setActiveYear}
-                  onOpenHelp={setHelpPopupChapter}
-                  yearlyProgress={yearlyProgress}
-                  vpbStatus={vpbStatus}
-                  setVpbGedaan={setVpbGedaan}
-                />
-              ) : (
-                <MultiYearOverview
-                  years={years}
-                  yearlySummaries={yearlySummaries}
-                  yearlyOpenOB={yearlyOpenOB}
-                  korRegeling={korRegeling}
-                  onYearClick={setActiveYear}
-                  ibStatus={ibStatus}
-                  setIbGedaan={setIbGedaan}
-                  zvwStatus={zvwStatus}
-                  setZvwGedaan={setZvwGedaan}
-                  costBreakdownByYear={costBreakdownByYear}
-                  kostenTotaalByYear={kostenTotaalByYear}
-                  volledigeJaren={volledigeJaren}
-                  businessAdvies={businessAdvies}
-                  activeYear={activeYear}
-                  onOpenHelp={setHelpPopupChapter}
-                  yearlyProgress={yearlyProgress}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <MultiYearModal
+          onClose={() => setShowMultiYearModal(false)}
+          rechtsvorm={rechtsvorm}
+          years={years}
+          yearlySummaries={yearlySummaries}
+          yearlyOpenOB={yearlyOpenOB}
+          korRegeling={korRegeling}
+          activeYear={activeYear}
+          setActiveYear={setActiveYear}
+          kostenTotaalByYear={kostenTotaalByYear}
+          costBreakdownByYear={costBreakdownByYear}
+          volledigeJaren={volledigeJaren}
+          businessAdvies={businessAdvies}
+          dgaSalarisByYear={dgaSalarisByYear}
+          rcVerloop={rcVerloop}
+          evVerloop={evVerloop}
+          yearlyProgress={yearlyProgress}
+          vpbStatus={vpbStatus}
+          setVpbGedaan={setVpbGedaan}
+          ibStatus={ibStatus}
+          setIbGedaan={setIbGedaan}
+          zvwStatus={zvwStatus}
+          setZvwGedaan={setZvwGedaan}
+          onOpenHelp={setHelpPopupChapter}
+        />
       )}
 
       {/* v270 — BTW-aangifte per kwartaal als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
       {showQuarterlyBtwModal && (
-        <div
-          className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3"
-          onClick={() => setShowQuarterlyBtwModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <h2 className="text-sm font-semibold text-slate-800">BTW-aangifte per kwartaal {activeYear}</h2>
-              <button onClick={() => setShowQuarterlyBtwModal(false)} className="text-slate-400 hover:text-slate-700 shrink-0">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-5 py-4 overflow-y-auto">
-              {!korRegeling ? (
-                <>
-                <PeriodeSignaal items={periodeSignalenActiefJaar} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
-                <QuarterlyBtwPanel
-                  quarters={quarterlyBtwData}
-                  kwartaalStatus={kwartaalStatus}
-                  setKwartaalStatusField={setKwartaalStatusField}
-                  activeYear={activeYear}
-                  costBreakdownByQuarter={costBreakdownByQuarter}
-                  onOpenHelp={setHelpPopupChapter}
-                  obIbSectionRef={obIbSectionRef}
-                />
-                </>
-              ) : (
-                // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
-                // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
-                // dus die blijft hier los staan, net als voorheen.
-                <div ref={obIbSectionRef} className="flex items-center justify-end">
-                  <HelpHint chapter="ob-ib-vakken" onOpen={setHelpPopupChapter} label="Waar vind ik dit op het aangifteformulier?" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <QuarterlyBtwModal
+          onClose={() => setShowQuarterlyBtwModal(false)}
+          activeYear={activeYear}
+          korRegeling={korRegeling}
+          periodeSignalenActiefJaar={periodeSignalenActiefJaar}
+          confirmPeriodeAsIs={confirmPeriodeAsIs}
+          movePeriodeToQuarter={movePeriodeToQuarter}
+          quarterlyBtwData={quarterlyBtwData}
+          kwartaalStatus={kwartaalStatus}
+          setKwartaalStatusField={setKwartaalStatusField}
+          costBreakdownByQuarter={costBreakdownByQuarter}
+          onOpenHelp={setHelpPopupChapter}
+          obIbSectionRef={obIbSectionRef}
+        />
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
