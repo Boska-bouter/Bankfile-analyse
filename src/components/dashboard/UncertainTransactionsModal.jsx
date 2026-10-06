@@ -25,6 +25,8 @@ export default function UncertainTransactionsModal({
   const [sortering, setSortering] = useState("bedrag");
   const [catFilter, setCatFilter] = useState("");
   const [zichtbaar, setZichtbaar] = useState(60);
+  const [bevestigAlles, setBevestigAlles] = useState(false);
+  const [openLosse, setOpenLosse] = useState(false);
 
   const groepen = useMemo(() => {
     const map = new Map();
@@ -146,12 +148,7 @@ export default function UncertainTransactionsModal({
                 groepen, zonder ze één voor één te hoeven langslopen. V73: houdt rekening met het filter. */}
             {getoondTx.length > 0 && (
               <button
-                onClick={() => {
-                  const wat = catFilter ? `alle ${getoond.length} groepen in "${catFilter}"` : `alle ${getoond.length} groepen`;
-                  if (window.confirm(`Weet je zeker dat je het voorstel voor ${wat} (${getoondTx.length} transacties) in één keer wilt goedkeuren?`)) {
-                    onConfirmAll(getoondTx);
-                  }
-                }}
+                onClick={() => setBevestigAlles((v) => !v)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2.5 py-1.5 text-xs font-medium hover:bg-emerald-100"
                 title="Bevestig het voorstel voor alle getoonde groepen in één keer (houdt rekening met het categorie-filter)"
               >
@@ -163,6 +160,42 @@ export default function UncertainTransactionsModal({
             </button>
           </div>
         </div>
+
+        {bevestigAlles && (() => {
+          const losseGroepen = getoond.filter((g) => g.losse);
+          const losseTx = losseGroepen.flatMap((g) => g.txs);
+          const zonderLosse = getoondTx.filter((tx) => !losseTx.includes(tx));
+          const wat = catFilter ? `alle ${getoond.length} groepen in "${catFilter}"` : `alle ${getoond.length} groepen`;
+          return (
+            <div className="mx-4 mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-900 shrink-0">
+              <p className="font-medium">Weet je zeker dat je {wat} ({getoondTx.length} transacties) in één keer wilt goedkeuren?</p>
+              {losseTx.length > 0 && (
+                <p className="mt-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-amber-900">
+                  ⚠ Let op: hieronder vallen ook <strong>{losseTx.length} losse pinbetalingen</strong> ({eur(losseGroepen.reduce((a, g) => a + g.totaal, 0))}) zonder herkend zoekwoord. Die worden dan óók goedgekeurd, zonder dat je ze hebt bekeken. Kijk ze eerst even na?
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {losseTx.length > 0 && (
+                  <button
+                    onClick={() => { setBevestigAlles(false); setCatFilter(displayCategory(losseGroepen[0].eerste.category)); setSortering("bedrag"); setOpenLosse(true); }}
+                    className="rounded-lg border border-amber-400 bg-white text-amber-900 px-2.5 py-1 font-semibold hover:bg-amber-50"
+                  >
+                    Eerst de losse pinbetalingen nakijken
+                  </button>
+                )}
+                {losseTx.length > 0 && zonderLosse.length > 0 && (
+                  <button onClick={() => { setBevestigAlles(false); onConfirmAll(zonderLosse); }} className="rounded-lg border border-emerald-400 bg-white text-emerald-800 px-2.5 py-1 font-semibold hover:bg-emerald-100">
+                    Goedkeuren zonder losse pinbetalingen ({zonderLosse.length})
+                  </button>
+                )}
+                <button onClick={() => { setBevestigAlles(false); onConfirmAll(getoondTx); }} className="rounded-lg bg-emerald-700 text-white px-2.5 py-1 font-semibold hover:bg-emerald-800">
+                  {losseTx.length > 0 ? "Toch alles goedkeuren" : "Ja, alles goedkeuren"}
+                </button>
+                <button onClick={() => setBevestigAlles(false)} className="rounded-lg px-2.5 py-1 text-slate-600 underline">Annuleren</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {bulkTotal > 0 && (
           <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 shrink-0">
@@ -216,7 +249,7 @@ export default function UncertainTransactionsModal({
           ) : (
             <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
               {getoond.slice(0, zichtbaar).map((g) => g.losse ? (
-                <details key={g.key}>
+                <details key={g.key} open={openLosse || undefined} onToggle={(e) => setOpenLosse(e.currentTarget.open)}>
                   <summary className="list-none cursor-pointer">
                     <div className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
                       <div className="flex-1 min-w-[9rem]">
