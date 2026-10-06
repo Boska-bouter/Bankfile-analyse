@@ -2487,7 +2487,7 @@ export default function App() {
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
       // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
-      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic").length;
+      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic" && !bevestigdInBulkVenster(tx)).length;
       // v260 — drie niveaus i.p.v. één harde grens (zie classifyContinuityGap in transactions.js):
       // tot €500 verschil bij een bestandsovergang is voor het dossier verwaarloosbaar (groen, geen
       // invloed op de jaarstatus), €500–€999 is "geel" (zet de status op zijn minst op oranje, ook
