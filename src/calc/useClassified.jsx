@@ -1,6 +1,7 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
 import { SPLIT_CATEGORY_NAMES } from "../classification/categories.js";
+import { ibansMatch } from "../utils/normalization.js";
 import { detectOwnAccountTransfer, resolveClassification } from "../classification/classify.js";
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
@@ -35,7 +36,31 @@ export function useClassified(p) {
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
-    const base = koppelDoorsluisOverboekingen(base0, Object.values(accountTypeByFile).includes("Zakelijk"));
+    // Een geladen privérekening die geld krijgt van/stuurt naar een opgegeven maar niet geladen ándere
+    // eigen privérekening wordt herkend als "Interne overboeking" (twee privérekeningen onderling). Staat er
+    // aan de zakelijke kant een opname/terugboeking met hetzelfde bedrag, dezelfde tegenrekening en een
+    // datum binnen 5 dagen, dan is dit in werkelijkheid de privékant van die zakelijke boeking
+    // (zakelijk -> andere privérekening -> deze rekening): noem hem dan "Ontvangen van zakelijk" /
+    // "Terugboeking naar zakelijk", zodat beide kanten van het overzicht gelijk zijn.
+    const dagen5 = 5 * 86400000;
+    const zakKandidaten = base0.filter((t) => t.type === "Zakelijk" && (t.category === "Prive opnames" || t.category === "Terugboeking van prive") && t.counterpartyIban);
+    const gebruiktZak = new Set();
+    const base1 = zakKandidaten.length === 0 ? base0 : base0.map((tx) => {
+      if (tx.category !== "Interne overboeking" || tx.type !== "Prive" || tx.accountType !== "Prive" || !tx.counterpartyIban) return tx;
+      const naarNietGeladen = (ownAccountsElsewhereByFile[tx.source] || []).some(
+        (o) => o.accountType === "Prive" && !o.isLoadedFile && ibansMatch(tx.counterpartyIban, o.iban)
+      );
+      if (!naarNietGeladen) return tx;
+      const wil = tx.amount > 0 ? "Prive opnames" : "Terugboeking van prive";
+      const z = zakKandidaten.find((q) =>
+        !gebruiktZak.has(q.id) && q.category === wil && Math.abs(q.amount + tx.amount) < 0.005 &&
+        ibansMatch(q.counterpartyIban, tx.counterpartyIban) && Math.abs(q.date - tx.date) <= dagen5
+      );
+      if (!z) return tx;
+      gebruiktZak.add(z.id);
+      return { ...tx, category: tx.amount > 0 ? "Ontvangen van zakelijk" : "Terugboeking naar zakelijk" };
+    });
+    const base = koppelDoorsluisOverboekingen(base1, Object.values(accountTypeByFile).includes("Zakelijk"));
     // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
