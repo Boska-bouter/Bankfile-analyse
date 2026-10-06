@@ -2398,7 +2398,7 @@ export default function App() {
       const allYearItems = [...zakItems, ...priItems];
       const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
       const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen);
-      const checks = [{ frac: yc.categorizedPct / 100 }];
+      const checks = [];
 
       const personKeysThisYear = new Set(
         allYearItems.filter((tx) => tx.category === "Overboekingen aan personen" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
@@ -2414,6 +2414,10 @@ export default function App() {
         const done = [...overigKeysThisYear].filter((k) => reviewedOverigKeys.includes(k)).length;
         checks.push({ frac: done / overigKeysThisYear.size });
       }
+      // V90 — "Overig" dat je bewust met "Klopt zo" hebt bevestigd telt als gecategoriseerd (het eigen
+      // Overig-check hierboven bewaakt dat al per tegenpartij); anders bleef dit jaar altijd 1 punt open.
+      const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear].every((k) => reviewedOverigKeys.includes(k));
+      checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
       checks.push({ frac: korRegeling !== null ? 1 : 0 });
       const kwTotal = quartersForYear.length;
       if (korRegeling === false) {
@@ -3892,14 +3896,14 @@ export default function App() {
         ? "__losse-pinbetalingen__|Winkels divers"
         : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       alle.add(gk);
-      if (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") open.add(gk);
+      if ((tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)) open.add(gk);
     }
     const adminOpen = yearlyProgress[activeYear].openPunten || 0;
     const openN = open.size + adminOpen;
     const totaal = Math.max(alle.size + 5, openN, 1);
     const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
     return { pct, open: openN, jaar: activeYear };
-  }, [classified, activeYear, yearlyProgress]);
+  }, [classified, activeYear, yearlyProgress, reviewedOverigKeys, reviewedPersonKeys]);
   const dossierOpenBreakdown = [
     controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
