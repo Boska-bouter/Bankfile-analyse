@@ -3962,6 +3962,12 @@ export default function App() {
   }, [teControlerenItems, inTeStellenItems]);
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
+  // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
+  const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
+  // voortgang: "stap X van N" — N = het hoogste aantal open stappen dat we in deze sessie/dit dossier zagen
+  const [maxStappen, setMaxStappen] = useState(0);
+  useEffect(() => { if (alleStappen.length > maxStappen) setMaxStappen(alleStappen.length); }, [alleStappen.length, maxStappen]);
+  const stappenKlaar = Math.max(0, maxStappen - alleStappen.length);
 
   const automatischeHerkenningItems = useMemo(() => {
     const incomeCard = instellingenDashboardCards.find((c) => c.key === "businessIncomeEntries");
@@ -4178,6 +4184,7 @@ export default function App() {
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
+      overgeslagenStappen,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -4274,6 +4281,8 @@ export default function App() {
       // V89 — "ga verder waar je was": positie bij het laatste opslaan, alleen als die niet gewoon Overzicht was
       const rp = project.resumePositie;
       setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") ? rp : null);
+      setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
+      setMaxStappen(0);
     } catch (e) {
       setError(e.message || String(e));
     }
@@ -4709,25 +4718,30 @@ export default function App() {
         {activeTab !== "overzicht" && (() => {
           const volgende = volgendeStap;
           const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
+          const pct = maxStappen > 0 ? Math.round((100 * stappenKlaar) / maxStappen) : 0;
           return alleStappen.length > 0 ? (
-            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-[13px] shadow-md">
-              <span className="min-w-0 truncate text-teal-900">
-                {volgende ? (
-                  <><strong>Eerstvolgende open stap:</strong> {volgende.label}{volgende.count != null ? ` (${volgende.count})` : ""} · nog {totaal} open punt{totaal === 1 ? "" : "en"}</>
-                ) : (
-                  <><strong>Alle resterende stappen overgeslagen.</strong> Nog {totaal} open punt{totaal === 1 ? "" : "en"}.</>
-                )}
-              </span>
-              <span className="shrink-0 flex items-center gap-2">
-                {overgeslagenStappen.length > 0 && <button type="button" onClick={() => setOvergeslagenStappen([])} className="text-xs text-teal-800 underline">Overgeslagen terugzetten</button>}
-                {volgende && <button type="button" onClick={stapOverslaan} className="rounded-full border border-teal-300 bg-white text-teal-800 font-semibold px-3 py-1 text-xs">Overslaan</button>}
-                {volgende && <button type="button" onClick={volgende.onClick} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-3.5 py-1 text-xs">Ga →</button>}
-              </span>
+            <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-teal-100">
+                    {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
+                  </div>
+                  <div className="truncate text-base font-bold">
+                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open)` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
+                  </div>
+                </div>
+                <span className="shrink-0 flex items-center gap-3">
+                  {overgeslagenStappen.length > 0 && <button type="button" onClick={() => setOvergeslagenStappen([])} className="text-xs text-teal-100 underline">Overgeslagen terugzetten</button>}
+                  {volgende && <button type="button" onClick={stapOverslaan} className="rounded-full border border-teal-200 text-white font-semibold px-3.5 py-1.5 text-sm hover:bg-teal-600">Overslaan</button>}
+                  {volgende && <button type="button" onClick={volgende.onClick} className="rounded-full bg-white text-teal-800 font-bold px-5 py-1.5 text-sm hover:bg-teal-50">Ga →</button>}
+                </span>
+              </div>
+              <div className="h-1.5 bg-teal-900/40"><div className="h-full bg-emerald-300 transition-all" style={{ width: `${pct}%` }} /></div>
             </div>
           ) : (
-            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-900 shadow-md">
-              <span><strong>Alles afgehandeld.</strong> Er staan geen open punten meer — bekijk de resultaten op Overzicht.</span>
-              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-emerald-700 text-white font-bold px-3.5 py-1 text-xs">Naar Overzicht →</button>
+            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-3 text-white shadow-lg">
+              <span className="text-base font-bold">✓ Alles afgehandeld <span className="font-normal text-sm">— er staan geen open punten meer</span></span>
+              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-white text-emerald-800 font-bold px-5 py-1.5 text-sm">Naar Overzicht →</button>
             </div>
           );
         })()}
@@ -4763,6 +4777,8 @@ export default function App() {
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
+            overgeslagen={overgeslagenStappen}
+            onAlsnogDoen={(k) => setOvergeslagenStappen((prev) => prev.filter((x) => x !== k))}
             volgende={volgendeStap}
             onOverslaan={stapOverslaan}
             controleCount={controlerenBadge}

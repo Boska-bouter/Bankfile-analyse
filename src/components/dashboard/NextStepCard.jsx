@@ -6,7 +6,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 //  - rechts: alle open punten in één compacte lijst (controle + instelling), elk klikbaar,
 //  - onderaan: één regel snelkoppelingen naar resultaten en herkenningsregels.
 // Geen nieuwe databron: dezelfde items als voorheen (teControlerenItems/inTeStellenItems/...).
-export default function NextStepCard({ stappen, volgende: volgendeIn, onOverslaan, controleCount, instellingCount, snelkoppelingen, onOpenHelp, hervat }) {
+export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen, volgende: volgendeIn, onOverslaan, controleCount, instellingCount, snelkoppelingen, onOpenHelp, hervat }) {
   const alle = stappen.map((i) => ({ ...i, soort: i.key === "loans" || i.key === "leases" || i.key === "activa" || i.key === "aannames" || i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
   const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
@@ -56,7 +56,7 @@ export default function NextStepCard({ stappen, volgende: volgendeIn, onOverslaa
                 >
                   <span className="min-w-0 truncate text-slate-700">
                     <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${item.soort === "Controleren" ? "bg-red-500" : "bg-amber-500"}`} />
-                    {item.label}
+                    {item.label}{overgeslagen.includes(item.key) && <span className="ml-1.5 text-[10px] font-semibold text-amber-700">overgeslagen</span>}
                   </span>
                   <span className="shrink-0 font-semibold text-slate-500">
                     {item.count} {item.onClick && <span className="text-slate-300">→</span>}
@@ -66,6 +66,18 @@ export default function NextStepCard({ stappen, volgende: volgendeIn, onOverslaa
             </div>
             {alle.length > 8 && <span className="block pt-1.5 text-[11px] font-medium text-slate-400">+ {alle.length - 8} meer — zie Controleren en Instellingen</span>}
           </div>
+        </div>
+      )}
+
+      {alle.some((i) => overgeslagen.includes(i.key)) && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">Overgeslagen — nog niet afgerond</p>
+          {alle.filter((i) => overgeslagen.includes(i.key)).map((i) => (
+            <div key={i.key} className="flex items-center justify-between gap-2 py-1 text-[12.5px] text-amber-900">
+              <span className="truncate">⚠ {i.label}{i.count != null ? ` (${i.count})` : ""}</span>
+              <button type="button" onClick={() => { onAlsnogDoen?.(i.key); i.onClick?.(); }} className="shrink-0 rounded-full border border-amber-400 bg-white px-2.5 py-0.5 font-semibold text-amber-900 hover:bg-amber-100">Alsnog doen →</button>
+            </div>
+          ))}
         </div>
       )}
 
