@@ -517,7 +517,7 @@ export default function App() {
     [overigReviewSectionRef, "opschonen", true],
     [duplicatesSectionRef, "opschonen", true],
     [periodeReviewSectionRef, "opschonen", true],
-    [detailsSectionRef, "aansluitingDetail", false],
+    [detailsSectionRef, "detailTabellen", true],
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
@@ -5142,7 +5142,23 @@ export default function App() {
                     AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
                     "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
                     controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
-                {!expandedCardKeys.aansluitingDetail && (
+                {/* V87 — de detailtabellen staan standaard ingeklapt (openen met de balk hieronder); links die naar
+                    de tabellen springen (jumpToSection) klappen ze automatisch open. */}
+                <div style={sectionTabStyle("controleren")}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpand("detailTabellen")}
+                    aria-expanded={!!expandedCardKeys.detailTabellen}
+                    className="w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-slate-50"
+                  >
+                    {expandedCardKeys.detailTabellen ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                    <span className="text-sm font-semibold text-slate-800">Detailtabellen</span>
+                    <span className="text-xs text-slate-400">
+                      {zakGroupForYear?.items?.length ?? 0} zakelijke en {priGroupShown?.items?.length ?? 0} privé-transacties · {expandedCardKeys.detailTabellen ? "klik om in te klappen" : "klik om te openen"}
+                    </span>
+                  </button>
+                </div>
+                {expandedCardKeys.detailTabellen && (
                   <div style={sectionTabStyle("controleren")}>
                     <AansluitingDetailPanel
                       detailsRef={detailsSectionRef}
