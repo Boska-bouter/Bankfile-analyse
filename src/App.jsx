@@ -4738,16 +4738,7 @@ export default function App() {
           {/* v273 — deze rij stond volledig verborgen zolang er geen jaren/project geladen waren;
               op verzoek toont het standaard-dashboard nu altijd deze sectie, met JaaroverzichtCard
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
-          <div className="grid md:grid-cols-2 gap-4 items-stretch">
-            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
-            <JaaroverzichtCard
-              year={activeYear}
-              summary={yearlySummary}
-              previousSummary={previousYearlySummary}
-              showTrend={showJaaroverzichtTrend}
-              onOpenDetails={() => jumpToSection(detailsSectionRef)}
-            />
-          </div>
+          <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* v286 — tone stond hier vast op "risk"/"attention", ook zodra er 0 open punten meer

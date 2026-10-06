@@ -9,22 +9,20 @@ import { Info, X } from "lucide-react";
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
   const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 shadow-sm p-4 flex gap-3">
-      <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
-        <Info className="h-4 w-4" />
+    <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 shadow-sm px-4 py-2.5 flex items-center gap-3">
+      <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+        <Info className="h-3.5 w-3.5" />
       </div>
-      <div className="flex-1">
-        <p className="text-sm font-bold text-slate-900">Wat deze app niet kan weten</p>
-        <p className="text-[13px] text-slate-600 mt-0.5">
-          Alleen bankgegevens: contante uitgaven, openstaande facturen en andere fiscale gegevens ontbreken.
-        </p>
-        <button
-          onClick={() => setOpen(true)}
-          className="mt-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-full px-3 py-1.5 hover:bg-indigo-50"
-        >
-          Meer informatie →
-        </button>
-      </div>
+      <p className="flex-1 min-w-0 text-[13px] text-slate-600">
+        <span className="font-bold text-slate-900">Wat deze app niet kan weten: </span>
+        alleen bankgegevens — contante uitgaven, openstaande facturen en andere fiscale gegevens ontbreken.
+      </p>
+      <button
+        onClick={() => setOpen(true)}
+        className="shrink-0 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-full px-3 py-1.5 hover:bg-indigo-50 whitespace-nowrap"
+      >
+        Meer informatie →
+      </button>
       {open && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={() => setOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
