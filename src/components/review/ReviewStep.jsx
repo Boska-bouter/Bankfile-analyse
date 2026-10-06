@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CATEGORY_ORDER, displayCategory, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
 
 // V76 — privé-categorieën samengevoegd in de keuzelijst (zie displayCategory in categories.js).
 import { eur } from "../../utils/amounts.js";
@@ -7,7 +7,7 @@ import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass }) {
-  const KEUZE_OPTIES = [...new Set(CATEGORY_ORDER.map(displayCategory))];
+  const KEUZE_OPTIES = sortNl([...new Set(CATEGORY_ORDER.map(displayCategory))]);
   const [category, setCategory] = useState(item.category || defaultCategory);
   const [type, setType] = useState(item.type || "Prive");
 

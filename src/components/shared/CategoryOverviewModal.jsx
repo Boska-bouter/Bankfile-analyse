@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useToonFijn } from "../../utils/useToonFijn.js";
 import { X, Search } from "lucide-react";
-import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, CATEGORIE_GROEPEN } from "../../classification/categories.js";
+import { MAIN_CATEGORY_ALFA, sortNl, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, CATEGORIE_GROEPEN } from "../../classification/categories.js";
 
 // Puur een opzoekvenster: "waar hoort dit onder" — geen bewerkmogelijkheden hier (dat blijft
 // Categorieregels), alleen een snel, doorzoekbaar overzicht van de volledige structuur.
@@ -11,9 +11,9 @@ export default function CategoryOverviewModal({ onClose }) {
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MAIN_CATEGORY_ORDER.map((main) => {
+    return MAIN_CATEGORY_ALFA.map((main) => {
       // V76 — privé-subtypes samengevoegd tot hun weergavenaam; zoeken vindt ook de fijne soorten erin.
-      const subtypes = [...new Set(subtypesForMainCategory(main).map(displayCategory))];
+      const subtypes = sortNl([...new Set(subtypesForMainCategory(main).map(displayCategory))]);
       const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
       const mainMatches = !q || main.toLowerCase().includes(q);
       const visibleSubtypes = mainMatches ? subtypes : subtypes.filter((s) => s.toLowerCase().includes(q) || leden(s).includes(q));

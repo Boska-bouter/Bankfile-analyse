@@ -557,6 +557,10 @@ export const MAIN_CATEGORY_ORDER = [
   "Financiering", "Interne overboekingen", "Belastingen & heffingen", "Privé", "Persoonlijk & vertrouwelijk", "Nog te beoordelen",
 ];
 
+// Alfabetische volgorde (Nederlands) voor keuzelijsten waar je in zoekt/kiest.
+export const sortNl = (arr, by = (x) => x) => [...arr].sort((a, b) => String(by(a)).localeCompare(String(by(b)), "nl", { sensitivity: "base" }));
+export const MAIN_CATEGORY_ALFA = sortNl(MAIN_CATEGORY_ORDER);
+
 export const MAIN_CATEGORY_COLOR = {
   "Zakelijke inkomsten": "bg-emerald-100 text-emerald-800",
   "Huisvesting": "bg-amber-100 text-amber-800",
@@ -794,10 +798,10 @@ export function displayCategory(category) {
 export function subtypeChoicesFor(mainCategory) {
   const fijn = subtypesForMainCategory(mainCategory);
   if (mainCategory === "Privé") {
-    return _toonFijn ? CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === "Privé") : PRIVE_KEUZE;
+    return sortNl(_toonFijn ? CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === "Privé") : PRIVE_KEUZE);
   }
-  if (_toonFijn) return fijn;
-  return [...new Set(fijn.map((c) => FIJN_NAAR_WEERGAVE[c] || c))];
+  if (_toonFijn) return sortNl(fijn);
+  return sortNl([...new Set(fijn.map((c) => FIJN_NAAR_WEERGAVE[c] || c))]);
 }
 
 // Welke opgeslagen (fijne) categorie hoort bij een gekozen weergavenaam? Behoort de huidige categorie
@@ -828,7 +832,7 @@ export function soortenVoor(category) {
   const w = FIJN_NAAR_WEERGAVE[category];
   if (!w || GEEN_SOORT.has(w)) return null;
   const leden = CATEGORIE_GROEPEN[w];
-  return leden.length > 1 ? leden : null;
+  return leden.length > 1 ? sortNl(leden, (o) => o.label) : null;
 }
 
 for (const [naam, leden] of Object.entries(ZAK_GROEPEN)) {
