@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ProgressGauge from "./ProgressGauge.jsx";
 import ConcentricGauge from "./ConcentricGauge.jsx";
 
@@ -11,6 +11,14 @@ export default function DashboardHeader({
   werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, openPoints, openBreakdown, yearRing,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
+  const aangiftesRef = useRef(null);
+  // Lijstje "welke aangiftes" sluit bij een klik ernaast of op Escape.
+  useEffect(() => {
+    if (!toonAangiftes) return;
+    const sluit = (e) => { if (e.type === "keydown" ? e.key === "Escape" : !aangiftesRef.current?.contains(e.target)) setToonAangiftes(false); };
+    document.addEventListener("mousedown", sluit); document.addEventListener("keydown", sluit);
+    return () => { document.removeEventListener("mousedown", sluit); document.removeEventListener("keydown", sluit); };
+  }, [toonAangiftes]);
   // V59 — 100% mag nooit getoond worden zolang er open punten zijn (afronding of een andere telbron dan de badges).
   const pct = pctIn != null && openPoints != null && openPoints > 0 ? Math.min(pctIn, 99) : pctIn;
   // v305 (V27) — "Dossiercontrole" toont als hoofdinformatie het aantal CONCRETE open punten (zie
@@ -134,7 +142,7 @@ export default function DashboardHeader({
           {/* V81 — "Werkelijke aangifte" staat als derde kolom in dezelfde kaart (zelfde kleurstelling als de rest),
               blijft inhoudelijk los van de Dossiercontrole: eigen kop, eigen stip. */}
           <div className="w-px self-stretch bg-slate-200" />
-          <div className="relative flex flex-col justify-center gap-1 shrink-0">
+          <div ref={aangiftesRef} className="relative flex flex-col justify-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => (werkelijkItems?.length ? setToonAangiftes((v) => !v) : null)}
