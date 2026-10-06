@@ -94,7 +94,7 @@ import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
-import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./reports/aangiftevoorstel-bv.js";
+import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
@@ -1233,7 +1233,9 @@ export default function App() {
         (tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
         tx.type === "Zakelijk" && !otherSideAlsoLoaded
       ) {
-        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", isMirror: true });
+        // viewType expliciet "Prive": de spiegel hoort in het PRIVÉ-overzicht. Zonder dit erfde hij viewType "Zakelijk" van het origineel
+        // (via de spread) en viel hij in het zakelijke overzicht tegen de opname weg (netto € 0,00).
+        mirrors.push({ ...tx, id: `${tx.id}-prive-spiegel`, amount: -tx.amount, type: "Prive", viewType: "Prive", isMirror: true });
       }
     }
     const result = mirrors.length ? [...base, ...mirrors] : base;
@@ -1555,7 +1557,7 @@ export default function App() {
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding)
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus })
       : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
@@ -2083,10 +2085,17 @@ export default function App() {
     () => (activeYear ? computeActivaAfschrijvingForYear(activaSummary, activaDetails, activeYear) : null),
     [activaSummary, activaDetails, activeYear]
   );
+  // V23 — BV: afschrijving (en boekresultaat bij beëindiging) van een financiële-lease-auto/machine telt ook op de
+  // kaart mee in de winst — zelfde bedrag als in het BV-rapport (computeBvWinstInvoer in aangiftevoorstel-bv.js).
+  const bvLeaseAutoWinstCorrectieActiveYear = useMemo(
+    () => (activeYear && rechtsvorm === "bv" ? computeBvWinstInvoer(activeYear, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, {}).leaseAutoWinstCorrectie : 0),
+    [activeYear, rechtsvorm, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails]
+  );
   const winstCorrectieActiveYear =
     (leaseAutoKostenForActiveYear?.winstCorrectie || 0) - (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) -
     (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0) +
-    (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0);
+    (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0) +
+    (bvLeaseAutoWinstCorrectieActiveYear || 0);
   const yearlySummary = useMemo(
     () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed) : null),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed]
@@ -4013,6 +4022,30 @@ export default function App() {
     return lijst.map((it, idx) => ({ it, idx })).sort((a, b) => rang(a.it.key) - rang(b.it.key) || a.idx - b.idx).map((x) => x.it);
   }, [teControlerenItems, inTeStellenItems]);
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
+  // V22 — een uitgeklapte Controleren-kaart klapt vanzelf in zodra de LAATSTE open stap erin is afgerond
+  // (bijv. Overig opruimen → 0 open en de rest van "Herkomst & opschonen" ook klaar). Alleen bij de overgang
+  // "had open punten → geen open punten meer"; bij het laden van een dossier of een al-groene kaart gebeurt niets.
+  const STAP_GROEPEN = {
+    importKwaliteit: ["importControle", "confidence"],
+    herkomstOpschonen: ["incomeReview", "personReview", "overigReview", "duplicates"],
+    bedrijfsmiddelen: ["loans", "leases", "activa"],
+    aannamesPercentages: ["aannames"],
+  };
+  const vorigeOpenGroepenRef = useRef(null);
+  useEffect(() => {
+    const open = new Set(Object.entries(STAP_GROEPEN).filter(([, keys]) => alleStappen.some((st) => keys.includes(st.key))).map(([g]) => g));
+    const vorige = vorigeOpenGroepenRef.current;
+    vorigeOpenGroepenRef.current = open;
+    if (!vorige) return;
+    const klaar = [...vorige].filter((g) => !open.has(g));
+    if (klaar.length === 0) return;
+    setExpandedCardKeys((prev) => {
+      if (!klaar.some((g) => prev[g])) return prev;
+      const next = { ...prev };
+      for (const g of klaar) if (next[g]) next[g] = false;
+      return next;
+    });
+  }, [alleStappen]);
   const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
   // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
   const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
@@ -4792,12 +4825,7 @@ export default function App() {
               </div>
               <div className="h-1.5 bg-teal-900/40"><div className="h-full bg-emerald-300 transition-all" style={{ width: `${pct}%` }} /></div>
             </div>
-          ) : (
-            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-3 text-white shadow-lg">
-              <span className="text-base font-bold">✓ Alles afgehandeld <span className="font-normal text-sm">— er staan geen open punten meer</span></span>
-              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-white text-emerald-800 font-bold px-5 py-1.5 text-sm">Naar Overzicht →</button>
-            </div>
-          );
+          ) : null; // V25 — alles afgehandeld: geen balk meer; hij komt vanzelf terug zodra er weer open punten zijn
         })()}
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
             platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan

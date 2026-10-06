@@ -18,7 +18,33 @@ import { computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
+import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
+
+// V23 — ÉÉN plek waar de winst van een BV per jaar wordt bepaald, gebruikt door (a) de jaarsectie hieronder,
+// (b) de voorberekening voor het eigen-vermogen-verloop en (c) de kaart op Overzicht (App.jsx). Voorheen
+// rekenden die drie net iets anders (lease-afschrijving, %-splitsing, deels-zakelijke huur) waardoor kaart
+// en rapport uiteenliepen. `opties`: { categoryZakelijkPercentage, autoStatus, heeftLeaseAuto,
+// huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus }.
+// Zonder de bewuste zzp-onderdelen: geen onttrekking/km-vergoeding (bij een BV is de bijtelling loon in natura).
+export function computeBvWinstInvoer(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties = {}) {
+  const loanRente = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
+  const leaseRente = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
+  const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
+  const activaAfschrijving = computeActivaAfschrijvingForYear(computeActivaSummary(classified), activaDetails || {}, year);
+  const leaseAutoKosten = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
+  const leaseAutoWinstCorrectie = (leaseAutoKosten?.afschrijvingTotaal || 0) - (leaseAutoKosten?.boekresultaatBeeindigingTotaal || 0);
+  const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, year, opties.huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const gedeeldeEnergie = computeGedeeldeEnergieVoorJaar(classified, year, opties.energieZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const gedeeldeGem = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, opties.gemeentelijkeKostenZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
+  const winstCorrectie = leaseAutoWinstCorrectie + (activaAfschrijving?.totaalAfschrijving || 0)
+    - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) - (gedeeldeEnergie?.nietAftrekbaarBedrag || 0) - (gedeeldeGem?.nietAftrekbaarBedrag || 0);
+  return { renteAftrekbaar, winstCorrectie, leaseAutoWinstCorrectie, activaAfschrijving, leaseAutoKosten };
+}
+export function computeBvSummary(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties = {}) {
+  const inv = computeBvWinstInvoer(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties);
+  return computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], inv.renteAftrekbaar, inv.winstCorrectie, opties.categoryZakelijkPercentage ?? null, opties.autoStatus ?? null, !!opties.heeftLeaseAuto);
+}
 
 // V20 — verzamelt per jaarsectie het totaal (BTW + Vpb) voor de meerjaren-slotregel.
 let JAAR_TOTALEN_BV = [];
@@ -79,7 +105,7 @@ function buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, c
 function buildYearSectionBv(
   year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides,
   loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile,
-  fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding
+  fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding, opties = {}
 ) {
   const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
@@ -103,7 +129,7 @@ function buildYearSectionBv(
   // winstcorrectie.
   const leaseAutoKostenBv = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
   const leaseAutoWinstCorrectieBv = (leaseAutoKostenBv?.afschrijvingTotaal || 0) - (leaseAutoKostenBv?.boekresultaatBeeindigingTotaal || 0);
-  const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, leaseAutoWinstCorrectieBv + (activaAfschrijvingForYear?.totaalAfschrijving || 0));
+  const summary = computeBvSummary(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties);
   const vpbEstimate = estimateVpb(summary.winst, year);
   const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
 
@@ -167,7 +193,7 @@ function buildYearSectionBv(
 
   // BTW werkt voor een BV hetzelfde als voor een zzp — de KOR is alleen niet van toepassing
   // (rechtspersonen kunnen er geen gebruik van maken), dus hier altijd de volledige kwartaalberekening.
-  const kwartalen = computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides);
+  const kwartalen = computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, opties.huurZakelijkPercentageStatus, opties.categoryZakelijkPercentage, opties.autoStatus, !!opties.heeftLeaseAuto, opties.energieZakelijkPercentageStatus, opties.gemeentelijkeKostenZakelijkPercentageStatus);
   const kwartaalRows = kwartalen
     .map((q) => {
       const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
@@ -573,7 +599,7 @@ function buildBijlageToelichtingenHtmlBv() {
   </p>`;
 }
 
-export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding) {
+export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, opties = {}) {
   // Rekening-courant en eigen vermogen zijn cumulatief — over de jaren in dít rapport (zie de
   // toelichting die bij elk jaar wordt getoond). Winst per jaar wordt hier apart bepaald (los van
   // buildYearSectionBv) omdat resultaatNaVpbPerJaar voor ALLE jaren in dit rapport bekend moet zijn
@@ -582,13 +608,8 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   const resultaatNaVpbPerJaar = {};
   // Apart bepaald zodat computeActivaAfschrijvingForYear elk jaar dezelfde afschrijving meetelt als
   // buildYearSectionBv verderop (zie de toelichting daar).
-  const activaSummaryVoorReserve = computeActivaSummary(classified);
   for (const year of jaren) {
-    const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
-    const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-    const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-    const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummaryVoorReserve, activaDetails || {}, year);
-    const summary = computeYearlySummary(classified, year, categoryBtwRates, btwVerlegd, [], [], [], renteAftrekbaar, activaAfschrijvingForYear?.totaalAfschrijving || 0);
+    const summary = computeBvSummary(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties);
     const vpbEstimate = estimateVpb(summary.winst, year);
     resultaatNaVpbPerJaar[year] = summary.winst - vpbEstimate.belasting;
   }
@@ -601,7 +622,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
       buildYearSectionBv(
         year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides,
         loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile,
-        fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding
+        fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding, opties
       )
     )
     .join('\n  <div style="page-break-before: always;"></div>\n');

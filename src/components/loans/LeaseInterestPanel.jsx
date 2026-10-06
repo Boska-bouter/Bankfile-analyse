@@ -164,7 +164,7 @@ export default function LeaseInterestPanel({
                         className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
                       >
                         <option value="">Samenvoegen met…</option>
-                        {leaseSummary.filter((l) => l.key !== lease.key).map((l) => (
+                        {[...leaseSummary.filter((l) => l.key !== lease.key)].sort((a, b) => String(a.name).localeCompare(String(b.name), "nl", { sensitivity: "base" })).map((l) => (
                           <option key={l.key} value={l.key}>{l.name}</option>
                         ))}
                       </select>
