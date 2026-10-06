@@ -1960,6 +1960,15 @@ export default function App() {
     const extra = zakGroupForYear.items.filter((t) => !t.isMirror);
     return extra.length ? { ...priGroupForYear, items: [...priGroupForYear.items, ...extra].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) } : priGroupForYear;
   }, [priGroupForYear, zakGroupForYear, accountTypeByFile]);
+  // V28 — in de detailtabellen telt een "Overig"/personen-transactie die je in het opschoonvenster met
+  // "Klopt zo" hebt bevestigd als 🟢 (zoals de controlekaart dat al deed); anders bleef hij daar 🟡
+  // staan en klopte "Controleren (N)" niet met "Classificatie zekerheid 0".
+  const metBevestiging = (g) => {
+    if (!g.items.some(bevestigdInBulkVenster)) return g;
+    return { ...g, items: g.items.map((t) => (bevestigdInBulkVenster(t) ? { ...t, confidence: { ...t.confidence, level: "override", label: "Bevestigd in het opschoonvenster (Klopt zo)" } } : t)) };
+  };
+  const zakGroupWeergave = useMemo(() => metBevestiging(zakGroupForYear), [zakGroupForYear, reviewedOverigKeys, reviewedPersonKeys]);
+  const priGroupWeergave = useMemo(() => metBevestiging(priGroupShown), [priGroupShown, reviewedOverigKeys, reviewedPersonKeys]);
 
   // Zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financial lease (soort "auto"), koop, of
   // operational lease — tellen computeLeaseAutoKostenVoorJaar (autoBijtelling.js) resp.
@@ -5306,8 +5315,8 @@ export default function App() {
                   <div style={sectionTabStyle("controleren")}>
                     <AansluitingDetailPanel
                       detailsRef={detailsSectionRef}
-                      zakGroupForYear={zakGroupForYear}
-                      priGroupForYear={priGroupShown}
+                      zakGroupForYear={zakGroupWeergave}
+                      priGroupForYear={priGroupWeergave}
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
                       expandedTable={expandedTable}
