@@ -24,6 +24,9 @@ import { eur } from "../utils/amounts.js";
 // aangifte fiscaal correct is (zie ook de vaste toelichting die overal waar deze tekst verschijnt
 // naast staat).
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
+// V19 — verzamelt per jaarsectie het totaal voor de meerjaren-slotregel (zie buildAangiftevoorstelHtml).
+let JAAR_TOTALEN = [];
+
 function statusTekst(status, aantalPunten) {
   if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
   if (status === "oranje") return `Berekening beschikbaar — ${aantalPunten} punt${aantalPunten === 1 ? "" : "en"} controleren`;
@@ -435,11 +438,43 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   </div>`
       : "";
 
+  // V19 — slotregel: totaal te betalen / te ontvangen over het jaar = IB ná heffingskorting (dus incl.
+  // zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen) + Zvw + BTW-saldo
+  // (4 kwartalen; bij KOR geen BTW). Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
+  const btwJaarSaldo = korRegeling ? 0 : kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0);
+  const totaalTekst = (t) => `${eur(Math.abs(t))} ${t < 0 ? "te ontvangen" : "te betalen"}`;
+  const ibNa = (ibE, hk) => Math.max(0, (ibE.belasting || 0) - (hk.totaal || 0));
+  let jaarTotaalHtml;
+  if (zaScenarios) {
+    const rij = (label, sc) => {
+      const i = ibNa(sc.ib, sc.heffingskortingen);
+      const t = i + sc.zvw.bijdrage + btwJaarSaldo;
+      return `<tr><td>${label}</td><td class="num">${eur(i)}</td><td class="num">${eur(sc.zvw.bijdrage)}</td><td class="num">${korRegeling ? "—" : (btwJaarSaldo < 0 ? "- " : "") + eur(Math.abs(btwJaarSaldo))}</td><td class="num"><strong>${totaalTekst(t)}</strong></td></tr>`;
+    };
+    jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>BTW-saldo</th><th>Totaal</th></tr></thead><tbody>
+      ${rij("Mét zelfstandigenaftrek", zaScenarios.metZelfstandigenaftrek)}
+      ${rij("Zonder zelfstandigenaftrek", zaScenarios.zonderZelfstandigenaftrek)}
+    </tbody></table><p class="kerncijfers-voetnoot">Indicatief, exclusief overig inkomen en zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
+    JAAR_TOTALEN.push({ year, onbekend: true });
+  } else {
+    const i = ibNa(ibEstimate, heffingskortingen);
+    const t = i + zvwEstimate.bijdrage + btwJaarSaldo;
+    JAAR_TOTALEN.push({ year, totaal: t });
+    jaarTotaalHtml = `<div class="totaal-kaart">
+      <div class="totaal-regel"><span>Indicatieve IB na heffingskorting</span><span>${eur(i)}</span></div>
+      <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
+      ${korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>`}
+      <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${totaalTekst(t)}</span></div>
+      <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; exclusief overig inkomen en zonder verrekening van voorschotten of voorlopige aanslagen.</p>
+    </div>`;
+  }
+
   const samenvattingHtml = `
   <div class="kerncijfers-kaart">
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
+  ${jaarTotaalHtml}
   <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
     <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}</strong> <span class="toelichting">(gegevenscontrole, geen fiscale beoordeling)</span></p>
     ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
@@ -697,9 +732,16 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   // altijd dezelfde variant, dus beide staan op hetzelfde element).
   const PAGE_BREAK_DIVIDER = '\n  <div style="page-break-before: always; break-before: page;"></div>\n';
 
+  JAAR_TOTALEN = [];
   const sections = yearsToInclude
     .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus))
     .join(PAGE_BREAK_DIVIDER);
+  const bepaald = JAAR_TOTALEN.filter((j) => !j.onbekend);
+  const onbekendeJaren = JAAR_TOTALEN.filter((j) => j.onbekend).map((j) => j.year);
+  const grandTotaal = bepaald.reduce((a, j) => a + j.totaal, 0);
+  const totaalAlleJarenHtml = yearsToInclude.length > 1 && bepaald.length > 0
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8"><title>Indicatieve aangifteberekening ${yearsToInclude.join(", ")}</title>
@@ -741,6 +783,9 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
   .kerncijfers-resultaat .bedrag-groot { font-size: 19px; font-weight: bold; color: #0f172a; }
   .kerncijfers-voetnoot { font-size: 9.5px; color: #94a3b8; margin: 6px 0 0; }
+  .totaal-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f0f9ff; border: 2px solid #0f172a; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .totaal-regel { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+  .totaal-eind { border-top: 1px solid #94a3b8; margin-top: 4px; padding-top: 6px; font-size: 14px; font-weight: bold; color: #0f172a; }
   .btw-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .samenvatting-btw { margin: 0; }
   .samenvatting-btw th, .samenvatting-btw td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; }
@@ -770,6 +815,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
   ${reserveWaarschuwingHtml}
   ${sections}
+  ${totaalAlleJarenHtml}
   ${PAGE_BREAK_DIVIDER}
   <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">

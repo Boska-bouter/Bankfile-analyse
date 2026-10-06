@@ -4654,12 +4654,12 @@ export default function App() {
           gebied van een tablet komt te zitten. */}
       <button
         onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-1.5 sm:right-2 z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        className="fixed right-3 sm:right-5 z-[70] inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 shadow-lg px-5 py-3 text-sm font-bold text-white hover:bg-teal-800"
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
         title="Snel opzoeken: alle categorieën en subtypes"
       >
-        <ListTree className="h-4 w-4 shrink-0" />
-        <span className="hidden sm:inline">Categorieën</span>
+        <ListTree className="h-5 w-5 shrink-0" />
+        <span>Categorieën</span>
       </button>
 
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
