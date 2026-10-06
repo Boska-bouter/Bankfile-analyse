@@ -3917,14 +3917,14 @@ export default function App() {
     () =>
       controlerenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
+        .map((c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
     [controlerenDashboardCards]
   );
   const inTeStellenItems = useMemo(
     () =>
       instellingenDashboardCards
         .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
+        .map((c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
     [instellingenDashboardCards]
   );
   const resultatenItems = useMemo(
@@ -3941,6 +3941,19 @@ export default function App() {
     ],
     []
   );
+  // V90 — vaste volgorde voor "eerstvolgende stap": eerst de importcontrole (klopt de data?), dan lease,
+  // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
+  // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
+  const [overgeslagenStappen, setOvergeslagenStappen] = useState([]);
+  const stapVolgorde = ["importControle", "leases", "loans", "activa"];
+  const alleStappen = useMemo(() => {
+    const lijst = [...teControlerenItems, ...inTeStellenItems];
+    const rang = (k) => { const i = stapVolgorde.indexOf(k); return i === -1 ? 99 : i; };
+    return lijst.map((it, idx) => ({ it, idx })).sort((a, b) => rang(a.it.key) - rang(b.it.key) || a.idx - b.idx).map((x) => x.it);
+  }, [teControlerenItems, inTeStellenItems]);
+  const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
+  const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
+
   const automatischeHerkenningItems = useMemo(() => {
     const incomeCard = instellingenDashboardCards.find((c) => c.key === "businessIncomeEntries");
     const expenseCard = instellingenDashboardCards.find((c) => c.key === "businessExpenseEntries");
@@ -4685,18 +4698,25 @@ export default function App() {
         <TabNavBar activeTab={activeTab} previousTab={previousTab} onGo={setActiveTab} />
         {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
         {activeTab !== "overzicht" && (() => {
-          const lijst = activeTab === "controleren" ? [...teControlerenItems, ...inTeStellenItems] : [...inTeStellenItems, ...teControlerenItems];
-          const volgende = lijst.find((i) => i.onClick);
+          const volgende = volgendeStap;
           const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
-          return volgende ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-[13px]">
+          return alleStappen.length > 0 ? (
+            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-[13px] shadow-md">
               <span className="min-w-0 truncate text-teal-900">
-                <strong>Eerstvolgende open stap:</strong> {volgende.label}{volgende.count != null ? ` (${volgende.count})` : ""} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
+                {volgende ? (
+                  <><strong>Eerstvolgende open stap:</strong> {volgende.label}{volgende.count != null ? ` (${volgende.count})` : ""} · nog {totaal} open punt{totaal === 1 ? "" : "en"}</>
+                ) : (
+                  <><strong>Alle resterende stappen overgeslagen.</strong> Nog {totaal} open punt{totaal === 1 ? "" : "en"}.</>
+                )}
               </span>
-              <button type="button" onClick={volgende.onClick} className="shrink-0 rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-3.5 py-1 text-xs">Ga →</button>
+              <span className="shrink-0 flex items-center gap-2">
+                {overgeslagenStappen.length > 0 && <button type="button" onClick={() => setOvergeslagenStappen([])} className="text-xs text-teal-800 underline">Overgeslagen terugzetten</button>}
+                {volgende && <button type="button" onClick={stapOverslaan} className="rounded-full border border-teal-300 bg-white text-teal-800 font-semibold px-3 py-1 text-xs">Overslaan</button>}
+                {volgende && <button type="button" onClick={volgende.onClick} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-3.5 py-1 text-xs">Ga →</button>}
+              </span>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-900">
+            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-900 shadow-md">
               <span><strong>Alles afgehandeld.</strong> Er staan geen open punten meer — bekijk de resultaten op Overzicht.</span>
               <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-emerald-700 text-white font-bold px-3.5 py-1 text-xs">Naar Overzicht →</button>
             </div>
@@ -4733,8 +4753,9 @@ export default function App() {
 
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
-            controleItems={teControlerenItems}
-            instellingItems={inTeStellenItems}
+            stappen={alleStappen}
+            volgende={volgendeStap}
+            onOverslaan={stapOverslaan}
             controleCount={controlerenBadge}
             instellingCount={instellingenBadge}
             snelkoppelingen={[

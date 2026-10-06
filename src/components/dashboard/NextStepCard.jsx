@@ -6,12 +6,9 @@ import HelpHint from "../shared/HelpHint.jsx";
 //  - rechts: alle open punten in één compacte lijst (controle + instelling), elk klikbaar,
 //  - onderaan: één regel snelkoppelingen naar resultaten en herkenningsregels.
 // Geen nieuwe databron: dezelfde items als voorheen (teControlerenItems/inTeStellenItems/...).
-export default function NextStepCard({ controleItems, instellingItems, controleCount, instellingCount, snelkoppelingen, onOpenHelp, hervat }) {
-  const alle = [
-    ...controleItems.map((i) => ({ ...i, soort: "Controleren" })),
-    ...instellingItems.map((i) => ({ ...i, soort: "Instellingen" })),
-  ];
-  const volgende = alle.find((i) => i.onClick) || alle[0];
+export default function NextStepCard({ stappen, volgende: volgendeIn, onOverslaan, controleCount, instellingCount, snelkoppelingen, onOpenHelp, hervat }) {
+  const alle = stappen.map((i) => ({ ...i, soort: i.key === "loans" || i.key === "leases" || i.key === "activa" || i.key === "aannames" || i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
+  const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
 
   return (
@@ -38,11 +35,14 @@ export default function NextStepCard({ controleItems, instellingItems, controleC
             <span className="text-[12px] text-slate-500">
               {volgende.soort} · {volgende.count != null ? `${volgende.count} open` : "open"} · nog {totaal} open punt{totaal === 1 ? "" : "en"} in totaal
             </span>
-            {volgende.onClick && (
-              <button type="button" onClick={volgende.onClick} className="mt-1 self-start rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-1.5 text-[12.5px]">
-                Ga naar deze stap →
-              </button>
-            )}
+            <div className="mt-1 flex items-center gap-3">
+              {volgende.onClick && (
+                <button type="button" onClick={volgende.onClick} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-1.5 text-[12.5px]">
+                  Ga naar deze stap →
+                </button>
+              )}
+              {onOverslaan && <button type="button" onClick={onOverslaan} className="text-[12px] text-slate-500 underline">Overslaan</button>}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="grid sm:grid-cols-2 gap-x-6">
