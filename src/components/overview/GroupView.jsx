@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState, Fragment } from "react";
+import { useToonFijn } from "../../utils/useToonFijn.js";
+import { useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -11,6 +12,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
 // op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
 export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp }) {
+  const toonFijn = useToonFijn();
   const totals = useMemo(() => {
     const t = {};
     for (const tx of group.items) t[tx.category] = (t[tx.category] || 0) + tx.amount;
@@ -40,6 +42,10 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
+        <label className="ml-auto inline-flex items-center gap-1 text-[10px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
+          <input type="checkbox" checked={toonFijn} onChange={(e) => setToonFijn(e.target.checked)} className="h-3 w-3" />
+          fijne categorieën
+        </label>
       </h3>
       <table className="w-full text-sm">
         <thead>
@@ -124,6 +130,20 @@ export function DetailTable({
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateFilterAlign, setDateFilterAlign] = useState("right"); // "right" | "left"
   const dateFilterBtnRef = useRef(null);
+  const amountWrapRef = useRef(null);
+  const dateWrapRef = useRef(null);
+  // V83 — een open filtervenster sluit zodra je buiten het venster klikt/tikt (en dus ook als je een ander
+  // filter opent); er is zo nooit meer dan één venster tegelijk open.
+  useEffect(() => {
+    if (!showAmountFilter && !showDateFilter) return undefined;
+    const onOutside = (e) => {
+      if (showAmountFilter && amountWrapRef.current && !amountWrapRef.current.contains(e.target)) setShowAmountFilter(false);
+      if (showDateFilter && dateWrapRef.current && !dateWrapRef.current.contains(e.target)) setShowDateFilter(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return () => { document.removeEventListener("mousedown", onOutside); document.removeEventListener("touchstart", onOutside); };
+  }, [showAmountFilter, showDateFilter]);
 
   // Deze twee filterknoppen openen een klein, absoluut gepositioneerd venstertje eronder. Bij een
   // rechts-uitgelijnd venster (het gebruikelijke geval — de knop staat meestal niet aan de uiterste
@@ -246,10 +266,10 @@ export function DetailTable({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-56" suggestions={searchSuggestions} />
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" ref={amountWrapRef}>
               <button
                 ref={amountFilterBtnRef}
-                onClick={() => openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter)}
+                onClick={() => { setShowDateFilter(false); openFilterPopup(amountFilterBtnRef, 240, setAmountFilterAlign, setShowAmountFilter); }}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   amountMin || amountMax || amountSign !== "beide" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -277,10 +297,10 @@ export function DetailTable({
                 </div>
               )}
             </div>
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" ref={dateWrapRef}>
               <button
                 ref={dateFilterBtnRef}
-                onClick={() => openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter)}
+                onClick={() => { setShowAmountFilter(false); openFilterPopup(dateFilterBtnRef, 256, setDateFilterAlign, setShowDateFilter); }}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   dateFrom || dateTo ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"
                 }`}
@@ -293,11 +313,11 @@ export function DetailTable({
                   <div className="space-y-2">
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Van</label>
-                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Tot en met</label>
-                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
+                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                   </div>
                   {(dateFrom || dateTo) && (
@@ -396,6 +416,7 @@ export function DetailTable({
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
+                    {subtypeChoicesFor(mainCategoryOf(t.category)).length > 1 && (
                     <select
                       value={displayCategory(t.category)}
                       onChange={(e) => applyChange(t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
@@ -406,12 +427,13 @@ export function DetailTable({
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
+                    )}
                     {soortenVoor(t.category) && (
                       <select
                         value={t.category}
                         onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
                         className="block mt-0.5 rounded-md px-1 py-0 text-[10px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-                        title="Soort — bepaalt het zakelijke percentage dat je bij Persoonlijke aannames per soort kunt instellen"
+                        title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
                       >
                         {soortenVoor(t.category).map((o) => (
                           <option key={o.key} value={o.key}>{o.label}</option>

@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
-import { CATEGORY_ORDER, displayCategory, storedCategoryForChoice } from "../../classification/categories.js";
+import { CATEGORY_ORDER, displayCategory, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
 
 // V76 — privé-categorieën samengevoegd in de keuzelijst (zie displayCategory in categories.js).
-const KEUZE_OPTIES = [...new Set(CATEGORY_ORDER.map(displayCategory))];
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
 function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass }) {
+  const KEUZE_OPTIES = [...new Set(CATEGORY_ORDER.map(displayCategory))];
   const [category, setCategory] = useState(item.category || defaultCategory);
   const [type, setType] = useState(item.type || "Prive");
 
@@ -35,6 +35,11 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
+      {soortenVoor(category) && (
+        <select value={category} onChange={(e) => apply(e.target.value, type)} className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-500" title="Soort">
+          {soortenVoor(category).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+        </select>
+      )}
       <select value={type} onChange={(e) => apply(category, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
         <option value="Prive">Prive</option>
         <option value="Zakelijk">Zakelijk</option>

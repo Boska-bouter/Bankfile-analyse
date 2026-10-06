@@ -20,6 +20,9 @@ import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
 import { eur } from "../utils/amounts.js";
 
+// V20 — verzamelt per jaarsectie het totaal (BTW + Vpb) voor de meerjaren-slotregel.
+let JAAR_TOTALEN_BV = [];
+
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_TEKST = { groen: "Klaar voor controle", oranje: "Controle nodig", rood: "Mogelijk ontbreekt een periode" };
 // v262 — zelfde kaartindeling als aangiftevoorstel.js (zzp): kerncijfers, BTW en dossierstatus als
@@ -290,11 +293,24 @@ function buildYearSectionBv(
   </div>`
       : "";
 
+  // V20 — slotregel: totaal te betalen / te ontvangen = geschatte Vpb + BTW-saldo (4 kwartalen).
+  // Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
+  const btwJaarSaldo = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0);
+  const jaarTotaal = (vpbEstimate.belasting || 0) + btwJaarSaldo;
+  JAAR_TOTALEN_BV.push({ year, totaal: jaarTotaal });
+  const jaarTotaalHtml = `<div class="totaal-kaart">
+    <div class="totaal-regel"><span>Geschatte Vpb</span><span>${eur(vpbEstimate.belasting || 0)}</span></div>
+    <div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>
+    <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${eur(Math.abs(jaarTotaal))} ${jaarTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>
+    <p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
+  </div>`;
+
   const samenvattingHtml = `
   <div class="kerncijfers-kaart">
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
+  ${jaarTotaalHtml}
   <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
     <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>
     ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
@@ -579,6 +595,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   const rcVerloop = computeRekeningCourantVerloop(classified, jaren);
   const evVerloop = computeEigenVermogenVerloop(classified, jaren, resultaatNaVpbPerJaar);
 
+  JAAR_TOTALEN_BV = [];
   const sections = jaren
     .map((year) =>
       buildYearSectionBv(
@@ -588,6 +605,10 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
       )
     )
     .join('\n  <div style="page-break-before: always;"></div>\n');
+  const grandTotaalBv = JAAR_TOTALEN_BV.reduce((a, j) => a + j.totaal, 0);
+  const totaalAlleJarenHtml = JAAR_TOTALEN_BV.length > 1
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${JAAR_TOTALEN_BV.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaalBv))} ${grandTotaalBv < 0 ? "te ontvangen" : "te betalen"}</span></div><p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8"><title>Indicatieve aangifteberekening BV ${jaren.join(", ")}</title>
@@ -621,6 +642,9 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
   .kerncijfers-resultaat .bedrag-groot { font-size: 19px; font-weight: bold; color: #0f172a; }
   .kerncijfers-voetnoot { font-size: 9.5px; color: #94a3b8; margin: 6px 0 0; }
+  .totaal-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f0f9ff; border: 2px solid #0f172a; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .totaal-regel { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+  .totaal-eind { border-top: 1px solid #94a3b8; margin-top: 4px; padding-top: 6px; font-size: 14px; font-weight: bold; color: #0f172a; }
   .btw-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .samenvatting-btw { margin: 0; }
   .samenvatting-btw th, .samenvatting-btw td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; }
@@ -653,6 +677,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     boekhouder of accountant.
   </div>
   ${sections}
+  ${totaalAlleJarenHtml}
   <div style="page-break-before: always;"></div>
   <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">

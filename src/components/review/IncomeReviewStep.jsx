@@ -31,7 +31,25 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
       </div>
 
       <div className="p-5">
-        <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam…" className="w-64 mb-3" />
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <SearchInput value={search} onChange={onSearch} placeholder="Zoeken op naam…" className="w-64" />
+          {filtered.length > 1 && (
+            <>
+              <button
+                onClick={() => { if (window.confirm(`${filtered.length} inkomstenbron(nen)${search.trim() ? " (gefilterd)" : ""} allemaal als zakelijke klant markeren?`)) filtered.forEach((i) => onMark(i, "zakelijk")); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-100"
+              >
+                Alles zakelijk: ja ({filtered.length})
+              </button>
+              <button
+                onClick={() => { if (window.confirm(`${filtered.length} inkomstenbron(nen)${search.trim() ? " (gefilterd)" : ""} allemaal als NIET zakelijk markeren? Ze komen dan bij "Overig" te staan.`)) filtered.forEach((i) => onMark(i, "nee")); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-600 px-3 py-1.5 text-xs font-medium hover:bg-slate-100"
+              >
+                Alles zakelijk: nee ({filtered.length})
+              </button>
+            </>
+          )}
+        </div>
 
         <div className="max-h-[28rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
           {filtered.map((item) => (

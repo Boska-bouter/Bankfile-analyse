@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SectionCard } from "./SectionCard.jsx";
 import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
 import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
+import { eur } from "../../utils/amounts.js";
 
 // Fase 1, dashboard-restyling (Stijl F) — "Details en overzichten"-paneel onderaan het Overzicht-
 // tabblad, met sub-tabs (Jaaroverzicht/Transacties/Categorieën/Activa/Leningen/Lease/BTW/
@@ -49,6 +50,7 @@ export default function DetailsPanel({
   vpbIndicatie,
   vpbBreakdown,
   holdingCard,
+  belastingTotaal,
   winst,
   previousWinst,
   showTrend,
@@ -136,6 +138,21 @@ export default function DetailsPanel({
           ) : (
             <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(btwQuarters)}</div>
           )
+        )}
+
+        {tab === "jaaroverzicht" && belastingTotaal && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-bold text-slate-900">Totaal te betalen / terug te krijgen {year}</p>
+              <p className="text-[11.5px] text-slate-500">
+                {belastingTotaal.delen.map((d) => `${d.label} ${eur(d.bedrag)}`).join(" + ")} · indicatief
+              </p>
+            </div>
+            <p className="text-lg font-bold text-slate-900">
+              {eur(Math.abs(belastingTotaal.totaal))}{" "}
+              <span className="text-xs font-semibold text-slate-500">{belastingTotaal.totaal < 0 ? "terug te krijgen" : "te betalen"}</span>
+            </p>
+          </div>
         )}
 
         {tab === "transacties" && (

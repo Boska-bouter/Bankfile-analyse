@@ -17,7 +17,6 @@ import {
   estimateIncomeTax, estimateZvw, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "./tax/incomeTax.js";
-import { computePeriodeMismatches, computeAllPeriodeSignals } from "./tax/periodDetection.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
@@ -44,6 +43,8 @@ import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import HerkomstVanGeldPanel from "./components/review/HerkomstVanGeldPanel.jsx";
+import PeriodeSignaal from "./components/btw/PeriodeSignaal.jsx";
+import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
@@ -56,9 +57,10 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
+import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
-import RollupCard from "./components/dashboard/RollupCard.jsx";
+import NextStepCard from "./components/dashboard/NextStepCard.jsx";
 import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
 import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
 import YearDropdown from "./components/dashboard/YearDropdown.jsx";
@@ -75,7 +77,6 @@ import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel
 import KeywordManager from "./components/settings/KeywordManager.jsx";
 import TegenpartijenPanel from "./components/settings/TegenpartijenPanel.jsx";
 import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
-import PeriodeReviewStep from "./components/review/PeriodeReviewStep.jsx";
 import OpschonenPanel from "./components/review/OpschonenPanel.jsx";
 import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
@@ -187,6 +188,7 @@ function normalizeAutoWizard(v) {
 }
 
 export default function App() {
+  useToonFijn(); // V82 — herrender bij de schakelaar "fijne categorieën"
   const [parsedFiles, setParsedFiles] = useState([]);
   const [accountTypeByFile, setAccountTypeByFile] = useState({});
   const [categoryRules, setCategoryRules] = useState(DEFAULT_RULES);
@@ -366,7 +368,6 @@ export default function App() {
   // controlerenDashboardCards/dashboardCards hierboven, waarvan een klik hetzelfde doet).
   const [showPersonReview, setShowPersonReview] = useState(null);
   const [showOverigReview, setShowOverigReview] = useState(null);
-  const [showPeriodeReview, setShowPeriodeReview] = useState(null);
   const [showOnverklaard, setShowOnverklaard] = useState(false);
   const [openConfidenceLevel, setOpenConfidenceLevel] = useState(null); // null | "heuristic" | "fallback"
   const [keywordSuggestion, setKeywordSuggestion] = useState(null); // { keyword, category, type, matches, sourceName }
@@ -416,7 +417,6 @@ export default function App() {
   const btwSettingsSectionRef = useRef(null);
   const checklistSectionRef = useRef(null);
   const obIbSectionRef = useRef(null);
-  const periodeReviewSectionRef = useRef(null);
   const loansSectionRef = useRef(null);
   const leasesSectionRef = useRef(null);
   const incomeRatesSectionRef = useRef(null);
@@ -454,8 +454,10 @@ export default function App() {
   // (onSelectTab, jumpToSection, enz.) blijven ongewijzigd werken.
   const previousTabRef = useRef("overzicht");
   const activeTabTrackerRef = useRef("overzicht");
+  const [previousTab, setPreviousTab] = useState("overzicht"); // V84 — state, zodat de navigatiebalk direct klopt
   useEffect(() => {
     previousTabRef.current = activeTabTrackerRef.current;
+    setPreviousTab(activeTabTrackerRef.current);
     activeTabTrackerRef.current = activeTab;
   }, [activeTab]);
   // Eén bron van waarheid voor "welke sectie-ref hoort bij welk tabblad" — gebruikt door
@@ -464,21 +466,23 @@ export default function App() {
   const REF_TAB_ENTRIES = [
     [importControleSectionRef, "controleren"],
     [confidenceSectionRef, "controleren"],
+    [incomeReviewSectionRef, "controleren"], // V90 — ontbrak: "Ga naar deze stap" bij Herkomst van inkomsten deed daardoor niets
     [personReviewSectionRef, "controleren"],
     [overigReviewSectionRef, "controleren"],
     [duplicatesSectionRef, "controleren"],
-    [periodeReviewSectionRef, "controleren"],
     [checklistSectionRef, "overzicht"],
     [multiYearSectionRef, "overzicht"],
     [quarterlyBtwSectionRef, "overzicht"],
     [obIbSectionRef, "overzicht"],
     [bvSignaleringSectionRef, "overzicht"],
-    [loansSectionRef, "instellingen"],
-    [leasesSectionRef, "instellingen"],
-    [activaSectionRef, "instellingen"],
-    [aannamesSectionRef, "instellingen"],
+    [loansSectionRef, "controleren"],
+    [leasesSectionRef, "controleren"],
+    [activaSectionRef, "controleren"],
+    [aannamesSectionRef, "controleren"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
+    [categoryPercentageSectionRef, "controleren"],
+    [automatiseringSectionRef, "instellingen"],
     [detailsSectionRef, "controleren"],
   ];
   // Fase 3 — sommige van de secties hierboven staan zelf op !expandedCardKeys.<key> (verborgen/
@@ -498,21 +502,20 @@ export default function App() {
   const REF_COLLAPSE_KEYS = [
     [importControleSectionRef, "importKwaliteit", true],
     [confidenceSectionRef, "importKwaliteit", true],
-    [incomeReviewSectionRef, "herkomstVanGeld", true],
-    [personReviewSectionRef, "herkomstVanGeld", true],
+    [incomeReviewSectionRef, "herkomstOpschonen", true],
+    [personReviewSectionRef, "herkomstOpschonen", true],
     [categorySectionRef, "categorieen", false],
     [activaSectionRef, "bedrijfsmiddelen", true],
     [leasesSectionRef, "bedrijfsmiddelen", true],
     [loansSectionRef, "bedrijfsmiddelen", true],
-    [aannamesSectionRef, "persoonlijkeAannames", true],
-    [categoryPercentageSectionRef, "zakelijkPrive", true],
+    [aannamesSectionRef, "aannamesPercentages", true],
+    [categoryPercentageSectionRef, "aannamesPercentages", true],
     [btwSettingsSectionRef, "btw", true],
     [automatiseringSectionRef, "automatisering", true],
     [incomeRatesSectionRef, "tegenpartijen", true],
-    [overigReviewSectionRef, "opschonen", true],
-    [duplicatesSectionRef, "opschonen", true],
-    [periodeReviewSectionRef, "opschonen", true],
-    [detailsSectionRef, "aansluitingDetail", false],
+    [overigReviewSectionRef, "herkomstOpschonen", true],
+    [duplicatesSectionRef, "herkomstOpschonen", true],
+    [detailsSectionRef, "detailTabellen", true],
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
@@ -1357,9 +1360,14 @@ export default function App() {
   // V58 — geteld per GROEP (zelfde tegenpartij + teken + categorie) in plaats van per transactie: 30
   // maandelijkse incasso's van dezelfde partij zijn één beslissing, niet dertig. Het aantal
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
+  const bevestigdInBulkVenster = (tx) => {
+    if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    return !!k && (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
+  };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
-    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set();
+    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -1369,24 +1377,32 @@ export default function App() {
       const gk = losseWinkel ? "__losse-pinbetalingen__|Winkels divers" : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       allGroups.add(gk);
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
+      // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
+      if (bevestigdInBulkVenster(tx)) { approved++; continue; }
       if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
-      else { unclearTx++; unclearGroups.add(gk); }
+      else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
-    return { groupsTotal: allGroups.size, approved, review, unclear, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
-  }, [classified]);
+    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+  }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
   // bij (die twee categorieën leveren per definitie nooit 🟢 op), dus die tellen we apart en
   // wijzen we liever naar de daarvoor bedoelde review-vensters dan dat we ze hier dupliceren. ----
   const uncertainModalData = useMemo(() => {
     if (!openConfidenceLevel) return null;
-    const all = classified.filter((tx) => !tx.isMirror && tx.confidence.level === openConfidenceLevel);
+    const all = classified.filter((tx) => !tx.isMirror && tx.confidence.level === openConfidenceLevel && !bevestigdInBulkVenster(tx));
     const overigCount = all.filter((tx) => tx.category === "Overig").length;
     const personenCount = all.filter((tx) => tx.category === "Overboekingen aan personen").length;
     const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
     return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
-  }, [classified, openConfidenceLevel]);
+  }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
+  // V90 — een venster dat "0 open" meldt is overbodig: sluit automatisch zodra er niets (meer) te beoordelen is
+  useEffect(() => {
+    if (!openConfidenceLevel || !uncertainModalData) return;
+    const b = uncertainModalData.bulkCounts;
+    if (uncertainModalData.transactions.length === 0 && (b.overig || 0) + (b.personen || 0) === 0) setOpenConfidenceLevel(null);
+  }, [openConfidenceLevel, uncertainModalData]);
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
@@ -1394,6 +1410,7 @@ export default function App() {
   };
   const jumpToPersonenFromModal = () => {
     setOpenConfidenceLevel(null);
+    if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
     setShowPersonReview(true);
     jumpToSection(personReviewSectionRef);
   };
@@ -1439,12 +1456,32 @@ export default function App() {
     setCounterpartyOverride(item.name, item.amount, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
+  // V90 — de bulkknoppen werken per TYPE: alleen de tegenpartijen die nu als Zakelijk (resp. Privé) staan.
+  const overigZakelijkPending = pendingOverigReview.filter((i) => i.type === "Zakelijk");
+  const overigPrivePending = pendingOverigReview.filter((i) => i.type !== "Zakelijk");
   const bulkMarkOverigAsPriveOpname = () => {
-    for (const item of pendingOverigReview) markOverigItem(item, "Prive opnames", "Zakelijk");
+    for (const item of overigZakelijkPending) markOverigItem(item, "Prive opnames", "Zakelijk");
   };
   const bulkMarkOverigAsWinkelsDivers = () => {
-    for (const item of pendingOverigReview) markOverigItem(item, "Winkels divers", "Prive");
+    for (const item of overigPrivePending) markOverigItem(item, "Winkels divers", "Prive");
   };
+  // V90 — "Overboekingen aan personen": alles in één keer bevestigen, of alles naar Overig
+  const personBulkAction = [
+    {
+      label: `Alles is aan personen: ja (${pendingPersonReview.length})`,
+      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal bevestigen als "Overboeking aan personen"?`,
+      onApply: () => {
+        snapshotBeforeAction('"Klopt zo" bevestigd (alles)');
+        const keys = pendingPersonReview.map((i) => i.key);
+        setReviewedPersonKeys((prev) => [...new Set([...prev, ...keys])]);
+      },
+    },
+    {
+      label: `Alles is aan personen: nee (${pendingPersonReview.length})`,
+      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal NIET als overboeking aan personen zien? Ze komen dan bij "Overig" te staan, waar je ze verder kunt indelen.`,
+      onApply: () => { for (const item of pendingPersonReview) markPersonSource(item, "Overig", item.type); },
+    },
+  ];
   const confirmOverigAsIs = (item) => {
     snapshotBeforeAction('"Klopt zo" bevestigd');
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -1506,25 +1543,6 @@ export default function App() {
     setCounterpartyOverride(item.name, item.amount, { category: item.category, type: item.type, btwVerlegd: value });
   };
 
-  // ---- Factuurperiode vs. boekingskwartaal ----
-  const periodeMismatches = useMemo(
-    () => computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides),
-    [classified, reviewedPeriodeKeys, periodeQuarterOverrides]
-  );
-  // v243 — inclusief al afgehandelde items (met status) — voor "toon toch" in het Controleren-
-  // mini-dashboard, zodat je een al-groene factuurperiode-controle alsnog kunt naslaan.
-  const periodeAllSignals = useMemo(
-    () => computeAllPeriodeSignals(classified, reviewedPeriodeKeys, periodeQuarterOverrides),
-    [classified, reviewedPeriodeKeys, periodeQuarterOverrides]
-  );
-  const confirmPeriodeAsIs = (tx) => {
-    snapshotBeforeAction("Factuurperiode bevestigd");
-    setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
-  };
-  const movePeriodeToQuarter = (tx, quarterKey) => {
-    snapshotBeforeAction("Factuurperiode verplaatst");
-    setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
-  };
 
   // yearsOverride: gebruikt door de "Voorstel bekijken"-snelknop voor het actieve jaar, die niet
   // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
@@ -1967,6 +1985,19 @@ export default function App() {
     () => heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus),
     [leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus]
   );
+  // V15 — lichte periode-melding in het BTW-per-kwartaal-venster (alleen het actieve jaar).
+  const periodeSignalenActiefJaar = useMemo(
+    () => (activeYear ? computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides).filter((m) => m.boekingKwartaal.startsWith(`${activeYear}-`) || m.voorgesteldKwartaal.startsWith(`${activeYear}-`)) : []),
+    [classified, reviewedPeriodeKeys, periodeQuarterOverrides, activeYear]
+  );
+  const confirmPeriodeAsIs = (tx) => {
+    snapshotBeforeAction("Periode laten staan");
+    setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
+  };
+  const movePeriodeToQuarter = (tx, quarterKey) => {
+    snapshotBeforeAction("Periode verplaatst");
+    setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
+  };
   const quarterlyBtwData = useMemo(
     () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) : []),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]
@@ -2209,6 +2240,26 @@ export default function App() {
     if (rechtsvorm !== "bv" || !activeYear || !yearlySummary) return null;
     return estimateVpb(yearlySummary.winst, activeYear);
   }, [rechtsvorm, activeYear, yearlySummary]);
+  // V16 — optelling onderaan "Details en overzichten": BTW (4 kwartalen) + IB na heffingskorting + Zvw
+  // (zzp) of Vpb (BV). Positief = te betalen, negatief = terug te krijgen.
+  const belastingTotaalJaar = useMemo(() => {
+    if (!activeYear) return null;
+    const btw = korRegeling ? 0 : [1, 2, 3, 4].reduce((acc, k) => {
+      const q = quarterlyBtwData.find((item) => item.kwartaal === k);
+      return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
+    }, 0);
+    let delen = [{ label: "BTW", bedrag: btw }];
+    if (rechtsvorm === "bv") {
+      if (!dashboardVpbIndicatie) return null;
+      delen.push({ label: "Vpb", bedrag: dashboardVpbIndicatie.belasting || 0 });
+    } else {
+      if (!dashboardAangifteIndicatie) return null;
+      const hk = dashboardAangifteIndicatie.heffingskortingen?.totaal || 0;
+      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (dashboardAangifteIndicatie.ib?.belasting || 0) - hk) });
+      delen.push({ label: "Zvw", bedrag: dashboardAangifteIndicatie.zvw?.bijdrage || 0 });
+    }
+    return { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) };
+  }, [activeYear, korRegeling, quarterlyBtwData, rechtsvorm, dashboardVpbIndicatie, dashboardAangifteIndicatie]);
   // v283 — zelfde drieluik (Omzet incl. BTW / Omzet excl. BTW / Zakelijke kosten) als de
   // "kerncijfers"-kaart in het BV-Aangiftevoorstel (reports/aangiftevoorstel-bv.js), nu ook als korte
   // toelichting onder "Indicatieve vennootschapsbelasting" op het Jaaroverzicht. Geen nieuwe
@@ -2386,7 +2437,7 @@ export default function App() {
       const allYearItems = [...zakItems, ...priItems];
       const quartersForYear = computeQuarterlyBtwForYear(classified, year, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
       const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen);
-      const checks = [{ frac: yc.categorizedPct / 100 }];
+      const checks = [];
 
       const personKeysThisYear = new Set(
         allYearItems.filter((tx) => tx.category === "Overboekingen aan personen" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
@@ -2402,6 +2453,10 @@ export default function App() {
         const done = [...overigKeysThisYear].filter((k) => reviewedOverigKeys.includes(k)).length;
         checks.push({ frac: done / overigKeysThisYear.size });
       }
+      // V90 — "Overig" dat je bewust met "Klopt zo" hebt bevestigd telt als gecategoriseerd (het eigen
+      // Overig-check hierboven bewaakt dat al per tegenpartij); anders bleef dit jaar altijd 1 punt open.
+      const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear].every((k) => reviewedOverigKeys.includes(k));
+      checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
       checks.push({ frac: korRegeling !== null ? 1 : 0 });
       const kwTotal = quartersForYear.length;
       if (korRegeling === false) {
@@ -2470,7 +2525,7 @@ export default function App() {
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
       // geclassificeerd, plus of er een bekend gat in de bestandscontinuïteit dit jaar raakt.
-      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic").length;
+      const onzekerDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level !== "override" && tx.confidence.level !== "keyword" && tx.confidence.level !== "heuristic" && !bevestigdInBulkVenster(tx)).length;
       // v260 — drie niveaus i.p.v. één harde grens (zie classifyContinuityGap in transactions.js):
       // tot €500 verschil bij een bestandsovergang is voor het dossier verwaarloosbaar (groen, geen
       // invloed op de jaarstatus), €500–€999 is "geel" (zet de status op zijn minst op oranje, ook
@@ -2502,6 +2557,13 @@ export default function App() {
   //    het laden is, en er dus bij de overgang naar "geladen" ineens twee hooks BIJKOMEN — exact de
   //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
   //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
+  // V90 — jumpToSection wordt aangeroepen vanuit onClick-handlers die in useMemo-kaarten zijn vastgelegd
+  // (controlerenDashboardCards e.d.); die zagen daardoor een verouderde activeTab/expandedCardKeys en
+  // deden soms niets (bijv. na "Terug naar Overzicht" of een zelf ingeklapte kaart). Lezen via refs = altijd actueel.
+  const expandedLiveRef = useRef(expandedCardKeys);
+  expandedLiveRef.current = expandedCardKeys;
+  const activeTabLiveRef = useRef(activeTab);
+  activeTabLiveRef.current = activeTab;
   const jumpToSection = (ref) => {
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
@@ -2511,13 +2573,13 @@ export default function App() {
     const visibilityEntry = REF_COLLAPSE_KEYS.find(([r]) => r === ref);
     const visibilityKey = visibilityEntry ? visibilityEntry[1] : null;
     const requiredExpanded = visibilityEntry ? visibilityEntry[2] : null;
-    const needsToggle = !!(visibilityKey && !!expandedCardKeys[visibilityKey] !== requiredExpanded);
+    const needsToggle = !!(visibilityKey && !!expandedLiveRef.current[visibilityKey] !== requiredExpanded);
     if (needsToggle) {
       setExpandedCardKeys((prev) => ({ ...prev, [visibilityKey]: requiredExpanded }));
     }
     const entry = REF_TAB_ENTRIES.find(([r]) => r === ref);
     const targetTab = entry ? entry[1] : null;
-    if (targetTab && targetTab !== activeTab) {
+    if (targetTab && targetTab !== activeTabLiveRef.current) {
       // Sectie zit op een ander tabblad: eerst wisselen, dan pas scrollen (zie de useEffect
       // hieronder — deze ref staat nu nog op display:none).
       setActiveTab(targetTab);
@@ -2530,6 +2592,7 @@ export default function App() {
       setPendingScrollRef(ref);
       return;
     }
+    if (!ref.current) { setPendingScrollRef(ref); return; }
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
@@ -2539,11 +2602,22 @@ export default function App() {
   // worden vóórdat de doel-sectie weer gemount is.
   useEffect(() => {
     if (!pendingScrollRef) return;
-    const raf = requestAnimationFrame(() => {
-      pendingScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setPendingScrollRef(null);
-    });
-    return () => cancelAnimationFrame(raf);
+    // V90 — wacht tot de sectie echt gemount is (max ~40 frames) i.p.v. na één frame op te geven
+    let raf, pogingen = 0, gestopt = false;
+    const probeer = () => {
+      if (gestopt) return;
+      const el = pendingScrollRef.current;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        setPendingScrollRef(null);
+      } else if (pogingen++ < 40) {
+        raf = requestAnimationFrame(probeer);
+      } else {
+        setPendingScrollRef(null);
+      }
+    };
+    raf = requestAnimationFrame(probeer);
+    return () => { gestopt = true; cancelAnimationFrame(raf); };
   }, [activeTab, expandedCardKeys, pendingScrollRef]);
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
@@ -2562,7 +2636,7 @@ export default function App() {
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
@@ -2575,6 +2649,9 @@ export default function App() {
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
+          // V90 — "Overboekingen aan personen" verschijnt pas als de herkomst van inkomsten is beantwoord;
+          // zolang die nog openstaat, ga je eerst daarheen (anders gebeurde er niets).
+          if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
           setShowPersonReview(true);
           jumpToSection(personReviewSectionRef);
         },
@@ -2917,7 +2994,7 @@ export default function App() {
   }, [
     transactions.length,
     confidenceSummary,
-    pendingPersonReview.length,
+    pendingPersonReview.length, pendingIncomeReview.length,
     pendingOverigReview.length,
     pendingDuplicateCount,
     duplicatePendingBreakdown,
@@ -2995,7 +3072,7 @@ export default function App() {
         tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclear > 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
@@ -3024,6 +3101,7 @@ export default function App() {
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
+          if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
           setShowPersonReview(true);
           jumpToSection(personReviewSectionRef);
         },
@@ -3063,17 +3141,6 @@ export default function App() {
           jumpToSection(duplicatesSectionRef);
         },
       },
-      {
-        key: "periode",
-        title: "Factuurperiode",
-        icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        value: periodeMismatches.length,
-        openCount: periodeMismatches.length,
-        subtitle: periodeMismatches.length > 0 ? "afwijkend kwartaal" : "Geen afwijkingen",
-        tone: periodeMismatches.length > 0 ? "attention" : "ok",
-        hint: "Naar de factuurperiode-controle",
-        onClick: () => jumpToSection(periodeReviewSectionRef),
-      },
     ];
   }, [
     transactions.length,
@@ -3084,7 +3151,6 @@ export default function App() {
     pendingOverigReview.length,
     pendingDuplicateCount,
     duplicatePendingBreakdown,
-    periodeMismatches.length,
   ]);
 
   // v261 — telt, over alle (niet-vaste-tarief) subtype-categorieën, hoeveel er op 21%/9%/0% staan —
@@ -3445,9 +3511,29 @@ export default function App() {
     };
     return [
       withExpand(
-        g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]),
+        (() => {
+          const basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          if (!basis || !aansluitControleInfo.heeftData) return basis;
+          const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
+          const bol = aansluitControleInfo.tone === "ok" ? "🟢 " : aansluitControleInfo.tone === "attention" ? "🟠 " : aansluitControleInfo.tone === "risk" ? "🔴 " : "";
+          return {
+            ...basis,
+            tone: toneRank[aansluitControleInfo.tone] > toneRank[basis.tone] ? aansluitControleInfo.tone : basis.tone,
+            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: `${bol}${aansluitControleInfo.tone === "ok" ? "Klopt" : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet gekoppeld` : "Controleren"}` }],
+          };
+        })(),
         "importKwaliteit",
         <div className="space-y-3">
+          {aansluitControleInfo.heeftData && (
+            <div className={`rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2 ${aansluitControleInfo.tone === "attention" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
+              <span><strong>Controle zakelijk ↔ privé:</strong> {aansluitControleInfo.subtitle}</span>
+              {aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0 ? (
+                <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking{aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}</button>
+              ) : (
+                <button type="button" onClick={() => jumpToSection(detailsSectionRef)} className="text-xs underline">Naar de detailtabellen</button>
+              )}
+            </div>
+          )}
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} />
           </div>
@@ -3462,9 +3548,10 @@ export default function App() {
         </div>
       ),
       withExpand(
-        g("herkomstVanGeld", "Herkomst van geld", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview"]),
-        "herkomstVanGeld",
-        <HerkomstVanGeldPanel
+        g("herkomstOpschonen", "Herkomst & opschonen", <Users className="h-3.5 w-3.5" />, ["incomeReview", "personReview", "overigReview", "duplicates"]),
+        "herkomstOpschonen",
+        <div className="space-y-3">
+<HerkomstVanGeldPanel
           incomeReviewRef={incomeReviewSectionRef}
           pendingIncomeReview={pendingIncomeReview}
           incomeSummary={incomeSummary}
@@ -3480,12 +3567,9 @@ export default function App() {
           onPersonSearch={setPersonSearch}
           onMarkPersonSource={markPersonSource}
           onConfirmPersonAsIs={confirmPersonAsIs}
+          personBulkAction={personBulkAction}
         />
-      ),
-      withExpand(
-        g("opschonen", "Opschonen", <HelpCircle className="h-3.5 w-3.5" />, ["overigReview", "duplicates", "periode"]),
-        "opschonen",
-        <OpschonenPanel
+<OpschonenPanel
           overigReviewRef={overigReviewSectionRef}
           overigSummary={overigSummary}
           pendingOverigReview={pendingOverigReview}
@@ -3497,6 +3581,8 @@ export default function App() {
           onConfirmOverigAsIs={confirmOverigAsIs}
           onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
           onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}
+          overigZakelijkCount={overigZakelijkPending.length}
+          overigPriveCount={overigPrivePending.length}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
@@ -3512,79 +3598,140 @@ export default function App() {
           onRemoveDuplicateGroup={removeDuplicateGroup}
           showConfirmedSeparateDuplicates={showConfirmedSeparateDuplicates}
           onToggleShowConfirmedSeparateDuplicates={() => setShowConfirmedSeparateDuplicates((v) => !v)}
-          periodeReviewRef={periodeReviewSectionRef}
-          periodeAllSignals={periodeAllSignals}
-          periodeMismatches={periodeMismatches}
-          showPeriodeReview={showPeriodeReview}
-          onToggleShowPeriodeReview={setShowPeriodeReview}
-          onConfirmPeriodeAsIs={confirmPeriodeAsIs}
-          onMovePeriodeToQuarter={movePeriodeToQuarter}
           onOpenHelp={setHelpPopupChapter}
         />
-      ),
-      withExpand(
-        {
-          key: "categorieen",
-          title: "Categorieën",
-          icon: <CardIcon name="chart" />,
-          tone: "neutral",
-          subtitle: "Categorieoverzicht zakelijk en privé bekijken",
-          hint: "Naar de categorieoverzichten",
-          helpChapter: "categorieen-overzicht",
-        },
-        "categorieen",
-        <div className="grid md:grid-cols-2 gap-4">
-          <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-          <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
         </div>
       ),
-      withExpand(
-        {
-          key: "aansluitingDetail",
-          title: "Aansluiting & detail",
-          icon: <CardIcon name="link" />,
-          tone: "neutral",
-          subtitle: "Controle zakelijk ↔ privé en de detailtabellen",
-          hint: "Naar de aansluitcontrole en detailtabellen",
-        },
-        "aansluitingDetail",
-        <AansluitingDetailPanel
-          detailsRef={detailsSectionRef}
-          zakGroupForYear={zakGroupForYear}
-          priGroupForYear={priGroupShown}
-          priveRekeningGeladen={priveRekeningGeladen}
-          zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-          expandedTable={expandedTable}
-          onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
-          onRequestCategoryChange={requestCategoryChange}
-          onConfirmCorrect={confirmClassificationCorrect}
-          fingerprintByTxId={fingerprintByTxId}
-          transactionNotes={transactionNotes}
-          onSetNote={setTransactionNote}
-          onOpenHelp={setHelpPopupChapter}
-        />
-      ),
+      // V86 — de kaarten "Categorieën" en "Aansluiting & detail" zijn vervallen: hun inhoud (categorie-
+      // overzichten + detailtabellen) staat al standaard zichtbaar onder deze kaarten.
       // v283 — de "Controle overboeking zakelijk ↔ privé"-banner stond voorheen alleen ín de
       // uitgeklapte "Aansluiting & detail"-kaart hierboven; op verzoek nu ook als eigen, altijd
       // zichtbare "box" ernaast — zelfde berekening als voorheen in AansluitingDetailPanel.jsx (nu
       // verwijderd, om dubbele content te voorkomen), hier alleen samengevat i.p.v. als volledige
       // banner-tekst. v286 — die berekening staat nu in de gedeelde aansluitControleInfo hierboven.
-      aansluitControleInfo.heeftData
-        ? {
-            key: "aansluitControle",
-            title: "Controle zakelijk ↔ privé",
-            icon: <CardIcon name="repeat" />,
-            tone: aansluitControleInfo.tone,
-            subtitle: aansluitControleInfo.subtitle,
-            ...(aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0
-              ? { hint: `Bekijk de ${aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking${aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}`, onClick: () => setShowOnverklaard(true) }
-              : { hint: "Naar de aansluiting & detailtabellen", onClick: () => jumpToSection(detailsSectionRef) }),
-          }
-        : null,
+      withExpand(
+        (() => {
+          const bb = groupCards(instellingenCardsByKey, ["loans", "leases", "activa"]);
+          if (!bb) return null;
+          return { key: "bedrijfsmiddelen", title: "Bedrijfsmiddelen", icon: <span>🏷️</span>, tone: bb.tone, lines: bb.lines, onClick: bb.onClick, hint: bb.hint, actionLabel: "Bekijken" };
+        })(),
+        "bedrijfsmiddelen",
+        <div className="space-y-3">
+          <div ref={activaSectionRef}>
+            <ActivaPanel
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              activeYear={activeYear}
+              onOpenModal={setActivaDetailsModalKey}
+              onMarkUnknown={markActivaUnknown}
+              onUnmarkUnknown={unmarkActivaUnknown}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={leasesSectionRef}>
+            <LeaseInterestPanel
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
+              onConfirmType={confirmLeaseType}
+              onOpenModal={setLeaseDetailsModalKey}
+              onMarkUnknown={markLeaseUnknown}
+              onUnmarkUnknown={unmarkLeaseUnknown}
+              onMergeInto={mergeLeaseInto}
+              onUndoMerge={undoMergeLease}
+              leaseMerges={leaseMerges}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={loansSectionRef}>
+            <LoanInterestPanel
+              loanSummary={loanSummary}
+              privateLoanSummary={privateLoanSummary}
+              loanDetails={loanDetails}
+              onOpenModal={setLoanDetailsModalKey}
+              onMarkUnknown={markLoanUnknown}
+              onUnmarkUnknown={unmarkLoanUnknown}
+              onMarkNotALoan={markLoanNotALoan}
+              onMarkAsPrive={markLoanAsPrive}
+              onMarkAsZakelijk={markLoanAsZakelijk}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+        </div>
+      ),
+      withExpand(
+        (() => {
+          const aan = instellingenCardsByKey.aannames;
+          const pc = instellingenCardsByKey.categoryPercentages;
+          if (!aan && !pc) return null;
+          const aanOpen = aan && typeof aan.openCount === "number" ? aan.openCount : 0;
+          const lines = [
+            ...(aan ? aan.lines : []),
+            ...(pc ? [{ label: "% zakelijk/privé splitsing", value: pc.value != null ? `${pc.value} aangepast` : "" }] : []),
+          ];
+          const tone = aan ? aan.tone : "ok";
+          const primary = aan || pc;
+          return { key: "aannamesPercentages", title: "Aannames & percentages", icon: <span>⚖️</span>, tone, lines, onClick: primary.onClick, hint: primary.hint, actionLabel: "Bekijken" };
+        })(),
+        "aannamesPercentages",
+        <div className="space-y-3">
+          <div ref={aannamesSectionRef}>
+            <PersoonlijkeAannamesPanel
+              activeYear={activeYear}
+              winst={yearlySummary?.winst}
+              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
+              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
+              zaLegacyJaDefault={zaLegacyJaDefault}
+              startersaftrekStatus={startersaftrekStatus}
+              onSetStartersaftrekStatus={setStartersaftrekStatus}
+              autoStatus={autoStatus}
+              onSetAutoStatus={setAutoStatus}
+              autoWizardStatus={autoWizardStatus}
+              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
+              kmVergoedingDetails={kmVergoedingDetails}
+              onSetKmVergoedingField={setKmVergoedingField}
+              activaSummary={activaSummary}
+              activaDetails={activaDetails}
+              leaseSummary={leaseSummary}
+              leaseDetails={leaseDetails}
+              gedeeldeHuur={gedeeldeHuurForActiveYear}
+              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
+              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
+              gedeeldeEnergie={gedeeldeEnergieForActiveYear}
+              energieZakelijkPercentageStatus={energieZakelijkPercentageStatus}
+              onSetEnergieZakelijkPercentageStatus={setEnergieZakelijkPercentageStatus}
+              gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear}
+              gemeentelijkeKostenZakelijkPercentageStatus={gemeentelijkeKostenZakelijkPercentageStatus}
+              onSetGemeentelijkeKostenZakelijkPercentageStatus={setGemeentelijkeKostenZakelijkPercentageStatus}
+              categoryBtwRates={effectiveCategoryBtwRates}
+              onOpenHelp={setHelpPopupChapter}
+            />
+          </div>
+          <div ref={categoryPercentageSectionRef}>
+            <CategoryPercentagePanel
+              activeYear={activeYear}
+              categorieTotalen={categorieTotalenActiveYear}
+              categoryZakelijkPercentage={categoryZakelijkPercentage}
+              huisvestingStandaardNul={priveOnlyDossier ? PRIVE_ONLY_HUISVESTING_STANDAARD_NUL : []}
+              onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
+              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}
+              onOpenHelp={setHelpPopupChapter}
+              gedeeldeRijen={[
+                { label: "Huur (deels zakelijk)", gedeelde: gedeeldeHuurForActiveYear, raw: huurZakelijkPercentageStatus?.[activeYear], onSet: setHuurZakelijkPercentageStatus },
+                { label: "Energie-water (deels zakelijk)", gedeelde: gedeeldeEnergieForActiveYear, raw: energieZakelijkPercentageStatus?.[activeYear], onSet: setEnergieZakelijkPercentageStatus },
+                { label: "Gemeentelijke kosten (deels zakelijk)", gedeelde: gedeeldeGemeentelijkeKostenForActiveYear, raw: gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear], onSet: setGemeentelijkeKostenZakelijkPercentageStatus },
+              ]}
+            />
+          </div>
+        </div>
+      ),
     ].filter(Boolean);
   }, [
     transactions.length,
     controlerenCardsByKey,
+    instellingenCardsByKey,
+    activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, loanSummary, privateLoanSummary, loanDetails,
+    zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
     expandedCardKeys,
     importDiagnostics,
     fileContinuity,
@@ -3611,9 +3758,6 @@ export default function App() {
     showDuplicateDetails,
     pendingDuplicateCount,
     showConfirmedSeparateDuplicates,
-    periodeAllSignals,
-    periodeMismatches,
-    showPeriodeReview,
     priveRekeningGeladen,
     zakelijkRekeningGeladen,
     aansluitControleInfo,
@@ -3676,110 +3820,6 @@ export default function App() {
             onToggleExpandBusinessExpenseList={() => setExpandedBusinessExpenseList((v) => !v)}
           />
         </div>
-      ),
-      withExpand(
-        g("bedrijfsmiddelen", "Bedrijfsmiddelen & financiering", <span>🏷️</span>, ["loans", "leases", "activa"]),
-        "bedrijfsmiddelen",
-        <div className="space-y-3">
-          <div ref={activaSectionRef}>
-            <ActivaPanel
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              activeYear={activeYear}
-              onOpenModal={setActivaDetailsModalKey}
-              onMarkUnknown={markActivaUnknown}
-              onUnmarkUnknown={unmarkActivaUnknown}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-          <div ref={leasesSectionRef}>
-            <LeaseInterestPanel
-              leaseSummary={leaseSummary}
-              leaseDetails={leaseDetails}
-              confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
-              onConfirmType={confirmLeaseType}
-              onOpenModal={setLeaseDetailsModalKey}
-              onMarkUnknown={markLeaseUnknown}
-              onUnmarkUnknown={unmarkLeaseUnknown}
-              onMergeInto={mergeLeaseInto}
-              onUndoMerge={undoMergeLease}
-              leaseMerges={leaseMerges}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-          <div ref={loansSectionRef}>
-            <LoanInterestPanel
-              loanSummary={loanSummary}
-              privateLoanSummary={privateLoanSummary}
-              loanDetails={loanDetails}
-              onOpenModal={setLoanDetailsModalKey}
-              onMarkUnknown={markLoanUnknown}
-              onUnmarkUnknown={unmarkLoanUnknown}
-              onMarkNotALoan={markLoanNotALoan}
-              onMarkAsPrive={markLoanAsPrive}
-              onMarkAsZakelijk={markLoanAsZakelijk}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-        </div>
-      ),
-      withExpand(
-        g("persoonlijkeAannames", "Persoonlijke aannames", <span>🧑</span>, ["aannames"]),
-        "persoonlijkeAannames",
-        <div className="space-y-3">
-          <div ref={aannamesSectionRef}>
-            <PersoonlijkeAannamesPanel
-              activeYear={activeYear}
-              winst={yearlySummary?.winst}
-              zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
-              onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus}
-              zaLegacyJaDefault={zaLegacyJaDefault}
-              startersaftrekStatus={startersaftrekStatus}
-              onSetStartersaftrekStatus={setStartersaftrekStatus}
-              autoStatus={autoStatus}
-              onSetAutoStatus={setAutoStatus}
-              autoWizardStatus={autoWizardStatus}
-              onOpenAutoActivaModal={() => setShowAutoActivaModal(true)}
-              kmVergoedingDetails={kmVergoedingDetails}
-              onSetKmVergoedingField={setKmVergoedingField}
-              activaSummary={activaSummary}
-              activaDetails={activaDetails}
-              leaseSummary={leaseSummary}
-              leaseDetails={leaseDetails}
-              gedeeldeHuur={gedeeldeHuurForActiveYear}
-              huurZakelijkPercentageStatus={huurZakelijkPercentageStatus}
-              onSetHuurZakelijkPercentageStatus={setHuurZakelijkPercentageStatus}
-              gedeeldeEnergie={gedeeldeEnergieForActiveYear}
-              energieZakelijkPercentageStatus={energieZakelijkPercentageStatus}
-              onSetEnergieZakelijkPercentageStatus={setEnergieZakelijkPercentageStatus}
-              gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear}
-              gemeentelijkeKostenZakelijkPercentageStatus={gemeentelijkeKostenZakelijkPercentageStatus}
-              onSetGemeentelijkeKostenZakelijkPercentageStatus={setGemeentelijkeKostenZakelijkPercentageStatus}
-              categoryBtwRates={effectiveCategoryBtwRates}
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
-        </div>
-      ),
-      withExpand(
-        g("zakelijkPrive", "Zakelijk-privé percentage splitsing", <span>⚖️</span>, ["categoryPercentages"]),
-        "zakelijkPrive",
-        <div ref={categoryPercentageSectionRef}>
-            <CategoryPercentagePanel
-              activeYear={activeYear}
-              categorieTotalen={categorieTotalenActiveYear}
-              categoryZakelijkPercentage={categoryZakelijkPercentage}
-              huisvestingStandaardNul={priveOnlyDossier ? PRIVE_ONLY_HUISVESTING_STANDAARD_NUL : []}
-              onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
-              autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}
-              onOpenHelp={setHelpPopupChapter}
-              gedeeldeRijen={[
-                { label: "Huur (deels zakelijk)", gedeelde: gedeeldeHuurForActiveYear, raw: huurZakelijkPercentageStatus?.[activeYear], onSet: setHuurZakelijkPercentageStatus },
-                { label: "Energie-water (deels zakelijk)", gedeelde: gedeeldeEnergieForActiveYear, raw: energieZakelijkPercentageStatus?.[activeYear], onSet: setEnergieZakelijkPercentageStatus },
-                { label: "Gemeentelijke kosten (deels zakelijk)", gedeelde: gedeeldeGemeentelijkeKostenForActiveYear, raw: gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear], onSet: setGemeentelijkeKostenZakelijkPercentageStatus },
-              ]}
-            />
-          </div>
       ),
       withExpand(
         g("btw", "BTW-instellingen", <Settings className="h-3.5 w-3.5" />, ["btwSettings"], undefined, "btw-percentages"),
@@ -3885,12 +3925,14 @@ export default function App() {
   // eigen `openCount` telt als 1 punt.
   const openPointsOf = (c) =>
     c.tone === "attention" || c.tone === "risk" ? (typeof c.openCount === "number" ? c.openCount : 1) : 0;
+  // V90 — Lease/Leningen/Activa zijn te controleren data (BTW/aftrek/kosten), geen instellingen: tellen bij Controleren
+  const VERPLAATST_NAAR_CONTROLEREN = ["loans", "leases", "activa", "aannames"];
   const controlerenBadge = useMemo(
-    () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
-    [controlerenDashboardCards]
+    () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0) + instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
+    [controlerenDashboardCards, instellingenDashboardCards]
   );
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0),
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
     [instellingenDashboardCards]
   );
 
@@ -3920,14 +3962,14 @@ export default function App() {
         ? "__losse-pinbetalingen__|Winkels divers"
         : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
       alle.add(gk);
-      if (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") open.add(gk);
+      if ((tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)) open.add(gk);
     }
     const adminOpen = yearlyProgress[activeYear].openPunten || 0;
     const openN = open.size + adminOpen;
     const totaal = Math.max(alle.size + 5, openN, 1);
     const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
     return { pct, open: openN, jaar: activeYear };
-  }, [classified, activeYear, yearlyProgress]);
+  }, [classified, activeYear, yearlyProgress, reviewedOverigKeys, reviewedPersonKeys]);
   const dossierOpenBreakdown = [
     controlerenBadge > 0 ? `${controlerenBadge} controle` : null,
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
@@ -3941,34 +3983,44 @@ export default function App() {
   // businessIncomeEntries/businessExpenseEntries) — geen nieuwe berekening, alleen samengevat en
   // doorklikbaar. Zie RollupCard.jsx.
   const dashboardCardsByKey = useMemo(() => Object.fromEntries(dashboardCards.map((c) => [c.key, c])), [dashboardCards]);
+  const stapItem = (c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick });
   const teControlerenItems = useMemo(
-    () =>
-      controlerenDashboardCards
-        .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
-    [controlerenDashboardCards]
+    () => [
+      ...controlerenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").map(stapItem),
+      ...instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key) && (c.tone === "attention" || c.tone === "risk")).map(stapItem),
+    ],
+    [controlerenDashboardCards, instellingenDashboardCards]
   );
   const inTeStellenItems = useMemo(
-    () =>
-      instellingenDashboardCards
-        .filter((c) => c.tone === "attention" || c.tone === "risk")
-        .map((c) => ({ label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick })),
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key) && (c.tone === "attention" || c.tone === "risk")).map(stapItem),
     [instellingenDashboardCards]
   );
   const resultatenItems = useMemo(
     () => [
       { label: "Meerjarenoverzicht", onClick: () => setShowMultiYearModal(true) },
       { label: "BTW-aangifte per kwartaal", onClick: () => setShowQuarterlyBtwModal(true) },
-      {
-        label: "Indicatieve aangifteberekening",
-        onClick: () => {
-          setShowAangifteMeerdereJaren(false);
-          setShowAangifteYearPicker(true);
-        },
-      },
     ],
     []
   );
+  // V90 — vaste volgorde voor "eerstvolgende stap": eerst de importcontrole (klopt de data?), dan lease,
+  // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
+  // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
+  const [overgeslagenStappen, setOvergeslagenStappen] = useState([]);
+  const stapVolgorde = ["importControle", "leases", "loans", "activa", "aannames", "duplicates", "incomeReview", "personReview", "overigReview", "confidence"];
+  const alleStappen = useMemo(() => {
+    const lijst = [...teControlerenItems, ...inTeStellenItems];
+    const rang = (k) => { const i = stapVolgorde.indexOf(k); return i === -1 ? 99 : i; };
+    return lijst.map((it, idx) => ({ it, idx })).sort((a, b) => rang(a.it.key) - rang(b.it.key) || a.idx - b.idx).map((x) => x.it);
+  }, [teControlerenItems, inTeStellenItems]);
+  const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
+  const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
+  // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
+  const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
+  // voortgang: "stap X van N" — N = het hoogste aantal open stappen dat we in deze sessie/dit dossier zagen
+  const [maxStappen, setMaxStappen] = useState(0);
+  useEffect(() => { if (alleStappen.length > maxStappen) setMaxStappen(alleStappen.length); }, [alleStappen.length, maxStappen]);
+  const stappenKlaar = Math.max(0, maxStappen - alleStappen.length);
+
   const automatischeHerkenningItems = useMemo(() => {
     const incomeCard = instellingenDashboardCards.find((c) => c.key === "businessIncomeEntries");
     const expenseCard = instellingenDashboardCards.find((c) => c.key === "businessExpenseEntries");
@@ -4073,9 +4125,6 @@ export default function App() {
     }
     // BTW-kwartalen nog niet aangegeven/betaald staat niet meer hier — dat is jaar-specifiek en
     // staat al in "Aangifte {jaar}" (aangifteOpenPunten), geen dubbele melding meer nodig.
-    if (periodeMismatches.length > 0) {
-      items.push({ key: "periode", text: `${periodeMismatches.length} zakelijke ontvangst(en) met factuurperiode in ander kwartaal`, ref: periodeReviewSectionRef });
-    }
     const incompleteLoans = loanSummary.filter((l) => !(loanDetails[l.key]?.leningbedrag && loanDetails[l.key]?.startdatum) && !loanDetails[l.key]?.onbekend);
     if (incompleteLoans.length > 0) {
       items.push({ key: "loans", text: `${incompleteLoans.length} lening(en) nog zonder volledige gegevens`, ref: loansSectionRef });
@@ -4166,11 +4215,12 @@ export default function App() {
   }, [
     pendingDuplicateCount, dismissedDuplicateNotice, pendingPersonReview, pendingOverigReview,
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
-    periodeMismatches, loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
+    loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
     confidenceSummary, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     incomeBtwTarieven, meerdereTarievenBevestigd,
   ]);
 
+  const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
     const project = buildProjectFile({
@@ -4182,6 +4232,8 @@ export default function App() {
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
+      overgeslagenStappen,
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -4275,6 +4327,11 @@ export default function App() {
       // openstond gewoon open te laten staan.
       setExpandedCardKeys({});
       setActiveTab("overzicht"); // V52 — na laden altijd beginnen op Overzicht
+      // V89 — "ga verder waar je was": positie bij het laatste opslaan, alleen als die niet gewoon Overzicht was
+      const rp = project.resumePositie;
+      setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") ? rp : null);
+      setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
+      setMaxStappen(0);
     } catch (e) {
       setError(e.message || String(e));
     }
@@ -4597,12 +4654,12 @@ export default function App() {
           gebied van een tablet komt te zitten. */}
       <button
         onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-1.5 sm:right-2 z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        className="fixed right-3 sm:right-5 z-[70] inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 shadow-lg px-5 py-3 text-sm font-bold text-white hover:bg-teal-800"
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
         title="Snel opzoeken: alle categorieën en subtypes"
       >
-        <ListTree className="h-4 w-4 shrink-0" />
-        <span className="hidden sm:inline">Categorieën</span>
+        <ListTree className="h-5 w-5 shrink-0" />
+        <span>Categorieën</span>
       </button>
 
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
@@ -4681,6 +4738,8 @@ export default function App() {
             </div>
             <div className="px-5 py-4 overflow-y-auto">
               {!korRegeling ? (
+                <>
+                <PeriodeSignaal items={periodeSignalenActiefJaar} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
                 <QuarterlyBtwPanel
                   quarters={quarterlyBtwData}
                   kwartaalStatus={kwartaalStatus}
@@ -4690,6 +4749,7 @@ export default function App() {
                   onOpenHelp={setHelpPopupChapter}
                   obIbSectionRef={obIbSectionRef}
                 />
+                </>
               ) : (
                 // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
                 // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
@@ -4703,25 +4763,42 @@ export default function App() {
         </div>
       )}
 
-      {/* v267 — Floating "terug"-knop: springt naar het vorige tabblad, of naar Overzicht ("home") als er
-          geen vorig tabblad bekend is. Links onderin geplaatst, weg van de bestaande "Categorieën"-
-          knop en het ongedaan-maken-paneel (die beide rechts staan). */}
-      {activeTab !== "overzicht" && (
-        <button
-          onClick={() => {
-            const target = previousTabRef.current && previousTabRef.current !== activeTab ? previousTabRef.current : "overzicht";
-            setActiveTab(target);
-          }}
-          className="fixed left-[224px] sm:left-[228px] z-[70] inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white/95 shadow px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
-          title="Terug naar vorig tabblad"
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Terug</span>
-        </button>
-      )}
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+        {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
+            (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
+        {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
+        {activeTab !== "overzicht" && (() => {
+          const volgende = volgendeStap;
+          const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
+          const pct = maxStappen > 0 ? Math.round((100 * stappenKlaar) / maxStappen) : 0;
+          return alleStappen.length > 0 ? (
+            <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-teal-100">
+                    {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
+                  </div>
+                  <div className="truncate text-base font-bold">
+                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open)` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
+                  </div>
+                </div>
+                <span className="shrink-0 flex items-center gap-3">
+                  {overgeslagenStappen.length > 0 && <button type="button" onClick={() => setOvergeslagenStappen([])} className="text-xs text-teal-100 underline">Overgeslagen terugzetten</button>}
+                  {!volgende && <button type="button" onClick={() => setActiveTab("overzicht")} className="rounded-full bg-white text-teal-800 font-bold px-5 py-1.5 text-sm hover:bg-teal-50">Naar Overzicht →</button>}
+                  {volgende && <button type="button" onClick={() => setActiveTab("overzicht")} className="text-xs text-teal-100 underline">Terug naar Overzicht</button>}
+                  {volgende && <button type="button" onClick={stapOverslaan} className="rounded-full border border-teal-200 text-white font-semibold px-3.5 py-1.5 text-sm hover:bg-teal-600">Overslaan</button>}
+                  {volgende && <button type="button" onClick={volgende.onClick} className="rounded-full bg-white text-teal-800 font-bold px-5 py-1.5 text-sm hover:bg-teal-50">Ga →</button>}
+                </span>
+              </div>
+              <div className="h-1.5 bg-teal-900/40"><div className="h-full bg-emerald-300 transition-all" style={{ width: `${pct}%` }} /></div>
+            </div>
+          ) : (
+            <div className="sticky top-2 z-30 flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-3 text-white shadow-lg">
+              <span className="text-base font-bold">✓ Alles afgehandeld <span className="font-normal text-sm">— er staan geen open punten meer</span></span>
+              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-white text-emerald-800 font-bold px-5 py-1.5 text-sm">Naar Overzicht →</button>
+            </div>
+          );
+        })()}
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
             platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan
             de info-banner + Jaaroverzicht-kaart naast elkaar, dan de 4 rollup-categoriekaarten, dan
@@ -4749,58 +4826,35 @@ export default function App() {
           {/* v273 — deze rij stond volledig verborgen zolang er geen jaren/project geladen waren;
               op verzoek toont het standaard-dashboard nu altijd deze sectie, met JaaroverzichtCard
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
-          <div className="grid md:grid-cols-2 gap-4 items-stretch">
-            <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
-            <JaaroverzichtCard
-              year={activeYear}
-              summary={yearlySummary}
-              previousSummary={previousYearlySummary}
-              showTrend={showJaaroverzichtTrend}
-              onOpenDetails={() => jumpToSection(detailsSectionRef)}
-            />
-          </div>
+          <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* v286 — tone stond hier vast op "risk"/"attention", ook zodra er 0 open punten meer
-                waren (rood/oranje terwijl er niets meer te doen is) — nu "ok" (groen) zodra de
-                teller op 0 staat, net als de andere statuskaarten in deze app. */}
-            <RollupCard
-              title="Nog te controleren"
-              icon={<CardIcon name="warning" />}
-              tone={controlerenBadge === 0 ? "ok" : "risk"}
-              count={controlerenBadge}
-              items={teControlerenItems}
-              ctaLabel="Alle controles bekijken"
-              onCta={() => setActiveTab("controleren")}
-            />
-            <RollupCard
-              title="Nog in te stellen"
-              icon={<CardIcon name="settings" />}
-              tone={instellingenBadge === 0 ? "ok" : "attention"}
-              count={instellingenBadge}
-              items={inTeStellenItems}
-              ctaLabel="Alle instellingen bekijken"
-              onCta={() => setActiveTab("instellingen")}
-            />
-            <RollupCard
-              title="Resultaten"
-              icon={<CardIcon name="chart" />}
-              tone="ok"
-              items={resultatenItems}
-              ctaLabel="Naar resultaten"
-              onCta={() => jumpToSection(checklistSectionRef)}
-            />
-            <RollupCard
-              title="Automatische herkenning"
-              icon={<CardIcon name="repeat" />}
-              tone="info"
-              items={automatischeHerkenningItems}
-              ctaLabel="Alle herkenningsregels bekijken"
-              onCta={() => setActiveTab("instellingen")}
-              helpChapter="tegenpartijregels"
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
+          {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
+          <NextStepCard
+            stappen={alleStappen}
+            overgeslagen={overgeslagenStappen}
+            onAlsnogDoen={(k) => setOvergeslagenStappen((prev) => prev.filter((x) => x !== k))}
+            volgende={volgendeStap}
+            onOverslaan={stapOverslaan}
+            controleCount={controlerenBadge}
+            instellingCount={instellingenBadge}
+            snelkoppelingen={[
+              ...resultatenItems.map((i) => ({ label: i.label, onClick: i.onClick })),
+              { label: `Herkenningsregels (${categoryRules.length})`, onClick: () => setActiveTab("instellingen") },
+            ]}
+            onOpenHelp={setHelpPopupChapter}
+            hervat={
+              resumeHint && activeYear
+                ? {
+                    tekst: `Je was gebleven bij ${resumeHint.tab === "controleren" ? "Controleren" : "Instellingen"}${resumeHint.jaar ? `, jaar ${resumeHint.jaar}` : ""}${resumeHint.openPunten != null ? ` · toen ${resumeHint.openPunten} open punt${resumeHint.openPunten === 1 ? "" : "en"}` : ""}`,
+                    onClick: () => {
+                      if (resumeHint.jaar && years.includes(resumeHint.jaar)) setActiveYear(resumeHint.jaar);
+                      setActiveTab(resumeHint.tab);
+                      setResumeHint(null);
+                    },
+                  }
+                : null
+            }
+          />
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
@@ -4818,6 +4872,7 @@ export default function App() {
               vpbIndicatie={dashboardVpbIndicatie}
               vpbBreakdown={dashboardVpbBreakdown}
               holdingCard={holdingSummaryCard}
+              belastingTotaal={belastingTotaalJaar}
               winst={yearlySummary?.winst}
               previousWinst={previousYearlySummary?.winst}
               showTrend={showJaaroverzichtTrend}
@@ -5202,7 +5257,23 @@ export default function App() {
                     AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
                     "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
                     controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
-                {!expandedCardKeys.aansluitingDetail && (
+                {/* V87 — de detailtabellen staan standaard ingeklapt (openen met de balk hieronder); links die naar
+                    de tabellen springen (jumpToSection) klappen ze automatisch open. */}
+                <div style={sectionTabStyle("controleren")}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpand("detailTabellen")}
+                    aria-expanded={!!expandedCardKeys.detailTabellen}
+                    className="w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-slate-50"
+                  >
+                    {expandedCardKeys.detailTabellen ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                    <span className="text-sm font-semibold text-slate-800">Detailtabellen</span>
+                    <span className="text-xs text-slate-400">
+                      {zakGroupForYear?.items?.length ?? 0} zakelijke en {priGroupShown?.items?.length ?? 0} privé-transacties · {expandedCardKeys.detailTabellen ? "klik om in te klappen" : "klik om te openen"}
+                    </span>
+                  </button>
+                </div>
+                {expandedCardKeys.detailTabellen && (
                   <div style={sectionTabStyle("controleren")}>
                     <AansluitingDetailPanel
                       detailsRef={detailsSectionRef}

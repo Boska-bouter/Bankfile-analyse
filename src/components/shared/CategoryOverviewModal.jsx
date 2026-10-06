@@ -1,23 +1,25 @@
 import { useMemo, useState } from "react";
+import { useToonFijn } from "../../utils/useToonFijn.js";
 import { X, Search } from "lucide-react";
-import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, PRIVE_GROEPEN } from "../../classification/categories.js";
+import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, CATEGORIE_GROEPEN } from "../../classification/categories.js";
 
 // Puur een opzoekvenster: "waar hoort dit onder" — geen bewerkmogelijkheden hier (dat blijft
 // Categorieregels), alleen een snel, doorzoekbaar overzicht van de volledige structuur.
 export default function CategoryOverviewModal({ onClose }) {
   const [query, setQuery] = useState("");
+  const toonFijn = useToonFijn();
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
     return MAIN_CATEGORY_ORDER.map((main) => {
       // V76 — privé-subtypes samengevoegd tot hun weergavenaam; zoeken vindt ook de fijne soorten erin.
       const subtypes = [...new Set(subtypesForMainCategory(main).map(displayCategory))];
-      const leden = (d) => (PRIVE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
+      const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
       const mainMatches = !q || main.toLowerCase().includes(q);
       const visibleSubtypes = mainMatches ? subtypes : subtypes.filter((s) => s.toLowerCase().includes(q) || leden(s).includes(q));
       return { main, subtypes: visibleSubtypes };
     }).filter((g) => g.subtypes.length > 0);
-  }, [query]);
+  }, [query, toonFijn]);
 
   return (
     <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
@@ -54,9 +56,9 @@ export default function CategoryOverviewModal({ onClose }) {
               <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                 {main}
               </span>
-              {subtypes.length > 1 || subtypes[0] !== main ? (
+              {subtypes.filter((s) => s !== main).length > 0 ? (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {subtypes.map((s) => (
+                  {subtypes.filter((s) => s !== main).map((s) => (
                     <span key={s} className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[s] || "bg-slate-100 text-slate-600"}`}>
                       {s}
                     </span>

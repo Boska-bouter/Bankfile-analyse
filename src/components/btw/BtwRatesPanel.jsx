@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
-import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory } from "../../classification/categories.js";
+import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, groepeerPerWeergave } from "../../classification/categories.js";
 import { FIXED_BTW_RATE_CATEGORIES } from "../../tax/btw.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
@@ -111,7 +111,8 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
                       </button>
                       {isOpen && (
                         <div className="grid sm:grid-cols-2 gap-2 px-3 pb-3">
-                          {subtypes.map((c) => {
+                          {(() => {
+                            const rij = (c) => {
                             const vastTarief = FIXED_BTW_RATE_CATEGORIES[c];
                             return (
                               <div key={c} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
@@ -141,7 +142,18 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
                                 )}
                               </div>
                             );
-                          })}
+                            };
+                            return groepeerPerWeergave(subtypes).map((blok) =>
+                              !blok.groep ? rij(blok.leden[0]) : (
+                                <details key={blok.naam} className="sm:col-span-2 rounded-lg border border-slate-100 px-3 py-2">
+                                  <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                                    {blok.naam} <span className="font-normal text-slate-400">({blok.leden.length} soorten)</span>
+                                  </summary>
+                                  <div className="grid sm:grid-cols-2 gap-2 pt-2">{blok.leden.map((c) => rij(c))}</div>
+                                </details>
+                              )
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

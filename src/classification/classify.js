@@ -496,7 +496,11 @@ function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaar
 function withAccountType(override, accountType) {
   if (!override) return override;
   const type = accountType === "Zakelijk" ? "Zakelijk" : "Prive";
-  return { ...override, type, viewType: override.type || type };
+  // V88 — viewType mag alleen AFWIJKEN voor een boeking op een privérekening die als zakelijk is aangemerkt.
+  // Een boeking op de ZAKELIJKE rekening met een oude override "type: Prive" bleef anders in het privé-overzicht
+  // staan (terwijl dat jaar geen privérekening heeft). De rekening bepaalt dan het overzicht.
+  const viewType = type === "Prive" && override.type === "Zakelijk" ? "Zakelijk" : type;
+  return { ...override, type, viewType };
 }
 
 // V50 — categorieën die op een privérekening NIET automatisch naar "Prive - overige kosten" gaan.
