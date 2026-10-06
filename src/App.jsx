@@ -4683,6 +4683,25 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
         {/* V84 — vervangt de zwevende "Terug"-knop linksonder */}
         <TabNavBar activeTab={activeTab} previousTab={previousTab} onGo={setActiveTab} />
+        {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
+        {activeTab !== "overzicht" && (() => {
+          const lijst = activeTab === "controleren" ? [...teControlerenItems, ...inTeStellenItems] : [...inTeStellenItems, ...teControlerenItems];
+          const volgende = lijst.find((i) => i.onClick);
+          const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
+          return volgende ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-[13px]">
+              <span className="min-w-0 truncate text-teal-900">
+                <strong>Eerstvolgende open stap:</strong> {volgende.label}{volgende.count != null ? ` (${volgende.count})` : ""} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
+              </span>
+              <button type="button" onClick={volgende.onClick} className="shrink-0 rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold px-3.5 py-1 text-xs">Ga →</button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-900">
+              <span><strong>Alles afgehandeld.</strong> Er staan geen open punten meer — bekijk de resultaten op Overzicht.</span>
+              <button type="button" onClick={() => setActiveTab("overzicht")} className="shrink-0 rounded-full bg-emerald-700 text-white font-bold px-3.5 py-1 text-xs">Naar Overzicht →</button>
+            </div>
+          );
+        })()}
         {/* Fase 1, dashboard-restyling (Stijl F, volledige mockup-indeling) — vervangt de eerdere
             platte kaartjes-lijst: DashboardHeader (titel + ringmeter + jaar-dropdown) bovenaan, dan
             de info-banner + Jaaroverzicht-kaart naast elkaar, dan de 4 rollup-categoriekaarten, dan
