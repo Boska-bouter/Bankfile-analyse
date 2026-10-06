@@ -49,6 +49,7 @@ import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossier/dossierMigraties.js";
+import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
 import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
@@ -351,7 +352,7 @@ export default function App() {
     // Laden/leegmaken/hervatten verandert veel state tegelijk — dat is geen "wijziging" van de
     // gebruiker. Een tijdvenster (i.p.v. een vlag) zodat het niet blijft hangen als er toevallig
     // niets daadwerkelijk verandert (bijv. hetzelfde dossierbestand twee keer laden).
-    suppressChangeCountUntilRef.current = Date.now() + 1500;
+    suppressChangeCountUntilRef.current = Date.now() + 2500;
   };
   const [lastSavedAt, setLastSavedAt] = useState(null); // Date — wanneer de automatische browseropslag voor het laatst is gelukt
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
@@ -833,8 +834,10 @@ export default function App() {
   // hierboven, maar bewust zonder loadedProjectFileName (die verandert bij het exporteren zelf).
   useEffect(() => {
     if (!loaded) return;
+    // Binnen het venster na laden/nieuw dossier telt niets mee. Het venster wordt bewust NIET na de eerste
+    // keer gesloten: na het laden kunnen er nog meer afgeleide waarden bijkomen (een tweede render), en die
+    // gaven anders een schijnbare "1 wijziging" bij een dossier waar je nog niets aan had gedaan.
     if (Date.now() < suppressChangeCountUntilRef.current) {
-      suppressChangeCountUntilRef.current = 0;
       setChangesSinceExport(0);
       return;
     }
@@ -2691,6 +2694,7 @@ export default function App() {
   // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
+  const opslaanHerinnering = useOpslaanHerinnering({ changesSinceExport, hasData: parsedFiles.length > 0 });
   const { startLoadProject, clearAllData } = useDossierDialogen({
     parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
     setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
@@ -2891,6 +2895,7 @@ export default function App() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+        <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
         {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
