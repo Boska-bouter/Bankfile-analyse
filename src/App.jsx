@@ -469,6 +469,7 @@ export default function App() {
   const REF_TAB_ENTRIES = [
     [importControleSectionRef, "controleren"],
     [confidenceSectionRef, "controleren"],
+    [incomeReviewSectionRef, "controleren"], // V90 — ontbrak: "Ga naar deze stap" bij Herkomst van inkomsten deed daardoor niets
     [personReviewSectionRef, "controleren"],
     [overigReviewSectionRef, "controleren"],
     [duplicatesSectionRef, "controleren"],
@@ -484,6 +485,8 @@ export default function App() {
     [aannamesSectionRef, "instellingen"],
     [btwSettingsSectionRef, "instellingen"],
     [incomeRatesSectionRef, "instellingen"],
+    [categoryPercentageSectionRef, "instellingen"],
+    [automatiseringSectionRef, "instellingen"],
     [detailsSectionRef, "controleren"],
   ];
   // Fase 3 — sommige van de secties hierboven staan zelf op !expandedCardKeys.<key> (verborgen/
@@ -2519,6 +2522,13 @@ export default function App() {
   //    het laden is, en er dus bij de overgang naar "geladen" ineens twee hooks BIJKOMEN — exact de
   //    "Rendered more hooks than during the previous render"-crash (ook een wit scherm, met dank aan
   //    de ErrorBoundary die dit nu tenminste zichtbaar maakt in plaats van stil te falen).
+  // V90 — jumpToSection wordt aangeroepen vanuit onClick-handlers die in useMemo-kaarten zijn vastgelegd
+  // (controlerenDashboardCards e.d.); die zagen daardoor een verouderde activeTab/expandedCardKeys en
+  // deden soms niets (bijv. na "Terug naar Overzicht" of een zelf ingeklapte kaart). Lezen via refs = altijd actueel.
+  const expandedLiveRef = useRef(expandedCardKeys);
+  expandedLiveRef.current = expandedCardKeys;
+  const activeTabLiveRef = useRef(activeTab);
+  activeTabLiveRef.current = activeTab;
   const jumpToSection = (ref) => {
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
@@ -2528,13 +2538,13 @@ export default function App() {
     const visibilityEntry = REF_COLLAPSE_KEYS.find(([r]) => r === ref);
     const visibilityKey = visibilityEntry ? visibilityEntry[1] : null;
     const requiredExpanded = visibilityEntry ? visibilityEntry[2] : null;
-    const needsToggle = !!(visibilityKey && !!expandedCardKeys[visibilityKey] !== requiredExpanded);
+    const needsToggle = !!(visibilityKey && !!expandedLiveRef.current[visibilityKey] !== requiredExpanded);
     if (needsToggle) {
       setExpandedCardKeys((prev) => ({ ...prev, [visibilityKey]: requiredExpanded }));
     }
     const entry = REF_TAB_ENTRIES.find(([r]) => r === ref);
     const targetTab = entry ? entry[1] : null;
-    if (targetTab && targetTab !== activeTab) {
+    if (targetTab && targetTab !== activeTabLiveRef.current) {
       // Sectie zit op een ander tabblad: eerst wisselen, dan pas scrollen (zie de useEffect
       // hieronder — deze ref staat nu nog op display:none).
       setActiveTab(targetTab);
@@ -2547,6 +2557,7 @@ export default function App() {
       setPendingScrollRef(ref);
       return;
     }
+    if (!ref.current) { setPendingScrollRef(ref); return; }
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
@@ -2556,11 +2567,22 @@ export default function App() {
   // worden vóórdat de doel-sectie weer gemount is.
   useEffect(() => {
     if (!pendingScrollRef) return;
-    const raf = requestAnimationFrame(() => {
-      pendingScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setPendingScrollRef(null);
-    });
-    return () => cancelAnimationFrame(raf);
+    // V90 — wacht tot de sectie echt gemount is (max ~40 frames) i.p.v. na één frame op te geven
+    let raf, pogingen = 0, gestopt = false;
+    const probeer = () => {
+      if (gestopt) return;
+      const el = pendingScrollRef.current;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        setPendingScrollRef(null);
+      } else if (pogingen++ < 40) {
+        raf = requestAnimationFrame(probeer);
+      } else {
+        setPendingScrollRef(null);
+      }
+    };
+    raf = requestAnimationFrame(probeer);
+    return () => { gestopt = true; cancelAnimationFrame(raf); };
   }, [activeTab, expandedCardKeys, pendingScrollRef]);
   const dashboardCards = useMemo(() => {
     if (transactions.length === 0) return [];
