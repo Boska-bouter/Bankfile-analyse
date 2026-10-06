@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, X, Plus } from "lucide-react";
-import { registerCategory, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, mainCategoryOf } from "../../classification/categories.js";
+import { registerCategory, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, mainCategoryOf, groepeerPerWeergave } from "../../classification/categories.js";
 import SearchInput from "../shared/SearchInput.jsx";
 
 // Zoekwoorden per subtype — gegroepeerd onder de hoofdcategorie waar dat subtype bij hoort (net
@@ -88,7 +88,8 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                   </button>
                   {isGroupOpen && (
                     <div className="grid sm:grid-cols-2 gap-2 px-3 pb-3">
-                      {rules.map((r) => {
+                      {(() => {
+                        const kaart = (r) => {
                         const isOpenCard = !!expandedCards[r.name] || isSearching;
                         return (
                           <div key={r.name} className="rounded-lg border border-slate-100">
@@ -129,7 +130,19 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                             )}
                           </div>
                         );
-                      })}
+                        };
+                        const perNaam = Object.fromEntries(rules.map((r) => [r.name, r]));
+                        return groepeerPerWeergave(rules.map((r) => r.name)).map((blok) =>
+                          !blok.groep ? kaart(perNaam[blok.leden[0]]) : (
+                            <details key={blok.naam} open={isSearching} className="sm:col-span-2 rounded-lg border border-slate-100 px-3 py-2">
+                              <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                                {blok.naam} <span className="font-normal text-slate-400">({blok.leden.length} soorten)</span>
+                              </summary>
+                              <div className="grid sm:grid-cols-2 gap-2 pt-2">{blok.leden.map((n) => kaart(perNaam[n]))}</div>
+                            </details>
+                          )
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

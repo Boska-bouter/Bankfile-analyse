@@ -60,7 +60,7 @@ import TabNavBar from "./components/shared/TabNavBar.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
-import RollupCard from "./components/dashboard/RollupCard.jsx";
+import NextStepCard from "./components/dashboard/NextStepCard.jsx";
 import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
 import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
 import YearDropdown from "./components/dashboard/YearDropdown.jsx";
@@ -4136,6 +4136,7 @@ export default function App() {
     incomeBtwTarieven, meerdereTarievenBevestigd,
   ]);
 
+  const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
   const saveProjectFile = () => {
     const project = buildProjectFile({
@@ -4147,6 +4148,7 @@ export default function App() {
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
@@ -4240,6 +4242,9 @@ export default function App() {
       // openstond gewoon open te laten staan.
       setExpandedCardKeys({});
       setActiveTab("overzicht"); // V52 — na laden altijd beginnen op Overzicht
+      // V89 — "ga verder waar je was": positie bij het laatste opslaan, alleen als die niet gewoon Overzicht was
+      const rp = project.resumePositie;
+      setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") ? rp : null);
     } catch (e) {
       setError(e.message || String(e));
     }
@@ -4700,47 +4705,30 @@ export default function App() {
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* v286 — tone stond hier vast op "risk"/"attention", ook zodra er 0 open punten meer
-                waren (rood/oranje terwijl er niets meer te doen is) — nu "ok" (groen) zodra de
-                teller op 0 staat, net als de andere statuskaarten in deze app. */}
-            <RollupCard
-              title="Nog te controleren"
-              icon={<CardIcon name="warning" />}
-              tone={controlerenBadge === 0 ? "ok" : "risk"}
-              count={controlerenBadge}
-              items={teControlerenItems}
-              ctaLabel="Alle controles bekijken"
-              onCta={() => setActiveTab("controleren")}
-            />
-            <RollupCard
-              title="Nog in te stellen"
-              icon={<CardIcon name="settings" />}
-              tone={instellingenBadge === 0 ? "ok" : "attention"}
-              count={instellingenBadge}
-              items={inTeStellenItems}
-              ctaLabel="Alle instellingen bekijken"
-              onCta={() => setActiveTab("instellingen")}
-            />
-            <RollupCard
-              title="Resultaten"
-              icon={<CardIcon name="chart" />}
-              tone="ok"
-              items={resultatenItems}
-              ctaLabel="Naar resultaten"
-              onCta={() => jumpToSection(checklistSectionRef)}
-            />
-            <RollupCard
-              title="Automatische herkenning"
-              icon={<CardIcon name="repeat" />}
-              tone="info"
-              items={automatischeHerkenningItems}
-              ctaLabel="Alle herkenningsregels bekijken"
-              onCta={() => setActiveTab("instellingen")}
-              helpChapter="tegenpartijregels"
-              onOpenHelp={setHelpPopupChapter}
-            />
-          </div>
+          {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
+          <NextStepCard
+            controleItems={teControlerenItems}
+            instellingItems={inTeStellenItems}
+            controleCount={controlerenBadge}
+            instellingCount={instellingenBadge}
+            snelkoppelingen={[
+              ...resultatenItems.map((i) => ({ label: i.label, onClick: i.onClick })),
+              { label: `Herkenningsregels (${categoryRules.length})`, onClick: () => setActiveTab("instellingen") },
+            ]}
+            onOpenHelp={setHelpPopupChapter}
+            hervat={
+              resumeHint && activeYear
+                ? {
+                    tekst: `Je was gebleven bij ${resumeHint.tab === "controleren" ? "Controleren" : "Instellingen"}${resumeHint.jaar ? `, jaar ${resumeHint.jaar}` : ""}${resumeHint.openPunten != null ? ` · toen ${resumeHint.openPunten} open punt${resumeHint.openPunten === 1 ? "" : "en"}` : ""}`,
+                    onClick: () => {
+                      if (resumeHint.jaar && years.includes(resumeHint.jaar)) setActiveYear(resumeHint.jaar);
+                      setActiveTab(resumeHint.tab);
+                      setResumeHint(null);
+                    },
+                  }
+                : null
+            }
+          />
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/

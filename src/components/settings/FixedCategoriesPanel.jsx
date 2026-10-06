@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, INCOME_TRANSFER_CATEGORIES, subtypesForMainCategory } from "../../classification/categories.js";
+import { MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, INCOME_TRANSFER_CATEGORIES, subtypesForMainCategory, groepeerPerWeergave, CATEGORY_COLOR } from "../../classification/categories.js";
 import HelpHint from "../shared/HelpHint.jsx";
 
 // Bepaalt welke categorieën als "vast" gelden (lopen door ongeacht omzet/activiteit — huur,
@@ -42,17 +42,29 @@ export default function FixedCategoriesPanel({ fixedCategories, setFixedCategori
                     {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
                   </button>
                   {isOpen && (
-                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-3 pb-3">
-                      {subtypes.map((c) => (
-                        <label key={c} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-                          <input
-                            type="checkbox"
-                            checked={fixedCategories.includes(c)}
-                            onChange={(e) => setFixedCategories((prev) => (e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)))}
-                          />
-                          {c}
-                        </label>
-                      ))}
+                    <div className="flex flex-col gap-1.5 px-3 pb-3">
+                      {groepeerPerWeergave(subtypes).map((blok) => {
+                        const checkbox = (c, label) => (
+                          <label key={c} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                            <input
+                              type="checkbox"
+                              checked={fixedCategories.includes(c)}
+                              onChange={(e) => setFixedCategories((prev) => (e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)))}
+                            />
+                            {label ?? c}
+                          </label>
+                        );
+                        if (!blok.groep) return <div key={blok.naam}>{checkbox(blok.leden[0])}</div>;
+                        const vast = blok.leden.filter((c) => fixedCategories.includes(c)).length;
+                        return (
+                          <details key={blok.naam} className="rounded-md border border-slate-100 px-2 py-1">
+                            <summary className="cursor-pointer text-xs font-medium text-slate-700">
+                              {blok.naam} <span className="font-normal text-slate-400">({vast}/{blok.leden.length} vast)</span>
+                            </summary>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-1.5 pb-1">{blok.leden.map((c) => checkbox(c))}</div>
+                          </details>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

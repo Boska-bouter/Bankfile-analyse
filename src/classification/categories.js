@@ -838,3 +838,18 @@ for (const [naam, leden] of Object.entries(ZAK_GROEPEN)) {
 CATEGORY_COLOR[PRIVE_WONEN] = CATEGORY_COLOR["Prive - huur"] || "bg-stone-200 text-stone-800";
 CATEGORY_COLOR[PRIVE_TELECOM] = CATEGORY_COLOR["Prive - mobiel/internet"] || "bg-stone-200 text-stone-800";
 CATEGORY_COLOR[PRIVE_ALGEMEEN] = CATEGORY_COLOR["Prive: overig"] || "bg-stone-100 text-stone-700";
+
+// V89 — voor de instellingenpanelen (BTW-tarieven, vast/variabel, zoekwoorden): zet een lijst fijne
+// categorieën om in blokken per weergavenaam. Blokken met één lid blijven gewoon een rij; blokken met meer
+// leden kunnen onder één kopregel worden ingeklapt. De instelling blijft per fijne soort.
+export function groepeerPerWeergave(fijneNamen) {
+  const blokken = [];
+  const index = {};
+  for (const c of fijneNamen) {
+    const d = FIJN_NAAR_WEERGAVE[c];
+    if (!d) { blokken.push({ naam: c, leden: [c], groep: false }); continue; }
+    if (!(d in index)) { index[d] = blokken.length; blokken.push({ naam: d, leden: [], groep: true }); }
+    blokken[index[d]].leden.push(c);
+  }
+  return blokken.map((b) => (b.groep && b.leden.length === 1 ? { naam: b.leden[0], leden: b.leden, groep: false } : b));
+}
