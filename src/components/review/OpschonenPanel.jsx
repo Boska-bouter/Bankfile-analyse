@@ -20,6 +20,8 @@ export default function OpschonenPanel({
   onConfirmOverigAsIs,
   onBulkMarkOverigAsPriveOpname,
   onBulkMarkOverigAsWinkelsDivers,
+  overigZakelijkCount = 0,
+  overigPriveCount = 0,
 
   duplicatesRef,
   duplicateGroups,
@@ -82,17 +84,17 @@ export default function OpschonenPanel({
               confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
               explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
               bulkAction={[
-                {
-                  label: `Alles wat hier nog staat (${pendingOverigReview.length}) naar "Prive opnames" (zakelijke rekening)`,
-                  confirmText: `${pendingOverigReview.length} tegenpartij(en) in "Overig" allemaal naar "Prive opnames" (Zakelijk) zetten? Dit is bedoeld voor een zakelijke rekening — gebruik dit niet als het om een privérekening gaat.`,
+                overigZakelijkCount > 0 && {
+                  label: `Alle zakelijke (${overigZakelijkCount}) naar "Prive opnames"`,
+                  confirmText: `${overigZakelijkCount} tegenpartij(en) in "Overig" die nu als Zakelijk staan, allemaal naar "Prive opnames" zetten?`,
                   onApply: onBulkMarkOverigAsPriveOpname,
                 },
-                {
-                  label: `Alles wat hier nog staat (${pendingOverigReview.length}) naar "Winkels divers" (privérekening)`,
-                  confirmText: `${pendingOverigReview.length} tegenpartij(en) in "Overig" allemaal naar "Winkels divers" (Privé) zetten? Dit is bedoeld voor een privérekening — gebruik dit niet als het om een zakelijke rekening gaat.`,
+                overigPriveCount > 0 && {
+                  label: `Alle privé (${overigPriveCount}) naar "Winkels divers"`,
+                  confirmText: `${overigPriveCount} tegenpartij(en) in "Overig" die nu als Privé staan, allemaal naar "Winkels divers" zetten?`,
                   onApply: onBulkMarkOverigAsWinkelsDivers,
                 },
-              ]}
+              ].filter(Boolean)}
             />
           )}
         </section>

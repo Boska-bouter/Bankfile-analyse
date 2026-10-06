@@ -1402,6 +1402,12 @@ export default function App() {
     const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
     return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
   }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
+  // V90 — een venster dat "0 open" meldt is overbodig: sluit automatisch zodra er niets (meer) te beoordelen is
+  useEffect(() => {
+    if (!openConfidenceLevel || !uncertainModalData) return;
+    const b = uncertainModalData.bulkCounts;
+    if (uncertainModalData.transactions.length === 0 && (b.overig || 0) + (b.personen || 0) === 0) setOpenConfidenceLevel(null);
+  }, [openConfidenceLevel, uncertainModalData]);
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
@@ -1455,12 +1461,32 @@ export default function App() {
     setCounterpartyOverride(item.name, item.amount, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
+  // V90 — de bulkknoppen werken per TYPE: alleen de tegenpartijen die nu als Zakelijk (resp. Privé) staan.
+  const overigZakelijkPending = pendingOverigReview.filter((i) => i.type === "Zakelijk");
+  const overigPrivePending = pendingOverigReview.filter((i) => i.type !== "Zakelijk");
   const bulkMarkOverigAsPriveOpname = () => {
-    for (const item of pendingOverigReview) markOverigItem(item, "Prive opnames", "Zakelijk");
+    for (const item of overigZakelijkPending) markOverigItem(item, "Prive opnames", "Zakelijk");
   };
   const bulkMarkOverigAsWinkelsDivers = () => {
-    for (const item of pendingOverigReview) markOverigItem(item, "Winkels divers", "Prive");
+    for (const item of overigPrivePending) markOverigItem(item, "Winkels divers", "Prive");
   };
+  // V90 — "Overboekingen aan personen": alles in één keer bevestigen, of alles naar Overig
+  const personBulkAction = [
+    {
+      label: `Alles is aan personen: ja (${pendingPersonReview.length})`,
+      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal bevestigen als "Overboeking aan personen"?`,
+      onApply: () => {
+        snapshotBeforeAction('"Klopt zo" bevestigd (alles)');
+        const keys = pendingPersonReview.map((i) => i.key);
+        setReviewedPersonKeys((prev) => [...new Set([...prev, ...keys])]);
+      },
+    },
+    {
+      label: `Alles is aan personen: nee (${pendingPersonReview.length})`,
+      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal NIET als overboeking aan personen zien? Ze komen dan bij "Overig" te staan, waar je ze verder kunt indelen.`,
+      onApply: () => { for (const item of pendingPersonReview) markPersonSource(item, "Overig", item.type); },
+    },
+  ];
   const confirmOverigAsIs = (item) => {
     snapshotBeforeAction('"Klopt zo" bevestigd');
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -3543,6 +3569,7 @@ export default function App() {
           onPersonSearch={setPersonSearch}
           onMarkPersonSource={markPersonSource}
           onConfirmPersonAsIs={confirmPersonAsIs}
+          personBulkAction={personBulkAction}
         />
       ),
       withExpand(
@@ -3560,6 +3587,8 @@ export default function App() {
           onConfirmOverigAsIs={confirmOverigAsIs}
           onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
           onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}
+          overigZakelijkCount={overigZakelijkPending.length}
+          overigPriveCount={overigPrivePending.length}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}

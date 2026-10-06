@@ -25,6 +25,7 @@ export default function HerkomstVanGeldPanel({
   onPersonSearch,
   onMarkPersonSource,
   onConfirmPersonAsIs,
+  personBulkAction,
 }) {
   if (pendingIncomeReview.length > 0) {
     return (
@@ -69,6 +70,7 @@ export default function HerkomstVanGeldPanel({
           onMark={onMarkPersonSource}
           onConfirm={onConfirmPersonAsIs}
           defaultCategory="Overboekingen aan personen"
+          bulkAction={personBulkAction}
           confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
           explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
         />
