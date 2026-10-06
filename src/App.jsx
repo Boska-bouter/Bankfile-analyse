@@ -57,7 +57,6 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
-import TabNavBar from "./components/shared/TabNavBar.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -4000,13 +3999,6 @@ export default function App() {
     () => [
       { label: "Meerjarenoverzicht", onClick: () => setShowMultiYearModal(true) },
       { label: "BTW-aangifte per kwartaal", onClick: () => setShowQuarterlyBtwModal(true) },
-      {
-        label: "Indicatieve aangifteberekening",
-        onClick: () => {
-          setShowAangifteMeerdereJaren(false);
-          setShowAangifteYearPicker(true);
-        },
-      },
     ],
     []
   );
@@ -4772,8 +4764,8 @@ export default function App() {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
-        {/* V84 — vervangt de zwevende "Terug"-knop linksonder */}
-        <TabNavBar activeTab={activeTab} previousTab={previousTab} onGo={setActiveTab} />
+        {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
+            (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
         {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
         {activeTab !== "overzicht" && (() => {
           const volgende = volgendeStap;
