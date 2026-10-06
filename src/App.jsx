@@ -43,6 +43,8 @@ import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
 import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
 import ReviewStep from "./components/review/ReviewStep.jsx";
 import HerkomstVanGeldPanel from "./components/review/HerkomstVanGeldPanel.jsx";
+import PeriodeSignaal from "./components/btw/PeriodeSignaal.jsx";
+import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import QuarterlyBtwPanel from "./components/btw/QuarterlyBtwPanel.jsx";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
@@ -1984,6 +1986,19 @@ export default function App() {
     () => heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus),
     [leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus]
   );
+  // V15 — lichte periode-melding in het BTW-per-kwartaal-venster (alleen het actieve jaar).
+  const periodeSignalenActiefJaar = useMemo(
+    () => (activeYear ? computePeriodeMismatches(classified, reviewedPeriodeKeys, periodeQuarterOverrides).filter((m) => m.boekingKwartaal.startsWith(`${activeYear}-`) || m.voorgesteldKwartaal.startsWith(`${activeYear}-`)) : []),
+    [classified, reviewedPeriodeKeys, periodeQuarterOverrides, activeYear]
+  );
+  const confirmPeriodeAsIs = (tx) => {
+    snapshotBeforeAction("Periode laten staan");
+    setReviewedPeriodeKeys((prev) => (prev.includes(tx.id) ? prev : [...prev, tx.id]));
+  };
+  const movePeriodeToQuarter = (tx, quarterKey) => {
+    snapshotBeforeAction("Periode verplaatst");
+    setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
+  };
   const quarterlyBtwData = useMemo(
     () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) : []),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]
@@ -4711,6 +4726,8 @@ export default function App() {
             </div>
             <div className="px-5 py-4 overflow-y-auto">
               {!korRegeling ? (
+                <>
+                <PeriodeSignaal items={periodeSignalenActiefJaar} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
                 <QuarterlyBtwPanel
                   quarters={quarterlyBtwData}
                   kwartaalStatus={kwartaalStatus}
@@ -4720,6 +4737,7 @@ export default function App() {
                   onOpenHelp={setHelpPopupChapter}
                   obIbSectionRef={obIbSectionRef}
                 />
+                </>
               ) : (
                 // Bij KOR wordt het kwartaalpaneel hierboven niet getoond (geen OB-aangifte),
                 // maar de uitleg blijft relevant voor de IB-vakken hieronder (CategorySummaryCard) —
