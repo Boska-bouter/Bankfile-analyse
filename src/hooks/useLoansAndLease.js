@@ -92,10 +92,16 @@ export function useLoansAndLease({
     }
     return merged;
   }, [autoLeaseMerges, leaseMergedInto]);
-  const leaseSummary = useMemo(
-    () => applyLeaseMerges(rawLeaseSummary, effectiveLeaseMerges),
-    [rawLeaseSummary, effectiveLeaseMerges]
-  );
+  // Handmatig toegevoegde leases (contract van een leasemaatschappij zonder betalingen in de geladen
+  // bankgegevens): bewaard in leaseDetails onder een eigen sleutel met `handmatigeNaam`.
+  const leaseSummary = useMemo(() => {
+    const basis = applyLeaseMerges(rawLeaseSummary, effectiveLeaseMerges);
+    const bestaand = new Set(basis.map((l) => l.key));
+    const handmatig = Object.entries(leaseDetails || {})
+      .filter(([k, d]) => d && d.handmatigeNaam && !bestaand.has(k))
+      .map(([k, d]) => ({ key: k, name: d.handmatigeNaam, total: 0, count: 0, transactions: [], category: "Lease (financieel)", handmatig: true, handmatigeGroep: d.handmatigeGroep || "auto" }));
+    return [...basis, ...handmatig];
+  }, [rawLeaseSummary, effectiveLeaseMerges, leaseDetails]);
   // Overzicht van actieve samenvoegingen, met de namen erbij (voor de "Loskoppelen"-knop in de
   // UI) — filtert automatisch samenvoegingen weg waarvan bron of doel niet meer bestaat (bijv. na
   // het wijzigen van classificatieregels, waardoor een lease-groep is opgesplitst of verdwenen).
@@ -125,7 +131,10 @@ export function useLoansAndLease({
 
   const setLeaseDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leasegegevens aangepast");
-    setLeaseDetails((prev) => ({ ...prev, [key]: newDetails }));
+    setLeaseDetails((prev) => {
+      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep } : {};
+      return { ...prev, [key]: { ...newDetails, ...meta } };
+    });
   };
   const markLeaseUnknown = (key) => {
     snapshotBeforeAction("Lease op onbekend gezet");
@@ -147,6 +156,22 @@ export function useLoansAndLease({
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
     if (type === "financieel") (openLeaseWizard || setLeaseDetailsModalKey)(lease.key);
   };
+  // Nieuwe lease zonder bankbetalingen (bijv. contract waarvan de client de betalingen niet aanleverde).
+  const addManualLease = (naam, groep) => {
+    const schoon = String(naam || "").trim();
+    if (!schoon) return null;
+    snapshotBeforeAction("Lease handmatig toegevoegd");
+    const key = `handmatig::${schoon.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), handmatigeNaam: schoon, handmatigeGroep: groep === "overig" ? "overig" : "auto" } }));
+    setConfirmedLeaseTypeKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    return key;
+  };
+  const removeManualLease = (key) => {
+    snapshotBeforeAction("Handmatige lease verwijderd");
+    setLeaseDetails((prev) => { const n = { ...prev }; delete n[key]; return n; });
+    setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== key));
+  };
+
   // Voegt twee lease-groepen samen die eigenlijk hetzelfde contract blijken te zijn (bijv.
   // verschillende tegenpartijnaam voor de eerste afschrijving vs. de maandelijkse termijnen).
   // De bron-groep verdwijnt, zijn transacties tellen voortaan mee bij de doel-groep.
@@ -169,6 +194,6 @@ export function useLoansAndLease({
   return {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges,
     setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease,
   };
 }

@@ -15,8 +15,9 @@ function computeFinancialLeaseAmortization(lease, details) {
 
 // Tijdlijn van de contracten van één financial lease: per contract een balk op een gezamenlijke
 // tijdas (start → einde, of beëindigingsdatum), met klik om het contract in de wizard te openen.
-function ContractTijdlijn({ segments, onOpen }) {
+function ContractTijdlijn({ segments, onOpen, indices }) {
   const rijen = segments.map((sg, i) => {
+    if (indices && !indices.includes(i)) return { i, sg, leeg: true };
     if (!sg || !sg.startdatum) return { i, sg, leeg: true };
     const start = new Date(sg.startdatum);
     let eind;
@@ -60,11 +61,24 @@ function ContractTijdlijn({ segments, onOpen }) {
   );
 }
 
+// Welke groep ("auto" of "overig") hoort bij elk contract (index) van een lease? Een contract zonder soort
+// volgt het vorige contract.
+export function contractGroepen(segments) {
+  const eersteMetSoort = segments.find((sg) => sg && sg.soort);
+  let vorige = eersteMetSoort ? (eersteMetSoort.soort === "machine" ? "overig" : "auto") : "auto";
+  return segments.map((sg) => {
+    if (sg && sg.soort) vorige = sg.soort === "machine" ? "overig" : "auto";
+    return vorige;
+  });
+}
+
 function LeaseGroepPanel({
   titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [],
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [], groep = null, onAddManualLease, onRemoveManualLease,
 }) {
+  const [formOpen, setFormOpen] = useState(false);
   const [kiesLease, setKiesLease] = useState("");
+  const [nieuweNaam, setNieuweNaam] = useState("");
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
@@ -95,21 +109,43 @@ function LeaseGroepPanel({
         <div className="px-5 pb-5">
           {onOpenWizard && (() => {
             const kandidaten = (alleLeases || []).filter((l) => l.category === "Lease (financieel)" || confirmedLeaseTypeKeys.includes(l.key));
-            if (kandidaten.length === 0) return null;
-            const eigen = kandidaten.filter((l) => leaseSummary.some((x) => x.key === l.key));
-            const lijst = eigen.length > 0 ? eigen : kandidaten;
-            const gekozen = lijst.find((l) => l.key === kiesLease)?.key || lijst[0].key;
+            const ANDERS = "__anders__";
+            const naam = kiesLease === ANDERS ? nieuweNaam.trim() : "";
+            const kanDoorgaan = kiesLease && (kiesLease !== ANDERS || naam.length >= 2);
+            const doorgaan = () => {
+              let key = kiesLease;
+              if (kiesLease === ANDERS) key = onAddManualLease?.(naam, groep);
+              if (!key) return;
+              onOpenWizard(key, { nieuw: true, soort });
+              setFormOpen(false); setKiesLease(""); setNieuweNaam("");
+            };
+            const soortTekst = soort === "machine" ? "machine/ander middel" : "auto";
             return (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs">
-                {lijst.length > 1 && (
-                  <select value={gekozen} onChange={(e) => setKiesLease(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
-                    {lijst.map((l) => <option key={l.key} value={l.key}>{l.name}</option>)}
-                  </select>
+              <div className="mb-3 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs">
+                {!formOpen ? (
+                  <button onClick={() => setFormOpen(true)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                    + Nieuw contract ({soortTekst})
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="font-medium text-slate-700">Bij welke leasemaatschappij hoort dit nieuwe contract?</p>
+                    <select value={kiesLease} onChange={(e) => setKiesLease(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs max-w-full">
+                      <option value="">Kies leasemaatschappij…</option>
+                      {kandidaten.map((l) => <option key={l.key} value={l.key}>{l.name}{l.count ? "" : " (handmatig)"}</option>)}
+                      <option value={ANDERS}>Andere leasemaatschappij (niet in de bankgegevens)…</option>
+                    </select>
+                    {kiesLease === ANDERS && (
+                      <div>
+                        <input value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} placeholder="Naam leasemaatschappij" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs w-64 max-w-full" />
+                        <p className="mt-1 text-slate-500">Er zijn geen betalingen aan deze maatschappij gevonden in de geladen bankbestanden — mogelijk heeft de client die niet aangeleverd. Je kunt het contract wel invullen; de rente-uitsplitsing per betaling is dan niet mogelijk.</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button disabled={!kanDoorgaan} onClick={doorgaan} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs font-medium disabled:opacity-40">Doorgaan</button>
+                      <button onClick={() => { setFormOpen(false); setKiesLease(""); }} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-600">Annuleren</button>
+                    </div>
+                  </div>
                 )}
-                <button onClick={() => onOpenWizard(gekozen, { nieuw: true, soort })} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
-                  + Nieuw contract{soort === "machine" ? " (machine/ander middel)" : " (auto)"}
-                </button>
-                {leeg && <span className="text-slate-500">Een machinecontract hoort bij een lease uit de bankgegevens — kies de leasemaatschappij.</span>}
               </div>
             );
           })()}
@@ -151,7 +187,12 @@ function LeaseGroepPanel({
               // LAATSTE (huidige) contract is beëindigd — een eerder, al opgevolgd contract "stopt"
               // altijd, dat is juist de bedoeling en geen signaal dat de hele lease voorbij is.
               const segments = isFinancieel ? getLeaseSegments(details) : [];
-              const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
+              const groepVanContract = contractGroepen(segments);
+              const gemengd = groep && new Set(groepVanContract).size > 1 && segments.some((sg) => sg?.soort);
+              const idxHier = segments.map((_, i) => i).filter((i) => !gemengd || groepVanContract[i] === groep);
+              const aantalHier = idxHier.length;
+              const laatsteHier = segments[idxHier[idxHier.length - 1]];
+              const isBeeindigd = segments.length > 0 && !!laatsteHier?.contractBeeindigd;
               // Samengevoegde benamingen van déze lease (bron → doel = deze lease).
               const benamingen = (leaseMerges || []).filter((m) => m.targetKey === lease.key);
               return (
@@ -161,8 +202,8 @@ function LeaseGroepPanel({
                     {isBeeindigd && (
                       <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
                     )}
-                    {segments.length > 1 && (
-                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{segments.length} contracten</span>
+                    {(aantalHier > 1 || gemengd) && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{aantalHier} {aantalHier === 1 ? "contract" : "contracten"}{gemengd ? " in deze groep" : ""}</span>
                     )}
                     {benamingen.length > 0 && (
                       <button
@@ -174,7 +215,14 @@ function LeaseGroepPanel({
                         {benamingen.length + 1} benamingen {toonBenamingen[lease.key] ? "▴" : "▾"}
                       </button>
                     )}
-                    <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
+                    {lease.handmatig ? (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-medium" title="Geen betalingen in de bankgegevens — handmatig toegevoegd">handmatig</span>
+                    ) : (
+                      <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
+                    )}
+                    {lease.handmatig && onRemoveManualLease && segments.length === 0 && (
+                      <button onClick={() => onRemoveManualLease(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-red-600">Verwijderen</button>
+                    )}
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
@@ -211,7 +259,7 @@ function LeaseGroepPanel({
                                 {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : segments.length > 0 ? "Verder invullen" : "Gegevens invullen"}
                               </button>
                               {isCompleteFinancialLeaseDetails(details) && onOpenWizard && (
-                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true, soort: groep === "overig" ? "machine" : "auto" })} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                                   + Nieuw contract
                                 </button>
                               )}
@@ -282,7 +330,7 @@ function LeaseGroepPanel({
                     ) : null;
                   })()}
                   {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && segments.length > 0 && (
-                    <ContractTijdlijn segments={segments} onOpen={(idx) => onOpenWizard(lease.key, { contract: idx })} />
+                    <ContractTijdlijn segments={segments} indices={gemengd ? idxHier : null} onOpen={(idx) => onOpenWizard(lease.key, { contract: idx })} />
                   )}
                   {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
                     const nieuw = detecteerNieuwContract(lease, details);
@@ -299,7 +347,7 @@ function LeaseGroepPanel({
                     ) : amortization ? (
                       <>
                         <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
-                          Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
+                          {gemengd ? "Hele lease (alle contracten): " : ""}Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
                         </p>
                         {amortization.renteNietBerekenbaar && (
                           <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
@@ -325,12 +373,13 @@ function LeaseGroepPanel({
 // Splitst de leases in twee panelen: lease van een auto, en lease van machines/andere bedrijfsmiddelen.
 // Een lease hoort bij "andere bedrijfsmiddelen" als zijn (laatste) contract als machine is ingevuld, of — zolang
 // er nog niets is ingevuld — als de naam overeenkomt met een "ander leaseobject" uit de nieuw-dossier-wizard.
-export function leaseGroepVan(lease, details, overigeNamen = []) {
+export function leaseGroepenVan(lease, details, overigeNamen = []) {
   const segs = getLeaseSegments(details).filter((sg) => sg && sg.soort);
-  if (segs.length > 0) return segs[segs.length - 1].soort === "machine" ? "overig" : "auto";
+  if (segs.length === 0 && lease.handmatig) return [lease.handmatigeGroep || "auto"];
+  if (segs.length > 0) return [...new Set(segs.map((sg) => (sg.soort === "machine" ? "overig" : "auto")))];
   const tekst = (lease.transactions || []).map((t) => `${t.counterparty} ${t.description}`).join(" ").toLowerCase();
   const treft = overigeNamen.some((n) => { const k = String(n).trim().toLowerCase(); return k.length >= 3 && tekst.includes(k); });
-  return treft ? "overig" : "auto";
+  return [treft ? "overig" : "auto"];
 }
 
 const UITLEG = {
@@ -341,14 +390,14 @@ const UITLEG = {
 export default function LeaseInterestPanel(props) {
   const { leaseSummary, leaseDetails, overigeLeaseNamen = [] } = props;
   const [openSignal, setOpenSignal] = useState(0);
-  const auto = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "auto");
-  const overig = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "overig");
+  const auto = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("auto"));
+  const overig = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("overig"));
   const gemeenschappelijk = { ...props, alleLeases: leaseSummary, onJump: () => setOpenSignal((n) => n + 1), openSignal };
   // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
   return (
     <div className="space-y-3">
-      <LeaseGroepPanel {...gemeenschappelijk} soort="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
-      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="auto" groep="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>
   );
 }

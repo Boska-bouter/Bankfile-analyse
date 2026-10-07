@@ -352,6 +352,8 @@ export function normalizeKenteken(kenteken) {
 export function getLeaseSegments(details) {
   if (!details) return [];
   if (Array.isArray(details.contracts) && details.contracts.length > 0) return details.contracts;
+  // Handmatig toegevoegde lease waar nog geen contract is ingevuld: alleen metadata, geen segment.
+  if (details.handmatigeNaam && !details.startdatum && !details.koopprijs && !details.soort && !details.looptijd && !details.maandbedrag) return [];
   return [details];
 }
 
