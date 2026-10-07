@@ -354,7 +354,11 @@ export default function App() {
   const [changesSinceExport, setChangesSinceExport] = useState(0);
   const [lastExportAt, setLastExportAt] = useState(null);
   const suppressChangeCountUntilRef = useRef(0);
+  // Aantal niet-geëxporteerde wijzigingen dat uit de browseropslag is hersteld (bijv. nadat iOS de app
+  // uit het geheugen haalde). Binnen het "laadvenster" blijft de teller op deze waarde i.p.v. op 0.
+  const restoredChangesRef = useRef(0);
   const suppressChangeCount = () => {
+    restoredChangesRef.current = 0;
     // Laden/leegmaken/hervatten verandert veel state tegelijk — dat is geen "wijziging" van de
     // gebruiker. Een tijdvenster (i.p.v. een vlag) zodat het niet blijft hangen als er toevallig
     // niets daadwerkelijk verandert (bijv. hetzelfde dossierbestand twee keer laden).
@@ -759,6 +763,7 @@ export default function App() {
 
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
+  const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const pendingProjectRef = useRef(null);
   useEffect(() => {
     (async () => {
@@ -785,6 +790,11 @@ export default function App() {
     if (pending) {
       setParsedFiles(pending.parsedFiles);
       if (pending.settings) applySettingsToState(pending.settings);
+      // Niet-geëxporteerde wijzigingen blijven onthouden over een herstart heen.
+      const n = Number(pending.settings?.changesSinceExport) || 0;
+      restoredChangesRef.current = n;
+      setChangesSinceExport(n);
+      if (pending.settings?.lastExportAtMs) setLastExportAt(new Date(pending.settings.lastExportAtMs));
     }
     setShowStartupChoice(false);
     setLoaded(true);
@@ -820,6 +830,7 @@ export default function App() {
         ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
+        changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
       if (ok1 && ok2) setLastSavedAt(new Date());
@@ -833,6 +844,7 @@ export default function App() {
     ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
+    changesSinceExport, lastExportAt,
     loaded,
   ]);
 
@@ -844,7 +856,7 @@ export default function App() {
     // keer gesloten: na het laden kunnen er nog meer afgeleide waarden bijkomen (een tweede render), en die
     // gaven anders een schijnbare "1 wijziging" bij een dossier waar je nog niets aan had gedaan.
     if (Date.now() < suppressChangeCountUntilRef.current) {
-      setChangesSinceExport(0);
+      setChangesSinceExport(restoredChangesRef.current);
       return;
     }
     setChangesSinceExport((n) => n + 1);
@@ -2670,6 +2682,7 @@ export default function App() {
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
+    restoredChangesRef.current = 0;
     setChangesSinceExport(0);
     setLastExportAt(new Date());
   };
@@ -2730,6 +2743,7 @@ export default function App() {
     const fileCount = pending ? pending.parsedFiles.length : 0;
     const pendingFileNames = pending ? pending.parsedFiles.map((f) => f.fileName).filter(Boolean) : [];
     const ondernemer = pending?.settings?.eigenNamen?.ondernemer;
+    const nietGeexporteerd = Number(pending?.settings?.changesSinceExport) || 0;
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
@@ -2751,6 +2765,12 @@ export default function App() {
               </ul>
             )}
           </div>
+          {nietGeexporteerd > 0 && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 mb-4 text-xs text-amber-900">
+              Let op: dit dossier heeft <strong>{nietGeexporteerd} wijziging{nietGeexporteerd === 1 ? "" : "en"}</strong> die nog niet als dossierbestand zijn opgeslagen.
+              Ze staan wel in de browseropslag van dit apparaat. Kies "Verder met dit dossier" en gebruik daarna "Dossier opslaan" om ze veilig te stellen.
+            </p>
+          )}
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
@@ -2759,10 +2779,10 @@ export default function App() {
               Verder met dit dossier
             </button>
             <button
-              onClick={startEmpty}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
+              onClick={() => (nietGeexporteerd > 0 && !bevestigNieuwStart ? setBevestigNieuwStart(true) : startEmpty())}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${bevestigNieuwStart ? "border-red-400 text-red-700 bg-red-50 hover:bg-red-100" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
             >
-              Nieuw dossier
+              {bevestigNieuwStart ? "Toch nieuw dossier — wijzigingen niet opgeslagen" : "Nieuw dossier"}
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-4">
