@@ -347,22 +347,22 @@ function JaNee({ value, onChange, opties, children }) {
 }
 
 // Lijst met namen (typen of uit suggesties kiezen).
-function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [] }) {
+function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [], dubbelToegestaan = false }) {
   const [huidig, setHuidig] = useState("");
   const vol = max != null && lijst.length >= max;
   const voeg = (naam) => {
     const n = (naam || "").trim();
-    if (!n || vol || lijst.some((x) => x.toLowerCase() === n.toLowerCase())) return;
+    if (!n || vol || (!dubbelToegestaan && lijst.some((x) => x.toLowerCase() === n.toLowerCase()))) return;
     onChange([...lijst, n]);
   };
   const open = suggesties.filter((s) => !lijst.some((x) => x.toLowerCase() === s.naam.toLowerCase()));
   return (
     <div className="space-y-2">
       {lijst.length > 0 && (
-        <ul className="space-y-1">
+        <ul className={`space-y-1 ${lijst.length > 4 ? "max-h-44 overflow-y-auto pr-1" : ""}`}>
           {lijst.map((naam, i) => (
             <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
-              <span className="truncate">{naam}</span>
+              <span className="truncate">{naam}{dubbelToegestaan && lijst.slice(0, i).filter((x) => x.toLowerCase() === naam.toLowerCase()).length > 0 ? ` — contract ${lijst.slice(0, i + 1).filter((x) => x.toLowerCase() === naam.toLowerCase()).length}` : ""}</span>
               <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
             </li>
           ))}
@@ -689,13 +689,13 @@ function Scherm33({ typedNow, zet, goNext, onAddBusinessKeywords, onAddBusinessE
   return (
     <div className="space-y-4">
       <Sectie
-        titel="Grootste of vaste opdrachtgevers (max. 5)"
+        titel="Grootste of vaste opdrachtgevers (max. 10)"
         uitleg="Zo herkent de app binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat je dat achteraf per klant moet bevestigen."
       >
-        <NaamLijst lijst={klanten} onChange={(l) => zet({ opdrachtgeversLijst: l })} placeholder="Naam opdrachtgever" max={5} suggesties={suggesties.opdrachtgevers || []} />
+        <NaamLijst lijst={klanten} onChange={(l) => zet({ opdrachtgeversLijst: l })} placeholder="Naam opdrachtgever" max={10} suggesties={suggesties.opdrachtgevers || []} />
       </Sectie>
-      <Sectie titel="Grootste of vaste leveranciers (max. 5, optioneel)" uitleg="Zelfde idee, maar dan voor vaste zakelijke uitgaven.">
-        <NaamLijst lijst={lev} onChange={(l) => zet({ leveranciersLijst: l })} placeholder="Naam leverancier" max={5} suggesties={suggesties.leveranciers || []} />
+      <Sectie titel="Grootste of vaste leveranciers (max. 10, optioneel)" uitleg="Zelfde idee, maar dan voor vaste zakelijke uitgaven.">
+        <NaamLijst lijst={lev} onChange={(l) => zet({ leveranciersLijst: l })} placeholder="Naam leverancier" max={10} suggesties={suggesties.leveranciers || []} />
       </Sectie>
       <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
       <button
@@ -802,13 +802,13 @@ function Scherm34({
       {toonLeaseAuto && (
         <Sectie
           titel="Is er een leaseauto (financieel) in dit bedrijf?"
-          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's? Voeg ze allemaal toe." : "Meerdere auto's? Voeg ze allemaal toe."}
+          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's of contracten (ook bij dezelfde maatschappij, bijv. bedrijfsbus + privéauto)? Voeg de naam voor elk contract toe." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
         >
           <JaNee
             value={leaseAutoJa}
             onChange={(v) => zet({ leaseAutoJa: v, leaseLijst: v ? jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto) : [] })}
           >
-            <NaamLijst lijst={t.leaseLijst || []} onChange={(l) => zet({ leaseLijst: l })} placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)" suggesties={suggesties.leaseAuto || []} />
+            <NaamLijst lijst={t.leaseLijst || []} onChange={(l) => zet({ leaseLijst: l })} placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)" suggesties={suggesties.leaseAuto || []} dubbelToegestaan />
           </JaNee>
         </Sectie>
       )}
@@ -816,7 +816,7 @@ function Scherm34({
       {needs.leaseOverig && (
         <Sectie titel="Nog een ander financieel leaseobject (bijv. machine of apparatuur, geen auto)?">
           <JaNee value={t.leaseOverigJa ?? null} onChange={(v) => zet({ leaseOverigJa: v, leaseOverigLijst: v ? t.leaseOverigLijst || [] : [] })}>
-            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
+            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" dubbelToegestaan />
           </JaNee>
         </Sectie>
       )}

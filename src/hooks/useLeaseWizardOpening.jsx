@@ -10,6 +10,49 @@ import { extractKeywordCandidate } from "../utils/normalization.js";
 
 // Bepaalt welke lease de wizard automatisch moet openen / als type bevestigd moet krijgen.
 // Geeft { key, bevestig?, lease? } of null.
+function sleutelVan(naam) {
+  const t = String(naam).trim().toLowerCase();
+  return extractKeywordCandidate(naam) || (t.length >= 3 ? t : "");
+}
+export function leaseMatchtNaam(lease, naam) {
+  const kw = sleutelVan(naam);
+  if (!kw) return false;
+  const kort = kw.length < 4 ? new RegExp(`(^|[^a-z0-9])${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+  return (lease.transactions || []).some((t) => {
+    const txt = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
+    return kort ? kort.test(txt) : txt.includes(kw);
+  });
+}
+// Hoeveel contracten (per soort) zijn in de nieuw-dossier-wizard voor deze lease opgegeven? Dezelfde naam
+// meerdere keren = meerdere contracten bij dezelfde maatschappij (bijv. bedrijfsbus + privéauto); verschillende
+// namen die op dezelfde lease wijzen tellen als één.
+function verwachtAantal(lease, lijst) {
+  const telling = new Map();
+  for (const i of lijst || []) {
+    const n = String(i?.naam || "").trim().toLowerCase();
+    if (n) telling.set(n, (telling.get(n) || 0) + 1);
+  }
+  let max = 0;
+  for (const [n, c] of telling) if (leaseMatchtNaam(lease, n)) max = Math.max(max, c);
+  return max;
+}
+// Welk contract moet er voor deze lease als eerstvolgende ingevuld worden? { soort, nieuw } of null als alles
+// wat in de wizard is opgegeven al is ingevuld (of als er geen opgave is).
+export function volgendContractVoor(lease, details, { verwachteLease, verwachteLeaseOverig }) {
+  const segs = getLeaseSegments(details).filter(Boolean);
+  const verwachtAuto = verwachtAantal(lease, verwachteLease);
+  const verwachtMachine = verwachtAantal(lease, verwachteLeaseOverig);
+  if (verwachtAuto + verwachtMachine === 0) return null;
+  const heeftData = segs.some((sg) => sg.koopprijs || sg.looptijd || sg.maandbedrag || sg.startdatum);
+  if (!heeftData) return { soort: verwachtAuto > 0 ? "auto" : "machine", nieuw: false };
+  if (!segs.every((sg) => sg.koopprijs && sg.looptijd && sg.maandbedrag && sg.startdatum)) return null; // half ingevuld: niet automatisch doordrukken
+  const klaarAuto = segs.filter((sg) => sg.soort !== "machine").length;
+  const klaarMachine = segs.filter((sg) => sg.soort === "machine").length;
+  if (klaarAuto < verwachtAuto) return { soort: "auto", nieuw: true };
+  if (klaarMachine < verwachtMachine) return { soort: "machine", nieuw: true };
+  return null;
+}
+
 export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKeys, leaseDetails, autoWizardStatus, verwachteLease, verwachteLeaseOverig }) {
   // Antwoorden uit de nieuw-dossier-wizard gelden als bevestiging van het lease-type:
   //  1) namen bij "leaseauto (financieel)" en "ander financieel leaseobject" = financial: een nog niet
@@ -18,26 +61,23 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
   //     onbevestigde lease is én er geen andere genoemde leaseobjecten zijn (anders is niet te weten welke de auto is).
   const onbevestigd = leaseSummary.filter((x) => !confirmedLeaseTypeKeys.includes(x.key));
   const genoemd = [...(verwachteLease || []), ...(verwachteLeaseOverig || [])].map((i) => i?.naam).filter(Boolean);
-  const sleutelsVan = (naam) => {
-    const t = String(naam).trim().toLowerCase();
-    const kw = extractKeywordCandidate(naam) || (t.length >= 3 ? t : "");
-    return kw;
-  };
-  const naamMatch = (lease) => genoemd.some((naam) => {
-    const kw = sleutelsVan(naam);
-    if (!kw) return false;
-    const kort = kw.length < 4 ? new RegExp(`(^|[^a-z0-9])${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
-    return lease.transactions.some((t) => {
-      const txt = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-      return kort ? kort.test(txt) : txt.includes(kw);
-    });
-  });
+  const naamMatch = (lease) => genoemd.some((naam) => leaseMatchtNaam(lease, naam));
   const genoemdeLease = onbevestigd.find(naamMatch);
   if (genoemdeLease) return { key: genoemdeLease.key, bevestig: "financieel", lease: genoemdeLease };
   const soortAuto = autoWizardStatus?.soort;
   if ((soortAuto === "financial" || soortAuto === "operational") && onbevestigd.length === 1 && genoemd.length === 0) {
     return { key: onbevestigd[0].key, bevestig: soortAuto === "financial" ? "financieel" : "operationeel", lease: onbevestigd[0] };
   }
+  const ctx = { verwachteLease, verwachteLeaseOverig };
+  // Eerst: leases waarvoor in de wizard contracten zijn opgegeven die nog niet (allemaal) zijn ingevuld.
+  for (const x of leaseSummary) {
+    if (x.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(x.key)) continue;
+    const d = leaseDetails[x.key];
+    if (d?.onbekend) continue;
+    const v = volgendContractVoor(x, d, ctx);
+    if (v) return { key: x.key, nieuw: v.nieuw, soort: v.soort };
+  }
+  // Daarna: een bevestigde financiële lease waar nog helemaal niets van is ingevuld.
   const l = leaseSummary.find((x) => {
     if (x.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(x.key)) return false;
     const d = leaseDetails[x.key];
@@ -49,13 +89,24 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
 
 export function useLeaseWizardOpening() {
   const [leaseWizard, setLeaseWizard] = useState(null); // { key, nieuw, contract, stap } of null
-  const openLeaseWizard = (key, opts) => setLeaseWizard((prev) => (
-    prev && prev.key === key && !opts?.nieuw && opts?.contract == null && !opts?.stap && !opts?.soort
-      ? prev
-      : { key, nieuw: !!opts?.nieuw, contract: opts?.contract ?? null, stap: opts?.stap ?? null, soort: opts?.soort ?? null }
-  ));
   // Verversd bij elke render van App (zie `registreer`): de kandidaat-bepaling leest zo altijd actuele data.
   const contextRef = useRef(null);
+  const openLeaseWizard = (key, opts) => {
+    // Zonder expliciete soort: neem het soort over dat in de nieuw-dossier-wizard is opgegeven voor deze lease.
+    let soort = opts?.soort ?? null;
+    let nieuw = !!opts?.nieuw;
+    const ctx = contextRef.current;
+    if (!soort && ctx && opts?.contract == null && !opts?.stap) {
+      const lease = ctx.leaseSummary.find((l) => l.key === key);
+      const v = lease ? volgendContractVoor(lease, ctx.leaseDetails[key], ctx) : null;
+      if (v && (v.nieuw === nieuw || !nieuw)) soort = v.soort;
+    }
+    setLeaseWizard((prev) => (
+      prev && prev.key === key && !nieuw && opts?.contract == null && !opts?.stap && !soort
+        ? prev
+        : { key, nieuw, contract: opts?.contract ?? null, stap: opts?.stap ?? null, soort }
+    ));
+  };
   const registreer = (ctx) => { contextRef.current = ctx; };
   const autoOpenLeaseWizard = () => {
     const ctx = contextRef.current;
@@ -63,7 +114,7 @@ export function useLeaseWizardOpening() {
     const k = bepaalLeaseWizardKandidaat(ctx);
     if (!k) return;
     if (k.bevestig) { setTimeout(() => contextRef.current?.confirmLeaseType?.(k.lease, k.bevestig), 250); return; } // financieel opent de wizard zelf
-    setTimeout(() => openLeaseWizard(k.key), 150);
+    setTimeout(() => openLeaseWizard(k.key, { nieuw: !!k.nieuw, soort: k.soort }), 150);
   };
   const renderLeaseWizard = ({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey }) => {
     if (!leaseWizard) return null;
@@ -78,6 +129,7 @@ export function useLeaseWizardOpening() {
         onConfirmType={confirmLeaseType}
         onSave={setLeaseDetailField}
         onClose={() => setLeaseWizard(null)}
+        onFinished={() => setTimeout(() => autoOpenLeaseWizard(), 500)}
         onOpenAdvanced={setLeaseDetailsModalKey}
         nieuwContract={leaseWizard.nieuw}
         startContract={leaseWizard.contract}

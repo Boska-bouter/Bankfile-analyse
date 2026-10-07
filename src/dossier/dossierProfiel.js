@@ -73,19 +73,13 @@ export function bouwDossierProfiel(p) {
   else if (autoWizardStatus?.status === "geen") auto.push("Geen auto");
   else auto.push("Auto: nog niet opgegeven");
   const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
-  if (lease.length) auto.push(`Financial lease: ${lease.join(", ")}`);
-  if (leaseO.length) auto.push(`Overige lease: ${leaseO.join(", ")}`);
+  // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
+  const leaseSoorten = [];
+  if (lease.length || autoWizardStatus?.soort === "financial") leaseSoorten.push("financiële autolease");
+  if (leaseO.length) leaseSoorten.push("financiële machinelease");
+  if (leaseSoorten.length) auto.push(`Lease: ${leaseSoorten.join(" en ")}`);
+  else if (leaseSummary.length) auto.push(`Lease in bankdata: ${leaseSummary.length}`);
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
-  // Leases zoals ze in de bankgegevens gevonden zijn: één regel per (samengevoegd) contract, met de
-  // overige benamingen erbij zodat zichtbaar is dat die bij dezelfde lease horen.
-  for (const l of leaseSummary) {
-    const aliassen = [...new Set(leaseMerges.filter((m) => m.targetKey === l.key).map((m) => m.sourceName).filter(Boolean))];
-    const type = !confirmedLeaseTypeKeys.includes(l.key) ? "type nog niet bevestigd" : l.category === "Lease (financieel)" ? "financieel" : "operationeel";
-    const aantal = l.category === "Lease (financieel)" ? getLeaseSegments(leaseDetails[l.key]).filter(Boolean).length : 0;
-    const extra = [type, aantal > 1 ? `${aantal} contracten` : null].filter(Boolean).join(", ");
-    const alias = aliassen.length ? ` — ook gezien als: ${aliassen.slice(0, 3).join(", ")}${aliassen.length > 3 ? ` (+${aliassen.length - 3})` : ""}` : "";
-    auto.push(`Lease in bankdata: ${l.name} (${extra})${alias}`);
-  }
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
   blokken.push({ titel: "Auto, lease en lening", regels: auto });
 

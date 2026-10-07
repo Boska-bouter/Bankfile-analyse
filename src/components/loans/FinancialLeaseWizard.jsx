@@ -85,7 +85,7 @@ function Voorstel({ tekst, onNeem }) {
   );
 }
 
-export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null, nieuwSoort = null }) {
+export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null, nieuwSoort = null, onFinished }) {
   const [contracts, setContracts] = useState(() => {
     const bestaand = getLeaseSegments(details).filter(Boolean).map(formFromSegment);
     const metSoort = (f) => {
@@ -164,6 +164,8 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
     onSave(lease.key, cleaned.length === 1 ? cleaned[0] : { contracts: cleaned });
   };
   const klaar = () => { bewaar(); onClose(); };
+  // "Afronden": daarna meteen door naar het volgende in de nieuw-dossier-wizard opgegeven contract (als er nog een is).
+  const afronden = () => { bewaar(); onClose(); onFinished?.(); };
 
   // Nieuw vervolgcontract (bij "vervangen" of "verlengd"): sla het huidige contract op in de lijst en ga
   // verder met een leeg vervolgcontract vanaf stap 1.
@@ -208,7 +210,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-teal-100">
-                Financial lease — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
+                Financial lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
               </p>
               <h2 className="text-sm font-semibold mt-0.5">{STAPPEN[stapNu]}</h2>
             </div>
@@ -390,7 +392,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                 <button onClick={() => setStap(stappen[pos + 1])} className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">Volgende <ChevronRight className="h-3.5 w-3.5" /></button>
               </>
             ) : (
-              <button onClick={klaar} className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"><Check className="h-3.5 w-3.5" /> Opslaan en afronden</button>
+              <button onClick={afronden} className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"><Check className="h-3.5 w-3.5" /> Opslaan en afronden</button>
             )}
           </div>
         </div>
