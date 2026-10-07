@@ -1,3 +1,4 @@
+import { metBolletjes } from "../shared/StatusDot.jsx";
 // Dashboard-overzicht (v217, fase 1) — een altijd-zichtbare kaartenlaag bovenaan de pagina met
 // live cijfers uit al bestaande berekeningen (confidenceSummary, pendingPersonReview, etc.). Elke
 // kaart is een snelkoppeling: klikken scrollt naar en opent de bijbehorende sectie verderop op
@@ -61,14 +62,14 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
                   {card.lines.map((l) => (
                     <div key={l.label}>
                       <div className="text-[10px] text-slate-500 leading-tight">{l.label}</div>
-                      <div className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{l.value}</div>
+                      <div className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{metBolletjes(l.value)}</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className={`mt-1 text-2xl font-semibold leading-tight ${TONE_VALUE[tone]}`}>{card.value}</div>
+                <div className={`mt-1 text-2xl font-semibold leading-tight ${TONE_VALUE[tone]}`}>{typeof card.value === "string" ? metBolletjes(card.value) : card.value}</div>
               )}
-              {card.subtitle && <div className="mt-0.5 text-[11px] text-slate-500 leading-snug">{card.subtitle}</div>}
+              {card.subtitle && <div className="mt-0.5 text-[11px] text-slate-500 leading-snug">{metBolletjes(card.subtitle)}</div>}
               {/* v258 — punt 11 uit de ChatGPT-aanbevelingen: "status → korte uitleg → actieknop".
                   Gericht toegepast op kaarten die al een compleet/onvolledig-telling hebben (Leningen,
                   Lease, Activa) i.p.v. op alle kaarten — voor een cijfer- of bedragkaart (Resultaat,

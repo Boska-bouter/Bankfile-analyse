@@ -112,9 +112,9 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
               onChange={(e) => setForm((prev) => ({ ...prev, kiaStatus: e.target.value === "controleren" ? "" : e.target.value }))}
               className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
             >
-              <option value="controleren">🟠 Handmatig controleren (standaard)</option>
-              <option value="kwalificeert">🟢 Waarschijnlijk kwalificerend</option>
-              <option value="uitgesloten">⚪ Niet meegenomen (sluit uit van KIA)</option>
+              <option value="controleren">Handmatig controleren (standaard)</option>
+              <option value="kwalificeert">Waarschijnlijk kwalificerend</option>
+              <option value="uitgesloten">Niet meegenomen (sluit uit van KIA)</option>
             </select>
             <span className="block text-xs text-slate-400 mt-1">
               Niet elk bedrijfsmiddel kwalificeert voor KIA (bijv. een personenauto, grond, of een te laag

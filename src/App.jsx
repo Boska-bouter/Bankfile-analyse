@@ -32,6 +32,7 @@ import { useControlerenDashboardCards } from "./cards/useControlerenDashboardCar
 import { useInstellingenDashboardCards } from "./cards/useInstellingenDashboardCards.jsx";
 import { useControlerenCardGroups } from "./cards/useControlerenCardGroups.jsx";
 import { useInstellingenCardGroups } from "./cards/useInstellingenCardGroups.jsx";
+import { bouwDossierProfiel } from "./dossier/dossierProfiel.js";
 import { useYearlyProgress } from "./calc/useYearlyProgress.jsx";
 import { useClassified } from "./calc/useClassified.jsx";
 import { useYearlySummaries } from "./calc/useYearlySummaries.jsx";
@@ -2409,7 +2410,18 @@ export default function App() {
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus,
   });
+  const dossierProfiel = useMemo(
+    () => bouwDossierProfiel({
+      parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
+      autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+    }),
+    [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
+      autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening]
+  );
   const instellingenCardGroups = useInstellingenCardGroups({
+    dossierProfiel,
     activaDetails, activaSummary, activeYear, addBusinessExpenseKeyword, addBusinessKeyword,
     autoStatus, autoWizardStatus, automatiseringSectionRef, btwSettingsSectionRef, btwVerlegd,
     businessExpenseEntries, businessExpenseKeywords, businessIncomeEntries, businessKeywords, categorieTotalenActiveYear,
@@ -3223,6 +3235,7 @@ export default function App() {
             zakelijkeSpaarRekening={zakelijkeSpaarRekening}
             setZakelijkeSpaarRekening={(v) => { snapshotBeforeAction("Zakelijke spaarrekening ingevuld"); setZakelijkeSpaarRekening(v); }}
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
+            dossierProfiel={dossierProfiel}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
             onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); }}

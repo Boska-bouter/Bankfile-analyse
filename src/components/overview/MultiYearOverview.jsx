@@ -4,6 +4,7 @@ import { eurTight } from "../../utils/amounts.js";
 import { estimateIncomeTax, estimateZvw } from "../../tax/incomeTax.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Kolomvolgorde volgt bewust dezelfde opbouw/logica als het Aangiftevoorstel (zie
 // src/reports/aangiftevoorstel.js): eerst het bruto zakelijk inkomen, dan de BTW eraf naar netto
@@ -135,7 +136,7 @@ export default function MultiYearOverview({
 
                 return (
                   <tr key={year} className="hover:bg-slate-50 cursor-pointer" onClick={() => onYearClick(year)}>
-                    <td className="py-2 pr-2 text-center" title={title}>{dot}</td>
+                    <td className="py-2 pr-2 text-center" title={title}>{metBolletjes(dot)}</td>
                     <td className="py-2 pr-3 font-medium">{year}</td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap">{eurTight(summary.zakelijkeInkomsten)}</td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">-{eurTight(summary.verschuldigdBtw)}</td>

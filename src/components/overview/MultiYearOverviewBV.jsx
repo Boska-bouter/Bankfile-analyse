@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { eurTight } from "../../utils/amounts.js";
 import { estimateVpb } from "../../tax/vpb.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // BV-variant van het Meerjarenoverzicht. Zelfde opzet als MultiYearOverview.jsx (kolomvolgorde volgt
 // de opbouw van het Aangiftevoorstel BV), maar met Vpb in plaats van IB/Zvw, en een extra blok voor
@@ -88,7 +89,7 @@ export default function MultiYearOverviewBV({
 
                 return (
                   <tr key={year} className="hover:bg-slate-50 cursor-pointer" onClick={() => onYearClick(year)}>
-                    <td className="py-2 pr-2 text-center" title={title}>{dot}</td>
+                    <td className="py-2 pr-2 text-center" title={title}>{metBolletjes(dot)}</td>
                     <td className="py-2 pr-3 font-medium">{year}</td>
                     <td className="py-2 px-3 text-right font-mono text-emerald-700 whitespace-nowrap">{eurTight(summary.zakelijkeInkomstenNetto)}</td>
                     <td className="py-2 px-3 text-right font-mono text-rose-700 whitespace-nowrap">-{eurTight(kosten)}</td>

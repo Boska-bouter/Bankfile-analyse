@@ -6,6 +6,7 @@ import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import HelpHint from "../shared/HelpHint.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026") — losstaand van de detailtabel zodat
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
@@ -384,11 +385,11 @@ export function DetailTable({
                   </td>
                   <td className="px-2 py-2 text-center">
                     {t.confidence && t.confidence.level !== "heuristic" && t.confidence.level !== "fallback" && (
-                      <span title={t.confidence.label}>🟢</span>
+                      <span title={t.confidence.label}>{metBolletjes("🟢")}</span>
                     )}
                     {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && (
                       <span className="inline-flex items-center gap-1" title={t.confidence.label}>
-                        <span>{t.confidence.level === "heuristic" ? "🟡" : "🔴"}</span>
+                        <span>{metBolletjes(t.confidence.level === "heuristic" ? "🟡" : "🔴")}</span>
                         {onConfirmCorrect && (
                           <button
                             onClick={() => onConfirmCorrect(t)}

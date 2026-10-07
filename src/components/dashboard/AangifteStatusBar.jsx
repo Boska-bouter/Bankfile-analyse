@@ -2,6 +2,7 @@ import { Check, AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Eén statusblok voor het actieve jaar. Was eerder twee losse panelen (een compacte statusbalk met
 // een korte "openstaande punten"-lijst, en een uitgebreide "Aangifte-checklist" eronder) die allebei
@@ -18,9 +19,9 @@ const STATUS_TEKST = {
 // voor de Jaarcontrole-stap), "todo" (nog niet begonnen) of "cta" (actie, geen eigen status).
 function StepIcon({ state }) {
   if (state === "done") return <Check className="h-3.5 w-3.5 text-emerald-600" />;
-  if (state === "groen") return <span>🟢</span>;
-  if (state === "oranje") return <span>🟠</span>;
-  if (state === "rood") return <span>🔴</span>;
+  if (state === "groen") return <span>{metBolletjes("🟢")}</span>;
+  if (state === "oranje") return <span>{metBolletjes("🟠")}</span>;
+  if (state === "rood") return <span>{metBolletjes("🔴")}</span>;
   return <span className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300" />;
 }
 
@@ -49,7 +50,7 @@ export default function AangifteStatusBar({
             {onOpenHelp && <HelpHint chapter="aangifte-checklist" onOpen={onOpenHelp} />}
           </p>
           <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5">
-            <span>{STATUS_EMOJI[yearStatus]}</span>
+            <span>{metBolletjes(STATUS_EMOJI[yearStatus])}</span>
             <span>{STATUS_TEKST[yearStatus]}</span>
           </p>
         </div>

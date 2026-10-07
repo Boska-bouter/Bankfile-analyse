@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ProgressGauge from "./ProgressGauge.jsx";
 import ConcentricGauge from "./ConcentricGauge.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Kop van het Overzicht-tabblad (fase 1 van de dashboard-restyling) — titel + subtitel links,
 // een statuskaart met ringmeter + statusregels rechts. Vervangt de losse "Dossierstatus {jaar}"-
@@ -122,7 +123,7 @@ export default function DashboardHeader({
                 {dossierLines.map((line) => (
                   <div key={line.label} className="flex items-center gap-2 text-xs">
                     <span className="text-slate-500 w-[120px] shrink-0">{line.label}</span>
-                    <span className="font-semibold text-slate-800">{line.value}</span>
+                    <span className="font-semibold text-slate-800">{metBolletjes(line.value)}</span>
                   </div>
                 ))}
                 {yearControl && <div className="mt-2">{yearControl}</div>}

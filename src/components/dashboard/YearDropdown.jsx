@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Fase 1, dashboard-restyling: vervangt de zwevende StickyYearNav.jsx-balk op het Overzicht-
 // tabblad (die nu over de dashboardkaarten heen hing na de verschuiving voor de nieuwe zijbalk) door
@@ -63,7 +64,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50"
               >
-                {status && <span>{STATUS_EMOJI[status] || "⚪"}</span>}
+                {status && <span>{metBolletjes(STATUS_EMOJI[status] || "⚪")}</span>}
                 <span className="flex-1 font-medium text-slate-700">{year}</span>
                 {showBreakdown && yearCoverage?.[year] && coverageNote(yearCoverage[year]) && (
                   <span className="text-[10px] text-amber-600" title={coverageNote(yearCoverage[year])}>{yearCoverage[year].zakelijk ? "alleen Z" : "alleen P"}</span>

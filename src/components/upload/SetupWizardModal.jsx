@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
+import DossierProfielLijst from "../shared/DossierProfielLijst.jsx";
 
 // V65 — de wizard is herindeeld van 17 losse vragen naar 7 schermen. Elk scherm bundelt vragen die bij
 // elkaar horen; de antwoorden worden met één "Doorgaan" vastgelegd via exact dezelfde setters als voorheen.
@@ -20,7 +21,7 @@ const STEP_LABELS = {
   34: "Auto, lease en lening",
   35: "Verzekering en BTW",
   36: "Fiscale jaren",
-  4: "Dossier opslaan",
+  4: "Dossierprofiel en opslaan",
 };
 
 const KNOP = "rounded-lg px-3 py-1.5 text-xs font-medium border";
@@ -55,6 +56,7 @@ export default function SetupWizardModal({
   zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
   opdrachtgeversGevraagd, onAddBusinessKeywords, onAddBusinessExpenseKeywords,
   suggesties = {},
+  dossierProfiel = null,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -246,6 +248,13 @@ export default function SetupWizardModal({
           {currentStepId === 36 && <Scherm36 {...props} />}
           {currentStepId === 4 && (
             <div className="space-y-3">
+              {dossierProfiel && dossierProfiel.length > 0 && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-800 mb-0.5">Dossierprofiel — klopt dit?</p>
+                  <p className="text-xs text-slate-500 mb-2">Controleer kort of dit klopt. Aanpassen kan later altijd bij Instellingen.</p>
+                  <DossierProfielLijst blokken={dossierProfiel} />
+                </div>
+              )}
               <p className="text-sm text-slate-700 font-medium">
                 Niet vergeten: sla je dossier op, anders gaan je correcties en aanpassingen verloren.
               </p>
