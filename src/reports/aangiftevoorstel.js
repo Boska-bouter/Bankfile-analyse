@@ -315,7 +315,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const openPunten = [];
   if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven (zie Bijlage)`);
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
-  if (kmVergoedingForYear) openPunten.push(`Kilometervergoeding: ${kmVergoedingForYear.zakelijkeKilometers} km ingevoerd`);
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
   if (yc.quartersNietAangegeven.length > 0) openPunten.push(`BTW nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`BTW nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
@@ -471,16 +470,18 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </div>`;
   }
 
+  const statusKaartHtml = openPunten.length > 0
+    ? `
+  <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
+    <p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>
+  </div>`
+    : "";
   const samenvattingHtml = `
   <div class="kerncijfers-kaart">
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
-  ${jaarTotaalHtml}
-  <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
-    <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}</strong> <span class="toelichting">(gegevenscontrole, geen fiscale beoordeling)</span></p>
-    ${openPunten.length > 0 ? `<p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>` : `<p class="toelichting">Geen belangrijke openstaande punten.</p>`}
-  </div>`;
+  ${jaarTotaalHtml}${statusKaartHtml}`;
 
   const overigeBedrijfskostenHtml =
     ib.overigeBedrijfskosten.length > 0
@@ -644,8 +645,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   return `
   <h1>Indicatieve aangifteberekening / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
-    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)}<br>
-    <span>Uitgangspunten (feiten uit de basisvragen, geen aannames): ${korRegeling ? "valt onder de KOR" : btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · op basis van beschikbare bankgegevens</span>
+    Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} <span>(gegevenscontrole, geen fiscale beoordeling)</span><br>
+    <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>
   </p>
   ${samenvattingHtml}
 
