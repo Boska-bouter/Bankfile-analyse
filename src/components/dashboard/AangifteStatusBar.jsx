@@ -9,7 +9,7 @@ import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 // gevolgd door de volledige checklist (met uitleg per punt, ook de punten die al in orde zijn).
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_TEKST = {
-  groen: "Klaar voor aangiftecontrole — geen belangrijke openstaande punten",
+  groen: "Administratie voldoende gecontroleerd — geen belangrijke openstaande punten",
   oranje: "Controlepunten aanwezig — zie hieronder wat nog beoordeeld moet worden",
   rood: "Mogelijk ontbreekt een periode — het saldo tussen twee bestanden van deze rekening sluit dit jaar niet aan, met een verschil groter dan een gewoon afrondingsverschil",
 };
@@ -45,7 +45,7 @@ export default function AangifteStatusBar({
       <div className="px-4 py-3 bg-slate-900 text-stone-50 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold flex items-center gap-2">
-            Aangifte {activeYear}
+            Controle {activeYear}
             {onOpenHelp && <HelpHint chapter="aangifte-checklist" onOpen={onOpenHelp} />}
           </p>
           <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5">

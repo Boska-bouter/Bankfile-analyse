@@ -200,7 +200,7 @@ export const HELP_CHAPTERS = [
   },
   {
     key: "aangifte-checklist",
-    titel: "Aangifte-checklist",
+    titel: "Controlelijst",
     inhoud: (
       <p>
         Een verzamellijst van alles wat de moeite waard is om te checken vóór je aangifte doet: hoeveel procent is al
@@ -381,7 +381,7 @@ export const HELP_CHAPTERS = [
         </p>
         <p className="text-xs text-slate-400">
           Dossiercontrole zegt alleen dat de administratie rond is. Het zegt niets over of de aangifte zelf al is
-          gedaan — dat staat apart bij "Werkelijke aangifte" — en ook niet hoeveel aannames er nog in de
+          gedaan — dat staat apart bij "Aangiftestatus" — en ook niet hoeveel aannames er nog in de
           indicatieve berekening zitten ("Indicatieve aangifte").
         </p>
       </div>

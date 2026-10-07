@@ -141,7 +141,7 @@ export function useDashboardCards(p) {
                 ? "Saldo tussen bestanden sluit niet helemaal aan (verschil €500–€999)"
                 : null,
               tone: yearProgress?.status === "groen" ? "ok" : yearProgress?.status === "rood" ? "attention" : "neutral",
-              hint: "Naar de aangifte-checklist voor dit jaar",
+              hint: "Naar de controlelijst voor dit jaar",
               onClick: () => jumpToSection(checklistSectionRef),
             },
             {
@@ -322,7 +322,7 @@ export function useDashboardCards(p) {
                   value: vpbStatus[activeYear]?.gedaan ? 0 : 1,
                   subtitle: vpbStatus[activeYear]?.gedaan ? "Afgehandeld" : "nog niet afgevinkt als gedaan",
                   tone: vpbStatus[activeYear]?.gedaan ? "ok" : "attention",
-                  hint: "Naar de aangifte-checklist voor dit jaar",
+                  hint: "Naar de controlelijst voor dit jaar",
                   onClick: () => jumpToSection(checklistSectionRef),
                 }
               : {
@@ -332,7 +332,7 @@ export function useDashboardCards(p) {
                   value: (ibStatus[activeYear]?.gedaan ? 0 : 1) + (zvwStatus[activeYear]?.gedaan ? 0 : 1),
                   subtitle: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "Beide afgehandeld" : "nog niet afgevinkt als gedaan",
                   tone: ibStatus[activeYear]?.gedaan && zvwStatus[activeYear]?.gedaan ? "ok" : "attention",
-                  hint: "Naar de aangifte-checklist voor dit jaar",
+                  hint: "Naar de controlelijst voor dit jaar",
                   onClick: () => jumpToSection(checklistSectionRef),
                 },
             // v286 — op verzoek: nergens was in één oogopslag te zien hoeveel bestanden zakelijk/

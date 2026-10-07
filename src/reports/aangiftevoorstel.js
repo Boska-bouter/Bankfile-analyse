@@ -646,6 +646,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <h1>Indicatieve aangifteberekening / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} <span>(gegevenscontrole, geen fiscale beoordeling)</span><br>
+    <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span><br>
     <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>
   </p>
   ${samenvattingHtml}
