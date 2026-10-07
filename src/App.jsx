@@ -271,10 +271,13 @@ export default function App() {
   // Wordt na de lease-berekening gevuld (zie hieronder): geeft de eerste financial lease waarvoor nog
   // helemaal niets is ingevuld (en niet op "onbekend" staat), of null.
   const leaseWizardKandidaatRef = useRef(() => null);
+  const confirmLeaseTypeRef = useRef(null);
   // Regel 1 & 2: automatisch alleen openen als er nog niets is ingevuld. Nooit bij bestaande gegevens.
   const autoOpenLeaseWizard = () => {
-    const key = leaseWizardKandidaatRef.current();
-    if (key) setTimeout(() => openLeaseWizard(key), 150);
+    const k = leaseWizardKandidaatRef.current();
+    if (!k) return;
+    if (k.bevestig) { setTimeout(() => confirmLeaseTypeRef.current?.(k.lease, k.bevestig), 250); return; } // financieel opent de wizard zelf
+    setTimeout(() => openLeaseWizard(k.key), 150);
   };
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
@@ -1521,14 +1524,42 @@ export default function App() {
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
   });
+  confirmLeaseTypeRef.current = confirmLeaseType;
   leaseWizardKandidaatRef.current = () => {
+    // Antwoorden uit de nieuw-dossier-wizard gelden als bevestiging van het lease-type:
+    //  1) namen bij "leaseauto (financieel)" en "ander financieel leaseobject" = financial: een nog niet
+    //     bevestigde lease waarvan de tegenpartij(en) die naam bevatten, wordt financieel bevestigd;
+    //  2) zonder namen: autoWizardStatus.soort (financial/operational) alleen als er precies één nog
+    //     onbevestigde lease is én er geen andere genoemde leaseobjecten zijn (anders is niet te weten welke de auto is).
+    const onbevestigd = leaseSummary.filter((x) => !confirmedLeaseTypeKeys.includes(x.key));
+    const genoemd = [...(verwachteLease || []), ...(verwachteLeaseOverig || [])].map((i) => i?.naam).filter(Boolean);
+    const sleutelsVan = (naam) => {
+      const t = String(naam).trim().toLowerCase();
+      const kw = extractKeywordCandidate(naam) || (t.length >= 3 ? t : "");
+      return kw;
+    };
+    const naamMatch = (lease) => genoemd.some((naam) => {
+      const kw = sleutelsVan(naam);
+      if (!kw) return false;
+      const kort = kw.length < 4 ? new RegExp(`(^|[^a-z0-9])${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+      return lease.transactions.some((t) => {
+        const txt = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
+        return kort ? kort.test(txt) : txt.includes(kw);
+      });
+    });
+    const genoemdeLease = onbevestigd.find(naamMatch);
+    if (genoemdeLease) return { key: genoemdeLease.key, bevestig: "financieel", lease: genoemdeLease };
+    const soortAuto = autoWizardStatus?.soort;
+    if ((soortAuto === "financial" || soortAuto === "operational") && onbevestigd.length === 1 && genoemd.length === 0) {
+      return { key: onbevestigd[0].key, bevestig: soortAuto === "financial" ? "financieel" : "operationeel", lease: onbevestigd[0] };
+    }
     const l = leaseSummary.find((x) => {
       if (x.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(x.key)) return false;
       const d = leaseDetails[x.key];
       if (d?.onbekend) return false;
       return !getLeaseSegments(d).some((s) => s && (s.koopprijs || s.looptijd || s.maandbedrag || s.startdatum));
     });
-    return l ? l.key : null;
+    return l ? { key: l.key } : null;
   };
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
