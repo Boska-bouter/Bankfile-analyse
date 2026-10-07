@@ -26,15 +26,12 @@ export function leaseMatchtNaam(lease, naam) {
 // Hoeveel contracten (per soort) zijn in de nieuw-dossier-wizard voor deze lease opgegeven? Dezelfde naam
 // meerdere keren = meerdere contracten bij dezelfde maatschappij (bijv. bedrijfsbus + privéauto); verschillende
 // namen die op dezelfde lease wijzen tellen als één.
+function itemNamen(i) {
+  return [i?.naam, ...(Array.isArray(i?.aliassen) ? i.aliassen : [])].filter(Boolean);
+}
 function verwachtAantal(lease, lijst) {
-  const telling = new Map();
-  for (const i of lijst || []) {
-    const n = String(i?.naam || "").trim().toLowerCase();
-    if (n) telling.set(n, (telling.get(n) || 0) + 1);
-  }
-  let max = 0;
-  for (const [n, c] of telling) if (leaseMatchtNaam(lease, n)) max = Math.max(max, c);
-  return max;
+  // Elk item uit de wizard is één contract (met eventueel meerdere namen die bij dat contract horen).
+  return (lijst || []).filter((i) => itemNamen(i).some((n) => leaseMatchtNaam(lease, n))).length;
 }
 // Welk contract moet er voor deze lease als eerstvolgende ingevuld worden? { soort, nieuw } of null als alles
 // wat in de wizard is opgegeven al is ingevuld (of als er geen opgave is).
@@ -60,7 +57,7 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
   //  2) zonder namen: autoWizardStatus.soort (financial/operational) alleen als er precies één nog
   //     onbevestigde lease is én er geen andere genoemde leaseobjecten zijn (anders is niet te weten welke de auto is).
   const onbevestigd = leaseSummary.filter((x) => !confirmedLeaseTypeKeys.includes(x.key));
-  const genoemd = [...(verwachteLease || []), ...(verwachteLeaseOverig || [])].map((i) => i?.naam).filter(Boolean);
+  const genoemd = [...(verwachteLease || []), ...(verwachteLeaseOverig || [])].flatMap(itemNamen);
   const naamMatch = (lease) => genoemd.some((naam) => leaseMatchtNaam(lease, naam));
   const genoemdeLease = onbevestigd.find(naamMatch);
   if (genoemdeLease) return { key: genoemdeLease.key, bevestig: "financieel", lease: genoemdeLease };

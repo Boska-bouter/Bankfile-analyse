@@ -183,7 +183,7 @@ export function useControlerenCardGroups(p) {
               onOpenWizard={openLeaseWizard}
               onAddManualLease={addManualLease}
               onRemoveManualLease={removeManualLease}
-              overigeLeaseNamen={(verwachteLeaseOverig || []).map((i) => i?.naam).filter(Boolean)}
+              overigeLeaseNamen={(verwachteLeaseOverig || []).flatMap((i) => [i?.naam, ...(i?.aliassen || [])]).filter(Boolean)}
               onMarkUnknown={markLeaseUnknown}
               onUnmarkUnknown={unmarkLeaseUnknown}
               onMergeInto={mergeLeaseInto}

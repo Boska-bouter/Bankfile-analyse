@@ -1,3 +1,4 @@
+import LeaseContractenVraag, { contractenVan, syncContracten } from "./LeaseContractenVraag.jsx";
 import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
@@ -362,21 +363,11 @@ function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [], dubbelT
         <ul className={`space-y-1 ${lijst.length > 4 ? "max-h-44 overflow-y-auto pr-1" : ""}`}>
           {lijst.map((naam, i) => (
             <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
-              <span className="truncate">{naam}{dubbelToegestaan && lijst.slice(0, i).filter((x) => x.toLowerCase() === naam.toLowerCase()).length > 0 ? ` — contract ${lijst.slice(0, i + 1).filter((x) => x.toLowerCase() === naam.toLowerCase()).length}` : ""}</span>
-              <span className="shrink-0 flex items-center gap-3">
-                {dubbelToegestaan && !vol && (
-                  <button type="button" onClick={() => onChange([...lijst.slice(0, i + 1), naam, ...lijst.slice(i + 1)])} className="text-xs text-teal-700 hover:text-teal-900 font-medium" title="Nog een contract (of auto) bij dezelfde leasemaatschappij">+ Nog een contract</button>
-                )}
-                <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
-              </span>
+              <span className="truncate">{naam}</span>
+              <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
             </li>
           ))}
         </ul>
-      )}
-      {dubbelToegestaan && lijst.length > 0 && (
-        <p className="text-[11px] text-slate-500">
-          Verschillende namen die bij hetzelfde contract horen (bijv. de leasemaatschappij én de incassonaam) tellen als <strong>één</strong> contract — de app voegt ze samen. Is er een tweede contract of auto bij dezelfde maatschappij? Gebruik <strong>+ Nog een contract</strong>.
-        </p>
       )}
       {!vol && (
         <div className="flex gap-2">
@@ -742,13 +733,15 @@ function Scherm34({
   const klaar =
     (!toonAuto || (autoKeuze != null && (autoKeuze !== "zaak" || t.autoSoort))) &&
     (!toonLeaseAuto || leaseAutoJa != null) &&
+    (!toonLeaseAuto || !leaseAutoJa || contractenVan(t.leaseLijst || [], t.leaseContracten ?? null) !== null) &&
     (!needs.leaseOverig || t.leaseOverigJa != null) &&
+    (!needs.leaseOverig || !t.leaseOverigJa || contractenVan(t.leaseOverigLijst || [], t.leaseOverigContracten ?? null) !== null) &&
     (!needs.lening || t.leningJa != null) &&
     (!needs.voorraad || t.voorraadJa != null);
   const alleNee = () => {
     const patch = {};
-    if (toonLeaseAuto) { patch.leaseAutoJa = false; patch.leaseLijst = []; }
-    if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigLijst = []; }
+    if (toonLeaseAuto) { patch.leaseAutoJa = false; patch.leaseLijst = []; patch.leaseContracten = null; }
+    if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigLijst = []; patch.leaseOverigContracten = null; }
     if (needs.lening) { patch.leningJa = false; patch.leningLijst = []; }
     if (needs.voorraad) patch.voorraadJa = false;
     if (toonAuto) { patch.autoKeuze = "geen"; patch.autoSoort = null; }
@@ -791,7 +784,7 @@ function Scherm34({
                       // Financial lease → de leaseauto-vraag hieronder staat meteen op "Ja".
                       if (o.key === "financial" && t.leaseAutoJa == null) {
                         patch.leaseAutoJa = true;
-                        patch.leaseLijst = jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto);
+                        patch.leaseLijst = jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto); patch.leaseContracten = null;
                       }
                       zet(patch);
                     }}
@@ -812,21 +805,23 @@ function Scherm34({
       {toonLeaseAuto && (
         <Sectie
           titel="Is er een leaseauto (financieel) in dit bedrijf?"
-          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's of contracten (ook bij dezelfde maatschappij, bijv. bedrijfsbus + privéauto)? Voeg de naam voor elk contract toe." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
+          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
         >
           <JaNee
             value={leaseAutoJa}
-            onChange={(v) => zet({ leaseAutoJa: v, leaseLijst: v ? jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto) : [] })}
+            onChange={(v) => zet({ leaseAutoJa: v, leaseLijst: v ? jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto) : [], leaseContracten: null })}
           >
-            <NaamLijst lijst={t.leaseLijst || []} onChange={(l) => zet({ leaseLijst: l })} placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)" suggesties={suggesties.leaseAuto || []} dubbelToegestaan />
+            <NaamLijst lijst={t.leaseLijst || []} onChange={(l) => zet({ leaseLijst: l, leaseContracten: syncContracten(t.leaseContracten, l) })} placeholder="Naam leasemaatschappij (bijv. Hiltermann Lease)" suggesties={suggesties.leaseAuto || []} />
+            <LeaseContractenVraag namen={t.leaseLijst || []} contracten={t.leaseContracten ?? null} onChange={(c) => zet({ leaseContracten: c })} soortTekst="auto" />
           </JaNee>
         </Sectie>
       )}
 
       {needs.leaseOverig && (
         <Sectie titel="Nog een ander financieel leaseobject (bijv. machine of apparatuur, geen auto)?">
-          <JaNee value={t.leaseOverigJa ?? null} onChange={(v) => zet({ leaseOverigJa: v, leaseOverigLijst: v ? t.leaseOverigLijst || [] : [] })}>
-            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" dubbelToegestaan />
+          <JaNee value={t.leaseOverigJa ?? null} onChange={(v) => zet({ leaseOverigJa: v, leaseOverigLijst: v ? t.leaseOverigLijst || [] : [], leaseOverigContracten: null })}>
+            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
+            <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
           </JaNee>
         </Sectie>
       )}
@@ -857,12 +852,12 @@ function Scherm34({
               onSeedAutoStatus(years, status);
             }
             if (needs.lease) {
-              const l = toonLeaseAuto && leaseAutoJa ? t.leaseLijst || [] : [];
-              setVerwachteLease(l.map((naam) => ({ naam, gevonden: false })));
+              const groepen = toonLeaseAuto && leaseAutoJa ? contractenVan(t.leaseLijst || [], t.leaseContracten ?? null) || [] : [];
+              setVerwachteLease(groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
             }
             if (needs.leaseOverig) {
-              const l = t.leaseOverigJa ? t.leaseOverigLijst || [] : [];
-              setVerwachteLeaseOverig(l.map((naam) => ({ naam, gevonden: false })));
+              const groepen = t.leaseOverigJa ? contractenVan(t.leaseOverigLijst || [], t.leaseOverigContracten ?? null) || [] : [];
+              setVerwachteLeaseOverig(groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
             }
             if (needs.lening) {
               const l = t.leningJa ? t.leningLijst || [] : [];

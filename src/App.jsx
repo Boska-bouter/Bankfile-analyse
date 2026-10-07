@@ -1149,30 +1149,35 @@ export default function App() {
   useEffect(() => {
     if (verwachteMatchSuggestie) return;
     const proberen = [];
-    (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, aliassen: item.aliassen, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
     // v275 — losse lijst voor overige leaseobjecten (machines, apparatuur), zie verwachteLeaseOverig
     // hierboven; eigen "type" (i.p.v. "lease") zodat de idx-gebaseerde verwachteAangeboden-sleutel
     // niet botst met die van verwachteLease.
-    (verwachteLeaseOverig || []).forEach((item, idx) => proberen.push({ type: "lease-overig", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    (verwachteLeaseOverig || []).forEach((item, idx) => proberen.push({ type: "lease-overig", idx, naam: item.naam, aliassen: item.aliassen, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
     (verwachteLening || []).forEach((item, idx) => proberen.push({ type: "lening", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Leningen" }));
     if (verwachteAOV?.status === "ja") {
       proberen.push({ type: "aov", idx: null, naam: verwachteAOV.naam, gevonden: verwachteAOV.gevonden, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" });
     }
-    for (const { type, idx, naam, gevonden, targetCategory } of proberen) {
+    for (const { type, idx, naam, aliassen, gevonden, targetCategory } of proberen) {
       if (!naam || gevonden) continue;
       const aangebodenKey = `${type}${idx ?? ""}`;
       if (verwachteAangeboden[aangebodenKey] === classified.length) continue;
       // V58 — ook een kort woord ("Pon") telt als zoekwoord (als heel woord), en een naam waarvan alle
       // transacties al op de doelcategorie staan ("Volkswagen Pon Financial Services" zat al via een
       // ander woord bij lease) geldt als gevonden i.p.v. voor altijd als "nog niet gevonden" open te blijven.
-      const naamTrim = String(naam).trim().toLowerCase();
-      const keyword = extractKeywordCandidate(naam) || (naamTrim.length >= 3 ? naamTrim : "");
-      if (!keyword) continue;
-      const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+      // Een contract kan meerdere namen hebben (aliassen): een transactie hoort erbij als één ervan past.
+      const zoek = [naam, ...(aliassen || [])].map((nm) => {
+        const naamTrim = String(nm).trim().toLowerCase();
+        const keyword = extractKeywordCandidate(nm) || (naamTrim.length >= 3 ? naamTrim : "");
+        if (!keyword) return null;
+        const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+        return { keyword, kortRe };
+      }).filter(Boolean);
+      if (zoek.length === 0) continue;
       const hits = classified.filter((t) => {
         if (t.isMirror) return false;
         const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-        return kortRe ? kortRe.test(text) : text.includes(keyword);
+        return zoek.some(({ keyword, kortRe }) => (kortRe ? kortRe.test(text) : text.includes(keyword)));
       });
       const matches = hits.filter((t) => t.category !== targetCategory);
       if (matches.length === 0 && hits.length > 0) {
