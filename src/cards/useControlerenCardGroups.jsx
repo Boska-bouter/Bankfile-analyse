@@ -33,7 +33,7 @@ export function useControlerenCardGroups(p) {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -180,6 +180,7 @@ export function useControlerenCardGroups(p) {
               confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
               onConfirmType={confirmLeaseType}
               onOpenModal={setLeaseDetailsModalKey}
+              onOpenWizard={openLeaseWizard}
               onMarkUnknown={markLeaseUnknown}
               onUnmarkUnknown={unmarkLeaseUnknown}
               onMergeInto={mergeLeaseInto}

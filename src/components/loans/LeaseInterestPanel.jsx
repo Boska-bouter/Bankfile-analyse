@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
+import { detecteerNieuwContract } from "./FinancialLeaseWizard.jsx";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
@@ -12,7 +13,7 @@ function computeFinancialLeaseAmortization(lease, details) {
 }
 
 export default function LeaseInterestPanel({
-  defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
+  defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
   onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
@@ -134,9 +135,19 @@ export default function LeaseInterestPanel({
                             </button>
                           ) : (
                             <>
-                              <button onClick={() => onOpenModal(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
+                              <button onClick={() => (onOpenWizard || onOpenModal)(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : segments.length > 0 ? "Verder invullen" : "Gegevens invullen"}
                               </button>
+                              {isCompleteFinancialLeaseDetails(details) && onOpenWizard && (
+                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                  + Nieuw contract
+                                </button>
+                              )}
+                              {onOpenWizard && (
+                                <button onClick={() => onOpenModal(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-600">
+                                  Alles op één scherm
+                                </button>
+                              )}
                               {!isCompleteFinancialLeaseDetails(details) && (
                                 <button onClick={() => onMarkUnknown(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                                   Gegevens onbekend
@@ -189,6 +200,15 @@ export default function LeaseInterestPanel({
                       </select>
                     </div>
                   )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
+                    const nieuw = detecteerNieuwContract(lease, details);
+                    return nieuw ? (
+                      <p className="mt-2 text-xs text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
+                        Sinds {nieuw.vanaf} {nieuw.aantal} betalingen buiten het ingevulde contract — lijkt een nieuw contract.
+                        <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Invullen</button>
+                      </p>
+                    ) : null;
+                  })()}
                   {typeConfirmed && isFinancieel && (
                     isOnbekend ? (
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>

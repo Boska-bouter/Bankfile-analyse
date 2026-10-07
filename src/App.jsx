@@ -107,6 +107,7 @@ import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.j
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
+import FinancialLeaseWizard from "./components/loans/FinancialLeaseWizard.jsx";
 import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetailsModal.jsx";
 import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModal.jsx";
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
@@ -122,7 +123,7 @@ import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/a
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
@@ -251,7 +252,10 @@ export default function App() {
   // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
   // (zie toggleCardExpand hieronder) — de rest blijft in fase 3 v1 gewoon "Bekijken" (springen).
   const [expandedCardKeys, setExpandedCardKeys] = useState({});
-  const toggleCardExpand = (key) => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleCardExpand = (key) => {
+    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
+    setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
@@ -261,6 +265,17 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
+  // Stappenscherm voor financial lease: { key, nieuw } of null. Zie openLeaseWizard / autoOpenLeaseWizard.
+  const [leaseWizard, setLeaseWizard] = useState(null);
+  const openLeaseWizard = (key, opts) => setLeaseWizard((prev) => (prev && prev.key === key && !opts?.nieuw ? prev : { key, nieuw: !!opts?.nieuw }));
+  // Wordt na de lease-berekening gevuld (zie hieronder): geeft de eerste financial lease waarvoor nog
+  // helemaal niets is ingevuld (en niet op "onbekend" staat), of null.
+  const leaseWizardKandidaatRef = useRef(() => null);
+  // Regel 1 & 2: automatisch alleen openen als er nog niets is ingevuld. Nooit bij bestaande gegevens.
+  const autoOpenLeaseWizard = () => {
+    const key = leaseWizardKandidaatRef.current();
+    if (key) setTimeout(() => openLeaseWizard(key), 150);
+  };
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
@@ -1503,9 +1518,18 @@ export default function App() {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
     setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
   } = useLoansAndLease({
-    classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
+    classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
   });
+  leaseWizardKandidaatRef.current = () => {
+    const l = leaseSummary.find((x) => {
+      if (x.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(x.key)) return false;
+      const d = leaseDetails[x.key];
+      if (d?.onbekend) return false;
+      return !getLeaseSegments(d).some((s) => s && (s.koopprijs || s.looptijd || s.maandbedrag || s.startdatum));
+    });
+    return l ? l.key : null;
+  };
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
@@ -2192,6 +2216,7 @@ export default function App() {
   // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
   const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
+    if (ref === leasesSectionRef) autoOpenLeaseWizard();
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
     // daarvoor benodigde stand, is de sectie op dit moment niet gemount — eerst de kaart in de juiste
@@ -2406,7 +2431,7 @@ export default function App() {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -3485,6 +3510,20 @@ export default function App() {
           details={loanDetails[loanDetailsModalKey]}
           onSave={setLoanDetailField}
           onClose={() => setLoanDetailsModalKey(null)}
+        />
+      )}
+
+      {leaseWizard && leaseSummary.find((l) => l.key === leaseWizard.key) && (
+        <FinancialLeaseWizard
+          key={leaseWizard.key + (leaseWizard.nieuw ? "-nieuw" : "")}
+          lease={leaseSummary.find((l) => l.key === leaseWizard.key)}
+          details={leaseDetails[leaseWizard.key]}
+          typeConfirmed={confirmedLeaseTypeKeys.includes(leaseWizard.key)}
+          onConfirmType={confirmLeaseType}
+          onSave={setLeaseDetailField}
+          onClose={() => setLeaseWizard(null)}
+          onOpenAdvanced={setLeaseDetailsModalKey}
+          nieuwContract={leaseWizard.nieuw}
         />
       )}
 

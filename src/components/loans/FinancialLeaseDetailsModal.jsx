@@ -27,7 +27,7 @@ const FIELDS_LEASE = [
 
 // Vult een opgeslagen (of nog lege) contractsegment aan tot het volledige formuliershape — zelfde
 // velden als voorheen op het topniveau van leaseDetails, nu per segment.
-function formFromSegment(segment) {
+export function formFromSegment(segment) {
   const s = segment || {};
   return {
     koopprijs: s.koopprijs ?? "",
@@ -93,7 +93,7 @@ function formFromSegment(segment) {
 // contract alvast overgenomen. Dit is puur een startpunt: net als de startdatum-suggestie hierboven
 // blijft dit veld gewoon aanpasbaar (of leeg te maken) als het vervolgcontract toch een ander
 // bedrijfsmiddel betreft.
-function blankVervolgContract(vorigeSegment) {
+export function blankVervolgContract(vorigeSegment) {
   const form = formFromSegment(null);
   if (vorigeSegment?.einddatumContract) {
     const d = new Date(vorigeSegment.einddatumContract);
@@ -106,7 +106,7 @@ function blankVervolgContract(vorigeSegment) {
   return form;
 }
 
-function cleanSegment(form) {
+export function cleanSegment(form) {
   const n = (v) => (v === "" ? null : Number(v));
   return {
     koopprijs: n(form.koopprijs), teBetalenBtw: n(form.teBetalenBtw), aanbetaling: n(form.aanbetaling),

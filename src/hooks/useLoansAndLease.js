@@ -66,7 +66,7 @@ function applyLeaseMerges(leaseSummary, leaseMergedInto) {
 // van de rest van de app — de ruwe state (loanDetails/leaseDetails/...) en de persistence
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
 export function useLoansAndLease({
-  classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
+  classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
   snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {},
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
@@ -145,7 +145,7 @@ export function useLoansAndLease({
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: "Zakelijk" }, tx.counterpartyIban);
     }
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
-    if (type === "financieel") setLeaseDetailsModalKey(lease.key);
+    if (type === "financieel") (openLeaseWizard || setLeaseDetailsModalKey)(lease.key);
   };
   // Voegt twee lease-groepen samen die eigenlijk hetzelfde contract blijken te zijn (bijv.
   // verschillende tegenpartijnaam voor de eerste afschrijving vs. de maandelijkse termijnen).
