@@ -17,6 +17,8 @@ export default function LeaseInterestPanel({
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
+  // Per samengevoegde lease: zijn de bijbehorende benamingen uitgeklapt? (standaard dicht)
+  const [toonBenamingen, setToonBenamingen] = useState({});
   if (leaseSummary.length === 0) return null;
 
   const incompleteCount = leaseSummary.filter((l) => {
@@ -45,26 +47,6 @@ export default function LeaseInterestPanel({
             <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
-          {onUndoMerge && leaseMerges?.length > 0 && (
-            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 mb-3 text-xs text-slate-600 space-y-1.5">
-              <p className="font-semibold text-slate-700">Samengevoegde leases</p>
-              {leaseMerges.map((m) => (
-                <div key={m.sourceKey} className="flex items-center justify-between gap-2 flex-wrap">
-                  <span>"{m.sourceName}" is samengevoegd met "{m.targetName}"</span>
-                  <button
-                    onClick={() => onUndoMerge(m.sourceKey)}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Loskoppelen
-                  </button>
-                </div>
-              ))}
-              <p className="text-slate-400">
-                Loskoppelen zet de samengevoegde lease weer terug als losse, eigen lease in de lijst hieronder —
-                eventueel al ingevulde leasegegevens bij de doel-lease blijven daarbij ongewijzigd staan.
-              </p>
-            </div>
-          )}
           {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
             <div key={group.map((l) => l.key).join("+")} className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-3 text-xs text-blue-900">
               <p>
@@ -97,6 +79,8 @@ export default function LeaseInterestPanel({
               // altijd, dat is juist de bedoeling en geen signaal dat de hele lease voorbij is.
               const segments = isFinancieel ? getLeaseSegments(details) : [];
               const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
+              // Samengevoegde benamingen van déze lease (bron → doel = deze lease).
+              const benamingen = (leaseMerges || []).filter((m) => m.targetKey === lease.key);
               return (
                 <div key={lease.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
@@ -106,6 +90,16 @@ export default function LeaseInterestPanel({
                     )}
                     {segments.length > 1 && (
                       <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{segments.length} contracten</span>
+                    )}
+                    {benamingen.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setToonBenamingen((v) => ({ ...v, [lease.key]: !v[lease.key] }))}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-medium hover:bg-slate-200"
+                        title="Deze lease bestaat uit meerdere tegenpartij-benamingen die samen één contract vormen"
+                      >
+                        {benamingen.length + 1} benamingen {toonBenamingen[lease.key] ? "▴" : "▾"}
+                      </button>
                     )}
                     <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     {!typeConfirmed ? (
@@ -154,6 +148,29 @@ export default function LeaseInterestPanel({
                       </>
                     )}
                   </div>
+                  {onUndoMerge && benamingen.length > 0 && toonBenamingen[lease.key] && (
+                    <div className="mt-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-600 space-y-1.5">
+                      <p className="font-semibold text-slate-700">Samengevoegde benamingen</p>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span>"{benamingen[0].targetName}" <span className="text-slate-400">(hoofdnaam)</span></span>
+                      </div>
+                      {benamingen.map((m) => (
+                        <div key={m.sourceKey} className="flex items-center justify-between gap-2 flex-wrap">
+                          <span>"{m.sourceName}"</span>
+                          <button
+                            onClick={() => onUndoMerge(m.sourceKey)}
+                            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                          >
+                            Loskoppelen
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-slate-400">
+                        Loskoppelen zet een benaming weer terug als losse, eigen lease in de lijst — eventueel al
+                        ingevulde leasegegevens bij de hoofdnaam blijven ongewijzigd.
+                      </p>
+                    </div>
+                  )}
                   {onMergeInto && leaseSummary.length > 1 && (
                     <div className="mt-2 flex items-center gap-2">
                       <label className="text-xs text-slate-400">Is dit eigenlijk hetzelfde contract als een andere lease hierboven?</label>
