@@ -43,7 +43,7 @@ export function useTodoItems({
     // open punt voor altijd hangen, met een "Ga erheen"-knop die nergens heen kan gaan als er
     // (door de verkeerde naam) sowieso geen lease/lening in de transacties herkend is.
     (verwachteLease || []).forEach((item, idx) => {
-      if (!item.gevonden) {
+      if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lease-${idx}`,
           text: `Je gaf aan dat er een leaseauto is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
@@ -55,7 +55,7 @@ export function useTodoItems({
       }
     });
     (verwachteLeaseOverig || []).forEach((item, idx) => {
-      if (!item.gevonden) {
+      if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lease-overig-${idx}`,
           text: `Je gaf aan dat er een ander leaseobject is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
@@ -67,7 +67,7 @@ export function useTodoItems({
       }
     });
     (verwachteLening || []).forEach((item, idx) => {
-      if (!item.gevonden) {
+      if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lening-${idx}`,
           text: `Je gaf aan dat er een zakelijke lening is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
