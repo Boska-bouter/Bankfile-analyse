@@ -58,9 +58,15 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
   //     onbevestigde lease is én er geen andere genoemde leaseobjecten zijn (anders is niet te weten welke de auto is).
   const onbevestigd = leaseSummary.filter((x) => !confirmedLeaseTypeKeys.includes(x.key));
   const genoemd = [...(verwachteLease || []), ...(verwachteLeaseOverig || [])].flatMap(itemNamen);
-  const naamMatch = (lease) => genoemd.some((naam) => leaseMatchtNaam(lease, naam));
-  const genoemdeLease = onbevestigd.find(naamMatch);
+  // Leaseauto-namen (uit de vraag "leaseauto (financieel)") = financieel: direct bevestigen.
+  const autoNamen = (verwachteLease || []).flatMap(itemNamen);
+  const genoemdeLease = onbevestigd.find((lease) => autoNamen.some((naam) => leaseMatchtNaam(lease, naam)));
   if (genoemdeLease) return { key: genoemdeLease.key, bevestig: "financieel", lease: genoemdeLease };
+  // Machines / andere middelen: in de nieuw-dossier-wizard is (net als bij de auto) gekozen voor financial lease
+  // voordat er namen gevraagd worden, dus ook die namen gelden als bevestiging "financieel".
+  const overigNamen = (verwachteLeaseOverig || []).flatMap(itemNamen);
+  const genoemdeOverig = onbevestigd.find((lease) => overigNamen.some((naam) => leaseMatchtNaam(lease, naam)));
+  if (genoemdeOverig) return { key: genoemdeOverig.key, bevestig: "financieel", lease: genoemdeOverig };
   const soortAuto = autoWizardStatus?.soort;
   if ((soortAuto === "financial" || soortAuto === "operational") && onbevestigd.length === 1 && genoemd.length === 0) {
     return { key: onbevestigd[0].key, bevestig: soortAuto === "financial" ? "financieel" : "operationeel", lease: onbevestigd[0] };

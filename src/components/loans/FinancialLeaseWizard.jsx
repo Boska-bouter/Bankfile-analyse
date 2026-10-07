@@ -191,7 +191,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
           <div className="p-5 space-y-3">
             <p className="text-sm text-slate-700">Is dit een <strong>financial lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operational lease</strong> (de hele termijn is aftrekbaar)?</p>
             <div className="flex gap-2">
-              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); }}>Operational — klaar, geen gegevens nodig</button>
+              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operational — klaar, geen gegevens nodig</button>
               <button className={`${KNOP} ${KNOP_AAN}`} onClick={() => { onConfirmType(lease, "financieel"); setTypeGekozen(true); }}>Financial — gegevens invullen</button>
             </div>
           </div>

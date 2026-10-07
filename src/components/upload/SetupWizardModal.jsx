@@ -741,7 +741,7 @@ function Scherm34({
   const alleNee = () => {
     const patch = {};
     if (toonLeaseAuto) { patch.leaseAutoJa = false; patch.leaseLijst = []; patch.leaseContracten = null; }
-    if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigLijst = []; patch.leaseOverigContracten = null; }
+    if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigSoort = "geen"; patch.leaseOverigLijst = []; patch.leaseOverigContracten = null; }
     if (needs.lening) { patch.leningJa = false; patch.leningLijst = []; }
     if (needs.voorraad) patch.voorraadJa = false;
     if (toonAuto) { patch.autoKeuze = "geen"; patch.autoSoort = null; }
@@ -818,11 +818,35 @@ function Scherm34({
       )}
 
       {needs.leaseOverig && (
-        <Sectie titel="Nog een ander financieel leaseobject (bijv. machine of apparatuur, geen auto)?">
-          <JaNee value={t.leaseOverigJa ?? null} onChange={(v) => zet({ leaseOverigJa: v, leaseOverigLijst: v ? t.leaseOverigLijst || [] : [], leaseOverigContracten: null })}>
-            <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
-            <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
-          </JaNee>
+        <Sectie titel="Zijn er machines of andere bedrijfsmiddelen (geen auto) in lease?" uitleg="Zelfde vraag als bij de auto: operational lease (hele termijn aftrekbaar, verder niets nodig) of financial lease (rente aftrekbaar, object wordt afgeschreven)?">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "geen", label: "Nee" },
+              { key: "operational", label: "Operational lease" },
+              { key: "financial", label: "Financial lease" },
+            ].map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => zet({
+                  leaseOverigSoort: o.key,
+                  leaseOverigJa: o.key === "financial",
+                  leaseOverigLijst: o.key === "financial" ? t.leaseOverigLijst || [] : [],
+                  leaseOverigContracten: o.key === "financial" ? t.leaseOverigContracten ?? null : null,
+                })}
+                className={`${KNOP} ${(t.leaseOverigSoort ?? (t.leaseOverigJa === false ? "geen" : t.leaseOverigJa ? "financial" : null)) === o.key ? KNOP_AAN : KNOP_UIT}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {t.leaseOverigJa && (
+            <div className="pt-2 space-y-2">
+              <p className="text-xs text-slate-600">Je gaf aan dat het financial lease is — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen.</p>
+              <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
+              <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
+            </div>
+          )}
         </Sectie>
       )}
 
