@@ -1,3 +1,4 @@
+import { getLeaseSegments } from "../tax/financialLease.js";
 // Dossierprofiel: een compacte, leesbare samenvatting van wat het dossier "weet" uit de wizard en
 // de instellingen — zodat de gebruiker in één oogopslag kan nagaan of het klopt. Puur lezen: er
 // wordt niets gewijzigd of berekend dat de cijfers raakt.
@@ -24,7 +25,7 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening,
+    zakelijkeSpaarRekening, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
   } = p;
   const isBV = rechtsvorm === "bv";
   const blokken = [];
@@ -72,8 +73,12 @@ export function bouwDossierProfiel(p) {
   else if (autoWizardStatus?.status === "geen") auto.push("Geen auto");
   else auto.push("Auto: nog niet opgegeven");
   const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
-  if (lease.length) auto.push(`Financial lease: ${lease.join(", ")}`);
-  if (leaseO.length) auto.push(`Overige lease: ${leaseO.join(", ")}`);
+  // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
+  const leaseSoorten = [];
+  if (lease.length || autoWizardStatus?.soort === "financial") leaseSoorten.push("financiële autolease");
+  if (leaseO.length) leaseSoorten.push("financiële machinelease");
+  if (leaseSoorten.length) auto.push(`Lease: ${leaseSoorten.join(" en ")}`);
+  else if (leaseSummary.length) auto.push(`Lease in bankdata: ${leaseSummary.length}`);
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
   blokken.push({ titel: "Auto, lease en lening", regels: auto });

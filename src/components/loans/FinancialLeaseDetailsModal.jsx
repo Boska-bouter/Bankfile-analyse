@@ -27,7 +27,7 @@ const FIELDS_LEASE = [
 
 // Vult een opgeslagen (of nog lege) contractsegment aan tot het volledige formuliershape — zelfde
 // velden als voorheen op het topniveau van leaseDetails, nu per segment.
-function formFromSegment(segment) {
+export function formFromSegment(segment) {
   const s = segment || {};
   return {
     koopprijs: s.koopprijs ?? "",
@@ -58,6 +58,7 @@ function formFromSegment(segment) {
     // tax/autoBijtelling.js) — allemaal optioneel en standaard leeg, zodat een bestaand contract
     // (zonder deze velden) exact hetzelfde blijft rekenen als voorheen.
     soort: s.soort ?? "",
+    naAfloop: s.naAfloop ?? "", // "blijft" = na afloop blijft het object in het bedrijf (afschrijving loopt door)
     afschrijvingstermijnJaren: s.afschrijvingstermijnJaren ?? "",
     // v295 — restwaarde: tot nu toe ontbrak dit veld hier (in tegenstelling tot een los activum in
     // ActivaDetailsModal.jsx, die dit al wel had) — buildLeaseActivumFromSegment in autoBijtelling.js
@@ -93,7 +94,7 @@ function formFromSegment(segment) {
 // contract alvast overgenomen. Dit is puur een startpunt: net als de startdatum-suggestie hierboven
 // blijft dit veld gewoon aanpasbaar (of leeg te maken) als het vervolgcontract toch een ander
 // bedrijfsmiddel betreft.
-function blankVervolgContract(vorigeSegment) {
+export function blankVervolgContract(vorigeSegment) {
   const form = formFromSegment(null);
   if (vorigeSegment?.einddatumContract) {
     const d = new Date(vorigeSegment.einddatumContract);
@@ -106,7 +107,7 @@ function blankVervolgContract(vorigeSegment) {
   return form;
 }
 
-function cleanSegment(form) {
+export function cleanSegment(form) {
   const n = (v) => (v === "" ? null : Number(v));
   return {
     koopprijs: n(form.koopprijs), teBetalenBtw: n(form.teBetalenBtw), aanbetaling: n(form.aanbetaling),
@@ -120,6 +121,7 @@ function cleanSegment(form) {
     handmatigBetaaldTotEnMet: form.handmatigBetaaldTotEnMet || null,
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
     soort: form.soort || null,
+    naAfloop: form.naAfloop || null,
     afschrijvingstermijnJaren: form.soort ? n(form.afschrijvingstermijnJaren) : null,
     restwaarde: form.soort ? n(form.restwaarde) : null,
     cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
@@ -340,12 +342,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   // Welke jaren zijn relevant om de privégebruik-toggle voor te tonen: alle jaren waarin er
   // daadwerkelijk banktransacties voor dit contract zijn, plus het huidige kalenderjaar en het
   // startjaar van het contract (ook als daar nog geen transacties over zijn geïmporteerd).
-  const jarenVoorPrivegebruik = useMemo(() => {
-    const jarenSet = new Set(segmentTransactions.map((tx) => tx.date.getFullYear()));
-    jarenSet.add(new Date().getFullYear());
-    if (form.startdatum) jarenSet.add(new Date(form.startdatum).getFullYear());
-    return [...jarenSet].sort((a, b) => a - b);
-  }, [segmentTransactions, form.startdatum]);
+  const jarenVoorPrivegebruik = useMemo(() => jarenVoorPrivegebruikVan(form, segmentTransactions, !kentekenGroupSegments || kentekenGroupSegments[kentekenGroupSegments.length - 1] === form), [kentekenGroupSegments, segmentTransactions, form.startdatum, form.looptijd, form.contractBeeindigd, form.einddatumContract, form.soort, form.afschrijvingstermijnJaren]);
 
   // "Extra bedrag 1e termijn" (bijv. eenmalige administratiekosten) zit al in totaleLeaseBetalingen
   // (dat telt alle daadwerkelijke betalingen op, incl. deze extra), maar zat tot nu toe niet aan de
@@ -548,7 +545,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             <span className="block text-xs font-medium text-slate-600 mb-1">Soort</span>
             <select
               value={form.soort || ""}
-              onChange={(e) => onChange({ ...form, soort: e.target.value })}
+              onChange={(e) => onChange({ ...form, soort: e.target.value, afschrijvingstermijnJaren: e.target.value && form.afschrijvingstermijnJaren === "" && !matchedPreceding ? String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN) : form.afschrijvingstermijnJaren })}
               className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
             >
               <option value="">Niet ingevuld (geen kapitalisatie)</option>
@@ -556,7 +553,15 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               <option value="machine">Machine/overig</option>
             </select>
           </label>
-          {form.soort && (
+          {form.soort && matchedPreceding && (
+            <div className="text-sm">
+              <span className="block text-xs font-medium text-slate-600 mb-1">Afschrijvingstermijn</span>
+              <p className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-600">
+                Loopt door vanaf het eerste contract van deze auto: {restantTekst(restantAfschrijving(matchedPreceding, form.startdatum))}. Dit contract heeft geen eigen termijn.
+              </p>
+            </div>
+          )}
+          {form.soort && !matchedPreceding && (
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">
                 Afschrijvingstermijn (jaren) — minimaal {MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN} (fiscale 20%-cap)
@@ -566,6 +571,9 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 placeholder={String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)}
                 className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
               />
+              <span className="block text-[11px] text-slate-400 mt-0.5">
+                = {(100 / Math.max(Number(form.afschrijvingstermijnJaren) || 0, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)).toFixed(2).replace(".", ",")}% per jaar van het af te schrijven bedrag. Langer afschrijven kan; het percentage gaat dan evenredig omlaag (6 jaar = 16,67%).
+              </span>
             </label>
           )}
           {form.soort && (
@@ -721,23 +729,12 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         {form.soort === "auto" && jarenVoorPrivegebruik.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-medium text-slate-600 mb-1">Privégebruik meer dan 500 km per jaar?</p>
-            <div className="flex flex-wrap gap-3">
-              {jarenVoorPrivegebruik.map((jaar) => (
-                <label key={jaar} className="flex items-center gap-1.5 text-xs text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={!!form.privegebruikMeerDan500kmPerJaar?.[jaar]}
-                    onChange={(e) =>
-                      onChange({
-                        ...form,
-                        privegebruikMeerDan500kmPerJaar: { ...(form.privegebruikMeerDan500kmPerJaar || {}), [jaar]: e.target.checked },
-                      })
-                    }
-                  />
-                  {jaar}
-                </label>
-              ))}
-            </div>
+            <PrivegebruikJaren
+              form={form}
+              jaren={jarenVoorPrivegebruik}
+              anderen={(kentekenGroupSegments || []).filter((sg) => sg !== form)}
+              onChange={(map) => onChange({ ...form, privegebruikMeerDan500kmPerJaar: map })}
+            />
             <p className="text-xs text-slate-400 mt-1">
               Alleen bij meer dan 500 km privégebruik per jaar geldt de bijtelling/onttrekking (afgetopt op de
               werkelijke totale autokosten) — anders blijven de volledige autokosten gewoon aftrekbaar.
@@ -895,6 +892,11 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         );
       })()}
 
+      {!canAddNext && !form.contractBeeindigd ? (
+        <div className="border-t border-slate-200 pt-3">
+          <p className="text-xs text-slate-500">Dit contract is opgevolgd door een vervolgcontract. Beëindigen of verlengen stel je in bij het laatste contract.</p>
+        </div>
+      ) : (
       <div className="border-t border-slate-200 pt-3">
         <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
           <input type="checkbox" checked={form.contractBeeindigd} onChange={setChecked("contractBeeindigd")} />
@@ -1007,6 +1009,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </div>
         )}
       </div>
+      )}
 
       {!amortization && renteJaarlijks == null && onbetaaldGedeelteKoop > 0 && Number(form.looptijd) > 0 && Number(form.maandbedrag) > 0 ? (
         <p className="text-xs text-slate-400">
@@ -1025,7 +1028,73 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   );
 }
 
-export default function FinancialLeaseDetailsModal({ lease, details, onSave, onClose }) {
+
+// Afschrijvingsvenster van een auto die over meerdere contracten loopt (zelfde kenteken): de afschrijving
+// is één doorlopende tijdlijn vanaf de start van het EERSTE contract, max. termijn (minimaal 5 jaar,
+// fiscale 20%-cap). Een vervolgcontract krijgt daarvan alleen het resterende stuk.
+export function restantAfschrijving(eerste, startVervolg) {
+  if (!eerste?.startdatum || !startVervolg) return null;
+  const termijn = Math.max(Number(eerste.afschrijvingstermijnJaren) || 0, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN);
+  const einde = new Date(eerste.startdatum); einde.setFullYear(einde.getFullYear() + termijn);
+  const start = new Date(startVervolg);
+  const maanden = Math.max(0, (einde.getFullYear() - start.getFullYear()) * 12 + (einde.getMonth() - start.getMonth()));
+  return { termijn, einde, maanden };
+}
+export function restantTekst(r) {
+  if (!r) return "";
+  const jaren = Math.floor(r.maanden / 12), mnd = r.maanden % 12;
+  const stuk = r.maanden === 0 ? "geen afschrijving meer over" : `nog ${[jaren ? `${jaren} jaar` : null, mnd ? `${mnd} mnd` : null].filter(Boolean).join(" en ")} over`;
+  return `${stuk} (totaal max. ${r.termijn} jaar vanaf het eerste contract, tot ${r.einde.toLocaleDateString("nl-NL", { month: "2-digit", year: "numeric" })})`;
+}
+
+// Jaren waarvoor het privégebruik-vinkje getoond wordt: jaren met banktransacties, het huidige jaar en
+// ELK jaar van start tot einde van het contract (anders ontbreekt bijv. 2025 bij een contract dat in
+// 2024 afloopt maar pas begin 2025 eindigt, of een jaar zonder betalingen in het dossier).
+export function jarenVoorPrivegebruikVan(form, transacties = [], laatsteVanAuto = true) {
+  const set = new Set((transacties || []).map((tx) => tx.date.getFullYear()));
+  if (laatsteVanAuto) set.add(new Date().getFullYear());
+  if (form.startdatum) {
+    const start = new Date(form.startdatum);
+    let eind = null;
+    if (form.contractBeeindigd && form.einddatumContract) eind = new Date(form.einddatumContract);
+    else if (Number(form.looptijd) > 0) { eind = new Date(form.startdatum); eind.setMonth(eind.getMonth() + Number(form.looptijd)); }
+    const sj = start.getFullYear();
+    const contractEindJaar = eind && !isNaN(eind) ? eind.getFullYear() : sj;
+    let ej = contractEindJaar;
+    // Auto: ook de jaren waarin nog wordt afgeschreven (minimaal 5 jaar vanaf start) — de auto wordt ook
+    // nog gebruikt (en dus bijgeteld) nadat dit contract is afgelopen, bijv. bij een vervolgcontract.
+    if (laatsteVanAuto && form.soort === "auto" && !(form.contractBeeindigd && form.einddatumContract)) {
+      ej = Math.max(ej, sj + Math.max(Number(form.afschrijvingstermijnJaren) || 0, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN));
+      ej = Math.min(ej, Math.max(new Date().getFullYear(), contractEindJaar)); // geen toekomstige jaren
+    }
+    for (let j = sj; j <= Math.min(Math.max(ej, sj), sj + 15); j++) set.add(j);
+  }
+  return [...set].filter((j) => !isNaN(j)).sort((a, b) => a - b);
+}
+
+// Vinkjes "privégebruik > 500 km" per jaar. Dezelfde auto (zelfde kenteken) in meerdere contracten:
+// het vinkje geldt voor de hele auto (zie computeLeaseAutoKostenVoorJaar) — staat het jaar al aangevinkt
+// bij een ander contract van die auto, dan tonen we het hier als aangevinkt (en vergrendeld).
+export function PrivegebruikJaren({ form, jaren, anderen = [], onChange }) {
+  const eigen = form.privegebruikMeerDan500kmPerJaar || {};
+  return (
+    <div className="flex flex-wrap gap-3">
+      {jaren.map((jaar) => {
+        const ander = anderen.findIndex((a) => !!a.privegebruikMeerDan500kmPerJaar?.[jaar]);
+        const vanAnder = ander >= 0 && !eigen[jaar];
+        return (
+          <label key={jaar} className="flex items-center gap-1.5 text-xs text-slate-700" title={vanAnder ? "Al aangevinkt bij een ander contract van dezelfde auto — geldt voor de hele auto" : undefined}>
+            <input type="checkbox" checked={!!eigen[jaar] || vanAnder} disabled={vanAnder}
+              onChange={(e) => onChange({ ...eigen, [jaar]: e.target.checked })} />
+            {jaar}{vanAnder ? <span className="text-slate-400">(ander contract)</span> : null}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function FinancialLeaseDetailsModal({ lease, details, onSave, onClose, onOpenWizard }) {
   const [contracts, setContracts] = useState(() => getLeaseSegments(details).map(formFromSegment));
 
   const segmentsWithTx = useMemo(
@@ -1090,7 +1159,12 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
           ))}
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
-          <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
+          <div className="flex items-center gap-3">
+            {onOpenWizard && (
+              <button onClick={() => { const c = contracts.map(cleanSegment); onSave(lease.key, c.length === 1 ? c[0] : { contracts: c }); onClose(); onOpenWizard(lease.key); }} className="rounded-lg border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-800 hover:bg-teal-50">← Terug naar stappen</button>
+            )}
+            <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
+          </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
             <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>

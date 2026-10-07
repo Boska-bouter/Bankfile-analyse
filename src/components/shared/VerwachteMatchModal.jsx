@@ -4,13 +4,14 @@ import ExpandableDescription from "./ExpandableDescription.jsx";
 
 const LABELS = {
   lease: { titel: "Leaseauto gevonden?", werkwoord: "financiële lease" },
+  "lease-overig": { titel: "Lease machine/ander middel gevonden?", werkwoord: "financiële lease van een machine of ander bedrijfsmiddel" },
   lening: { titel: "Lening gevonden?", werkwoord: "lening" },
   aov: { titel: "AOV gevonden?", werkwoord: "AOV" },
 };
 
 export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) {
   const { type, naam, matches } = suggestie;
-  const label = LABELS[type];
+  const label = LABELS[type] || { titel: "Gevonden?", werkwoord: "post" };
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-3" onClick={onDismiss}>

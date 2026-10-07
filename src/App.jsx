@@ -107,6 +107,7 @@ import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.j
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
+import { useLeaseWizardOpening } from "./hooks/useLeaseWizardOpening.jsx";
 import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetailsModal.jsx";
 import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModal.jsx";
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
@@ -122,7 +123,7 @@ import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/a
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
@@ -251,7 +252,11 @@ export default function App() {
   // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
   // (zie toggleCardExpand hieronder) — de rest blijft in fase 3 v1 gewoon "Bekijken" (springen).
   const [expandedCardKeys, setExpandedCardKeys] = useState({});
-  const toggleCardExpand = (key) => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
+  const toggleCardExpand = (key) => {
+    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
+    setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
   const [periodeQuarterOverrides, setPeriodeQuarterOverrides] = useState({});
@@ -261,6 +266,7 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
+  const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard } = useLeaseWizardOpening();
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
@@ -349,7 +355,11 @@ export default function App() {
   const [changesSinceExport, setChangesSinceExport] = useState(0);
   const [lastExportAt, setLastExportAt] = useState(null);
   const suppressChangeCountUntilRef = useRef(0);
+  // Aantal niet-geëxporteerde wijzigingen dat uit de browseropslag is hersteld (bijv. nadat iOS de app
+  // uit het geheugen haalde). Binnen het "laadvenster" blijft de teller op deze waarde i.p.v. op 0.
+  const restoredChangesRef = useRef(0);
   const suppressChangeCount = () => {
+    restoredChangesRef.current = 0;
     // Laden/leegmaken/hervatten verandert veel state tegelijk — dat is geen "wijziging" van de
     // gebruiker. Een tijdvenster (i.p.v. een vlag) zodat het niet blijft hangen als er toevallig
     // niets daadwerkelijk verandert (bijv. hetzelfde dossierbestand twee keer laden).
@@ -754,6 +764,7 @@ export default function App() {
 
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
+  const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const pendingProjectRef = useRef(null);
   useEffect(() => {
     (async () => {
@@ -780,6 +791,11 @@ export default function App() {
     if (pending) {
       setParsedFiles(pending.parsedFiles);
       if (pending.settings) applySettingsToState(pending.settings);
+      // Niet-geëxporteerde wijzigingen blijven onthouden over een herstart heen.
+      const n = Number(pending.settings?.changesSinceExport) || 0;
+      restoredChangesRef.current = n;
+      setChangesSinceExport(n);
+      if (pending.settings?.lastExportAtMs) setLastExportAt(new Date(pending.settings.lastExportAtMs));
     }
     setShowStartupChoice(false);
     setLoaded(true);
@@ -815,6 +831,7 @@ export default function App() {
         ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
+        changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
       if (ok1 && ok2) setLastSavedAt(new Date());
@@ -828,6 +845,7 @@ export default function App() {
     ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
+    changesSinceExport, lastExportAt,
     loaded,
   ]);
 
@@ -839,7 +857,7 @@ export default function App() {
     // keer gesloten: na het laden kunnen er nog meer afgeleide waarden bijkomen (een tweede render), en die
     // gaven anders een schijnbare "1 wijziging" bij een dossier waar je nog niets aan had gedaan.
     if (Date.now() < suppressChangeCountUntilRef.current) {
-      setChangesSinceExport(0);
+      setChangesSinceExport(restoredChangesRef.current);
       return;
     }
     setChangesSinceExport((n) => n + 1);
@@ -1132,30 +1150,35 @@ export default function App() {
   useEffect(() => {
     if (verwachteMatchSuggestie) return;
     const proberen = [];
-    (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    (verwachteLease || []).forEach((item, idx) => proberen.push({ type: "lease", idx, naam: item.naam, aliassen: item.aliassen, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
     // v275 — losse lijst voor overige leaseobjecten (machines, apparatuur), zie verwachteLeaseOverig
     // hierboven; eigen "type" (i.p.v. "lease") zodat de idx-gebaseerde verwachteAangeboden-sleutel
     // niet botst met die van verwachteLease.
-    (verwachteLeaseOverig || []).forEach((item, idx) => proberen.push({ type: "lease-overig", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
+    (verwachteLeaseOverig || []).forEach((item, idx) => proberen.push({ type: "lease-overig", idx, naam: item.naam, aliassen: item.aliassen, gevonden: item.gevonden, targetCategory: "Lease (financieel)" }));
     (verwachteLening || []).forEach((item, idx) => proberen.push({ type: "lening", idx, naam: item.naam, gevonden: item.gevonden, targetCategory: "Leningen" }));
     if (verwachteAOV?.status === "ja") {
       proberen.push({ type: "aov", idx: null, naam: verwachteAOV.naam, gevonden: verwachteAOV.gevonden, targetCategory: "AOV (arbeidsongeschiktheidsverzekering)" });
     }
-    for (const { type, idx, naam, gevonden, targetCategory } of proberen) {
+    for (const { type, idx, naam, aliassen, gevonden, targetCategory } of proberen) {
       if (!naam || gevonden) continue;
       const aangebodenKey = `${type}${idx ?? ""}`;
       if (verwachteAangeboden[aangebodenKey] === classified.length) continue;
       // V58 — ook een kort woord ("Pon") telt als zoekwoord (als heel woord), en een naam waarvan alle
       // transacties al op de doelcategorie staan ("Volkswagen Pon Financial Services" zat al via een
       // ander woord bij lease) geldt als gevonden i.p.v. voor altijd als "nog niet gevonden" open te blijven.
-      const naamTrim = String(naam).trim().toLowerCase();
-      const keyword = extractKeywordCandidate(naam) || (naamTrim.length >= 3 ? naamTrim : "");
-      if (!keyword) continue;
-      const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+      // Een contract kan meerdere namen hebben (aliassen): een transactie hoort erbij als één ervan past.
+      const zoek = [naam, ...(aliassen || [])].map((nm) => {
+        const naamTrim = String(nm).trim().toLowerCase();
+        const keyword = extractKeywordCandidate(nm) || (naamTrim.length >= 3 ? naamTrim : "");
+        if (!keyword) return null;
+        const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
+        return { keyword, kortRe };
+      }).filter(Boolean);
+      if (zoek.length === 0) continue;
       const hits = classified.filter((t) => {
         if (t.isMirror) return false;
         const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-        return kortRe ? kortRe.test(text) : text.includes(keyword);
+        return zoek.some(({ keyword, kortRe }) => (kortRe ? kortRe.test(text) : text.includes(keyword)));
       });
       const matches = hits.filter((t) => t.category !== targetCategory);
       if (matches.length === 0 && hits.length > 0) {
@@ -1501,11 +1524,13 @@ export default function App() {
   // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
   const {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease: removeManualLeaseRaw, koppelBetalingen, wijsKandidatenAf,
   } = useLoansAndLease({
-    classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey,
+    classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
   });
+  const removeManualLease = (key) => { geenAutoInklapRef.current = Date.now() + 2000; removeManualLeaseRaw(key); };
+  registreerLeaseWizard({ leaseSummary, confirmedLeaseTypeKeys, leaseDetails, autoWizardStatus, verwachteLease, verwachteLeaseOverig, confirmLeaseType });
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
@@ -2192,6 +2217,7 @@ export default function App() {
   // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
   const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
+    if (ref === leasesSectionRef) autoOpenLeaseWizard();
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
     // daarvoor benodigde stand, is de sectie op dit moment niet gemount — eerst de kaart in de juiste
@@ -2406,7 +2432,7 @@ export default function App() {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -2419,10 +2445,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
-      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening]
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
@@ -2559,6 +2587,7 @@ export default function App() {
     if (!vorige) return;
     const klaar = [...vorige].filter((g) => !open.has(g));
     if (klaar.length === 0) return;
+    if (Date.now() < geenAutoInklapRef.current) return; // een zojuist verwijderd nieuw contract is geen 'klaar'
     setExpandedCardKeys((prev) => {
       if (!klaar.some((g) => prev[g])) return prev;
       const next = { ...prev };
@@ -2661,6 +2690,7 @@ export default function App() {
     });
     const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
     setLoadedProjectFileName(filename);
+    restoredChangesRef.current = 0;
     setChangesSinceExport(0);
     setLastExportAt(new Date());
   };
@@ -2721,6 +2751,7 @@ export default function App() {
     const fileCount = pending ? pending.parsedFiles.length : 0;
     const pendingFileNames = pending ? pending.parsedFiles.map((f) => f.fileName).filter(Boolean) : [];
     const ondernemer = pending?.settings?.eigenNamen?.ondernemer;
+    const nietGeexporteerd = Number(pending?.settings?.changesSinceExport) || 0;
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
@@ -2742,6 +2773,12 @@ export default function App() {
               </ul>
             )}
           </div>
+          {nietGeexporteerd > 0 && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 mb-4 text-xs text-amber-900">
+              Let op: dit dossier heeft <strong>{nietGeexporteerd} wijziging{nietGeexporteerd === 1 ? "" : "en"}</strong> die nog niet als dossierbestand zijn opgeslagen.
+              Ze staan wel in de browseropslag van dit apparaat. Kies "Verder met dit dossier" en gebruik daarna "Dossier opslaan" om ze veilig te stellen.
+            </p>
+          )}
           <div className="space-y-2">
             <button
               onClick={resumeLastProject}
@@ -2750,10 +2787,10 @@ export default function App() {
               Verder met dit dossier
             </button>
             <button
-              onClick={startEmpty}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50"
+              onClick={() => (nietGeexporteerd > 0 && !bevestigNieuwStart ? setBevestigNieuwStart(true) : startEmpty())}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${bevestigNieuwStart ? "border-red-400 text-red-700 bg-red-50 hover:bg-red-100" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
             >
-              Nieuw dossier
+              {bevestigNieuwStart ? "Toch nieuw dossier — wijzigingen niet opgeslagen" : "Nieuw dossier"}
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-4">
@@ -3488,12 +3525,15 @@ export default function App() {
         />
       )}
 
+      {renderLeaseWizard({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey })}
+
       {leaseDetailsModalKey && leaseSummary.find((l) => l.key === leaseDetailsModalKey) && (
         <FinancialLeaseDetailsModal
           lease={leaseSummary.find((l) => l.key === leaseDetailsModalKey)}
           details={leaseDetails[leaseDetailsModalKey]}
           onSave={setLeaseDetailField}
           onClose={() => setLeaseDetailsModalKey(null)}
+          onOpenWizard={openLeaseWizard}
         />
       )}
 

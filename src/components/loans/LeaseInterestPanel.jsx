@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { txSleutel } from "../../hooks/useLoansAndLease.js";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
+import { detecteerNieuwContract, detecteerAfgelopenZonderBesluit } from "./FinancialLeaseWizard.jsx";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
@@ -11,15 +13,80 @@ function computeFinancialLeaseAmortization(lease, details) {
   return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
 }
 
-export default function LeaseInterestPanel({
-  defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
+
+// Tijdlijn van de contracten van één financial lease: per contract een balk op een gezamenlijke
+// tijdas (start → einde, of beëindigingsdatum), met klik om het contract in de wizard te openen.
+function ContractTijdlijn({ segments, onOpen, indices }) {
+  const rijen = segments.map((sg, i) => {
+    if (indices && !indices.includes(i)) return { i, sg, leeg: true };
+    if (!sg || !sg.startdatum) return { i, sg, leeg: true };
+    const start = new Date(sg.startdatum);
+    let eind;
+    if (sg.contractBeeindigd && sg.einddatumContract) eind = new Date(sg.einddatumContract);
+    else { eind = new Date(sg.startdatum); eind.setMonth(eind.getMonth() + (Number(sg.looptijd) || 0)); }
+    return { i, sg, start, eind, beeindigd: !!sg.contractBeeindigd };
+  });
+  const geldig = rijen.filter((r) => !r.leeg && !isNaN(r.start) && !isNaN(r.eind) && r.eind > r.start);
+  if (geldig.length === 0) return null;
+  const nu = new Date();
+  const min = Math.min(...geldig.map((r) => +r.start));
+  const max = Math.max(nu > new Date(Math.max(...geldig.map((r) => +r.eind))) ? +nu : 0, ...geldig.map((r) => +r.eind));
+  const span = Math.max(max - min, 1);
+  const pct = (d) => ((+d - min) / span) * 100;
+  const fmt = (d) => d.toLocaleDateString("nl-NL", { month: "2-digit", year: "numeric" });
+  const status = (r) => (r.beeindigd ? "vroegtijdig gestopt" : r.eind < nu ? "afgelopen" : r.start > nu ? "nog niet gestart" : "loopt");
+  return (
+    <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+      <p className="text-[11px] font-medium text-slate-500 mb-1.5">Contracten in volgorde</p>
+      <div className="space-y-1.5">
+        {geldig.map((r) => (
+          <button key={r.i} type="button" onClick={() => onOpen(r.i)} className="w-full text-left group" title="Dit contract openen in de stappen">
+            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600">
+              <span className="truncate">
+                <strong>Contract {r.i + 1}</strong> · {fmt(r.start)} → {fmt(r.eind)}
+                {r.sg.maandbedrag ? ` · ${eur(Number(r.sg.maandbedrag))}/mnd` : ""}
+                {r.sg.kenteken ? ` · ${r.sg.kenteken}` : ""}
+              </span>
+              <span className={`shrink-0 ${r.beeindigd ? "text-amber-700" : r.eind < nu ? "text-slate-400" : "text-emerald-700"}`}>{status(r)}</span>
+            </div>
+            <div className="relative h-1.5 mt-0.5 rounded-full bg-slate-200">
+              <div
+                className={`absolute h-1.5 rounded-full ${r.beeindigd ? "bg-amber-400" : r.eind < nu ? "bg-slate-400" : "bg-teal-600"} group-hover:opacity-80`}
+                style={{ left: `${pct(r.start)}%`, width: `${Math.max(pct(r.eind) - pct(r.start), 1.5)}%`, backgroundColor: r.beeindigd ? "#fbbf24" : r.eind < nu ? "#94a3b8" : "#0d9488" }}
+              />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Welke groep ("auto" of "overig") hoort bij elk contract (index) van een lease? Een contract zonder soort
+// volgt het vorige contract.
+export function contractGroepen(segments) {
+  const eersteMetSoort = segments.find((sg) => sg && sg.soort);
+  let vorige = eersteMetSoort ? (eersteMetSoort.soort === "machine" ? "overig" : "auto") : "auto";
+  return segments.map((sg) => {
+    if (sg && sg.soort) vorige = sg.soort === "machine" ? "overig" : "auto";
+    return vorige;
+  });
+}
+
+function LeaseGroepPanel({
+  titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [], groep = null, onAddManualLease, onRemoveManualLease, onKoppelBetalingen, onWijsKandidatenAf,
 }) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [kiesLease, setKiesLease] = useState("");
+  const [nieuweNaam, setNieuweNaam] = useState("");
+  const [splitKenteken, setSplitKenteken] = useState("");
   const [open, setOpen] = useState(!!defaultOpen);
-  const sectionRef = useOpenOnJump(setOpen);
+  const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
+  useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
   // Per samengevoegde lease: zijn de bijbehorende benamingen uitgeklapt? (standaard dicht)
   const [toonBenamingen, setToonBenamingen] = useState({});
-  if (leaseSummary.length === 0) return null;
+  const leeg = leaseSummary.length === 0;
 
   const incompleteCount = leaseSummary.filter((l) => {
     if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
@@ -30,7 +97,7 @@ export default function LeaseInterestPanel({
   return (
     <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
-        <span>Lease (operationeel/financieel)</span>
+        <span>{titel}</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
         {incompleteCount > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -42,9 +109,64 @@ export default function LeaseInterestPanel({
       </button>
       {open && (
         <div className="px-5 pb-5">
+          {onOpenWizard && (() => {
+            const kandidaten = (alleLeases || []).filter((l) => l.category === "Lease (financieel)" || confirmedLeaseTypeKeys.includes(l.key));
+            const ANDERS = "__anders__";
+            const naam = kiesLease === ANDERS ? nieuweNaam.trim() : "";
+            const kanDoorgaan = kiesLease && (kiesLease !== ANDERS || naam.length >= 2);
+            // Heeft deze maatschappij al een ingevuld contract? Dan is een nieuw contract een APART contract
+            // (andere auto/machine, eigen leasebedrag) — geen vervolg. Een vervolgcontract voeg je toe bij het bestaande contract zelf.
+            const gekozen = kiesLease && kiesLease !== ANDERS ? (alleLeases || []).find((l) => l.key === kiesLease) : null;
+            const heeftContract = !!gekozen && getLeaseSegments(leaseDetails[kiesLease]).filter(Boolean).length > 0;
+            const doorgaan = () => {
+              let key = kiesLease;
+              if (kiesLease === ANDERS) key = onAddManualLease?.(naam, groep);
+              else if (heeftContract) key = onAddManualLease?.(gekozen.name.split(" — ")[0], groep, { splitVan: kiesLease });
+              if (!key) return;
+              onOpenWizard(key, { nieuw: true, soort });
+              setFormOpen(false); setKiesLease(""); setNieuweNaam(""); setSplitKenteken("");
+            };
+            const soortTekst = soort === "machine" ? "machine/ander middel" : "auto";
+            return (
+              <div className="mb-3 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs">
+                {!formOpen ? (
+                  <button onClick={() => setFormOpen(true)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                    + Nieuw contract ({soortTekst})
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="font-medium text-slate-700">Bij welke leasemaatschappij hoort dit nieuwe contract?</p>
+                    <select value={kiesLease} onChange={(e) => setKiesLease(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs max-w-full">
+                      <option value="">Kies leasemaatschappij…</option>
+                      {kandidaten.map((l) => <option key={l.key} value={l.key}>{l.name}{l.count ? "" : " (handmatig)"}</option>)}
+                      <option value={ANDERS}>Andere leasemaatschappij (niet in de bankgegevens)…</option>
+                    </select>
+                    {heeftContract && (
+                      <div>
+                        <p className="text-slate-600">Deze maatschappij heeft al een contract. Dit nieuwe contract wordt een <strong>apart contract</strong> (bijv. een andere {soort === "machine" ? "machine" : "auto"}). Een vervolgcontract voeg je toe bij het bestaande contract.</p>
+                        <p className="mt-1 text-slate-500">Betalingen die al bij het bestaande contract staan blijven daar, ook als het bedrag lijkt op dat van dit contract. Kenteken en gegevens vul je in de stappen die hierna starten. Staat het kenteken (of type auto) in het afschrift, dan worden die betalingen vanzelf gekoppeld; lijken andere betalingen op dit contract, dan vraag ik eerst bij welk contract ze horen.</p>
+                      </div>
+                    )}
+                    {kiesLease === ANDERS && (
+                      <div>
+                        <input value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} placeholder="Naam leasemaatschappij" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs w-64 max-w-full" />
+                        <p className="mt-1 text-slate-500">Er zijn geen betalingen aan deze maatschappij gevonden in de geladen bankbestanden — mogelijk heeft de client die niet aangeleverd. Je kunt het contract wel invullen; de rente-uitsplitsing per betaling is dan niet mogelijk.</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button disabled={!kanDoorgaan} onClick={doorgaan} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs font-medium disabled:opacity-40">Doorgaan</button>
+                      <button onClick={() => { setFormOpen(false); setKiesLease(""); setSplitKenteken(""); }} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-600">Annuleren</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {leeg ? (
+            <p className="text-xs text-slate-500">{legeTekst}</p>
+          ) : (<>
           <p className="text-xs text-slate-500 mb-3">
-            Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij{" "}
-            <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
+            {uitleg}{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
           {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
@@ -78,7 +200,12 @@ export default function LeaseInterestPanel({
               // LAATSTE (huidige) contract is beëindigd — een eerder, al opgevolgd contract "stopt"
               // altijd, dat is juist de bedoeling en geen signaal dat de hele lease voorbij is.
               const segments = isFinancieel ? getLeaseSegments(details) : [];
-              const isBeeindigd = segments.length > 0 && !!segments[segments.length - 1]?.contractBeeindigd;
+              const groepVanContract = contractGroepen(segments);
+              const gemengd = groep && new Set(groepVanContract).size > 1 && segments.some((sg) => sg?.soort);
+              const idxHier = segments.map((_, i) => i).filter((i) => !gemengd || groepVanContract[i] === groep);
+              const aantalHier = idxHier.length;
+              const laatsteHier = segments[idxHier[idxHier.length - 1]];
+              const isBeeindigd = segments.length > 0 && !!laatsteHier?.contractBeeindigd;
               // Samengevoegde benamingen van déze lease (bron → doel = deze lease).
               const benamingen = (leaseMerges || []).filter((m) => m.targetKey === lease.key);
               return (
@@ -88,8 +215,8 @@ export default function LeaseInterestPanel({
                     {isBeeindigd && (
                       <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
                     )}
-                    {segments.length > 1 && (
-                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{segments.length} contracten</span>
+                    {(aantalHier > 1 || gemengd) && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{aantalHier} {aantalHier === 1 ? "contract" : "contracten"}{gemengd ? " in deze groep" : ""}</span>
                     )}
                     {benamingen.length > 0 && (
                       <button
@@ -101,7 +228,14 @@ export default function LeaseInterestPanel({
                         {benamingen.length + 1} benamingen {toonBenamingen[lease.key] ? "▴" : "▾"}
                       </button>
                     )}
-                    <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
+                    {lease.handmatig ? (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-medium" title="Geen betalingen in de bankgegevens — handmatig toegevoegd">handmatig</span>
+                    ) : (
+                      <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
+                    )}
+                    {(lease.handmatig || lease.splitVan) && onRemoveManualLease && (segments.length === 0 || lease.splitVan) && (
+                      <button onClick={() => onRemoveManualLease(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-red-600">Verwijderen</button>
+                    )}
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
@@ -134,9 +268,19 @@ export default function LeaseInterestPanel({
                             </button>
                           ) : (
                             <>
-                              <button onClick={() => onOpenModal(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : "Gegevens invullen"}
+                              <button onClick={() => (onOpenWizard || onOpenModal)(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : segments.length > 0 ? "Verder invullen" : "Gegevens invullen"}
                               </button>
+                              {isCompleteFinancialLeaseDetails(details) && onOpenWizard && (
+                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true, soort: groep === "overig" ? "machine" : "auto" })} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                  + Vervolgcontract
+                                </button>
+                              )}
+                              {onOpenWizard && (
+                                <button onClick={() => onOpenModal(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-600">
+                                  Alles op één scherm
+                                </button>
+                              )}
                               {!isCompleteFinancialLeaseDetails(details) && (
                                 <button onClick={() => onMarkUnknown(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
                                   Gegevens onbekend
@@ -189,13 +333,51 @@ export default function LeaseInterestPanel({
                       </select>
                     </div>
                   )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
+                    const afgelopen = detecteerAfgelopenZonderBesluit(lease, details);
+                    return afgelopen ? (
+                      <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
+                        Het laatste contract liep af op {afgelopen.eind} en er zijn geen nieuwe betalingen. Blijft het object in het bedrijf, of is het ingeleverd/verkocht?
+                        <button onClick={() => onOpenWizard(lease.key, { contract: afgelopen.contract, stap: "verloop" })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Beantwoorden</button>
+                      </p>
+                    ) : null;
+                  })()}
+                  {lease.splitKandidaten?.length > 0 && onKoppelBetalingen && (
+                    <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
+                      <p>
+                        <strong>Bij welk contract horen deze betalingen?</strong> Er staan {lease.splitKandidaten.length} betalingen van ongeveer {eur(lease.splitBedrag)} bij het
+                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan ik kan zien bij welk contract ze horen — dat bepaal jij.
+                      </p>
+                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-[11px] text-blue-800">
+                        {lease.splitKandidaten.slice(0, 12).map((tx, i) => (
+                          <li key={i}>{new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.description || tx.counterparty || "").slice(0, 60)}</li>
+                        ))}
+                      </ul>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <button onClick={() => onKoppelBetalingen(lease.key, lease.splitKandidaten.map(txSleutel))} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Alle horen bij dit nieuwe contract</button>
+                        <button onClick={() => onWijsKandidatenAf(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] text-blue-900">Ze horen bij het bestaande contract</button>
+                      </div>
+                    </div>
+                  )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && segments.length > 0 && (
+                    <ContractTijdlijn segments={segments} indices={gemengd ? idxHier : null} onOpen={(idx) => onOpenWizard(lease.key, { contract: idx })} />
+                  )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
+                    const nieuw = detecteerNieuwContract(lease, details);
+                    return nieuw ? (
+                      <p className="mt-2 text-xs text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
+                        Sinds {nieuw.vanaf} {nieuw.aantal} betalingen buiten het ingevulde contract — lijkt een nieuw contract.
+                        <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Invullen</button>
+                      </p>
+                    ) : null;
+                  })()}
                   {typeConfirmed && isFinancieel && (
                     isOnbekend ? (
                       <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lease wordt niet gesplitst.</p>
                     ) : amortization ? (
                       <>
                         <p className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
-                          Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
+                          {gemengd ? "Hele lease (alle contracten): " : ""}Totaal tot nu toe: rente <strong>{eur(amortization.totaalRente)}</strong> · aflossing <strong>{eur(amortization.totaalAflossing)}</strong> · nog openstaand <strong>{eur(amortization.saldoNu)}</strong> — voor de aangifte: zie de uitsplitsing per jaar bij "Gegevens bewerken".
                         </p>
                         {amortization.renteNietBerekenbaar && (
                           <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
@@ -211,8 +393,41 @@ export default function LeaseInterestPanel({
               );
             })}
           </div>
+          </>)}
         </div>
       )}
     </section>
+  );
+}
+
+// Splitst de leases in twee panelen: lease van een auto, en lease van machines/andere bedrijfsmiddelen.
+// Een lease hoort bij "andere bedrijfsmiddelen" als zijn (laatste) contract als machine is ingevuld, of — zolang
+// er nog niets is ingevuld — als de naam overeenkomt met een "ander leaseobject" uit de nieuw-dossier-wizard.
+export function leaseGroepenVan(lease, details, overigeNamen = []) {
+  const segs = getLeaseSegments(details).filter((sg) => sg && sg.soort);
+  if (segs.length === 0 && lease.handmatig) return [lease.handmatigeGroep || "auto"];
+  if (segs.length > 0) return [...new Set(segs.map((sg) => (sg.soort === "machine" ? "overig" : "auto")))];
+  const tekst = (lease.transactions || []).map((t) => `${t.counterparty} ${t.description}`).join(" ").toLowerCase();
+  const treft = overigeNamen.some((n) => { const k = String(n).trim().toLowerCase(); return k.length >= 3 && tekst.includes(k); });
+  return [treft ? "overig" : "auto"];
+}
+
+const UITLEG = {
+  auto: <>Lease van een <strong>auto</strong>. Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar; de auto wordt afgeschreven en kan bijtelling geven.</>,
+  overig: <>Lease van <strong>machines of andere bedrijfsmiddelen</strong> (geen auto). Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar. Bij <strong>financiële</strong> lease is alleen de rente aftrekbaar en wordt het object afgeschreven.</>,
+};
+
+export default function LeaseInterestPanel(props) {
+  const { leaseSummary, leaseDetails, overigeLeaseNamen = [] } = props;
+  const [openSignal, setOpenSignal] = useState(0);
+  const auto = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("auto"));
+  const overig = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("overig"));
+  const gemeenschappelijk = { ...props, alleLeases: leaseSummary, onJump: () => setOpenSignal((n) => n + 1), openSignal };
+  // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
+  return (
+    <div className="space-y-3">
+      <LeaseGroepPanel {...gemeenschappelijk} soort="auto" groep="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
+    </div>
   );
 }

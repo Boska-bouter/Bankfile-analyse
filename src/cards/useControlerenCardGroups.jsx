@@ -33,7 +33,7 @@ export function useControlerenCardGroups(p) {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -180,6 +180,12 @@ export function useControlerenCardGroups(p) {
               confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
               onConfirmType={confirmLeaseType}
               onOpenModal={setLeaseDetailsModalKey}
+              onOpenWizard={openLeaseWizard}
+              onAddManualLease={addManualLease}
+              onRemoveManualLease={removeManualLease}
+              onKoppelBetalingen={koppelBetalingen}
+              onWijsKandidatenAf={wijsKandidatenAf}
+              overigeLeaseNamen={(verwachteLeaseOverig || []).flatMap((i) => [i?.naam, ...(i?.aliassen || [])]).filter(Boolean)}
               onMarkUnknown={markLeaseUnknown}
               onUnmarkUnknown={unmarkLeaseUnknown}
               onMergeInto={mergeLeaseInto}
@@ -276,7 +282,7 @@ export function useControlerenCardGroups(p) {
     transactions.length,
     controlerenCardsByKey,
     instellingenCardsByKey,
-    activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, loanSummary, privateLoanSummary, loanDetails,
+    activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, verwachteLeaseOverig, loanSummary, privateLoanSummary, loanDetails,
     zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
     expandedCardKeys,
     importDiagnostics,
