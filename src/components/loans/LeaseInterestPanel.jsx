@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
 import { detecteerNieuwContract, detecteerAfgelopenZonderBesluit } from "./FinancialLeaseWizard.jsx";
@@ -60,12 +60,13 @@ function ContractTijdlijn({ segments, onOpen }) {
   );
 }
 
-export default function LeaseInterestPanel({
-  defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
+function LeaseGroepPanel({
+  titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal,
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
-  const sectionRef = useOpenOnJump(setOpen);
+  const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
+  useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
   // Per samengevoegde lease: zijn de bijbehorende benamingen uitgeklapt? (standaard dicht)
   const [toonBenamingen, setToonBenamingen] = useState({});
   if (leaseSummary.length === 0) return null;
@@ -79,7 +80,7 @@ export default function LeaseInterestPanel({
   return (
     <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
-        <span>Lease (operationeel/financieel)</span>
+        <span>{titel}</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
         {incompleteCount > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
@@ -92,8 +93,7 @@ export default function LeaseInterestPanel({
       {open && (
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
-            Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij{" "}
-            <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar — net als bij een lening.{" "}
+            {uitleg}{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
           </p>
           {onMergeInto && suggestLeaseMerges(leaseSummary).map((group) => (
@@ -294,5 +294,37 @@ export default function LeaseInterestPanel({
         </div>
       )}
     </section>
+  );
+}
+
+// Splitst de leases in twee panelen: lease van een auto, en lease van machines/andere bedrijfsmiddelen.
+// Een lease hoort bij "andere bedrijfsmiddelen" als zijn (laatste) contract als machine is ingevuld, of — zolang
+// er nog niets is ingevuld — als de naam overeenkomt met een "ander leaseobject" uit de nieuw-dossier-wizard.
+export function leaseGroepVan(lease, details, overigeNamen = []) {
+  const segs = getLeaseSegments(details).filter((sg) => sg && sg.soort);
+  if (segs.length > 0) return segs[segs.length - 1].soort === "machine" ? "overig" : "auto";
+  const tekst = (lease.transactions || []).map((t) => `${t.counterparty} ${t.description}`).join(" ").toLowerCase();
+  const treft = overigeNamen.some((n) => { const k = String(n).trim().toLowerCase(); return k.length >= 3 && tekst.includes(k); });
+  return treft ? "overig" : "auto";
+}
+
+const UITLEG = {
+  auto: <>Lease van een <strong>auto</strong>. Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar, geen verdere actie nodig. Bij <strong>financiële</strong> lease is alleen de rente in de termijn aftrekbaar; de auto wordt afgeschreven en kan bijtelling geven.</>,
+  overig: <>Lease van <strong>machines of andere bedrijfsmiddelen</strong> (geen auto). Bij <strong>operationele</strong> lease is de hele termijn aftrekbaar. Bij <strong>financiële</strong> lease is alleen de rente aftrekbaar en wordt het object afgeschreven.</>,
+};
+
+export default function LeaseInterestPanel(props) {
+  const { leaseSummary, leaseDetails, overigeLeaseNamen = [] } = props;
+  const [openSignal, setOpenSignal] = useState(0);
+  if (leaseSummary.length === 0) return null;
+  const auto = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "auto");
+  const overig = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "overig");
+  const gemeenschappelijk = { ...props, onJump: () => setOpenSignal((n) => n + 1), openSignal };
+  // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
+  return (
+    <div className="space-y-3">
+      {auto.length > 0 && <LeaseGroepPanel {...gemeenschappelijk} titel="Lease — auto" uitleg={UITLEG.auto} leaseSummary={auto} />}
+      {overig.length > 0 && <LeaseGroepPanel {...gemeenschappelijk} titel="Lease — machines en andere bedrijfsmiddelen" uitleg={UITLEG.overig} leaseSummary={overig} />}
+    </div>
   );
 }
