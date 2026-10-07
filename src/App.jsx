@@ -252,6 +252,7 @@ export default function App() {
   // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
   // (zie toggleCardExpand hieronder) — de rest blijft in fase 3 v1 gewoon "Bekijken" (springen).
   const [expandedCardKeys, setExpandedCardKeys] = useState({});
+  const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
     if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
     setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1523,11 +1524,12 @@ export default function App() {
   // ---- Leningen & Lease — zie hooks/useLoansAndLease.js ----
   const {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges, setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease: removeManualLeaseRaw, koppelBetalingen, wijsKandidatenAf,
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
   });
+  const removeManualLease = (key) => { geenAutoInklapRef.current = Date.now() + 2000; removeManualLeaseRaw(key); };
   registreerLeaseWizard({ leaseSummary, confirmedLeaseTypeKeys, leaseDetails, autoWizardStatus, verwachteLease, verwachteLeaseOverig, confirmLeaseType });
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
@@ -2430,7 +2432,7 @@ export default function App() {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -2585,6 +2587,7 @@ export default function App() {
     if (!vorige) return;
     const klaar = [...vorige].filter((g) => !open.has(g));
     if (klaar.length === 0) return;
+    if (Date.now() < geenAutoInklapRef.current) return; // een zojuist verwijderd nieuw contract is geen 'klaar'
     setExpandedCardKeys((prev) => {
       if (!klaar.some((g) => prev[g])) return prev;
       const next = { ...prev };

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { computeLoanSummary, computeLeaseSummary } from "../tax/loanAmortization.js";
+import { normalizeKenteken } from "../tax/financialLease.js";
 
 // Twee leaseovereenkomsten kunnen in de bank onder verschillende tegenpartijnamen verschijnen
 // (bijv. de eerste afschrijving anders benoemd dan de maandelijkse termijnen) — automatisch
@@ -62,6 +63,8 @@ function applyLeaseMerges(leaseSummary, leaseMergedInto) {
   return leaseSummary.filter((l) => !merged.has(l.key)).map((l) => byKey[l.key]);
 }
 
+export const txSleutel = (tx) => `${tx.date instanceof Date ? tx.date.toISOString().slice(0, 10) : tx.date}|${tx.amount}|${String(tx.description || "").slice(0, 60)}`;
+
 // Bundelt de leningen/lease-logica (samenvattingen + correctie-handlers) die verder los staat
 // van de rest van de app — de ruwe state (loanDetails/leaseDetails/...) en de persistence
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
@@ -97,10 +100,48 @@ export function useLoansAndLease({
   const leaseSummary = useMemo(() => {
     const basis = applyLeaseMerges(rawLeaseSummary, effectiveLeaseMerges);
     const bestaand = new Set(basis.map((l) => l.key));
+    // Kenteken van een los (apart) contract: uit de ingevulde gegevens, anders het bij het toevoegen opgegeven kenteken.
+    const platTekst = (tx) => `${tx.counterparty || ""} ${tx.description || ""}`.toUpperCase().replace(/[\s-]/g, "");
+    // Herkenning in het afschrift: kenteken of type auto/object van het nieuwe contract.
+    const kenmerkenVan = (d) => {
+      const segs = [d, ...(Array.isArray(d.contracts) ? d.contracts : [])].filter(Boolean);
+      const lijst = [d.splitKenteken, ...segs.map((x) => x.kenteken), ...segs.map((x) => x.voertuigtype)]
+        .map((x) => String(x || "").toUpperCase().replace(/[\s-]/g, ""))
+        .filter((x) => x.length >= 5);
+      return [...new Set(lijst)];
+    };
+    const bedragVan = (d) => Number(d.maandbedrag) || Number(d.contracts?.[0]?.maandbedrag) || 0;
+    const basisKopie = basis.map((l) => ({ ...l }));
     const handmatig = Object.entries(leaseDetails || {})
       .filter(([k, d]) => d && d.handmatigeNaam && !bestaand.has(k))
-      .map(([k, d]) => ({ key: k, name: d.handmatigeNaam, total: 0, count: 0, transactions: [], category: "Lease (financieel)", handmatig: true, handmatigeGroep: d.handmatigeGroep || "auto" }));
-    return [...basis, ...handmatig];
+      .map(([k, d]) => {
+        let transactions = [];
+        let splitKandidaten = [];
+        const bron = d.splitVan ? basisKopie.find((l) => l.key === d.splitVan) : null;
+        // Betalingen uit een bestaand contract gaan NOOIT op grond van het bedrag vanzelf naar een nieuw contract.
+        // Vanzelf alleen als kenteken/type in de omschrijving staat, of als de gebruiker het zelf heeft bevestigd.
+        if (bron) {
+          const kenmerken = kenmerkenVan(d);
+          const toegewezen = new Set(d.toegewezen || []);
+          transactions = bron.transactions.filter((tx) => toegewezen.has(txSleutel(tx)) || kenmerken.some((kt) => platTekst(tx).includes(kt)));
+          if (transactions.length) {
+            const weg = new Set(transactions);
+            bron.transactions = bron.transactions.filter((tx) => !weg.has(tx));
+            bron.count = bron.transactions.length;
+            bron.total = bron.transactions.reduce((a, tx) => a + (Number(tx.amount) || 0), 0);
+          }
+          // Lijken resterende betalingen op het leasebedrag van dit contract? Dan een vraag, geen automatische keuze.
+          const bedrag = bedragVan(d);
+          if (bedrag > 0 && !d.kandidatenAfgewezen) {
+            const marge = Math.max(1.5, bedrag * 0.02);
+            splitKandidaten = bron.transactions.filter((tx) => tx.amount < 0 && Math.abs(Math.abs(tx.amount) - bedrag) <= marge);
+          }
+        }
+        const total = transactions.reduce((a, tx) => a + (Number(tx.amount) || 0), 0);
+        return { key: k, name: d.handmatigeNaam, total, count: transactions.length, transactions, category: "Lease (financieel)", handmatig: transactions.length === 0, splitVan: d.splitVan || null, splitKandidaten, splitBedrag: bedragVan(d), handmatigeGroep: d.handmatigeGroep || "auto" };
+      });
+    const basisNaSplit = handmatig.some((h) => h.splitVan) ? basisKopie : basis;
+    return [...basisNaSplit, ...handmatig];
   }, [rawLeaseSummary, effectiveLeaseMerges, leaseDetails]);
   // Overzicht van actieve samenvoegingen, met de namen erbij (voor de "Loskoppelen"-knop in de
   // UI) — filtert automatisch samenvoegingen weg waarvan bron of doel niet meer bestaat (bijv. na
@@ -132,7 +173,7 @@ export function useLoansAndLease({
   const setLeaseDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leasegegevens aangepast");
     setLeaseDetails((prev) => {
-      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep } : {};
+      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep, ...(prev[key].splitVan ? { splitVan: prev[key].splitVan, splitKenteken: prev[key].splitKenteken, toegewezen: prev[key].toegewezen, kandidatenAfgewezen: prev[key].kandidatenAfgewezen } : {}) } : {};
       return { ...prev, [key]: { ...newDetails, ...meta } };
     });
   };
@@ -157,14 +198,32 @@ export function useLoansAndLease({
     if (type === "financieel") (openLeaseWizard || setLeaseDetailsModalKey)(lease.key);
   };
   // Nieuwe lease zonder bankbetalingen (bijv. contract waarvan de client de betalingen niet aanleverde).
-  const addManualLease = (naam, groep) => {
+  const addManualLease = (naam, groep, extra) => {
     const schoon = String(naam || "").trim();
     if (!schoon) return null;
     snapshotBeforeAction("Lease handmatig toegevoegd");
-    const key = `handmatig::${schoon.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), handmatigeNaam: schoon, handmatigeGroep: groep === "overig" ? "overig" : "auto" } }));
+    const slug = schoon.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    let key = `handmatig::${slug}`;
+    let weergave = schoon;
+    const split = extra?.splitVan ? { splitVan: extra.splitVan, splitKenteken: String(extra.splitKenteken || "") } : null;
+    if (split) {
+      // Apart (parallel) contract bij dezelfde maatschappij: eigen sleutel.
+      let n = 2;
+      while (leaseDetails[`handmatig::${slug}-${n}`]) n += 1;
+      key = `handmatig::${slug}-${n}`;
+      weergave = `${schoon} — apart contract ${n}`;
+    }
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), handmatigeNaam: weergave, handmatigeGroep: groep === "overig" ? "overig" : "auto", ...(split || {}) } }));
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
     return key;
+  };
+  const koppelBetalingen = (key, sleutels) => {
+    snapshotBeforeAction("Betalingen aan contract gekoppeld");
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), toegewezen: [...new Set([...(prev[key]?.toegewezen || []), ...sleutels])] } }));
+  };
+  const wijsKandidatenAf = (key) => {
+    snapshotBeforeAction("Betalingen blijven bij bestaand contract");
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), kandidatenAfgewezen: true } }));
   };
   const removeManualLease = (key) => {
     snapshotBeforeAction("Handmatige lease verwijderd");
@@ -194,6 +253,6 @@ export function useLoansAndLease({
   return {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges,
     setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf,
   };
 }
