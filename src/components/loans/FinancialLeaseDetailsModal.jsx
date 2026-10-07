@@ -1025,7 +1025,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   );
 }
 
-export default function FinancialLeaseDetailsModal({ lease, details, onSave, onClose }) {
+export default function FinancialLeaseDetailsModal({ lease, details, onSave, onClose, onOpenWizard }) {
   const [contracts, setContracts] = useState(() => getLeaseSegments(details).map(formFromSegment));
 
   const segmentsWithTx = useMemo(
@@ -1090,7 +1090,12 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
           ))}
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
-          <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
+          <div className="flex items-center gap-3">
+            {onOpenWizard && (
+              <button onClick={() => { const c = contracts.map(cleanSegment); onSave(lease.key, c.length === 1 ? c[0] : { contracts: c }); onClose(); onOpenWizard(lease.key); }} className="rounded-lg border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-800 hover:bg-teal-50">← Terug naar stappen</button>
+            )}
+            <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
+          </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
             <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>

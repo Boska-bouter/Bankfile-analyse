@@ -3533,6 +3533,7 @@ export default function App() {
           details={leaseDetails[leaseDetailsModalKey]}
           onSave={setLeaseDetailField}
           onClose={() => setLeaseDetailsModalKey(null)}
+          onOpenWizard={openLeaseWizard}
         />
       )}
 
