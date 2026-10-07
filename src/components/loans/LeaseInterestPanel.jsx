@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } from "../../tax/loanAmortization.js";
-import { detecteerNieuwContract } from "./FinancialLeaseWizard.jsx";
+import { detecteerNieuwContract, detecteerAfgelopenZonderBesluit } from "./FinancialLeaseWizard.jsx";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
@@ -248,6 +248,15 @@ export default function LeaseInterestPanel({
                       </select>
                     </div>
                   )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
+                    const afgelopen = detecteerAfgelopenZonderBesluit(lease, details);
+                    return afgelopen ? (
+                      <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
+                        Het laatste contract liep af op {afgelopen.eind} en er zijn geen nieuwe betalingen. Blijft het object in het bedrijf, of is het ingeleverd/verkocht?
+                        <button onClick={() => onOpenWizard(lease.key, { contract: afgelopen.contract, stap: "verloop" })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Beantwoorden</button>
+                      </p>
+                    ) : null;
+                  })()}
                   {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && segments.length > 0 && (
                     <ContractTijdlijn segments={segments} onOpen={(idx) => onOpenWizard(lease.key, { contract: idx })} />
                   )}

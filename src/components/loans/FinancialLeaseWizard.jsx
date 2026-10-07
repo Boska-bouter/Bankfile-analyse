@@ -6,7 +6,7 @@ import {
   normalizeKenteken, mergeHandmatigeTermijnen, isCompleteLeaseSegment,
 } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
-import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren } from "./FinancialLeaseDetailsModal.jsx";
+import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren, restantAfschrijving, restantTekst } from "./FinancialLeaseDetailsModal.jsx";
 
 // Stappenscherm voor het invullen van een financial lease. Gebruikt exact hetzelfde opslagformaat
 // (en dezelfde berekeningen) als het volledige gegevensscherm (FinancialLeaseDetailsModal) — het is een
@@ -43,6 +43,22 @@ export function detecteerNieuwContract(lease, details) {
   return erna.length >= 2 ? { aantal: erna.length, vanaf: iso(erna.sort((a, b) => a.date - b.date)[0].date) } : null;
 }
 
+// Laatste contract is afgelopen (ruim) zonder dat is aangegeven wat er daarna met het object gebeurt en
+// zonder nieuwe betalingen: vraag of het object blijft of is ingeleverd/verkocht.
+export function detecteerAfgelopenZonderBesluit(lease, details) {
+  const segs = getLeaseSegments(details).filter(Boolean);
+  if (segs.length === 0) return null;
+  const laatste = segs[segs.length - 1];
+  if (!isCompleteLeaseSegment(laatste) || !laatste.soort || laatste.contractBeeindigd || laatste.naAfloop) return null;
+  const eind = new Date(maandenErbij(laatste.startdatum, laatste.looptijd));
+  if (isNaN(eind)) return null;
+  const grens = new Date(); grens.setDate(grens.getDate() - 60);
+  if (eind > grens) return null;
+  const erna = lease.transactions.filter((t) => t.amount < 0 && t.date > new Date(eind.getTime() + 45 * 86400000));
+  if (erna.length >= 2) return null; // dan is er waarschijnlijk een nieuw contract (zie detecteerNieuwContract)
+  return { eind: iso(eind), contract: segs.length - 1 };
+}
+
 const STAPPEN = {
   type: "Soort lease", contract: "Contract", aankoop: "Aankoop", voorwaarden: "Leasevoorwaarden",
   bedrijfsmiddel: "Bedrijfsmiddel", controle: "Controle", verloop: "Verloop",
@@ -69,7 +85,7 @@ function Voorstel({ tekst, onNeem }) {
   );
 }
 
-export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null }) {
+export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null }) {
   const [contracts, setContracts] = useState(() => {
     const bestaand = getLeaseSegments(details).filter(Boolean).map(formFromSegment);
     if (bestaand.length === 0) return [formFromSegment(null)];
@@ -92,7 +108,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
     if (isLaatste) l.push("verloop");
     return l;
   }, [form.soort, isLaatste]);
-  const [stap, setStap] = useState("contract");
+  const [stap, setStap] = useState(startStap || "contract");
   const stapNu = stappen.includes(stap) ? stap : stappen[0];
   const pos = stappen.indexOf(stapNu);
 
@@ -212,7 +228,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                 )}
               </Veld>
               <Veld label="Soort object" hint="Auto of machine: dan wordt het geleasede object ook als bedrijfsmiddel afgeschreven. 'Niet ingevuld': alleen de rente is aftrekbaar.">
-                <select className={INPUT} value={form.soort || ""} onChange={(e) => set({ soort: e.target.value })}>
+                <select className={INPUT} value={form.soort || ""} onChange={(e) => set({ soort: e.target.value, ...(e.target.value && form.afschrijvingstermijnJaren === "" && !eerderZelfdeAuto ? { afschrijvingstermijnJaren: "5" } : {}) })}>
                   <option value="">Niet ingevuld</option>
                   <option value="auto">Auto</option>
                   <option value="machine">Machine/overig</option>
@@ -265,7 +281,14 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                 <p className="text-xs text-teal-800 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5">Zelfde kenteken als een eerder contract — cataloguswaarde en bijtelling worden daarvan overgenomen.</p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Veld label="Afschrijvingstermijn (jaren)"><input type="number" className={INPUT} value={form.afschrijvingstermijnJaren} onChange={(e) => set({ afschrijvingstermijnJaren: e.target.value })} /></Veld>
+                {eerderZelfdeAuto ? (
+                  <div className="text-sm">
+                    <span className="block text-xs font-medium text-slate-600 mb-1">Afschrijvingstermijn</span>
+                    <p className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-600">Loopt door vanaf het eerste contract van deze auto: {restantTekst(restantAfschrijving(contracts.find((c) => c.soort === "auto" && normalizeKenteken(c.kenteken) === normalizeKenteken(form.kenteken)), form.startdatum))}.</p>
+                  </div>
+                ) : (
+                  <Veld label="Afschrijvingstermijn (jaren)" hint={`= ${(100 / Math.max(Number(form.afschrijvingstermijnJaren) || 0, 5)).toFixed(2).replace(".", ",")}% per jaar. Minimaal 5 jaar (fiscale 20%-cap); langer kan, het percentage gaat dan evenredig omlaag.`}><input type="number" className={INPUT} value={form.afschrijvingstermijnJaren} onChange={(e) => set({ afschrijvingstermijnJaren: e.target.value })} /></Veld>
+                )}
                 <Veld label="Restwaarde"><input type="number" step="0.01" className={INPUT} value={form.restwaarde} onChange={(e) => set({ restwaarde: e.target.value })} /></Veld>
                 {form.soort === "auto" && !eerderZelfdeAuto && (
                   <>
@@ -322,15 +345,16 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
 
           {stapNu === "verloop" && (
             <>
-              <p className="text-xs text-slate-500">Hoe loopt dit contract nu?</p>
+              <p className="text-xs text-slate-500">Hoe staat dit contract er nu voor?</p>
               <div className="space-y-2">
-                <label className="flex items-start gap-2 text-sm"><input type="radio" name="verloop" checked={!form.contractBeeindigd} onChange={() => set({ contractBeeindigd: false })} /> <span><strong>Loopt nog</strong> (of is gewoon afgelopen)</span></label>
-                <label className="flex items-start gap-2 text-sm"><input type="radio" name="verloop" checked={!!form.contractBeeindigd} onChange={() => set({ contractBeeindigd: true })} /> <span><strong>Vroegtijdig gestopt</strong> — verkocht, geveild of afgekocht</span></label>
+                <label className="flex items-start gap-2 text-sm"><input type="radio" name="verloop" checked={!form.contractBeeindigd && form.naAfloop !== "blijft"} onChange={() => set({ contractBeeindigd: false, naAfloop: "" })} /> <span><strong>Loopt nog</strong></span></label>
+                <label className="flex items-start gap-2 text-sm"><input type="radio" name="verloop" checked={!form.contractBeeindigd && form.naAfloop === "blijft"} onChange={() => set({ contractBeeindigd: false, naAfloop: "blijft" })} /> <span><strong>Afgelopen — het object blijft in het bedrijf</strong> (eindbetaling gedaan, overgenomen of herfinancierd). De afschrijving loopt door tot de totale termijn.</span></label>
+                <label className="flex items-start gap-2 text-sm"><input type="radio" name="verloop" checked={!!form.contractBeeindigd} onChange={() => set({ contractBeeindigd: true, naAfloop: "", einddatumContract: form.einddatumContract || maandenErbij(form.startdatum, form.looptijd) })} /> <span><strong>Gestopt — ingeleverd, verkocht of geveild.</strong> De afschrijving stopt op de einddatum.</span></label>
               </div>
               {form.contractBeeindigd && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                   <Veld label="Einddatum"><input type="date" className={INPUT} value={form.einddatumContract} onChange={(e) => set({ einddatumContract: e.target.value })} /></Veld>
-                  <Veld label="Verkoop-/veilingopbrengst" hint="Leeg laten bij een gewone herfinanciering."><input type="number" step="0.01" className={INPUT} value={form.verkoopsom} onChange={(e) => set({ verkoopsom: e.target.value })} /></Veld>
+                  <Veld label="Opbrengst (verkoop/veiling/inlevering)" hint="Vul 0 in als het object zonder vergoeding is ingeleverd — de resterende boekwaarde wordt dan als verlies genomen. Leeg laten alleen bij een gewone herfinanciering."><input type="number" step="0.01" className={INPUT} value={form.verkoopsom} onChange={(e) => set({ verkoopsom: e.target.value })} /></Veld>
                 </div>
               )}
               <div className="border-t border-slate-100 pt-3 space-y-1.5">
