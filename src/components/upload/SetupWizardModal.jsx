@@ -843,7 +843,7 @@ function Scherm34({
           {t.leaseOverigJa && (
             <div className="pt-2 space-y-2">
               <p className="text-xs text-slate-600">Je gaf aan dat het financial lease is — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen.</p>
-              <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" />
+              <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" suggesties={(suggesties.leaseAuto || []).filter((s) => !(t.leaseLijst || []).some((x) => x.toLowerCase() === s.naam.toLowerCase()))} />
               <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
             </div>
           )}
