@@ -8,7 +8,19 @@ import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
-  if (loanSummary.length === 0 && privateLoanSummary.length === 0) return null;
+  if (loanSummary.length === 0 && privateLoanSummary.length === 0) {
+    return (
+      <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+        <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
+          <span>Leningen</span>
+          <span className="text-xs font-normal text-slate-400">(0)</span>
+          <span className="flex-1" />
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+        {open && <p className="px-5 pb-5 text-xs text-slate-500">Geen leningen gevonden in de bankgegevens.</p>}
+      </section>
+    );
+  }
 
   return (
     <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">

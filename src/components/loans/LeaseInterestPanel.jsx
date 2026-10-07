@@ -62,14 +62,14 @@ function ContractTijdlijn({ segments, onOpen }) {
 
 function LeaseGroepPanel({
   titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst,
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
   // Per samengevoegde lease: zijn de bijbehorende benamingen uitgeklapt? (standaard dicht)
   const [toonBenamingen, setToonBenamingen] = useState({});
-  if (leaseSummary.length === 0) return null;
+  const leeg = leaseSummary.length === 0;
 
   const incompleteCount = leaseSummary.filter((l) => {
     if (!confirmedLeaseTypeKeys.includes(l.key)) return true;
@@ -92,6 +92,9 @@ function LeaseGroepPanel({
       </button>
       {open && (
         <div className="px-5 pb-5">
+          {leeg ? (
+            <p className="text-xs text-slate-500">{legeTekst}</p>
+          ) : (<>
           <p className="text-xs text-slate-500 mb-3">
             {uitleg}{" "}
             {onOpenHelp && <HelpHint chapter="lease-financieel" onOpen={onOpenHelp} />}
@@ -291,6 +294,7 @@ function LeaseGroepPanel({
               );
             })}
           </div>
+          </>)}
         </div>
       )}
     </section>
@@ -316,15 +320,14 @@ const UITLEG = {
 export default function LeaseInterestPanel(props) {
   const { leaseSummary, leaseDetails, overigeLeaseNamen = [] } = props;
   const [openSignal, setOpenSignal] = useState(0);
-  if (leaseSummary.length === 0) return null;
   const auto = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "auto");
   const overig = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "overig");
   const gemeenschappelijk = { ...props, onJump: () => setOpenSignal((n) => n + 1), openSignal };
   // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
   return (
     <div className="space-y-3">
-      {auto.length > 0 && <LeaseGroepPanel {...gemeenschappelijk} titel="Lease — auto" uitleg={UITLEG.auto} leaseSummary={auto} />}
-      {overig.length > 0 && <LeaseGroepPanel {...gemeenschappelijk} titel="Lease — machines en andere bedrijfsmiddelen" uitleg={UITLEG.overig} leaseSummary={overig} />}
+      <LeaseGroepPanel {...gemeenschappelijk} titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
+      <LeaseGroepPanel {...gemeenschappelijk} titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>
   );
 }
