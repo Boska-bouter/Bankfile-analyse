@@ -340,12 +340,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   // Welke jaren zijn relevant om de privégebruik-toggle voor te tonen: alle jaren waarin er
   // daadwerkelijk banktransacties voor dit contract zijn, plus het huidige kalenderjaar en het
   // startjaar van het contract (ook als daar nog geen transacties over zijn geïmporteerd).
-  const jarenVoorPrivegebruik = useMemo(() => {
-    const jarenSet = new Set(segmentTransactions.map((tx) => tx.date.getFullYear()));
-    jarenSet.add(new Date().getFullYear());
-    if (form.startdatum) jarenSet.add(new Date(form.startdatum).getFullYear());
-    return [...jarenSet].sort((a, b) => a - b);
-  }, [segmentTransactions, form.startdatum]);
+  const jarenVoorPrivegebruik = useMemo(() => jarenVoorPrivegebruikVan(form, segmentTransactions, !kentekenGroupSegments || kentekenGroupSegments[kentekenGroupSegments.length - 1] === form), [kentekenGroupSegments, segmentTransactions, form.startdatum, form.looptijd, form.contractBeeindigd, form.einddatumContract, form.soort, form.afschrijvingstermijnJaren]);
 
   // "Extra bedrag 1e termijn" (bijv. eenmalige administratiekosten) zit al in totaleLeaseBetalingen
   // (dat telt alle daadwerkelijke betalingen op, incl. deze extra), maar zat tot nu toe niet aan de
@@ -721,23 +716,12 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         {form.soort === "auto" && jarenVoorPrivegebruik.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-medium text-slate-600 mb-1">Privégebruik meer dan 500 km per jaar?</p>
-            <div className="flex flex-wrap gap-3">
-              {jarenVoorPrivegebruik.map((jaar) => (
-                <label key={jaar} className="flex items-center gap-1.5 text-xs text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={!!form.privegebruikMeerDan500kmPerJaar?.[jaar]}
-                    onChange={(e) =>
-                      onChange({
-                        ...form,
-                        privegebruikMeerDan500kmPerJaar: { ...(form.privegebruikMeerDan500kmPerJaar || {}), [jaar]: e.target.checked },
-                      })
-                    }
-                  />
-                  {jaar}
-                </label>
-              ))}
-            </div>
+            <PrivegebruikJaren
+              form={form}
+              jaren={jarenVoorPrivegebruik}
+              anderen={(kentekenGroupSegments || []).filter((sg) => sg !== form)}
+              onChange={(map) => onChange({ ...form, privegebruikMeerDan500kmPerJaar: map })}
+            />
             <p className="text-xs text-slate-400 mt-1">
               Alleen bij meer dan 500 km privégebruik per jaar geldt de bijtelling/onttrekking (afgetopt op de
               werkelijke totale autokosten) — anders blijven de volledige autokosten gewoon aftrekbaar.
@@ -1021,6 +1005,54 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </p>
         )
       )}
+    </div>
+  );
+}
+
+
+// Jaren waarvoor het privégebruik-vinkje getoond wordt: jaren met banktransacties, het huidige jaar en
+// ELK jaar van start tot einde van het contract (anders ontbreekt bijv. 2025 bij een contract dat in
+// 2024 afloopt maar pas begin 2025 eindigt, of een jaar zonder betalingen in het dossier).
+export function jarenVoorPrivegebruikVan(form, transacties = [], laatsteVanAuto = true) {
+  const set = new Set((transacties || []).map((tx) => tx.date.getFullYear()));
+  if (laatsteVanAuto) set.add(new Date().getFullYear());
+  if (form.startdatum) {
+    const start = new Date(form.startdatum);
+    let eind = null;
+    if (form.contractBeeindigd && form.einddatumContract) eind = new Date(form.einddatumContract);
+    else if (Number(form.looptijd) > 0) { eind = new Date(form.startdatum); eind.setMonth(eind.getMonth() + Number(form.looptijd)); }
+    const sj = start.getFullYear();
+    const contractEindJaar = eind && !isNaN(eind) ? eind.getFullYear() : sj;
+    let ej = contractEindJaar;
+    // Auto: ook de jaren waarin nog wordt afgeschreven (minimaal 5 jaar vanaf start) — de auto wordt ook
+    // nog gebruikt (en dus bijgeteld) nadat dit contract is afgelopen, bijv. bij een vervolgcontract.
+    if (laatsteVanAuto && form.soort === "auto" && !(form.contractBeeindigd && form.einddatumContract)) {
+      ej = Math.max(ej, sj + Math.max(Number(form.afschrijvingstermijnJaren) || 0, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN));
+      ej = Math.min(ej, Math.max(new Date().getFullYear(), contractEindJaar)); // geen toekomstige jaren
+    }
+    for (let j = sj; j <= Math.min(Math.max(ej, sj), sj + 15); j++) set.add(j);
+  }
+  return [...set].filter((j) => !isNaN(j)).sort((a, b) => a - b);
+}
+
+// Vinkjes "privégebruik > 500 km" per jaar. Dezelfde auto (zelfde kenteken) in meerdere contracten:
+// het vinkje geldt voor de hele auto (zie computeLeaseAutoKostenVoorJaar) — staat het jaar al aangevinkt
+// bij een ander contract van die auto, dan tonen we het hier als aangevinkt (en vergrendeld).
+export function PrivegebruikJaren({ form, jaren, anderen = [], onChange }) {
+  const eigen = form.privegebruikMeerDan500kmPerJaar || {};
+  return (
+    <div className="flex flex-wrap gap-3">
+      {jaren.map((jaar) => {
+        const ander = anderen.findIndex((a) => !!a.privegebruikMeerDan500kmPerJaar?.[jaar]);
+        const vanAnder = ander >= 0 && !eigen[jaar];
+        return (
+          <label key={jaar} className="flex items-center gap-1.5 text-xs text-slate-700" title={vanAnder ? "Al aangevinkt bij een ander contract van dezelfde auto — geldt voor de hele auto" : undefined}>
+            <input type="checkbox" checked={!!eigen[jaar] || vanAnder} disabled={vanAnder}
+              onChange={(e) => onChange({ ...eigen, [jaar]: e.target.checked })} />
+            {jaar}{vanAnder ? <span className="text-slate-400">(ander contract)</span> : null}
+          </label>
+        );
+      })}
     </div>
   );
 }

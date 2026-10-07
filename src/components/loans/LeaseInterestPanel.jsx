@@ -12,6 +12,54 @@ function computeFinancialLeaseAmortization(lease, details) {
   return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
 }
 
+
+// Tijdlijn van de contracten van één financial lease: per contract een balk op een gezamenlijke
+// tijdas (start → einde, of beëindigingsdatum), met klik om het contract in de wizard te openen.
+function ContractTijdlijn({ segments, onOpen }) {
+  const rijen = segments.map((sg, i) => {
+    if (!sg || !sg.startdatum) return { i, sg, leeg: true };
+    const start = new Date(sg.startdatum);
+    let eind;
+    if (sg.contractBeeindigd && sg.einddatumContract) eind = new Date(sg.einddatumContract);
+    else { eind = new Date(sg.startdatum); eind.setMonth(eind.getMonth() + (Number(sg.looptijd) || 0)); }
+    return { i, sg, start, eind, beeindigd: !!sg.contractBeeindigd };
+  });
+  const geldig = rijen.filter((r) => !r.leeg && !isNaN(r.start) && !isNaN(r.eind) && r.eind > r.start);
+  if (geldig.length === 0) return null;
+  const nu = new Date();
+  const min = Math.min(...geldig.map((r) => +r.start));
+  const max = Math.max(nu > new Date(Math.max(...geldig.map((r) => +r.eind))) ? +nu : 0, ...geldig.map((r) => +r.eind));
+  const span = Math.max(max - min, 1);
+  const pct = (d) => ((+d - min) / span) * 100;
+  const fmt = (d) => d.toLocaleDateString("nl-NL", { month: "2-digit", year: "numeric" });
+  const status = (r) => (r.beeindigd ? "vroegtijdig gestopt" : r.eind < nu ? "afgelopen" : r.start > nu ? "nog niet gestart" : "loopt");
+  return (
+    <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+      <p className="text-[11px] font-medium text-slate-500 mb-1.5">Contracten in volgorde</p>
+      <div className="space-y-1.5">
+        {geldig.map((r) => (
+          <button key={r.i} type="button" onClick={() => onOpen(r.i)} className="w-full text-left group" title="Dit contract openen in de stappen">
+            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600">
+              <span className="truncate">
+                <strong>Contract {r.i + 1}</strong> · {fmt(r.start)} → {fmt(r.eind)}
+                {r.sg.maandbedrag ? ` · ${eur(Number(r.sg.maandbedrag))}/mnd` : ""}
+                {r.sg.kenteken ? ` · ${r.sg.kenteken}` : ""}
+              </span>
+              <span className={`shrink-0 ${r.beeindigd ? "text-amber-700" : r.eind < nu ? "text-slate-400" : "text-emerald-700"}`}>{status(r)}</span>
+            </div>
+            <div className="relative h-1.5 mt-0.5 rounded-full bg-slate-200">
+              <div
+                className={`absolute h-1.5 rounded-full ${r.beeindigd ? "bg-amber-400" : r.eind < nu ? "bg-slate-400" : "bg-teal-600"} group-hover:opacity-80`}
+                style={{ left: `${pct(r.start)}%`, width: `${Math.max(pct(r.eind) - pct(r.start), 1.5)}%`, backgroundColor: r.beeindigd ? "#fbbf24" : r.eind < nu ? "#94a3b8" : "#0d9488" }}
+              />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function LeaseInterestPanel({
   defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
   onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
@@ -199,6 +247,9 @@ export default function LeaseInterestPanel({
                         ))}
                       </select>
                     </div>
+                  )}
+                  {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && segments.length > 0 && (
+                    <ContractTijdlijn segments={segments} onOpen={(idx) => onOpenWizard(lease.key, { contract: idx })} />
                   )}
                   {typeConfirmed && isFinancieel && !isOnbekend && onOpenWizard && (() => {
                     const nieuw = detecteerNieuwContract(lease, details);

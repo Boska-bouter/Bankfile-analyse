@@ -267,7 +267,7 @@ export default function App() {
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
   // Stappenscherm voor financial lease: { key, nieuw } of null. Zie openLeaseWizard / autoOpenLeaseWizard.
   const [leaseWizard, setLeaseWizard] = useState(null);
-  const openLeaseWizard = (key, opts) => setLeaseWizard((prev) => (prev && prev.key === key && !opts?.nieuw ? prev : { key, nieuw: !!opts?.nieuw }));
+  const openLeaseWizard = (key, opts) => setLeaseWizard((prev) => (prev && prev.key === key && !opts?.nieuw && opts?.contract == null ? prev : { key, nieuw: !!opts?.nieuw, contract: opts?.contract ?? null }));
   // Wordt na de lease-berekening gevuld (zie hieronder): geeft de eerste financial lease waarvoor nog
   // helemaal niets is ingevuld (en niet op "onbekend" staat), of null.
   const leaseWizardKandidaatRef = useRef(() => null);
@@ -2475,10 +2475,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
-      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening]
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
@@ -3546,7 +3548,7 @@ export default function App() {
 
       {leaseWizard && leaseSummary.find((l) => l.key === leaseWizard.key) && (
         <FinancialLeaseWizard
-          key={leaseWizard.key + (leaseWizard.nieuw ? "-nieuw" : "")}
+          key={leaseWizard.key + (leaseWizard.nieuw ? "-nieuw" : "") + (leaseWizard.contract != null ? `-c${leaseWizard.contract}` : "")}
           lease={leaseSummary.find((l) => l.key === leaseWizard.key)}
           details={leaseDetails[leaseWizard.key]}
           typeConfirmed={confirmedLeaseTypeKeys.includes(leaseWizard.key)}
@@ -3555,6 +3557,7 @@ export default function App() {
           onClose={() => setLeaseWizard(null)}
           onOpenAdvanced={setLeaseDetailsModalKey}
           nieuwContract={leaseWizard.nieuw}
+          startContract={leaseWizard.contract}
         />
       )}
 

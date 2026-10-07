@@ -6,7 +6,7 @@ import {
   normalizeKenteken, mergeHandmatigeTermijnen, isCompleteLeaseSegment,
 } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
-import { formFromSegment, blankVervolgContract, cleanSegment } from "./FinancialLeaseDetailsModal.jsx";
+import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren } from "./FinancialLeaseDetailsModal.jsx";
 
 // Stappenscherm voor het invullen van een financial lease. Gebruikt exact hetzelfde opslagformaat
 // (en dezelfde berekeningen) als het volledige gegevensscherm (FinancialLeaseDetailsModal) — het is een
@@ -69,7 +69,7 @@ function Voorstel({ tekst, onNeem }) {
   );
 }
 
-export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false }) {
+export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null }) {
   const [contracts, setContracts] = useState(() => {
     const bestaand = getLeaseSegments(details).filter(Boolean).map(formFromSegment);
     if (bestaand.length === 0) return [formFromSegment(null)];
@@ -77,6 +77,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
   });
   const [cIdx, setCIdx] = useState(() => {
     const n = getLeaseSegments(details).filter(Boolean).length;
+    if (startContract != null && startContract < n) return startContract;
     return nieuwContract && n > 0 ? n : 0;
   });
   const [typeGekozen, setTypeGekozen] = useState(!!typeConfirmed);
@@ -273,7 +274,19 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                   </>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400">KIA-beoordeling en privégebruik per jaar stel je in via "Meer opties" (alles op één scherm).</p>
+              {form.soort === "auto" && (
+                <div>
+                  <p className="text-xs font-medium text-slate-600 mb-1">Privégebruik meer dan 500 km per jaar?</p>
+                  <PrivegebruikJaren
+                    form={form}
+                    jaren={jarenVoorPrivegebruikVan(form, segTx, !contracts.slice(cIdx + 1).some((c) => c.soort === "auto" && normalizeKenteken(c.kenteken) && normalizeKenteken(c.kenteken) === normalizeKenteken(form.kenteken)))}
+                    anderen={contracts.filter((c, i) => i !== cIdx && c.soort === "auto" && normalizeKenteken(c.kenteken) && normalizeKenteken(c.kenteken) === normalizeKenteken(form.kenteken))}
+                    onChange={(map) => set({ privegebruikMeerDan500kmPerJaar: map })}
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">Alleen bij meer dan 500 km privé per jaar geldt de bijtelling. Voor dezelfde auto telt een vinkje voor alle contracten.</p>
+                </div>
+              )}
+              <p className="text-[11px] text-slate-400">KIA-beoordeling stel je in via "Meer opties" (alles op één scherm).</p>
             </>
           )}
 

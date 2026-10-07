@@ -1,3 +1,4 @@
+import { getLeaseSegments } from "../tax/financialLease.js";
 // Dossierprofiel: een compacte, leesbare samenvatting van wat het dossier "weet" uit de wizard en
 // de instellingen — zodat de gebruiker in één oogopslag kan nagaan of het klopt. Puur lezen: er
 // wordt niets gewijzigd of berekend dat de cijfers raakt.
@@ -24,7 +25,7 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening,
+    zakelijkeSpaarRekening, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
   } = p;
   const isBV = rechtsvorm === "bv";
   const blokken = [];
@@ -75,6 +76,16 @@ export function bouwDossierProfiel(p) {
   if (lease.length) auto.push(`Financial lease: ${lease.join(", ")}`);
   if (leaseO.length) auto.push(`Overige lease: ${leaseO.join(", ")}`);
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
+  // Leases zoals ze in de bankgegevens gevonden zijn: één regel per (samengevoegd) contract, met de
+  // overige benamingen erbij zodat zichtbaar is dat die bij dezelfde lease horen.
+  for (const l of leaseSummary) {
+    const aliassen = [...new Set(leaseMerges.filter((m) => m.targetKey === l.key).map((m) => m.sourceName).filter(Boolean))];
+    const type = !confirmedLeaseTypeKeys.includes(l.key) ? "type nog niet bevestigd" : l.category === "Lease (financieel)" ? "financieel" : "operationeel";
+    const aantal = l.category === "Lease (financieel)" ? getLeaseSegments(leaseDetails[l.key]).filter(Boolean).length : 0;
+    const extra = [type, aantal > 1 ? `${aantal} contracten` : null].filter(Boolean).join(", ");
+    const alias = aliassen.length ? ` — ook gezien als: ${aliassen.slice(0, 3).join(", ")}${aliassen.length > 3 ? ` (+${aliassen.length - 3})` : ""}` : "";
+    auto.push(`Lease in bankdata: ${l.name} (${extra})${alias}`);
+  }
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
   blokken.push({ titel: "Auto, lease en lening", regels: auto });
 
