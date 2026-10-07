@@ -43,10 +43,10 @@ export default function DashboardHeader({
   const werkelijkTotal = werkelijkAangifteTotal ?? 0;
   const werkelijkDone = werkelijkAangifteDone ?? 0;
   const werkelijkFrac = werkelijkTotal > 0 ? werkelijkDone / werkelijkTotal : 0;
-  const werkelijkDot =
-    pct == null ? null : werkelijkTotal === 0 ? "⚪" : werkelijkFrac === 0 ? "🔴" : werkelijkFrac < 0.5 ? "🟠" : werkelijkFrac < 1 ? "🟡" : "🟢";
+  const werkelijkDotKleur =
+    pct == null ? null : werkelijkTotal === 0 ? "#CBD5E1" : werkelijkFrac === 0 ? "#DC2626" : werkelijkFrac < 0.5 ? "#F59E0B" : werkelijkFrac < 1 ? "#EAB308" : "#059669";
   const werkelijkTekst =
-    pct == null ? "nog geen data" : werkelijkTotal === 0 ? "Niet van toepassing" : `${werkelijkDone} van ${werkelijkTotal} gedaan`;
+    pct == null ? "nog geen data" : werkelijkTotal === 0 ? "Niet van toepassing" : `${werkelijkDone} van ${werkelijkTotal} afgevinkt`;
   return (
     <div className="flex flex-col 2xl:flex-row 2xl:items-start 2xl:justify-between gap-4">
       <div>
@@ -70,7 +70,7 @@ export default function DashboardHeader({
                   <div className="flex items-start gap-1.5">
                     <span className="mt-1 rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
                     <div className="flex flex-col leading-tight">
-                      <span className="text-xs text-slate-500">Hele dossier · <strong className="text-slate-800">{pct}%</strong></span>
+                      <span className="text-[11px] text-slate-400">Hele dossier · {pct}%</span>
                       <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
                         {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
                       </span>
@@ -80,7 +80,7 @@ export default function DashboardHeader({
                   <div className="flex items-start gap-1.5">
                     <span className="mt-1 rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
                     <div className="flex flex-col leading-tight">
-                      <span className="text-xs text-slate-500">{yearRing.jaar} · <strong className="text-slate-800">{yearRing.pct}%</strong></span>
+                      <span className="text-[11px] text-slate-400">{yearRing.jaar} · {yearRing.pct}%</span>
                       <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
                         {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
                       </span>
@@ -149,10 +149,10 @@ export default function DashboardHeader({
               className={`flex flex-col items-start gap-1 text-left ${werkelijkItems?.length ? "cursor-pointer" : "cursor-default"}`}
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
-              <span className="text-xs font-semibold text-slate-800">Werkelijke aangifte</span>
+              <span className="text-[11px] font-medium text-slate-500">Aangiftestatus <span className="font-normal text-slate-400">(informatie)</span></span>
               <span className="flex items-center gap-2">
-                {werkelijkDot && <span className="text-sm leading-none">{werkelijkDot}</span>}
-                <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{werkelijkTekst}</span>
+                {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
+                <span className="text-xs text-slate-600 whitespace-nowrap">{werkelijkTekst}</span>
                 {werkelijkItems?.length > 0 && <span className="text-[11px] text-teal-700 underline">welke?</span>}
               </span>
             </button>

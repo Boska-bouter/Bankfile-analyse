@@ -414,7 +414,8 @@ function buildYearSectionBv(
   <h1>Indicatieve aangifteberekening BV / fiscale reconstructie — ${year}</h1>
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]} · Gewone BTW-plicht (KOR niet van toepassing voor een BV) ·
-    op basis van beschikbare bankgegevens
+    op basis van beschikbare bankgegevens<br>
+    <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span>
   </p>
   ${samenvattingHtml}
 
