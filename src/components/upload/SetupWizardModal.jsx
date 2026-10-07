@@ -363,10 +363,20 @@ function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [], dubbelT
           {lijst.map((naam, i) => (
             <li key={i} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
               <span className="truncate">{naam}{dubbelToegestaan && lijst.slice(0, i).filter((x) => x.toLowerCase() === naam.toLowerCase()).length > 0 ? ` — contract ${lijst.slice(0, i + 1).filter((x) => x.toLowerCase() === naam.toLowerCase()).length}` : ""}</span>
-              <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="shrink-0 text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
+              <span className="shrink-0 flex items-center gap-3">
+                {dubbelToegestaan && !vol && (
+                  <button type="button" onClick={() => onChange([...lijst.slice(0, i + 1), naam, ...lijst.slice(i + 1)])} className="text-xs text-teal-700 hover:text-teal-900 font-medium" title="Nog een contract (of auto) bij dezelfde leasemaatschappij">+ Nog een contract</button>
+                )}
+                <button type="button" onClick={() => onChange(lijst.filter((_, j) => j !== i))} className="text-xs text-slate-400 hover:text-slate-700">Verwijderen</button>
+              </span>
             </li>
           ))}
         </ul>
+      )}
+      {dubbelToegestaan && lijst.length > 0 && (
+        <p className="text-[11px] text-slate-500">
+          Verschillende namen die bij hetzelfde contract horen (bijv. de leasemaatschappij én de incassonaam) tellen als <strong>één</strong> contract — de app voegt ze samen. Is er een tweede contract of auto bij dezelfde maatschappij? Gebruik <strong>+ Nog een contract</strong>.
+        </p>
       )}
       {!vol && (
         <div className="flex gap-2">
