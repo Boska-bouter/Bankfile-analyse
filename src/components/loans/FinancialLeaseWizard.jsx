@@ -206,23 +206,23 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="px-5 py-3 bg-teal-700 text-white rounded-t-xl shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs text-teal-100">
-                Financial lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
-              </p>
-              <h2 className="text-sm font-semibold mt-0.5">{STAPPEN[stapNu]}</h2>
-            </div>
-            <button onClick={onClose} className="text-teal-50 hover:text-white shrink-0" title="Sluiten zonder opslaan"><X className="h-5 w-5" /></button>
+        <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white rounded-t-xl shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-50 hover:bg-white/15"
+            title="Sluiten zonder opslaan"
+          >
+            <X className="h-4 w-4" /> Afbreken
+          </button>
+          <p className="text-xs text-slate-300 pr-24">
+            Financial lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
+          </p>
+          <h2 className="text-sm font-semibold mt-0.5">{STAPPEN[stapNu]}</h2>
+          <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
+            <div className="h-full bg-white/80" style={{ width: `${Math.round((pos / Math.max(stappen.length, 1)) * 100)}%` }} />
           </div>
-          <div className="mt-2 flex gap-1">
-            {stappen.map((s, i) => (
-              <button key={s} type="button" onClick={() => setStap(s)} title={STAPPEN[s]}
-                className={`h-1.5 p-0 block flex-1 rounded-full ${i <= pos ? "bg-white" : "bg-white/30"}`} />
-            ))}
-          </div>
-          <p className="mt-1 text-[11px] text-teal-100">Stap {pos + 1} van {stappen.length}</p>
+          <p className="mt-1.5 text-[11px] text-teal-100">Stap {pos + 1} van {stappen.length}</p>
         </div>
 
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
