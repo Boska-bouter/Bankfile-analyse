@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { defaultZakelijkPercentage } from "../../tax/categorySplit.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 // Eén categorie-rij met een eigen "concept"-waarde (draft) — de wijziging wordt bewust pas
 // doorgegeven bij het verlaten van het veld (blur) of op Enter, niet bij elke toetsaanslag. Zou dat
@@ -58,9 +59,10 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
+  defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!defaultOpen);
+  const sectionRef = useOpenOnJump(setOpen);
   const categorieen = Object.keys(categorieTotalen || {}).sort((a, b) => a.localeCompare(b));
   // Blijft ook zichtbaar zonder splitsbare categorieën als er dit jaar "auto op de zaak" is
   // aangegeven — anders verdwijnt het paneel stilletjes zodra Brandstof/Parkeren (vaak de enige
@@ -71,7 +73,7 @@ export default function CategoryPercentagePanel({
   const aangepast = gedeeldeZichtbaar.filter((r) => r.raw != null).length + categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Percentage zakelijk per categorie</span>
         {aangepast > 0 && <span className="text-xs font-normal text-slate-400">({aangepast} aangepast)</span>}

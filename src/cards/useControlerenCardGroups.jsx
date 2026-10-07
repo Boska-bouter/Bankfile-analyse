@@ -49,6 +49,9 @@ export function useControlerenCardGroups(p) {
       if (!built) return null;
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
+    // Staat er maar één van de drie panelen (activa/lease/lening) in de kaart, dan meteen openklappen
+    // i.p.v. de gebruiker nóg een klik te laten doen.
+    const bedrijfsmiddelenEnkelPaneel = [activaSummary?.length, leaseSummary?.length, (loanSummary?.length || 0) + (privateLoanSummary?.length || 0)].filter((n) => n > 0).length === 1;
     return [
       withExpand(
         (() => {
@@ -159,6 +162,7 @@ export function useControlerenCardGroups(p) {
         <div className="space-y-3">
           <div ref={activaSectionRef}>
             <ActivaPanel
+              defaultOpen={bedrijfsmiddelenEnkelPaneel}
               activaSummary={activaSummary}
               activaDetails={activaDetails}
               activeYear={activeYear}
@@ -170,6 +174,7 @@ export function useControlerenCardGroups(p) {
           </div>
           <div ref={leasesSectionRef}>
             <LeaseInterestPanel
+              defaultOpen={bedrijfsmiddelenEnkelPaneel}
               leaseSummary={leaseSummary}
               leaseDetails={leaseDetails}
               confirmedLeaseTypeKeys={confirmedLeaseTypeKeys}
@@ -185,6 +190,7 @@ export function useControlerenCardGroups(p) {
           </div>
           <div ref={loansSectionRef}>
             <LoanInterestPanel
+              defaultOpen={bedrijfsmiddelenEnkelPaneel}
               loanSummary={loanSummary}
               privateLoanSummary={privateLoanSummary}
               loanDetails={loanDetails}

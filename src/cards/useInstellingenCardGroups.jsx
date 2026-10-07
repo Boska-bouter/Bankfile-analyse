@@ -46,37 +46,25 @@ export function useInstellingenCardGroups(p) {
           tone: nogOpen > 0 ? "attention" : "neutral",
           lines: [
             { label: "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
+            { label: "Rekeningen", value: `${eigenRekeningenGeladen.length} geladen · ${(eigenRekeningenExtra || []).length} extra` },
             { label: "Nog niet opgegeven", value: String(nogOpen) },
           ],
-          hint: "Overzicht van je antwoorden — klopt dit?",
+          hint: "Overzicht van je antwoorden en eigen rekeningen — klopt dit?",
           actionLabel: "Bekijken",
         },
         "dossierProfiel",
         <div className="px-1 pb-1">
           <p className="text-xs text-slate-500 mb-3">Klopt dit? Dit is wat de app uit je antwoorden en instellingen heeft opgebouwd. Wijzigen kan bij de betreffende kaarten of via de wizard.</p>
           <DossierProfielLijst blokken={dossierProfiel} />
+          <div className="mt-5">
+            <EigenRekeningenPanel
+              loadedAccounts={eigenRekeningenGeladen}
+              eigenRekeningenExtra={eigenRekeningenExtra}
+              onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
+              classified={classified}
+            />
+          </div>
         </div>
-      ),
-      withExpand(
-        {
-          key: "eigenRekeningen",
-          title: "Eigen rekeningen",
-          icon: <span>🏦</span>,
-          tone: "neutral",
-          lines: [
-            { label: "Geladen", value: String(eigenRekeningenGeladen.length) },
-            { label: "Opgegeven, niet geladen", value: String((eigenRekeningenExtra || []).length) },
-          ],
-          hint: "Rekeningen die bestaan maar niet zijn geladen",
-          actionLabel: "Bekijken",
-        },
-        "eigenRekeningen",
-        <EigenRekeningenPanel
-          loadedAccounts={eigenRekeningenGeladen}
-          eigenRekeningenExtra={eigenRekeningenExtra}
-          onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
-          classified={classified}
-        />
       ),
       withExpand(
         g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),

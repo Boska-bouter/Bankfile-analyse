@@ -2189,6 +2189,8 @@ export default function App() {
   expandedLiveRef.current = expandedCardKeys;
   const activeTabLiveRef = useRef(activeTab);
   activeTabLiveRef.current = activeTab;
+  // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
+  const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
@@ -2218,6 +2220,7 @@ export default function App() {
       return;
     }
     if (!ref.current) { setPendingScrollRef(ref); return; }
+    openPaneelIn(ref.current);
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
@@ -2233,6 +2236,7 @@ export default function App() {
       if (gestopt) return;
       const el = pendingScrollRef.current;
       if (el) {
+        openPaneelIn(el);
         el.scrollIntoView({ behavior: "smooth", block: "start" });
         setPendingScrollRef(null);
       } else if (pogingen++ < 40) {

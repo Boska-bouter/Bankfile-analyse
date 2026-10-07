@@ -14,7 +14,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
       <p className="min-w-0">
         Reconstructie op basis van bankdata ·{" "}
         <button onClick={() => setOpen(true)} className="font-semibold text-indigo-700 hover:underline whitespace-nowrap">
-          wat ontbreekt? →
+          wat staat niet in de bankgegevens? →
         </button>
       </p>
       {open && (
@@ -27,6 +27,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
               </button>
             </div>
             <div className="p-4 overflow-y-auto text-[13px] text-slate-700 space-y-2">
+              <p className="text-slate-500">Dit zijn punten die je niet uit de bankgegevens kunt halen. Er ontbreekt dus niets in je dossier — de app kan het alleen niet zien, en houdt er daarom geen rekening mee.</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Contante ontvangsten en uitgaven</li>
                 <li>Openstaande facturen — nog te ontvangen (debiteuren) en nog te betalen (crediteuren) bedragen die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>

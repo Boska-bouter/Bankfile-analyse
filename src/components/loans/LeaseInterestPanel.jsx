@@ -4,6 +4,7 @@ import { computeFinancialLeaseAmortizationMultiSegment, suggestLeaseMerges } fro
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 function computeFinancialLeaseAmortization(lease, details) {
   if (!isCompleteFinancialLeaseDetails(details)) return null;
@@ -11,10 +12,11 @@ function computeFinancialLeaseAmortization(lease, details) {
 }
 
 export default function LeaseInterestPanel({
-  leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
+  defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onMarkUnknown, onUnmarkUnknown,
   onMergeInto, onUndoMerge, leaseMerges, onOpenHelp,
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!defaultOpen);
+  const sectionRef = useOpenOnJump(setOpen);
   if (leaseSummary.length === 0) return null;
 
   const incompleteCount = leaseSummary.filter((l) => {
@@ -24,7 +26,7 @@ export default function LeaseInterestPanel({
   }).length;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Lease (operationeel/financieel)</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
