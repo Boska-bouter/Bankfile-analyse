@@ -349,9 +349,18 @@ export function normalizeKenteken(kenteken) {
   return (kenteken || "").toString().trim().toUpperCase().replace(/[\s-]/g, "");
 }
 
+// Een contract zonder enig bedrag of looptijd is geen echt contract maar een leeg "vervolg"-restant
+// (bijv. een wizard die op Opslaan is gesloten zonder iets in te vullen).
+export function isLeegSegment(sg) {
+  return !sg || (!Number(sg.koopprijs) && !Number(sg.looptijd) && !Number(sg.maandbedrag) && !Number(sg.leaseVergoeding));
+}
+
 export function getLeaseSegments(details) {
   if (!details) return [];
-  if (Array.isArray(details.contracts) && details.contracts.length > 0) return details.contracts.filter(Boolean);
+  if (Array.isArray(details.contracts) && details.contracts.length > 0) {
+    const echt = details.contracts.filter((sg) => !isLeegSegment(sg));
+    return echt.length > 0 ? echt : details.contracts.filter(Boolean).slice(0, 1);
+  }
   // Handmatig toegevoegde lease waar nog geen contract is ingevuld: alleen metadata, geen segment.
   if (details.handmatigeNaam && !details.startdatum && !details.koopprijs && !details.soort && !details.looptijd && !details.maandbedrag) return [];
   return [details];

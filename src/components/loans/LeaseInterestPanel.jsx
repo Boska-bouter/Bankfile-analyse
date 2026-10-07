@@ -121,7 +121,7 @@ function LeaseGroepPanel({
             const doorgaan = () => {
               let key = kiesLease;
               if (kiesLease === ANDERS) key = onAddManualLease?.(naam, groep);
-              else if (heeftContract) key = onAddManualLease?.(gekozen.name.split(" — ")[0], groep, { splitVan: kiesLease, splitKenteken });
+              else if (heeftContract) key = onAddManualLease?.(gekozen.name.split(" — ")[0], groep, { splitVan: kiesLease });
               if (!key) return;
               onOpenWizard(key, { nieuw: true, soort });
               setFormOpen(false); setKiesLease(""); setNieuweNaam(""); setSplitKenteken("");
@@ -144,12 +144,7 @@ function LeaseGroepPanel({
                     {heeftContract && (
                       <div>
                         <p className="text-slate-600">Deze maatschappij heeft al een contract. Dit nieuwe contract wordt een <strong>apart contract</strong> (bijv. een andere {soort === "machine" ? "machine" : "auto"}). Een vervolgcontract voeg je toe bij het bestaande contract.</p>
-                        {soort !== "machine" && (
-                          <label className="mt-1.5 block text-slate-700">Kenteken (optioneel)
-                            <input value={splitKenteken} onChange={(e) => setSplitKenteken(e.target.value)} placeholder="bijv. AB-123-C" className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-xs w-32" />
-                          </label>
-                        )}
-                        <p className="mt-1 text-slate-500">Betalingen die al bij het bestaande contract staan blijven daar, ook als het bedrag lijkt op dat van dit contract. Alleen betalingen waarin dit kenteken (of het type auto) in het afschrift staat worden vanzelf aan het nieuwe contract gekoppeld. Lijken andere betalingen op dit contract, dan vraag ik eerst bij welk contract ze horen.</p>
+                        <p className="mt-1 text-slate-500">Betalingen die al bij het bestaande contract staan blijven daar, ook als het bedrag lijkt op dat van dit contract. Kenteken en gegevens vul je in de stappen die hierna starten. Staat het kenteken (of type auto) in het afschrift, dan worden die betalingen vanzelf gekoppeld; lijken andere betalingen op dit contract, dan vraag ik eerst bij welk contract ze horen.</p>
                       </div>
                     )}
                     {kiesLease === ANDERS && (

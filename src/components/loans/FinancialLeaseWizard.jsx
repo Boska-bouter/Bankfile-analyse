@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import {
   computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
-  generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
+  generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, isLeegSegment, assignLeaseTransactionsToSegments,
   normalizeKenteken, mergeHandmatigeTermijnen, isCompleteLeaseSegment,
 } from "../../tax/financialLease.js";
 import { eur } from "../../utils/amounts.js";
@@ -160,7 +160,10 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
   ].filter(Boolean);
 
   const bewaar = (lijst = contracts) => {
-    const cleaned = lijst.map(cleanSegment);
+    let cleaned = lijst.map(cleanSegment);
+    // Lege (nog niet ingevulde) contracten niet bewaren — anders ontstaan er "vervolgcontracten" die er niet zijn.
+    const echt = cleaned.filter((sg) => !isLeegSegment(sg));
+    cleaned = echt.length > 0 ? echt : cleaned.slice(0, 1);
     onSave(lease.key, cleaned.length === 1 ? cleaned[0] : { contracts: cleaned });
   };
   const klaar = () => { bewaar(); onClose(); };
