@@ -3525,7 +3525,7 @@ export default function App() {
         />
       )}
 
-      {renderLeaseWizard({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey })}
+      {renderLeaseWizard({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey, removeManualLease })}
 
       {leaseDetailsModalKey && leaseSummary.find((l) => l.key === leaseDetailsModalKey) && (
         <FinancialLeaseDetailsModal

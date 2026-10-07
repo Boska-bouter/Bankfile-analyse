@@ -303,7 +303,8 @@ function significanteWoorden(text) {
   return [...((text || "").toLowerCase().match(/[a-z]{5,}/g) || [])].filter((w) => !LEASE_MERGE_STOPWOORDEN.has(w));
 }
 export function suggestLeaseMerges(leaseSummary) {
-  const items = leaseSummary.map((lease) => ({
+  // Aparte contracten (zelfde maatschappij, andere auto/machine) worden nooit voorgesteld om samen te voegen.
+  const items = leaseSummary.filter((lease) => !lease.splitVan).map((lease) => ({
     lease, woorden: new Set(significanteWoorden(lease.transactions[0]?.counterparty || lease.name)),
   }));
   const groups = [];

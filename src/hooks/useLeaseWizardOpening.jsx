@@ -4,8 +4,8 @@
 // maar alleen als er nog niets is ingevuld (en de lease niet op "onbekend" staat); (2) nooit automatisch
 // bij bestaande gegevens; (3) altijd handmatig te starten, ook voor een nieuw contract.
 import { useRef, useState } from "react";
+import { getLeaseSegments, isLeegSegment } from "../tax/financialLease.js";
 import FinancialLeaseWizard from "../components/loans/FinancialLeaseWizard.jsx";
-import { getLeaseSegments } from "../tax/financialLease.js";
 import { extractKeywordCandidate } from "../utils/normalization.js";
 
 // Bepaalt welke lease de wizard automatisch moet openen / als type bevestigd moet krijgen.
@@ -119,7 +119,7 @@ export function useLeaseWizardOpening() {
     if (k.bevestig) { setTimeout(() => contextRef.current?.confirmLeaseType?.(k.lease, k.bevestig), 250); return; } // financieel opent de wizard zelf
     setTimeout(() => openLeaseWizard(k.key, { nieuw: !!k.nieuw, soort: k.soort }), 150);
   };
-  const renderLeaseWizard = ({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey }) => {
+  const renderLeaseWizard = ({ leaseSummary, leaseDetails, confirmedLeaseTypeKeys, confirmLeaseType, setLeaseDetailField, setLeaseDetailsModalKey, removeManualLease }) => {
     if (!leaseWizard) return null;
     const lease = leaseSummary.find((l) => l.key === leaseWizard.key);
     if (!lease) return null;
@@ -132,6 +132,12 @@ export function useLeaseWizardOpening() {
         onConfirmType={confirmLeaseType}
         onSave={setLeaseDetailField}
         onClose={() => setLeaseWizard(null)}
+        onAbort={() => {
+          // Afgebroken zonder iets in te vullen bij een net toegevoegd apart contract: weer opruimen, anders blijft een leeg open punt achter.
+          const leeg = !getLeaseSegments(leaseDetails[leaseWizard.key]).some((sg) => !isLeegSegment(sg));
+          setLeaseWizard(null);
+          if (lease.splitVan && leeg) removeManualLease?.(lease.key);
+        }}
         onFinished={() => setTimeout(() => autoOpenLeaseWizard(), 500)}
         onOpenAdvanced={setLeaseDetailsModalKey}
         nieuwContract={leaseWizard.nieuw}
