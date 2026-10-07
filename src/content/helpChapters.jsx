@@ -1,3 +1,4 @@
+import { metBolletjes } from "../components/shared/StatusDot.jsx";
 // Alle uitgebreide toelichtingsteksten, gebundeld — hergebruikt door zowel het volledige
 // "Help en uitleg"-overzicht als de gerichte pop-up die bij losse "?"-knopjes opent.
 export const HELP_CHAPTERS = [
@@ -314,16 +315,16 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Elke transactie krijgt een van vier niveaus: <strong>🟢 override</strong> (je hebt 'm zelf al eens bevestigd,
-          op IBAN of tegenpartij), <strong>🟢 keyword</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
-          Brandstof), <strong>🟡 heuristic</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
-          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>🔴 fallback</strong> (geen enkele regel matchte
+          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 override")}</strong> (je hebt 'm zelf al eens bevestigd,
+          op IBAN of tegenpartij), <strong>{metBolletjes("🟢 keyword")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
+          Brandstof), <strong>{metBolletjes("🟡 heuristic")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
+          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 fallback")}</strong> (geen enkele regel matchte
           — in "Overig" beland).
         </p>
         <p>
           Dit is geen extra classificatiesysteem naast de echte indeling — het is puur een indicatie van hóe die
-          indeling tot stand kwam, zodat je niet alles hoeft na te lopen: de 🟢-transacties zijn met vertrouwen
-          ingedeeld, de 🟡/🔴-transacties zijn de moeite van het bekijken waard.
+          indeling tot stand kwam, zodat je niet alles hoeft na te lopen: de groene transacties zijn met vertrouwen
+          ingedeeld, de gele/rode transacties zijn de moeite van het bekijken waard.
         </p>
         <p>
           <strong>Hoe het wordt geteld:</strong> de aantallen onder "Nog te controleren" tellen per{" "}
@@ -346,9 +347,9 @@ export const HELP_CHAPTERS = [
           blijven gewoon op elke plek in de tekst werken.
         </p>
         <p>
-          Klopt een 🟡/🔴-indeling bij nazien gewoon? Dan hoef je 'm niet te wijzigen om 'm te bevestigen — het
+          Klopt een gele of rode indeling bij nazien gewoon? Dan hoef je 'm niet te wijzigen om 'm te bevestigen — het
           "✓ Klopt zo"-knopje (in de detailtabel naast het icoontje, of hier in deze lijst) legt de huidige indeling
-          vast als bevestigde regel, zonder iets te veranderen. Vanaf dan is die tegenpartij 🟢.
+          vast als bevestigde regel, zonder iets te veranderen. Vanaf dan is die tegenpartij groen.
         </p>
       </div>
     ),
@@ -362,7 +363,7 @@ export const HELP_CHAPTERS = [
           De kaart bovenaan het Overzicht toont per jaar het aantal <strong>open punten</strong>: wat je nog moet
           beoordelen (onzekere indelingen, herkomst van inkomsten, overboekingen aan personen, "Overig") plus openstaande
           vragen bij Instellingen. Daaronder staat tussen haakjes de verdeling, bijvoorbeeld "5 controle · 1 instelling".
-          Een indeling die al 🟢 is telt niet mee.
+          Een indeling die al groen is telt niet mee.
         </p>
         <p>
           De <strong>ring</strong> laat zien welk deel van alle te beoordelen groepen (tegenpartij + categorie) al

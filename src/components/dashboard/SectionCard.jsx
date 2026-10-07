@@ -1,4 +1,5 @@
 import HelpHint from "../shared/HelpHint.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Restyling (fase 1) van de dashboardtegel: zelfde databron/contract als DashboardOverview.jsx
 // ({key,title,value|lines,subtitle,tone,actionLabel,icon,onClick,hint}), nieuwe kaartstijl zoals
@@ -64,7 +65,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
                 <span className="text-[11.5px] text-slate-500">{l.label}</span>
-                <span className={`text-[13px] font-semibold ${t.text}`}>{l.value}</span>
+                <span className={`text-[13px] font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
               </div>
             ))}
           </div>
@@ -72,7 +73,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
         {/* v286 — voorheen alleen getoond als er GEEN `lines` waren; sommige kaarten (Dossierstatus,
             Bestanden geladen) zetten beide en willen de subtitle als extra toelichting ónder de
             regels tonen (bijv. of zakelijk/privé-overboekingen matchen), niet in plaats ervan. */}
-        {subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{subtitle}</p>}
+        {subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{metBolletjes(subtitle)}</p>}
 
         {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
       </Wrapper>

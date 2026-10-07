@@ -1,3 +1,4 @@
+import { metBolletjes } from "../shared/StatusDot.jsx";
 // Keuzevenster "Indicatieve aangifteberekening": toont de status van het gekozen jaar en laat het
 // rapport voor dat jaar (of meerdere jaren) openen. Puur weergave; de selectie en het genereren van het
 // rapport zitten in App.jsx.
@@ -26,7 +27,7 @@ export default function AangifteYearPickerModal({
             {yearProgress && (
               <div>
                 <p className="text-sm flex items-center gap-1.5">
-                  <span>{{ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress.status]}</span>
+                  <span>{metBolletjes({ groen: "🟢", oranje: "🟠", rood: "🔴" }[yearProgress.status])}</span>
                   <span className="font-medium">
                     {aangifteStatusTekst(yearProgress.status, aangifteOpenPunten.length)}
                   </span>

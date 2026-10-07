@@ -3,13 +3,15 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeAfschrijvingPerJaar } from "../../tax/activa.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 function isCompleteActivaDetails(details) {
   return !!(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
 }
 
-export default function ActivaPanel({ activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp }) {
-  const [open, setOpen] = useState(false);
+export default function ActivaPanel({ defaultOpen = false, activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  const sectionRef = useOpenOnJump(setOpen);
   if (activaSummary.length === 0) return null;
 
   const incompleteCount = activaSummary.filter((a) => {
@@ -19,7 +21,7 @@ export default function ActivaPanel({ activaSummary, activaDetails, activeYear, 
   }).length;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Activa (bedrijfsmiddelen) — afschrijving</span>
         <span className="text-xs font-normal text-slate-400">({activaSummary.length})</span>

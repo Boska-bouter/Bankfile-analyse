@@ -703,9 +703,9 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                     onChange={(e) => onChange({ ...form, kiaStatus: e.target.value === "controleren" ? "" : e.target.value })}
                     className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
                   >
-                    <option value="controleren">🟠 Handmatig controleren (standaard)</option>
-                    <option value="kwalificeert">🟢 Waarschijnlijk kwalificerend</option>
-                    <option value="uitgesloten">⚪ Niet meegenomen (sluit uit van KIA)</option>
+                    <option value="controleren">Handmatig controleren (standaard)</option>
+                    <option value="kwalificeert">Waarschijnlijk kwalificerend</option>
+                    <option value="uitgesloten">Niet meegenomen (sluit uit van KIA)</option>
                   </select>
                 </label>
                 <p className="text-xs text-slate-400 mt-1">

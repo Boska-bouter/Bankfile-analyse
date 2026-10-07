@@ -6,6 +6,7 @@ import {
 import { counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import { metBolletjes } from "../shared/StatusDot.jsx";
 
 const LEVEL_INFO = {
   heuristic: { icon: "🟡", label: "Controleren" },
@@ -139,7 +140,7 @@ export default function UncertainTransactionsModal({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
           <p className="text-sm font-semibold text-slate-800">
-            {info.icon} {info.label} ({groepen.length} groep{groepen.length === 1 ? "" : "en"}
+            {metBolletjes(info.icon)} {info.label} ({groepen.length} groep{groepen.length === 1 ? "" : "en"}
             {transactions.length !== groepen.length ? `, ${transactions.length} transacties` : ""}
             {bulkTotal > 0 ? ` + ${bulkTotal} elders` : ""})
           </p>

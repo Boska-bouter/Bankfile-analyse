@@ -32,6 +32,7 @@ import { useControlerenDashboardCards } from "./cards/useControlerenDashboardCar
 import { useInstellingenDashboardCards } from "./cards/useInstellingenDashboardCards.jsx";
 import { useControlerenCardGroups } from "./cards/useControlerenCardGroups.jsx";
 import { useInstellingenCardGroups } from "./cards/useInstellingenCardGroups.jsx";
+import { bouwDossierProfiel } from "./dossier/dossierProfiel.js";
 import { useYearlyProgress } from "./calc/useYearlyProgress.jsx";
 import { useClassified } from "./calc/useClassified.jsx";
 import { useYearlySummaries } from "./calc/useYearlySummaries.jsx";
@@ -2188,6 +2189,8 @@ export default function App() {
   expandedLiveRef.current = expandedCardKeys;
   const activeTabLiveRef = useRef(activeTab);
   activeTabLiveRef.current = activeTab;
+  // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
+  const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
     // v281 — als deze ref bij een kaart hoort waarvan de zichtbaarheid afhangt van de
     // uitgeklapt/ingeklapt-stand (zie REF_COLLAPSE_KEYS hierboven), en de kaart staat nu niet in de
@@ -2217,6 +2220,7 @@ export default function App() {
       return;
     }
     if (!ref.current) { setPendingScrollRef(ref); return; }
+    openPaneelIn(ref.current);
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
@@ -2232,6 +2236,7 @@ export default function App() {
       if (gestopt) return;
       const el = pendingScrollRef.current;
       if (el) {
+        openPaneelIn(el);
         el.scrollIntoView({ behavior: "smooth", block: "start" });
         setPendingScrollRef(null);
       } else if (pogingen++ < 40) {
@@ -2409,7 +2414,18 @@ export default function App() {
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus,
   });
+  const dossierProfiel = useMemo(
+    () => bouwDossierProfiel({
+      parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
+      autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
+    }),
+    [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
+      autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
+      zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening]
+  );
   const instellingenCardGroups = useInstellingenCardGroups({
+    dossierProfiel,
     activaDetails, activaSummary, activeYear, addBusinessExpenseKeyword, addBusinessKeyword,
     autoStatus, autoWizardStatus, automatiseringSectionRef, btwSettingsSectionRef, btwVerlegd,
     businessExpenseEntries, businessExpenseKeywords, businessIncomeEntries, businessKeywords, categorieTotalenActiveYear,
@@ -3223,6 +3239,7 @@ export default function App() {
             zakelijkeSpaarRekening={zakelijkeSpaarRekening}
             setZakelijkeSpaarRekening={(v) => { snapshotBeforeAction("Zakelijke spaarrekening ingevuld"); setZakelijkeSpaarRekening(v); }}
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
+            dossierProfiel={dossierProfiel}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
             onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); }}

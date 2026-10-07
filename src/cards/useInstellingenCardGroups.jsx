@@ -4,6 +4,7 @@ import BtwRatesPanel from "../components/btw/BtwRatesPanel.jsx";
 import CardIcon from "../components/shared/CardIcon.jsx";
 import CategoryRulesPanel from "../components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "../components/settings/CounterpartyRulesPanel.jsx";
+import DossierProfielLijst from "../components/shared/DossierProfielLijst.jsx";
 import EigenRekeningenPanel from "../components/settings/EigenRekeningenPanel.jsx";
 import FixedCategoriesPanel from "../components/settings/FixedCategoriesPanel.jsx";
 import RecurringPaymentsPanel from "../components/overview/RecurringPaymentsPanel.jsx";
@@ -12,7 +13,7 @@ import TegenpartijenPanel from "../components/settings/TegenpartijenPanel.jsx";
 
 export function useInstellingenCardGroups(p) {
   const {
-    activaDetails, activaSummary, activeYear, addBusinessExpenseKeyword, addBusinessKeyword,
+    dossierProfiel, activaDetails, activaSummary, activeYear, addBusinessExpenseKeyword, addBusinessKeyword,
     autoStatus, autoWizardStatus, automatiseringSectionRef, btwSettingsSectionRef, btwVerlegd,
     businessExpenseEntries, businessExpenseKeywords, businessIncomeEntries, businessKeywords, categorieTotalenActiveYear,
     categoryBtwRates, categoryRules, categoryZakelijkPercentage, classified, confirmedLeaseTypeKeys,
@@ -35,27 +36,35 @@ export function useInstellingenCardGroups(p) {
       if (!built) return null;
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken", helpChapter };
     };
+    const nogOpen = (dossierProfiel || []).reduce((n, b) => n + b.regels.filter((r) => /nog niet opgegeven/.test(r)).length, 0);
     return [
       withExpand(
         {
-          key: "eigenRekeningen",
-          title: "Eigen rekeningen",
-          icon: <span>🏦</span>,
-          tone: "neutral",
+          key: "dossierProfiel",
+          title: "Dossierprofiel",
+          icon: <CardIcon name="user" />,
+          tone: nogOpen > 0 ? "attention" : "neutral",
           lines: [
-            { label: "Geladen", value: String(eigenRekeningenGeladen.length) },
-            { label: "Opgegeven, niet geladen", value: String((eigenRekeningenExtra || []).length) },
+            { label: "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
+            { label: "Rekeningen", value: `${eigenRekeningenGeladen.length} geladen · ${(eigenRekeningenExtra || []).length} extra` },
+            { label: "Nog niet opgegeven", value: String(nogOpen) },
           ],
-          hint: "Rekeningen die bestaan maar niet zijn geladen",
+          hint: "Overzicht van je antwoorden en eigen rekeningen — klopt dit?",
           actionLabel: "Bekijken",
         },
-        "eigenRekeningen",
-        <EigenRekeningenPanel
-          loadedAccounts={eigenRekeningenGeladen}
-          eigenRekeningenExtra={eigenRekeningenExtra}
-          onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
-          classified={classified}
-        />
+        "dossierProfiel",
+        <div className="px-1 pb-1">
+          <p className="text-xs text-slate-500 mb-3">Klopt dit? Dit is wat de app uit je antwoorden en instellingen heeft opgebouwd. Wijzigen kan bij de betreffende kaarten of via de wizard.</p>
+          <DossierProfielLijst blokken={dossierProfiel} />
+          <div className="mt-5">
+            <EigenRekeningenPanel
+              loadedAccounts={eigenRekeningenGeladen}
+              eigenRekeningenExtra={eigenRekeningenExtra}
+              onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
+              classified={classified}
+            />
+          </div>
+        </div>
       ),
       withExpand(
         g("tegenpartijen", "Tegenpartijen", <span>🤝</span>, ["businessIncomeEntries", "businessExpenseEntries"]),
@@ -126,6 +135,7 @@ export function useInstellingenCardGroups(p) {
       ),
     ].filter(Boolean);
   }, [
+    dossierProfiel,
     transactions.length,
     eigenRekeningenGeladen,
     eigenRekeningenExtra,

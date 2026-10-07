@@ -9,20 +9,14 @@ import { Info, X } from "lucide-react";
 export default function OnzekerhedenPanel({ heeftVoorraad }) {
   const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 shadow-sm px-4 py-2.5 flex items-center gap-3">
-      <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-        <Info className="h-3.5 w-3.5" />
-      </div>
-      <p className="flex-1 min-w-0 text-[13px] text-slate-600">
-        <span className="font-bold text-slate-900">Wat deze app niet kan weten: </span>
-        alleen bankgegevens — contante uitgaven, openstaande facturen en andere fiscale gegevens ontbreken.
+    <section className="flex items-center gap-2 px-1 text-[12.5px] text-slate-500">
+      <Info className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+      <p className="min-w-0">
+        Reconstructie op basis van bankdata ·{" "}
+        <button onClick={() => setOpen(true)} className="font-semibold text-indigo-700 hover:underline whitespace-nowrap">
+          wat staat niet in de bankgegevens? →
+        </button>
       </p>
-      <button
-        onClick={() => setOpen(true)}
-        className="shrink-0 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-full px-3 py-1.5 hover:bg-indigo-50 whitespace-nowrap"
-      >
-        Meer informatie →
-      </button>
       {open && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={() => setOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -33,6 +27,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
               </button>
             </div>
             <div className="p-4 overflow-y-auto text-[13px] text-slate-700 space-y-2">
+              <p className="text-slate-500">Dit zijn punten die je niet uit de bankgegevens kunt halen. Er ontbreekt dus niets in je dossier — de app kan het alleen niet zien, en houdt er daarom geen rekening mee.</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Contante ontvangsten en uitgaven</li>
                 <li>Openstaande facturen — nog te ontvangen (debiteuren) en nog te betalen (crediteuren) bedragen die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>

@@ -1,3 +1,4 @@
+import { metBolletjes } from "../shared/StatusDot.jsx";
 // Blijft vast op het scherm staan tijdens scrollen — zodat je altijd snel van jaar kunt wisselen,
 // ook diep in een lange pagina. Verticaal aan de linkerkant (in plaats van een horizontale balk
 // bovenin) omdat een horizontale balk op tablets al snel moet scrollen of te veel ruimte inneemt;
@@ -26,7 +27,7 @@ export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyP
             }`}
             title={`Jaar ${year}${yp ? ` — ${yp.pct}% klaar. ${STATUS_LABEL[yp.status]}` : ""}`}
           >
-            <span>{yp?.status && <span className="mr-0.5">{STATUS_EMOJI[yp.status]}</span>}{year}</span>
+            <span>{yp?.status && <span className="mr-0.5">{metBolletjes(STATUS_EMOJI[yp.status])}</span>}{year}</span>
             {yp && <span className="tabular-nums opacity-80 text-[9px] sm:text-[10px]">{yp.pct}%</span>}
           </button>
         );

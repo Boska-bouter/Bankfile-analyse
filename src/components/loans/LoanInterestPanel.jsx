@@ -3,13 +3,15 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
-export default function LoanInterestPanel({ loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
-  const [open, setOpen] = useState(false);
+export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  const sectionRef = useOpenOnJump(setOpen);
   if (loanSummary.length === 0 && privateLoanSummary.length === 0) return null;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Rentepercentage per lening</span>
         <span className="text-xs font-normal text-slate-400">({loanSummary.length + privateLoanSummary.length})</span>
