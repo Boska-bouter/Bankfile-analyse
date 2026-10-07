@@ -50,9 +50,9 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
 export function useLeaseWizardOpening() {
   const [leaseWizard, setLeaseWizard] = useState(null); // { key, nieuw, contract, stap } of null
   const openLeaseWizard = (key, opts) => setLeaseWizard((prev) => (
-    prev && prev.key === key && !opts?.nieuw && opts?.contract == null && !opts?.stap
+    prev && prev.key === key && !opts?.nieuw && opts?.contract == null && !opts?.stap && !opts?.soort
       ? prev
-      : { key, nieuw: !!opts?.nieuw, contract: opts?.contract ?? null, stap: opts?.stap ?? null }
+      : { key, nieuw: !!opts?.nieuw, contract: opts?.contract ?? null, stap: opts?.stap ?? null, soort: opts?.soort ?? null }
   ));
   // Verversd bij elke render van App (zie `registreer`): de kandidaat-bepaling leest zo altijd actuele data.
   const contextRef = useRef(null);
@@ -71,7 +71,7 @@ export function useLeaseWizardOpening() {
     if (!lease) return null;
     return (
       <FinancialLeaseWizard
-        key={leaseWizard.key + (leaseWizard.nieuw ? "-nieuw" : "") + (leaseWizard.contract != null ? `-c${leaseWizard.contract}` : "") + (leaseWizard.stap ? `-${leaseWizard.stap}` : "")}
+        key={leaseWizard.key + (leaseWizard.nieuw ? "-nieuw" : "") + (leaseWizard.contract != null ? `-c${leaseWizard.contract}` : "") + (leaseWizard.stap ? `-${leaseWizard.stap}` : "") + (leaseWizard.soort ? `-${leaseWizard.soort}` : "")}
         lease={lease}
         details={leaseDetails[leaseWizard.key]}
         typeConfirmed={confirmedLeaseTypeKeys.includes(leaseWizard.key)}
@@ -82,6 +82,7 @@ export function useLeaseWizardOpening() {
         nieuwContract={leaseWizard.nieuw}
         startContract={leaseWizard.contract}
         startStap={leaseWizard.stap}
+        nieuwSoort={leaseWizard.soort}
       />
     );
   };

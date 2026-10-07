@@ -62,8 +62,9 @@ function ContractTijdlijn({ segments, onOpen }) {
 
 function LeaseGroepPanel({
   titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [],
 }) {
+  const [kiesLease, setKiesLease] = useState("");
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
@@ -92,6 +93,26 @@ function LeaseGroepPanel({
       </button>
       {open && (
         <div className="px-5 pb-5">
+          {onOpenWizard && (() => {
+            const kandidaten = (alleLeases || []).filter((l) => l.category === "Lease (financieel)" || confirmedLeaseTypeKeys.includes(l.key));
+            if (kandidaten.length === 0) return null;
+            const eigen = kandidaten.filter((l) => leaseSummary.some((x) => x.key === l.key));
+            const lijst = eigen.length > 0 ? eigen : kandidaten;
+            const gekozen = lijst.find((l) => l.key === kiesLease)?.key || lijst[0].key;
+            return (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs">
+                {lijst.length > 1 && (
+                  <select value={gekozen} onChange={(e) => setKiesLease(e.target.value)} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
+                    {lijst.map((l) => <option key={l.key} value={l.key}>{l.name}</option>)}
+                  </select>
+                )}
+                <button onClick={() => onOpenWizard(gekozen, { nieuw: true, soort })} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                  + Nieuw contract{soort === "machine" ? " (machine/ander middel)" : " (auto)"}
+                </button>
+                {leeg && <span className="text-slate-500">Een machinecontract hoort bij een lease uit de bankgegevens — kies de leasemaatschappij.</span>}
+              </div>
+            );
+          })()}
           {leeg ? (
             <p className="text-xs text-slate-500">{legeTekst}</p>
           ) : (<>
@@ -322,12 +343,12 @@ export default function LeaseInterestPanel(props) {
   const [openSignal, setOpenSignal] = useState(0);
   const auto = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "auto");
   const overig = leaseSummary.filter((l) => leaseGroepVan(l, leaseDetails[l.key], overigeLeaseNamen) === "overig");
-  const gemeenschappelijk = { ...props, onJump: () => setOpenSignal((n) => n + 1), openSignal };
+  const gemeenschappelijk = { ...props, alleLeases: leaseSummary, onJump: () => setOpenSignal((n) => n + 1), openSignal };
   // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
   return (
     <div className="space-y-3">
-      <LeaseGroepPanel {...gemeenschappelijk} titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
-      <LeaseGroepPanel {...gemeenschappelijk} titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>
   );
 }

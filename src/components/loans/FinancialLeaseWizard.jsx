@@ -85,11 +85,17 @@ function Voorstel({ tekst, onNeem }) {
   );
 }
 
-export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null }) {
+export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null, nieuwSoort = null }) {
   const [contracts, setContracts] = useState(() => {
     const bestaand = getLeaseSegments(details).filter(Boolean).map(formFromSegment);
-    if (bestaand.length === 0) return [formFromSegment(null)];
-    return nieuwContract ? [...bestaand, blankVervolgContract(bestaand[bestaand.length - 1])] : bestaand;
+    const metSoort = (f) => {
+      if (!nieuwSoort) return f;
+      f.soort = nieuwSoort;
+      if (nieuwSoort !== "auto") { f.kenteken = ""; f.voertuigtype = ""; if (nieuwSoort === "machine" && !f.afschrijvingstermijnJaren) f.afschrijvingstermijnJaren = "5"; }
+      return f;
+    };
+    if (bestaand.length === 0) return [metSoort(formFromSegment(null))];
+    return nieuwContract ? [...bestaand, metSoort(blankVervolgContract(bestaand[bestaand.length - 1]))] : bestaand;
   });
   const [cIdx, setCIdx] = useState(() => {
     const n = getLeaseSegments(details).filter(Boolean).length;
