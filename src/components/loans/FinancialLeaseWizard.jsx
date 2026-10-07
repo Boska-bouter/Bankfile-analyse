@@ -85,7 +85,7 @@ function Voorstel({ tekst, onNeem }) {
   );
 }
 
-export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null, nieuwSoort = null, onFinished }) {
+export default function FinancialLeaseWizard({ lease, details, typeConfirmed, onConfirmType, onSave, onClose, onOpenAdvanced, nieuwContract = false, startContract = null, startStap = null, nieuwSoort = null, onFinished, onAbort }) {
   const [contracts, setContracts] = useState(() => {
     const bestaand = getLeaseSegments(details).filter(Boolean).map(formFromSegment);
     const metSoort = (f) => {
@@ -212,7 +212,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
         <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white rounded-t-xl shrink-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={onAbort || onClose}
             className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-teal-50 hover:bg-white/15"
             title="Sluiten zonder opslaan"
           >
