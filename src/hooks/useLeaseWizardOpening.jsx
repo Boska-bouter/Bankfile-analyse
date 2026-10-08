@@ -1,4 +1,4 @@
-// Lease-wizard (financial lease): state, openen en het automatisch openen/bevestigen. Uit App.jsx gehaald.
+// Lease-wizard (financiële lease): state, openen en het automatisch openen/bevestigen. Uit App.jsx gehaald.
 //
 // Openingsregels: (1) automatisch bij "Ga naar deze stap" of het openen van de kaart Bedrijfsmiddelen,
 // maar alleen als er nog niets is ingevuld (en de lease niet op "onbekend" staat); (2) nooit automatisch
@@ -62,7 +62,7 @@ export function bepaalLeaseWizardKandidaat({ leaseSummary, confirmedLeaseTypeKey
   const autoNamen = (verwachteLease || []).flatMap(itemNamen);
   const genoemdeLease = onbevestigd.find((lease) => autoNamen.some((naam) => leaseMatchtNaam(lease, naam)));
   if (genoemdeLease) return { key: genoemdeLease.key, bevestig: "financieel", lease: genoemdeLease };
-  // Machines / andere middelen: in de nieuw-dossier-wizard is (net als bij de auto) gekozen voor financial lease
+  // Machines / andere middelen: in de nieuw-dossier-wizard is (net als bij de auto) gekozen voor financiële lease
   // voordat er namen gevraagd worden, dus ook die namen gelden als bevestiging "financieel".
   const overigNamen = (verwachteLeaseOverig || []).flatMap(itemNamen);
   const genoemdeOverig = onbevestigd.find((lease) => overigNamen.some((naam) => leaseMatchtNaam(lease, naam)));
@@ -147,5 +147,5 @@ export function useLeaseWizardOpening() {
       />
     );
   };
-  return { openLeaseWizard, autoOpenLeaseWizard, registreer, renderLeaseWizard };
+  return { openLeaseWizard, autoOpenLeaseWizard, registreer, renderLeaseWizard, leaseWizardOpen: !!leaseWizard };
 }

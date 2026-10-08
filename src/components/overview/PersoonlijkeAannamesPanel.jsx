@@ -250,7 +250,7 @@ export default function PersoonlijkeAannamesPanel({
               className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
             >
               <option value="">Onbekend/niet aangegeven — huidige percentage-splitsing op Brandstof/Parkeren blijft bruikbaar</option>
-              <option value="zaak">Auto op de zaak (koop, operational lease of financial lease)</option>
+              <option value="zaak">Auto op de zaak (koop, operationele lease of financiële lease)</option>
               <option value="prive">Privéauto zakelijk gebruikt (kilometervergoeding)</option>
             </select>
                         <p className="mt-1.5 text-xs text-slate-400">
@@ -272,7 +272,7 @@ export default function PersoonlijkeAannamesPanel({
             {(autoStatus?.[activeYear] === "zaak") &&
               autoWizardStatus?.soort === "financial" && (
                 <p className="mt-2 text-xs text-slate-400">
-                  Bij financial lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
+                  Bij financiële lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
                   het leningen/lease-overzicht), niet hier.
                 </p>
               )}

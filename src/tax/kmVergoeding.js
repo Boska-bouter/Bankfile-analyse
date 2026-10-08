@@ -1,6 +1,6 @@
 // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive" — zie de wizard-vraag "Heeft de zaak een auto?" in SetupWizardModal.jsx en de
 // "Auto-status"-vraag per jaar in Persoonlijke aannames/App.jsx). Anders dan bij "auto op de zaak"
-// (financial lease/koop/operational lease, zie autoBijtelling.js/autoActiva.js) is er hier geen
+// (financiële lease/koop/operationele lease, zie autoBijtelling.js/autoActiva.js) is er hier geen
 // bedrijfsmiddel om af te schrijven en geen bijtelling: de zakelijke kilometers worden vergoed
 // tegen een vast bedrag per kilometer, dat als kostenpost aftrekbaar is, ongeacht wat de werkelijke
 // autokosten zijn. De aftrek zelf komt hier niet uit banktransacties (het is geen aparte

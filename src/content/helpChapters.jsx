@@ -538,8 +538,8 @@ export const HELP_CHAPTERS = [
           passen. Niet voor een BV.
         </p>
         <p>
-          <strong>Auto</strong> — per jaar kies je: geen auto, <em>Auto op de zaak</em> (gekocht, operational lease of
-          financial lease) of <em>Privéauto zakelijk gebruikt</em>. Bij een auto op de zaak tellen de werkelijke
+          <strong>Auto</strong> — per jaar kies je: geen auto, <em>Auto op de zaak</em> (gekocht, operationele lease of
+          financiële lease) of <em>Privéauto zakelijk gebruikt</em>. Bij een auto op de zaak tellen de werkelijke
           autokosten mee met een bijtelling voor privégebruik, en vervalt de %-splitsing op Brandstof/Parkeren voor dat
           jaar. Bij een privéauto vul je de zakelijke kilometers en de vergoeding per km in. Een combinatie van beide
           bestaat niet als keuze; heeft een oud dossier die nog, dan wordt het bij openen omgezet naar "Privéauto

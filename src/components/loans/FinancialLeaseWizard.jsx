@@ -1,3 +1,4 @@
+import DatumVeld from "../shared/DatumVeld.jsx";
 import { useMemo, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import {
@@ -8,7 +9,7 @@ import {
 import { eur } from "../../utils/amounts.js";
 import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren, restantAfschrijving, restantTekst } from "./FinancialLeaseDetailsModal.jsx";
 
-// Stappenscherm voor het invullen van een financial lease. Gebruikt exact hetzelfde opslagformaat
+// Stappenscherm voor het invullen van een financiële lease. Gebruikt exact hetzelfde opslagformaat
 // (en dezelfde berekeningen) als het volledige gegevensscherm (FinancialLeaseDetailsModal) — het is een
 // andere, begeleide manier om dezelfde velden in te vullen: Contract → Aankoop → Leasevoorwaarden →
 // (Bedrijfsmiddel) → Controle → Verloop. Waarden uit de bank worden alleen als VOORSTEL getoond
@@ -192,9 +193,9 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <button onClick={onClose} className="text-teal-50 hover:text-white"><X className="h-5 w-5" /></button>
           </div>
           <div className="p-5 space-y-3">
-            <p className="text-sm text-slate-700">Is dit een <strong>financial lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operational lease</strong> (de hele termijn is aftrekbaar)?</p>
+            <p className="text-sm text-slate-700">Is dit een <strong>financiële lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operationele lease</strong> (de hele termijn is aftrekbaar)?</p>
             <div className="flex gap-2">
-              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operational — klaar, geen gegevens nodig</button>
+              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operationeel — klaar, geen gegevens nodig</button>
               <button className={`${KNOP} ${KNOP_AAN}`} onClick={() => { onConfirmType(lease, "financieel"); setTypeGekozen(true); }}>Financial — gegevens invullen</button>
             </div>
           </div>
@@ -219,7 +220,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <X className="h-4 w-4" /> Afbreken
           </button>
           <p className="text-xs text-slate-300 pr-24">
-            Financial lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
+            Financiële lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
           </p>
           <h2 className="text-sm font-semibold mt-0.5">{STAPPEN[stapNu]}</h2>
           <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
@@ -233,7 +234,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <>
               <p className="text-xs text-slate-500">Wanneer begon dit contract en om wat voor soort object gaat het?</p>
               <Veld label="Startdatum contract">
-                <input type="date" className={INPUT} value={form.startdatum} onChange={(e) => set({ startdatum: e.target.value })} />
+                <DatumVeld  className={INPUT} value={form.startdatum} onChange={(e) => set({ startdatum: e.target.value })} />
                 {bank.startdatum && form.startdatum !== bank.startdatum && (
                   <Voorstel tekst={`eerste betaling op ${new Date(bank.startdatum).toLocaleDateString("nl-NL")}`} onNeem={() => set({ startdatum: bank.startdatum })} />
                 )}
@@ -364,7 +365,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
               </div>
               {form.contractBeeindigd && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
-                  <Veld label="Einddatum"><input type="date" className={INPUT} value={form.einddatumContract} onChange={(e) => set({ einddatumContract: e.target.value })} /></Veld>
+                  <Veld label="Einddatum"><DatumVeld  className={INPUT} value={form.einddatumContract} onChange={(e) => set({ einddatumContract: e.target.value })} /></Veld>
                   <Veld label="Opbrengst (verkoop/veiling/inlevering)" hint="Vul 0 in als het object zonder vergoeding is ingeleverd — de resterende boekwaarde wordt dan als verlies genomen. Leeg laten alleen bij een gewone herfinanciering."><input type="number" step="0.01" className={INPUT} value={form.verkoopsom} onChange={(e) => set({ verkoopsom: e.target.value })} /></Veld>
                 </div>
               )}

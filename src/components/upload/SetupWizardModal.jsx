@@ -769,19 +769,19 @@ function Scherm34({
           </div>
           {autoKeuze === "zaak" && (
             <div className="pt-1 space-y-1.5">
-              <p className="text-xs text-slate-600">Gekocht, operational lease of financial lease?</p>
+              <p className="text-xs text-slate-600">Gekocht, operationele lease of financiële lease?</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   { key: "koop", label: "Gekocht (eigendom)" },
-                  { key: "operational", label: "Operational lease" },
-                  { key: "financial", label: "Financial lease" },
+                  { key: "operational", label: "Operationele lease" },
+                  { key: "financial", label: "Financiële lease" },
                 ].map((o) => (
                   <button
                     key={o.key}
                     type="button"
                     onClick={() => {
                       const patch = { autoSoort: o.key };
-                      // Financial lease → de leaseauto-vraag hieronder staat meteen op "Ja".
+                      // Financiële lease → de leaseauto-vraag hieronder staat meteen op "Ja".
                       if (o.key === "financial" && t.leaseAutoJa == null) {
                         patch.leaseAutoJa = true;
                         patch.leaseLijst = jaMetSuggesties(t.leaseLijst, suggesties.leaseAuto); patch.leaseContracten = null;
@@ -805,7 +805,7 @@ function Scherm34({
       {toonLeaseAuto && (
         <Sectie
           titel="Is er een leaseauto (financieel) in dit bedrijf?"
-          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financial lease is — vul de leasemaatschappij in. Meerdere auto's of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
+          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financiële lease is — vul de leasemaatschappij in. Meerdere auto's of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
         >
           <JaNee
             value={leaseAutoJa}
@@ -818,12 +818,12 @@ function Scherm34({
       )}
 
       {needs.leaseOverig && (
-        <Sectie titel="Zijn er machines of andere bedrijfsmiddelen (geen auto) in lease?" uitleg="Zelfde vraag als bij de auto: operational lease (hele termijn aftrekbaar, verder niets nodig) of financial lease (rente aftrekbaar, object wordt afgeschreven)?">
+        <Sectie titel="Zijn er machines of andere bedrijfsmiddelen (geen auto) in lease?" uitleg="Zelfde vraag als bij de auto: operationele lease (hele termijn aftrekbaar, verder niets nodig) of financiële lease (rente aftrekbaar, object wordt afgeschreven)?">
           <div className="flex flex-wrap gap-2">
             {[
               { key: "geen", label: "Nee" },
-              { key: "operational", label: "Operational lease" },
-              { key: "financial", label: "Financial lease" },
+              { key: "operational", label: "Operationele lease" },
+              { key: "financial", label: "Financiële lease" },
             ].map((o) => (
               <button
                 key={o.key}
@@ -842,7 +842,7 @@ function Scherm34({
           </div>
           {t.leaseOverigJa && (
             <div className="pt-2 space-y-2">
-              <p className="text-xs text-slate-600">Je gaf aan dat het financial lease is — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen.</p>
+              <p className="text-xs text-slate-600">Je gaf aan dat het financiële lease is — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen.</p>
               <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" suggesties={(suggesties.leaseAuto || []).filter((s) => !(t.leaseLijst || []).some((x) => x.toLowerCase() === s.naam.toLowerCase()))} />
               <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
             </div>

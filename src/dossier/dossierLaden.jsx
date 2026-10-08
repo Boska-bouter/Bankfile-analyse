@@ -94,7 +94,7 @@ export async function laadDossierBestand(file, c) {
     setActiveTab("overzicht"); // V52 — na laden altijd beginnen op Overzicht
     // V89 — "ga verder waar je was": positie bij het laatste opslaan, alleen als die niet gewoon Overzicht was
     const rp = project.resumePositie;
-    setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") ? rp : null);
+    setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") && rp.openPunten !== 0 ? rp : null);
     setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
     setMaxStappen(0);
   } catch (e) {

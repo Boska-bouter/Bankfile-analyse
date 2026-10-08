@@ -33,7 +33,7 @@ export function useControlerenCardGroups(p) {
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
-    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
+    setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
@@ -185,6 +185,8 @@ export function useControlerenCardGroups(p) {
               onRemoveManualLease={removeManualLease}
               onKoppelBetalingen={koppelBetalingen}
               onWijsKandidatenAf={wijsKandidatenAf}
+              onBehandelAlsLease={behandelAlsLease}
+              onWijsZoekAf={wijsZoekAf}
               overigeLeaseNamen={(verwachteLeaseOverig || []).flatMap((i) => [i?.naam, ...(i?.aliassen || [])]).filter(Boolean)}
               onMarkUnknown={markLeaseUnknown}
               onUnmarkUnknown={unmarkLeaseUnknown}

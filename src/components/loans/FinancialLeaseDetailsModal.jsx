@@ -1,3 +1,4 @@
+import DatumVeld from "../shared/DatumVeld.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
@@ -486,8 +487,8 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           ))}
           <label className="text-sm">
             <span className="block text-xs font-medium text-slate-600 mb-1">Startdatum *</span>
-            <input
-              type="date"
+            <DatumVeld
+              
               value={form.startdatum}
               onChange={(e) => {
                 const nieuweStartdatum = e.target.value;
@@ -505,7 +506,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           </label>
           <label className="text-sm">
             <span className="block text-xs font-medium text-slate-600 mb-1">Datum 1e termijn</span>
-            <input type="date" value={form.datumEersteTermijn} onChange={set("datumEersteTermijn")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+            <DatumVeld  value={form.datumEersteTermijn} onChange={set("datumEersteTermijn")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
           </label>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -823,8 +824,8 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
         </p>
         <label className="text-sm">
           <span className="block text-xs font-medium text-slate-600 mb-1">Termijnen betaald t/m</span>
-          <input
-            type="date" value={form.handmatigBetaaldTotEnMet} onChange={set("handmatigBetaaldTotEnMet")}
+          <DatumVeld
+             value={form.handmatigBetaaldTotEnMet} onChange={set("handmatigBetaaldTotEnMet")}
             className="w-full max-w-xs rounded-lg border border-slate-300 px-2 py-1.5"
           />
         </label>
@@ -912,7 +913,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum contract</span>
-                <input type="date" value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                <DatumVeld  value={form.einddatumContract} onChange={set("einddatumContract")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">
                 <span className="block text-xs font-medium text-slate-600 mb-1">Verkoop-/veilingopbrengst</span>

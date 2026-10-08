@@ -2,7 +2,7 @@ import { getLeaseSegments } from "../tax/financialLease.js";
 // Dossierprofiel: een compacte, leesbare samenvatting van wat het dossier "weet" uit de wizard en
 // de instellingen — zodat de gebruiker in één oogopslag kan nagaan of het klopt. Puur lezen: er
 // wordt niets gewijzigd of berekend dat de cijfers raakt.
-const SOORT_AUTO = { koop: "gekocht", operational: "operational lease", financial: "financial lease" };
+const SOORT_AUTO = { koop: "gekocht", operational: "operationele lease", financial: "financiële lease" };
 
 // "2020, 2021, 2022" → "2020–2022" waar jaren opeenvolgend zijn.
 export function jarenBereik(jaren) {
@@ -75,7 +75,8 @@ export function bouwDossierProfiel(p) {
   const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
   // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
   const leaseSoorten = [];
-  if (lease.length || autoWizardStatus?.soort === "financial") leaseSoorten.push("financiële autolease");
+  const autoAlGenoemd = autoWizardStatus?.status === "zaak" && autoWizardStatus?.soort === "financial";
+  if (!autoAlGenoemd && (lease.length || autoWizardStatus?.soort === "financial")) leaseSoorten.push("financiële autolease");
   if (leaseO.length) leaseSoorten.push("financiële machinelease");
   if (leaseSoorten.length) auto.push(`Lease: ${leaseSoorten.join(" en ")}`);
   else if (leaseSummary.length) auto.push(`Lease in bankdata: ${leaseSummary.length}`);

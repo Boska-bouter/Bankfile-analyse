@@ -234,7 +234,7 @@ function buildYearSectionBv(
   if (dgaSalarisDitJaar > 0 && !gebruikelijkLoon.voldoetVermoedelijk) openPunten.push(`DGA-salaris (${eur(dgaSalarisDitJaar)}${bijtellingPrivegebruikAuto > 0 ? ` + bijtelling auto ${eur(bijtellingPrivegebruikAuto)}` : ""}) lijkt onder het gebruikelijk loon van ${eur(gebruikelijkLoon.minimum)} te liggen`);
   if (bijtellingPrivegebruikAuto > 0) {
     openPunten.push(
-      `Bijtelling privégebruik auto (financial lease, ${eur(bijtellingPrivegebruikAuto)}) — dit is geen correctie op de winst/Vpb, maar hoort als loon in natura bij het DGA-salaris. Check of dit is verwerkt in de loonheffing.`
+      `Bijtelling privégebruik auto (financiële lease, ${eur(bijtellingPrivegebruikAuto)}) — dit is geen correctie op de winst/Vpb, maar hoort als loon in natura bij het DGA-salaris. Check of dit is verwerkt in de loonheffing.`
     );
   }
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);

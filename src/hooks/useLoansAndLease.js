@@ -70,7 +70,7 @@ export const txSleutel = (tx) => `${tx.date instanceof Date ? tx.date.toISOStrin
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
 export function useLoansAndLease({
   classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
-  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {},
+  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {}, onHerbeoordeelOverig, setRowOverridesBulk,
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
   // Leningen die eerder expliciet als privé zijn aangemerkt ("Leningen (privé)") — apart
@@ -111,6 +111,7 @@ export function useLoansAndLease({
       return [...new Set(lijst)];
     };
     const bedragVan = (d) => Number(d.maandbedrag) || Number(d.contracts?.[0]?.maandbedrag) || 0;
+    const normNaam = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     const basisKopie = basis.map((l) => ({ ...l }));
     const handmatig = Object.entries(leaseDetails || {})
       .filter(([k, d]) => d && d.handmatigeNaam && !bestaand.has(k))
@@ -137,12 +138,33 @@ export function useLoansAndLease({
             splitKandidaten = bron.transactions.filter((tx) => tx.amount < 0 && Math.abs(Math.abs(tx.amount) - bedrag) <= marge);
           }
         }
+        // Handmatig toegevoegde maatschappij (geen apart contract): zoek betalingen aan die naam in de bankgegevens.
+        // 1) Staan ze al als lease herkend (onder een eigen naam), dan horen ze bij dit contract. 2) Staan ze onder een andere
+        // categorie (bijv. omdat tijdens het inlezen nog niet bekend was dat het lease is), dan stellen we voor ze als lease te behandelen.
+        let zoekKandidaten = [];
+        if (!d.splitVan) {
+          const naamNorm = normNaam(d.handmatigeNaam);
+          if (naamNorm.length >= 4) {
+            const raakt = (tx) => normNaam(tx.counterparty).includes(naamNorm) || normNaam(tx.description).includes(naamNorm);
+            for (const l of basisKopie) {
+              if (l.splitVan || l.absorbedInto) continue;
+              if (l.transactions.some(raakt) || normNaam(l.name).includes(naamNorm)) {
+                transactions = [...transactions, ...l.transactions];
+                l.absorbedInto = k;
+              }
+            }
+            transactions.sort((a, b) => a.date - b.date);
+            if (transactions.length === 0 && !d.zoekAfgewezen) {
+              zoekKandidaten = (classified || []).filter((tx) => tx.amount < 0 && !tx.isMirror && !String(tx.category || "").startsWith("Lease") && raakt(tx));
+            }
+          }
+        }
         const total = transactions.reduce((a, tx) => a + (Number(tx.amount) || 0), 0);
-        return { key: k, name: d.handmatigeNaam, total, count: transactions.length, transactions, category: "Lease (financieel)", handmatig: transactions.length === 0, splitVan: d.splitVan || null, splitKandidaten, splitBedrag: bedragVan(d), handmatigeGroep: d.handmatigeGroep || "auto" };
+        return { zoekKandidaten, key: k, name: d.handmatigeNaam, total, count: transactions.length, transactions, category: "Lease (financieel)", handmatig: transactions.length === 0, absorbed: !d.splitVan && transactions.length > 0, splitVan: d.splitVan || null, splitKandidaten, splitBron: bron || null, splitBedrag: bedragVan(d), handmatigeGroep: d.handmatigeGroep || "auto" };
       });
-    const basisNaSplit = handmatig.some((h) => h.splitVan) ? basisKopie : basis;
+    const basisNaSplit = basisKopie.filter((l) => !l.absorbedInto);
     return [...basisNaSplit, ...handmatig];
-  }, [rawLeaseSummary, effectiveLeaseMerges, leaseDetails]);
+  }, [rawLeaseSummary, effectiveLeaseMerges, leaseDetails, classified]);
   // Overzicht van actieve samenvoegingen, met de namen erbij (voor de "Loskoppelen"-knop in de
   // UI) — filtert automatisch samenvoegingen weg waarvan bron of doel niet meer bestaat (bijv. na
   // het wijzigen van classificatieregels, waardoor een lease-groep is opgesplitst of verdwenen).
@@ -173,7 +195,7 @@ export function useLoansAndLease({
   const setLeaseDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leasegegevens aangepast");
     setLeaseDetails((prev) => {
-      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep, ...(prev[key].splitVan ? { splitVan: prev[key].splitVan, splitKenteken: prev[key].splitKenteken, toegewezen: prev[key].toegewezen, kandidatenAfgewezen: prev[key].kandidatenAfgewezen } : {}) } : {};
+      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep, zoekAfgewezen: prev[key].zoekAfgewezen, omgezet: prev[key].omgezet, ...(prev[key].splitVan ? { splitVan: prev[key].splitVan, splitKenteken: prev[key].splitKenteken, toegewezen: prev[key].toegewezen, kandidatenAfgewezen: prev[key].kandidatenAfgewezen } : {}) } : {};
       return { ...prev, [key]: { ...newDetails, ...meta } };
     });
   };
@@ -217,6 +239,20 @@ export function useLoansAndLease({
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
     return key;
   };
+  // Betalingen aan deze tegenpartij(en) voortaan als financiële lease behandelen (categorie aanpassen).
+  const behandelAlsLease = (txs, leaseKey) => {
+    // Per betaling (rij) aanpassen, niet per tegenpartij/IBAN: andere partijen met hetzelfde rekeningnummer blijven ongemoeid.
+    const lijst = (txs || []).filter((tx) => tx && tx.id != null);
+    if (lijst.length === 0) return;
+    snapshotBeforeAction("Betalingen als lease aangemerkt");
+    setRowOverridesBulk?.(lijst.map((tx) => tx.id), { category: "Lease (financieel)", type: "Zakelijk" });
+    // Onthouden welke betalingen door dit contract als lease zijn gaan tellen — nodig om het terug te draaien bij verwijderen.
+    const omgezet = lijst.map((tx) => ({ id: tx.id, counterparty: tx.counterparty || tx.description, amount: tx.amount, iban: tx.counterpartyIban || null }));
+    if (leaseKey) setLeaseDetails((prev) => ({ ...prev, [leaseKey]: { ...(prev[leaseKey] || {}), omgezet: [...(prev[leaseKey]?.omgezet || []), ...omgezet] } }));
+  };
+  const wijsZoekAf = (key) => {
+    setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), zoekAfgewezen: true } }));
+  };
   const koppelBetalingen = (key, sleutels) => {
     snapshotBeforeAction("Betalingen aan contract gekoppeld");
     setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), toegewezen: [...new Set([...(prev[key]?.toegewezen || []), ...sleutels])] } }));
@@ -227,6 +263,14 @@ export function useLoansAndLease({
   };
   const removeManualLease = (key) => {
     snapshotBeforeAction("Handmatige lease verwijderd");
+    // Betalingen die dankzij dit zelf aangemaakte contract als lease zijn gaan tellen: terug naar "Overig" zodat ze opnieuw beoordeeld worden.
+    const omgezet = leaseDetails[key]?.omgezet || [];
+    const metId = omgezet.filter((o) => o.id != null);
+    if (metId.length) setRowOverridesBulk?.(metId.map((o) => o.id), { category: "Overig", type: "Zakelijk" });
+    for (const o of omgezet.filter((o) => o.id == null)) {
+      setCounterpartyOverride(o.counterparty, o.amount, { category: "Overig", type: "Zakelijk" }, o.iban);
+    }
+    if (leaseDetails[key]?.omgezet?.length) onHerbeoordeelOverig?.(leaseDetails[key].omgezet);
     setLeaseDetails((prev) => { const n = { ...prev }; delete n[key]; return n; });
     setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== key));
   };
@@ -253,6 +297,6 @@ export function useLoansAndLease({
   return {
     loanSummary, privateLoanSummary, leaseSummary, leaseMerges,
     setLoanDetailField, markLoanUnknown, unmarkLoanUnknown,
-    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf,
+    setLeaseDetailField, markLeaseUnknown, unmarkLeaseUnknown, confirmLeaseType, mergeLeaseInto, undoMergeLease, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf,
   };
 }
