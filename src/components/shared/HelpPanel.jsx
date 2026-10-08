@@ -15,15 +15,15 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">3.</span>
-      De kaart "Dossiercontrole" bovenaan toont hoeveel open punten er nog zijn (en een ring die pas 100% haalt als alles klaar is). Onder Controleren loop je die punten na; onder Instellingen staan de dossiervragen en aannames.
+      De route onder de kop (Import → Controleren → Bedrijfsmiddelen → Instellingen → Advies) en de kaart "Eerstvolgende stap" laten zien wat je nu moet doen. De kaart "Dossiercontrole" toont hoeveel open punten er nog zijn.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">4.</span>
-      Per jaar vind je de controlelijst, het BTW-kwartaaloverzicht, het aangiftevoorstel, en (bij meerdere jaren) een meerjarenoverzicht.
+      Per jaar vind je onder "Details en overzichten" het jaaroverzicht, de BTW-kwartalen en (bij meerdere jaren) het meerjarenoverzicht. Links bij Acties maak je de indicatieve aangifteberekening, de samenvatting voor de klant en de onderbouwing.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Alles wordt lokaal in deze browser verwerkt en automatisch bewaard — er gaat niets naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden.
+      Alles wordt lokaal in deze browser verwerkt en automatisch bewaard — er gaat niets naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Werken met de app" hieronder.
     </li>
   </ol>
 );

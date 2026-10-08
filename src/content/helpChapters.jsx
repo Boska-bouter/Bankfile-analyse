@@ -3,6 +3,52 @@ import { metBolletjes } from "../components/shared/StatusDot.jsx";
 // "Help en uitleg"-overzicht als de gerichte pop-up die bij losse "?"-knopjes opent.
 export const HELP_CHAPTERS = [
   {
+    key: "werken-met-de-app",
+    titel: "Werken met de app (route, opslaan, documenten)",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>
+          <strong>De route.</strong> De balk onder de kop laat de stappen zien: Import → Controleren → Bedrijfsmiddelen →
+          Instellingen → Advies. Klik op een stap om erheen te gaan. De kaart "Eerstvolgende stap" daaronder zegt wat je nu
+          het best kunt doen, met een knop "Ga naar deze stap"; "Overslaan" zet die stap even opzij.
+        </p>
+        <p>
+          <strong>Details en overzichten.</strong> Onder de route staan de jaaroverzichten en tabbladen (Transacties,
+          Categorieën, Activa, Leningen, Lease). Rechtsboven staan Meerjarenoverzicht, Herkenningsregels, Excel exporteren
+          (alle transacties plus overzichten) en Print.
+        </p>
+        <p>
+          <strong>Zakelijk en privé.</strong> Onder "Overzicht" staat hoeveel bankbestanden zijn geladen en of dat zakelijk,
+          privé of beide zijn. Bij het gekozen jaar staat wat voor dat jaar is geladen. Mist een type, dan zie je dat daar.
+        </p>
+        <p>
+          <strong>Dossier opslaan, met of zonder wachtwoord.</strong> Bij de eerste keer opslaan kies je. Met een
+          wachtwoord wordt het bestand versleuteld en krijg je eerst een <strong>herstelcode</strong> te zien: bewaar die
+          apart van het dossier. Vergeet je het wachtwoord, dan kun je het dossier alleen nog openen via "Wachtwoord kwijt?
+          Herstelcode gebruiken". Er is geen andere manier om het te herstellen. Daarna slaat de app direct op; onder
+          "Dossier opslaan" kun je het wachtwoord wijzigen of verwijderen en de code opnieuw bekijken.
+        </p>
+        <p>
+          <strong>Documenten (links bij Acties).</strong> "Indicatieve aangifteberekening" is het uitgebreide voorstel per
+          jaar (of meerdere jaren). "Samenvatting voor klant" is één pagina met resultaat, indicatieve belasting, wat er is
+          meegenomen en wat nog openstaat. "Onderbouwing overzichten" is een apart document met de transacties achter de
+          bedragen, per jaar en rubriek. Alle drie zijn indicatief en geen aangifte of fiscaal advies.
+        </p>
+        <p>
+          <strong>Bron en uitleg in het voorstel.</strong> Op het scherm staat bij veel regels "ⓘ bron": klik erop om de
+          transacties erachter te zien. Die bron staat niet in een gedownload of geprint bestand; daarvoor is het
+          onderbouwingsdocument. Met het vinkje "Uitleg meenemen" voeg je de algemene toelichting achteraan het voorstel toe
+          (standaard uit, zodat het document korter blijft).
+        </p>
+        <p>
+          <strong>Zoeken en begrippen.</strong> Het vergrootglas onderin links (of Cmd/Ctrl+K) zoekt in alle transacties. Het
+          boek-icoon opent uitleg bij vakbegrippen; onderstreepte begrippen in de tekst tonen die uitleg als je erover
+          gaat of erop tikt.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "btw-percentages",
     titel: "BTW-percentages",
     inhoud: (
@@ -373,17 +419,18 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           Er zijn <strong>twee ringen in elkaar</strong>: de buitenste (<em>hele dossier</em>, groen) telt alle jaren samen, de
-          binnenste (oranje) geldt alleen voor het gekozen jaar. De jaarring telt de groepen van dat jaar die nog onzeker zijn, plus de jaarchecks
+          binnenste (blauw) geldt alleen voor het gekozen jaar. De jaarring telt de groepen van dat jaar die nog onzeker zijn, plus de jaarchecks
           die nog openstaan (zoals KOR, BTW-verlegd en het beoordelen van personen en "Overig").
         </p>
         <p>
-          Bij "Overig opruimen" (Opschonen) staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive
+          Bij "Overig opruimen" (onder Controleren) staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive
           opnames" (voor een zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
         <p className="text-xs text-slate-400">
           Dossiercontrole zegt alleen dat de administratie rond is. Het zegt niets over of de aangifte zelf al is
-          gedaan — dat staat apart bij "Aangiftestatus" — en ook niet hoeveel aannames er nog in de
-          indicatieve berekening zitten ("Indicatieve aangifte").
+          gedaan — dat staat apart bij "Aangifte buiten deze app" (IB, Zvw, BTW). Staan er aannames in de
+          indicatieve berekening, dan verschijnt daarnaast een regel "Indicatieve aangifte" met het aantal; zonder aannames
+          staat die regel er niet.
         </p>
       </div>
     ),
