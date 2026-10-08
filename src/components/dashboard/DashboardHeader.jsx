@@ -9,7 +9,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, openPoints, openBreakdown, yearRing,
+  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
   const aangiftesRef = useRef(null);
@@ -48,6 +48,29 @@ export default function DashboardHeader({
     pct == null ? null : werkelijkTotal === 0 ? "#CBD5E1" : werkelijkFrac === 0 ? "#DC2626" : werkelijkFrac < 0.5 ? "#F59E0B" : werkelijkFrac < 1 ? "#EAB308" : "#059669";
   const werkelijkTekst =
     pct == null ? "nog geen data" : werkelijkTotal === 0 ? "Niet van toepassing" : `${werkelijkDone} van ${werkelijkTotal} afgevinkt`;
+  if (compact) {
+    // ChatGPT-review punt 2 — Controleren/Instellingen: één rustige regel i.p.v. de volledige statuskop.
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>{title}</h1>
+          <p className="mt-1 text-sm text-slate-500 flex flex-wrap items-center gap-x-2">
+            <span>{subtitle}</span>
+            {pct != null && openPoints != null && (
+              <>
+                <span className="text-slate-300">·</span>
+                <span className={`inline-flex items-center gap-1.5 font-semibold ${heeftOpenPunten ? "text-slate-800" : "text-emerald-700"}`}>
+                  <span className="rounded-full" style={{ background: heeftOpenPunten ? "#F59E0B" : "#059669", width: 8, height: 8 }} />
+                  {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+        {yearControl && <div className="shrink-0">{yearControl}</div>}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col 2xl:flex-row 2xl:items-start 2xl:justify-between gap-4">
       <div>
@@ -55,6 +78,7 @@ export default function DashboardHeader({
           {title}
         </h1>
         {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
+        {dossierInfo && <p className="mt-0.5 text-xs text-slate-400">{dossierInfo}</p>}
       </div>
 
       <div className="flex flex-wrap items-start gap-3">
@@ -150,10 +174,10 @@ export default function DashboardHeader({
               className={`flex flex-col items-start gap-1 text-left ${werkelijkItems?.length ? "cursor-pointer" : "cursor-default"}`}
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
-              <span className="text-[11px] font-medium text-slate-500">Aangiftestatus <span className="font-normal text-slate-400">(informatie)</span></span>
+              <span className="text-[11px] font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· IB · Zvw · BTW</span></span>
               <span className="flex items-center gap-2">
                 {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
-                <span className="text-xs text-slate-600 whitespace-nowrap">{werkelijkTekst}</span>
+                <span className="text-xs text-slate-500 whitespace-nowrap">{werkelijkTekst}</span>
                 {werkelijkItems?.length > 0 && <span className="text-[11px] text-teal-700 underline">welke?</span>}
               </span>
             </button>

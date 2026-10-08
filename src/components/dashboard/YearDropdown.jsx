@@ -12,7 +12,7 @@ const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 
 const coverageNote = (c) => (c.zakelijk && c.prive ? null : c.zakelijk ? "dit jaar: alleen zakelijk geladen" : c.prive ? "dit jaar: alleen privé geladen" : null);
 
-export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage }) {
+export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage, yearPeriod = {} }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -49,10 +49,10 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 rounded-full border-2 border-slate-300 bg-white px-4 py-2.5 text-base font-bold text-slate-800 shadow-sm hover:border-slate-400"
       >
-        {activeYear ?? "Jaar"} <ChevronDown className="h-5 w-5 text-slate-500" />
+        {activeYear ?? "Jaar"}{activeYear && yearPeriod[activeYear] && <span className="text-sm font-semibold text-slate-500">· {yearPeriod[activeYear].label}</span>} <ChevronDown className="h-5 w-5 text-slate-500" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+        <div className="absolute right-0 top-full mt-1.5 z-30 w-60 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
           {years.map((year) => {
             const status = yearlyProgress?.[year]?.status;
             return (
@@ -65,7 +65,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50"
               >
                 {status && <span>{metBolletjes(STATUS_EMOJI[status] || "⚪")}</span>}
-                <span className="flex-1 font-medium text-slate-700">{year}</span>
+                <span className="flex-1 font-medium text-slate-700">{year}{yearPeriod[year] && <span className="ml-1.5 text-xs font-normal text-slate-400">· {yearPeriod[year].label}</span>}</span>
                 {showBreakdown && yearCoverage?.[year] && coverageNote(yearCoverage[year]) && (
                   <span className="text-[10px] text-amber-600" title={coverageNote(yearCoverage[year])}>{yearCoverage[year].zakelijk ? "alleen Z" : "alleen P"}</span>
                 )}

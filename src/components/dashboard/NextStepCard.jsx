@@ -11,6 +11,8 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
   const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
 
+  // Alles afgehandeld en niets te hervatten: de route-balk erboven zegt al hetzelfde, dus geen aparte kaart.
+  if (alle.length === 0 && !hervat) return null;
   return (
     <div className="rounded-[20px] border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-3">
       {hervat && (
@@ -81,14 +83,6 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2.5 text-[12px]">
-        {snelkoppelingen.map((s) => (
-          <button key={s.label} type="button" onClick={s.onClick} className="font-semibold text-teal-700 hover:underline">
-            {s.label}
-          </button>
-        ))}
-        {onOpenHelp && <HelpHint chapter="tegenpartijregels" onOpen={onOpenHelp} label="" />}
-      </div>
     </div>
   );
 }

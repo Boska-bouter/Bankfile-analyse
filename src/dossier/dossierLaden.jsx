@@ -9,7 +9,7 @@ import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, nor
 export async function laadDossierBestand(file, c) {
   const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
   try {
-    const project = await readProjectFile(file);
+    const project = await readProjectFile(file, c.vraagWachtwoord);
     suppressChangeCount();
     setLastExportAt(null);
     setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
@@ -87,6 +87,9 @@ export async function laadDossierBestand(file, c) {
     setCategoryZakelijkPercentageState(project.categoryZakelijkPercentage && typeof project.categoryZakelijkPercentage === "object" ? project.categoryZakelijkPercentage : {});
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
     setLoadedProjectFileName(file.name);
+    c.setDossierWachtwoord?.(project.__wachtwoord || null); // een beveiligd dossier blijft bij opslaan beveiligd
+    c.setBevestigdeControles?.(project.bevestigdeControles && typeof project.bevestigdeControles === "object" ? project.bevestigdeControles : {});
+    c.setAuditLog?.(Array.isArray(project.auditLog) ? project.auditLog.slice(-300) : []);
     // v286 — zie ook handleFiles hierboven: alle uitklapbare kaarten beginnen ingeklapt bij het
     // laden van een (ander) project, i.p.v. een kaart die van een vorig dossier in deze sessie nog
     // openstond gewoon open te laten staan.
@@ -98,6 +101,7 @@ export async function laadDossierBestand(file, c) {
     setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
     setMaxStappen(0);
   } catch (e) {
+    if (e.code === "GEANNULEERD") return;
     setError(e.message || String(e));
   }
 }
@@ -105,6 +109,9 @@ export async function laadDossierBestand(file, c) {
 export async function wisDossier(c, askWizard = false) {
   const { setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey, setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDialog, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseDetailsModalKey, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey, setManualWizardOpen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded, setVpbStatus, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, snapshotBeforeAction, suppressChangeCount } = c;
   snapshotBeforeAction("Nieuw dossier");
+  c.setDossierWachtwoord?.(null);
+  c.setAuditLog?.([]);
+  c.setBevestigdeControles?.({});
   setActiveTab("overzicht"); // V52 — nieuw dossier begint altijd op Overzicht
   suppressChangeCount();
   setLastExportAt(null);

@@ -56,6 +56,13 @@ import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
+import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
+import { berekenJaarPeriodes } from "./utils/periode.js";
+import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
+import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
+import BegrippenModal from "./components/shared/BegrippenModal.jsx";
+import RouteBalk from "./components/dashboard/RouteBalk.jsx";
+import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
@@ -269,11 +276,12 @@ export default function App() {
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
   const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
   // Tijdens en kort na een lease-wizard klapt het overzicht niet vanzelf in: je wilt het resultaat kunnen controleren.
-  if (leaseWizardOpen) geenAutoInklapRef.current = Date.now() + 5000;
-  else if (wizardWasOpenRef.current) geenAutoInklapRef.current = Date.now() + 5000;
-  wizardWasOpenRef.current = leaseWizardOpen;
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
+  // Ook tijdens/na een gegevensvenster (lease, lening, activa) klapt het overzicht niet vanzelf in.
+  const gegevensVensterOpen = leaseWizardOpen || !!activaDetailsModalKey || !!leaseDetailsModalKey || !!loanDetailsModalKey;
+  if (gegevensVensterOpen || wizardWasOpenRef.current) geenAutoInklapRef.current = Date.now() + 5000;
+  wizardWasOpenRef.current = gegevensVensterOpen;
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
   // v275 — los van verwachteLease (die alleen nog gevraagd wordt als de auto-vraag daar aanleiding
   // toe geeft, zie SetupWizardModal): een aparte, altijd gestelde vraag voor overige financiële
@@ -376,6 +384,21 @@ export default function App() {
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
   const [dialog, setDialog] = useState(null); // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
+  // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
+  const [auditLog, setAuditLog] = useState([]);
+  const [bevestigdeControles, setBevestigdeControles] = useState({}); // C — { sleutel: true } voor 'klopt zo' bij aanvullende controles
+  const [showLog, setShowLog] = useState(false);
+  const [showZoek, setShowZoek] = useState(false);
+  const [showBegrippen, setShowBegrippen] = useState(false);
+  // D2 — Ctrl/Cmd+K opent het zoekveld over alle transacties.
+  useEffect(() => {
+    const h = (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setShowZoek(true); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+  const [dossierWachtwoord, setDossierWachtwoord] = useState(null);
+  const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
+  const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
   const projectFileInputRef = useRef(null);
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
@@ -516,6 +539,7 @@ export default function App() {
     setHeeftHolding(resolveHeeftHolding(settings));
     setHoldingBoekingen(settings.holdingBoekingen && typeof settings.holdingBoekingen === "object" ? settings.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
+    setBevestigdeControles(settings.bevestigdeControles && typeof settings.bevestigdeControles === "object" ? settings.bevestigdeControles : {});
     setDismissedDuplicateNotice(!!settings.dismissedDuplicateNotice);
     setExcludedManualFingerprints(Array.isArray(settings.excludedManualFingerprints) ? settings.excludedManualFingerprints : []);
     setTransactionNotes(settings.transactionNotes && typeof settings.transactionNotes === "object" ? settings.transactionNotes : {});
@@ -833,7 +857,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
@@ -847,7 +871,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     changesSinceExport, lastExportAt,
@@ -872,7 +896,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
@@ -959,6 +983,11 @@ export default function App() {
   // (duplicaten verwijderen, wis alles). Bewust maar 1 stap terug — elke volgende momentopname
   // overschrijft de vorige. ----
   const snapshotBeforeAction = (label) => {
+    setAuditLog((prev) => {
+      const laatste = prev[prev.length - 1];
+      if (laatste && laatste.label === label && Date.now() - laatste.t < 2000) return prev;
+      return [...prev, { t: Date.now(), label }].slice(-300);
+    });
     setLastActionSnapshot({
       label,
       state: {
@@ -1544,10 +1573,28 @@ export default function App() {
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
-  const activaSummary = useMemo(() => computeActivaSummary(classified), [classified]);
+  const activaSummary = useMemo(() => computeActivaSummary(classified, activaDetails), [classified, activaDetails]);
   const setActivaDetailField = (key, newDetails) => {
     snapshotBeforeAction("Activagegevens aangepast");
-    setActivaDetails((prev) => ({ ...prev, [key]: newDetails }));
+    setActivaDetails((prev) => ({ ...prev, [key]: { ...(prev[key]?.handmatig ? { handmatig: true } : {}), ...newDetails } }));
+  };
+  // Bedrijfsmiddel handmatig toevoegen (zonder bankbetaling), vanuit de wizard (namen) of het Activa-paneel.
+  const maakActivaSleutel = (i = 0) => `handmatig::${Date.now().toString(36)}${i}`;
+  const voegActivaToe = (namen) => {
+    const lijst = (namen || []).map((n) => String(n).trim()).filter(Boolean);
+    if (lijst.length === 0) return;
+    snapshotBeforeAction("Bedrijfsmiddelen toegevoegd");
+    setActivaDetails((prev) => { const next = { ...prev }; lijst.forEach((naam, i) => { next[maakActivaSleutel(i)] = { handmatig: true, naam }; }); return next; });
+  };
+  const addManualActiva = () => {
+    const key = maakActivaSleutel();
+    snapshotBeforeAction("Bedrijfsmiddel toegevoegd");
+    setActivaDetails((prev) => ({ ...prev, [key]: { handmatig: true, nieuw: true, naam: "Nieuw bedrijfsmiddel" } }));
+    setActivaDetailsModalKey(key);
+  };
+  const removeActivum = (key) => {
+    snapshotBeforeAction("Bedrijfsmiddel verwijderd");
+    setActivaDetails((prev) => { const next = { ...prev }; delete next[key]; return next; });
   };
   const markActivaUnknown = (key) => {
     snapshotBeforeAction("Activum op onbekend gezet");
@@ -2319,6 +2366,21 @@ export default function App() {
   // op de plek waar je toch al aan het controleren bent, i.p.v. terug te moeten naar Overzicht.
   // "Factuurperiode" stond eerder op Overzicht en is hiernaartoe verhuisd (zie dashboardCards
   // hierboven, waar die kaart is weggehaald).
+  const yearPeriod = useMemo(() => berekenJaarPeriodes(allTransactions), [allTransactions]);
+  // Aanvullende controles (C1 dekking, C2 terugkerende betalingen, C3 jaarvergelijking)
+  const aanvullendeControles = useMemo(() => {
+    if (!allTransactions.length) return null;
+    return {
+      dekking: berekenDekking({ allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, bevestigd: bevestigdeControles }),
+      terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
+      sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles }),
+    };
+  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles]);
+  const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
+  const toepassenTerugkerend = (t) => {
+    snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
+  };
   const controlerenDashboardCards = useControlerenDashboardCards({
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
@@ -2430,10 +2492,11 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
+    aanvullendeControles, bevestigControle, toepassenTerugkerend,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
-    loanSummary, loansSectionRef, markActivaUnknown, markIncomeSource, markLeaseUnknown,
+    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
     markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
@@ -2455,12 +2518,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails]
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
@@ -2605,6 +2668,31 @@ export default function App() {
       return next;
     });
   }, [alleStappen]);
+  // D1 — route Import → Controleren → Bedrijfsmiddelen → Aannames → Advies, afgeleid van dezelfde open stappen.
+  const routeStappen = (() => {
+    const som = (keys) => alleStappen.filter((st) => keys.includes(st.key)).reduce((n, st) => n + (st.count ?? 1), 0);
+    const eerste = (keys) => alleStappen.find((st) => keys.includes(st.key) && st.onClick);
+    const maak = (key, label, keys, klaarTekst, fallbackTab) => {
+      const open = som(keys);
+      return { key, label, open, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : open > 0 ? `${open} open` : klaarTekst, eerste: eerste(keys), fallbackTab };
+    };
+    const lijst = [
+      maak("import", "Import", ["importControle"], parsedFiles.length === 1 ? "1 bestand, klopt" : `${parsedFiles.length} bestanden, klopt`, "controleren"),
+      maak("controleren", "Controleren", ["confidence", "incomeReview", "personReview", "overigReview", "duplicates"], "afgehandeld", "controleren"),
+      maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren"),
+      maak("aannames", "Aannames", ["aannames"], "bevestigd", "instellingen"),
+    ];
+    const vorigOpen = lijst.reduce((n, s) => n + s.open, 0);
+    lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
+    return lijst;
+  })();
+  const kiesRouteStap = (s) => {
+    if (s.advies) {
+      setActiveTab("overzicht");
+      setTimeout(() => document.getElementById("advies-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    } else if (s.eerste?.onClick) s.eerste.onClick();
+    else setActiveTab(s.fallbackTab || "controleren");
+  };
   const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
   // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
   const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
@@ -2641,6 +2729,12 @@ export default function App() {
         break;
       case "btw":
         jumpToSection(btwSettingsSectionRef);
+        break;
+      case "meerjaren":
+        setShowMultiYearModal(true);
+        break;
+      case "herkenningsregels":
+        setActiveTab("instellingen");
         break;
       case "excel":
         exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
@@ -2685,11 +2779,12 @@ export default function App() {
 
   const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
-  const saveProjectFile = () => {
+  const saveProjectFile = async () => {
     const project = buildProjectFile({
+      auditLog,
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
       categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
-      excludedDuplicateFingerprints, dismissedDuplicateNotice, businessKeywords, businessExpenseKeywords,
+      excludedDuplicateFingerprints, dismissedDuplicateNotice, bevestigdeControles, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
@@ -2698,7 +2793,13 @@ export default function App() {
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
     });
-    const filename = downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer);
+    let filename;
+    try {
+      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, dossierWachtwoord);
+    } catch (e) {
+      setError(e.message || "Opslaan mislukt.");
+      return;
+    }
     setLoadedProjectFileName(filename);
     restoredChangesRef.current = 0;
     setChangesSinceExport(0);
@@ -2707,7 +2808,7 @@ export default function App() {
 
   // ---- Dossier laden vanaf een bestand ----
   const dossierCtx = {
-    suppressChangeCount, snapshotBeforeAction,
+    suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setAuditLog, setBevestigdeControles,
     setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
     setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
     setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
@@ -2850,6 +2951,12 @@ export default function App() {
           })
         }
         onSaveProject={saveProjectFile}
+        heeftWachtwoord={!!dossierWachtwoord}
+        onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
+        onOpenLog={() => setShowLog(true)}
+        onZoek={() => setShowZoek(true)}
+        onBegrippen={() => setShowBegrippen(true)}
+        logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
         onClearAll={clearAllData}
@@ -2998,7 +3105,8 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3010,7 +3118,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -3020,6 +3128,7 @@ export default function App() {
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
+          {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3029,11 +3138,6 @@ export default function App() {
             onOverslaan={stapOverslaan}
             controleCount={controlerenBadge}
             instellingCount={instellingenBadge}
-            snelkoppelingen={[
-              ...resultatenItems.map((i) => ({ label: i.label, onClick: i.onClick })),
-              { label: `Herkenningsregels (${categoryRules.length})`, onClick: () => setActiveTab("instellingen") },
-            ]}
-            onOpenHelp={setHelpPopupChapter}
             hervat={
               resumeHint && activeYear && resumeHint.openPunten !== 0
                 ? {
@@ -3076,6 +3180,7 @@ export default function App() {
               zakCount={zakGroupForYear.items.length}
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
+              herkenningsregelsCount={categoryRules.length}
             />
           </div>
         </div>
@@ -3198,7 +3303,8 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            compact
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3210,7 +3316,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -3277,6 +3383,9 @@ export default function App() {
             suggesties={wizardSuggesties}
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
+            activaGevraagd={!!bevestigdeControles.activaWizard}
+            activaAantalBank={activaSummary.filter((a) => !a.handmatig).length}
+            onActivaBeantwoord={(namen) => { setBevestigdeControles((p) => ({ ...p, activaWizard: true })); voegActivaToe(namen); }}
             heeftVoorraad={heeftVoorraad}
             setHeeftVoorraad={(v) => { snapshotBeforeAction("Voorraadvraag beantwoord"); setHeeftVoorraad(v); }}
             eigenNamen={eigenNamen}
@@ -3369,7 +3478,8 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            compact
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3381,7 +3491,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -3562,11 +3672,36 @@ export default function App() {
           activum={activaSummary.find((a) => a.key === activaDetailsModalKey)}
           details={activaDetails[activaDetailsModalKey]}
           onSave={setActivaDetailField}
-          onClose={() => setActivaDetailsModalKey(null)}
+          onClose={() => { const k = activaDetailsModalKey; setActivaDetailsModalKey(null); setActivaDetails((prev) => { if (!prev[k]?.nieuw) return prev; const next = { ...prev }; delete next[k]; return next; }); }}
         />
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
+      {wachtwoordModal && (
+        <WachtwoordModal
+          modus={wachtwoordModal.modus}
+          fout={wachtwoordModal.fout}
+          heeftWachtwoord={!!dossierWachtwoord}
+          onOK={(pw) => {
+            if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(pw);
+            else { setDossierWachtwoord(pw); setChangesSinceExport((n) => Math.max(n, 1)); }
+            setWachtwoordModal(null);
+          }}
+          onAnnuleer={() => { if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(null); setWachtwoordModal(null); }}
+          onVerwijder={() => { setDossierWachtwoord(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
+        />
+      )}
+      {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
+      {showBegrippen && <BegrippenModal onClose={() => setShowBegrippen(false)} />}
+      {showLog && (
+        <WijzigingslogModal
+          log={auditLog}
+          kanLaatsteTerugdraaien={!!lastActionSnapshot}
+          laatsteLabel={lastActionSnapshot?.label}
+          onTerugdraaien={() => { undoLastAction(); setShowLog(false); }}
+          onClose={() => setShowLog(false)}
+        />
+      )}
       <UndoToast
         snapshot={lastActionSnapshot && !isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndo={undoLastAction}

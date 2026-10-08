@@ -1,4 +1,5 @@
 import HelpHint from "../shared/HelpHint.jsx";
+import { metBegrippen } from "../shared/Begrip.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 
 // Restyling (fase 1) van de dashboardtegel: zelfde databron/contract als DashboardOverview.jsx
@@ -64,7 +65,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           <div className="flex flex-col gap-1.5">
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
-                <span className="text-[11.5px] text-slate-500">{l.label}</span>
+                <span className="text-[11.5px] text-slate-500">{metBegrippen(l.label)}</span>
                 <span className={`text-[13px] font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
               </div>
             ))}

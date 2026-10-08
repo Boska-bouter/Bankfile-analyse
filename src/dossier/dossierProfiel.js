@@ -25,7 +25,7 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
+    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
   } = p;
   const isBV = rechtsvorm === "bv";
   const blokken = [];
@@ -62,7 +62,11 @@ export function bouwDossierProfiel(p) {
     else if (btwVerlegd === false) btw.push("Geen BTW-verlegd");
     const kw = Object.entries(kwartaalStatus).filter(([, s]) => s?.aangegeven);
     const kwJaren = [...new Set(kw.map(([k]) => k.split("-")[0]))];
-    if (kw.length > 0) btw.push(`${kw.length} kwartalen aangegeven (${jarenBereik(kwJaren)})`);
+    if (kw.length > 0) {
+      const alleJaren = [...new Set([...kwJaren, ...years.map(String)])].map(Number).filter(Number.isFinite);
+      const totaal = alleJaren.length ? (Math.max(...alleJaren) - Math.min(...alleJaren) + 1) * 4 : kw.length;
+      btw.push(`${kw.length} van ${Math.max(totaal, kw.length)} kwartalen aangegeven`);
+    }
   }
   blokken.push({ titel: "BTW", regels: btw });
 
@@ -71,7 +75,15 @@ export function bouwDossierProfiel(p) {
   if (autoWizardStatus?.status === "zaak") auto.push(`Auto op de zaak${autoWizardStatus.soort ? ` — ${SOORT_AUTO[autoWizardStatus.soort] || autoWizardStatus.soort}` : ""}`);
   else if (autoWizardStatus?.status === "prive") auto.push("Privéauto zakelijk gebruikt (kilometervergoeding)");
   else if (autoWizardStatus?.status === "geen") auto.push("Geen auto");
-  else auto.push("Auto: nog niet opgegeven");
+  else {
+    // Wizard-antwoord ontbreekt (bijv. overgeslagen), maar per jaar is de auto wel ingesteld: toon dat.
+    const perJaar = Object.entries(autoStatus || {}).filter(([, v]) => v === "prive" || v === "zaak" || v === "geen");
+    const naam = { prive: "privéauto zakelijk gebruikt", zaak: "auto op de zaak", geen: "geen auto" };
+    if (perJaar.length > 0) {
+      const soorten = [...new Set(perJaar.map(([, v]) => v))];
+      auto.push(`Auto: ${soorten.map((v) => `${naam[v]} (${jarenBereik(perJaar.filter(([, x]) => x === v).map(([j]) => j))})`).join("; ")}`);
+    } else auto.push("Auto: nog niet opgegeven");
+  }
   const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
   // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
   const leaseSoorten = [];
@@ -80,6 +92,9 @@ export function bouwDossierProfiel(p) {
   if (leaseO.length) leaseSoorten.push("financiële machinelease");
   if (leaseSoorten.length) auto.push(`Lease: ${leaseSoorten.join(" en ")}`);
   else if (leaseSummary.length) auto.push(`Lease in bankdata: ${leaseSummary.length}`);
+  const leaseHerkend = leaseSoorten.length > 0 || leaseSummary.length > 0 || autoAlGenoemd;
+  const leaseBevestigd = confirmedLeaseTypeKeys.length > 0 || Object.keys(leaseDetails || {}).length > 0;
+  if (leaseHerkend && !leaseBevestigd) auto.push("Leasegegevens nog te controleren");
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
   blokken.push({ titel: "Auto, lease en lening", regels: auto });
