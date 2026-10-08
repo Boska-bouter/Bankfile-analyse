@@ -15,7 +15,7 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
     if (pw !== pw2) { setFout("De twee wachtwoorden zijn niet gelijk."); return; }
     onOpslaan(pw);
   };
-  const veld = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm";
+  const veld = "w-full rounded-lg border border-slate-300 px-3 py-2 text-base bg-white text-slate-900";
   const optie = (actief) => `flex items-start gap-2 rounded-lg border px-3 py-2 cursor-pointer ${actief ? "border-teal-600 bg-teal-50" : "border-slate-200"}`;
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 flex items-center justify-center p-3" onClick={onAnnuleer}>
@@ -34,8 +34,8 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
         </label>
         {met && (
           <div className="space-y-2">
-            <input type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
-            <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />
+            <input type="text" name="dossier-wachtwoord" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
+            <input type="text" name="dossier-wachtwoord-2" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />
           </div>
         )}
         {fout && <p className="text-xs text-rose-600">{fout}</p>}
