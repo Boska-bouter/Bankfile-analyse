@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -257,14 +257,6 @@ export default function AppSidebar({
             </div>
           );
         })()}
-        {projectStatus?.hasData && (
-          <div className="flex flex-col gap-1.5">
-            <button onClick={onOpenLog} title="Wijzigingslog" className="sb-btn flex items-center gap-2 text-left">
-              <ClipboardList className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="sb-label text-[11.5px] text-slate-400">Wijzigingslog{logAantal ? ` (${logAantal})` : ""}</span>
-            </button>
-          </div>
-        )}
         {saveState && (
           <div className="sb-label flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
@@ -287,25 +279,26 @@ export default function AppSidebar({
             )}
           </div>
         )}
-        <button onClick={onZoek} title="Zoeken in alle transacties (Ctrl+K)" className="sb-btn flex items-center gap-2 text-left">
-          <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="sb-label text-[11.5px] text-slate-400">Zoeken in transacties</span>
-        </button>
-        <button onClick={onBegrippen} title="Uitleg bij vakbegrippen" className="sb-btn flex items-center gap-2 text-left">
-          <BookOpen className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="sb-label text-[11.5px] text-slate-400">Begrippen</span>
-        </button>
-        <button onClick={onToggleHelp} title="Help en uitleg" className="sb-btn flex items-center gap-2 text-left">
-          <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="sb-label text-[11.5px] text-slate-400">Help en uitleg</span>
-        </button>
-        <div className="sb-btn flex items-center gap-2" title="Privacy & beveiliging">
-          <Shield className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-          <span className="sb-label text-[11.5px] text-slate-500">Privacy &amp; beveiliging</span>
+        {/* Hulpmiddelen in één compacte icoonrij (was: vier losse regels) */}
+        <div className="flex flex-wrap items-center gap-0.5 -mx-1">
+          <button onClick={onZoek} title="Zoeken in alle transacties (Ctrl+K)" aria-label="Zoeken in alle transacties (Ctrl+K)" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+            <Search className="h-4 w-4" />
+          </button>
+          <button onClick={onBegrippen} title="Uitleg bij vakbegrippen" aria-label="Uitleg bij vakbegrippen" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+            <BookOpen className="h-4 w-4" />
+          </button>
+          {projectStatus?.hasData && (
+            <button onClick={onOpenLog} title={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} aria-label="Wijzigingslog" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+              <ClipboardList className="h-4 w-4" />
+            </button>
+          )}
+          <button onClick={onToggleHelp} title="Help en uitleg" aria-label="Help en uitleg" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
-        <div className="sb-btn flex items-center gap-2" title="Uw gegevens blijven lokaal">
+        <div className="flex items-center gap-2 text-[10.5px] text-slate-500" title="Privacy & beveiliging: uw gegevens blijven lokaal in deze browser">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
-          <span className="sb-label text-[11px] text-slate-500">Uw gegevens blijven lokaal</span>
+          <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
         <div className="text-[10.5px] text-slate-500 break-all" title={`Versie van de app: ${APP_RELEASE}`}>{collapsed ? APP_RELEASE.replace("release", "r") : `Release ${APP_RELEASE}`}</div>
       </div>
