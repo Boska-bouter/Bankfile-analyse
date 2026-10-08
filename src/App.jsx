@@ -129,6 +129,8 @@ import { exportExcel, exportCsv } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
+import { jarenBereik } from "./dossier/dossierProfiel.js";
+import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
@@ -1502,12 +1504,44 @@ export default function App() {
   };
   // E2 — samenvatting voor de klant (één pagina, zelfde cijfers als het Overzicht).
   const [klantSamenvattingHtml, setKlantSamenvattingHtml] = useState(null);
-  const openKlantSamenvatting = () => {
+  const [klantJaarKeuze, setKlantJaarKeuze] = useState(null); // null = picker dicht, anders gekozen jaren
+  const [klantSamenvattingJaren, setKlantSamenvattingJaren] = useState([]);
+  const klantJaarData = (y) => {
+    const s = yearlySummaries[y];
+    if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
+    let delen = [];
+    if (!korRegeling) {
+      const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+      delen.push({ label: "BTW", bedrag: [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting : 0); }, 0) });
+    } else delen.push({ label: "BTW", bedrag: 0 });
+    if (rechtsvorm === "bv") {
+      delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
+    } else {
+      const aftrek = ondernemersaftrekPerJaar[y];
+      const starters = startersaftrekStatus?.[y] === "ja";
+      const bedragAftrek = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
+      const ib = estimateIncomeTaxMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
+      const hk = estimateHeffingskortingenMetOndernemersaftrek(s.winst, y, bedragAftrek, starters)?.totaal || 0;
+      const zvw = estimateZvwMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
+      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (ib?.belasting || 0) - hk) });
+      delen.push({ label: "Zvw", bedrag: zvw?.bijdrage || 0 });
+    }
+    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) } };
+  };
+  const startKlantSamenvatting = () => {
     if (!activeYear) return;
+    if ((years || []).length > 1) setKlantJaarKeuze([activeYear]);
+    else openKlantSamenvatting([activeYear]);
+  };
+  const openKlantSamenvatting = (gekozen) => {
+    const jaren = [...gekozen].sort();
+    if (jaren.length === 0) return;
+    setKlantJaarKeuze(null);
+    setKlantSamenvattingJaren(jaren);
     setKlantSamenvattingHtml(buildKlantSamenvattingHtml({
-      klantNaam: eigenNamen?.ondernemer, jaar: activeYear, periode: yearPeriod[activeYear]?.label, rechtsvorm,
-      omzetNetto: yearlySummary?.zakelijkeInkomstenNetto, winst: yearlySummary?.winst,
-      belasting: belastingTotaalJaar, profiel: dossierProfiel,
+      klantNaam: eigenNamen?.ondernemer, rechtsvorm,
+      jaren: jaren.map(klantJaarData),
+      profiel: dossierProfiel,
       openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
       meegenomen: (() => {
         const m = [];
@@ -1519,9 +1553,14 @@ export default function App() {
         const op = leaseSummary.filter((l) => l.category !== "Lease (financieel)").map((l) => l.name);
         if (fin.length) m.push({ label: "Financiële lease", items: fin });
         if (op.length) m.push({ label: "Operationele lease", items: op });
-        const au = autoStatus?.[activeYear];
-        if (au === "prive") m.push({ label: "Auto", items: ["privéauto zakelijk gebruikt"] });
-        else if (au === "zaak") m.push({ label: "Auto", items: [`auto op de zaak${autoWizardStatus?.soort === "financial" ? " (financiële lease)" : autoWizardStatus?.soort === "koop" ? " (gekocht)" : autoWizardStatus?.soort === "operational" ? " (operationele lease)" : ""}`] });
+        const soortTxt = autoWizardStatus?.soort === "financial" ? " (financiële lease)" : autoWizardStatus?.soort === "koop" ? " (gekocht)" : autoWizardStatus?.soort === "operational" ? " (operationele lease)" : "";
+        const metJaren = (txt, js) => (jaren.length > 1 ? `${txt} (${jarenBereik(js)})` : txt);
+        const priveJ = jaren.filter((j) => autoStatus?.[j] === "prive");
+        const zaakJ = jaren.filter((j) => autoStatus?.[j] === "zaak");
+        const autoItems = [];
+        if (priveJ.length) autoItems.push(metJaren("privéauto zakelijk gebruikt", priveJ));
+        if (zaakJ.length) autoItems.push(metJaren(`auto op de zaak${soortTxt}`, zaakJ));
+        if (autoItems.length) m.push({ label: "Auto", items: autoItems });
         if (heeftVoorraad === true) m.push({ label: "Voorraad", items: ["aanwezig"] });
         return m;
       })(),
@@ -3012,7 +3051,7 @@ export default function App() {
         projectStatus={{ hasData: parsedFiles.length > 0, changes: changesSinceExport, lastExportAt, loadedName: loadedProjectFileName }}
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
-        onKlantSamenvatting={activeYear ? openKlantSamenvatting : null}
+        onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3672,12 +3711,15 @@ export default function App() {
                   />
                 )}
 
+        {klantJaarKeuze && (
+          <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
+        )}
         {klantSamenvattingHtml && (
           <AangifteVoorstelPreviewModal
             html={klantSamenvattingHtml}
-            years={[activeYear]}
-            titel={`Samenvatting voor klant ${activeYear}`}
-            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, activeYear)}
+            years={klantSamenvattingJaren}
+            titel={`Samenvatting voor klant ${jarenBereik(klantSamenvattingJaren)}`}
+            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren))}
             onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
             onClose={() => setKlantSamenvattingHtml(null)}
           />

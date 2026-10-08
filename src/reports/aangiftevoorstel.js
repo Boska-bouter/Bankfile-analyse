@@ -67,8 +67,9 @@ let BRON_CTX = null; // { classified, year } — gezet door buildYearSection
 const MAX_BRON_RIJEN = 100;
 function bronTabelHtml(categorie) {
   if (!BRON_CTX) return "";
+  const cats = Array.isArray(categorie) ? categorie : [categorie];
   const rijen = BRON_CTX.classified
-    .filter((t) => !t.isMirror && t.year === BRON_CTX.year && t.category === categorie)
+    .filter((t) => !t.isMirror && t.year === BRON_CTX.year && cats.includes(t.category))
     .sort((a, b) => a.date - b.date);
   if (rijen.length === 0) return "";
   const totaal = rijen.reduce((a, t) => a + (t.amount || 0), 0);
@@ -82,7 +83,7 @@ function bronTabelHtml(categorie) {
 function categorieDetailHtml(perCategorie) {
   if (!perCategorie || perCategorie.length === 0) return "";
   return perCategorie.map((r) => {
-    const bron = bronTabelHtml(r.categorie);
+    const bron = bronTabelHtml(r.bronCats || r.categorie);
     return bron
       ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.totaal)}</span></summary>${bron}</details>`
       : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`;
@@ -581,7 +582,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
     const autoCategorieDetail = categorieDetailHtml([
       { categorie: "Afschrijving", totaal: leaseAfschrijvingAuto },
-      { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag },
+      { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag, bronCats: ib.autokostenOverig.categorieen },
     ]);
     const renteVerwijzing =
       ib.leaseAutoKosten && ib.leaseAutoKosten.leaseRenteTotaal > 0
@@ -679,8 +680,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="toelichting">Alle bedragen hieronder zijn netto, exclusief BTW (niet het bruto bankbedrag), tenzij anders vermeld.</p>
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
-    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null)}
-    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.")}
+    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null, ib.inkoopkosten.perCategorie.filter((r) => r.categorie === "Zakelijke inkoop/uitgaven" && r.totaal))}
+    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.", ib.inkoopkosten.perCategorie.filter((r) => r.categorie === "Inhuur personeel" && r.totaal))}
     ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
     ${autoMachineKostenHtml}
     ${overigeBedrijfskostenHtml}

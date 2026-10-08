@@ -1,15 +1,29 @@
 import { eur } from "../utils/amounts.js";
+import { jarenBereik } from "../dossier/dossierProfiel.js";
 
 // E2 — één pagina voor de klant: wat is het resultaat, wat is de indicatieve belasting, waar is
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvorm, omzetNetto, winst, belasting, profiel, openPunten, meegenomen, vandaag = new Date() }) {
+export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
-  const regel = (l, v, sterk) => `<tr${sterk ? ' class="sterk"' : ""}><td>${esc(l)}</td><td class="num">${v}</td></tr>`;
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
-  const delen = belasting?.delen || [];
-  const totaal = belasting?.totaal ?? null;
+  const meer = jaren.length > 1;
+  const jaarTitel = jarenBereik(jaren.map((j) => j.jaar));
+  const periode = meer ? "" : jaren[0]?.periode;
+  const jaar = jaarTitel;
+  const kop = meer ? `<tr><th></th>${jaren.map((j) => `<th class="num">${esc(j.jaar)}</th>`).join("")}</tr>` : "";
+  const rij = (l, waarden, sterk) => `<tr${sterk ? ' class="sterk"' : ""}><td>${esc(l)}</td>${waarden.map((v) => `<td class="num">${v}</td>`).join("")}</tr>`;
+  const isNum = (n) => n != null && Number.isFinite(n);
+  const heeftOmzet = jaren.some((j) => isNum(j.omzetNetto));
+  const heeftWinst = jaren.some((j) => isNum(j.winst));
+  const resultaatHtml = `<table>${kop}${heeftOmzet ? rij("Omzet (excl. BTW)", jaren.map((j) => (isNum(j.omzetNetto) ? eur(j.omzetNetto) : "—"))) : ""}${heeftOmzet && heeftWinst ? rij("Zakelijke kosten", jaren.map((j) => (isNum(j.omzetNetto) && isNum(j.winst) && j.omzetNetto - j.winst >= 0 ? eur(j.omzetNetto - j.winst) : "—"))) : ""}${heeftWinst ? rij(isBV ? "Resultaat vóór Vpb" : "Winst uit onderneming", jaren.map((j) => (isNum(j.winst) ? eur(j.winst) : "—")), true) : ""}</table>`;
+  const labels = [...new Set(jaren.flatMap((j) => (j.belasting?.delen || []).map((d) => d.label)))];
+  const heeftBelasting = jaren.some((j) => j.belasting);
+  const totaalLabel = jaren.length === 1 && jaren[0].belasting?.totaal < 0 ? "Totaal terug te krijgen" : "Totaal te betalen";
+  const belastingHtml = heeftBelasting
+    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? bedrag(d.bedrag) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? bedrag(j.belasting.totaal) : "—")), true)}</table>`
+    : `<p>Nog niet te berekenen.</p>`;
   const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");
   // Alleen wat er is (zonder details — die staan in de indicatieve aangifteberekening).
@@ -19,7 +33,7 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvor
   const openHtml = openPunten?.length
     ? `<ul>${openPunten.map((o) => `<li>${esc(o.label)}${o.count != null ? ` (${o.count})` : ""}</li>`).join("")}</ul><p class="noot">Zolang deze punten openstaan kunnen de bedragen hierboven nog veranderen.</p>`
     : `<p>Er staan geen open punten meer.</p>`;
-  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Samenvatting ${esc(jaar)}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Samenvatting ${esc(jaarTitel)}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
 <style>
  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:12px;line-height:1.4}
  h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;margin-bottom:18px}
@@ -36,10 +50,10 @@ th{font-size:9px;text-transform:uppercase;color:#64748b;text-align:left;border-b
 <div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}${esc(periode || "")}${periode ? " · " : ""}${isBV ? "BV" : "Eenmanszaak / zzp"} · opgesteld ${vandaag.toLocaleDateString("nl-NL")}</div>
 
 <h2>Resultaat</h2>
-<table>${omzetNetto != null ? regel("Omzet (excl. BTW)", eur(omzetNetto)) : ""}${omzetNetto != null && winst != null ? regel("Zakelijke kosten", eur(omzetNetto - winst)) : ""}${winst != null ? regel(isBV ? "Resultaat vóór Vpb" : "Winst uit onderneming", eur(winst), true) : ""}</table>
+${resultaatHtml}
 
 <h2>Indicatieve belasting en premies</h2>
-${delen.length ? `<table>${delen.map((d) => regel(d.label, bedrag(d.bedrag))).join("")}${totaal != null ? regel(totaal < 0 ? "Totaal terug te krijgen" : "Totaal te betalen", bedrag(totaal), true) : ""}</table>` : `<p>Nog niet te berekenen.</p>`}
+${belastingHtml}
 
 ${meegenomenHtml}
 
