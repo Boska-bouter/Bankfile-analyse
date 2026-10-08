@@ -2505,12 +2505,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails]
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,

@@ -25,7 +25,7 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
+    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
   } = p;
   const isBV = rechtsvorm === "bv";
   const blokken = [];
@@ -71,7 +71,15 @@ export function bouwDossierProfiel(p) {
   if (autoWizardStatus?.status === "zaak") auto.push(`Auto op de zaak${autoWizardStatus.soort ? ` — ${SOORT_AUTO[autoWizardStatus.soort] || autoWizardStatus.soort}` : ""}`);
   else if (autoWizardStatus?.status === "prive") auto.push("Privéauto zakelijk gebruikt (kilometervergoeding)");
   else if (autoWizardStatus?.status === "geen") auto.push("Geen auto");
-  else auto.push("Auto: nog niet opgegeven");
+  else {
+    // Wizard-antwoord ontbreekt (bijv. overgeslagen), maar per jaar is de auto wel ingesteld: toon dat.
+    const perJaar = Object.entries(autoStatus || {}).filter(([, v]) => v === "prive" || v === "zaak" || v === "geen");
+    const naam = { prive: "privéauto zakelijk gebruikt", zaak: "auto op de zaak", geen: "geen auto" };
+    if (perJaar.length > 0) {
+      const soorten = [...new Set(perJaar.map(([, v]) => v))];
+      auto.push(`Auto: ${soorten.map((v) => `${naam[v]} (${jarenBereik(perJaar.filter(([, x]) => x === v).map(([j]) => j))})`).join("; ")}`);
+    } else auto.push("Auto: nog niet opgegeven");
+  }
   const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
   // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
   const leaseSoorten = [];
