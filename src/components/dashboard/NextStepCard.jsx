@@ -35,7 +35,7 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
             <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Eerstvolgende stap</span>
             <span className="text-[15px] font-bold text-slate-900 leading-snug">{volgende.label}</span>
             <span className="text-[12px] text-slate-500">
-              {volgende.soort} · {volgende.count != null ? `${volgende.count} open` : "open"} · nog {totaal} open punt{totaal === 1 ? "" : "en"} in totaal
+              {volgende.soort} · {volgende.count != null ? `${volgende.count} open` : "open"}
             </span>
             <div className="mt-1 flex items-center gap-3">
               {volgende.onClick && (
