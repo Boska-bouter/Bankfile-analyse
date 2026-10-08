@@ -31,8 +31,8 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
         ) : (
           <p className="text-xs text-slate-600">Voer het wachtwoord in om dit dossierbestand te openen.</p>
         )}
-        <input type="password" name="dossier-wachtwoord" autoComplete={instellen ? "new-password" : "current-password"} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
-        {instellen && <input type="password" name="dossier-wachtwoord-2" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />}
+        <input type="text" name="dossier-wachtwoord" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
+        {instellen && <input type="text" name="dossier-wachtwoord-2" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />}
         {(fout || lokaalFout) && <p className="text-xs text-rose-600">{lokaalFout || fout}</p>}
         {!instellen && !toonCode && (
           <button type="button" onClick={() => setToonCode(true)} className="text-xs text-slate-500 underline decoration-dotted">Wachtwoord kwijt? Herstelcode gebruiken</button>

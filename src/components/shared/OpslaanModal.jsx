@@ -34,8 +34,8 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
         </label>
         {met && (
           <div className="space-y-2">
-            <input type="password" name="dossier-wachtwoord" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
-            <input type="password" name="dossier-wachtwoord-2" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />
+            <input type="text" name="dossier-wachtwoord" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
+            <input type="text" name="dossier-wachtwoord-2" autoComplete="off" data-lpignore="true" data-1p-ignore="true" style={{ WebkitTextSecurity: "disc", textSecurity: "disc" }} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />
           </div>
         )}
         {fout && <p className="text-xs text-rose-600">{fout}</p>}
