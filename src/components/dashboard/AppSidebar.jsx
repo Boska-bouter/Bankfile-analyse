@@ -19,6 +19,27 @@ const TAB_LABELS = {
   instellingen: "Instellingen",
 };
 
+
+// Icoonknop met een duidelijke tekstballon (fixed, dus niet afgekapt door de scrollende zijbalk).
+function IcoonKnop({ onClick, label, Icon }) {
+  const [tip, setTip] = useState(null);
+  const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left + r.width / 2, y: r.top }); };
+  return (
+    <>
+      <button type="button" onClick={onClick} aria-label={label} onMouseEnter={toon} onMouseLeave={() => setTip(null)} onFocus={toon} onBlur={() => setTip(null)}
+        className="rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+        <Icon className="h-[18px] w-[18px]" />
+      </button>
+      {tip && (
+        <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
+          style={{ left: Math.max(70, Math.min(tip.x, window.innerWidth - 90)), top: tip.y - 8 }}>
+          {label}
+        </span>
+      )}
+    </>
+  );
+}
+
 function TabItem({ tabKey, active, badge, onClick }) {
   const Icon = TAB_ICONS[tabKey];
   return (
@@ -281,20 +302,10 @@ export default function AppSidebar({
         )}
         {/* Hulpmiddelen in één compacte icoonrij (was: vier losse regels) */}
         <div className="flex flex-wrap items-center gap-0.5 -mx-1">
-          <button onClick={onZoek} title="Zoeken in alle transacties (Ctrl+K)" aria-label="Zoeken in alle transacties (Ctrl+K)" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
-            <Search className="h-4 w-4" />
-          </button>
-          <button onClick={onBegrippen} title="Uitleg bij vakbegrippen" aria-label="Uitleg bij vakbegrippen" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
-            <BookOpen className="h-4 w-4" />
-          </button>
-          {projectStatus?.hasData && (
-            <button onClick={onOpenLog} title={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} aria-label="Wijzigingslog" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
-              <ClipboardList className="h-4 w-4" />
-            </button>
-          )}
-          <button onClick={onToggleHelp} title="Help en uitleg" aria-label="Help en uitleg" className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
-            <HelpCircle className="h-4 w-4" />
-          </button>
+          <IcoonKnop onClick={onZoek} label="Zoeken in transacties (Ctrl+K)" Icon={Search} />
+          <IcoonKnop onClick={onBegrippen} label="Begrippen (uitleg vakwoorden)" Icon={BookOpen} />
+          {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
+          <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
         </div>
         <div className="flex items-center gap-2 text-[10.5px] text-slate-500" title="Privacy & beveiliging: uw gegevens blijven lokaal in deze browser">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />

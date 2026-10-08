@@ -2689,7 +2689,15 @@ export default function App() {
   const kiesRouteStap = (s) => {
     if (s.advies) {
       setActiveTab("overzicht");
-      setTimeout(() => document.getElementById("advies-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+      window.dispatchEvent(new Event("bankoverzicht-toon-advies"));
+      const zoek = (n) => {
+        const el = document.getElementById("advies-sectie");
+        if (!el || el.offsetParent === null) { if (n < 10) setTimeout(() => zoek(n + 1), 150); return; }
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("ring-4", "ring-teal-500", "transition-shadow");
+        setTimeout(() => el.classList.remove("ring-4", "ring-teal-500"), 2000);
+      };
+      setTimeout(() => zoek(0), 150);
     } else if (s.eerste?.onClick) s.eerste.onClick();
     else setActiveTab(s.fallbackTab || "controleren");
   };

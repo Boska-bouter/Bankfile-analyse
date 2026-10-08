@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SectionCard } from "./SectionCard.jsx";
 import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
 import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
@@ -61,6 +61,12 @@ export default function DetailsPanel({
   onJump, herkenningsregelsCount,
 }) {
   const [tab, setTab] = useState("jaaroverzicht");
+  // De route-balk ("Advies") vraagt om het Jaaroverzicht-tabblad met de indicatieve aangifte.
+  useEffect(() => {
+    const h = () => setTab("jaaroverzicht");
+    window.addEventListener("bankoverzicht-toon-advies", h);
+    return () => window.removeEventListener("bankoverzicht-toon-advies", h);
+  }, []);
   const btwQuarters = cardsByKey.btwQuarters;
   const loans = cardsByKey.loans;
   const leases = cardsByKey.leases;
