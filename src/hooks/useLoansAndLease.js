@@ -70,7 +70,7 @@ export const txSleutel = (tx) => `${tx.date instanceof Date ? tx.date.toISOStrin
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
 export function useLoansAndLease({
   classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
-  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {},
+  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {}, onHerbeoordeelOverig,
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
   // Leningen die eerder expliciet als privé zijn aangemerkt ("Leningen (privé)") — apart
@@ -270,6 +270,8 @@ export function useLoansAndLease({
     for (const o of leaseDetails[key]?.omgezet || []) {
       setCounterpartyOverride(o.counterparty, o.amount, { category: "Overig", type: "Zakelijk" }, o.iban);
     }
+    // Eerder als "Klopt zo" beoordeelde tegenpartijen opnieuw laten beoordelen.
+    if (leaseDetails[key]?.omgezet?.length) onHerbeoordeelOverig?.(leaseDetails[key].omgezet);
     setLeaseDetails((prev) => { const n = { ...prev }; delete n[key]; return n; });
     setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== key));
   };
