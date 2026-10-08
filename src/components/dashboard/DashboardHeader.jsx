@@ -39,6 +39,8 @@ export default function DashboardHeader({
   // verschijnt naast de nieuwe rechterkaart.
   const dossierLines = (statusLines || []).filter(
     (l) => l.label !== "Werkelijke aangifte" && !(openPoints != null && l.label === "Dossiercontrole")
+      // "Geen aannames" zegt niets: alleen tonen als er wél aannames zijn.
+      && !(l.label === "Indicatieve aangifte" && /geen aannames/i.test(String(l.value)))
   );
   const heeftOpenPunten = openPoints != null && openPoints > 0;
   const werkelijkTotal = werkelijkAangifteTotal ?? 0;
@@ -153,6 +155,13 @@ export default function DashboardHeader({
                 {yearControl && <div className="mt-2">{yearControl}</div>}
               </div>
             </>
+          ) : pct != null ? (
+            yearControl ? (
+              <>
+                <div className="w-px self-stretch bg-slate-200" />
+                <div className="flex flex-col gap-1.5">{yearControl}</div>
+              </>
+            ) : null
           ) : (
             <>
               <div className="w-px self-stretch bg-slate-200" />

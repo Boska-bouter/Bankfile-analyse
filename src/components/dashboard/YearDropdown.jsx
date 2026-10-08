@@ -33,10 +33,6 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
           de uitsplitsing zakelijk/privé daaronder. Zonder privérekening is die uitsplitsing gelijk aan
           het totaal en dus overbodig. */}
       <div className="flex flex-col">
-      <div className="text-[11px] text-slate-400 text-left mb-0.5 whitespace-nowrap">
-        {years.length} {years.length === 1 ? "jaar" : "jaren"} in dossier
-        {showBreakdown ? ` · ${zakelijkYears ?? 0} zakelijk, ${priveYears ?? 0} privé` : ""}
-      </div>
       {/* V73 — per jaar zichtbaar welke rekeningen data hebben: een jaar zonder privé- (of zakelijk) bestand
           toont daar € 0,00, wat anders op een fout lijkt. */}
       {showBreakdown && yearCoverage && activeYear && yearCoverage[activeYear] && coverageNote(yearCoverage[activeYear]) && (
