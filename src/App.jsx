@@ -2674,22 +2674,31 @@ export default function App() {
     const eerste = (keys) => alleStappen.find((st) => keys.includes(st.key) && st.onClick);
     const maak = (key, label, keys, klaarTekst, fallbackTab) => {
       const open = som(keys);
-      return { key, label, open, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : open > 0 ? `${open} open` : klaarTekst, eerste: eerste(keys), fallbackTab };
+      return { key, label, open, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen input" : open > 0 ? `${open} open` : klaarTekst, eerste: eerste(keys), fallbackTab };
     };
     const lijst = [
       maak("import", "Import", ["importControle"], parsedFiles.length === 1 ? "1 bestand, klopt" : `${parsedFiles.length} bestanden, klopt`, "controleren"),
       maak("controleren", "Controleren", ["confidence", "incomeReview", "personReview", "overigReview", "duplicates"], "afgehandeld", "controleren"),
       maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren"),
-      maak("aannames", "Aannames", ["aannames"], "bevestigd", "instellingen"),
+      maak("aannames", "Instellingen", ["aannames"], "afgehandeld", "instellingen"),
     ];
     const vorigOpen = lijst.reduce((n, s) => n + s.open, 0);
-    lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
+    lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen input" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
     return lijst;
   })();
   const kiesRouteStap = (s) => {
+    if (parsedFiles.length === 0) { if (s.key === "import") clearAllData(); return; } // zonder dossier: Import start een nieuw dossier, de rest wacht
     if (s.advies) {
       setActiveTab("overzicht");
-      setTimeout(() => document.getElementById("advies-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+      window.dispatchEvent(new Event("bankoverzicht-toon-advies"));
+      const zoek = (n) => {
+        const el = document.getElementById("advies-sectie");
+        if (!el || el.offsetParent === null) { if (n < 10) setTimeout(() => zoek(n + 1), 150); return; }
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("ring-4", "ring-teal-500", "transition-shadow");
+        setTimeout(() => el.classList.remove("ring-4", "ring-teal-500"), 2000);
+      };
+      setTimeout(() => zoek(0), 150);
     } else if (s.eerste?.onClick) s.eerste.onClick();
     else setActiveTab(s.fallbackTab || "controleren");
   };
@@ -3128,7 +3137,7 @@ export default function App() {
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
-          {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
+          <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
