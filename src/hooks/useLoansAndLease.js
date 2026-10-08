@@ -70,7 +70,7 @@ export const txSleutel = (tx) => `${tx.date instanceof Date ? tx.date.toISOStrin
 // daarvan blijven bewust in App.jsx, dit hook-bestand voegt alleen de handelingen erop toe.
 export function useLoansAndLease({
   classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
-  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {}, onHerbeoordeelOverig,
+  snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto = {}, setLeaseMergedInto, leaseDetails = {}, onHerbeoordeelOverig, setRowOverridesBulk,
 }) {
   const loanSummary = useMemo(() => computeLoanSummary(classified), [classified]);
   // Leningen die eerder expliciet als privé zijn aangemerkt ("Leningen (privé)") — apart
@@ -241,16 +241,13 @@ export function useLoansAndLease({
   };
   // Betalingen aan deze tegenpartij(en) voortaan als financiële lease behandelen (categorie aanpassen).
   const behandelAlsLease = (txs, leaseKey) => {
-    const gezien = new Set();
-    const omgezet = [];
-    for (const tx of txs || []) {
-      const k = `${tx.counterparty}|${tx.amount < 0 ? "neg" : "pos"}`;
-      if (gezien.has(k)) continue;
-      gezien.add(k);
-      omgezet.push({ counterparty: tx.counterparty || tx.description, amount: tx.amount, iban: tx.counterpartyIban || null, categorie: tx.category || null });
-      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Lease (financieel)", type: "Zakelijk" }, tx.counterpartyIban);
-    }
-    // Onthouden welke tegenpartijen door dit contract als lease zijn gaan tellen — nodig om het terug te draaien bij verwijderen.
+    // Per betaling (rij) aanpassen, niet per tegenpartij/IBAN: andere partijen met hetzelfde rekeningnummer blijven ongemoeid.
+    const lijst = (txs || []).filter((tx) => tx && tx.id != null);
+    if (lijst.length === 0) return;
+    snapshotBeforeAction("Betalingen als lease aangemerkt");
+    setRowOverridesBulk?.(lijst.map((tx) => tx.id), { category: "Lease (financieel)", type: "Zakelijk" });
+    // Onthouden welke betalingen door dit contract als lease zijn gaan tellen — nodig om het terug te draaien bij verwijderen.
+    const omgezet = lijst.map((tx) => ({ id: tx.id, counterparty: tx.counterparty || tx.description, amount: tx.amount, iban: tx.counterpartyIban || null }));
     if (leaseKey) setLeaseDetails((prev) => ({ ...prev, [leaseKey]: { ...(prev[leaseKey] || {}), omgezet: [...(prev[leaseKey]?.omgezet || []), ...omgezet] } }));
   };
   const wijsZoekAf = (key) => {
@@ -267,10 +264,12 @@ export function useLoansAndLease({
   const removeManualLease = (key) => {
     snapshotBeforeAction("Handmatige lease verwijderd");
     // Betalingen die dankzij dit zelf aangemaakte contract als lease zijn gaan tellen: terug naar "Overig" zodat ze opnieuw beoordeeld worden.
-    for (const o of leaseDetails[key]?.omgezet || []) {
+    const omgezet = leaseDetails[key]?.omgezet || [];
+    const metId = omgezet.filter((o) => o.id != null);
+    if (metId.length) setRowOverridesBulk?.(metId.map((o) => o.id), { category: "Overig", type: "Zakelijk" });
+    for (const o of omgezet.filter((o) => o.id == null)) {
       setCounterpartyOverride(o.counterparty, o.amount, { category: "Overig", type: "Zakelijk" }, o.iban);
     }
-    // Eerder als "Klopt zo" beoordeelde tegenpartijen opnieuw laten beoordelen.
     if (leaseDetails[key]?.omgezet?.length) onHerbeoordeelOverig?.(leaseDetails[key].omgezet);
     setLeaseDetails((prev) => { const n = { ...prev }; delete n[key]; return n; });
     setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== key));

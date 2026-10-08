@@ -1528,6 +1528,7 @@ export default function App() {
   } = useLoansAndLease({
     classified, setLoanDetails, setLeaseDetails, setConfirmedLeaseTypeKeys, setLeaseDetailsModalKey, openLeaseWizard,
     snapshotBeforeAction, setCounterpartyOverride, leaseMergedInto, setLeaseMergedInto, leaseDetails,
+    setRowOverridesBulk: (ids, patch) => setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), ...patch }; return next; }),
     onHerbeoordeelOverig: (lijst) => {
       const keys = new Set(lijst.flatMap((o) => [counterpartyKey(o.counterparty, o.amount), o.iban && exclusiveIbanKey(o.iban, o.amount)]).filter(Boolean));
       setReviewedOverigKeys((prev) => prev.filter((k) => !keys.has(k)));
