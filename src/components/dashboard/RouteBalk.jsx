@@ -12,8 +12,9 @@ export default function RouteBalk({ stappen, onKies }) {
           const nu = i === eerstOpen;
           return (
             <li key={s.key} className="flex items-center">
-              <button type="button" onClick={() => onKies(s)} data-route={s.key}
-                className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-left hover:bg-slate-50 ${nu ? "bg-teal-50 ring-1 ring-teal-600" : ""}`}>
+              <button type="button" onClick={() => onKies(s)} data-route={s.key} disabled={s.geenData && i > 0}
+                title={s.geenData ? (i === 0 ? "Start een nieuw dossier of laad een bankbestand" : "Eerst bankbestanden importeren") : undefined}
+                className={`disabled:cursor-default disabled:hover:bg-transparent flex items-center gap-2 rounded-xl px-3 py-1.5 text-left hover:bg-slate-50 ${nu ? "bg-teal-50 ring-1 ring-teal-600" : ""}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${klaar ? "bg-emerald-600 text-white" : nu ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-600"}`}>
                   {klaar ? <Check className="h-3.5 w-3.5" /> : i + 1}
                 </span>

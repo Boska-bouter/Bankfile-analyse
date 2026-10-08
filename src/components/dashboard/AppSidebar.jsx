@@ -23,7 +23,7 @@ const TAB_LABELS = {
 // Icoonknop met een duidelijke tekstballon (fixed, dus niet afgekapt door de scrollende zijbalk).
 function IcoonKnop({ onClick, label, Icon }) {
   const [tip, setTip] = useState(null);
-  const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left + r.width / 2, y: r.top }); };
+  const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left, y: r.top }); };
   return (
     <>
       <button type="button" onClick={onClick} aria-label={label} onMouseEnter={toon} onMouseLeave={() => setTip(null)} onFocus={toon} onBlur={() => setTip(null)}
@@ -31,8 +31,8 @@ function IcoonKnop({ onClick, label, Icon }) {
         <Icon className="h-[18px] w-[18px]" />
       </button>
       {tip && (
-        <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
-          style={{ left: Math.max(70, Math.min(tip.x, window.innerWidth - 90)), top: tip.y - 8 }}>
+        <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
+          style={{ left: Math.max(8, tip.x), top: tip.y - 8, maxWidth: "calc(100vw - 16px)" }}>
           {label}
         </span>
       )}
