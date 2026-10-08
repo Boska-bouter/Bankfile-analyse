@@ -911,8 +911,10 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     je aangifte doet.
   </div>
   ${aandachtspuntenBlok}
+  <!--UITLEG-START-->
   ${PAGE_BREAK_DIVIDER}
   ${buildBijlageToelichtingenHtml()}
+  <!--UITLEG-END-->
 </body></html>`;
 }
 
@@ -1084,4 +1086,19 @@ export function downloadAangiftevoorstel(html, years) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// Voor download en print: het voorstel zonder de interactieve "ⓘ bron"-uitklappers (die zijn alleen
+// bedoeld voor op het scherm in de app).
+export function stripBronHtml(html) {
+  return String(html || "")
+    .replace(/<div class="bron-inhoud">[\s\S]*?<\/p><\/div>/g, "")
+    .replace(/ ?<span class="bron-knop"[^>]*>[^<]*<\/span>/g, "")
+    .replace(/<details class="bron"><summary class="categorie-detail">/g, '<div class="categorie-detail">')
+    .replace(/<\/summary><\/details>/g, "</div>");
+}
+
+// De uitgebreide uitleg achteraan (Bijlage: Toelichtingen) is optioneel: weglaten voor een korter document.
+export function zonderUitlegHtml(html) {
+  return String(html || "").replace(/<!--UITLEG-START-->[\s\S]*?<!--UITLEG-END-->/g, "");
 }

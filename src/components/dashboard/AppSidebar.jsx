@@ -82,7 +82,7 @@ export default function AppSidebar({
   heeftWachtwoord, onWachtwoord, onOpenLog, logAantal = 0,
   showActies,
   onEditBasisvragen,
-  onOpenAangifteberekening, onKlantSamenvatting,
+  onOpenAangifteberekening, onKlantSamenvatting, onOnderbouwing,
   lastActionSnapshot,
   onUndoLastAction,
   onDismissLastAction,
@@ -230,6 +230,12 @@ export default function AppSidebar({
             <button onClick={onKlantSamenvatting} title="Samenvatting voor de klant (1 pagina, afdrukbaar)" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
               <FileText className="h-3.5 w-3.5 text-slate-300 shrink-0" />
               <span className="sb-label text-xs font-semibold text-slate-200">Samenvatting voor klant</span>
+            </button>
+          )}
+          {onOnderbouwing && (
+            <button onClick={onOnderbouwing} title="Overzicht van de transacties achter de bedragen in het voorstel (optioneel, voor op papier)" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="sb-label text-xs font-semibold text-slate-200">Onderbouwing overzichten</span>
             </button>
           )}
           {canSaveProject && (

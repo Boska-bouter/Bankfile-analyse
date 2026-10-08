@@ -126,10 +126,11 @@ import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrij
 import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
-import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
+import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, stripBronHtml, zonderUitlegHtml } from "./reports/aangiftevoorstel.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
 import { jarenBereik } from "./dossier/dossierProfiel.js";
+import { buildOnderbouwingHtml, downloadOnderbouwing } from "./reports/onderbouwing.js";
 import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
@@ -1528,6 +1529,21 @@ export default function App() {
     }
     return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) } };
   };
+  const [onderbouwingKeuze, setOnderbouwingKeuze] = useState(null);
+  const [onderbouwingHtml, setOnderbouwingHtml] = useState(null);
+  const [onderbouwingJaren, setOnderbouwingJaren] = useState([]);
+  const openOnderbouwing = (gekozen) => {
+    const jaren = [...gekozen].sort();
+    if (jaren.length === 0) return;
+    setOnderbouwingKeuze(null);
+    setOnderbouwingJaren(jaren);
+    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified }));
+  };
+  const startOnderbouwing = () => {
+    if (!activeYear) return;
+    if ((years || []).length > 1) setOnderbouwingKeuze([activeYear]);
+    else openOnderbouwing([activeYear]);
+  };
   const startKlantSamenvatting = () => {
     if (!activeYear) return;
     if ((years || []).length > 1) setKlantJaarKeuze([activeYear]);
@@ -1566,8 +1582,10 @@ export default function App() {
       })(),
     }));
   };
-  const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
-  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(aangiftevoorstelPreview, selectedAangifteYears);
+  const [uitlegMeenemen, setUitlegMeenemen] = useState(false);
+  const voorstelHtmlWeergave = uitlegMeenemen ? aangiftevoorstelPreview : zonderUitlegHtml(aangiftevoorstelPreview);
+  const printAangiftevoorstelPreview = () => printHtmlDocument(stripBronHtml(voorstelHtmlWeergave));
+  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(stripBronHtml(voorstelHtmlWeergave), selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -3052,6 +3070,7 @@ export default function App() {
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
         onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
+        onOnderbouwing={activeYear ? startOnderbouwing : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3711,6 +3730,14 @@ export default function App() {
                   />
                 )}
 
+        {onderbouwingKeuze && (
+          <KlantJaarKeuzeModal years={years} selected={onderbouwingKeuze} setSelected={setOnderbouwingKeuze} onOpen={openOnderbouwing} onClose={() => setOnderbouwingKeuze(null)}
+            vraag="Voor welke jaren wil je het onderbouwingsoverzicht?" knop="Onderbouwing tonen" />
+        )}
+        {onderbouwingHtml && (
+          <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
+            onDownload={() => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
+        )}
         {klantJaarKeuze && (
           <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
         )}
@@ -3726,8 +3753,10 @@ export default function App() {
         )}
         {aangiftevoorstelPreview && (
           <AangifteVoorstelPreviewModal
-            html={aangiftevoorstelPreview}
+            html={voorstelHtmlWeergave}
             years={selectedAangifteYears}
+            uitleg={uitlegMeenemen}
+            setUitleg={setUitlegMeenemen}
             onDownload={downloadAangiftevoorstelPreview}
             onPrint={printAangiftevoorstelPreview}
             onClose={() => setAangiftevoorstelPreview(null)}
