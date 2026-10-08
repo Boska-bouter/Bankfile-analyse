@@ -252,6 +252,7 @@ export default function App() {
   // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
   // (zie toggleCardExpand hieronder) — de rest blijft in fase 3 v1 gewoon "Bekijken" (springen).
   const [expandedCardKeys, setExpandedCardKeys] = useState({});
+  const wizardWasOpenRef = useRef(false);
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
     if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
@@ -266,7 +267,11 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
-  const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard } = useLeaseWizardOpening();
+  const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
+  // Tijdens en kort na een lease-wizard klapt het overzicht niet vanzelf in: je wilt het resultaat kunnen controleren.
+  if (leaseWizardOpen) geenAutoInklapRef.current = Date.now() + 5000;
+  else if (wizardWasOpenRef.current) geenAutoInklapRef.current = Date.now() + 5000;
+  wizardWasOpenRef.current = leaseWizardOpen;
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
   const [verwachteLease, setVerwachteLease] = useState(null); // null=nog niet gevraagd | [{naam, gevonden}, ...] (leeg = geen)
@@ -1874,8 +1879,8 @@ export default function App() {
   const zakGroupWeergave = useMemo(() => metBevestiging(zakGroupForYear), [zakGroupForYear, reviewedOverigKeys, reviewedPersonKeys]);
   const priGroupWeergave = useMemo(() => metBevestiging(priGroupShown), [priGroupShown, reviewedOverigKeys, reviewedPersonKeys]);
 
-  // Zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financial lease (soort "auto"), koop, of
-  // operational lease — tellen computeLeaseAutoKostenVoorJaar (autoBijtelling.js) resp.
+  // Zodra er ÉÉN auto-op-de-zaak geregistreerd staat — financiële lease (soort "auto"), koop, of
+  // operationele lease — tellen computeLeaseAutoKostenVoorJaar (autoBijtelling.js) resp.
   // computeAutoActivaKostenVoorJaar (autoActiva.js) voor ELK jaar 100% van Brandstof/Parkeren mee —
   // ongeacht wat autoStatus voor dat jaar zegt. De generieke %-splitsing hieronder moet die twee
   // categorieën daarom ook mijden zodra dit dossierbreed het geval is, niet alleen in een jaar met
@@ -3030,7 +3035,7 @@ export default function App() {
             ]}
             onOpenHelp={setHelpPopupChapter}
             hervat={
-              resumeHint && activeYear
+              resumeHint && activeYear && resumeHint.openPunten !== 0
                 ? {
                     tekst: `Je was gebleven bij ${resumeHint.tab === "controleren" ? "Controleren" : "Instellingen"}${resumeHint.jaar ? `, jaar ${resumeHint.jaar}` : ""}${resumeHint.openPunten != null ? ` · toen ${resumeHint.openPunten} open punt${resumeHint.openPunten === 1 ? "" : "en"}` : ""}`,
                     onClick: () => {

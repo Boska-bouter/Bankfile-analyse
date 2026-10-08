@@ -1,7 +1,7 @@
 // Bijtelling/onttrekking + (bij "koop") afschrijving voor een auto op de zaak die GEEN financiële
 // lease is — dus een gekochte auto (eigendom) of een operational-leaseauto (zie de wizard-vraag
-// "Is die auto gekocht (eigendom), operational lease, of financial lease?", SetupWizardModal.jsx).
-// Voor financial lease bestaat dit al in autoBijtelling.js (gekoppeld aan de banktransacties van
+// "Is die auto gekocht (eigendom), operationele lease, of financiële lease?", SetupWizardModal.jsx).
+// Voor financiële lease bestaat dit al in autoBijtelling.js (gekoppeld aan de banktransacties van
 // dat leasecontract). Deze twee andere gevallen hebben geen leningschema om aan op te hangen —
 // vandaar een los, eenvoudiger model met zijn eigen (optionele) invoer, zie AutoOpDeZaakDetailsModal.
 //
@@ -22,7 +22,7 @@ import { computeBtw } from "./btw.js";
 const AUTOKOSTEN_CATEGORIEN_OPERATIONAL_LEASE = [...AUTOKOSTEN_CATEGORIEN, "Lease (operationeel)"];
 
 // Zelfde berekening als sumAutokostenTransactiesVoorJaar in autoBijtelling.js, maar met een eigen
-// (langere) categorielijst voor operational lease — vandaar hier opnieuw, in plaats van hergebruik
+// (langere) categorielijst voor operationele lease — vandaar hier opnieuw, in plaats van hergebruik
 // met een hardcoded lijst.
 function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
@@ -81,7 +81,7 @@ export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardSta
   // aangiftevoorstel (aangiftevoorstel.js) de twee kan samenvoegen tot één "Auto"-sectie voor de
   // weergave, ongeacht of de auto financieel geleased, gekocht, of operational geleased is.
   const contracten = [{
-    leaseKey: "auto-op-de-zaak", leaseName: soort === "koop" ? "Auto (eigendom)" : "Auto (operational lease)", soort: "auto",
+    leaseKey: "auto-op-de-zaak", leaseName: soort === "koop" ? "Auto (eigendom)" : "Auto (operationele lease)", soort: "auto",
     bron: soort,
     afschrijving, leaseRente: 0, cataloguswaarde: details.cataloguswaarde || null, bijtellingspercentage: details.bijtellingspercentage || null,
     privegebruikMeerDan500km, normaleBijtelling, kenteken: null, aantalGekoppeldeSegmenten: 1,

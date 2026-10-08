@@ -19,7 +19,7 @@ export function computeOnbetaaldGedeelteKoop(details) {
 //     is wél onderdeel van de leaseschuld waarover rente wordt betaald.
 //   - "Aanschafwaarde bedrijfsmiddel" (de AFSCHRIJVINGSbasis) is wat het bedrijfsmiddel zelf waard is
 //     — v256, op expliciet verzoek gecorrigeerd naar UITSLUITEND de koopprijs (excl. BTW), zonder de
-//     BTW erbij. Eerder (t/m v255) stond hier koopprijs + BTW, maar BTW bij een financial lease van
+//     BTW erbij. Eerder (t/m v255) stond hier koopprijs + BTW, maar BTW bij een financiële lease van
 //     een zakelijk bedrijfsmiddel is (behoudens KOR/vrijgestelde prestaties) meteen volledig
 //     aftrekbaar als voorbelasting — dat is geen meerjarige afschrijvingspost, en zou hier dus
 //     dubbelop zijn (eerst in één keer terug via de BTW-aangifte, dan nogmaals via 5+ jaar

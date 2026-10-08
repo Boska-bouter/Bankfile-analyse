@@ -9,7 +9,7 @@ import {
 import { eur } from "../../utils/amounts.js";
 import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren, restantAfschrijving, restantTekst } from "./FinancialLeaseDetailsModal.jsx";
 
-// Stappenscherm voor het invullen van een financial lease. Gebruikt exact hetzelfde opslagformaat
+// Stappenscherm voor het invullen van een financiële lease. Gebruikt exact hetzelfde opslagformaat
 // (en dezelfde berekeningen) als het volledige gegevensscherm (FinancialLeaseDetailsModal) — het is een
 // andere, begeleide manier om dezelfde velden in te vullen: Contract → Aankoop → Leasevoorwaarden →
 // (Bedrijfsmiddel) → Controle → Verloop. Waarden uit de bank worden alleen als VOORSTEL getoond
@@ -193,9 +193,9 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <button onClick={onClose} className="text-teal-50 hover:text-white"><X className="h-5 w-5" /></button>
           </div>
           <div className="p-5 space-y-3">
-            <p className="text-sm text-slate-700">Is dit een <strong>financial lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operational lease</strong> (de hele termijn is aftrekbaar)?</p>
+            <p className="text-sm text-slate-700">Is dit een <strong>financiële lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operationele lease</strong> (de hele termijn is aftrekbaar)?</p>
             <div className="flex gap-2">
-              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operational — klaar, geen gegevens nodig</button>
+              <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operationeel — klaar, geen gegevens nodig</button>
               <button className={`${KNOP} ${KNOP_AAN}`} onClick={() => { onConfirmType(lease, "financieel"); setTypeGekozen(true); }}>Financial — gegevens invullen</button>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <X className="h-4 w-4" /> Afbreken
           </button>
           <p className="text-xs text-slate-300 pr-24">
-            Financial lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
+            Financiële lease{form?.soort === "auto" ? " (auto)" : form?.soort === "machine" ? " (machine/ander middel)" : ""} — {lease.name}{contracts.length > 1 ? ` · contract ${cIdx + 1} van ${contracts.length}` : ""}
           </p>
           <h2 className="text-sm font-semibold mt-0.5">{STAPPEN[stapNu]}</h2>
           <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">

@@ -577,8 +577,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         : "Privéauto zakelijk gebruikt, maar geen kilometers ingevuld — daardoor nog geen autoaftrek.");
     }
     for (const c of autoContracten) {
-      if (c.bron === "financieel") autoUitleg.push(`Financial lease${c.leaseName ? " (" + c.leaseName + ")" : ""}: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
-      else if (c.bron === "operational") autoUitleg.push(`Operational lease: leasetermijnen en autokosten zijn volledig aftrekbaar; ${bijtellingTekst(c)}.`);
+      if (c.bron === "financieel") autoUitleg.push(`Financiële lease${c.leaseName ? " (" + c.leaseName + ")" : ""}: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
+      else if (c.bron === "operational") autoUitleg.push(`Operationele lease: leasetermijnen en autokosten zijn volledig aftrekbaar; ${bijtellingTekst(c)}.`);
       else if (c.bron === "koop") autoUitleg.push(`Auto in eigendom: afschrijving + autokosten aftrekbaar; ${bijtellingTekst(c)}.`);
     }
     const autoUitlegHtml = autoUitleg.length ? `<p class="toelichting"><strong>Verrekend als aftrek:</strong> ${autoUitleg.join(" ")}</p>` : "";

@@ -91,17 +91,17 @@ function autoOpDeZaak(year, autoStatus) {
   return status === "zaak";
 }
 
-// Zowel computeLeaseAutoKostenVoorJaar (financial lease, zie autoBijtelling.js) als
-// computeAutoActivaKostenVoorJaar (koop/operational lease, zie autoActiva.js) tellen 100% van
+// Zowel computeLeaseAutoKostenVoorJaar (financiële lease, zie autoBijtelling.js) als
+// computeAutoActivaKostenVoorJaar (koop/operationele lease, zie autoActiva.js) tellen 100% van
 // Brandstof/Parkeren mee zodra er zo'n auto-op-de-zaak geregistreerd staat — voor ELK jaar, ongeacht
 // wat `autoStatus` voor dat jaar zegt (geen van beide functies kijkt daarnaar). Zonder deze functie
 // zou de generieke %-splitsing hierboven dezelfde Brandstof/Parkeren-transacties in een jaar met
 // `autoStatus` nog op "Onbekend" tegelijk nog eens apart (en tegenstrijdig) kunnen verdelen. Deze
 // functie detecteert alle drie de situaties rechtstreeks vanuit dezelfde bronnen en dezelfde
 // voorwaarden als die twee berekenfuncties zelf gebruiken (leaseSummary/leaseDetails met
-// `soort === "auto"` voor financial lease; autoWizardStatus.soort "koop"/"operational" mét ingevulde
+// `soort === "auto"` voor financiële lease; autoWizardStatus.soort "koop"/"operational" mét ingevulde
 // autoActivaDetails voor de andere twee — zie combineAutoKosten in autoActiva.js, die om precies
-// dezelfde reden "financial lease OF koop/operational, ongeacht welke" samenvoegt) — bewust zonder
+// dezelfde reden "financiële lease OF koop/operational, ongeacht welke" samenvoegt) — bewust zonder
 // jaarfilter: geen van beide brondfuncties filtert zijn resultaat op jaar, dus moet de generieke
 // splitsing deze twee categorieën voor ELK jaar mijden zodra één van de drie autovormen ergens in het
 // dossier geregistreerd staat, niet alleen de jaren binnen de looptijd van dat ene contract.
@@ -159,8 +159,8 @@ export function rawBtw(tx, categoryBtwRates, btwVerlegd) {
 // `autoStatus` optioneel — laat Brandstof/Parkeren weg voor een jaar met "auto op de zaak" (zie
 // effectiveZakelijkPercentage hierboven), zodat het instelpaneel geen percentage-veld toont dat
 // voor dat jaar toch genegeerd wordt. `heeftLeaseAuto` (zie heeftGeregistreerdeAutoOpDeZaak
-// hierboven) doet hetzelfde voor een geregistreerde auto-op-de-zaak (financial lease met soort
-// "auto", koop, of operational lease), ongeacht wat autoStatus voor dit jaar zegt.
+// hierboven) doet hetzelfde voor een geregistreerde auto-op-de-zaak (financiële lease met soort
+// "auto", koop, of operationele lease), ongeacht wat autoStatus voor dit jaar zegt.
 export function computeSplitsbareCategorieTotalenVoorJaar(classified, year, autoStatus, heeftLeaseAuto = false) {
   const netto = {};
   for (const tx of classified) {

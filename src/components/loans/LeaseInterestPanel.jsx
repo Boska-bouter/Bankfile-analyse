@@ -14,7 +14,7 @@ function computeFinancialLeaseAmortization(lease, details) {
 }
 
 
-// Tijdlijn van de contracten van één financial lease: per contract een balk op een gezamenlijke
+// Tijdlijn van de contracten van één financiële lease: per contract een balk op een gezamenlijke
 // tijdas (start → einde, of beëindigingsdatum), met klik om het contract in de wizard te openen.
 function ContractTijdlijn({ segments, onOpen, indices }) {
   const rijen = segments.map((sg, i) => {

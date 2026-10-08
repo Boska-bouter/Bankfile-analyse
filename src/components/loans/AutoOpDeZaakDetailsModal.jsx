@@ -70,7 +70,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
           <div>
             <p className="text-sm font-semibold text-slate-800">
-              Auto op de zaak — {soort === "koop" ? "eigendom (gekocht)" : "operational lease"}
+              Auto op de zaak — {soort === "koop" ? "eigendom (gekocht)" : "operationele lease"}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
               {soort === "koop"
