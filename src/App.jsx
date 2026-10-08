@@ -2265,6 +2265,14 @@ export default function App() {
   // Is er daadwerkelijk een privérekening-BESTAND geladen in dit dossier? Zie de toelichting bij
   // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
   // betekenis heeft, of dat de echte privétransacties zelf al hun eigen tegenboeking zijn.
+  const rekeningTypeTekst = (() => {
+    const t = parsedFiles.map((f) => accountTypeByFile[f.fileName]).filter(Boolean);
+    const z = t.filter((x) => x === "Zakelijk").length, p = t.filter((x) => x === "Prive").length;
+    if (z + p === 0) return "";
+    if (p === 0) return " — alleen zakelijk geladen";
+    if (z === 0) return " — alleen privé geladen";
+    return ` (${z} zakelijk, ${p} privé)`;
+  })();
   const priveRekeningGeladen = useMemo(() => Object.values(accountTypeByFile).includes("Prive"), [accountTypeByFile]);
   // v233: zelfde soort vlag, maar dan voor de zakelijke kant — gebruikt door de "Controle
   // overboeking zakelijk ↔ privé"-banner in het Details-tabblad hieronder, om net als hierboven
@@ -3220,7 +3228,7 @@ export default function App() {
           <DashboardHeader
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
-            dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}` : null}
+            dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
