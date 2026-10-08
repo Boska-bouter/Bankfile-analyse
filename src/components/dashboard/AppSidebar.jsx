@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock } from "lucide-react";
+import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -24,14 +25,15 @@ function TabItem({ tabKey, active, badge, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${
+      title={TAB_LABELS[tabKey]}
+      className={`sb-btn relative w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${
         active ? "bg-sky-400/10 border-l-[3px] border-sky-400" : "border-l-[3px] border-transparent hover:bg-white/5"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#7DD3FC" : "#8992B4" }} />
-      <span className={`text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
+      <span className={`sb-label text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
       {!!badge && (
-        <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
+        <span className="sb-badge text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
       )}
     </button>
   );
@@ -64,6 +66,16 @@ export default function AppSidebar({
   onUndoLastAction,
   onDismissLastAction,
 }) {
+  // Inklapbaar (alleen iconen). Keuze wordt onthouden; standaard ingeklapt op smalle schermen.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const v = window.localStorage.getItem("bankoverzicht-sidebar-ingeklapt");
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch { /* geen opslag beschikbaar */ }
+    return typeof window !== "undefined" && window.innerWidth < 900;
+  });
+  const toggle = () => setCollapsed((c) => { const n = !c; try { window.localStorage.setItem("bankoverzicht-sidebar-ingeklapt", n ? "1" : "0"); } catch { /* negeren */ } return n; });
   return (
     // `sticky top-0 h-screen overflow-y-auto` (i.p.v. min-h-screen) zodat de zijbalk zelf de
     // schermhoogte houdt en blijft staan tijdens scrollen door de (vaak veel langere) hoofdinhoud —
@@ -76,7 +88,7 @@ export default function AppSidebar({
     // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
-      className="w-[216px] shrink-0 bg-[#16203A] flex flex-col px-3.5 sticky top-0 h-screen overflow-y-auto"
+      className={`${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
       style={{
         paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
         paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
@@ -92,14 +104,18 @@ export default function AppSidebar({
             B
           </span>
         </div>
-        <div className="flex flex-col min-w-0">
+        <div className="sb-label flex flex-col min-w-0 flex-grow">
           <span className="text-[14.5px] font-bold text-white whitespace-nowrap">Bankoverzicht</span>
           <span className="text-[10px] text-slate-400 whitespace-nowrap truncate">{orgName}</span>
         </div>
       </div>
+      <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
+        className="sb-btn flex items-center gap-2 self-end rounded-lg px-2 py-1 mb-2 text-slate-500 hover:text-slate-200 hover:bg-white/5">
+        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[10.5px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
+      </button>
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
-      <div className="px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
+      <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
         {rekeninghouderNaam ? (
           <div className="flex flex-col gap-0.5">
             <span className="text-slate-400 text-[11px]">Rekeninghouder</span>
@@ -130,31 +146,39 @@ export default function AppSidebar({
           nu "Bankbestand toevoegen" (het voegt toe aan het dossier, het vervangt niets) en "Wis alles"
           is "Nieuw dossier" (met keuzevenster, zie clearAllData in App.jsx). */}
       <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
-        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
+        <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         {canClearAll && (
-          <button onClick={onClearAll} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
+          <button onClick={onClearAll} title="Nieuw dossier" className={`sb-btn flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
             <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className={`text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
+            <span className={`sb-label text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
           </button>
         )}
 
         {canSaveProject && (
-          <button onClick={onSaveProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
-            <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className="text-xs font-semibold text-slate-200">Dossier opslaan</span>
-          </button>
+          <>
+            <button onClick={onSaveProject} title="Dossier opslaan" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+              <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="sb-label text-xs font-semibold text-slate-200">Dossier opslaan</span>
+            </button>
+            {onWachtwoord && (
+              <button onClick={onWachtwoord} title={heeftWachtwoord ? "Dossier is beveiligd met wachtwoord — wijzig" : "Wachtwoord op dossierbestand"} className="sb-btn -mt-1 flex items-center gap-2 rounded-lg px-3 py-1 text-left hover:bg-white/5">
+                <Lock className={`h-3 w-3 shrink-0 ${heeftWachtwoord ? "text-emerald-400" : "text-slate-500"}`} />
+                <span className={`sb-label text-[11px] ${heeftWachtwoord ? "text-emerald-300" : "text-slate-400"}`}>{heeftWachtwoord ? "Beveiligd met wachtwoord — wijzig" : "Wachtwoord op bestand"}</span>
+              </button>
+            )}
+          </>
         )}
 
-        <button onClick={onLoadProject} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
+        <button onClick={onLoadProject} title="Dossier laden" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
           <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-          <span className="text-xs font-semibold text-slate-200">Dossier laden</span>
+          <span className="sb-label text-xs font-semibold text-slate-200">Dossier laden</span>
         </button>
 
         {canSaveProject && (
-        <button onClick={onLoadFile} className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
+        <button onClick={onLoadFile} title="Extra bankbestand toevoegen" className="sb-btn flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
           <Upload className="h-3.5 w-3.5 text-white shrink-0" />
-          <div className="flex flex-col leading-tight">
+          <div className="sb-label flex flex-col leading-tight">
             <span className="text-xs font-bold text-white">Extra bankbestand toevoegen</span>
             <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
           </div>
@@ -166,19 +190,19 @@ export default function AppSidebar({
           (nu verwijderde) Aangifte-statusblok — zelfde handlers als voorheen. */}
       {showActies && (
         <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
-          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
+          <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
 
           {onEditBasisvragen && (
-            <button onClick={onEditBasisvragen} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+            <button onClick={onEditBasisvragen} title="Basisvragen bewerken" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
               <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-              <span className="text-xs font-semibold text-slate-200">Basisvragen bewerken</span>
+              <span className="sb-label text-xs font-semibold text-slate-200">Basisvragen bewerken</span>
             </button>
           )}
 
           {onOpenAangifteberekening && (
-            <button onClick={onOpenAangifteberekening} className="flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+            <button onClick={onOpenAangifteberekening} title="Indicatieve aangifteberekening" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
               <FileSpreadsheet className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-              <span className="text-xs font-semibold text-slate-200">Indicatieve aangifteberekening</span>
+              <span className="sb-label text-xs font-semibold text-slate-200">Indicatieve aangifteberekening</span>
             </button>
           )}
         </div>
@@ -229,24 +253,20 @@ export default function AppSidebar({
               title="Dossierbestand = het exportbestand (Dossier opslaan). Dit staat los van de automatische browseropslag hieronder."
             >
               {dirty ? <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <FileSpreadsheet className="h-3 w-3 mt-0.5 shrink-0" />}
-              <span>{tekst}</span>
+              <span className="sb-label">{tekst}</span>
             </div>
           );
         })()}
         {projectStatus?.hasData && (
           <div className="flex flex-col gap-1.5">
-            <button onClick={onWachtwoord} className="flex items-center gap-2 text-left">
-              <Lock className={`h-3.5 w-3.5 shrink-0 ${heeftWachtwoord ? "text-emerald-400" : "text-slate-400"}`} />
-              <span className="text-[11.5px] text-slate-400">{heeftWachtwoord ? "Dossier beveiligd — wijzig" : "Wachtwoord op dossierbestand"}</span>
-            </button>
-            <button onClick={onOpenLog} className="flex items-center gap-2 text-left">
+            <button onClick={onOpenLog} title="Wijzigingslog" className="sb-btn flex items-center gap-2 text-left">
               <ClipboardList className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="text-[11.5px] text-slate-400">Wijzigingslog{logAantal ? ` (${logAantal})` : ""}</span>
+              <span className="sb-label text-[11.5px] text-slate-400">Wijzigingslog{logAantal ? ` (${logAantal})` : ""}</span>
             </button>
           </div>
         )}
         {saveState && (
-          <div className="flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
+          <div className="sb-label flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
@@ -267,19 +287,19 @@ export default function AppSidebar({
             )}
           </div>
         )}
-        <button onClick={onToggleHelp} className="flex items-center gap-2 text-left">
+        <button onClick={onToggleHelp} title="Help en uitleg" className="sb-btn flex items-center gap-2 text-left">
           <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="text-[11.5px] text-slate-400">Help en uitleg</span>
+          <span className="sb-label text-[11.5px] text-slate-400">Help en uitleg</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="sb-btn flex items-center gap-2" title="Privacy & beveiliging">
           <Shield className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-          <span className="text-[11.5px] text-slate-500">Privacy &amp; beveiliging</span>
+          <span className="sb-label text-[11.5px] text-slate-500">Privacy &amp; beveiliging</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="sb-btn flex items-center gap-2" title="Uw gegevens blijven lokaal">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
-          <span className="text-[11px] text-slate-500">Uw gegevens blijven lokaal</span>
+          <span className="sb-label text-[11px] text-slate-500">Uw gegevens blijven lokaal</span>
         </div>
-        <div className="text-[10.5px] text-slate-500" title="Versie van de app">Release {APP_RELEASE}</div>
+        <div className="text-[10.5px] text-slate-500 break-all" title={`Versie van de app: ${APP_RELEASE}`}>{collapsed ? APP_RELEASE.replace("release", "r") : `Release ${APP_RELEASE}`}</div>
       </div>
     </div>
   );

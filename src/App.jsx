@@ -57,6 +57,7 @@ import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storag
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
+import { berekenJaarPeriodes } from "./utils/periode.js";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
 import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
@@ -2354,6 +2355,7 @@ export default function App() {
   // op de plek waar je toch al aan het controleren bent, i.p.v. terug te moeten naar Overzicht.
   // "Factuurperiode" stond eerder op Overzicht en is hiernaartoe verhuisd (zie dashboardCards
   // hierboven, waar die kaart is weggehaald).
+  const yearPeriod = useMemo(() => berekenJaarPeriodes(allTransactions), [allTransactions]);
   // Aanvullende controles (C1 dekking, C2 terugkerende betalingen, C3 jaarvergelijking)
   const aanvullendeControles = useMemo(() => {
     if (!allTransactions.length) return null;
@@ -3059,7 +3061,7 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3071,7 +3073,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -3259,7 +3261,7 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3271,7 +3273,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
@@ -3433,7 +3435,7 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
             openPoints={activeYear ? dossierOpenPoints : null}
@@ -3445,7 +3447,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
             yearControl={
               years.length > 1 && (
-                <YearDropdown years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
+                <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
               )
             }
           />
