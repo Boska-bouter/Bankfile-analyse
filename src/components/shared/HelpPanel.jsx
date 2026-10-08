@@ -92,18 +92,20 @@ export default function HelpPanel({ onClose, openChapter }) {
             return (
               <div key={groep.key}>
                 <h3 className="px-5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-teal-700 bg-slate-50/60">{groep.titel}</h3>
+                <div className="mb-2" style={{ marginLeft: 20, marginRight: 12, borderLeft: "2px solid #ccfbf1" }}>
                 {lijst.map((chapter) => (
                   <div key={chapter.key}>
                     <button
                       onClick={() => toggle(chapter.key)}
-                      className="w-full flex items-center justify-between gap-2 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 text-left"
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 text-left"
                     >
                       <span>{chapter.titel}</span>
                       {openKeys.has(chapter.key) || zoekTerm ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                     </button>
-                    {(openKeys.has(chapter.key) || zoekTerm) && <div className="px-5 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
+                    {(openKeys.has(chapter.key) || zoekTerm) && <div className="px-3 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
                   </div>
                 ))}
+                </div>
               </div>
             );
           })}
