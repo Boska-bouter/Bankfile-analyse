@@ -195,7 +195,7 @@ export function useLoansAndLease({
   const setLeaseDetailField = (key, newDetails) => {
     snapshotBeforeAction("Leasegegevens aangepast");
     setLeaseDetails((prev) => {
-      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep, zoekAfgewezen: prev[key].zoekAfgewezen, ...(prev[key].splitVan ? { splitVan: prev[key].splitVan, splitKenteken: prev[key].splitKenteken, toegewezen: prev[key].toegewezen, kandidatenAfgewezen: prev[key].kandidatenAfgewezen } : {}) } : {};
+      const meta = prev[key]?.handmatigeNaam ? { handmatigeNaam: prev[key].handmatigeNaam, handmatigeGroep: prev[key].handmatigeGroep, zoekAfgewezen: prev[key].zoekAfgewezen, omgezet: prev[key].omgezet, ...(prev[key].splitVan ? { splitVan: prev[key].splitVan, splitKenteken: prev[key].splitKenteken, toegewezen: prev[key].toegewezen, kandidatenAfgewezen: prev[key].kandidatenAfgewezen } : {}) } : {};
       return { ...prev, [key]: { ...newDetails, ...meta } };
     });
   };
@@ -240,14 +240,18 @@ export function useLoansAndLease({
     return key;
   };
   // Betalingen aan deze tegenpartij(en) voortaan als financiële lease behandelen (categorie aanpassen).
-  const behandelAlsLease = (txs) => {
+  const behandelAlsLease = (txs, leaseKey) => {
     const gezien = new Set();
+    const omgezet = [];
     for (const tx of txs || []) {
       const k = `${tx.counterparty}|${tx.amount < 0 ? "neg" : "pos"}`;
       if (gezien.has(k)) continue;
       gezien.add(k);
+      omgezet.push({ counterparty: tx.counterparty || tx.description, amount: tx.amount, iban: tx.counterpartyIban || null, categorie: tx.category || null });
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Lease (financieel)", type: "Zakelijk" }, tx.counterpartyIban);
     }
+    // Onthouden welke tegenpartijen door dit contract als lease zijn gaan tellen — nodig om het terug te draaien bij verwijderen.
+    if (leaseKey) setLeaseDetails((prev) => ({ ...prev, [leaseKey]: { ...(prev[leaseKey] || {}), omgezet: [...(prev[leaseKey]?.omgezet || []), ...omgezet] } }));
   };
   const wijsZoekAf = (key) => {
     setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), zoekAfgewezen: true } }));
@@ -262,6 +266,10 @@ export function useLoansAndLease({
   };
   const removeManualLease = (key) => {
     snapshotBeforeAction("Handmatige lease verwijderd");
+    // Betalingen die dankzij dit zelf aangemaakte contract als lease zijn gaan tellen: terug naar "Overig" zodat ze opnieuw beoordeeld worden.
+    for (const o of leaseDetails[key]?.omgezet || []) {
+      setCounterpartyOverride(o.counterparty, o.amount, { category: "Overig", type: "Zakelijk" }, o.iban);
+    }
     setLeaseDetails((prev) => { const n = { ...prev }; delete n[key]; return n; });
     setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== key));
   };

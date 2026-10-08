@@ -356,7 +356,7 @@ function LeaseGroepPanel({
                         ))}
                       </ul>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <button onClick={() => onBehandelAlsLease(lease.zoekKandidaten)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Ja, behandel als leasebetalingen</button>
+                        <button onClick={() => onBehandelAlsLease(lease.zoekKandidaten, lease.key)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Ja, behandel als leasebetalingen</button>
                         <button onClick={() => onWijsZoekAf?.(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] text-blue-900">Nee, geen lease</button>
                       </div>
                     </div>
