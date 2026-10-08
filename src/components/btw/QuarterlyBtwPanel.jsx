@@ -37,11 +37,6 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
           </span>
         )}
         <span className="flex-1" />
-        {onOpenHelp && (
-          <span onClick={(e) => e.stopPropagation()}>
-            <HelpHint chapter="ob-ib-vakken" onOpen={onOpenHelp} label="Waar vind ik dit op het aangifteformulier?" />
-          </span>
-        )}
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </div>
       {open && (

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { isValidElement } from "react";
-import { HELP_CHAPTERS } from "../../content/helpChapters.jsx";
+import { HELP_CHAPTERS, HELP_GROEPEN } from "../../content/helpChapters.jsx";
 
 const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
@@ -15,15 +15,15 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">3.</span>
-      De kaart "Dossiercontrole" bovenaan toont hoeveel open punten er nog zijn (en een ring die pas 100% haalt als alles klaar is). Onder Controleren loop je die punten na; onder Instellingen staan de dossiervragen en aannames.
+      De route onder de kop (Import → Controleren → Bedrijfsmiddelen → Instellingen → Advies) en de kaart "Eerstvolgende stap" laten zien wat je nu moet doen. De kaart "Dossiercontrole" toont hoeveel open punten er nog zijn.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">4.</span>
-      Per jaar vind je de controlelijst, het BTW-kwartaaloverzicht, het aangiftevoorstel, en (bij meerdere jaren) een meerjarenoverzicht.
+      Per jaar vind je onder "Details en overzichten" het jaaroverzicht, de BTW-kwartalen en (bij meerdere jaren) het meerjarenoverzicht. Links bij Acties maak je de indicatieve aangifteberekening, de samenvatting voor de klant en de onderbouwing.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Alles wordt lokaal in deze browser verwerkt en automatisch bewaard — er gaat niets naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden.
+      Alles wordt lokaal in deze browser verwerkt en automatisch bewaard — er gaat niets naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
     </li>
   </ol>
 );
@@ -52,7 +52,7 @@ export default function HelpPanel({ onClose, openChapter }) {
   };
 
   const [zoek, setZoek] = useState("");
-  const allChapters = [{ key: "intro", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
+  const allChapters = [{ key: "intro", groep: "beginnen", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
   const zoekTerm = zoek.trim().toLowerCase();
   const doorzoekbaar = useMemo(() => allChapters.map((c) => ({ c, tekst: `${c.titel} ${tekstVan(c.inhoud)}`.toLowerCase() })), []);
   const zichtbareHoofdstukken = zoekTerm ? doorzoekbaar.filter((d) => d.tekst.includes(zoekTerm)).map((d) => d.c) : allChapters;
@@ -86,18 +86,27 @@ export default function HelpPanel({ onClose, openChapter }) {
           {zoekTerm && zichtbareHoofdstukken.length === 0 && (
             <p className="px-5 py-6 text-xs text-slate-400 text-center">Geen hoofdstuk gevonden voor "{zoek}".</p>
           )}
-          {zichtbareHoofdstukken.map((chapter) => (
-            <div key={chapter.key}>
-              <button
-                onClick={() => toggle(chapter.key)}
-                className="w-full flex items-center justify-between gap-2 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 text-left"
-              >
-                <span>{chapter.titel}</span>
-                {openKeys.has(chapter.key) || zoekTerm ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-              </button>
-              {(openKeys.has(chapter.key) || zoekTerm) && <div className="px-5 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
-            </div>
-          ))}
+          {HELP_GROEPEN.map((groep) => {
+            const lijst = zichtbareHoofdstukken.filter((c) => c.groep === groep.key);
+            if (lijst.length === 0) return null;
+            return (
+              <div key={groep.key}>
+                <h3 className="px-5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-teal-700 bg-slate-50/60">{groep.titel}</h3>
+                {lijst.map((chapter) => (
+                  <div key={chapter.key}>
+                    <button
+                      onClick={() => toggle(chapter.key)}
+                      className="w-full flex items-center justify-between gap-2 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 text-left"
+                    >
+                      <span>{chapter.titel}</span>
+                      {openKeys.has(chapter.key) || zoekTerm ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                    </button>
+                    {(openKeys.has(chapter.key) || zoekTerm) && <div className="px-5 pb-4 text-xs text-slate-500 max-w-3xl">{chapter.inhoud}</div>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
