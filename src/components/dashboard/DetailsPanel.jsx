@@ -58,7 +58,7 @@ export default function DetailsPanel({
   onShowFullCalculation,
   zakCount,
   priCount,
-  onJump,
+  onJump, herkenningsregelsCount,
 }) {
   const [tab, setTab] = useState("jaaroverzicht");
   const btwQuarters = cardsByKey.btwQuarters;
@@ -87,6 +87,8 @@ export default function DetailsPanel({
           ))}
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-auto pb-2">
+          <LinkOut label="Meerjarenoverzicht" onClick={() => onJump("meerjaren")} />
+          <LinkOut label={`Herkenningsregels${herkenningsregelsCount != null ? ` (${herkenningsregelsCount})` : ""}`} onClick={() => onJump("herkenningsregels")} />
           <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
           <LinkOut label="Print" onClick={() => onJump("print")} />
         </div>

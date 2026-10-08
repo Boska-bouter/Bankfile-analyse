@@ -2730,6 +2730,12 @@ export default function App() {
       case "btw":
         jumpToSection(btwSettingsSectionRef);
         break;
+      case "meerjaren":
+        setShowMultiYearModal(true);
+        break;
+      case "herkenningsregels":
+        setActiveTab("instellingen");
+        break;
       case "excel":
         exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
@@ -3132,11 +3138,6 @@ export default function App() {
             onOverslaan={stapOverslaan}
             controleCount={controlerenBadge}
             instellingCount={instellingenBadge}
-            snelkoppelingen={[
-              ...resultatenItems.map((i) => ({ label: i.label, onClick: i.onClick })),
-              { label: `Herkenningsregels (${categoryRules.length})`, onClick: () => setActiveTab("instellingen") },
-            ]}
-            onOpenHelp={setHelpPopupChapter}
             hervat={
               resumeHint && activeYear && resumeHint.openPunten !== 0
                 ? {
@@ -3179,6 +3180,7 @@ export default function App() {
               zakCount={zakGroupForYear.items.length}
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
+              herkenningsregelsCount={categoryRules.length}
             />
           </div>
         </div>
