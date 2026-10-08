@@ -340,7 +340,7 @@ export function DetailTable({
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🟡 Controleren"
             >
-              🟡 Controleren ({confidenceCounts.heuristic}){filterHeuristic ? " ✓" : ""}
+              {metBolletjes("🟡")} Controleren ({confidenceCounts.heuristic}){filterHeuristic ? " ✓" : ""}
             </button>
             <button
               onClick={() => setFilterFallback((v) => !v)}
@@ -349,7 +349,7 @@ export function DetailTable({
               }`}
               title="Toon alleen transacties met classificatiezekerheid 🔴 Onduidelijk"
             >
-              🔴 Onduidelijk ({confidenceCounts.fallback}){filterFallback ? " ✓" : ""}
+              {metBolletjes("🔴")} Onduidelijk ({confidenceCounts.fallback}){filterFallback ? " ✓" : ""}
             </button>
           </div>
         </div>

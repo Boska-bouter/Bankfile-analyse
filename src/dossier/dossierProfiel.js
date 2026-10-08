@@ -62,7 +62,11 @@ export function bouwDossierProfiel(p) {
     else if (btwVerlegd === false) btw.push("Geen BTW-verlegd");
     const kw = Object.entries(kwartaalStatus).filter(([, s]) => s?.aangegeven);
     const kwJaren = [...new Set(kw.map(([k]) => k.split("-")[0]))];
-    if (kw.length > 0) btw.push(`${kw.length} kwartalen aangegeven (${jarenBereik(kwJaren)})`);
+    if (kw.length > 0) {
+      const alleJaren = [...new Set([...kwJaren, ...years.map(String)])].map(Number).filter(Number.isFinite);
+      const totaal = alleJaren.length ? (Math.max(...alleJaren) - Math.min(...alleJaren) + 1) * 4 : kw.length;
+      btw.push(`${kw.length} van ${Math.max(totaal, kw.length)} kwartalen aangegeven`);
+    }
   }
   blokken.push({ titel: "BTW", regels: btw });
 
@@ -88,6 +92,9 @@ export function bouwDossierProfiel(p) {
   if (leaseO.length) leaseSoorten.push("financiële machinelease");
   if (leaseSoorten.length) auto.push(`Lease: ${leaseSoorten.join(" en ")}`);
   else if (leaseSummary.length) auto.push(`Lease in bankdata: ${leaseSummary.length}`);
+  const leaseHerkend = leaseSoorten.length > 0 || leaseSummary.length > 0 || autoAlGenoemd;
+  const leaseBevestigd = confirmedLeaseTypeKeys.length > 0 || Object.keys(leaseDetails || {}).length > 0;
+  if (leaseHerkend && !leaseBevestigd) auto.push("Leasegegevens nog te controleren");
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
   blokken.push({ titel: "Auto, lease en lening", regels: auto });
