@@ -5,6 +5,7 @@ import CategoryPercentagePanel from "../components/overview/CategoryPercentagePa
 import ClassificationConfidencePanel from "../components/dashboard/ClassificationConfidencePanel.jsx";
 import { FileSpreadsheet, Users } from "lucide-react";
 import HerkomstVanGeldPanel from "../components/review/HerkomstVanGeldPanel.jsx";
+import AanvullendeControles from "../components/review/AanvullendeControles.jsx";
 import ImportControlPanel from "../components/upload/ImportControlPanel.jsx";
 import LeaseInterestPanel from "../components/loans/LeaseInterestPanel.jsx";
 import LoanInterestPanel from "../components/loans/LoanInterestPanel.jsx";
@@ -13,6 +14,7 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
+    aanvullendeControles, bevestigControle, toepassenTerugkerend,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
@@ -24,7 +26,7 @@ export function useControlerenCardGroups(p) {
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
-    loanSummary, loansSectionRef, markActivaUnknown, markIncomeSource, markLeaseUnknown,
+    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
     markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
@@ -55,7 +57,9 @@ export function useControlerenCardGroups(p) {
     return [
       withExpand(
         (() => {
-          const basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          const nCtl = aanvullendeControles ? (aanvullendeControles.dekking.aantalVerdacht > 0 ? 1 : 0) + aanvullendeControles.terugkerend.length + aanvullendeControles.sprongen.length : 0;
+          if (basis && nCtl > 0) basis = { ...basis, lines: [...basis.lines, { label: "Aanvullende controles", value: `🟠 ${nCtl} om te bekijken` }] };
           if (!basis || !aansluitControleInfo.heeftData) return basis;
           const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
           const bol = aansluitControleInfo.tone === "ok" ? "🟢 " : aansluitControleInfo.tone === "attention" ? "🟠 " : aansluitControleInfo.tone === "risk" ? "🔴 " : "";
@@ -80,6 +84,7 @@ export function useControlerenCardGroups(p) {
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} />
           </div>
+          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onToepassenTerugkerend={toepassenTerugkerend} />
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={classified}
@@ -169,6 +174,8 @@ export function useControlerenCardGroups(p) {
               onOpenModal={setActivaDetailsModalKey}
               onMarkUnknown={markActivaUnknown}
               onUnmarkUnknown={unmarkActivaUnknown}
+              onAddManual={addManualActiva}
+              onRemove={removeActivum}
               onOpenHelp={setHelpPopupChapter}
             />
           </div>
@@ -318,5 +325,6 @@ export function useControlerenCardGroups(p) {
     expandedTable,
     fingerprintByTxId,
     transactionNotes,
+    aanvullendeControles,
   ]);
 }

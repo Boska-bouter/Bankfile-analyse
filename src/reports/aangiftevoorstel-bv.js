@@ -31,7 +31,7 @@ export function computeBvWinstInvoer(year, classified, categoryBtwRates, btwVerl
   const loanRente = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRente = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
-  const activaAfschrijving = computeActivaAfschrijvingForYear(computeActivaSummary(classified), activaDetails || {}, year);
+  const activaAfschrijving = computeActivaAfschrijvingForYear(computeActivaSummary(classified, activaDetails), activaDetails || {}, year);
   const leaseAutoKosten = computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year, classified, categoryBtwRates, btwVerlegd);
   const leaseAutoWinstCorrectie = (leaseAutoKosten?.afschrijvingTotaal || 0) - (leaseAutoKosten?.boekresultaatBeeindigingTotaal || 0);
   const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, year, opties.huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
@@ -115,7 +115,7 @@ function buildYearSectionBv(
   // toelichting daar). activaSummary/activaAfschrijvingForYear moeten daarom vóór
   // computeYearlySummary worden bepaald, zodat de daadwerkelijk berekende afschrijving alsnog wordt
   // meegeteld — exact dezelfde constructie als bij de zzp-variant.
-  const activaSummary = computeActivaSummary(classified);
+  const activaSummary = computeActivaSummary(classified, activaDetails);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   // v205: de afschrijving (en een eventueel boekresultaat bij vroegtijdige verkoop/veiling, zie
   // hieronder) van een gekapitaliseerd financieel-leaseobject (auto/machine, "Soort" ingevuld) telde

@@ -52,6 +52,7 @@ export default function SetupWizardModal({
   zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap,
   startersaftrekStatus, onSeedStartersaftrekStatus,
   heeftVoorraad, setHeeftVoorraad,
+  activaGevraagd, onActivaBeantwoord, activaAantalBank = 0,
   eigenNamen, setEigenNamen,
   eigenRekeningenExtra, setEigenRekeningenExtra,
   zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
@@ -93,6 +94,7 @@ export default function SetupWizardModal({
       leaseOverig: vol && verwachteLeaseOverig === null,
       lening: vol && verwachteLening === null,
       voorraad: vol && heeftVoorraad === null,
+      activa: vol && !activaGevraagd,
       aov: vol && verwachteAOV === null,
       uren: vol && Object.keys(zelfstandigenaftrekStatus || {}).length === 0,
       starters: vol && Object.keys(startersaftrekStatus || {}).length === 0,
@@ -121,7 +123,7 @@ export default function SetupWizardModal({
     if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
     if (needs.klanten) list.push(33);
-    if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad) list.push(34);
+    if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
     if (needs.starters || needs.kwartalen) list.push(36);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
@@ -172,7 +174,7 @@ export default function SetupWizardModal({
     eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
     onAddBusinessKeywords, onAddBusinessExpenseKeywords, suggesties,
     autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
-    setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV,
+    setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV, onActivaBeantwoord, activaAantalBank,
     onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, zelfstandigenaftrekStatus,
     onSeedStartersaftrekStatus, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
   };
@@ -720,7 +722,7 @@ function Scherm33({ typedNow, zet, goNext, onAddBusinessKeywords, onAddBusinessE
 function Scherm34({
   typedNow, zet, needs, goNext, years,
   autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
-  setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, suggesties,
+  setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, suggesties, onActivaBeantwoord, activaAantalBank = 0,
 }) {
   const t = typedNow;
   const autoKeuze = t.autoKeuze ?? null;
@@ -737,13 +739,15 @@ function Scherm34({
     (!needs.leaseOverig || t.leaseOverigJa != null) &&
     (!needs.leaseOverig || !t.leaseOverigJa || contractenVan(t.leaseOverigLijst || [], t.leaseOverigContracten ?? null) !== null) &&
     (!needs.lening || t.leningJa != null) &&
-    (!needs.voorraad || t.voorraadJa != null);
+    (!needs.voorraad || t.voorraadJa != null) &&
+    (!needs.activa || t.activaJa != null);
   const alleNee = () => {
     const patch = {};
     if (toonLeaseAuto) { patch.leaseAutoJa = false; patch.leaseLijst = []; patch.leaseContracten = null; }
     if (needs.leaseOverig) { patch.leaseOverigJa = false; patch.leaseOverigSoort = "geen"; patch.leaseOverigLijst = []; patch.leaseOverigContracten = null; }
     if (needs.lening) { patch.leningJa = false; patch.leningLijst = []; }
     if (needs.voorraad) patch.voorraadJa = false;
+    if (needs.activa) { patch.activaJa = false; patch.activaLijst = []; }
     if (toonAuto) { patch.autoKeuze = "geen"; patch.autoSoort = null; }
     zet(patch);
   };
@@ -864,6 +868,14 @@ function Scherm34({
         </Sectie>
       )}
 
+      {needs.activa && (
+        <Sectie titel="Heb je machines, gereedschap of inventaris gekocht voor de zaak?" uitleg={`Dat zijn bedrijfsmiddelen die je over meerdere jaren afschrijft.${activaAantalBank > 0 ? ` In de bankbestanden staan al ${activaAantalBank} aankoop${activaAantalBank === 1 ? "" : "en"} als apparatuur/machines — die hoef je hier niet nogmaals te noemen.` : ""} Noem hier alleen wat niet (of nog niet) via de bank is gelopen; bedragen vul je later in bij Bedrijfsmiddelen.`}>
+          <JaNee value={t.activaJa ?? null} onChange={(v) => zet({ activaJa: v, activaLijst: v ? t.activaLijst || [] : [] })}>
+            <NaamLijst lijst={t.activaLijst || []} onChange={(l) => zet({ activaLijst: l })} placeholder="Bijv. CNC-machine, laptop, bedrijfsbus" dubbelToegestaan />
+          </JaNee>
+        </Sectie>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -888,6 +900,7 @@ function Scherm34({
               setVerwachteLening(l.map((naam) => ({ naam, gevonden: false })));
             }
             if (needs.voorraad) setHeeftVoorraad(!!t.voorraadJa);
+            if (needs.activa) onActivaBeantwoord?.(t.activaJa ? t.activaLijst || [] : []);
             goNext();
           }}
           className={PRIMAIR}

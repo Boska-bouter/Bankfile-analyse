@@ -3,6 +3,7 @@
 // per-browser-opslag; dit hier is voor de expliciete "Dossier opslaan/laden"-actie.
 
 import { nextVersionedFilename } from "./projectStorage.js";
+import { VERSLEUTELD_TYPE, versleutelTekst, ontsleutelTekst } from "./projectCrypto.js";
 
 export const PROJECT_FILE_TYPE = "bankoverzicht-project";
 export const PROJECT_FILE_VERSION = 1;
@@ -30,8 +31,9 @@ function sanitizeForFilename(naam) {
   return (naam || "").trim().replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
 }
 
-export function downloadProjectFile(project, previousFileName, rekeninghouderNaam) {
-  const json = JSON.stringify(project, null, 2);
+export async function downloadProjectFile(project, previousFileName, rekeninghouderNaam, wachtwoord = null) {
+  let json = JSON.stringify(project, null, 2);
+  if (wachtwoord) json = JSON.stringify(await versleutelTekst(json, wachtwoord));
   const stamp = new Date().toISOString().slice(0, 10);
   // De naam van de rekeninghouder (uit de wizard) komt, indien bekend, in de bestandsnaam bij de
   // EERSTE keer opslaan — zo is bij het laden (bijv. in de Bestanden-app) al aan de bestandsnaam
@@ -59,7 +61,7 @@ export function downloadProjectFile(project, previousFileName, rekeninghouderNaa
 
 // Leest en valideert een geüpload dossierbestand. Gooit een Error met een begrijpelijke
 // boodschap bij een ongeldig bestand, zodat de UI dat direct kan tonen.
-export async function readProjectFile(file) {
+export async function readProjectFile(file, vraagWachtwoord = null) {
   let parsed;
   try {
     const text = await file.text();
@@ -67,8 +69,26 @@ export async function readProjectFile(file) {
   } catch (e) {
     throw new Error("Kon het dossierbestand niet lezen. Controleer of dit het juiste bestand is.");
   }
+  let wachtwoord = null;
+  if (parsed && parsed.type === VERSLEUTELD_TYPE) {
+    if (!vraagWachtwoord) throw new Error("Dit dossierbestand is beveiligd met een wachtwoord.");
+    let fout = null;
+    for (;;) {
+      const pw = await vraagWachtwoord(fout);
+      if (pw == null) { const e = new Error("Laden geannuleerd."); e.code = "GEANNULEERD"; throw e; }
+      try {
+        parsed = JSON.parse(await ontsleutelTekst(parsed, pw));
+        wachtwoord = pw;
+        break;
+      } catch (e) {
+        if (e.code !== "FOUT_WACHTWOORD") throw new Error("Kon het dossierbestand niet lezen. Controleer of dit het juiste bestand is.");
+        fout = "Onjuist wachtwoord, probeer het opnieuw.";
+      }
+    }
+  }
   if (!parsed || parsed.type !== PROJECT_FILE_TYPE) {
     throw new Error("Dit lijkt geen geldig dossierbestand van deze app te zijn.");
   }
+  if (wachtwoord) Object.defineProperty(parsed, "__wachtwoord", { value: wachtwoord, enumerable: false });
   return parsed;
 }

@@ -16,8 +16,11 @@ export function buildTransactions(parsedFiles) {
       if (isNaN(amount)) continue;
       const afbijRaw = mapping.afbij ? String(r[mapping.afbij] || "").toLowerCase() : "";
       if (afbijRaw) {
-        const isAf = ["af", "debit", "d", "-"].some((v) => afbijRaw.includes(v));
-        const isBij = ["bij", "credit", "c", "+"].some((v) => afbijRaw.includes(v));
+        // Losse letters (D/C) alleen als hele waarde, anders matcht "c" bijv. in "Afschrijvingen" (Knab)
+        // en werd een afschrijving ten onrechte als bijschrijving gelezen.
+        const tok = afbijRaw.trim();
+        const isAf = tok === "d" || ["af", "debit", "debet", "-"].some((v) => afbijRaw.includes(v));
+        const isBij = tok === "c" || ["bij", "credit", "+"].some((v) => afbijRaw.includes(v));
         amount = Math.abs(amount) * (isAf && !isBij ? -1 : 1);
       }
       const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";

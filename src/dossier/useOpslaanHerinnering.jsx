@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
 
 export const HERINNERING_NA_MS = 30 * 60 * 1000;
+export const HERINNERING_NA_WIJZIGINGEN = 40;
 const UITSTEL_KORT_MS = 15 * 60 * 1000;
 const UITSTEL_LANG_MS = 60 * 60 * 1000;
 
@@ -30,7 +31,7 @@ export function useOpslaanHerinnering({ changesSinceExport, hasData }) {
   }, [heeftOpenWijzigingen]);
 
   const minuten = eersteWijzigingOp ? Math.floor((nu - eersteWijzigingOp) / 60000) : 0;
-  const tonen = heeftOpenWijzigingen && eersteWijzigingOp != null && nu - eersteWijzigingOp >= HERINNERING_NA_MS && nu >= uitgesteldTot;
+  const tonen = heeftOpenWijzigingen && eersteWijzigingOp != null && (nu - eersteWijzigingOp >= HERINNERING_NA_MS || changesSinceExport >= HERINNERING_NA_WIJZIGINGEN) && nu >= uitgesteldTot;
   return {
     tonen, minuten, wijzigingen: changesSinceExport,
     uitstellen: (lang) => setUitgesteldTot(Date.now() + (lang ? UITSTEL_LANG_MS : UITSTEL_KORT_MS)),
@@ -44,7 +45,9 @@ export function OpslaanHerinneringBalk({ herinnering, onOpslaan }) {
     <div role="alert" className="sticky top-2 z-30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-md">
       <AlertCircle className="h-4 w-4 shrink-0" />
       <span className="flex-1 min-w-[16rem]">
-        Je werkt al {minuten} minuten aan dit dossier zonder het op te slaan ({wijzigingen} wijziging{wijzigingen === 1 ? "" : "en"}).
+        {minuten >= 30
+          ? `Je werkt al ${minuten} minuten aan dit dossier zonder het op te slaan (${wijzigingen} wijziging${wijzigingen === 1 ? "" : "en"}).`
+          : `Je hebt ${wijzigingen} wijzigingen gemaakt sinds het laatste dossierbestand.`}
         De automatische browseropslag is geen dossierbestand.
       </span>
       <button type="button" onClick={onOpslaan} className="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white hover:bg-amber-700">Nu opslaan</button>

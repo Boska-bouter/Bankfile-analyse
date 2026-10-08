@@ -85,11 +85,20 @@ export function computeAfschrijvingSchema(activum) {
 // aanschaf meestal een losse, eenmalige betaling (geen terugkerende termijnen), dus groeperen we
 // per transactie in plaats van per tegenpartij: dezelfde leverancier kan immers op verschillende
 // data totaal verschillende bedrijfsmiddelen leveren, elk met een eigen afschrijvingstermijn.
-export function computeActivaSummary(classified) {
-  return classified
+export function computeActivaSummary(classified, activaDetails = {}) {
+  const uitBank = classified
     .filter((tx) => tx.category === "Zakelijk - apparatuur/machines" && !tx.isMirror)
-    .map((tx) => ({ key: String(tx.id), naam: tx.counterparty || tx.description || "(onbekend)", tx }))
-    .sort((a, b) => b.tx.date - a.tx.date);
+    .map((tx) => ({ key: String(tx.id), naam: tx.counterparty || tx.description || "(onbekend)", tx }));
+  // Handmatig toegevoegde bedrijfsmiddelen (sleutel "handmatig::…"): zonder bankbetaling — bijvoorbeeld
+  // wat via een andere weg is betaald, privé is ingebracht, of nog niet in de geladen bestanden staat.
+  // Ze krijgen een "nep"-transactie zodat paneel, modal en berekeningen ze net zo behandelen.
+  const handmatig = Object.entries(activaDetails || {})
+    .filter(([k, d]) => k.startsWith("handmatig::") && d && !d.verwijderd)
+    .map(([k, d]) => ({
+      key: k, naam: d.naam || "Bedrijfsmiddel", handmatig: true,
+      tx: { id: k, amount: -(Number(d.aanschafwaarde) || 0), date: d.aanschafdatum ? new Date(d.aanschafdatum) : new Date(), counterparty: d.naam || "Bedrijfsmiddel" },
+    }));
+  return [...uitBank, ...handmatig].sort((a, b) => b.tx.date - a.tx.date);
 }
 
 // Som van de berekende afschrijving over alle geregistreerde activa voor een specifiek jaar —

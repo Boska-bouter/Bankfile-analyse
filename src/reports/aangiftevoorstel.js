@@ -126,7 +126,7 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   // "Zakelijk - apparatuur/machines" telt niet als volledige kosten mee (zie yearlySummary.js) — in
   // plaats daarvan telt hier de daadwerkelijk berekende afschrijving mee, exact dezelfde constructie
   // als de financiële-lease-afschrijving hierboven.
-  const activaSummary = computeActivaSummary(classified);
+  const activaSummary = computeActivaSummary(classified, activaDetails);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
     (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) -
@@ -177,7 +177,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // - apparatuur/machines" telt niet als volledige kosten mee in yearlySummary.js, dus de
   // daadwerkelijk berekende afschrijving moet hier alsnog worden meegeteld, exact dezelfde
   // constructie als de financiële-lease-afschrijving hierboven.
-  const activaSummary = computeActivaSummary(classified);
+  const activaSummary = computeActivaSummary(classified, activaDetails);
   const activaAfschrijvingForYear = computeActivaAfschrijvingForYear(activaSummary, activaDetails || {}, year);
   const winstCorrectie =
     (leaseAutoKostenForYear?.winstCorrectie || 0) - (gedeeldeHuurForYear?.nietAftrekbaarBedrag || 0) -

@@ -1,5 +1,5 @@
 import { APP_RELEASE } from "../../version.js";
-import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X } from "lucide-react";
+import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -56,6 +56,7 @@ export default function AppSidebar({
   saveState,
   lastSavedAt,
   projectStatus,
+  heeftWachtwoord, onWachtwoord, onOpenLog, logAantal = 0,
   showActies,
   onEditBasisvragen,
   onOpenAangifteberekening,
@@ -232,6 +233,18 @@ export default function AppSidebar({
             </div>
           );
         })()}
+        {projectStatus?.hasData && (
+          <div className="flex flex-col gap-1.5">
+            <button onClick={onWachtwoord} className="flex items-center gap-2 text-left">
+              <Lock className={`h-3.5 w-3.5 shrink-0 ${heeftWachtwoord ? "text-emerald-400" : "text-slate-400"}`} />
+              <span className="text-[11.5px] text-slate-400">{heeftWachtwoord ? "Dossier beveiligd — wijzig" : "Wachtwoord op dossierbestand"}</span>
+            </button>
+            <button onClick={onOpenLog} className="flex items-center gap-2 text-left">
+              <ClipboardList className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <span className="text-[11.5px] text-slate-400">Wijzigingslog{logAantal ? ` (${logAantal})` : ""}</span>
+            </button>
+          </div>
+        )}
         {saveState && (
           <div className="flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
