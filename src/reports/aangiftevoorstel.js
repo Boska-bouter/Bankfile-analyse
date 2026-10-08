@@ -728,7 +728,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok = "") {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
@@ -876,6 +876,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat
     je aangifte doet.
   </div>
+  ${aandachtspuntenBlok}
   ${PAGE_BREAK_DIVIDER}
   ${buildBijlageToelichtingenHtml()}
 </body></html>`;

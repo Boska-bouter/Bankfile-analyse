@@ -128,6 +128,7 @@ import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
+import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
@@ -1488,9 +1489,13 @@ export default function App() {
       return;
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+    const aandachtspuntenBlok = aandachtspuntenHtml(bepaalAandachtspunten({
+      years: targetYears, yearPeriod, classified, incompleteLeases: incompleteLeasesCount, incompleteLoans: incompleteLoansCount,
+      zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
+    }));
     const html = rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus })
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok })
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
