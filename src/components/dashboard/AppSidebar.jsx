@@ -170,7 +170,7 @@ export default function AppSidebar({
         <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         {canClearAll && (
-          <button onClick={onClearAll} title="Nieuw dossier" className={`sb-btn flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
+          <button onClick={onClearAll} title="Nieuw dossier starten (sluit het huidige dossier)" className={`sb-btn flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
             <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
             <span className={`sb-label text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
           </button>

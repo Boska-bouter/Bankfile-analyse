@@ -68,7 +68,7 @@ export function useDossierDialogen({
     if (changesSinceExport === 0) { doClearAllData(true); return; }
     const nieuw = () => doClearAllData(true);
     setDialog({
-      title: "Nieuw dossier starten?",
+      title: "Nieuw dossier starten? Het huidige dossier wordt nu gesloten",
       message: (
         <>
           <p>
@@ -77,7 +77,7 @@ export function useDossierDialogen({
           </p>
           {wijzigingWaarschuwing()}
           <p className="text-xs text-slate-400 pt-1">
-            Direct daarna kun je dit nog terugdraaien via "Ongedaan maken" in de zijbalk.
+            Stop je daarna halverwege de wizard, dan houd je een leeg dossier. Direct daarna kun je dit nog terugdraaien via "Ongedaan maken" in de zijbalk.
           </p>
         </>
       ),

@@ -27,7 +27,7 @@ export default function QuarterlyBtwModal({
         // Bij KOR wordt het kwartaalpaneel niet getoond (geen OB-aangifte), maar de uitleg blijft
         // relevant voor de IB-vakken (CategorySummaryCard) — dus die blijft hier los staan.
         <div ref={obIbSectionRef} className="flex items-center justify-end">
-          <HelpHint chapter="ob-ib-vakken" onOpen={onOpenHelp} label="Waar vind ik dit op het aangifteformulier?" />
+          <HelpHint chapter="btw-aangifte-kwartaal" onOpen={onOpenHelp} label="Uitleg bij dit overzicht" />
         </div>
       )}
     </ModalShell>

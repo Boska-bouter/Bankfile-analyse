@@ -47,7 +47,7 @@ export default function AangifteStatusBar({
         <div>
           <p className="text-sm font-semibold flex items-center gap-2">
             Controle {activeYear}
-            {onOpenHelp && <HelpHint chapter="aangifte-checklist" onOpen={onOpenHelp} />}
+            {onOpenHelp && <HelpHint chapter="dossiercontrole" onOpen={onOpenHelp} />}
           </p>
           <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5">
             <span>{metBolletjes(STATUS_EMOJI[yearStatus])}</span>
