@@ -61,9 +61,33 @@ function rubriekBlokAltijd(nr, naam, totaal, toelichting, perCategorie) {
 
 // Uitsplitsing per categorie onder een rubriek — zodat een bedrag in dit document direct terug te
 // vinden is bij de gelijknamige categorie in de app zelf (zie ook het categorieoverzicht onderaan).
+// A1 — elke categorieregel klapt open ("bron") naar de transacties erachter. Alleen op het scherm:
+// in de print blijft alleen de gewone regel staan (de onderbouwing voor op papier is A2).
+let BRON_CTX = null; // { classified, year } — gezet door buildYearSection
+const MAX_BRON_RIJEN = 100;
+function bronTabelHtml(categorie) {
+  if (!BRON_CTX) return "";
+  const cats = Array.isArray(categorie) ? categorie : [categorie];
+  const rijen = BRON_CTX.classified
+    .filter((t) => !t.isMirror && t.year === BRON_CTX.year && cats.includes(t.category))
+    .sort((a, b) => a.date - b.date);
+  if (rijen.length === 0) return "";
+  const totaal = rijen.reduce((a, t) => a + (t.amount || 0), 0);
+  return `<div class="bron-inhoud"><table>
+    <tr><th>Datum</th><th>Tegenpartij</th><th>Omschrijving</th><th class="num">Bedrag (bank)</th></tr>
+    ${rijen.slice(0, MAX_BRON_RIJEN).map((t) => `<tr><td>${fmtDatum(t.date)}</td><td>${esc(t.counterparty)}</td><td>${esc(String(t.description || "").slice(0, 70))}</td><td class="num">${eur(t.amount)}</td></tr>`).join("")}
+    ${rijen.length > MAX_BRON_RIJEN ? `<tr><td colspan="4"><em>… en ${rijen.length - MAX_BRON_RIJEN} meer — zie de app (Categorieën) voor de volledige lijst.</em></td></tr>` : ""}
+    <tr class="total"><td colspan="3">${rijen.length} transactie${rijen.length === 1 ? "" : "s"}</td><td class="num">${eur(totaal)}</td></tr>
+  </table><p class="toelichting">Bedragen zoals op het afschrift (incl. BTW). In dit voorstel staan ze netto (excl. BTW) en, waar van toepassing, na het zakelijke percentage.</p></div>`;
+}
 function categorieDetailHtml(perCategorie) {
   if (!perCategorie || perCategorie.length === 0) return "";
-  return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
+  return perCategorie.map((r) => {
+    const bron = bronTabelHtml(r.bronCats || r.categorie);
+    return bron
+      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.totaal)}</span></summary>${bron}</details>`
+      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`;
+  }).join("");
 }
 
 const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend");
@@ -160,6 +184,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
   const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
+  BRON_CTX = { classified, year };
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
@@ -557,7 +582,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
     const autoCategorieDetail = categorieDetailHtml([
       { categorie: "Afschrijving", totaal: leaseAfschrijvingAuto },
-      { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag },
+      { categorie: "Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", totaal: autokostenOverigBedrag, bronCats: ib.autokostenOverig.categorieen },
     ]);
     const renteVerwijzing =
       ib.leaseAutoKosten && ib.leaseAutoKosten.leaseRenteTotaal > 0
@@ -655,8 +680,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="toelichting">Alle bedragen hieronder zijn netto, exclusief BTW (niet het bruto bankbedrag), tenzij anders vermeld.</p>
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
-    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null)}
-    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.")}
+    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null, ib.inkoopkosten.perCategorie.filter((r) => r.categorie === "Zakelijke inkoop/uitgaven" && r.totaal))}
+    ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.", ib.inkoopkosten.perCategorie.filter((r) => r.categorie === "Inhuur personeel" && r.totaal))}
     ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
     ${autoMachineKostenHtml}
     ${overigeBedrijfskostenHtml}
@@ -728,7 +753,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok = "") {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
@@ -785,6 +810,15 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .wvr { margin-bottom: 8px; }
   .wvr .rubriek { display: flex; justify-content: space-between; padding: 5px 6px; border-bottom: 1px solid #f1f5f9; font-weight: 600; }
   .wvr .subrubriek { display: flex; justify-content: space-between; padding: 3px 6px 3px 18px; border-bottom: 1px solid #f8fafc; color: #475569; font-weight: 400; }
+  details.bron > summary { list-style: none; cursor: pointer; }
+  details.bron > summary::-webkit-details-marker { display: none; }
+  details.bron > summary:hover { background: #f8fafc; }
+  .bron-knop { color: #0f766e; font-size: 9px; font-weight: 600; margin-left: 4px; }
+  details.bron[open] > summary { background: #f0fdfa; }
+  .bron-inhoud { margin: 2px 0 8px 32px; padding: 6px 8px; border-left: 2px solid #99f6e4; background: #f8fafc; }
+  .bron-inhoud table { font-size: 9.5px; margin-bottom: 4px; }
+  .bron-inhoud th, .bron-inhoud td { padding: 2px 5px; }
+  @media print { .bron-knop, .bron-inhoud { display: none !important; } }
   .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
@@ -876,8 +910,11 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat
     je aangifte doet.
   </div>
+  ${aandachtspuntenBlok}
+  <!--UITLEG-START-->
   ${PAGE_BREAK_DIVIDER}
   ${buildBijlageToelichtingenHtml()}
+  <!--UITLEG-END-->
 </body></html>`;
 }
 
@@ -1049,4 +1086,19 @@ export function downloadAangiftevoorstel(html, years) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// Voor download en print: het voorstel zonder de interactieve "ⓘ bron"-uitklappers (die zijn alleen
+// bedoeld voor op het scherm in de app).
+export function stripBronHtml(html) {
+  return String(html || "")
+    .replace(/<div class="bron-inhoud">[\s\S]*?<\/p><\/div>/g, "")
+    .replace(/ ?<span class="bron-knop"[^>]*>[^<]*<\/span>/g, "")
+    .replace(/<details class="bron"><summary class="categorie-detail">/g, '<div class="categorie-detail">')
+    .replace(/<\/summary><\/details>/g, "</div>");
+}
+
+// De uitgebreide uitleg achteraan (Bijlage: Toelichtingen) is optioneel: weglaten voor een korter document.
+export function zonderUitlegHtml(html) {
+  return String(html || "").replace(/<!--UITLEG-START-->[\s\S]*?<!--UITLEG-END-->/g, "");
 }

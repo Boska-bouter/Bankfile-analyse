@@ -58,6 +58,7 @@ import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
+import OpslaanModal from "./components/shared/OpslaanModal.jsx";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
 import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
 import BegrippenModal from "./components/shared/BegrippenModal.jsx";
@@ -122,12 +123,16 @@ import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAanname
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
-import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
 import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
-import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
+import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, stripBronHtml, zonderUitlegHtml } from "./reports/aangiftevoorstel.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
+import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
+import { jarenBereik } from "./dossier/dossierProfiel.js";
+import { buildOnderbouwingHtml, downloadOnderbouwing } from "./reports/onderbouwing.js";
+import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
@@ -1488,26 +1493,100 @@ export default function App() {
       return;
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+    const aandachtspuntenBlok = aandachtspuntenHtml(bepaalAandachtspunten({
+      years: targetYears, yearPeriod, classified, incompleteLeases: incompleteLeasesCount, incompleteLoans: incompleteLoansCount,
+      zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
+    }));
     const html = rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus })
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok })
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
   };
   // E2 — samenvatting voor de klant (één pagina, zelfde cijfers als het Overzicht).
   const [klantSamenvattingHtml, setKlantSamenvattingHtml] = useState(null);
-  const openKlantSamenvatting = () => {
+  const [klantJaarKeuze, setKlantJaarKeuze] = useState(null); // null = picker dicht, anders gekozen jaren
+  const [klantSamenvattingJaren, setKlantSamenvattingJaren] = useState([]);
+  const klantJaarData = (y) => {
+    const s = yearlySummaries[y];
+    if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
+    let delen = [];
+    if (!korRegeling) {
+      const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+      delen.push({ label: "BTW", bedrag: [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting : 0); }, 0) });
+    } else delen.push({ label: "BTW", bedrag: 0 });
+    if (rechtsvorm === "bv") {
+      delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
+    } else {
+      const aftrek = ondernemersaftrekPerJaar[y];
+      const starters = startersaftrekStatus?.[y] === "ja";
+      const bedragAftrek = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
+      const ib = estimateIncomeTaxMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
+      const hk = estimateHeffingskortingenMetOndernemersaftrek(s.winst, y, bedragAftrek, starters)?.totaal || 0;
+      const zvw = estimateZvwMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
+      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (ib?.belasting || 0) - hk) });
+      delen.push({ label: "Zvw", bedrag: zvw?.bijdrage || 0 });
+    }
+    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) } };
+  };
+  const [onderbouwingKeuze, setOnderbouwingKeuze] = useState(null);
+  const [onderbouwingHtml, setOnderbouwingHtml] = useState(null);
+  const [onderbouwingJaren, setOnderbouwingJaren] = useState([]);
+  const openOnderbouwing = (gekozen) => {
+    const jaren = [...gekozen].sort();
+    if (jaren.length === 0) return;
+    setOnderbouwingKeuze(null);
+    setOnderbouwingJaren(jaren);
+    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified }));
+  };
+  const startOnderbouwing = () => {
     if (!activeYear) return;
+    if ((years || []).length > 1) setOnderbouwingKeuze([activeYear]);
+    else openOnderbouwing([activeYear]);
+  };
+  const startKlantSamenvatting = () => {
+    if (!activeYear) return;
+    if ((years || []).length > 1) setKlantJaarKeuze([activeYear]);
+    else openKlantSamenvatting([activeYear]);
+  };
+  const openKlantSamenvatting = (gekozen) => {
+    const jaren = [...gekozen].sort();
+    if (jaren.length === 0) return;
+    setKlantJaarKeuze(null);
+    setKlantSamenvattingJaren(jaren);
     setKlantSamenvattingHtml(buildKlantSamenvattingHtml({
-      klantNaam: eigenNamen?.ondernemer, jaar: activeYear, periode: yearPeriod[activeYear]?.label, rechtsvorm,
-      omzetNetto: yearlySummary?.zakelijkeInkomstenNetto, winst: yearlySummary?.winst,
-      belasting: belastingTotaalJaar, profiel: dossierProfiel,
+      klantNaam: eigenNamen?.ondernemer, rechtsvorm,
+      jaren: jaren.map(klantJaarData),
+      profiel: dossierProfiel,
       openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
+      meegenomen: (() => {
+        const m = [];
+        const act = activaSummary.map((a) => activaDetails[a.key]?.naam || a.naam).filter(Boolean);
+        if (act.length) m.push({ label: "Bedrijfsmiddelen (activa)", items: act });
+        const len = loanSummary.map((l) => l.name).filter(Boolean);
+        if (len.length) m.push({ label: "Leningen", items: len });
+        const fin = leaseSummary.filter((l) => l.category === "Lease (financieel)").map((l) => l.name);
+        const op = leaseSummary.filter((l) => l.category !== "Lease (financieel)").map((l) => l.name);
+        if (fin.length) m.push({ label: "Financiële lease", items: fin });
+        if (op.length) m.push({ label: "Operationele lease", items: op });
+        const soortTxt = autoWizardStatus?.soort === "financial" ? " (financiële lease)" : autoWizardStatus?.soort === "koop" ? " (gekocht)" : autoWizardStatus?.soort === "operational" ? " (operationele lease)" : "";
+        const metJaren = (txt, js) => (jaren.length > 1 ? `${txt} (${jarenBereik(js)})` : txt);
+        const priveJ = jaren.filter((j) => autoStatus?.[j] === "prive");
+        const zaakJ = jaren.filter((j) => autoStatus?.[j] === "zaak");
+        const autoItems = [];
+        if (priveJ.length) autoItems.push(metJaren("privéauto zakelijk gebruikt", priveJ));
+        if (zaakJ.length) autoItems.push(metJaren(`auto op de zaak${soortTxt}`, zaakJ));
+        if (autoItems.length) m.push({ label: "Auto", items: autoItems });
+        if (heeftVoorraad === true) m.push({ label: "Voorraad", items: ["aanwezig"] });
+        return m;
+      })(),
     }));
   };
-  const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
-  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(aangiftevoorstelPreview, selectedAangifteYears);
+  const [uitlegMeenemen, setUitlegMeenemen] = useState(false);
+  const voorstelHtmlWeergave = uitlegMeenemen ? aangiftevoorstelPreview : zonderUitlegHtml(aangiftevoorstelPreview);
+  const printAangiftevoorstelPreview = () => printHtmlDocument(stripBronHtml(voorstelHtmlWeergave));
+  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(stripBronHtml(voorstelHtmlWeergave), selectedAangifteYears);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -2803,7 +2882,8 @@ export default function App() {
 
   const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
-  const saveProjectFile = async () => {
+  const saveProjectFile = async (pwOverride) => {
+    const pwGebruik = typeof pwOverride === "string" ? pwOverride : dossierWachtwoord;
     const project = buildProjectFile({
       auditLog,
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
@@ -2819,7 +2899,7 @@ export default function App() {
     });
     let filename;
     try {
-      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, dossierWachtwoord);
+      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, pwGebruik);
     } catch (e) {
       setError(e.message || "Opslaan mislukt.");
       return;
@@ -2828,6 +2908,14 @@ export default function App() {
     restoredChangesRef.current = 0;
     setChangesSinceExport(0);
     setLastExportAt(new Date());
+  };
+
+  // Sidebar-knop: bij een nieuw (onbeveiligd) dossier eerst kiezen met/zonder wachtwoord; daarna direct opslaan.
+  const [opslaanModal, setOpslaanModal] = useState(false);
+  const [opslaanKeuzeGemaakt, setOpslaanKeuzeGemaakt] = useState(false);
+  const startOpslaan = () => {
+    if (dossierWachtwoord || opslaanKeuzeGemaakt) saveProjectFile();
+    else setOpslaanModal(true);
   };
 
   // ---- Dossier laden vanaf een bestand ----
@@ -2974,7 +3062,7 @@ export default function App() {
             ],
           })
         }
-        onSaveProject={saveProjectFile}
+        onSaveProject={startOpslaan}
         heeftWachtwoord={!!dossierWachtwoord}
         onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
         onOpenLog={() => setShowLog(true)}
@@ -2991,7 +3079,8 @@ export default function App() {
         projectStatus={{ hasData: parsedFiles.length > 0, changes: changesSinceExport, lastExportAt, loadedName: loadedProjectFileName }}
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
-        onKlantSamenvatting={activeYear ? openKlantSamenvatting : null}
+        onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
+        onOnderbouwing={activeYear ? startOnderbouwing : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3154,6 +3243,7 @@ export default function App() {
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
           <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
+          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om te beginnen.</p>}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3184,7 +3274,7 @@ export default function App() {
           {/* v273 — ook dit paneel toont nu altijd, met DetailsPanel zelf een lege-staat renderend
               wanneer er nog geen activeYear is. */}
           <div ref={checklistSectionRef}>
-            <DetailsPanel
+            {activeYear && <DetailsPanel
               year={activeYear}
               cardsByKey={dashboardCardsByKey}
               aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
@@ -3206,7 +3296,7 @@ export default function App() {
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
-            />
+            />}
           </div>
         </div>
 
@@ -3650,20 +3740,33 @@ export default function App() {
                   />
                 )}
 
+        {onderbouwingKeuze && (
+          <KlantJaarKeuzeModal years={years} selected={onderbouwingKeuze} setSelected={setOnderbouwingKeuze} onOpen={openOnderbouwing} onClose={() => setOnderbouwingKeuze(null)}
+            vraag="Voor welke jaren wil je het onderbouwingsoverzicht?" knop="Onderbouwing tonen" />
+        )}
+        {onderbouwingHtml && (
+          <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
+            onDownload={() => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
+        )}
+        {klantJaarKeuze && (
+          <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
+        )}
         {klantSamenvattingHtml && (
           <AangifteVoorstelPreviewModal
             html={klantSamenvattingHtml}
-            years={[activeYear]}
-            titel={`Samenvatting voor klant ${activeYear}`}
-            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, activeYear)}
+            years={klantSamenvattingJaren}
+            titel={`Samenvatting voor klant ${jarenBereik(klantSamenvattingJaren)}`}
+            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren))}
             onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
             onClose={() => setKlantSamenvattingHtml(null)}
           />
         )}
         {aangiftevoorstelPreview && (
           <AangifteVoorstelPreviewModal
-            html={aangiftevoorstelPreview}
+            html={voorstelHtmlWeergave}
             years={selectedAangifteYears}
+            uitleg={uitlegMeenemen}
+            setUitleg={setUitlegMeenemen}
             onDownload={downloadAangiftevoorstelPreview}
             onPrint={printAangiftevoorstelPreview}
             onClose={() => setAangiftevoorstelPreview(null)}
@@ -3712,6 +3815,17 @@ export default function App() {
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
+      {opslaanModal && (
+        <OpslaanModal
+          onAnnuleer={() => setOpslaanModal(false)}
+          onOpslaan={(pw) => {
+            setOpslaanModal(false);
+            setOpslaanKeuzeGemaakt(true);
+            if (pw) setDossierWachtwoord(pw);
+            saveProjectFile(pw || "");
+          }}
+        />
+      )}
       {wachtwoordModal && (
         <WachtwoordModal
           modus={wachtwoordModal.modus}

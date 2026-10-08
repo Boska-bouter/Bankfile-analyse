@@ -729,8 +729,11 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     geen officiële aangifte, geen jaarrekening en geen belastingadvies. Controleer de cijfers altijd zelf of met je
     boekhouder/accountant voordat je aangifte doet.
   </div>
+  ${opties.aandachtspuntenBlok || ""}
+  <!--UITLEG-START-->
   <div style="page-break-before: always;"></div>
   ${buildBijlageToelichtingenHtmlBv()}
+  <!--UITLEG-END-->
 </body></html>`;
 }
 

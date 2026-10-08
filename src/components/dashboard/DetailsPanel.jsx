@@ -74,12 +74,16 @@ export default function DetailsPanel({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="px-5 pt-4">
-        <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
           <h3 className="text-sm font-bold text-slate-900 mr-1">Details en overzichten</h3>
-          {/* v307 (V30) — de losse tabs "BTW" en "Rapportages" zijn vervallen; Excel en Print staan nu direct bij de kop. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <LinkOut label="Meerjarenoverzicht" onClick={() => onJump("meerjaren")} />
+            <LinkOut label={`Herkenningsregels${herkenningsregelsCount != null ? ` (${herkenningsregelsCount})` : ""}`} onClick={() => onJump("herkenningsregels")} />
+            <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
+            <LinkOut label="Print" onClick={() => onJump("print")} />
+          </div>
         </div>
-        <div className="flex items-start gap-2">
-        <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1 flex-1 min-w-0">
+        <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -91,14 +95,6 @@ export default function DetailsPanel({
               {t.label}
             </button>
           ))}
-        </div>
-        <div className="flex items-center gap-2 shrink-0 ml-auto pb-2">
-          <LinkOut label="Meerjarenoverzicht" onClick={() => onJump("meerjaren")} />
-          <LinkOut label={`Herkenningsregels${herkenningsregelsCount != null ? ` (${herkenningsregelsCount})` : ""}`} onClick={() => onJump("herkenningsregels")} />
-          <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
-          <LinkOut label="CSV" onClick={() => onJump("csv")} />
-          <LinkOut label="Print" onClick={() => onJump("print")} />
-        </div>
         </div>
       </div>
 

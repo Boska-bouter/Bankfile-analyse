@@ -176,3 +176,14 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
     nogNietIngedeeld,
   };
 }
+
+// Indeling van een categorie in de hoofdrubrieken van het voorstel — voor het onderbouwingsoverzicht.
+export function rubriekVanCategorie(c) {
+  if (RUBRIEK_OPBRENGSTEN.includes(c)) return "1. Opbrengsten";
+  if (RUBRIEK_INKOOP.includes(c)) return "2. Inkoopkosten en uitbesteed werk";
+  if (AUTOKOSTEN_CATEGORIEN.includes(c) || c === "Zakelijk - apparatuur/machines") return "3. Auto's en machines";
+  if ([...RUBRIEK_OVERIG_VERVOER, ...RUBRIEK_HUISVESTING, ...RUBRIEK_VERKOOP, ...RUBRIEK_ANDERE_KOSTEN].includes(c)) return "4. Overige bedrijfskosten";
+  if (AL_APART_BEHANDELD.includes(c)) return "5. Financiering en bedrijfsmiddelen";
+  if ([...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST].includes(c)) return null; // geen onderdeel van de winst
+  return "6. Nog niet ingedeeld";
+}
