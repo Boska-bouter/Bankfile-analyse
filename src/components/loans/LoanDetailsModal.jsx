@@ -1,3 +1,4 @@
+import DatumVeld from "../shared/DatumVeld.jsx";
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
@@ -60,7 +61,7 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Startdatum *</span>
-              <input type="date" value={form.startdatum} onChange={set("startdatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+              <DatumVeld  value={form.startdatum} onChange={set("startdatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Rentepercentage per jaar *</span>
@@ -68,7 +69,7 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Einddatum (optioneel)</span>
-              <input type="date" value={form.einddatum} onChange={set("einddatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+              <DatumVeld  value={form.einddatum} onChange={set("einddatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
             </label>
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Al afgelost tot nu (optioneel)</span>

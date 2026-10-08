@@ -1,3 +1,4 @@
+import DatumVeld from "../shared/DatumVeld.jsx";
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { computeAfschrijvingSchema } from "../../tax/activa.js";
@@ -94,7 +95,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
                 </label>
                 <label className="text-sm">
                   <span className="block text-xs font-medium text-slate-600 mb-1">Aanschafdatum</span>
-                  <input type="date" value={form.aanschafdatum} onChange={set("aanschafdatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                  <DatumVeld  value={form.aanschafdatum} onChange={set("aanschafdatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
                 </label>
                 <label className="text-sm">
                   <span className="block text-xs font-medium text-slate-600 mb-1">Restwaarde (optioneel)</span>

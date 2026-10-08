@@ -1,3 +1,4 @@
+import DatumVeld from "../shared/DatumVeld.jsx";
 import { useMemo, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import {
@@ -233,7 +234,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <>
               <p className="text-xs text-slate-500">Wanneer begon dit contract en om wat voor soort object gaat het?</p>
               <Veld label="Startdatum contract">
-                <input type="date" className={INPUT} value={form.startdatum} onChange={(e) => set({ startdatum: e.target.value })} />
+                <DatumVeld  className={INPUT} value={form.startdatum} onChange={(e) => set({ startdatum: e.target.value })} />
                 {bank.startdatum && form.startdatum !== bank.startdatum && (
                   <Voorstel tekst={`eerste betaling op ${new Date(bank.startdatum).toLocaleDateString("nl-NL")}`} onNeem={() => set({ startdatum: bank.startdatum })} />
                 )}
@@ -364,7 +365,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
               </div>
               {form.contractBeeindigd && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
-                  <Veld label="Einddatum"><input type="date" className={INPUT} value={form.einddatumContract} onChange={(e) => set({ einddatumContract: e.target.value })} /></Veld>
+                  <Veld label="Einddatum"><DatumVeld  className={INPUT} value={form.einddatumContract} onChange={(e) => set({ einddatumContract: e.target.value })} /></Veld>
                   <Veld label="Opbrengst (verkoop/veiling/inlevering)" hint="Vul 0 in als het object zonder vergoeding is ingeleverd — de resterende boekwaarde wordt dan als verlies genomen. Leeg laten alleen bij een gewone herfinanciering."><input type="number" step="0.01" className={INPUT} value={form.verkoopsom} onChange={(e) => set({ verkoopsom: e.target.value })} /></Veld>
                 </div>
               )}

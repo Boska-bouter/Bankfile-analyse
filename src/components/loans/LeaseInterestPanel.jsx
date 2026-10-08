@@ -75,7 +75,7 @@ export function contractGroepen(segments) {
 
 function LeaseGroepPanel({
   titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
-  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [], groep = null, onAddManualLease, onRemoveManualLease, onKoppelBetalingen, onWijsKandidatenAf,
+  onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [], groep = null, onAddManualLease, onRemoveManualLease, onKoppelBetalingen, onWijsKandidatenAf, onBehandelAlsLease, onWijsZoekAf,
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [kiesLease, setKiesLease] = useState("");
@@ -235,7 +235,7 @@ function LeaseGroepPanel({
                     ) : (
                       <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     )}
-                    {(lease.handmatig || lease.splitVan) && onRemoveManualLease && (segments.length === 0 || lease.splitVan) && (
+                    {(lease.handmatig || lease.splitVan || lease.absorbed) && onRemoveManualLease && (segments.length === 0 || lease.splitVan || lease.absorbed) && (
                       <button onClick={() => onRemoveManualLease(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-red-600">Verwijderen</button>
                     )}
                     {!typeConfirmed ? (
@@ -344,6 +344,23 @@ function LeaseGroepPanel({
                       </p>
                     ) : null;
                   })()}
+                  {lease.zoekKandidaten?.length > 0 && onBehandelAlsLease && (
+                    <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
+                      <p>
+                        <strong>Betalingen gevonden voor "{lease.name}".</strong> Ik vond {lease.zoekKandidaten.length} betalingen aan een naam die hierop lijkt, die nu onder een andere categorie staan
+                        ({[...new Set(lease.zoekKandidaten.map((tx) => tx.category))].slice(0, 3).join(", ")}) — mogelijk omdat bij het inlezen nog niet bekend was dat het om lease gaat. Zijn dit leasebetalingen?
+                      </p>
+                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-[11px] text-blue-800">
+                        {lease.zoekKandidaten.slice(0, 12).map((tx, i) => (
+                          <li key={i}>{new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.counterparty || tx.description || "").slice(0, 50)}</li>
+                        ))}
+                      </ul>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <button onClick={() => onBehandelAlsLease(lease.zoekKandidaten)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Ja, behandel als leasebetalingen</button>
+                        <button onClick={() => onWijsZoekAf?.(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] text-blue-900">Nee, geen lease</button>
+                      </div>
+                    </div>
+                  )}
                   {lease.splitKandidaten?.length > 0 && onKoppelBetalingen && (
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
@@ -388,9 +405,9 @@ function LeaseGroepPanel({
                         )}
                       </>
                     ) : (
-                      lease.splitVan && isCompleteFinancialLeaseDetails(details) ? (
+                      (lease.splitVan || lease.handmatig) && isCompleteFinancialLeaseDetails(details) ? (
                         <div className="mt-2 text-xs">
-                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
+                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst{lease.splitVan ? "" : ". Ik heb in de bankgegevens niets gevonden met deze naam — laad eventueel ook de bankbestanden waarop deze lease wordt betaald."} (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
                           {onKoppelBetalingen && (lease.splitBron?.transactions?.length > 0) && (
                             koppelOpen === lease.key ? (
                               <div className="mt-1.5 rounded-lg border border-slate-200 bg-white p-2">
