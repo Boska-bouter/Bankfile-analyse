@@ -125,9 +125,10 @@ import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
 import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
-import { exportExcel } from "./reports/excelExport.js";
+import { exportExcel, exportCsv } from "./reports/excelExport.js";
 import { buildAangiftevoorstelHtml, downloadAangiftevoorstel } from "./reports/aangiftevoorstel.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
+import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
@@ -1494,6 +1495,17 @@ export default function App() {
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
   };
+  // E2 — samenvatting voor de klant (één pagina, zelfde cijfers als het Overzicht).
+  const [klantSamenvattingHtml, setKlantSamenvattingHtml] = useState(null);
+  const openKlantSamenvatting = () => {
+    if (!activeYear) return;
+    setKlantSamenvattingHtml(buildKlantSamenvattingHtml({
+      klantNaam: eigenNamen?.ondernemer, jaar: activeYear, periode: yearPeriod[activeYear]?.label, rechtsvorm,
+      omzetNetto: yearlySummary?.zakelijkeInkomstenNetto, winst: yearlySummary?.winst,
+      belasting: belastingTotaalJaar, profiel: dossierProfiel,
+      openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
+    }));
+  };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);
   const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(aangiftevoorstelPreview, selectedAangifteYears);
 
@@ -2745,6 +2757,9 @@ export default function App() {
       case "herkenningsregels":
         setActiveTab("instellingen");
         break;
+      case "csv":
+        exportCsv(groups, effectiveCategoryBtwRates, btwVerlegd);
+        break;
       case "excel":
         exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
@@ -2976,6 +2991,7 @@ export default function App() {
         projectStatus={{ hasData: parsedFiles.length > 0, changes: changesSinceExport, lastExportAt, loadedName: loadedProjectFileName }}
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
+        onKlantSamenvatting={activeYear ? openKlantSamenvatting : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3634,6 +3650,16 @@ export default function App() {
                   />
                 )}
 
+        {klantSamenvattingHtml && (
+          <AangifteVoorstelPreviewModal
+            html={klantSamenvattingHtml}
+            years={[activeYear]}
+            titel={`Samenvatting voor klant ${activeYear}`}
+            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, activeYear)}
+            onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
+            onClose={() => setKlantSamenvattingHtml(null)}
+          />
+        )}
         {aangiftevoorstelPreview && (
           <AangifteVoorstelPreviewModal
             html={aangiftevoorstelPreview}

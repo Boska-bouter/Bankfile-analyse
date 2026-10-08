@@ -1,2 +1,2 @@
 // Releasenaam, zichtbaar linksonder in de zijbalk. Bij elke levering ophogen.
-export const APP_RELEASE = "release7V5";
+export const APP_RELEASE = "release8V1";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -82,7 +82,7 @@ export default function AppSidebar({
   heeftWachtwoord, onWachtwoord, onOpenLog, logAantal = 0,
   showActies,
   onEditBasisvragen,
-  onOpenAangifteberekening,
+  onOpenAangifteberekening, onKlantSamenvatting,
   lastActionSnapshot,
   onUndoLastAction,
   onDismissLastAction,
@@ -224,6 +224,12 @@ export default function AppSidebar({
             <button onClick={onOpenAangifteberekening} title="Indicatieve aangifteberekening" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
               <FileSpreadsheet className="h-3.5 w-3.5 text-slate-300 shrink-0" />
               <span className="sb-label text-xs font-semibold text-slate-200">Indicatieve aangifteberekening</span>
+            </button>
+          )}
+          {onKlantSamenvatting && (
+            <button onClick={onKlantSamenvatting} title="Samenvatting voor de klant (1 pagina, afdrukbaar)" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <FileText className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="sb-label text-xs font-semibold text-slate-200">Samenvatting voor klant</span>
             </button>
           )}
         </div>

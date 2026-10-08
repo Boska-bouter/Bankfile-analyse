@@ -96,6 +96,7 @@ export default function DetailsPanel({
           <LinkOut label="Meerjarenoverzicht" onClick={() => onJump("meerjaren")} />
           <LinkOut label={`Herkenningsregels${herkenningsregelsCount != null ? ` (${herkenningsregelsCount})` : ""}`} onClick={() => onJump("herkenningsregels")} />
           <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
+          <LinkOut label="CSV" onClick={() => onJump("csv")} />
           <LinkOut label="Print" onClick={() => onJump("print")} />
         </div>
         </div>
