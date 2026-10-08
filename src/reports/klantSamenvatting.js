@@ -4,14 +4,18 @@ import { eur } from "../utils/amounts.js";
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvorm, omzetNetto, winst, belasting, profiel, openPunten, vandaag = new Date() }) {
+export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvorm, omzetNetto, winst, belasting, profiel, openPunten, meegenomen, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
   const regel = (l, v, sterk) => `<tr${sterk ? ' class="sterk"' : ""}><td>${esc(l)}</td><td class="num">${v}</td></tr>`;
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
   const delen = belasting?.delen || [];
   const totaal = belasting?.totaal ?? null;
-  const profielHtml = (profiel || []).filter((b) => b.regels?.length).map((b) =>
+  const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");
+  // Alleen wat er is (zonder details — die staan in de indicatieve aangifteberekening).
+  const meegenomenHtml = meegenomen?.length
+    ? `<h2>Meegenomen in de berekening</h2>\n<ul>${meegenomen.map((m) => `<li><strong>${esc(m.label)}:</strong> ${m.items.map(esc).join(", ")}</li>`).join("")}</ul>`
+    : "";
   const openHtml = openPunten?.length
     ? `<ul>${openPunten.map((o) => `<li>${esc(o.label)}${o.count != null ? ` (${o.count})` : ""}</li>`).join("")}</ul><p class="noot">Zolang deze punten openstaan kunnen de bedragen hierboven nog veranderen.</p>`
     : `<p>Er staan geen open punten meer.</p>`;
@@ -25,6 +29,7 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvor
  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums} tr.sterk td{font-weight:bold;border-top:2px solid #0f172a;border-bottom:none;font-size:13px;padding-top:8px}
  .blokken{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px} .blok ul,ul{margin:0;padding-left:16px} .blok li,li{margin:1px 0}
  .noot{color:#64748b;font-size:10.5px;font-style:italic} .disc{margin-top:22px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#475569;font-size:10.5px}
+th{font-size:9px;text-transform:uppercase;color:#64748b;text-align:left;border-bottom:1px solid #cbd5e1;padding:4px 6px} .klein{color:#64748b;font-size:10px}
  .blok{break-inside:avoid;page-break-inside:avoid} @media print{body{padding:0}}
 </style></head><body>
 <h1>Samenvatting ${esc(jaar)}</h1>
@@ -35,6 +40,8 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaar, periode, rechtsvor
 
 <h2>Indicatieve belasting en premies</h2>
 ${delen.length ? `<table>${delen.map((d) => regel(d.label, bedrag(d.bedrag))).join("")}${totaal != null ? regel(totaal < 0 ? "Totaal terug te krijgen" : "Totaal te betalen", bedrag(totaal), true) : ""}</table>` : `<p>Nog niet te berekenen.</p>`}
+
+${meegenomenHtml}
 
 <h2>Waarvan is uitgegaan</h2>
 <div class="blokken">${profielHtml || "<p>Geen gegevens.</p>"}</div>

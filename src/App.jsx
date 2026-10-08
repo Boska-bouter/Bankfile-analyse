@@ -122,7 +122,7 @@ import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAanname
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
-import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
 import { computeIbBoxMapping } from "./tax/boxMapping.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
@@ -1509,6 +1509,22 @@ export default function App() {
       omzetNetto: yearlySummary?.zakelijkeInkomstenNetto, winst: yearlySummary?.winst,
       belasting: belastingTotaalJaar, profiel: dossierProfiel,
       openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
+      meegenomen: (() => {
+        const m = [];
+        const act = activaSummary.map((a) => activaDetails[a.key]?.naam || a.naam).filter(Boolean);
+        if (act.length) m.push({ label: "Bedrijfsmiddelen (activa)", items: act });
+        const len = loanSummary.map((l) => l.name).filter(Boolean);
+        if (len.length) m.push({ label: "Leningen", items: len });
+        const fin = leaseSummary.filter((l) => l.category === "Lease (financieel)").map((l) => l.name);
+        const op = leaseSummary.filter((l) => l.category !== "Lease (financieel)").map((l) => l.name);
+        if (fin.length) m.push({ label: "Financiële lease", items: fin });
+        if (op.length) m.push({ label: "Operationele lease", items: op });
+        const au = autoStatus?.[activeYear];
+        if (au === "prive") m.push({ label: "Auto", items: ["privéauto zakelijk gebruikt"] });
+        else if (au === "zaak") m.push({ label: "Auto", items: [`auto op de zaak${autoWizardStatus?.soort === "financial" ? " (financiële lease)" : autoWizardStatus?.soort === "koop" ? " (gekocht)" : autoWizardStatus?.soort === "operational" ? " (operationele lease)" : ""}`] });
+        if (heeftVoorraad === true) m.push({ label: "Voorraad", items: ["aanwezig"] });
+        return m;
+      })(),
     }));
   };
   const printAangiftevoorstelPreview = () => printHtmlDocument(aangiftevoorstelPreview);

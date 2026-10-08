@@ -176,6 +176,13 @@ export default function AppSidebar({
           </button>
         )}
 
+        {showActies && onEditBasisvragen && (
+            <button onClick={onEditBasisvragen} title="Basisvragen bewerken" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="sb-label text-xs font-semibold text-slate-200">Basisvragen bewerken</span>
+            </button>
+          )}
+
         {canSaveProject && (
           <>
             <button onClick={onSaveProject} title="Dossier opslaan" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2">
@@ -196,7 +203,7 @@ export default function AppSidebar({
           <span className="sb-label text-xs font-semibold text-slate-200">Dossier laden</span>
         </button>
 
-        {canSaveProject && (
+        {canSaveProject && !showActies && (
         <button onClick={onLoadFile} title="Extra bankbestand toevoegen" className="sb-btn flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
           <Upload className="h-3.5 w-3.5 text-white shrink-0" />
           <div className="sb-label flex flex-col leading-tight">
@@ -213,13 +220,6 @@ export default function AppSidebar({
         <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
           <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
 
-          {onEditBasisvragen && (
-            <button onClick={onEditBasisvragen} title="Basisvragen bewerken" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
-              <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-              <span className="sb-label text-xs font-semibold text-slate-200">Basisvragen bewerken</span>
-            </button>
-          )}
-
           {onOpenAangifteberekening && (
             <button onClick={onOpenAangifteberekening} title="Indicatieve aangifteberekening" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
               <FileSpreadsheet className="h-3.5 w-3.5 text-slate-300 shrink-0" />
@@ -231,6 +231,15 @@ export default function AppSidebar({
               <FileText className="h-3.5 w-3.5 text-slate-300 shrink-0" />
               <span className="sb-label text-xs font-semibold text-slate-200">Samenvatting voor klant</span>
             </button>
+          )}
+          {canSaveProject && (
+        <button onClick={onLoadFile} title="Extra bankbestand toevoegen" className="sb-btn flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
+          <Upload className="h-3.5 w-3.5 text-white shrink-0" />
+          <div className="sb-label flex flex-col leading-tight">
+            <span className="text-xs font-bold text-white">Extra bankbestand toevoegen</span>
+            <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
+          </div>
+        </button>
           )}
         </div>
       )}
