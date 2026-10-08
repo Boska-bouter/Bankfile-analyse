@@ -1992,11 +1992,21 @@ export default function App() {
     const c = {};
     for (const g of groups) {
       if (!g.items || g.items.length === 0) continue;
-      const e = (c[g.year] ||= { zakelijk: false, prive: false });
+      const e = (c[g.year] ||= { zakelijk: false, prive: false, zakelijkBestanden: 0, priveBestanden: 0 });
       if (g.type === "Zakelijk") e.zakelijk = true; else e.prive = true;
     }
+    // Aantal bestanden per type dat het jaar overlapt (op basis van de periode van elk bestand).
+    for (const [jaar, e] of Object.entries(c)) {
+      const start = new Date(Number(jaar), 0, 1), eind = new Date(Number(jaar), 11, 31, 23, 59, 59);
+      for (const d of importDiagnostics || []) {
+        if (!d.from || !d.to || d.from > eind || d.to < start) continue;
+        if (accountTypeByFile[d.fileName] === "Prive") e.priveBestanden++; else e.zakelijkBestanden++;
+      }
+      if (e.zakelijk && !e.zakelijkBestanden) e.zakelijkBestanden = 1;
+      if (e.prive && !e.priveBestanden) e.priveBestanden = 1;
+    }
     return c;
-  }, [groups]);
+  }, [groups, importDiagnostics, accountTypeByFile]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
   // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
