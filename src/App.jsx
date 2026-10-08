@@ -2904,12 +2904,17 @@ export default function App() {
 
   const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
-  const saveProjectFile = async (pwOverride) => {
+  const saveProjectFile = async (pwOverride, codeOverride) => {
     const pwGebruik = typeof pwOverride === "string" ? pwOverride : dossierWachtwoord;
-    let codeGebruik = null, codeNieuw = false;
+    let codeGebruik = null;
     if (pwGebruik) {
-      codeGebruik = dossierHerstelcode;
-      if (!codeGebruik) { codeGebruik = maakHerstelcode(); codeNieuw = true; setDossierHerstelcode(codeGebruik); }
+      codeGebruik = typeof codeOverride === "string" ? codeOverride : dossierHerstelcode;
+      if (!codeGebruik) {
+        // Eerst de herstelcode tonen en laten bevestigen; pas daarna wordt het bestand opgeslagen.
+        const nieuweCode = maakHerstelcode();
+        setHerstelcodeToon({ code: nieuweCode, nieuw: true, daarna: () => { setDossierHerstelcode(nieuweCode); saveProjectFile(pwGebruik, nieuweCode); } });
+        return;
+      }
     } else if (dossierHerstelcode) setDossierHerstelcode(null);
     const project = buildProjectFile({
       auditLog,
@@ -2931,7 +2936,6 @@ export default function App() {
       setError(e.message || "Opslaan mislukt.");
       return;
     }
-    if (codeNieuw) setHerstelcodeToon({ code: codeGebruik, nieuw: true });
     setLoadedProjectFileName(filename);
     restoredChangesRef.current = 0;
     setChangesSinceExport(0);
@@ -3855,7 +3859,7 @@ export default function App() {
           }}
         />
       )}
-      {herstelcodeToon && <HerstelcodeModal code={herstelcodeToon.code} nieuw={herstelcodeToon.nieuw} onSluit={() => setHerstelcodeToon(null)} />}
+      {herstelcodeToon && <HerstelcodeModal code={herstelcodeToon.code} nieuw={herstelcodeToon.nieuw} onSluit={() => setHerstelcodeToon(null)} onBevestig={herstelcodeToon.daarna ? () => { const f = herstelcodeToon.daarna; setHerstelcodeToon(null); f(); } : null} />}
       {wachtwoordModal && (
         <WachtwoordModal
           modus={wachtwoordModal.modus}
