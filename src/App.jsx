@@ -3175,6 +3175,7 @@ export default function App() {
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
           <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
+          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om te beginnen.</p>}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3205,7 +3206,7 @@ export default function App() {
           {/* v273 — ook dit paneel toont nu altijd, met DetailsPanel zelf een lege-staat renderend
               wanneer er nog geen activeYear is. */}
           <div ref={checklistSectionRef}>
-            <DetailsPanel
+            {activeYear && <DetailsPanel
               year={activeYear}
               cardsByKey={dashboardCardsByKey}
               aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
@@ -3227,7 +3228,7 @@ export default function App() {
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
-            />
+            />}
           </div>
         </div>
 
