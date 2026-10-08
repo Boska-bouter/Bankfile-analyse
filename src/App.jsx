@@ -59,6 +59,9 @@ import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
+import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
+import BegrippenModal from "./components/shared/BegrippenModal.jsx";
+import RouteBalk from "./components/dashboard/RouteBalk.jsx";
 import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
@@ -385,6 +388,14 @@ export default function App() {
   const [auditLog, setAuditLog] = useState([]);
   const [bevestigdeControles, setBevestigdeControles] = useState({}); // C — { sleutel: true } voor 'klopt zo' bij aanvullende controles
   const [showLog, setShowLog] = useState(false);
+  const [showZoek, setShowZoek] = useState(false);
+  const [showBegrippen, setShowBegrippen] = useState(false);
+  // D2 — Ctrl/Cmd+K opent het zoekveld over alle transacties.
+  useEffect(() => {
+    const h = (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setShowZoek(true); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
   const [dossierWachtwoord, setDossierWachtwoord] = useState(null);
   const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
   const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
@@ -2657,6 +2668,31 @@ export default function App() {
       return next;
     });
   }, [alleStappen]);
+  // D1 — route Import → Controleren → Bedrijfsmiddelen → Aannames → Advies, afgeleid van dezelfde open stappen.
+  const routeStappen = (() => {
+    const som = (keys) => alleStappen.filter((st) => keys.includes(st.key)).reduce((n, st) => n + (st.count ?? 1), 0);
+    const eerste = (keys) => alleStappen.find((st) => keys.includes(st.key) && st.onClick);
+    const maak = (key, label, keys, klaarTekst, fallbackTab) => {
+      const open = som(keys);
+      return { key, label, open, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : open > 0 ? `${open} open` : klaarTekst, eerste: eerste(keys), fallbackTab };
+    };
+    const lijst = [
+      maak("import", "Import", ["importControle"], parsedFiles.length === 1 ? "1 bestand, klopt" : `${parsedFiles.length} bestanden, klopt`, "controleren"),
+      maak("controleren", "Controleren", ["confidence", "incomeReview", "personReview", "overigReview", "duplicates"], "afgehandeld", "controleren"),
+      maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren"),
+      maak("aannames", "Aannames", ["aannames"], "bevestigd", "instellingen"),
+    ];
+    const vorigOpen = lijst.reduce((n, s) => n + s.open, 0);
+    lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen bestanden" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
+    return lijst;
+  })();
+  const kiesRouteStap = (s) => {
+    if (s.advies) {
+      setActiveTab("overzicht");
+      setTimeout(() => document.getElementById("advies-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    } else if (s.eerste?.onClick) s.eerste.onClick();
+    else setActiveTab(s.fallbackTab || "controleren");
+  };
   const stapOverslaan = () => volgendeStap && setOvergeslagenStappen((prev) => [...prev, volgendeStap.key]);
   // V90 — alleen overgeslagen stappen die nog echt openstaan tellen als "overgeslagen"
   const openOvergeslagen = alleStappen.filter((i) => overgeslagenStappen.includes(i.key));
@@ -2912,6 +2948,8 @@ export default function App() {
         heeftWachtwoord={!!dossierWachtwoord}
         onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
         onOpenLog={() => setShowLog(true)}
+        onZoek={() => setShowZoek(true)}
+        onBegrippen={() => setShowBegrippen(true)}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
@@ -3084,6 +3122,7 @@ export default function App() {
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
+          {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3650,6 +3689,8 @@ export default function App() {
           onVerwijder={() => { setDossierWachtwoord(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
         />
       )}
+      {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
+      {showBegrippen && <BegrippenModal onClose={() => setShowBegrippen(false)} />}
       {showLog && (
         <WijzigingslogModal
           log={auditLog}

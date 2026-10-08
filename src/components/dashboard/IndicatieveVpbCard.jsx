@@ -16,7 +16,7 @@ export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, breakdow
   const pct = showTrend && prevWinst != null && prevWinst !== 0 ? Math.round(((winst - prevWinst) / Math.abs(prevWinst)) * 100) : null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col gap-4">
+    <div id="advies-sectie" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col gap-4">
       <h4 className="text-sm font-bold text-slate-900">Indicatieve vennootschapsbelasting {year}</h4>
 
       <div>

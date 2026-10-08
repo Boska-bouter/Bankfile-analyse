@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, Shield, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -54,7 +54,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp,
+  onToggleHelp, onZoek, onBegrippen,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -287,6 +287,14 @@ export default function AppSidebar({
             )}
           </div>
         )}
+        <button onClick={onZoek} title="Zoeken in alle transacties (Ctrl+K)" className="sb-btn flex items-center gap-2 text-left">
+          <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span className="sb-label text-[11.5px] text-slate-400">Zoeken in transacties</span>
+        </button>
+        <button onClick={onBegrippen} title="Uitleg bij vakbegrippen" className="sb-btn flex items-center gap-2 text-left">
+          <BookOpen className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span className="sb-label text-[11.5px] text-slate-400">Begrippen</span>
+        </button>
         <button onClick={onToggleHelp} title="Help en uitleg" className="sb-btn flex items-center gap-2 text-left">
           <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
           <span className="sb-label text-[11.5px] text-slate-400">Help en uitleg</span>
