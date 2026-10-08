@@ -59,6 +59,8 @@ import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
 import OpslaanModal from "./components/shared/OpslaanModal.jsx";
+import HerstelcodeModal from "./components/shared/HerstelcodeModal.jsx";
+import { maakHerstelcode } from "./storage/herstelcode.js";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
 import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
 import BegrippenModal from "./components/shared/BegrippenModal.jsx";
@@ -403,6 +405,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", h);
   }, []);
   const [dossierWachtwoord, setDossierWachtwoord] = useState(null);
+  const [dossierHerstelcode, setDossierHerstelcode] = useState(null);
+  const [herstelcodeToon, setHerstelcodeToon] = useState(null); // { code, nieuw }
   const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
   const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
   const projectFileInputRef = useRef(null);
@@ -2902,6 +2906,11 @@ export default function App() {
   // ---- Dossier opslaan als downloadbaar bestand ----
   const saveProjectFile = async (pwOverride) => {
     const pwGebruik = typeof pwOverride === "string" ? pwOverride : dossierWachtwoord;
+    let codeGebruik = null, codeNieuw = false;
+    if (pwGebruik) {
+      codeGebruik = dossierHerstelcode;
+      if (!codeGebruik) { codeGebruik = maakHerstelcode(); codeNieuw = true; setDossierHerstelcode(codeGebruik); }
+    } else if (dossierHerstelcode) setDossierHerstelcode(null);
     const project = buildProjectFile({
       auditLog,
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
@@ -2917,11 +2926,12 @@ export default function App() {
     });
     let filename;
     try {
-      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, pwGebruik);
+      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, pwGebruik, codeGebruik);
     } catch (e) {
       setError(e.message || "Opslaan mislukt.");
       return;
     }
+    if (codeNieuw) setHerstelcodeToon({ code: codeGebruik, nieuw: true });
     setLoadedProjectFileName(filename);
     restoredChangesRef.current = 0;
     setChangesSinceExport(0);
@@ -2938,7 +2948,7 @@ export default function App() {
 
   // ---- Dossier laden vanaf een bestand ----
   const dossierCtx = {
-    suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setAuditLog, setBevestigdeControles,
+    suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setDossierHerstelcode, setAuditLog, setBevestigdeControles,
     setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
     setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
     setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
@@ -3083,6 +3093,7 @@ export default function App() {
         onSaveProject={startOpslaan}
         heeftWachtwoord={!!dossierWachtwoord}
         onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
+        onHerstelcode={dossierHerstelcode ? () => setHerstelcodeToon({ code: dossierHerstelcode, nieuw: false }) : null}
         onOpenLog={() => setShowLog(true)}
         onZoek={() => setShowZoek(true)}
         onBegrippen={() => setShowBegrippen(true)}
@@ -3844,6 +3855,7 @@ export default function App() {
           }}
         />
       )}
+      {herstelcodeToon && <HerstelcodeModal code={herstelcodeToon.code} nieuw={herstelcodeToon.nieuw} onSluit={() => setHerstelcodeToon(null)} />}
       {wachtwoordModal && (
         <WachtwoordModal
           modus={wachtwoordModal.modus}
@@ -3855,7 +3867,7 @@ export default function App() {
             setWachtwoordModal(null);
           }}
           onAnnuleer={() => { if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(null); setWachtwoordModal(null); }}
-          onVerwijder={() => { setDossierWachtwoord(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
+          onVerwijder={() => { setDossierWachtwoord(null); setDossierHerstelcode(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
         />
       )}
       {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}

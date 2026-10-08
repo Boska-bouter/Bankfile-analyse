@@ -87,6 +87,7 @@ export async function laadDossierBestand(file, c) {
     setCategoryZakelijkPercentageState(project.categoryZakelijkPercentage && typeof project.categoryZakelijkPercentage === "object" ? project.categoryZakelijkPercentage : {});
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
     setLoadedProjectFileName(file.name);
+    c.setDossierHerstelcode?.(project.__herstelcode || null);
     c.setDossierWachtwoord?.(project.__wachtwoord || null); // een beveiligd dossier blijft bij opslaan beveiligd
     c.setBevestigdeControles?.(project.bevestigdeControles && typeof project.bevestigdeControles === "object" ? project.bevestigdeControles : {});
     c.setAuditLog?.(Array.isArray(project.auditLog) ? project.auditLog.slice(-300) : []);

@@ -79,7 +79,7 @@ export default function AppSidebar({
   saveState,
   lastSavedAt,
   projectStatus,
-  heeftWachtwoord, onWachtwoord, onOpenLog, logAantal = 0,
+  heeftWachtwoord, onWachtwoord, onHerstelcode, onOpenLog, logAantal = 0,
   showActies,
   onEditBasisvragen,
   onOpenAangifteberekening, onKlantSamenvatting, onOnderbouwing,
@@ -194,6 +194,7 @@ export default function AppSidebar({
                 <Lock className="h-3 w-3 shrink-0 text-emerald-400" />
                 <span className="sb-label text-[11px] text-emerald-300">Met wachtwoord</span>
                 <button onClick={onWachtwoord} title="Wachtwoord wijzigen of verwijderen" className="sb-label text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-200">wijzig</button>
+                {onHerstelcode && <button onClick={onHerstelcode} title="Herstelcode tonen" className="sb-label text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-200">code</button>}
               </div>
             )}
           </>

@@ -1,7 +1,8 @@
 // Optionele versleuteling van het dossierbestand (wachtwoord). AES-256-GCM, sleutel afgeleid met
 // PBKDF2-SHA256 (250.000 iteraties) en een willekeurige salt per bestand. Alles gebeurt lokaal in de
 // browser (WebCrypto); het wachtwoord wordt nergens opgeslagen of verstuurd. Een vergeten wachtwoord
-// is niet te herstellen.
+// is alleen te herstellen met de herstelcode van dat dossier (zie herstelcode.js); er is geen algemene sleutel.
+import { wikkelWachtwoord } from "./herstelcode.js";
 export const VERSLEUTELD_TYPE = "bankoverzicht-project-versleuteld";
 const ITERATIES = 250000;
 
@@ -23,12 +24,13 @@ async function sleutel(wachtwoord, salt, iteraties) {
   return s.deriveKey({ name: "PBKDF2", salt, iterations: iteraties, hash: "SHA-256" }, basis, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
 
-export async function versleutelTekst(tekst, wachtwoord) {
+export async function versleutelTekst(tekst, wachtwoord, herstelcode = null) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const k = await sleutel(wachtwoord, salt, ITERATIES);
   const data = await subtle().encrypt({ name: "AES-GCM", iv }, k, new TextEncoder().encode(tekst));
-  return { type: VERSLEUTELD_TYPE, version: 1, kdf: "PBKDF2-SHA256", iterations: ITERATIES, salt: naarB64(salt), iv: naarB64(iv), data: naarB64(data) };
+  const herstel = herstelcode ? await wikkelWachtwoord(wachtwoord, herstelcode) : null;
+  return { type: VERSLEUTELD_TYPE, version: 1, kdf: "PBKDF2-SHA256", iterations: ITERATIES, salt: naarB64(salt), iv: naarB64(iv), data: naarB64(data), ...(herstel ? { herstel } : {}) };
 }
 
 // Gooit Error met code "FOUT_WACHTWOORD" bij een onjuist wachtwoord (of beschadigd bestand).
