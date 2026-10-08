@@ -18,7 +18,7 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
     } else if (!pw) { return; }
     onOK(pw);
   };
-  const veld = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm";
+  const veld = "w-full rounded-lg border border-slate-300 px-3 py-2 text-base bg-white text-slate-900";
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 flex items-center justify-center p-3" onClick={onAnnuleer}>
       <form onSubmit={verstuur} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-5 space-y-3">
@@ -31,8 +31,8 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
         ) : (
           <p className="text-xs text-slate-600">Voer het wachtwoord in om dit dossierbestand te openen.</p>
         )}
-        <input type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
-        {instellen && <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />}
+        <input type="password" name="dossier-wachtwoord" autoComplete={instellen ? "new-password" : "current-password"} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Wachtwoord" className={veld} />
+        {instellen && <input type="password" name="dossier-wachtwoord-2" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Wachtwoord nogmaals" className={veld} />}
         {(fout || lokaalFout) && <p className="text-xs text-rose-600">{lokaalFout || fout}</p>}
         {!instellen && !toonCode && (
           <button type="button" onClick={() => setToonCode(true)} className="text-xs text-slate-500 underline decoration-dotted">Wachtwoord kwijt? Herstelcode gebruiken</button>
