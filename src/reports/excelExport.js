@@ -2,8 +2,38 @@ import * as XLSX from "xlsx";
 import { CATEGORY_ORDER } from "../classification/categories.js";
 import { computeBtw } from "../tax/btw.js";
 
+// Eén platte lijst van álle transacties (alle jaren, zakelijk en privé) — de vorm die een boekhouder
+// of boekhoudpakket het makkelijkst inleest: één rij per transactie, jaar en rekeningtype als kolom.
+function platteRijen(groups, categoryBtwRates, btwVerlegd) {
+  return groups.flatMap((g) => g.items.map((t) => ({ _d: t.date,
+    Jaar: t.year ?? t.date.getFullYear(),
+    Datum: t.date.toLocaleDateString("nl-NL"),
+    Rekening: g.type,
+    Bedrag: t.amount,
+    BTW: Math.round(computeBtw(t, categoryBtwRates, btwVerlegd) * 100) / 100,
+    Categorie: t.category,
+    Tegenpartij: t.counterparty,
+    Omschrijving: t.description,
+    Bron: t.source,
+  }))).sort((a, b) => a._d - b._d).map(({ _d, ...rest }) => rest);
+}
+
+export function exportCsv(groups, categoryBtwRates, btwVerlegd) {
+  const rijen = platteRijen(groups, categoryBtwRates, btwVerlegd);
+  if (rijen.length === 0) { window.alert("Er is nog geen data om te exporteren — upload eerst een bankbestand."); return; }
+  const kop = Object.keys(rijen[0]);
+  const cel = (v) => { const s = typeof v === "number" ? String(v).replace(".", ",") : String(v ?? ""); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const tekst = [kop.join(";"), ...rijen.map((r) => kop.map((k) => cel(r[k])).join(";"))].join("\r\n");
+  const blob = new Blob(["\uFEFF" + tekst], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "Bankoverzicht_transacties.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
 export function exportExcel(groups, categoryBtwRates, btwVerlegd) {
   const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(platteRijen(groups, categoryBtwRates, btwVerlegd)), "Alle transacties");
   for (const g of groups) {
     const rows = g.items
       .slice()
