@@ -81,6 +81,8 @@ function LeaseGroepPanel({
   const [kiesLease, setKiesLease] = useState("");
   const [nieuweNaam, setNieuweNaam] = useState("");
   const [splitKenteken, setSplitKenteken] = useState("");
+  const [koppelOpen, setKoppelOpen] = useState(null); // lease-key waarvoor de betalingenlijst openstaat
+  const [koppelKeuze, setKoppelKeuze] = useState({});
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump((v) => { setOpen(v); onJump?.(); });
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
@@ -386,7 +388,39 @@ function LeaseGroepPanel({
                         )}
                       </>
                     ) : (
-                      <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>
+                      lease.splitVan && isCompleteFinancialLeaseDetails(details) ? (
+                        <div className="mt-2 text-xs">
+                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
+                          {onKoppelBetalingen && (lease.splitBron?.transactions?.length > 0) && (
+                            koppelOpen === lease.key ? (
+                              <div className="mt-1.5 rounded-lg border border-slate-200 bg-white p-2">
+                                <p className="text-slate-700 font-medium">Welke betalingen horen bij dit contract? (van {lease.splitBron.name.split(" — ")[0]})</p>
+                                <ul className="mt-1 max-h-48 overflow-y-auto space-y-0.5">
+                                  {lease.splitBron.transactions.filter((tx) => tx.amount < 0).map((tx) => {
+                                    const k = txSleutel(tx);
+                                    return (
+                                      <li key={k}>
+                                        <label className="flex items-center gap-2 text-[11px] text-slate-700">
+                                          <input type="checkbox" checked={!!koppelKeuze[k]} onChange={(e) => setKoppelKeuze((v) => ({ ...v, [k]: e.target.checked }))} />
+                                          {new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.description || tx.counterparty || "").slice(0, 60)}
+                                        </label>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                                <div className="mt-1.5 flex gap-1.5">
+                                  <button onClick={() => { const sl = Object.keys(koppelKeuze).filter((k) => koppelKeuze[k]); if (sl.length) onKoppelBetalingen(lease.key, sl); setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Koppel geselecteerde betalingen</button>
+                                  <button onClick={() => { setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-600">Annuleren</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => setKoppelOpen(lease.key)} className="mt-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Betalingen koppelen…</button>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-400">Nog niet gesplitst — vul de aankoop- en leasestructuur in.</p>
+                      )
                     )
                   )}
                 </div>

@@ -138,7 +138,7 @@ export function useLoansAndLease({
           }
         }
         const total = transactions.reduce((a, tx) => a + (Number(tx.amount) || 0), 0);
-        return { key: k, name: d.handmatigeNaam, total, count: transactions.length, transactions, category: "Lease (financieel)", handmatig: transactions.length === 0, splitVan: d.splitVan || null, splitKandidaten, splitBedrag: bedragVan(d), handmatigeGroep: d.handmatigeGroep || "auto" };
+        return { key: k, name: d.handmatigeNaam, total, count: transactions.length, transactions, category: "Lease (financieel)", handmatig: transactions.length === 0, splitVan: d.splitVan || null, splitKandidaten, splitBron: bron || null, splitBedrag: bedragVan(d), handmatigeGroep: d.handmatigeGroep || "auto" };
       });
     const basisNaSplit = handmatig.some((h) => h.splitVan) ? basisKopie : basis;
     return [...basisNaSplit, ...handmatig];
