@@ -189,11 +189,12 @@ export default function AppSidebar({
               <Download className="h-3.5 w-3.5 text-slate-300 shrink-0" />
               <span className="sb-label text-xs font-semibold text-slate-200">Dossier opslaan</span>
             </button>
-            {onWachtwoord && (
-              <button onClick={onWachtwoord} title={heeftWachtwoord ? "Dossier is beveiligd met wachtwoord — wijzig" : "Wachtwoord op dossierbestand"} className="sb-btn -mt-1 flex items-center gap-2 rounded-lg px-3 py-1 text-left hover:bg-white/5">
-                <Lock className={`h-3 w-3 shrink-0 ${heeftWachtwoord ? "text-emerald-400" : "text-slate-500"}`} />
-                <span className={`sb-label text-[11px] ${heeftWachtwoord ? "text-emerald-300" : "text-slate-400"}`}>{heeftWachtwoord ? "Beveiligd met wachtwoord — wijzig" : "Wachtwoord op bestand"}</span>
-              </button>
+            {onWachtwoord && heeftWachtwoord && (
+              <div className="-mt-1 flex items-center gap-2 px-3 py-0.5">
+                <Lock className="h-3 w-3 shrink-0 text-emerald-400" />
+                <span className="sb-label text-[11px] text-emerald-300">Met wachtwoord</span>
+                <button onClick={onWachtwoord} title="Wachtwoord wijzigen of verwijderen" className="sb-label text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-200">wijzig</button>
+              </div>
             )}
           </>
         )}

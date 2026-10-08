@@ -58,6 +58,7 @@ import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
+import OpslaanModal from "./components/shared/OpslaanModal.jsx";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
 import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
 import BegrippenModal from "./components/shared/BegrippenModal.jsx";
@@ -2881,7 +2882,8 @@ export default function App() {
 
   const [resumeHint, setResumeHint] = useState(null);
   // ---- Dossier opslaan als downloadbaar bestand ----
-  const saveProjectFile = async () => {
+  const saveProjectFile = async (pwOverride) => {
+    const pwGebruik = typeof pwOverride === "string" ? pwOverride : dossierWachtwoord;
     const project = buildProjectFile({
       auditLog,
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
@@ -2897,7 +2899,7 @@ export default function App() {
     });
     let filename;
     try {
-      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, dossierWachtwoord);
+      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, pwGebruik);
     } catch (e) {
       setError(e.message || "Opslaan mislukt.");
       return;
@@ -2906,6 +2908,14 @@ export default function App() {
     restoredChangesRef.current = 0;
     setChangesSinceExport(0);
     setLastExportAt(new Date());
+  };
+
+  // Sidebar-knop: bij een nieuw (onbeveiligd) dossier eerst kiezen met/zonder wachtwoord; daarna direct opslaan.
+  const [opslaanModal, setOpslaanModal] = useState(false);
+  const [opslaanKeuzeGemaakt, setOpslaanKeuzeGemaakt] = useState(false);
+  const startOpslaan = () => {
+    if (dossierWachtwoord || opslaanKeuzeGemaakt) saveProjectFile();
+    else setOpslaanModal(true);
   };
 
   // ---- Dossier laden vanaf een bestand ----
@@ -3052,7 +3062,7 @@ export default function App() {
             ],
           })
         }
-        onSaveProject={saveProjectFile}
+        onSaveProject={startOpslaan}
         heeftWachtwoord={!!dossierWachtwoord}
         onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
         onOpenLog={() => setShowLog(true)}
@@ -3805,6 +3815,17 @@ export default function App() {
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
+      {opslaanModal && (
+        <OpslaanModal
+          onAnnuleer={() => setOpslaanModal(false)}
+          onOpslaan={(pw) => {
+            setOpslaanModal(false);
+            setOpslaanKeuzeGemaakt(true);
+            if (pw) setDossierWachtwoord(pw);
+            saveProjectFile(pw || "");
+          }}
+        />
+      )}
       {wachtwoordModal && (
         <WachtwoordModal
           modus={wachtwoordModal.modus}
