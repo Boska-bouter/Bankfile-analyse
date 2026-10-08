@@ -10,7 +10,15 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // tabbladen, die nog geen eigen DashboardHeader hebben.
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 
+const bestanden = (n) => `${n} bestand${n === 1 ? "" : "en"}`;
 const coverageNote = (c) => (c.zakelijk && c.prive ? null : c.zakelijk ? "dit jaar: alleen zakelijk geladen" : c.prive ? "dit jaar: alleen privé geladen" : null);
+// Altijd tonen wat er voor dit jaar is geladen (zakelijk/privé en hoeveel bestanden).
+const coverageTekst = (c) => {
+  if (c.zakelijk && c.prive) return `dit jaar geladen: zakelijk (${bestanden(c.zakelijkBestanden)}) en privé (${bestanden(c.priveBestanden)})`;
+  if (c.zakelijk) return `dit jaar: alleen zakelijk geladen (${bestanden(c.zakelijkBestanden)})`;
+  if (c.prive) return `dit jaar: alleen privé geladen (${bestanden(c.priveBestanden)})`;
+  return null;
+};
 
 export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage, yearPeriod = {} }) {
   const [open, setOpen] = useState(false);
@@ -35,8 +43,8 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
       <div className="flex flex-col">
       {/* V73 — per jaar zichtbaar welke rekeningen data hebben: een jaar zonder privé- (of zakelijk) bestand
           toont daar € 0,00, wat anders op een fout lijkt. */}
-      {showBreakdown && yearCoverage && activeYear && yearCoverage[activeYear] && coverageNote(yearCoverage[activeYear]) && (
-        <div className="text-[11px] text-amber-600 text-left mb-0.5 whitespace-nowrap">{coverageNote(yearCoverage[activeYear])}</div>
+      {yearCoverage && activeYear && yearCoverage[activeYear] && coverageTekst(yearCoverage[activeYear]) && (
+        <div className={`text-[11px] text-left mb-0.5 whitespace-nowrap ${coverageNote(yearCoverage[activeYear]) && showBreakdown ? "text-amber-600" : "text-slate-400"}`}>{coverageTekst(yearCoverage[activeYear])}</div>
       )}
       </div>
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
