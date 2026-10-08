@@ -10,6 +10,7 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
   const verstuur = (e) => {
     e?.preventDefault();
     if (!met) { onOpslaan(null); return; }
+    if (pw.length > 100) { setFout("Kies een wachtwoord van maximaal 100 tekens."); return; }
     if (pw.length < 6) { setFout("Kies een wachtwoord van minimaal 6 tekens."); return; }
     if (pw !== pw2) { setFout("De twee wachtwoorden zijn niet gelijk."); return; }
     onOpslaan(pw);
@@ -29,7 +30,7 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
         </label>
         <label className={optie(met)}>
           <input type="radio" name="pw" checked={met} onChange={() => setMet(true)} className="mt-1" />
-          <span className="text-sm"><strong>Met wachtwoord</strong><br /><span className="text-xs text-slate-500">Het bestand wordt versleuteld. Een vergeten wachtwoord kan niet worden hersteld.</span></span>
+          <span className="text-sm"><strong>Met wachtwoord</strong><br /><span className="text-xs text-slate-500">Het bestand wordt versleuteld. Je krijgt een herstelcode; zonder wachtwoord én code is het bestand niet te openen.</span></span>
         </label>
         {met && (
           <div className="space-y-2">

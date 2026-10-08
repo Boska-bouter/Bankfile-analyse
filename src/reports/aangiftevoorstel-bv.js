@@ -137,7 +137,7 @@ function buildYearSectionBv(
   // net zo goed van toepassing op een BV onder de Vpb — computeInvesteringenForYear/computeMogelijkeKia
   // zijn generieke, rechtsvorm-onafhankelijke functies (zelfde als bij de zzp-variant in
   // aangiftevoorstel.js). "Ná mogelijke KIA*" is ook hier een apart scenario naast de winst
-  // hierboven — geen automatische correctie, want niet elke investering kwalificeert (zie Bijlage).
+  // hierboven — geen automatische correctie, want niet elke investering kwalificeert<!--V--> (zie Bijlage)<!--/V-->.
   // KIA-grondslag: activaregister + financiële-lease-objecten (auto/machine) samen — zie
   // computeLeaseInvesteringenForYear in tax/autoBijtelling.js voor waarom een geleasede personenauto
   // daar bewust NIET in meetelt (KIA geldt daar fiscaal niet voor), en een bestelauto/machine wel.
@@ -239,22 +239,22 @@ function buildYearSectionBv(
   }
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
   // v205: vroegtijdige beëindiging (verkoop/veiling) van een leaseauto/-machine dit jaar — zie de
-  // toelichting bij leaseAutoWinstCorrectieBv hierboven en de Bijlage.
+  // toelichting bij leaseAutoWinstCorrectieBv hierboven<!--V--> en de Bijlage<!--/V-->.
   const beeindigdeLeaseContracten = (leaseAutoKostenBv?.contracten || []).filter((c) => c.beeindigingsresultaat);
   for (const c of beeindigdeLeaseContracten) {
     const b = c.beeindigingsresultaat;
     if (b.boekresultaat != null) {
       openPunten.push(
-        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus boekresultaat ${b.boekresultaat >= 0 ? "+" : "−"}${eur(Math.abs(b.boekresultaat))} (${b.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}, al verwerkt in de winst hierboven). Zie Bijlage.`
+        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus boekresultaat ${b.boekresultaat >= 0 ? "+" : "−"}${eur(Math.abs(b.boekresultaat))} (${b.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}, al verwerkt in de winst hierboven).<!--V--> Zie Bijlage.<!--/V-->`
       );
     } else {
-      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract). Zie Bijlage.`);
+      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract).<!--V--> Zie Bijlage.<!--/V-->`);
     }
     if (b.restschuldOfOverwaarde != null) {
       openPunten.push(
         b.restschuldOfOverwaarde >= 0
-          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost, zie Bijlage)`
-          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost, zie Bijlage)`
+          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost<!--V-->, zie Bijlage)<!--/V-->`
+          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost<!--V-->, zie Bijlage)<!--/V-->`
       );
     }
   }
@@ -305,7 +305,7 @@ function buildYearSectionBv(
       <div><span class="label">Geschatte Vpb*</span><span class="bedrag-groot">${eur(vpbEstimate.belasting)}</span></div>
       <div><span class="label">Resultaat ná Vpb</span><span class="bedrag-groot">${eur(summary.winst - vpbEstimate.belasting)}</span></div>
     </div>
-    ${mogelijkeKia > 0 ? `<p class="kerncijfers-voetnoot">Ná mogelijke KIA* (${eur(mogelijkeKia)}): geschatte Vpb <strong>${eur(vpbEstimateNaKia.belasting)}</strong> in plaats van ${eur(vpbEstimate.belasting)} — zie "Mogelijke investeringsaftrek (KIA)" hieronder en de Bijlage.</p>` : `<p class="kerncijfers-voetnoot">* Geen belastingadvies, alleen een indicatie op basis van de beschikbare bankgegevens.</p>`}`;
+    ${mogelijkeKia > 0 ? `<p class="kerncijfers-voetnoot">Ná mogelijke KIA* (${eur(mogelijkeKia)}): geschatte Vpb <strong>${eur(vpbEstimateNaKia.belasting)}</strong> in plaats van ${eur(vpbEstimate.belasting)} — zie "Mogelijke investeringsaftrek (KIA)" hieronder<!--V--> en de Bijlage<!--/V-->.</p>` : `<p class="kerncijfers-voetnoot">* Geen belastingadvies, alleen een indicatie op basis van de beschikbare bankgegevens.</p>`}`;
 
   const btwKaartHtml =
     kwartalen.length > 0
@@ -441,7 +441,7 @@ function buildYearSectionBv(
 
   <h2>Mogelijke investeringsaftrek (KIA)</h2>
   ${investeringenForYear.totaalInvestering > 0 ? `
-  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
+  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* Resultaat vóór Vpb blijft ${eur(summary.winst)} — de KIA is een aftrekpost op de Vpb-grondslag, geen correctie op het bedrijfsresultaat zelf. Vpb vóór mogelijke KIA: ${eur(vpbEstimate.belasting)}. Vpb ná mogelijke KIA: ${eur(vpbEstimateNaKia.belasting)}.</strong></p>
   <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>

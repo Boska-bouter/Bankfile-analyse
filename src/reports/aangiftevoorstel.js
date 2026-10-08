@@ -338,7 +338,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // (urencriterium/KIA/kilometervergoeding), als korte fragmenten, niet als volledige zinnen (de
   // uitleg zelf staat één keer in de Bijlage: Toelichtingen, hier alleen het signaal).
   const openPunten = [];
-  if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven (zie Bijlage)`);
+  if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven<!--V--> (zie Bijlage)<!--/V-->`);
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
   if (yc.quartersNietAangegeven.length > 0) openPunten.push(`BTW nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
@@ -349,22 +349,22 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   if (yc.priveTransferMissingMirrors.length > 0) openPunten.push(`${yc.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
   if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
   // v205: vroegtijdige beëindiging (verkoop/veiling) van een leaseauto/-machine dit jaar — zie de
-  // toelichting bij winstCorrectie/computeLeaseAutoKostenVoorJaar en de Bijlage.
+  // toelichting bij winstCorrectie/computeLeaseAutoKostenVoorJaar<!--V--> en de Bijlage<!--/V-->.
   const beeindigdeLeaseContracten = (leaseAutoKostenForYear?.contracten || []).filter((c) => c.beeindigingsresultaat);
   for (const c of beeindigdeLeaseContracten) {
     const b = c.beeindigingsresultaat;
     if (b.boekresultaat != null) {
       openPunten.push(
-        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus boekresultaat ${b.boekresultaat >= 0 ? "+" : "−"}${eur(Math.abs(b.boekresultaat))} (${b.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}, al verwerkt in de winst hierboven). Zie Bijlage.`
+        `${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwaarde ${eur(b.boekwaardeBijBeeindiging)}, dus boekresultaat ${b.boekresultaat >= 0 ? "+" : "−"}${eur(Math.abs(b.boekresultaat))} (${b.boekresultaat >= 0 ? "plus = winst" : "min = aftrekpost"}, al verwerkt in de winst hierboven).<!--V--> Zie Bijlage.<!--/V-->`
       );
     } else {
-      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract). Zie Bijlage.`);
+      openPunten.push(`${esc(c.leaseName)}: leaseobject verkocht/geveild voor ${eur(b.opbrengst)} — boekwinst/-verlies niet te bepalen (vul "Soort" in bij dit leasecontract).<!--V--> Zie Bijlage.<!--/V-->`);
     }
     if (b.restschuldOfOverwaarde != null) {
       openPunten.push(
         b.restschuldOfOverwaarde >= 0
-          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost, zie Bijlage)`
-          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost, zie Bijlage)`
+          ? `${esc(c.leaseName)}: naar schatting nog ${eur(b.restschuldOfOverwaarde)} restschuld bij de leasemaatschappij (geen winst-/verliespost<!--V-->, zie Bijlage)<!--/V-->`
+          : `${esc(c.leaseName)}: naar schatting ${eur(Math.abs(b.restschuldOfOverwaarde))} overwaarde die de leasemaatschappij nog moet terugbetalen (geen winst-/verliespost<!--V-->, zie Bijlage)<!--/V-->`
       );
     }
   }
@@ -537,7 +537,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
-        } <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span></p>
+        }<!--V--> <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span><!--/V--></p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
     { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
@@ -612,7 +612,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <div class="subrubriek"><span>Auto — autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
   ${autoUitlegHtml}
-  ${totaleAutokosten > 0 ? `<p class="toelichting">${autoUitleg.length ? "" : "Volledig aftrekbaar — geen bijtelling van toepassing. "}${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg.</p>` : ""}`
+  ${totaleAutokosten > 0 ? `<p class="toelichting">${autoUitleg.length ? "" : "Volledig aftrekbaar — geen bijtelling van toepassing. "}${renteVerwijzing}<!--V--> Zie Bijlage: Toelichtingen voor de algemene uitleg.<!--/V--></p>` : ""}`
       : `
   <div class="subrubriek"><span>Auto — totale autokosten (afschrijving + gecategoriseerde kosten)</span><span class="num">${eur(totaleAutokosten)}</span></div>
   ${autoCategorieDetail}
@@ -623,7 +623,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         gemengdLeaseWaarschuwing
           ? "⚠ Dit jaar is zowel een auto als een machine financieel geleased — controleer de aftopping handmatig, de app berekent deze nu tegen de afschrijving van auto én machine samen. "
           : ""
-      }${renteVerwijzing} Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de app zelf.</p>`;
+      }${renteVerwijzing}<!--V--> Zie Bijlage: Toelichtingen voor de algemene uitleg van dit mechanisme — de volledige berekening per contract staat in de app zelf.<!--/V--></p>`;
 
     const totaalAutoMachine = machineBedrag + (heeftBijtelling ? aftrekbareAutokosten : totaleAutokosten);
     return `
@@ -644,7 +644,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     .filter(({ gh }) => !!gh)
     .map(({ label, gh }) => `
   <div class="rubriek"><span>${label} — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
-  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}. Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de app zelf.</p>`)
+  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}.<!--V--> Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de app zelf.<!--/V--></p>`)
     .join("");
 
   const priveHtml =
@@ -715,7 +715,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de app zelf terugvinden.</p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
-  <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw. Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.</p>
+  <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw.<!--V--> Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.<!--/V--></p>
   ${zaScenarios ? `
   <p>Indicatieve Zvw mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenarios.metZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""} · zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenarios.zonderZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}</p>
   <p>Heffingskortingen mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal)}</strong> · zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal)}</strong></p>
@@ -743,7 +743,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
   ${investeringenForYear.totaalInvestering > 0 ? `
-  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""} <span class="toelichting">Zie Bijlage.</span></p>
+  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
   <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
@@ -1100,5 +1100,5 @@ export function stripBronHtml(html) {
 
 // De uitgebreide uitleg achteraan (Bijlage: Toelichtingen) is optioneel: weglaten voor een korter document.
 export function zonderUitlegHtml(html) {
-  return String(html || "").replace(/<!--UITLEG-START-->[\s\S]*?<!--UITLEG-END-->/g, "");
+  return String(html || "").replace(/<!--UITLEG-START-->[\s\S]*?<!--UITLEG-END-->/g, "").replace(/<!--V-->[\s\S]*?<!--\/V-->/g, "");
 }
