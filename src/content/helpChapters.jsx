@@ -689,25 +689,56 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
-    key: "doc-samenvatting-onderbouwing",
+    key: "doc-samenvatting",
     groep: "documenten",
-    titel: "Samenvatting voor klant en Onderbouwing overzichten",
+    titel: "Samenvatting voor klant",
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          <strong>Samenvatting voor klant</strong> is één pagina met het resultaat, de indicatieve belasting en premies,
-          wat er in de berekening is meegenomen, waarvan is uitgegaan en wat nog openstaat. Je kiest eerst het jaar (of
-          meerdere jaren, dan staan ze naast elkaar in kolommen). De cijfers zijn dezelfde als op het Overzicht; er is geen
-          aparte berekening.
+          Eén pagina voor de klant. Je opent hem links bij Acties; bij meerdere jaren kies je eerst het jaar of de jaren
+          (dan staan ze naast elkaar in kolommen). De cijfers zijn dezelfde als op het Overzicht en in de indicatieve
+          aangifteberekening; er is geen aparte berekening.
         </p>
         <p>
-          <strong>Onderbouwing overzichten</strong> is een apart document met de transacties achter de bedragen, per jaar en
-          per rubriek. Gebruik dit als iemand wil nagaan waar een bedrag vandaan komt. Ook hier kies je eerst het jaar of de
-          jaren.
+          <strong>Wat staat erin:</strong> het <em>resultaat</em> (omzet, zakelijke kosten, winst of resultaat vóór Vpb), de{" "}
+          <em>indicatieve belasting en premies</em> (BTW en IB met Zvw, of BTW en Vpb), wat er is <em>meegenomen</em> in de
+          berekening (bijvoorbeeld leningen, lease en auto), <em>waarvan is uitgegaan</em> (rechtsvorm, jaren, rekeninghouder,
+          geladen bankbestanden, BTW-keuzes) en wat er <em>nog openstaat</em>.
         </p>
-        <p className="text-xs text-slate-400">
-          Beide documenten zijn indicatief en geen aangifte of fiscaal advies.
+        <p>
+          <strong>Wanneer gebruik je hem:</strong> om aan de klant te laten zien waar het dossier staat, zonder alle details.
+          Bedragen kunnen nog veranderen zolang er open punten staan; dat staat er ook bij.
         </p>
+        <p className="text-xs text-slate-400">Indicatief en geen aangifte of fiscaal advies.</p>
+      </div>
+    ),
+  },
+  {
+    key: "doc-onderbouwing",
+    groep: "documenten",
+    titel: "Onderbouwing overzichten",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>
+          Een apart document met de <strong>transacties achter de bedragen</strong> in de indicatieve aangifteberekening. Je
+          opent het links bij Acties; bij meerdere jaren kies je eerst het jaar of de jaren.
+        </p>
+        <p>
+          <strong>Hoe is het opgebouwd:</strong> per jaar, per rubriek van de aangifte (bijvoorbeeld Opbrengsten of Overige
+          bedrijfskosten) en daarbinnen per categorie. Elke categorie is een tabel met datum, tegenpartij, omschrijving en
+          bedrag, met onderaan het aantal transacties en het totaal.
+        </p>
+        <p>
+          <strong>Let op de bedragen:</strong> die staan zoals op het bankafschrift, dus inclusief BTW. In de berekening staan
+          ze netto (exclusief BTW) en, waar dat van toepassing is, na het zakelijke percentage. Een totaal in dit document
+          kan daarom afwijken van het bedrag in het voorstel; dat is geen fout.
+        </p>
+        <p>
+          <strong>Wanneer gebruik je het:</strong> als iemand (klant, boekhouder, inspecteur) wil nagaan waar een bedrag
+          vandaan komt. Op het scherm kun je bij het voorstel zelf ook op "ⓘ bron" klikken, maar die bron staat niet in een
+          gedownload of geprint voorstel. Dit onderbouwingsdocument is daarvoor de plek.
+        </p>
+        <p className="text-xs text-slate-400">Indicatief en geen aangifte of fiscaal advies.</p>
       </div>
     ),
   },

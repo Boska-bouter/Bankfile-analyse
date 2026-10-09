@@ -65,9 +65,33 @@ function rubriekBlok(nr, naam, totaal, toelichting, perCategorie) {
   ${categorieDetailHtml(perCategorie)}`;
 }
 
+// Elke categorieregel klapt open ("bron") naar de transacties erachter. Alleen op het scherm: voor
+// download en print haalt stripBronHtml (aangiftevoorstel.js) dit weer weg.
+let BRON_CTX = null; // { classified, year } — gezet door buildYearSectionBv
+const MAX_BRON_RIJEN = 100;
+function bronTabelHtml(categorie) {
+  if (!BRON_CTX) return "";
+  const cats = Array.isArray(categorie) ? categorie : [categorie];
+  const rijen = BRON_CTX.classified
+    .filter((t) => !t.isMirror && t.year === BRON_CTX.year && cats.includes(t.category))
+    .sort((a, b) => a.date - b.date);
+  if (rijen.length === 0) return "";
+  const totaal = rijen.reduce((a, t) => a + (t.amount || 0), 0);
+  return `<div class="bron-inhoud"><table>
+    <tr><th>Datum</th><th>Tegenpartij</th><th>Omschrijving</th><th class="num">Bedrag (bank)</th></tr>
+    ${rijen.slice(0, MAX_BRON_RIJEN).map((t) => `<tr><td>${fmtDatum(t.date)}</td><td>${esc(t.counterparty)}</td><td>${esc(String(t.description || "").slice(0, 70))}</td><td class="num">${eur(t.amount)}</td></tr>`).join("")}
+    ${rijen.length > MAX_BRON_RIJEN ? `<tr><td colspan="4"><em>… en ${rijen.length - MAX_BRON_RIJEN} meer — zie de app (Categorieën) voor de volledige lijst.</em></td></tr>` : ""}
+    <tr class="total"><td colspan="3">${rijen.length} transactie${rijen.length === 1 ? "" : "s"}</td><td class="num">${eur(totaal)}</td></tr>
+  </table><p class="toelichting">Bedragen zoals op het afschrift (incl. BTW). In dit voorstel staan ze netto (excl. BTW) en, waar van toepassing, na het zakelijke percentage.</p></div>`;
+}
 function categorieDetailHtml(perCategorie) {
   if (!perCategorie || perCategorie.length === 0) return "";
-  return perCategorie.map((r) => `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`).join("");
+  return perCategorie.map((r) => {
+    const bron = bronTabelHtml(r.bronCats || r.categorie);
+    return bron
+      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.totaal)}</span></summary>${bron}</details>`
+      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`;
+  }).join("");
 }
 
 const fmtDatum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL") : "onbekend");
@@ -108,6 +132,7 @@ function buildYearSectionBv(
   fileContinuity, kwartaalStatus, rcVerloop, evVerloop, heeftHolding, opties = {}
 ) {
   const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
+  BRON_CTX = { classified, year };
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
@@ -272,7 +297,8 @@ function buildYearSectionBv(
     (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
     overigeBedrijfskostenMetAuto.reduce((a, r) => a + (r.totaal || 0), 0) +
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
-    renteAftrekbaar;
+    renteAftrekbaar +
+    leaseAutoWinstCorrectieBv; // afschrijving financiële-lease-auto: zit ook in het resultaat, dus ook in de kosten
 
   // Omzet (ib.opbrengsten.totaal, netto/exclusief BTW) plus de over het jaar verschuldigde BTW op
   // de omzet (som van box 1a/1b per kwartaal) geeft de omzet inclusief BTW.
@@ -652,6 +678,15 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   .wvr .rubriek { display: flex; justify-content: space-between; padding: 5px 6px; border-bottom: 1px solid #f1f5f9; font-weight: 600; }
   .wvr .subrubriek { display: flex; justify-content: space-between; padding: 3px 6px 3px 18px; border-bottom: 1px solid #f8fafc; color: #475569; font-weight: 400; }
   .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
+  details.bron > summary { list-style: none; cursor: pointer; }
+  details.bron > summary::-webkit-details-marker { display: none; }
+  details.bron > summary:hover { background: #f8fafc; }
+  .bron-knop { color: #0f766e; font-size: 9px; font-weight: 600; margin-left: 4px; }
+  details.bron[open] > summary { background: #f0fdfa; }
+  .bron-inhoud { margin: 2px 0 8px 32px; padding: 6px 8px; border-left: 2px solid #99f6e4; background: #f8fafc; }
+  .bron-inhoud table { font-size: 9.5px; margin-bottom: 4px; }
+  .bron-inhoud th, .bron-inhoud td { padding: 2px 5px; }
+  @media print { .bron-knop, .bron-inhoud { display: none !important; } }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
   .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
   .kerncijfers-kaart { margin: 0 0 12px; padding: 14px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
