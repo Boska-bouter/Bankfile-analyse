@@ -9,6 +9,7 @@ import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeLeaseAutoKostenVoorJaar } from "../tax/autoBijtelling.js";
 import { computeLeaseRenteForYear, computeLoanRenteForYear } from "../tax/loanAmortization.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
+import { computeBvWinstInvoer } from "../reports/aangiftevoorstel-bv.js";
 
 export function useYearlySummaries(p) {
   const {
@@ -44,7 +45,10 @@ export function useYearlySummaries(p) {
       const winstCorrectie =
         (leaseAutoKosten?.winstCorrectie || 0) - (gedeeldeHuur?.nietAftrekbaarBedrag || 0) -
         (gedeeldeEnergie?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKosten?.nietAftrekbaarBedrag || 0) +
-        (kmVergoeding?.bedrag || 0) + (activaAfschrijving?.totaalAfschrijving || 0);
+        (kmVergoeding?.bedrag || 0) + (activaAfschrijving?.totaalAfschrijving || 0) +
+        // BV: afschrijving (en boekresultaat) van een financiële-lease-auto/machine telt ook mee, net als
+        // bij het actieve jaar in App.jsx en in het BV-voorstel (anders wijkt het meerjaren-/klantoverzicht af).
+        (rechtsvorm === "bv" ? computeBvWinstInvoer(y, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, {}).leaseAutoWinstCorrectie || 0 : 0);
       map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed);
     }
     return map;

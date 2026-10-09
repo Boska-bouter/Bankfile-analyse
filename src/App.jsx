@@ -2006,6 +2006,9 @@ export default function App() {
         if (!d.from || !d.to || d.from > eind || d.to < start) continue;
         if (accountTypeByFile[d.fileName] === "Prive") e.priveBestanden++; else e.zakelijkBestanden++;
       }
+      // De bestanden zelf bepalen wat er geladen is: een privé-boeking op een zakelijke rekening maakt
+      // wel een "Prive"-groep, maar is geen privé-bestand.
+      if (e.zakelijkBestanden + e.priveBestanden > 0) { e.zakelijk = e.zakelijkBestanden > 0; e.prive = e.priveBestanden > 0; }
       if (e.zakelijk && !e.zakelijkBestanden) e.zakelijkBestanden = 1;
       if (e.prive && !e.priveBestanden) e.priveBestanden = 1;
     }
