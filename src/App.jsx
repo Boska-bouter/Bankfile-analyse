@@ -3359,6 +3359,8 @@ export default function App() {
           <div ref={checklistSectionRef}>
             {activeYear && <DetailsPanel
               year={activeYear}
+              years={years}
+              onSelectYear={setActiveYear}
               cardsByKey={dashboardCardsByKey}
               aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
               dashboardAangifteIndicatie={dashboardAangifteIndicatie}

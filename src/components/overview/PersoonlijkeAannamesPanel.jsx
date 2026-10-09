@@ -8,6 +8,7 @@ import { computeInvesteringenForYear } from "../../tax/activa.js";
 import { computeLeaseInvesteringenForYear } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { toetsStartersaftrek } from "../../tax/startersaftrekToets.js";
 
 // v291 — gedeeld blok voor Huur/Energie-water/Gemeentelijke kosten "(deels zakelijk)": drie losse
 // categorieën met elk hun eigen percentage-per-jaar-instelling (zie tax/gedeeldeHuur.js), maar
@@ -195,6 +196,9 @@ export default function PersoonlijkeAannamesPanel({
               geen ondernemer was, en dit in die periode niet vaker dan 2x eerder hebt toegepast (max. 3x in de
               eerste 5 jaar). Vast bedrag van € 2.123 (2023 t/m 2026 ongewijzigd) — controleer dit zelf.
             </p>
+            {toetsStartersaftrek(startersaftrekStatus, zelfstandigenaftrekStatus).meldingen.map((m, i) => (
+              <p key={i} className="mt-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">⚠ {m}</p>
+            ))}
           </div>
 
           <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
