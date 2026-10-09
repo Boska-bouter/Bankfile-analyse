@@ -176,6 +176,8 @@ export const INTRA_FILE_BALANCE_THRESHOLD = 100;
 // de melding terugkomt als het verschil verandert (ander bestand, ander beginsaldo, extra transacties).
 export const saldoControleSleutel = (d) => `saldo|${d.fileName}|${Math.round((d.balanceCheck?.diff || 0) * 100)}`;
 
+export const aansluitingControleSleutel = (c) => `aansluiting|${c.fileA}|${c.fileB}|${Math.round((c.diff || 0) * 100)}`;
+
 export function classifyContinuityGap(diff) {
   const abs = Math.abs(diff);
   if (abs >= CONTINUITY_GAP_ROOD) return "rood";
