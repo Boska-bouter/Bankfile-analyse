@@ -168,6 +168,7 @@ export default function AppSidebar({
       {/* Tabs */}
       {tabsVisible && (
         <div className="flex flex-col gap-1">
+          <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Navigatie</span>
           <TabItem tabKey="overzicht" active={activeTab === "overzicht"} onClick={() => onSelectTab("overzicht")} />
           <TabItem tabKey="controleren" active={activeTab === "controleren"} badge={controlerenBadge} onClick={() => onSelectTab("controleren")} />
           <TabItem tabKey="instellingen" active={activeTab === "instellingen"} badge={instellingenBadge} onClick={() => onSelectTab("instellingen")} />

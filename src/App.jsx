@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
+import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel } from "./importers/transactions.js";
+import TabPijlen from "./components/shared/TabPijlen.jsx";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
@@ -2492,11 +2493,11 @@ export default function App() {
   // "geel" (de moeite waard om te bekijken) en telt hier bewust niet meer als een telbaar probleem.
   const controlerenImportProblemCount = useMemo(() => {
     const balansProblemen = importDiagnostics.filter(
-      (d) => d.balanceCheck && !d.balanceCheck.ok && Math.abs(d.balanceCheck.diff) >= INTRA_FILE_BALANCE_THRESHOLD
+      (d) => d.balanceCheck && !d.balanceCheck.ok && Math.abs(d.balanceCheck.diff) >= INTRA_FILE_BALANCE_THRESHOLD && !bevestigdeControles[saldoControleSleutel(d)]
     ).length;
     const aansluitProblemen = fileContinuity.filter((c) => !c.ok && classifyContinuityGap(c.diff) === "rood").length;
     return balansProblemen + aansluitProblemen;
-  }, [importDiagnostics, fileContinuity]);
+  }, [importDiagnostics, fileContinuity, bevestigdeControles]);
 
   // v240 — Mini-dashboard voor tabblad "Controleren": dezelfde kaartstijl als Overzicht, maar dan
   // precies de items die je tijdens het daadwerkelijk controleren van een dossier afloopt (import,
@@ -2515,6 +2516,8 @@ export default function App() {
     };
   }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles]);
   const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
+  const bevestigControles = (sleutels) => setBevestigdeControles((prev) => { const next = { ...prev }; for (const k of sleutels) next[k] = true; return next; });
+  const herroepControle = (sleutel) => setBevestigdeControles((prev) => { const next = { ...prev }; delete next[sleutel]; return next; });
   const toepassenTerugkerend = (t) => {
     snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
@@ -2630,7 +2633,7 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, toepassenTerugkerend,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
@@ -3209,7 +3212,7 @@ export default function App() {
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
-      {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
+      {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
@@ -3259,6 +3262,9 @@ export default function App() {
         />
       )}
 
+      {/* Tabblad-pijlen in de marge naast de inhoud (alleen waar die marge breed genoeg is): één tik naar het
+          vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
+      {tabsVisible && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
@@ -3357,6 +3363,8 @@ export default function App() {
           <div ref={checklistSectionRef}>
             {activeYear && <DetailsPanel
               year={activeYear}
+              years={years}
+              onSelectYear={setActiveYear}
               cardsByKey={dashboardCardsByKey}
               aannamesCard={instellingenDashboardCards.find((c) => c.key === "aannames")}
               dashboardAangifteIndicatie={dashboardAangifteIndicatie}
@@ -3858,8 +3866,8 @@ export default function App() {
       {/* Vaste onderbalk (neemt zelf ruimte in): de knoppen "Hulpvraag of feedback" en "Categorieën" komen
           daardoor nooit over de tekst heen te hangen. */}
       <div
-        className="sticky bottom-0 z-[70] flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-stone-50/95 px-3 sm:px-5 py-2.5"
-        style={{ bottom: 0, paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom, 0px))" }}
+        className="sticky bottom-0 z-[70] flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-stone-50/95 px-3 sm:px-5 py-1"
+        style={{ bottom: 0, paddingTop: 8, paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <button
           onClick={() => setShowFeedback(true)}

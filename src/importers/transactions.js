@@ -172,6 +172,9 @@ export const CONTINUITY_GAP_ROOD = 1000;
 // eindsaldo van dát bestand) — een ander soort check dan de aansluiting tussen twee bestanden
 // hierboven, en bewust niet meegeschoven naar €1000 toen die grens drie niveaus kreeg.
 export const INTRA_FILE_BALANCE_THRESHOLD = 100;
+// Sleutel voor "dit saldoverschil is akkoord" in bevestigdeControles. Het bedrag zit in de sleutel, zodat
+// de melding terugkomt als het verschil verandert (ander bestand, ander beginsaldo, extra transacties).
+export const saldoControleSleutel = (d) => `saldo|${d.fileName}|${Math.round((d.balanceCheck?.diff || 0) * 100)}`;
 
 export function classifyContinuityGap(diff) {
   const abs = Math.abs(diff);

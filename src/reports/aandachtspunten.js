@@ -1,4 +1,5 @@
 import { eur } from "../utils/amounts.js";
+import { toetsStartersaftrek } from "../tax/startersaftrekToets.js";
 
 // A4 — "Aandachtspunten voor de adviseur": alleen wat de app zelf niet kan beoordelen en wat de
 // uitkomst kan beïnvloeden. Bewust anders dan "Nog open" (dat is werk voor de gebruiker zelf).
@@ -25,6 +26,7 @@ export function bepaalAandachtspunten({
     if (onb.length) p.push(`Urencriterium onbekend of niet beantwoord (${jarenTekst(onb)}): de zelfstandigenaftrek is niet vastgesteld.`);
     const st = jaren.filter((y) => startersaftrekStatus?.[y] === "ja");
     if (st.length) p.push(`Startersaftrek toegepast (${jarenTekst(st)}): toets of aan de voorwaarden is voldaan (o.a. maximaal drie keer, binnen vijf jaar na start).`);
+    for (const m of toetsStartersaftrek(startersaftrekStatus, zelfstandigenaftrekStatus).meldingen) p.push(`Let op, ${m.charAt(0).toLowerCase()}${m.slice(1)}`);
     const pa = jaren.filter((y) => autoStatus?.[y] === "prive");
     if (pa.length) p.push(`Privéauto zakelijk gebruikt (${jarenTekst(pa)}): de kilometers komen uit de opgave in de app; de onderbouwing (ritregistratie) zit niet in de bankgegevens.`);
   }

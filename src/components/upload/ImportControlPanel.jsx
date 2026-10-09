@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle, Trash2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
-import { INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "../../importers/transactions.js";
+import { INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel } from "../../importers/transactions.js";
 
 // Tolerantie voor de saldocontrole bínnen één bestand (klopt begin- + mutaties = eindsaldo van dit
 // ene bestand) — losstaand van de drie niveaus voor de aansluiting tússen bestanden bij een
@@ -27,7 +27,7 @@ function StatusLine({ ok, warn, children }) {
 // Een korte "APK" per geüpload bestand, vóór je verder gaat met classificeren — geeft vertrouwen
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de app blijft gewoon meteen bruikbaar.
-export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile, accountTypeByFile = {} }) {
+export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile, accountTypeByFile = {}, bevestigd = {}, onBevestig, onHerroep }) {
   // v243 — null = "auto" (open zodra er een echt punt is, ingeklapt zodra alles klopt), zelfde
   // patroon als de andere Controleren-secties — een expliciete klik wint daarna, ongeacht of er
   // later nog een bestand bijkomt.
@@ -36,7 +36,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
 
   const anyIssue =
     diagnostics.some(
-      (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff))
+      (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff) && !bevestigd[saldoControleSleutel(d)])
     ) || continuity.some((c) => !c.ok && classifyContinuityGap(c.diff) !== "groen");
   const open = openOverride === null ? anyIssue : openOverride;
 
@@ -110,7 +110,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                       : `${d.missingCounterparty} transactie(s) zonder tegenpartij én zonder omschrijving`}
                   </StatusLine>
                   {d.balanceCheck ? (
-                    <StatusLine ok={d.balanceCheck.ok || isMinorDiff(d.balanceCheck.diff)} warn={!d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff)}>
+                    <StatusLine ok={d.balanceCheck.ok || isMinorDiff(d.balanceCheck.diff) || !!bevestigd[saldoControleSleutel(d)]} warn={!d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff)}>
                       {d.balanceCheck.ok ? (
                         <>
                           Saldo sluit aan (begin- en eindsaldo kloppen met de som van de transacties)
@@ -123,12 +123,33 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                             toch even bekijken kan altijd
                           </button>
                         </>
+                      ) : bevestigd[saldoControleSleutel(d)] ? (
+                        <>
+                          Saldoverschil {eur(d.balanceCheck.diff)} — door jou als akkoord aangemerkt
+                          {onHerroep && (
+                            <>
+                              {" "}(<button onClick={() => onHerroep(saldoControleSleutel(d))} className="underline hover:no-underline">toch weer als open punt tonen</button>)
+                            </>
+                          )}
+                        </>
                       ) : (
                         <>
                           Saldo sluit <strong>niet</strong> aan (verschil {eur(d.balanceCheck.diff)}) —{" "}
                           <button onClick={() => onReviewFile(d.fileName)} className="underline hover:no-underline">
                             bekijk waar het misgaat, of corrigeer het beginsaldo
                           </button>
+                          {onBevestig && (
+                            <>
+                              {" "}·{" "}
+                              <button
+                                onClick={() => onBevestig(saldoControleSleutel(d))}
+                                title="Je hebt gekeken en het verschil is bekend of bewust zo. Het blijft dan niet als open punt staan; verandert het verschil later, dan komt de melding terug."
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                Saldoverschil is akkoord
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </StatusLine>
