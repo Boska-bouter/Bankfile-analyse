@@ -1,6 +1,6 @@
 // Gebruiksvoorwaarden — getoond bij het eerste gebruik (per apparaat/browser) en terug te lezen in de Help.
 // Bij een inhoudelijke wijziging: VOORWAARDEN_VERSIE ophogen, dan moet iedereen opnieuw akkoord gaan.
-export const VOORWAARDEN_VERSIE = "1";
+export const VOORWAARDEN_VERSIE = "2";
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
 export const VOORWAARDEN_INHOUD = (
@@ -34,7 +34,7 @@ export const VOORWAARDEN_INHOUD = (
       <h3 className="font-semibold text-slate-800">4. Gegevens en privacy</h3>
       <p>
         Je bankgegevens worden in je eigen browser verwerkt en bewaard. Er gaat niets naar een server. Daardoor kan de
-        maker ze ook niet inzien of terugzetten. Maak zelf een back-up met "Dossier opslaan". Bij een dossier met wachtwoord
+        maker ze ook niet inzien of terugzetten. Maak zelf een back-up met "Dossier opslaan". Wis je de browsergegevens (cache, websitegegevens) of werk je in een privévenster, dan zijn je bewaarde dossier en je akkoord op deze voorwaarden weg, en komt dit scherm opnieuw. Bij een dossier met wachtwoord
         is de herstelcode de enige weg terug; zonder wachtwoord en herstelcode is het dossier niet meer te openen. Zet je
         klantgegevens in een bericht aan de maker, dan is dat je eigen keuze.
       </p>
