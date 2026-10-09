@@ -173,16 +173,37 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                     <StatusLine key={`${c.fileA}__${c.fileB}`} ok={severity === "groen"} warn={severity === "geel"}>
                       <strong>{c.fileA}</strong> (eindigt {c.aTo.toLocaleDateString("nl-NL")}, saldo {eur(c.aLastBalance)}) →{" "}
                       <strong>{c.fileB}</strong> (begint {c.bFrom.toLocaleDateString("nl-NL")}, saldo {eur(c.bOpeningBalance)})
-                      {c.ok ? (
+                      {c.bevestigd ? (
+                        <>
+                          {" "}— verschil {eur(c.diff)}, door jou als akkoord aangemerkt
+                          {onHerroep && (
+                            <>
+                              {" "}(<button onClick={() => onHerroep(c.sleutel)} className="underline hover:no-underline">toch weer als open punt tonen</button>)
+                            </>
+                          )}
+                        </>
+                      ) : c.ok ? (
                         " — sluit aan."
                       ) : severity === "groen" ? (
                         <> — verschil {eur(c.diff)}. Een verschil tot €500 is meestal gewoon afronding of een periodegrens en maakt voor het dossier weinig uit — dit telt daarom nergens elders mee als een gemiste periode.</>
-                      ) : severity === "geel" ? (
-                        <> — verschil {eur(c.diff)}. Nog geen echt gat, maar wel de moeite waard om even te bekijken.</>
                       ) : (
                         <>
-                          {" "}— verschil {eur(c.diff)}. Dat is groter dan gebruikelijk (vanaf €1000) — de moeite waard
-                          om na te gaan of er tussenin iets ontbreekt.
+                          {" "}— verschil {eur(c.diff)}.{" "}
+                          {severity === "geel"
+                            ? "Nog geen echt gat, maar wel de moeite waard om even te bekijken."
+                            : "Dat is groter dan gebruikelijk (vanaf €1000) — de moeite waard om na te gaan of er tussenin iets ontbreekt."}
+                          {onBevestig && (
+                            <>
+                              {" "}
+                              <button
+                                onClick={() => onBevestig(c.sleutel)}
+                                title="Je hebt gekeken en het verschil is bekend of bewust zo (bijvoorbeeld een ontbrekende periode zonder transacties). Het blijft dan niet als open punt staan; verandert het verschil later, dan komt de melding terug."
+                                className="ml-1 rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                Verschil is akkoord
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </StatusLine>

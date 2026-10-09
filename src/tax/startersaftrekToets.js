@@ -6,7 +6,9 @@
 // je precies bent gestart. De toets hieronder rekent daarom vanaf het EERSTE jaar waarin jij de
 // startersaftrek hebt aangegeven; was je eigenlijk al eerder gestart, dan is de periode korter.
 //
-// Alleen een waarschuwing: de berekening zelf past de keuze van de gebruiker ongewijzigd toe.
+// De toets bepaalt ook welke jaren daadwerkelijk meetellen (`toegepast`) en welke niet (`genegeerd`):
+// de berekening gebruikt alleen `toegepast`. Jaren met urencriterium "nee" tellen niet mee; de eerste
+// overgebleven jaar is het startjaar; daarna maximaal 3 jaren binnen 5 jaar.
 export function toetsStartersaftrek(startersaftrekStatus = {}, zelfstandigenaftrekStatus = {}) {
   const jaren = Object.entries(startersaftrekStatus || {})
     .filter(([, v]) => v === "ja")
@@ -14,18 +16,39 @@ export function toetsStartersaftrek(startersaftrekStatus = {}, zelfstandigenaftr
     .filter((j) => Number.isFinite(j))
     .sort((a, b) => a - b);
   const meldingen = [];
-  if (jaren.length === 0) return { jaren, meldingen };
+  if (jaren.length === 0) return { jaren, meldingen, toegepast: [], genegeerd: [] };
 
-  if (jaren.length > 3) {
-    meldingen.push(`Startersaftrek is voor ${jaren.length} jaren aangegeven (${jaren.join(", ")}), maar mag maximaal 3 keer worden toegepast. Haal het uit minstens ${jaren.length - 3} jaar weg.`);
-  }
-  const buitenPeriode = jaren.filter((j) => j - jaren[0] > 4);
-  if (buitenPeriode.length) {
-    meldingen.push(`Startersaftrek mag alleen in de eerste 5 jaar na de start. Eerste toepassing is ${jaren[0]}, dus ${buitenPeriode.join(", ")} valt daarbuiten (uiterlijk ${jaren[0] + 4}).`);
-  }
   const zonderZa = jaren.filter((j) => zelfstandigenaftrekStatus?.[j] === "nee");
-  if (zonderZa.length) {
-    meldingen.push(`Startersaftrek in ${zonderZa.join(", ")} terwijl het urencriterium op "nee" staat: startersaftrek kan alleen samen met zelfstandigenaftrek.`);
+  const geldig = jaren.filter((j) => !zonderZa.includes(j));
+  const start = geldig[0];
+  const toegepast = [];
+  const buitenPeriode = [];
+  const teVeel = [];
+  for (const j of geldig) {
+    if (j - start > 4) buitenPeriode.push(j);
+    else if (toegepast.length >= 3) teVeel.push(j);
+    else toegepast.push(j);
   }
-  return { jaren, meldingen };
+  const genegeerd = [...zonderZa, ...buitenPeriode, ...teVeel].sort((a, b) => a - b);
+
+  if (teVeel.length) {
+    meldingen.push(`Startersaftrek is voor ${jaren.length} jaren aangegeven (${jaren.join(", ")}), maar mag maximaal 3 keer worden toegepast. In de berekening telt ze alleen mee voor ${toegepast.join(", ")}; ${teVeel.join(", ")} wordt niet toegepast.`);
+  }
+  if (buitenPeriode.length) {
+    meldingen.push(`Startersaftrek mag alleen in de eerste 5 jaar na de start. Eerste toepassing is ${start}, dus ${buitenPeriode.join(", ")} valt daarbuiten (uiterlijk ${start + 4}) en wordt in de berekening niet toegepast.`);
+  }
+  if (zonderZa.length) {
+    meldingen.push(`Startersaftrek in ${zonderZa.join(", ")} terwijl het urencriterium op "nee" staat: startersaftrek kan alleen samen met zelfstandigenaftrek, dus ze wordt in de berekening niet toegepast.`);
+  }
+  return { jaren, meldingen, toegepast, genegeerd };
+}
+
+// Status zoals de berekening die moet gebruiken: alleen de jaren waarin startersaftrek mag.
+export function effectieveStartersaftrekStatus(startersaftrekStatus = {}, zelfstandigenaftrekStatus = {}) {
+  const { toegepast, genegeerd } = toetsStartersaftrek(startersaftrekStatus, zelfstandigenaftrekStatus);
+  if (genegeerd.length === 0) return startersaftrekStatus || {};
+  const uit = { ...(startersaftrekStatus || {}) };
+  for (const j of genegeerd) uit[j] = "nee";
+  for (const j of toegepast) uit[j] = "ja";
+  return uit;
 }

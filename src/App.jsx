@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
-import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel } from "./importers/transactions.js";
+import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
 import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
@@ -118,6 +118,7 @@ import KeywordManager from "./components/settings/KeywordManager.jsx";
 import TegenpartijenPanel from "./components/settings/TegenpartijenPanel.jsx";
 import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
 import OpschonenPanel from "./components/review/OpschonenPanel.jsx";
+import { effectieveStartersaftrekStatus } from "./tax/startersaftrekToets.js";
 import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.jsx";
 import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
 import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
@@ -238,6 +239,9 @@ export default function App() {
   const [zaLegacyJaDefault, setZaLegacyJaDefault] = useState(false);
   // { "2025": "ja" | "nee" } — ontbrekend jaar = niet aangegeven, geen startersaftrek toegepast.
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
+  // Wat de berekening gebruikt: startersaftrek alleen in jaren waarin ze mag (max. 3x, binnen 5 jaar, met zelfstandigenaftrek).
+  // De keuze zelf (startersaftrekStatus) blijft ongewijzigd in het dossier staan.
+  const startersaftrekEff = useMemo(() => effectieveStartersaftrekStatus(startersaftrekStatus, zelfstandigenaftrekStatus), [startersaftrekStatus, zelfstandigenaftrekStatus]);
   // { "2025": "zaak" | "prive" } — of de auto van de zaak is (koop/operational/financial
   // lease), een privéauto zakelijk gebruikt wordt, of beide. Ontbrekend jaar = onbekend/niet
   // aangegeven — dan blijft de generieke %-splitsing (SPLITSBARE_CATEGORIEEN, zie
@@ -1001,7 +1005,16 @@ export default function App() {
     () => computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections),
     [parsedFiles, allTransactions, openingBalanceCorrections]
   );
-  const fileContinuity = useMemo(() => computeFileContinuity(importDiagnostics, accountTypeByFile), [importDiagnostics, accountTypeByFile]);
+  const fileContinuityRuw = useMemo(() => computeFileContinuity(importDiagnostics, accountTypeByFile), [importDiagnostics, accountTypeByFile]);
+  // Een door jou als akkoord aangemerkt verschil tussen twee bestanden telt overal (controles, voortgang, rapport)
+  // als aansluitend. Verandert het verschil later, dan hoort de sleutel er niet meer bij en komt het punt terug.
+  const fileContinuity = useMemo(
+    () => fileContinuityRuw.map((c) => {
+      const sleutel = aansluitingControleSleutel(c);
+      return !c.ok && bevestigdeControles?.[sleutel] ? { ...c, ok: true, bevestigd: true, sleutel } : { ...c, sleutel };
+    }),
+    [fileContinuityRuw, bevestigdeControles]
+  );
 
   const { fingerprintByTxId, duplicateGroups, duplicateFingerprints, confirmedSeparateGroups } = useMemo(
     () => computeDuplicateInfo(allTransactions),
@@ -1526,7 +1539,7 @@ export default function App() {
     }));
     const html = rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok })
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok);
+      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok);
     setAangiftevoorstelPreview(html);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
@@ -1547,7 +1560,7 @@ export default function App() {
       delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
     } else {
       const aftrek = ondernemersaftrekPerJaar[y];
-      const starters = startersaftrekStatus?.[y] === "ja";
+      const starters = startersaftrekEff?.[y] === "ja";
       const bedragAftrek = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
       const ib = estimateIncomeTaxMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
       const hk = estimateHeffingskortingenMetOndernemersaftrek(s.winst, y, bedragAftrek, starters)?.totaal || 0;
@@ -2226,11 +2239,11 @@ export default function App() {
   // compacte kaart; de volledige, preciezere uitsplitsing (incl. beide scenario's) staat in de
   // "Indicatieve aangifteberekening" zelf, waar deze kaarten ook naartoe doorklikken.
   const ondernemersaftrekPerJaar = useOndernemersaftrekPerJaar({
-    rechtsvorm, startersaftrekStatus, yearlySummaries, years, zaLegacyJaDefault,
+    rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus,
   });
   const dashboardAangifteIndicatie = useDashboardAangifteIndicatie({
-    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus, yearlySummary,
+    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummary,
   });
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
@@ -2562,7 +2575,7 @@ export default function App() {
     gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, huurZakelijkPercentageStatus, incomeRatesSectionRef,
     incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, jumpToSection, korRegeling,
     leaseSummary, leasesSectionRef, loanSummary, loansSectionRef, parsedFiles,
-    rechtsvorm, setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, startersaftrekStatus, transactions,
+    rechtsvorm, setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, startersaftrekStatus, startersaftrekEff, transactions,
     zaLegacyJaDefault, zelfstandigenaftrekStatus,
   });
 

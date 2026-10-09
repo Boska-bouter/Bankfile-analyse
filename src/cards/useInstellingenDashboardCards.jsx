@@ -12,7 +12,7 @@ export function useInstellingenDashboardCards(p) {
     gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, huurZakelijkPercentageStatus, incomeRatesSectionRef,
     incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, jumpToSection, korRegeling,
     leaseSummary, leasesSectionRef, loanSummary, loansSectionRef, parsedFiles,
-    rechtsvorm, setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, startersaftrekStatus, transactions,
+    rechtsvorm, setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, startersaftrekStatus, startersaftrekEff, transactions,
     zaLegacyJaDefault, zelfstandigenaftrekStatus,
   } = p;
 
@@ -111,7 +111,8 @@ export function useInstellingenDashboardCards(p) {
             // Startersaftrek heeft geen "onbekend"-status: leeg/niet ingevuld betekent gewoon "Nee /
             // niet van toepassing" (zie PersoonlijkeAannamesPanel.jsx) — telt daarom niet mee als
             // "nog niet opgegeven".
-            const startersaftrekAan = startersaftrekStatus?.[activeYear] === "ja";
+            const startersaftrekGekozen = startersaftrekStatus?.[activeYear] === "ja";
+            const startersaftrekAan = startersaftrekGekozen && (startersaftrekEff || startersaftrekStatus)?.[activeYear] === "ja";
             // v309 (V31) — de deels-zakelijke percentages (huur, energie-water, gemeentelijke kosten) tellen al
             // mee als aanname in de kop; nu staan ze ook als regel in deze kaart (alleen als dit jaar van toepassing).
             const gedeeldeLijnen = [
@@ -139,7 +140,7 @@ export function useInstellingenDashboardCards(p) {
                         ? "🟢 Ja"
                         : "🟢 Nee",
                   },
-                  { label: "Startersaftrek", value: startersaftrekAan ? "🟢 Ja" : "⚪ Nee" },
+                  { label: "Startersaftrek", value: startersaftrekAan ? "🟢 Ja" : startersaftrekGekozen ? "🟠 Aangegeven, maar niet toegepast" : "⚪ Nee" },
                   { label: "Auto", value: autoLabel ? `🟢 ${autoLabel}` : "🟠 Niet opgegeven" },
                   ...gedeeldeLijnen.map((l) => ({ label: l.label, value: l.status == null ? "🟠 Niet opgegeven" : `🟢 ${l.status}%` })),
                 ],
@@ -276,6 +277,7 @@ export function useInstellingenDashboardCards(p) {
     businessExpenseEntries,
     autoStatus,
     startersaftrekStatus,
+    startersaftrekEff,
     categorieTotalenActiveYear,
     categoryZakelijkPercentage,
     btwRateCounts,
