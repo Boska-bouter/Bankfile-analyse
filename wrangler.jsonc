@@ -1,6 +1,12 @@
 {
   "name": "bankfile-analyse",
-  "previews": {},
+  "previews": {
+    "send_email": [{ "name": "EMAIL" }],
+    "vars": {
+      "FEEDBACK_TO": "paul@paulgerits.eu",
+      "FEEDBACK_FROM": "feedback@paulgerits.eu"
+    }
+  },
   "main": "worker/index.js",
   "compatibility_date": "2026-09-17",
   "assets": {
