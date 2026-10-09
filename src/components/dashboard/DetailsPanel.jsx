@@ -62,11 +62,12 @@ export default function DetailsPanel({
   years = [], onSelectYear,
 }) {
   const [tab, setTab] = useState("jaaroverzicht");
-  // Veegbeweging (links/rechts) wisselt van jaar. Bewust voorzichtig: een veeg die begint in iets wat zelf
-  // zijdelings kan scrollen (brede tabel, tabbladenrij) of in een invoerveld, telt niet mee; en de beweging
-  // moet duidelijk meer horizontaal dan verticaal zijn, zodat gewoon omhoog/omlaag scrollen niets doet.
-  const swipeStart = useRef(null);
-  const [slide, setSlide] = useState(null); // "van-rechts" (volgend jaar) | "van-links" (vorig jaar) | null
+  // Veegbeweging (links/rechts) wisselt van jaar. De inhoud schuift tijdens het vegen mee met je vinger; bij
+  // loslaten na een duidelijke veeg schuift hij weg en komt het andere jaar rustig van de andere kant binnen,
+  // anders veert hij terug. Bewust voorzichtig: een veeg die begint in iets wat zelf zijdelings kan scrollen
+  // (brede tabel, tabbladenrij) of in een invoerveld telt niet mee, en omhoog/omlaag scrollen blijft ongemoeid.
+  const contentRef = useRef(null);
+  const drag = useRef(null); // { x, y, mode: null | "h" | "v", dx }
   const kanVegen = years.length > 1 && typeof onSelectYear === "function";
   const zijdelingsScrollbaar = (el) => {
     for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
@@ -77,26 +78,47 @@ export default function DetailsPanel({
     }
     return false;
   };
+  const doelJaar = (dx) => { const i = years.indexOf(year); return i < 0 ? undefined : (dx < 0 ? years[i + 1] : years[i - 1]); }; // veeg naar links = volgend jaar
+  const zet = (el, transform, opacity, transition) => { el.style.transition = transition; el.style.transform = transform; el.style.opacity = opacity; };
+  const terugveren = () => { const el = contentRef.current; if (el) zet(el, "none", "1", "transform .18s ease-out, opacity .18s ease-out"); };
   const onTouchStart = (e) => {
-    swipeStart.current = null;
+    drag.current = null;
     if (!kanVegen || e.touches.length !== 1) return;
     const t = e.target;
     if (t.closest && t.closest("input, select, textarea")) return;
     if (zijdelingsScrollbaar(t)) return;
-    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, dx: 0 };
+    const el = contentRef.current; if (el) zet(el, "none", "1", "none");
   };
-  const onTouchEnd = (e) => {
-    const s = swipeStart.current; swipeStart.current = null;
-    if (!s || !e.changedTouches.length) return;
-    const dx = e.changedTouches[0].clientX - s.x;
-    const dy = e.changedTouches[0].clientY - s.y;
-    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
-    const i = years.indexOf(year);
-    if (i < 0) return;
-    const naar = dx < 0 ? years[i + 1] : years[i - 1]; // veeg naar links = volgend jaar
-    if (naar == null) return;
-    setSlide(dx < 0 ? "van-rechts" : "van-links");
-    onSelectYear(naar);
+  const onTouchMove = (e) => {
+    const d = drag.current; const el = contentRef.current;
+    if (!d || !el || !e.touches.length) return;
+    const dx = e.touches[0].clientX - d.x, dy = e.touches[0].clientY - d.y;
+    if (d.mode === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      d.mode = Math.abs(dx) > Math.abs(dy) * 1.4 ? "h" : "v";
+    }
+    if (d.mode !== "h") return;
+    d.dx = dx;
+    const heeftDoel = doelJaar(dx) != null;
+    const factor = heeftDoel ? 0.8 : 0.2; // aan het eerste/laatste jaar zwaar tegenhouden
+    el.style.transform = `translateX(${dx * factor}px)`;
+    el.style.opacity = String(heeftDoel ? Math.max(0.4, 1 - Math.abs(dx) / 450) : 1);
+  };
+  const onTouchEnd = () => {
+    const d = drag.current; drag.current = null;
+    const el = contentRef.current;
+    if (!d || !el) return;
+    if (d.mode !== "h") { terugveren(); return; }
+    const naar = doelJaar(d.dx);
+    if (Math.abs(d.dx) < 80 || naar == null) { terugveren(); return; }
+    const uit = d.dx < 0 ? -70 : 70;
+    zet(el, `translateX(${uit}px)`, "0", "transform .13s ease-in, opacity .13s ease-in");
+    setTimeout(() => {
+      onSelectYear(naar);
+      zet(el, `translateX(${-uit}px)`, "0", "none");
+      requestAnimationFrame(() => requestAnimationFrame(() => zet(el, "none", "1", "transform .24s ease-out, opacity .24s ease-out")));
+    }, 130);
   };
   // Voorkomt dat een veeg naar rechts door de browser als "pagina terug" wordt opgevat zolang dit paneel in beeld is.
   useEffect(() => {
@@ -105,11 +127,6 @@ export default function DetailsPanel({
     document.documentElement.style.overscrollBehaviorX = "none";
     return () => { document.documentElement.style.overscrollBehaviorX = vorig; };
   }, [kanVegen]);
-  useEffect(() => {
-    if (!slide) return undefined;
-    const id = setTimeout(() => setSlide(null), 280);
-    return () => clearTimeout(id);
-  }, [slide]);
   const aanraking = typeof window !== "undefined" && "ontouchstart" in window;
   const jaarIdx = years.indexOf(year);
   // De route-balk ("Advies") vraagt om het Jaaroverzicht-tabblad met de indicatieve aangifte.
@@ -123,8 +140,7 @@ export default function DetailsPanel({
   const leases = cardsByKey.leases;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} data-testid="details-panel">
-      <style>{`@keyframes bo-van-rechts{from{opacity:.35;transform:translateX(32px)}to{opacity:1;transform:none}}@keyframes bo-van-links{from{opacity:.35;transform:translateX(-32px)}to{opacity:1;transform:none}}`}</style>
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} data-testid="details-panel">
       <div className="px-5 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
           <h3 className="text-sm font-bold text-slate-900 mr-1">
@@ -157,7 +173,8 @@ export default function DetailsPanel({
         </div>
       </div>
 
-      <div className="border-t border-slate-100 p-5" style={slide ? { animation: `bo-${slide} .26s ease-out` } : undefined}>
+      <div style={{ overflowX: "clip" }}>
+      <div ref={contentRef} className="border-t border-slate-100 p-5" style={{ willChange: "transform" }}>
         {/* v273 — voorheen werd dit hele paneel niet gerenderd zolang er geen activeYear was; nu
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
@@ -270,6 +287,7 @@ export default function DetailsPanel({
 
           </>
         )}
+      </div>
       </div>
     </div>
   );
