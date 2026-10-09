@@ -17,7 +17,8 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname !== "/api/feedback") return new Response("Not found", { status: 404 });
+    // Alles behalve /api/feedback is de app zelf (statische bestanden): doorgeven aan de assets-binding.
+    if (url.pathname !== "/api/feedback") return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });
     if (request.method !== "POST") return json({ ok: false, fout: "Alleen POST" }, 405);
 
     const email = request.headers.get("Cf-Access-Authenticated-User-Email");
@@ -40,6 +41,7 @@ export default {
 
     const bericht_ = { to: env.FEEDBACK_TO, from: env.FEEDBACK_FROM, subject, text, html };
     try {
+      if (!env.EMAIL) throw Object.assign(new Error("Binding EMAIL ontbreekt in deze deployment"), { code: "NO_BINDING" });
       try {
         await env.EMAIL.send({ ...bericht_, replyTo: email });
       } catch {
@@ -47,7 +49,9 @@ export default {
         await env.EMAIL.send(bericht_);
       }
     } catch (e) {
-      return json({ ok: false, fout: "Versturen mislukt" }, 502);
+      // Technische melding meegeven (code + tekst van Cloudflare), zodat de oorzaak in de app zichtbaar is.
+      const detail = [e?.code, e?.message].filter(Boolean).join(" — ").slice(0, 300);
+      return json({ ok: false, fout: "Versturen mislukt", detail }, 502);
     }
     return json({ ok: true });
   },
