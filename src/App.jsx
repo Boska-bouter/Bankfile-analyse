@@ -3212,7 +3212,7 @@ export default function App() {
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
-      {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
+      {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}

@@ -1,25 +1,49 @@
 import { useMemo, useState } from "react";
 import { useToonFijn } from "../../utils/useToonFijn.js";
 import { X, Search } from "lucide-react";
-import { MAIN_CATEGORY_ALFA, sortNl, MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, CATEGORIE_GROEPEN } from "../../classification/categories.js";
+import { MAIN_CATEGORY_COLOR, CATEGORY_COLOR, subtypesForMainCategory, displayCategory, CATEGORIE_GROEPEN, ZAK_GROEPEN, PRIVE_KEUZE } from "../../classification/categories.js";
 
 // Puur een opzoekvenster: "waar hoort dit onder" — geen bewerkmogelijkheden hier (dat blijft
 // Categorieregels), alleen een snel, doorzoekbaar overzicht van de volledige structuur.
-export default function CategoryOverviewModal({ onClose }) {
+// Vaste, logische volgorde (niet alfabetisch): eerst alles wat zakelijk is, dan privé, dan de rest.
+const SECTIES = [
+  { titel: "Zakelijk", mains: ["Zakelijke inkomsten", "Inkoop & zakelijke uitgaven", "Vervoer & auto", "Huisvesting", "Telecom & abonnementen", "Apparatuur & inventaris", "Personeel", "Financiering", "Belastingen & heffingen", "Interne overboekingen"] },
+  { titel: "Privé", mains: ["Privé", "Persoonlijk & vertrouwelijk"] },
+  { titel: "Overig", mains: ["Nog te beoordelen"] },
+];
+// Alleen bij een BV in gebruik; bij een eenmanszaak/zzp tonen we ze niet.
+const ALLEEN_BV = new Set(["DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding"]);
+
+export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
   const [query, setQuery] = useState("");
   const toonFijn = useToonFijn();
 
-  const groups = useMemo(() => {
+  const secties = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MAIN_CATEGORY_ALFA.map((main) => {
-      // V76 — privé-subtypes samengevoegd tot hun weergavenaam; zoeken vindt ook de fijne soorten erin.
-      const subtypes = sortNl([...new Set(subtypesForMainCategory(main).map(displayCategory))]);
-      const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
-      const mainMatches = !q || main.toLowerCase().includes(q);
-      const visibleSubtypes = mainMatches ? subtypes : subtypes.filter((s) => s.toLowerCase().includes(q) || leden(s).includes(q));
-      return { main, subtypes: visibleSubtypes };
-    }).filter((g) => g.subtypes.length > 0);
-  }, [query, toonFijn]);
+    const isBv = rechtsvorm === "bv";
+    const fijn = (main) => {
+      const alle = subtypesForMainCategory(main).filter((c) => isBv || !ALLEEN_BV.has(c));
+      if (main === "Privé") {
+        // Volgorde van de privé-keuzelijst: opnames en teruggeboekt eerst.
+        const keuze = PRIVE_KEUZE.map((k) => (isBv || !ALLEEN_BV.has(k) ? k : null)).filter(Boolean);
+        return [...new Set([...keuze, ...alle.map(displayCategory)])];
+      }
+      const volgorde = (ZAK_GROEPEN[main] || []).map((l) => l.key).filter((k) => alle.includes(k));
+      const rest = alle.filter((c) => !volgorde.includes(c));
+      return [...volgorde, ...rest];
+    };
+    const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
+    return SECTIES.map((sec) => ({
+      titel: sec.titel,
+      groups: sec.mains.map((main) => {
+        const subtypes = fijn(main);
+        const mainMatches = !q || main.toLowerCase().includes(q);
+        const zichtbaar = mainMatches ? subtypes : subtypes.filter((x) => x.toLowerCase().includes(q) || leden(x).includes(q));
+        return { main, subtypes: zichtbaar };
+      }).filter((g) => g.subtypes.length > 0),
+    })).filter((sec) => sec.groups.length > 0);
+  }, [query, toonFijn, rechtsvorm]);
+  const geenResultaat = secties.length === 0;
 
   return (
     <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
@@ -49,22 +73,27 @@ export default function CategoryOverviewModal({ onClose }) {
           </div>
         </div>
 
-        <div className="p-5 overflow-y-auto flex-1 space-y-4">
-          {groups.length === 0 && <p className="text-sm text-slate-400 text-center py-6">Niets gevonden voor "{query}".</p>}
-          {groups.map(({ main, subtypes }) => (
-            <div key={main}>
-              <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
-                {main}
-              </span>
-              {subtypes.filter((s) => s !== main).length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {subtypes.filter((s) => s !== main).map((s) => (
-                    <span key={s} className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[s] || "bg-slate-100 text-slate-600"}`}>
-                      {s}
-                    </span>
-                  ))}
+        <div className="p-5 overflow-y-auto flex-1 space-y-5">
+          {geenResultaat && <p className="text-sm text-slate-400 text-center py-6">Niets gevonden voor "{query}".</p>}
+          {secties.map((sec) => (
+            <div key={sec.titel} className="space-y-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1">{sec.titel}</div>
+              {sec.groups.map(({ main, subtypes }) => (
+                <div key={main}>
+                  <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
+                    {main}
+                  </span>
+                  {subtypes.filter((x) => x !== main).length > 0 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {subtypes.filter((x) => x !== main).map((x) => (
+                        <span key={x} className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[x] || "bg-slate-100 text-slate-600"}`}>
+                          {x}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              ))}
             </div>
           ))}
         </div>
