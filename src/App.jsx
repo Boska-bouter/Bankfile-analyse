@@ -3859,7 +3859,7 @@ export default function App() {
           daardoor nooit over de tekst heen te hangen. */}
       <div
         className="sticky bottom-0 z-[70] flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-stone-50/95 px-3 sm:px-5 py-1"
-        style={{ bottom: 0, paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ bottom: 0, paddingTop: 8, paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <button
           onClick={() => setShowFeedback(true)}
