@@ -3876,14 +3876,16 @@ export default function App() {
           <MessageSquare className="h-4 w-4 shrink-0" />
           <span>Hulpvraag of feedback</span>
         </button>
-        <button
-          onClick={() => setShowCategoryOverview(true)}
-          className="inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800"
-          title="Snel opzoeken: alle categorieën en subtypes"
-        >
-          <ListTree className="h-4 w-4 shrink-0" />
-          <span>Categorieën</span>
-        </button>
+        {activeTab === "controleren" && (
+          <button
+            onClick={() => setShowCategoryOverview(true)}
+            className="inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800"
+            title="Snel opzoeken: alle categorieën en subtypes"
+          >
+            <ListTree className="h-4 w-4 shrink-0" />
+            <span>Categorieën</span>
+          </button>
+        )}
       </div>
 
       {loanDetailsModalKey && loanSummary.find((l) => l.key === loanDetailsModalKey) && (
