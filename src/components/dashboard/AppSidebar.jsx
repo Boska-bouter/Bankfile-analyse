@@ -61,7 +61,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
 }
 
 export default function AppSidebar({
-  orgName = "© Paul Gerits",
+  orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
   onEditRekeninghouder,
   activeTab,
@@ -127,7 +127,7 @@ export default function AppSidebar({
         </div>
         <div className="sb-label flex flex-col min-w-0 flex-grow">
           <span className="text-[14.5px] font-bold text-white whitespace-nowrap">Bankoverzicht</span>
-          <span className="text-[10px] text-slate-400 whitespace-nowrap truncate">{orgName}</span>
+          <span className="text-[10px] text-slate-400 leading-snug" title={`Versie van de app: ${APP_RELEASE}`}>{orgName}<br />{APP_RELEASE}</span>
         </div>
       </div>
       <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
@@ -334,7 +334,6 @@ export default function AppSidebar({
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
-        <div className="text-[10.5px] text-slate-500 break-all" title={`Versie van de app: ${APP_RELEASE}`}>{collapsed ? APP_RELEASE.replace("release", "r") : `Release ${APP_RELEASE}`}</div>
       </div>
     </div>
   );

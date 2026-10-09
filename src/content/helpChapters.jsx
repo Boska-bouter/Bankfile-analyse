@@ -1,4 +1,5 @@
 import { metBolletjes } from "../components/shared/StatusDot.jsx";
+import { VOORWAARDEN_INHOUD } from "./voorwaarden.jsx";
 // Alle uitgebreide toelichtingsteksten, gebundeld — hergebruikt door zowel het volledige
 // "Help en uitleg"-overzicht als de gerichte pop-up die bij losse "?"-knopjes opent.
 export const HELP_GROEPEN = [
@@ -38,6 +39,18 @@ export const HELP_CHAPTERS = [
           <strong>Zakelijk en privé.</strong> Onder "Overzicht" staat hoeveel bankbestanden zijn geladen en of dat zakelijk,
           privé of beide zijn. Bij het gekozen jaar staat wat voor dat jaar is geladen. Mist een type, dan zie je dat daar.
         </p>
+      </div>
+    ),
+  },
+  {
+    key: "gebruiksvoorwaarden",
+    groep: "beginnen",
+    titel: "Gebruiksvoorwaarden en copyright",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>Dit zijn de voorwaarden waarmee je bij het eerste gebruik akkoord bent gegaan. Het scherm komt opnieuw als de tekst inhoudelijk wijzigt.</p>
+        {VOORWAARDEN_INHOUD}
+        <p className="text-xs text-slate-400">© Paul Gerits — alle rechten voorbehouden.</p>
       </div>
     ),
   },
