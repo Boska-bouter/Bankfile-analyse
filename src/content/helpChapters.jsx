@@ -43,6 +43,25 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "hulpvraag-feedback",
+    groep: "beginnen",
+    titel: "Hulpvraag of feedback sturen",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>
+          Rechtsonder, naast "Categorieën", staat de knop <strong>Hulpvraag of feedback</strong>. Kies of het een hulpvraag
+          of feedback is, vul eventueel je naam in, een onderwerp en je bericht, en kies "Versturen". Je blijft in de app; je
+          krijgt antwoord op het e-mailadres waarmee je bent ingelogd.
+        </p>
+        <p>
+          Er worden geen dossiergegevens meegestuurd: alleen je bericht, je naam, het releasenummer en het e-mailadres van je
+          inlog. Zet zelf geen klantgegevens in je bericht. Lukt versturen niet, dan biedt de app een noodroute via je eigen
+          mailapp of "Tekst kopiëren".
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "gebruiksvoorwaarden",
     groep: "beginnen",
     titel: "Gebruiksvoorwaarden en copyright",

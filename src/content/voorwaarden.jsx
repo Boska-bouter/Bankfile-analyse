@@ -1,6 +1,6 @@
 // Gebruiksvoorwaarden — getoond bij het eerste gebruik (per apparaat/browser) en terug te lezen in de Help.
 // Bij een inhoudelijke wijziging: VOORWAARDEN_VERSIE ophogen, dan moet iedereen opnieuw akkoord gaan.
-export const VOORWAARDEN_VERSIE = "2";
+export const VOORWAARDEN_VERSIE = "4";
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
 export const VOORWAARDEN_INHOUD = (
@@ -35,8 +35,7 @@ export const VOORWAARDEN_INHOUD = (
       <p>
         Je bankgegevens worden in je eigen browser verwerkt en bewaard. Er gaat niets naar een server. Daardoor kan de
         maker ze ook niet inzien of terugzetten. Maak zelf een back-up met "Dossier opslaan". Wis je de browsergegevens (cache, websitegegevens) of werk je in een privévenster, dan zijn je bewaarde dossier en je akkoord op deze voorwaarden weg, en komt dit scherm opnieuw. Bij een dossier met wachtwoord
-        is de herstelcode de enige weg terug; zonder wachtwoord en herstelcode is het dossier niet meer te openen. Zet je
-        klantgegevens in een bericht aan de maker, dan is dat je eigen keuze.
+        is de herstelcode de enige weg terug; zonder wachtwoord en herstelcode is het dossier niet meer te openen. Alleen als je zelf een hulpvraag of feedback verstuurt, gaat die tekst via Cloudflare naar de maker, samen met je naam (als je die invult), het releasenummer en het e-mailadres waarmee je bent ingelogd; er worden geen dossiergegevens meegestuurd. Zet je klantgegevens in zo'n bericht, dan is dat je eigen keuze.
       </p>
     </section>
     <section>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap } from "./importers/transactions.js";
@@ -67,6 +67,7 @@ import BegrippenModal from "./components/shared/BegrippenModal.jsx";
 import RouteBalk from "./components/dashboard/RouteBalk.jsx";
 import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
+import FeedbackModal from "./components/shared/FeedbackModal.jsx";
 import VoorwaardenScherm from "./components/shared/VoorwaardenScherm.jsx";
 import { VOORWAARDEN_VERSIE, VOORWAARDEN_SLEUTEL } from "./content/voorwaarden.jsx";
 import { APP_RELEASE } from "./version.js";
@@ -807,6 +808,7 @@ export default function App() {
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const pendingProjectRef = useRef(null);
   // Gebruiksvoorwaarden: één keer per apparaat/browser (en opnieuw bij een nieuwe versie van de tekst).
   const [voorwaardenOk, setVoorwaardenOk] = useState(() => {
@@ -3108,7 +3110,10 @@ export default function App() {
           )}
           <p className="text-[11px] text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
+            <br />
+            <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
           </p>
+          {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
         </div>
       </div>
     );
@@ -3197,27 +3202,15 @@ export default function App() {
         }}
       />
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
 
       {updateAvailable && <UpdateAvailableBanner />}
 
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
-      {/* v277 — bottom iets ruimer (was bottom-4/1rem) plus env(safe-area-inset-bottom) erbovenop,
-          zodat deze knop niet (bijna) achter de taakbalk/dock van een laptop of het home-indicator-
-          gebied van een tablet komt te zitten. */}
-      <button
-        onClick={() => setShowCategoryOverview(true)}
-        className="fixed right-3 sm:right-5 z-[70] inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 shadow-lg px-5 py-3 text-sm font-bold text-white hover:bg-teal-800"
-        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
-        title="Snel opzoeken: alle categorieën en subtypes"
-      >
-        <ListTree className="h-5 w-5 shrink-0" />
-        <span>Categorieën</span>
-      </button>
-
       {showCategoryOverview && <CategoryOverviewModal onClose={() => setShowCategoryOverview(false)} />}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
       {showMultiYearModal && (
@@ -3266,7 +3259,7 @@ export default function App() {
         />
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
@@ -3861,6 +3854,29 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Vaste onderbalk (neemt zelf ruimte in): de knoppen "Hulpvraag of feedback" en "Categorieën" komen
+          daardoor nooit over de tekst heen te hangen. */}
+      <div
+        className="sticky bottom-0 z-[70] flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-stone-50/95 px-3 sm:px-5 py-2.5"
+        style={{ bottom: 0, paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <button
+          onClick={() => setShowFeedback(true)}
+          className="inline-flex items-center gap-2 rounded-full border-2 border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <MessageSquare className="h-4 w-4 shrink-0" />
+          <span>Hulpvraag of feedback</span>
+        </button>
+        <button
+          onClick={() => setShowCategoryOverview(true)}
+          className="inline-flex items-center gap-2 rounded-full border-2 border-teal-700 bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800"
+          title="Snel opzoeken: alle categorieën en subtypes"
+        >
+          <ListTree className="h-4 w-4 shrink-0" />
+          <span>Categorieën</span>
+        </button>
+      </div>
 
       {loanDetailsModalKey && loanSummary.find((l) => l.key === loanDetailsModalKey) && (
         <LoanDetailsModal

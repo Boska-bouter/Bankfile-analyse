@@ -1,10 +1,23 @@
 {
-  // Trigger-commentaar: forceert een nieuwe commit zodat Cloudflare een verse build start
-  // vanuit de main-branch (nu correct ingesteld als standaardbranch).
   "name": "bankfile-analyse",
+  "main": "worker/index.js",
   "compatibility_date": "2026-09-17",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    "FEEDBACK_TO": "paul@paulgerits.eu",
+    "FEEDBACK_FROM": "feedback@paulgerits.eu"
+  },
+  "previews": {
+    "send_email": [{ "name": "EMAIL" }],
+    "vars": {
+      "FEEDBACK_TO": "paul@paulgerits.eu",
+      "FEEDBACK_FROM": "feedback@paulgerits.eu"
+    }
   }
 }
