@@ -3111,8 +3111,9 @@ export default function App() {
           <p className="text-[11px] text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
             <br />
-            <a className="underline" href={`mailto:paul@paulgerits.eu?subject=${encodeURIComponent("[Bankoverzicht] Vraag")}`}>Vraag of opmerking? Mail Paul</a>
+            <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
           </p>
+          {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
         </div>
       </div>
     );
@@ -3201,7 +3202,7 @@ export default function App() {
         }}
       />
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
 
       {updateAvailable && <UpdateAvailableBanner />}
 
@@ -3258,7 +3259,7 @@ export default function App() {
         />
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
