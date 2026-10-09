@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { SectionCard } from "./SectionCard.jsx";
 import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
@@ -118,7 +119,8 @@ export default function DetailsPanel({
     const uit = d.dx < 0 ? -70 : 70;
     zet(el, `translateX(${uit}px)`, "0", "transform .13s ease-in, opacity .13s ease-in");
     setTimeout(() => {
-      onSelectYear(naar);
+      // Synchroon renderen terwijl het blok onzichtbaar is: de zware herberekening zit zo niet midden in de animatie.
+      flushSync(() => onSelectYear(naar));
       zet(el, `translateX(${-uit}px)`, "0", "none");
       requestAnimationFrame(() => requestAnimationFrame(() => zet(el, "none", "1", "transform .24s ease-out, opacity .24s ease-out")));
     }, 130);
