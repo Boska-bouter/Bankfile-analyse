@@ -11,7 +11,7 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "FEEDBACK_TO": "paul@paulgerits.eu",
-    "FEEDBACK_FROM": "feedback@paulgerits.eu"
+    "FEEDBACK_FROM": "feedback@bankafschriftentool.app"
   },
   "previews": {
     "send_email": [{ "name": "EMAIL" }],
