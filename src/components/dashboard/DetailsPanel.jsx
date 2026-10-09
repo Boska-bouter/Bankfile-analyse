@@ -67,6 +67,7 @@ export default function DetailsPanel({
   // anders veert hij terug. Bewust voorzichtig: een veeg die begint in iets wat zelf zijdelings kan scrollen
   // (brede tabel, tabbladenrij) of in een invoerveld telt niet mee, en omhoog/omlaag scrollen blijft ongemoeid.
   const contentRef = useRef(null);
+  const panelRef = useRef(null);
   const drag = useRef(null); // { x, y, mode: null | "h" | "v", dx }
   const kanVegen = years.length > 1 && typeof onSelectYear === "function";
   const zijdelingsScrollbaar = (el) => {
@@ -99,12 +100,14 @@ export default function DetailsPanel({
       d.mode = Math.abs(dx) > Math.abs(dy) * 1.4 ? "h" : "v";
     }
     if (d.mode !== "h") return;
+    if (e.cancelable) e.preventDefault(); // voorkomt dat Safari/iPadOS de beweging overneemt (terug-gebaar, rubberband)
     d.dx = dx;
     const heeftDoel = doelJaar(dx) != null;
     const factor = heeftDoel ? 0.8 : 0.2; // aan het eerste/laatste jaar zwaar tegenhouden
     el.style.transform = `translateX(${dx * factor}px)`;
     el.style.opacity = String(heeftDoel ? Math.max(0.4, 1 - Math.abs(dx) / 450) : 1);
   };
+  const onTouchCancel = () => { drag.current = null; terugveren(); };
   const onTouchEnd = () => {
     const d = drag.current; drag.current = null;
     const el = contentRef.current;
@@ -120,6 +123,21 @@ export default function DetailsPanel({
       requestAnimationFrame(() => requestAnimationFrame(() => zet(el, "none", "1", "transform .24s ease-out, opacity .24s ease-out")));
     }, 130);
   };
+  // Native listeners (touchmove niet-passief), anders mag preventDefault niet en neemt Safari de veeg halverwege over.
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return undefined;
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchCancel, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchCancel);
+    };
+  });
   // Voorkomt dat een veeg naar rechts door de browser als "pagina terug" wordt opgevat zolang dit paneel in beeld is.
   useEffect(() => {
     if (!kanVegen) return undefined;
@@ -140,7 +158,7 @@ export default function DetailsPanel({
   const leases = cardsByKey.leases;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} data-testid="details-panel">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm" ref={panelRef} data-testid="details-panel">
       <div className="px-5 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
           <h3 className="text-sm font-bold text-slate-900 mr-1">
