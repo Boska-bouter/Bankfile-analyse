@@ -14,7 +14,6 @@ export default function FeedbackModal({ onClose }) {
   const [naam, setNaam] = useState("");
   const [onderwerp, setOnderwerp] = useState("");
   const [bericht, setBericht] = useState("");
-  const [technisch, setTechnisch] = useState("");
   const [status, setStatus] = useState("invullen"); // invullen | bezig | verstuurd | mislukt
   const [gekopieerd, setGekopieerd] = useState(false);
 
@@ -31,10 +30,8 @@ export default function FeedbackModal({ onClose }) {
         body: JSON.stringify({ soort, naam: naam.trim(), onderwerp: onderwerp.trim(), bericht: bericht.trim(), release: APP_RELEASE }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!(r.ok && d.ok)) setTechnisch(`HTTP ${r.status}${d.fout ? ` · ${d.fout}` : ""}${d.detail ? ` · ${d.detail}` : ""}`);
       setStatus(r.ok && d.ok ? "verstuurd" : "mislukt");
-    } catch (e) {
-      setTechnisch(`Geen verbinding · ${e?.message || ""}`);
+    } catch {
       setStatus("mislukt");
     }
   };
@@ -86,7 +83,6 @@ export default function FeedbackModal({ onClose }) {
             {status === "mislukt" && (
               <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800 space-y-2">
                 <p>Versturen is niet gelukt. Probeer het later opnieuw, of stuur het bericht via je eigen mailapp.</p>
-                {technisch && <p className="font-mono break-all text-red-700">Technische melding: {technisch}</p>}
                 <div className="flex gap-2">
                   <button onClick={viaMailapp} className="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-medium hover:bg-red-100">Via mailapp</button>
                   <button onClick={kopieren} className="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-medium hover:bg-red-100">{gekopieerd ? "Gekopieerd" : "Tekst kopiëren"}</button>
