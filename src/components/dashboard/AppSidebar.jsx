@@ -88,6 +88,18 @@ export default function AppSidebar({
   onDismissLastAction,
 }) {
   // Inklapbaar (alleen iconen). Keuze wordt onthouden; standaard ingeklapt op smalle schermen.
+  // Eigen tekstballon voor alle elementen met een title in de zijbalk: de standaard browser-title verschijnt
+  // niet op een iPad met muis/trackpad. We halen de title weg en tonen dezelfde tekst als vaste ballon.
+  const [sbTip, setSbTip] = useState(null);
+  const toonTip = (e) => {
+    const el = e.target.closest?.("[title],[data-tip]");
+    if (!el || !e.currentTarget.contains(el)) return;
+    if (el.hasAttribute("title")) { el.setAttribute("data-tip", el.getAttribute("title")); el.removeAttribute("title"); }
+    const t = el.getAttribute("data-tip");
+    if (!t) return;
+    const r = el.getBoundingClientRect();
+    setSbTip({ text: t, x: r.right + 8, y: r.top + r.height / 2 });
+  };
   const [collapsed, setCollapsed] = useState(() => {
     try {
       const v = window.localStorage.getItem("bankoverzicht-sidebar-ingeklapt");
@@ -109,6 +121,7 @@ export default function AppSidebar({
     // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
+      onMouseOver={toonTip} onMouseOut={() => setSbTip(null)} onFocus={toonTip} onBlur={() => setSbTip(null)}
       className={`${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
       style={{
         paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
@@ -335,6 +348,12 @@ export default function AppSidebar({
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
       </div>
+      {sbTip && (
+        <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-1/2 rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
+          style={{ left: sbTip.x, top: sbTip.y, maxWidth: 300 }}>
+          {sbTip.text}
+        </span>
+      )}
     </div>
   );
 }

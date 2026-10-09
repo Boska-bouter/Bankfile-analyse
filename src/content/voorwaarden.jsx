@@ -1,6 +1,6 @@
 // Gebruiksvoorwaarden — getoond bij het eerste gebruik (per apparaat/browser) en terug te lezen in de Help.
 // Bij een inhoudelijke wijziging: VOORWAARDEN_VERSIE ophogen, dan moet iedereen opnieuw akkoord gaan.
-export const VOORWAARDEN_VERSIE = "2";
+export const VOORWAARDEN_VERSIE = "3";
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
 export const VOORWAARDEN_INHOUD = (

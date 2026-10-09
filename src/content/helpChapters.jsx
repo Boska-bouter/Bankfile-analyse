@@ -43,6 +43,25 @@ export const HELP_CHAPTERS = [
     ),
   },
   {
+    key: "hulpvraag-feedback",
+    groep: "beginnen",
+    titel: "Hulpvraag of feedback sturen",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>
+          Rechtsonder, naast "Categorieën", staat de knop <strong>Hulpvraag of feedback</strong>. Kies of het een hulpvraag
+          of feedback is, vul je naam (niet verplicht), een onderwerp en je bericht in, en kies "Mail versturen". Je eigen
+          mailapp opent dan met het bericht aan paul@paulgerits.eu; je drukt daar zelf op verzenden. Lukt dat niet, gebruik
+          dan "Tekst kopiëren".
+        </p>
+        <p>
+          De app voegt alleen het releasenummer en je apparaat toe, geen dossiergegevens. Zet zelf geen klantgegevens in je
+          bericht. De app stuurt niets zelf: zonder verzenden in je mailapp komt er niets aan.
+        </p>
+      </div>
+    ),
+  },
+  {
     key: "gebruiksvoorwaarden",
     groep: "beginnen",
     titel: "Gebruiksvoorwaarden en copyright",
