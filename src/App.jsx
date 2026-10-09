@@ -67,6 +67,9 @@ import BegrippenModal from "./components/shared/BegrippenModal.jsx";
 import RouteBalk from "./components/dashboard/RouteBalk.jsx";
 import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
+import VoorwaardenScherm from "./components/shared/VoorwaardenScherm.jsx";
+import { VOORWAARDEN_VERSIE, VOORWAARDEN_SLEUTEL } from "./content/voorwaarden.jsx";
+import { APP_RELEASE } from "./version.js";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
@@ -805,25 +808,40 @@ export default function App() {
   const [showStartupChoice, setShowStartupChoice] = useState(false);
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const pendingProjectRef = useRef(null);
+  // Gebruiksvoorwaarden: één keer per apparaat/browser (en opnieuw bij een nieuwe versie van de tekst).
+  const [voorwaardenOk, setVoorwaardenOk] = useState(() => {
+    try { return localStorage.getItem(VOORWAARDEN_SLEUTEL) === VOORWAARDEN_VERSIE; } catch { return false; }
+  });
+  const akkoordVoorwaarden = () => {
+    try { localStorage.setItem(VOORWAARDEN_SLEUTEL, VOORWAARDEN_VERSIE); } catch { /* geen opslag: scherm komt dan opnieuw */ }
+    setVoorwaardenOk(true);
+  };
+  // Startscherm (verder / nieuw / laden): één keer per tabblad. Een herlading in hetzelfde tabblad
+  // (bijv. na de nieuwe inlog bij Cloudflare) gaat direct verder.
+  const STARTGEZIEN_SLEUTEL = "bankoverzicht-start";
+  const startGezien = () => { try { return sessionStorage.getItem(STARTGEZIEN_SLEUTEL) === "1"; } catch { return false; } };
+  const markeerStartGezien = () => { try { sessionStorage.setItem(STARTGEZIEN_SLEUTEL, "1"); } catch { /* ignore */ } };
   useEffect(() => {
     (async () => {
       const pendingData = await loadPersistedParsedFiles();
       const pendingSettings = await loadPersistedSettings();
       if (pendingData && pendingData.length > 0) {
-        // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen.
+        // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen (of ga direct
+        // verder als het startscherm in dit tabblad al is geweest).
         pendingProjectRef.current = { parsedFiles: pendingData, settings: pendingSettings };
-        setShowStartupChoice(true);
+        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
       } else {
-        // Niets om te kiezen — gewoon meteen starten, eventuele losse instellingen (zonder
-        // bestanden) mogen alsnog ingeladen worden.
+        // Geen bewaard dossier — eventuele losse instellingen (zonder bestanden) alsnog inladen.
         skipNextPersistRef.current = true;
         suppressChangeCount();
         if (pendingSettings) applySettingsToState(pendingSettings);
-        setLoaded(true);
+        if (startGezien()) setLoaded(true); else setShowStartupChoice(true);
       }
     })();
   }, []);
+  const resumeLastProjectRef = useRef(null);
   const resumeLastProject = () => {
+    markeerStartGezien();
     const pending = pendingProjectRef.current;
     skipNextPersistRef.current = true;
     suppressChangeCount();
@@ -839,7 +857,9 @@ export default function App() {
     setShowStartupChoice(false);
     setLoaded(true);
   };
+  resumeLastProjectRef.current = resumeLastProject;
   const startEmpty = () => {
+    markeerStartGezien();
     // Bewust niets wissen — de eerder opgeslagen data in deze browser blijft intact totdat er
     // weer iets nieuws wordt opgeslagen (bijv. door een bestand toe te voegen). (v304: een
     // tussentijdse versie wiste hier de browseropslag zonder bevestiging — dat is teruggedraaid:
@@ -3004,57 +3024,90 @@ export default function App() {
     setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
   });
 
+  if (!voorwaardenOk) return <VoorwaardenScherm onAkkoord={akkoordVoorwaarden} />;
+
   if (showStartupChoice) {
     const pending = pendingProjectRef.current;
+    const heeftBewaard = !!pending;
     const fileCount = pending ? pending.parsedFiles.length : 0;
     const pendingFileNames = pending ? pending.parsedFiles.map((f) => f.fileName).filter(Boolean) : [];
     const ondernemer = pending?.settings?.eigenNamen?.ondernemer;
     const nietGeexporteerd = Number(pending?.settings?.changesSinceExport) || 0;
+    const nieuwStarten = () => { startEmpty(); setActiveTab("overzicht"); setManualWizardOpen(true); };
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
-          <h1 className="text-lg font-semibold mb-1">Vorig dossier gevonden</h1>
+          <h1 className="text-lg font-semibold mb-1">{heeftBewaard ? "Vorig dossier gevonden" : "Bankoverzicht"}</h1>
           <p className="text-sm text-slate-500 mb-3">
-            Er staat op dit apparaat nog een eerder dossier klaar. Wil je daarmee verdergaan, of een nieuw dossier starten?
+            {heeftBewaard
+              ? "Er staat op dit apparaat nog een eerder dossier klaar. Wil je daarmee verdergaan, of een nieuw dossier starten?"
+              : "Start een nieuw dossier, of laad een dossierbestand dat je eerder hebt opgeslagen."}
           </p>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 mb-5 text-sm">
-            <p className="font-semibold text-slate-800">
-              {ondernemer || "Dossier zonder naam"}
-              <span className="font-normal text-slate-500"> · {fileCount} bankbestand{fileCount === 1 ? "" : "en"}</span>
-            </p>
-            {pendingFileNames.length > 0 && (
-              <ul className="mt-1 text-xs text-slate-500 space-y-0.5">
-                {pendingFileNames.slice(0, 4).map((n) => (
-                  <li key={n} className="truncate">{n}</li>
-                ))}
-                {pendingFileNames.length > 4 && <li>+ {pendingFileNames.length - 4} meer</li>}
-              </ul>
-            )}
-          </div>
-          {nietGeexporteerd > 0 && (
+          {heeftBewaard && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 mb-5 text-sm">
+              <p className="font-semibold text-slate-800">
+                {ondernemer || "Dossier zonder naam"}
+                <span className="font-normal text-slate-500"> · {fileCount} bankbestand{fileCount === 1 ? "" : "en"}</span>
+              </p>
+              {pendingFileNames.length > 0 && (
+                <ul className="mt-1 text-xs text-slate-500 space-y-0.5">
+                  {pendingFileNames.slice(0, 4).map((n) => (
+                    <li key={n} className="truncate">{n}</li>
+                  ))}
+                  {pendingFileNames.length > 4 && <li>+ {pendingFileNames.length - 4} meer</li>}
+                </ul>
+              )}
+            </div>
+          )}
+          {heeftBewaard && nietGeexporteerd > 0 && (
             <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 mb-4 text-xs text-amber-900">
               Let op: dit dossier heeft <strong>{nietGeexporteerd} wijziging{nietGeexporteerd === 1 ? "" : "en"}</strong> die nog niet als dossierbestand zijn opgeslagen.
               Ze staan wel in de browseropslag van dit apparaat. Kies "Verder met dit dossier" en gebruik daarna "Dossier opslaan" om ze veilig te stellen.
             </p>
           )}
           <div className="space-y-2">
+            {heeftBewaard && (
+              <button
+                onClick={resumeLastProject}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-teal-800"
+              >
+                Verder met dit dossier
+              </button>
+            )}
             <button
-              onClick={resumeLastProject}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-teal-800"
-            >
-              Verder met dit dossier
-            </button>
-            <button
-              onClick={() => (nietGeexporteerd > 0 && !bevestigNieuwStart ? setBevestigNieuwStart(true) : startEmpty())}
-              className={`w-full inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${bevestigNieuwStart ? "border-red-400 text-red-700 bg-red-50 hover:bg-red-100" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+              onClick={() => (heeftBewaard && nietGeexporteerd > 0 && !bevestigNieuwStart ? setBevestigNieuwStart(true) : nieuwStarten())}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${
+                bevestigNieuwStart ? "border-red-400 text-red-700 bg-red-50 hover:bg-red-100"
+                : heeftBewaard ? "border-slate-300 text-slate-600 hover:bg-slate-50"
+                : "bg-teal-700 border-teal-700 text-white hover:bg-teal-800"}`}
             >
               {bevestigNieuwStart ? "Toch nieuw dossier — wijzigingen niet opgeslagen" : "Nieuw dossier"}
             </button>
+            <label className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-600 px-4 py-2.5 text-sm font-medium hover:bg-slate-50 cursor-pointer">
+              Dossier laden
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  startEmpty();
+                  setTimeout(() => requestLoadProject(f), 0);
+                }}
+              />
+            </label>
           </div>
-          <p className="text-xs text-slate-400 mt-4">
-            "Nieuw dossier" verwijdert niets: het vorige dossier blijft in deze browser bewaard en dit keuzescherm
-            verschijnt de volgende keer weer, totdat je zelf een nieuw bestand toevoegt — pas dán wordt het
-            oude dossier in deze browser overschreven.
+          {heeftBewaard && (
+            <p className="text-xs text-slate-400 mt-4">
+              "Nieuw dossier" verwijdert niets: het vorige dossier blijft in deze browser bewaard en dit keuzescherm
+              verschijnt de volgende keer weer, totdat je zelf een nieuw bestand toevoegt — pas dán wordt het
+              oude dossier in deze browser overschreven.
+            </p>
+          )}
+          <p className="text-[11px] text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
+            © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
           </p>
         </div>
       </div>
