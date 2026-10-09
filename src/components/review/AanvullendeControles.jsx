@@ -12,7 +12,7 @@ function Knop({ children, onClick, primair }) {
 }
 
 // C1 + C2 + C3 in één opklapbare sectie. Zonder meldingen is hij dicht en groen.
-export default function AanvullendeControles({ data, onBevestig, onToepassenTerugkerend }) {
+export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend }) {
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
@@ -87,6 +87,9 @@ export default function AanvullendeControles({ data, onBevestig, onToepassenTeru
                 <Knop onClick={() => onBevestig(s.key)}>Klopt zo</Knop>
               </div>
             ))}
+            {sprongen.length > 1 && (
+              <div className="mb-2"><Knop primair onClick={() => (onBevestigAlles ? onBevestigAlles(sprongen.map((s) => s.key)) : sprongen.forEach((s) => onBevestig(s.key)))}>Alles klopt zo ({sprongen.length})</Knop></div>
+            )}
             <p className="text-[11px] text-slate-400">Alleen volledige, opeenvolgende jaren; alleen grote verschillen (minimaal €750 én 40%); maximaal 5 per jaar.</p>
           </div>
         </div>
