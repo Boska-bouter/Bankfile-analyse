@@ -159,6 +159,7 @@ export default function PersoonlijkeAannamesPanel({
               Voldaan aan het urencriterium voor de zelfstandigenaftrek in {activeYear}?
             </label>
             <select
+              key={`za-${activeYear}`}
               value={rawStatus == null ? "" : rawStatus}
               onChange={(e) => onSetZelfstandigenaftrekStatus(activeYear, e.target.value || null)}
               className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
@@ -184,6 +185,7 @@ export default function PersoonlijkeAannamesPanel({
               Startersaftrek toepassen in {activeYear}?
             </label>
             <select
+              key={`starters-${activeYear}`}
               value={startersaftrekAan ? "ja" : ""}
               onChange={(e) => onSetStartersaftrekStatus(activeYear, e.target.value || null)}
               className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
@@ -249,6 +251,7 @@ export default function PersoonlijkeAannamesPanel({
               Auto-status in {activeYear}
             </label>
             <select
+              key={`auto-${activeYear}`}
               value={autoStatus?.[activeYear] || ""}
               onChange={(e) => onSetAutoStatus(activeYear, e.target.value || null)}
               className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
