@@ -238,6 +238,9 @@ export default function SetupWizardModal({
                   ))}
                 </ul>
               )}
+              <p className="text-xs text-slate-500">
+                <strong>Privacy:</strong> bankgegevens worden lokaal in je browser verwerkt en niet naar een externe server gestuurd voor analyse.
+              </p>
               <p className="text-xs text-slate-400">
                 Tip: laad zowel de zakelijke als de privérekening, anders kan de app overboekingen tussen je rekeningen niet controleren.
               </p>

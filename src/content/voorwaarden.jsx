@@ -33,9 +33,9 @@ export const VOORWAARDEN_INHOUD = (
     <section>
       <h3 className="font-semibold text-slate-800">4. Gegevens en privacy</h3>
       <p>
-        Je bankgegevens worden in je eigen browser verwerkt en bewaard. Er gaat niets naar een server. Daardoor kan de
+        Je bankgegevens blijven op je eigen apparaat. Bankbestanden worden in je eigen browser verwerkt en bewaard; de transacties en je administratieve gegevens worden niet naar een server gestuurd voor de analyse of de fiscale berekeningen. Daardoor kan de
         maker ze ook niet inzien of terugzetten. Maak zelf een back-up met "Dossier opslaan". Wis je de browsergegevens (cache, websitegegevens) of werk je in een privévenster, dan zijn je bewaarde dossier en je akkoord op deze voorwaarden weg, en komt dit scherm opnieuw. Bij een dossier met wachtwoord
-        is de herstelcode de enige weg terug; zonder wachtwoord en herstelcode is het dossier niet meer te openen. Alleen als je zelf een hulpvraag of feedback verstuurt, gaat die tekst via Cloudflare naar de maker, samen met je naam (als je die invult), het releasenummer en het e-mailadres waarmee je bent ingelogd; er worden geen dossiergegevens meegestuurd. Zet je klantgegevens in zo'n bericht, dan is dat je eigen keuze.
+        is de herstelcode de enige weg terug; zonder wachtwoord en herstelcode is het dossier niet meer te openen. Alleen als je zelf een hulpvraag of feedback verstuurt, gaat die tekst via Cloudflare naar de maker, samen met je naam (als je die invult), het releasenummer en het e-mailadres waarmee je bent ingelogd; er worden geen dossiergegevens meegestuurd. Zet je klantgegevens in zo'n bericht, dan is dat je eigen keuze. Verder maakt de app alleen verbinding met internet om de app zelf te laden (inloggen en bestanden via Cloudflare, lettertypen via Google Fonts) en om te controleren of er een nieuwe versie is; daarbij gaan geen dossiergegevens mee. Je projectbestanden en exports (Dossier opslaan, Excel, rapporten) kunnen financiële en persoonlijke gegevens bevatten: bewaar ze zorgvuldig.
       </p>
     </section>
     <section>

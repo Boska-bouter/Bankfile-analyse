@@ -80,8 +80,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          <strong>Automatisch bewaard.</strong> Alles wordt lokaal in deze browser verwerkt en bewaard; er gaat niets naar
-          een server. Met "Dossier opslaan" maak je daarnaast een bestand dat je zelf kunt bewaren en later weer laden.
+          <strong>Automatisch bewaard.</strong> Je bankgegevens worden lokaal in deze browser verwerkt en bewaard; ze gaan niet naar
+          een server. De app maakt alleen internetverbinding voor het laden van de app zelf, de controle op een nieuwe versie en (alleen als je het zelf verstuurt) je feedback. Bewaar exports en projectbestanden zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten. Met "Dossier opslaan" maak je daarnaast een bestand dat je zelf kunt bewaren en later weer laden.
         </p>
         <p>
           <strong>Met of zonder wachtwoord.</strong> Bij de eerste keer opslaan kies je. Met een
