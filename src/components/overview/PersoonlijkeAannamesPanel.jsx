@@ -261,8 +261,9 @@ export default function PersoonlijkeAannamesPanel({
               Bepaalt welk fiscaal model voor autokosten geldt: bij "auto op de zaak" tellen werkelijke
               autokosten (brandstof, parkeren, verzekering, MRB) mee met een bijtellingscorrectie voor
               privégebruik, en vervalt de generieke %-splitsing op Brandstof/Parkeren voor dit jaar; bij
-              "privéauto zakelijk gebruikt" geldt in plaats daarvan een kilometervergoeding voor het
-              zakelijke gebruik.
+              "privéauto zakelijk gebruikt" geldt in plaats daarvan alleen een kilometervergoeding voor het
+              zakelijke gebruik: de werkelijke autokosten (brandstof, parkeren, verzekering, MRB, onderhoud)
+              tellen dan niet mee, die zitten in de vergoeding per kilometer.
             </p>
             {(autoStatus?.[activeYear] === "zaak") &&
               (autoWizardStatus?.soort === "koop" || autoWizardStatus?.soort === "operational") && (
@@ -270,14 +271,14 @@ export default function PersoonlijkeAannamesPanel({
                   onClick={onOpenAutoActivaModal}
                   className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 >
-                  Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""} auto op de zaak instellen →
+                  Bijtelling{autoWizardStatus.soort === "koop" ? "/afschrijving" : ""}/btw auto op de zaak instellen →
                 </button>
               )}
             {(autoStatus?.[activeYear] === "zaak") &&
               autoWizardStatus?.soort === "financial" && (
                 <p className="mt-2 text-xs text-slate-400">
                   Bij financiële lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
-                  het leningen/lease-overzicht), niet hier.
+                  het leningen/lease-overzicht), niet hier. De btw-correctie privégebruik rekent de app dan automatisch (forfait) zodra er een bedrag bij "Te betalen BTW" staat.
                 </p>
               )}
             {(autoStatus?.[activeYear] === "prive") && (

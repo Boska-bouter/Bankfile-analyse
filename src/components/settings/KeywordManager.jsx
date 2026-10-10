@@ -66,10 +66,10 @@ export default function KeywordManager({
                   {/* v307 (V30) — wrap + min-breedte: op een smal scherm (tablet) persten de drie keuzelijsten (shrink-0) de naam-kolom tot 0 breed, waardoor de naam van de tegenpartij verdween. */}
                   <div className="flex-1 min-w-[14rem] basis-full sm:basis-0">
                     <p className="text-xs font-medium truncate">{item.name}</p>
-                    <p className="text-[10px] text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
+                    <p className="text-[11px] text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
                     {item.description && (
                       <p
-                        className={`text-[10px] text-slate-400 cursor-pointer ${expandedDesc === item.key ? "whitespace-normal break-words" : "truncate"}`}
+                        className={`text-[11px] text-slate-400 cursor-pointer ${expandedDesc === item.key ? "whitespace-normal break-words" : "truncate"}`}
                         onClick={() => setExpandedDesc((cur) => (cur === item.key ? null : item.key))}
                         title="Klik om de volledige omschrijving te tonen/verbergen"
                       >

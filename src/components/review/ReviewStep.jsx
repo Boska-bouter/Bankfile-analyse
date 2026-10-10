@@ -23,7 +23,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
       <div className="flex-1 min-w-[10rem]">
         <p className="text-sm font-medium truncate">
           {item.name}{" "}
-          <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-semibold align-middle ${item.amount >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+          <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-semibold align-middle ${item.amount >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
             {item.amount >= 0 ? "ontvangen" : "betaald"}
           </span>
         </p>

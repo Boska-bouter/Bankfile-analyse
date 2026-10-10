@@ -15,7 +15,7 @@ function DeltaBadge({ pct }) {
   if (pct == null) return null;
   const positive = pct >= 0;
   return (
-    <span className={`text-[11px] font-semibold ${positive ? "text-emerald-600" : "text-red-600"}`}>
+    <span className={`text-xs font-semibold ${positive ? "text-emerald-600" : "text-red-600"}`}>
       {positive ? "↑" : "↓"} {Math.abs(pct)}% t.o.v. vorig jaar
     </span>
   );
@@ -57,23 +57,23 @@ export default function JaaroverzichtCard({ year, summary, previousSummary, show
       )}
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <p className="text-[11px] text-slate-400">Omzet</p>
+          <p className="text-xs text-slate-400">Omzet</p>
           <p className="text-lg font-bold text-slate-900">{eur(omzet)}</p>
           {hasSummary && showTrend && <DeltaBadge pct={pctDelta(omzet, prevOmzet)} />}
         </div>
         <div>
-          <p className="text-[11px] text-slate-400">Kosten</p>
+          <p className="text-xs text-slate-400">Kosten</p>
           <p className="text-lg font-bold text-slate-900">{eur(Math.abs(kosten))}</p>
           {hasSummary && showTrend && <DeltaBadge pct={pctDelta(Math.abs(kosten), Math.abs(prevKosten ?? 0) || null)} />}
         </div>
         <div>
-          <p className="text-[11px] text-slate-400">Winst</p>
+          <p className="text-xs text-slate-400">Winst</p>
           <p className={`text-lg font-bold ${winst < 0 ? "text-red-600" : "text-slate-900"}`}>{eur(winst)}</p>
           {hasSummary && showTrend && <DeltaBadge pct={pctDelta(winst, prevWinst)} />}
         </div>
       </div>
       {hasSummary && (
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-xs text-slate-400">
           <span>
             Bruto omzet (incl. BTW) <span className="font-semibold text-slate-600">{eur(brutoOmzet)}</span>
           </span>

@@ -146,6 +146,7 @@ import { printReport, printHtmlDocument } from "./reports/printReport.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
+import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 
@@ -1553,8 +1554,8 @@ export default function App() {
     if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
     let delen = [];
     if (!korRegeling) {
-      const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
-      delen.push({ label: "BTW", bedrag: [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting : 0); }, 0) });
+      const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }));
+      delen.push({ label: "BTW", bedrag: [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting + (r.btwPrivegebruikAuto || 0) : 0); }, 0) });
     } else delen.push({ label: "BTW", bedrag: 0 });
     if (rechtsvorm === "bv") {
       delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
@@ -2109,9 +2110,14 @@ export default function App() {
     snapshotBeforeAction("Periode verplaatst");
     setPeriodeQuarterOverrides((prev) => ({ ...prev, [tx.id]: quarterKey }));
   };
+  // Btw-correctie privégebruik auto (alleen zzp) — zie tax/btwPrivegebruikAuto.js.
+  const btwPrivegebruikAutoActiefJaar = useMemo(
+    () => (activeYear ? computeBtwPrivegebruikAuto(activeYear, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }) : null),
+    [activeYear, leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, effectiveCategoryBtwRates, btwVerlegd, rechtsvorm]
+  );
   const quarterlyBtwData = useMemo(
-    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) : []),
-    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]
+    () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, btwPrivegebruikAutoActiefJaar) : []),
+    [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, btwPrivegebruikAutoActiefJaar]
   );
   // Uitsluitend voor de "Uitgaven (netto)"-pop-up: dezelfde indeling als hierboven, alleen per
   // categorie apart gehouden — geen nieuwe berekening, puur het al berekende bedrag herleidbaar
@@ -2158,10 +2164,11 @@ export default function App() {
       activeYear && rechtsvorm !== "bv"
         ? combineAutoKosten(
             computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd)
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
+            autoStatus, activeYear
           )
         : null,
-    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus]
+    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus, autoStatus]
   );
   // "Huur (deels zakelijk)" — null zolang er dit jaar geen enkele transactie in deze categorie
   // voorkomt (verreweg de meeste dossiers), dus zonder enige invloed op de winst/voorbelasting
@@ -3124,7 +3131,7 @@ export default function App() {
               oude dossier in deze browser overschreven.
             </p>
           )}
-          <p className="text-[11px] text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
             <br />
             <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
@@ -3291,7 +3298,7 @@ export default function App() {
             <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-teal-100">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-teal-100">
                     {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
                   </div>
                   <div className="truncate text-base font-bold">

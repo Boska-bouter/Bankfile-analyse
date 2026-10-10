@@ -64,7 +64,7 @@ export default function DatumVeld({ value, onChange, className = "", style, type
           className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
         />
       </span>
-      {fout && <span className="block text-[11px] text-red-600 mt-0.5">Geen geldige datum — typ bijv. 08-10-2026.</span>}
+      {fout && <span className="block text-xs text-red-600 mt-0.5">Geen geldige datum — typ bijv. 08-10-2026.</span>}
     </span>
   );
 }

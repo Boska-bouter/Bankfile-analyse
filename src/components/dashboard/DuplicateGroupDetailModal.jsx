@@ -40,9 +40,9 @@ export default function DuplicateGroupDetailModal({ group, onClose, removed, onR
             <h2 className="text-sm font-semibold text-slate-800">
               Vergelijk originele regels — {group.length}x {group[0].counterparty || group[0].description || "(geen omschrijving)"}
             </h2>
-            <p className={`inline-block mt-1.5 rounded-lg border px-2 py-0.5 text-[11px] font-medium ${info.className}`}>{info.label}</p>
+            <p className={`inline-block mt-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium ${info.className}`}>{info.label}</p>
             {isDuplicateCandidate && removed && (
-              <p className="mt-1.5 text-[11px] text-emerald-700">
+              <p className="mt-1.5 text-xs text-emerald-700">
                 ✓ Deze groep is al verwijderd (de eerste regel is bewaard) — telt niet meer mee in de cijfers.
               </p>
             )}

@@ -32,7 +32,7 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
       ) : (
         <div className="flex flex-col md:flex-row gap-4 md:gap-6">
           <div className="md:w-[38%] flex flex-col gap-1.5 justify-center">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Eerstvolgende stap</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Eerstvolgende stap</span>
             <span className="text-[15px] font-bold text-slate-900 leading-snug">{volgende.label}</span>
             <span className="text-[12px] text-slate-500">
               {volgende.soort} · {volgende.count != null ? `${volgende.count} open` : "open"}
@@ -58,7 +58,7 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
                 >
                   <span className="min-w-0 truncate text-slate-700">
                     <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${item.soort === "Controleren" ? "bg-red-500" : "bg-amber-500"}`} />
-                    {item.label}{overgeslagen.includes(item.key) && <span className="ml-1.5 text-[10px] font-semibold text-amber-700">overgeslagen</span>}
+                    {item.label}{overgeslagen.includes(item.key) && <span className="ml-1.5 text-[11px] font-semibold text-amber-700">overgeslagen</span>}
                   </span>
                   <span className="shrink-0 font-semibold text-slate-500">
                     {item.count} {item.onClick && <span className="text-slate-300">→</span>}
@@ -66,14 +66,14 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
                 </button>
               ))}
             </div>
-            {alle.length > 8 && <span className="block pt-1.5 text-[11px] font-medium text-slate-400">+ {alle.length - 8} meer — zie Controleren en Instellingen</span>}
+            {alle.length > 8 && <span className="block pt-1.5 text-xs font-medium text-slate-400">+ {alle.length - 8} meer — zie Controleren en Instellingen</span>}
           </div>
         </div>
       )}
 
       {alle.some((i) => overgeslagen.includes(i.key)) && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">Overgeslagen — nog niet afgerond</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Overgeslagen — nog niet afgerond</p>
           {alle.filter((i) => overgeslagen.includes(i.key)).map((i) => (
             <div key={i.key} className="flex items-center justify-between gap-2 py-1 text-[12.5px] text-amber-900">
               <span className="truncate">⚠ {i.label}{i.count != null ? ` (${i.count})` : ""}</span>

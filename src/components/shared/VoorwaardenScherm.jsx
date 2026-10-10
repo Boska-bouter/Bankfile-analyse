@@ -25,8 +25,8 @@ export default function VoorwaardenScherm({ onAkkoord }) {
           >
             Akkoord en doorgaan
           </button>
-          <p className="text-[11px] text-slate-400 text-center">Dit scherm komt opnieuw als je browsergegevens wist, in een privévenster werkt of als de voorwaarden wijzigen.</p>
-          <p className="text-[11px] text-slate-400 text-center">© {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</p>
+          <p className="text-xs text-slate-400 text-center">Dit scherm komt opnieuw als je browsergegevens wist, in een privévenster werkt of als de voorwaarden wijzigen.</p>
+          <p className="text-xs text-slate-400 text-center">© {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</p>
         </div>
       </div>
     </div>

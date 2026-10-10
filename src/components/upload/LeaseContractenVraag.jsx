@@ -56,7 +56,7 @@ export default function LeaseContractenVraag({ namen, contracten, onChange, soor
             <button type="button" onClick={() => onChange([[...namen]])} className={`${KNOP} border-teal-700 bg-teal-700 text-white`}>Eén contract (zelfde lease)</button>
             <button type="button" onClick={() => onChange(namen.map((n) => [n]))} className={`${KNOP} border-slate-300 bg-white text-slate-700`}>Losse contracten</button>
           </div>
-          <p className="text-[11px] text-amber-800">Bijvoorbeeld: de leasemaatschappij en de naam van de incasso zijn één contract; een bedrijfsbus en een privéauto zijn twee.</p>
+          <p className="text-xs text-amber-800">Bijvoorbeeld: de leasemaatschappij en de naam van de incasso zijn één contract; een bedrijfsbus en een privéauto zijn twee.</p>
         </div>
       )}
 
@@ -70,7 +70,7 @@ export default function LeaseContractenVraag({ namen, contracten, onChange, soor
                 <div key={n} className="flex items-center justify-between gap-2">
                   <span className="truncate">{n}</span>
                   {(groepen.length > 1 || g.length > 1) && (
-                    <select value="" onChange={(e) => e.target.value && verplaats(n, gi, e.target.value)} className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] text-slate-600">
+                    <select value="" onChange={(e) => e.target.value && verplaats(n, gi, e.target.value)} className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600">
                       <option value="">Verplaats naar…</option>
                       {groepen.map((_, j) => j !== gi && <option key={j} value={j}>Contract {j + 1}</option>)}
                       {g.length > 1 && <option value="nieuw">Eigen contract</option>}

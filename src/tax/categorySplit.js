@@ -123,7 +123,15 @@ export function heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, auto
 // blijft die situatie altijd op het standaardgedrag (100%, gewone aftrekbare kosten; de eventuele
 // bijtelling-correctie loopt apart via autoBijtelling.js), ook als er nog een percentage opgeslagen
 // staat van vóór dat autoStatus werd ingesteld.
+// Privéauto zakelijk gebruikt (autoStatus "prive"): de kilometervergoeding (tax/kmVergoeding.js) is dan de ENIGE
+// aftrek voor de auto en dekt alle autokosten. De werkelijke autokosten uit de bank (brandstof, parkeren,
+// verzekering, MRB, overige autokosten) tellen dus niet mee — noch als kosten, noch als voorbelasting.
+// Dezelfde lijst als AUTOKOSTEN_CATEGORIEN in autoBijtelling.js (hier herhaald om een importcirkel te vermijden).
+const PRIVEAUTO_UITGESLOTEN = ["Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB"];
+export function isPriveAutoJaar(year, autoStatus) { return autoStatus?.[year] === "prive"; }
+
 export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false) {
+  if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus)) return 0;
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
   if (AUTO_SPLIT_UITSLUITING.includes(category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
     return defaultZakelijkPercentage(category);
@@ -166,7 +174,7 @@ export function computeSplitsbareCategorieTotalenVoorJaar(classified, year, auto
   for (const tx of classified) {
     if (tx.isMirror || tx.year !== year) continue;
     if (!isSplitsbareCategorie(tx.category)) continue;
-    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) continue;
+    if (AUTO_SPLIT_UITSLUITING.includes(tx.category) && (autoOpDeZaak(year, autoStatus) || isPriveAutoJaar(year, autoStatus) || heeftLeaseAuto)) continue;
     netto[tx.category] = (netto[tx.category] || 0) + tx.amount;
   }
   const totalen = {};

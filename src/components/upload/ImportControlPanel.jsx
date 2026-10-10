@@ -67,7 +67,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                         elders. accountTypeByFile komt uit diezelfde bron (de basisvragen-wizard). */}
                     {accountTypeByFile[d.fileName] && (
                       <span
-                        className={`ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold align-middle ${
+                        className={`ml-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold align-middle ${
                           accountTypeByFile[d.fileName] === "Zakelijk" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
                         }`}
                       >
@@ -144,7 +144,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                               <button
                                 onClick={() => onBevestig(saldoControleSleutel(d))}
                                 title="Je hebt gekeken en het verschil is bekend of bewust zo. Het blijft dan niet als open punt staan; verandert het verschil later, dan komt de melding terug."
-                                className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                               >
                                 Saldoverschil is akkoord
                               </button>
@@ -198,7 +198,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                               <button
                                 onClick={() => onBevestig(c.sleutel)}
                                 title="Je hebt gekeken en het verschil is bekend of bewust zo (bijvoorbeeld een ontbrekende periode zonder transacties). Het blijft dan niet als open punt staan; verandert het verschil later, dan komt de melding terug."
-                                className="ml-1 rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                className="ml-1 rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                               >
                                 Verschil is akkoord
                               </button>

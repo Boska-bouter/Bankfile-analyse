@@ -12,7 +12,7 @@ export function useBelastingTotaalJaar(p) {
     if (!activeYear) return null;
     const btw = korRegeling ? 0 : [1, 2, 3, 4].reduce((acc, k) => {
       const q = quarterlyBtwData.find((item) => item.kwartaal === k);
-      return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
+      return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0);
     }, 0);
     let delen = [{ label: "BTW", bedrag: btw }];
     if (rechtsvorm === "bv") {

@@ -39,10 +39,10 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, breakd
 
       <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
         <div>
-          <p className="text-[11px] text-slate-400">Winst uit onderneming</p>
+          <p className="text-xs text-slate-400">Winst uit onderneming</p>
           <p className="text-xl font-bold text-slate-900">{eur(winst)}</p>
           {pct != null && (
-            <span className={`text-[11px] font-semibold ${pct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+            <span className={`text-xs font-semibold ${pct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {pct >= 0 ? "↑" : "↓"} {Math.abs(pct)}% t.o.v. vorig jaar
             </span>
           )}

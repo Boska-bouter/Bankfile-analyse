@@ -44,3 +44,6 @@ select {
    onderbalk (Hulpvraag/Categorieën) verdwijnt zolang een venster open staat, zodat hij de onderkant niet bedekt. */
 .fixed.inset-0.bg-slate-900\/50 { height: 100vh; height: 100dvh; }
 body:has(.fixed.inset-0.bg-slate-900\/50) .onderbalk { display: none; }
+
+/* Bedragen en cijfers: cijfers van gelijke breedte, zodat kolommen en totalen onder elkaar goed te vergelijken zijn. */
+body { font-variant-numeric: tabular-nums; }

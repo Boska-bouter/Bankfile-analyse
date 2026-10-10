@@ -71,7 +71,7 @@ export default function RawFileReviewModal({
 
         <div className="px-5 py-3 border-b border-slate-100 shrink-0 flex flex-wrap items-end gap-4 bg-slate-50">
           <div>
-            <label className="block text-[10px] text-slate-500 mb-1">
+            <label className="block text-[11px] text-slate-500 mb-1">
               Beginsaldo corrigeren {balanceCheck && <span className="text-slate-400">(bestand zelf: {eur(balanceCheck.fileOpeningBalance)})</span>}
             </label>
             <div className="flex gap-1.5">
@@ -92,7 +92,7 @@ export default function RawFileReviewModal({
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 mt-1 max-w-md">
+            <p className="text-[11px] text-slate-400 mt-1 max-w-md">
               Bijvoorbeeld als het beginsaldo op 1 januari net niet exact aansluit bij het eindsaldo van 31 december in
               een ander bestand — dan kun je hier het uitgangspunt zelf zetten.
             </p>
@@ -130,8 +130,8 @@ export default function RawFileReviewModal({
                     <td className="py-1.5 px-2">
                       {tx.counterparty || <ExpandableDescription tx={tx} short="(geen omschrijving)" className="inline" />}
                       {isBreakpoint && <span className="ml-1.5 text-amber-700" title="Bij deze regel klopt het lopende saldo niet meer">⚠</span>}
-                      {tx.counterparty && <ExpandableDescription tx={tx} prefix="" className="block text-[10px] text-slate-400" />}
-                      {tx.counterpartyIban && <span className="block text-[10px] font-mono text-slate-400 select-all">{tx.counterpartyIban}</span>}
+                      {tx.counterparty && <ExpandableDescription tx={tx} prefix="" className="block text-[11px] text-slate-400" />}
+                      {tx.counterpartyIban && <span className="block text-[11px] font-mono text-slate-400 select-all">{tx.counterpartyIban}</span>}
                     </td>
                     <td className="py-1.5 px-2 text-right font-mono whitespace-nowrap">{eur(tx.amount)}</td>
                     <td className="py-1.5 pl-2 pr-5 text-right font-mono whitespace-nowrap text-slate-500">{tx.balance != null ? eur(tx.balance) : "—"}</td>

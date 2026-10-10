@@ -68,10 +68,10 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
                     <p className="text-xs font-medium truncate flex items-center gap-1.5">
                       {r.displayName}
                       {r.viaIban && (
-                        <span className="shrink-0 rounded-md bg-indigo-100 text-indigo-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">IBAN</span>
+                        <span className="shrink-0 rounded-md bg-indigo-100 text-indigo-700 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide">IBAN</span>
                       )}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[11px] text-slate-400">
                       {r.sign} ·{" "}
                       <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
                         {mainCategoryOf(r.category)}

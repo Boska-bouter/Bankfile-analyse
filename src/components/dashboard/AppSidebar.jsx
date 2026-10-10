@@ -54,7 +54,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
       <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#7DD3FC" : "#8992B4" }} />
       <span className={`sb-label text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
       {!!badge && (
-        <span className="sb-badge text-[10px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
+        <span className="sb-badge text-[11px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
       )}
     </button>
   );
@@ -140,21 +140,21 @@ export default function AppSidebar({
         </div>
         <div className="sb-label flex flex-col min-w-0 flex-grow">
           <span className="text-[14.5px] font-bold text-white whitespace-nowrap">Bankoverzicht</span>
-          <span className="text-[10px] text-slate-400 leading-snug" title={`Versie van de app: ${APP_RELEASE}`}>{orgName}<br />{APP_RELEASE}</span>
+          <span className="text-[11px] text-slate-400 leading-snug" title={`Versie van de app: ${APP_RELEASE}`}>{orgName}<br />{APP_RELEASE}</span>
         </div>
       </div>
       <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
         className="sb-btn flex items-center gap-2 self-end rounded-lg px-2 py-1 mb-2 text-slate-500 hover:text-slate-200 hover:bg-white/5">
-        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[10.5px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
+        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[11px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
       </button>
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
         {rekeninghouderNaam ? (
           <div className="flex flex-col gap-0.5">
-            <span className="text-slate-400 text-[11px]">Rekeninghouder</span>
+            <span className="text-slate-400 text-xs">Rekeninghouder</span>
             <span className="text-white font-bold text-[15px] leading-tight">{rekeninghouderNaam}</span>
-            <button onClick={onEditRekeninghouder} className="self-start text-indigo-300 underline decoration-dotted text-[11px]">
+            <button onClick={onEditRekeninghouder} className="self-start text-indigo-300 underline decoration-dotted text-xs">
               wijzigen
             </button>
           </div>
@@ -168,7 +168,7 @@ export default function AppSidebar({
       {/* Tabs */}
       {tabsVisible && (
         <div className="flex flex-col gap-1">
-          <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Navigatie</span>
+          <span className="sb-label text-[11px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Navigatie</span>
           <TabItem tabKey="overzicht" active={activeTab === "overzicht"} onClick={() => onSelectTab("overzicht")} />
           <TabItem tabKey="controleren" active={activeTab === "controleren"} badge={controlerenBadge} onClick={() => onSelectTab("controleren")} />
           <TabItem tabKey="instellingen" active={activeTab === "instellingen"} badge={instellingenBadge} onClick={() => onSelectTab("instellingen")} />
@@ -181,7 +181,7 @@ export default function AppSidebar({
           nu "Bankbestand toevoegen" (het voegt toe aan het dossier, het vervangt niets) en "Wis alles"
           is "Nieuw dossier" (met keuzevenster, zie clearAllData in App.jsx). */}
       <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
-        <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
+        <span className="sb-label text-[11px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         {canClearAll && (
           <button onClick={onClearAll} title="Nieuw dossier starten (sluit het huidige dossier)" className={`sb-btn flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
@@ -206,9 +206,9 @@ export default function AppSidebar({
             {onWachtwoord && heeftWachtwoord && (
               <div className="-mt-1 flex items-center gap-2 px-3 py-0.5">
                 <Lock className="h-3 w-3 shrink-0 text-emerald-400" />
-                <span className="sb-label text-[11px] text-emerald-300">Met wachtwoord</span>
-                <button onClick={onWachtwoord} title="Wachtwoord wijzigen of verwijderen" className="sb-label text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-200">wijzig</button>
-                {onHerstelcode && <button onClick={onHerstelcode} title="Herstelcode tonen" className="sb-label text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-200">code</button>}
+                <span className="sb-label text-xs text-emerald-300">Met wachtwoord</span>
+                <button onClick={onWachtwoord} title="Wachtwoord wijzigen of verwijderen" className="sb-label text-xs text-slate-400 underline decoration-dotted hover:text-slate-200">wijzig</button>
+                {onHerstelcode && <button onClick={onHerstelcode} title="Herstelcode tonen" className="sb-label text-xs text-slate-400 underline decoration-dotted hover:text-slate-200">code</button>}
               </div>
             )}
           </>
@@ -234,7 +234,7 @@ export default function AppSidebar({
           (nu verwijderde) Aangifte-statusblok — zelfde handlers als voorheen. */}
       {showActies && (
         <div className="flex flex-col gap-2 pt-3.5 mt-3.5 border-t border-white/10">
-          <span className="sb-label text-[10px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
+          <span className="sb-label text-[11px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Acties</span>
 
           {onOpenAangifteberekening && (
             <button onClick={onOpenAangifteberekening} title="Indicatieve aangifteberekening" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
@@ -273,7 +273,7 @@ export default function AppSidebar({
       {lastActionSnapshot && (
         <div className="mt-3 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-1">
-            <p className="text-[11px] text-slate-600 leading-tight">
+            <p className="text-xs text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>
             </p>
             <button onClick={onDismissLastAction} className="text-slate-400 hover:text-slate-700 shrink-0">
@@ -307,7 +307,7 @@ export default function AppSidebar({
             : "Nog geen dossierbestand opgeslagen";
           return (
             <div
-              className={`flex items-start gap-1.5 text-[10.5px] ${dirty ? "text-amber-300" : "text-slate-500"}`}
+              className={`flex items-start gap-1.5 text-[11px] ${dirty ? "text-amber-300" : "text-slate-500"}`}
               title="Dossierbestand = het exportbestand (Dossier opslaan). Dit staat los van de automatische browseropslag hieronder."
             >
               {dirty ? <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <FileSpreadsheet className="h-3 w-3 mt-0.5 shrink-0" />}
@@ -316,7 +316,7 @@ export default function AppSidebar({
           );
         })()}
         {saveState && (
-          <div className="sb-label flex items-start gap-1.5 text-[10.5px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
+          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
@@ -344,7 +344,7 @@ export default function AppSidebar({
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
         </div>
-        <div className="flex items-center gap-2 text-[10.5px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>

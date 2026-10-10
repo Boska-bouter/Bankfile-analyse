@@ -20,10 +20,10 @@ export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, breakdow
       <h4 className="text-sm font-bold text-slate-900">Indicatieve vennootschapsbelasting {year}</h4>
 
       <div>
-        <p className="text-[11px] text-slate-400">Resultaat vóór Vpb</p>
+        <p className="text-xs text-slate-400">Resultaat vóór Vpb</p>
         <p className="text-xl font-bold text-slate-900">{eur(winst)}</p>
         {pct != null && (
-          <span className={`text-[11px] font-semibold ${pct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+          <span className={`text-xs font-semibold ${pct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
             {pct >= 0 ? "↑" : "↓"} {Math.abs(pct)}% t.o.v. vorig jaar
           </span>
         )}
@@ -59,12 +59,12 @@ export default function IndicatieveVpbCard({ year, winst, vpbIndicatie, breakdow
       </div>
 
       {vpbIndicatie.geëxtrapoleerd && (
-        <p className="text-[11px] text-slate-400">
+        <p className="text-xs text-slate-400">
           Vpb-tarief van {year} nog niet bekend — benaderd met het dichtstbijzijnde bekende tarief.
         </p>
       )}
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-xs text-slate-400">
         * Geen belastingadvies, alleen een indicatie op basis van de beschikbare bankgegevens.
       </p>
 

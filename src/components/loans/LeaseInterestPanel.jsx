@@ -37,11 +37,11 @@ function ContractTijdlijn({ segments, onOpen, indices }) {
   const status = (r) => (r.beeindigd ? "vroegtijdig gestopt" : r.eind < nu ? "afgelopen" : r.start > nu ? "nog niet gestart" : "loopt");
   return (
     <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
-      <p className="text-[11px] font-medium text-slate-500 mb-1.5">Contracten in volgorde</p>
+      <p className="text-xs font-medium text-slate-500 mb-1.5">Contracten in volgorde</p>
       <div className="space-y-1.5">
         {geldig.map((r) => (
           <button key={r.i} type="button" onClick={() => onOpen(r.i)} className="w-full text-left group" title="Dit contract openen in de stappen">
-            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
               <span className="truncate">
                 <strong>Contract {r.i + 1}</strong> · {fmt(r.start)} → {fmt(r.eind)}
                 {r.sg.maandbedrag ? ` · ${eur(Number(r.sg.maandbedrag))}/mnd` : ""}
@@ -183,7 +183,7 @@ function LeaseGroepPanel({
                   <button
                     key={l.key}
                     onClick={() => onMergeInto(l.key, group[0].key)}
-                    className="rounded-lg border border-blue-300 bg-white px-2 py-1 text-[11px] font-medium text-blue-800 hover:bg-blue-100"
+                    className="rounded-lg border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
                   >
                     Ja, "{l.name}" samenvoegen met "{group[0].name}"
                   </button>
@@ -215,28 +215,28 @@ function LeaseGroepPanel({
                   <div className="flex items-center gap-3 text-sm flex-wrap">
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{lease.name}</span>
                     {isBeeindigd && (
-                      <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[10px] font-medium">beëindigd</span>
+                      <span className="inline-flex items-center rounded-full bg-slate-200 text-slate-600 px-2 py-0.5 text-[11px] font-medium">beëindigd</span>
                     )}
                     {(aantalHier > 1 || gemengd) && (
-                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[10px] font-medium">{aantalHier} {aantalHier === 1 ? "contract" : "contracten"}{gemengd ? " in deze groep" : ""}</span>
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-[11px] font-medium">{aantalHier} {aantalHier === 1 ? "contract" : "contracten"}{gemengd ? " in deze groep" : ""}</span>
                     )}
                     {benamingen.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setToonBenamingen((v) => ({ ...v, [lease.key]: !v[lease.key] }))}
-                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-medium hover:bg-slate-200"
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[11px] font-medium hover:bg-slate-200"
                         title="Deze lease bestaat uit meerdere tegenpartij-benamingen die samen één contract vormen"
                       >
                         {benamingen.length + 1} benamingen {toonBenamingen[lease.key] ? "▴" : "▾"}
                       </button>
                     )}
                     {lease.handmatig ? (
-                      <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[10px] font-medium" title="Geen betalingen in de bankgegevens — handmatig toegevoegd">handmatig</span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[11px] font-medium" title="Geen betalingen in de bankgegevens — handmatig toegevoegd">handmatig</span>
                     ) : (
                       <span className="text-xs text-slate-400 font-mono">{lease.count}x, totaal {eur(lease.total)}</span>
                     )}
                     {(lease.handmatig || lease.splitVan || lease.absorbed) && onRemoveManualLease && (segments.length === 0 || lease.splitVan || lease.absorbed) && (
-                      <button onClick={() => onRemoveManualLease(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-red-600">Verwijderen</button>
+                      <button onClick={() => onRemoveManualLease(lease.key)} className="text-xs text-slate-400 underline decoration-dotted hover:text-red-600">Verwijderen</button>
                     )}
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
@@ -279,7 +279,7 @@ function LeaseGroepPanel({
                                 </button>
                               )}
                               {onOpenWizard && (
-                                <button onClick={() => onOpenModal(lease.key)} className="text-[11px] text-slate-400 underline decoration-dotted hover:text-slate-600">
+                                <button onClick={() => onOpenModal(lease.key)} className="text-xs text-slate-400 underline decoration-dotted hover:text-slate-600">
                                   Alles op één scherm
                                 </button>
                               )}
@@ -305,7 +305,7 @@ function LeaseGroepPanel({
                           <span>"{m.sourceName}"</span>
                           <button
                             onClick={() => onUndoMerge(m.sourceKey)}
-                            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                           >
                             Loskoppelen
                           </button>
@@ -340,7 +340,7 @@ function LeaseGroepPanel({
                     return afgelopen ? (
                       <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
                         Het laatste contract liep af op {afgelopen.eind} en er zijn geen nieuwe betalingen. Blijft het object in het bedrijf, of is het ingeleverd/verkocht?
-                        <button onClick={() => onOpenWizard(lease.key, { contract: afgelopen.contract, stap: "verloop" })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Beantwoorden</button>
+                        <button onClick={() => onOpenWizard(lease.key, { contract: afgelopen.contract, stap: "verloop" })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-xs font-medium">Beantwoorden</button>
                       </p>
                     ) : null;
                   })()}
@@ -350,14 +350,14 @@ function LeaseGroepPanel({
                         <strong>Betalingen gevonden voor "{lease.name}".</strong> Ik vond {lease.zoekKandidaten.length} betalingen aan een naam die hierop lijkt, die nu onder een andere categorie staan
                         ({[...new Set(lease.zoekKandidaten.map((tx) => tx.category))].slice(0, 3).join(", ")}) — mogelijk omdat bij het inlezen nog niet bekend was dat het om lease gaat. Zijn dit leasebetalingen?
                       </p>
-                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-[11px] text-blue-800">
+                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
                         {lease.zoekKandidaten.slice(0, 12).map((tx, i) => (
                           <li key={i}>{new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.counterparty || tx.description || "").slice(0, 50)}</li>
                         ))}
                       </ul>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <button onClick={() => onBehandelAlsLease(lease.zoekKandidaten, lease.key)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Ja, behandel als leasebetalingen</button>
-                        <button onClick={() => onWijsZoekAf?.(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] text-blue-900">Nee, geen lease</button>
+                        <button onClick={() => onBehandelAlsLease(lease.zoekKandidaten, lease.key)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs font-medium">Ja, behandel als leasebetalingen</button>
+                        <button onClick={() => onWijsZoekAf?.(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-xs text-blue-900">Nee, geen lease</button>
                       </div>
                     </div>
                   )}
@@ -367,14 +367,14 @@ function LeaseGroepPanel({
                         <strong>Bij welk contract horen deze betalingen?</strong> Er staan {lease.splitKandidaten.length} betalingen van ongeveer {eur(lease.splitBedrag)} bij het
                         bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan ik kan zien bij welk contract ze horen — dat bepaal jij.
                       </p>
-                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-[11px] text-blue-800">
+                      <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
                         {lease.splitKandidaten.slice(0, 12).map((tx, i) => (
                           <li key={i}>{new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.description || tx.counterparty || "").slice(0, 60)}</li>
                         ))}
                       </ul>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <button onClick={() => onKoppelBetalingen(lease.key, lease.splitKandidaten.map(txSleutel))} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Alle horen bij dit nieuwe contract</button>
-                        <button onClick={() => onWijsKandidatenAf(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] text-blue-900">Ze horen bij het bestaande contract</button>
+                        <button onClick={() => onKoppelBetalingen(lease.key, lease.splitKandidaten.map(txSleutel))} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs font-medium">Alle horen bij dit nieuwe contract</button>
+                        <button onClick={() => onWijsKandidatenAf(lease.key)} className="rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-xs text-blue-900">Ze horen bij het bestaande contract</button>
                       </div>
                     </div>
                   )}
@@ -386,7 +386,7 @@ function LeaseGroepPanel({
                     return nieuw ? (
                       <p className="mt-2 text-xs text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2.5 py-1.5 flex items-center gap-2 flex-wrap">
                         Sinds {nieuw.vanaf} {nieuw.aantal} betalingen buiten het ingevulde contract — lijkt een nieuw contract.
-                        <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-[11px] font-medium">Invullen</button>
+                        <button onClick={() => onOpenWizard(lease.key, { nieuw: true })} className="rounded-lg bg-teal-700 text-white px-2 py-0.5 text-xs font-medium">Invullen</button>
                       </p>
                     ) : null;
                   })()}
@@ -417,7 +417,7 @@ function LeaseGroepPanel({
                                     const k = txSleutel(tx);
                                     return (
                                       <li key={k}>
-                                        <label className="flex items-center gap-2 text-[11px] text-slate-700">
+                                        <label className="flex items-center gap-2 text-xs text-slate-700">
                                           <input type="checkbox" checked={!!koppelKeuze[k]} onChange={(e) => setKoppelKeuze((v) => ({ ...v, [k]: e.target.checked }))} />
                                           {new Date(tx.date).toLocaleDateString("nl-NL")} · {eur(Math.abs(tx.amount))} · {String(tx.description || tx.counterparty || "").slice(0, 60)}
                                         </label>
@@ -426,12 +426,12 @@ function LeaseGroepPanel({
                                   })}
                                 </ul>
                                 <div className="mt-1.5 flex gap-1.5">
-                                  <button onClick={() => { const sl = Object.keys(koppelKeuze).filter((k) => koppelKeuze[k]); if (sl.length) onKoppelBetalingen(lease.key, sl); setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-[11px] font-medium">Koppel geselecteerde betalingen</button>
-                                  <button onClick={() => { setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-600">Annuleren</button>
+                                  <button onClick={() => { const sl = Object.keys(koppelKeuze).filter((k) => koppelKeuze[k]); if (sl.length) onKoppelBetalingen(lease.key, sl); setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs font-medium">Koppel geselecteerde betalingen</button>
+                                  <button onClick={() => { setKoppelOpen(null); setKoppelKeuze({}); }} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-600">Annuleren</button>
                                 </div>
                               </div>
                             ) : (
-                              <button onClick={() => setKoppelOpen(lease.key)} className="mt-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Betalingen koppelen…</button>
+                              <button onClick={() => setKoppelOpen(lease.key)} className="mt-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Betalingen koppelen…</button>
                             )
                           )}
                         </div>

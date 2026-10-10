@@ -51,7 +51,7 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
               return (
                 <div key={activum.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
-                    <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}{activum.handmatig && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 align-middle">handmatig</span>}</span>
+                    <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}{activum.handmatig && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 align-middle">handmatig</span>}</span>
                     {!(activum.handmatig && !activum.tx.amount) && <span className="text-xs text-slate-400 font-mono">{eur(Math.abs(activum.tx.amount))}, {activum.tx.date.toLocaleDateString("nl-NL")}</span>}
                     {isOnbekend ? (
                       <button onClick={() => onUnmarkUnknown(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
@@ -92,7 +92,7 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
           {onAddManual && (
             <div className="mt-3">
               <button onClick={onAddManual} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100">+ Bedrijfsmiddel toevoegen</button>
-              <p className="mt-1.5 text-[11px] text-slate-400">Voor iets zonder bankbetaling in de geladen bestanden. Staat de betaling wél in de bank? Geef die dan de categorie "Zakelijk - apparatuur/machines", dan staat hij hier vanzelf (anders tel je hem dubbel).</p>
+              <p className="mt-1.5 text-xs text-slate-400">Voor iets zonder bankbetaling in de geladen bestanden. Staat de betaling wél in de bank? Geef die dan de categorie "Zakelijk - apparatuur/machines", dan staat hij hier vanzelf (anders tel je hem dubbel).</p>
             </div>
           )}
         </div>

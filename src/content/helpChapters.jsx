@@ -431,6 +431,18 @@ export const HELP_CHAPTERS = [
           zakelijk gebruikt" — controleer zo'n jaar even.
         </p>
         <p>
+          <strong>Btw bij privégebruik van een auto op de zaak</strong> — heb je btw op de auto afgetrokken (gekocht incl.
+          btw, of een financiële lease met een bedrag bij "Te betalen BTW"; bij operationele lease alleen als je dat zelf
+          aanvinkt), dan moet je in de laatste btw-aangifte van het jaar btw afdragen voor het privégebruik. De app
+          rekent standaard het forfait: 2,7% van de cataloguswaarde (incl. btw en bpm) per jaar, 1,5% vanaf het vijfde
+          jaar na de aanschaf, en in het eerste jaar naar rato van de maanden. Het bedrag is nooit hoger dan de btw die
+          je op onderhoud en gebruik hebt afgetrokken plus (tot en met het vierde jaar na aanschaf) 1/5 van de btw bij
+          aanschaf. Je ziet het terug bij Q4 in het btw-overzicht en het aangiftevoorstel. Per jaar kun je kiezen voor
+          werkelijk privégebruik of geen correctie (bij "Auto op de zaak" voor gekocht of operationele lease). Bij een
+          privéauto of zonder btw-aftrek is er geen correctie. Alleen voor een zzp; bron: Belastingdienst, "Privégebruik
+          auto van de zaak".
+        </p>
+        <p>
           Zijn er dat jaar transacties in "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)",
           dan staat hier ook per categorie het percentage zakelijk gebruik, net als bij huur. Leeg betekent 100%.
         </p>
