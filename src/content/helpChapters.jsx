@@ -195,14 +195,22 @@ export const HELP_CHAPTERS = [
     groep: "overzicht",
     titel: "BTW-aangifte per kwartaal (netto/bruto)",
     inhoud: (
+      <div className="space-y-2">
       <p>
         De omzet- en kostenbedragen staan <strong>netto</strong> (excl. BTW, zoals je ze invult bij de aangifte), met
         het werkelijke bankbedrag (bruto, incl. BTW) er in klein grijs tussen haakjes onder — zo kun je het altijd
         terugrekenen naar wat er op de bank stond. De BTW-kolommen ernaast laten zien hoeveel dat is, uitgesplitst
-        naar 21% en 9%. Verschuldigde BTW wordt alleen berekend over de omzet ("Zakelijke inkomsten"). Voorbelasting
+        naar 21% en 9%. 
+        </p>
+        <p>
+          Verschuldigde BTW wordt alleen berekend over de omzet ("Zakelijke inkomsten"). Voorbelasting
         is de BTW over alle overige zakelijke uitgaven, die je mag aftrekken, behalve van categorieën die je zelf hebt
-        uitgesloten bij de BTW-instellingen. BTW-verlegde bedragen staan apart van omzet tegen 21% of 9%.
+        uitgesloten bij de BTW-instellingen. 
+        </p>
+        <p>
+          BTW-verlegde bedragen staan apart van omzet tegen 21% of 9%.
       </p>
+      </div>
     ),
   },
   {
@@ -210,15 +218,26 @@ export const HELP_CHAPTERS = [
     groep: "overzicht",
     titel: "Detailtabel",
     inhoud: (
+      <div className="space-y-2">
       <p>
         Categorie is direct als dropdown aanpasbaar — een wijziging geldt meteen voor alle transacties van
         dezelfde tegenpartij, in alle jaren (tenzij er geen bruikbare naam is, dan alleen voor die ene transactie).
-        Klik op de tegenpartij of omschrijving om de volledige tekst te zien. Het type (Zakelijk/Privé) staat er
+        
+        </p>
+        <p>
+          Klik op de tegenpartij of omschrijving om de volledige tekst te zien. 
+        </p>
+        <p>
+          Het type (Zakelijk/Privé) staat er
         alleen ter info bij: dat volgt altijd het bankbestand waaruit de transactie is ingelezen en is bewust niet
-        los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. Gebruik de filters
+        los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. 
+        </p>
+        <p>
+          Gebruik de filters
         op bedrag en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte
         te bekijken.
       </p>
+      </div>
     ),
   },
   {
@@ -359,7 +378,10 @@ export const HELP_CHAPTERS = [
           pinbetaling en komt in dezelfde categorie als de uitgave (bijv. een Jumbo-retour onder Boodschappen). Een
           bijschrijving met "storno", "terugboeking", "restitutie" of "terugbetaling" krijgt de categorie van de
           partij als die herkend wordt (of van de eerdere afschrijving die je zelf al hebt ingedeeld), anders "Overig"
-          ter beoordeling. Een geldstorting bij de Geldmaat telt niet als retour. Een
+          ter beoordeling. 
+        </p>
+        <p>
+          Een geldstorting bij de Geldmaat telt niet als retour. Een
           pinbetaling wordt nooit als "persoon" aangemerkt.
         </p>
         <p>
@@ -545,12 +567,21 @@ export const HELP_CHAPTERS = [
           Betreft het financiële leasecontract een <strong>auto of machine</strong>, dan is het geleasde object
           fiscaal een eigen bedrijfsmiddel — net als bij een gewone aanschaf (zie ook "Activa (bedrijfsmiddelen) —
           afschrijving") wordt dat gekapitaliseerd en afgeschreven, los van de rente/aflossing-splitsing hierboven.
+          
+        </p>
+        <p>
           Vul daarvoor bij het contract "Soort" (Auto of Machine/overig) in, met de afschrijvingstermijn (voor een
           auto minimaal 5 jaar) en optioneel de <strong>restwaarde</strong> — de verwachte waarde aan het einde van
           de afschrijvingstermijn (bij een lease-object met een aanzienlijke eindbetaling is dat vaak niet nul).
+          
+        </p>
+        <p>
           Leeg betekent restwaarde €0 (volledig afschrijven), zoals voorheen — een bestaand contract zonder dit veld
           rekent dus ongewijzigd door. De aanschafwaarde wordt automatisch het gefinancierde bedrag bij aanvang van
-          dít contract. Laat "Soort" op "Niet ingevuld" staan om de oude berekening (alleen rente aftrekbaar,
+          dít contract. 
+        </p>
+        <p>
+          Laat "Soort" op "Niet ingevuld" staan om de oude berekening (alleen rente aftrekbaar,
           geen afschrijving) ongewijzigd te laten — dat blijft de standaard voor elk bestaand contract.
         </p>
         <p>
@@ -595,11 +626,17 @@ export const HELP_CHAPTERS = [
         <p>
           Categorie "Leningen" is altijd 0% BTW — een lening is geen omzet of kost waar BTW op zit. De{" "}
           <strong>rente</strong> die je over een lening betaalt, is wél aftrekbaar van de winst voor de
-          inkomstenbelasting; de <strong>aflossing</strong> van de hoofdsom niet. Bij "Rentepercentage per lening"
+          inkomstenbelasting; de <strong>aflossing</strong> van de hoofdsom niet. 
+        </p>
+        <p>
+          Bij "Rentepercentage per lening"
           kun je per lening de volledige gegevens invullen: leningbedrag (het oorspronkelijk geleende bedrag),
           startdatum en rentepercentage per jaar. Zodra die drie bekend zijn, rekent de app voor elke betaling terug
           hoeveel rente was en hoeveel aflossing — startend vanaf het leningbedrag op de startdatum, en steeds het
-          nog openstaande bedrag bijwerkend na elke betaling. Dat werkt ook gewoon bij onregelmatige betalingen (een
+          nog openstaande bedrag bijwerkend na elke betaling. 
+        </p>
+        <p>
+          Dat werkt ook gewoon bij onregelmatige betalingen (een
           maand overslaan, een keer extra aflossen) — er wordt geen vast schema aangenomen, alleen de daadwerkelijke
           betalingen uit de bank tellen.
         </p>
@@ -628,14 +665,22 @@ export const HELP_CHAPTERS = [
     groep: "instellingen",
     titel: "BTW-percentages",
     inhoud: (
+      <div className="space-y-2">
       <p>
         Het bankbedrag is altijd inclusief BTW — de app rekent 'm er automatisch uit op basis van het percentage per
-        categorie. Alleen van toepassing op Zakelijke transacties. Standaard staat alles op 21% (Reiskosten OV op 9%), met
+        categorie. Alleen van toepassing op Zakelijke transacties. 
+        </p>
+        <p>
+          Standaard staat alles op 21% (Reiskosten OV op 9%), met
         uitzondering van categorieën waar geen BTW op zit: Bankkosten, alle Belastingen en Gemeentelijke kosten, alle
         Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Prive opnames/Ontvangen van zakelijk,
-        interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. Inhuur personeel
+        interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. 
+        </p>
+        <p>
+          Inhuur personeel
         staat juist op 21% (een freelancer factureert normaal met BTW). Per categorie aan te passen.
       </p>
+      </div>
     ),
   },
   {
@@ -643,15 +688,26 @@ export const HELP_CHAPTERS = [
     groep: "instellingen",
     titel: "Tegenpartijregels",
     inhoud: (
+      <div className="space-y-2">
       <p>
         Elke keer dat je in de detailtabel een categorie of type corrigeert, onthoudt de app dat voortaan voor
-        diezelfde tegenpartij — in alle jaren. Ontvangen en betaalde bedragen worden apart onthouden: een
-        correctie op de uitgaven bij een winkel geldt dus niet automatisch voor een terugbetaling van diezelfde winkel. Bevat het bankbestand een tegenrekening-IBAN, dan wordt die als sleutel
+        diezelfde tegenpartij — in alle jaren. 
+        </p>
+        <p>
+          Ontvangen en betaalde bedragen worden apart onthouden: een
+        correctie op de uitgaven bij een winkel geldt dus niet automatisch voor een terugbetaling van diezelfde winkel. 
+        </p>
+        <p>
+          Bevat het bankbestand een tegenrekening-IBAN, dan wordt die als sleutel
         gebruikt in plaats van de naam: dat is stabieler, want een bank kan dezelfde rekening de ene keer "KPN B.V."
         en de andere keer "KPN Mobile" noemen, terwijl het rekeningnummer gelijk blijft. Zonder IBAN in het
-        bankbestand wordt de (genormaliseerde) naam gebruikt. Een regel verwijderen laat de betrokken transacties
+        bankbestand wordt de (genormaliseerde) naam gebruikt. 
+        </p>
+        <p>
+          Een regel verwijderen laat de betrokken transacties
         terugvallen op de automatische classificatie.
       </p>
+      </div>
     ),
   },
   {
