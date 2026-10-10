@@ -95,7 +95,6 @@ import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSi
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
 import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.jsx";
 import { estimateVpb } from "./tax/vpb.js";
-import JaarSwipe from "./components/shared/JaarSwipe.jsx";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
@@ -3544,9 +3543,7 @@ export default function App() {
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
-          <JaarSwipe years={years} year={activeYear} onSelectYear={setActiveYear}>
-            <SectionCardGrid cards={controlerenCardGroups} onOpenHelp={setHelpPopupChapter} />
-          </JaarSwipe>
+          <SectionCardGrid cards={controlerenCardGroups} onOpenHelp={setHelpPopupChapter} swipe={{ years, year: activeYear, onSelectYear: setActiveYear }} />
         </div>
 
         {/* v230 — Importcontrole stond eerst op Overzicht, hoort inhoudelijk beter bij de andere
@@ -3721,9 +3718,7 @@ export default function App() {
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("instellingen")}>
-          <JaarSwipe years={years} year={activeYear} onSelectYear={setActiveYear}>
-            <SectionCardGrid cards={instellingenCardGroups} onOpenHelp={setHelpPopupChapter} />
-          </JaarSwipe>
+          <SectionCardGrid cards={instellingenCardGroups} onOpenHelp={setHelpPopupChapter} swipe={{ years, year: activeYear, onSelectYear: setActiveYear }} />
         </div>
 
         {/* Op verzoek (v281) staat dit alleen nog binnen de uitgeklapte kaart "Tegenpartijen" (zie

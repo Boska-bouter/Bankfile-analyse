@@ -87,6 +87,7 @@ export default function DetailsPanel({
     drag.current = null;
     if (!kanVegen || e.touches.length !== 1) return;
     const t = e.target;
+    if (!contentRef.current?.parentElement?.contains(t)) return; // alleen een veeg binnen het inhoudsvenster, niet op de kop/tabbladen
     if (t.closest && t.closest("input, select, textarea")) return;
     if (zijdelingsScrollbaar(t)) return;
     drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, dx: 0 };

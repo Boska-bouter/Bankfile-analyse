@@ -344,7 +344,7 @@ export default function AppSidebar({
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
         </div>
-        <div className="flex items-center gap-2 text-[10.5px] text-slate-500" title="Privacy & beveiliging: uw gegevens blijven lokaal in deze browser">
+        <div className="flex items-center gap-2 text-[10.5px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
