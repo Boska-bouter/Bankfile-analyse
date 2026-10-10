@@ -6,7 +6,7 @@ export default function WijzigingslogModal({ log, kanLaatsteTerugdraaien, laatst
   const fmt = (t) => new Date(t).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[85dvh] flex flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h3 className="font-bold text-slate-900">Wijzigingslog</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>

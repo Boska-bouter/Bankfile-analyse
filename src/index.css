@@ -39,3 +39,8 @@ select {
 .sb-collapsed .sb-label { display: none; }
 .sb-collapsed .sb-btn { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
 .sb-collapsed .sb-badge { position: absolute; margin-left: 1.1rem; margin-top: -1.1rem; }
+
+/* Vensters (modals): hoogte van het écht zichtbare scherm (iPad/Safari: 100vh is hoger dan wat je ziet), en de vaste
+   onderbalk (Hulpvraag/Categorieën) verdwijnt zolang een venster open staat, zodat hij de onderkant niet bedekt. */
+.fixed.inset-0.bg-slate-900\/50 { height: 100vh; height: 100dvh; }
+body:has(.fixed.inset-0.bg-slate-900\/50) .onderbalk { display: none; }

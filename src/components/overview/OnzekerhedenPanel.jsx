@@ -19,7 +19,7 @@ export default function OnzekerhedenPanel({ heeftVoorraad }) {
       </p>
       {open && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={() => setOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0 rounded-t-xl">
               <p className="text-sm font-semibold text-slate-800">Wat deze app niet kan weten</p>
               <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 shrink-0">

@@ -209,7 +209,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90dvh] flex flex-col">
         <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white rounded-t-xl shrink-0">
           <button
             type="button"
