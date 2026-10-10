@@ -249,7 +249,7 @@ export default function AangifteStatusBar({
                 {onConfirmCorrect && (
                   <button
                     onClick={() => checklistData.inkomstenZonderOmschrijving.forEach((tx) => onConfirmCorrect(tx))}
-                    className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:bg-emerald-50"
+                    className="rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
                   >
                     Ja, allemaal zakelijk
                   </button>
@@ -262,7 +262,7 @@ export default function AangifteStatusBar({
                     {onRequestChange && (
                       <button
                         onClick={() => onRequestChange(tx, { category: "Overig", type: tx.type })}
-                        className="shrink-0 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100"
+                        className="shrink-0 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100"
                         title="Toch niet zakelijk? Zet 'm op Overig, voor verdere beoordeling."
                       >
                         Toch niet zakelijk

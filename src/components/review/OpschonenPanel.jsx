@@ -145,15 +145,15 @@ export default function OpschonenPanel({
                         <span className="text-slate-400"> — {group.length}x</span>
                       </p>
                       <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
-                        <button onClick={() => onShowDuplicateDetailGroup(group)} className="text-[11px] font-medium text-amber-900 underline hover:no-underline">
+                        <button onClick={() => onShowDuplicateDetailGroup(group)} className="text-xs font-medium text-amber-900 underline hover:no-underline">
                           Bekijk originele regels
                         </button>
                         {removedGroup ? (
-                          <button onClick={() => onRestoreDuplicateGroup(group)} className="text-[11px] font-medium text-emerald-700 underline hover:no-underline">
+                          <button onClick={() => onRestoreDuplicateGroup(group)} className="text-xs font-medium text-emerald-700 underline hover:no-underline">
                             Ongedaan maken
                           </button>
                         ) : (
-                          <button onClick={() => onRemoveDuplicateGroup(group)} className="text-[11px] font-medium text-rose-700 underline hover:no-underline">
+                          <button onClick={() => onRemoveDuplicateGroup(group)} className="text-xs font-medium text-rose-700 underline hover:no-underline">
                             Verwijderen
                           </button>
                         )}
@@ -200,7 +200,7 @@ export default function OpschonenPanel({
                   {showConfirmedSeparateDuplicates && (
                     <div className="px-3 pb-2 space-y-1.5">
                       {confirmedSeparateGroups.map((group) => (
-                        <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-[11px] text-emerald-800">
+                        <div key={group[0].fingerprint} className="flex items-center justify-between gap-2 text-xs text-emerald-800">
                           <span>
                             {group[0].date.toLocaleDateString("nl-NL")} · {eur(group[0].amount)} ·{" "}
                             {group[0].counterparty || group[0].description || "(geen omschrijving)"} — {group.length}x

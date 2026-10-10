@@ -100,10 +100,10 @@ export default function RecurringPaymentsPanel({ classified, activeYear, onOpenH
                     <tr key={`${r.name}-${r.type}-${i}`}>
                       <td className="py-1.5 pr-4 max-w-[12rem] truncate" title={r.name}>{r.name}</td>
                       <td className="py-1.5 px-3">
-                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium ${r.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{r.type}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${r.type === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{r.type}</span>
                       </td>
                       <td className="py-1.5 px-3">
-                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[displayCategory(r.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(r.category)}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(r.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(r.category)}</span>
                       </td>
                       <td className="py-1.5 px-3 text-right font-mono whitespace-nowrap">
                         {r.betaaldCount > 0 && <div>Betaald: {eur(Math.abs(r.totaalBetaald))} <span className="text-slate-400">(gem. {eur(Math.abs(r.gemBetaald))})</span></div>}

@@ -69,9 +69,9 @@ export default function UncertainTransactionsModal({
             {g ? g.naam : (tx.counterparty || tx.description || "(geen omschrijving)")}
             {meer && <span className="ml-1.5 font-normal text-slate-500">· {g.txs.length} transacties</span>}
           </p>
-          <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
-          <p className="text-[10px] text-slate-400 font-mono select-all">Tegenrekening: {tx.counterpartyIban || "—"}</p>
-          <p className="text-[10px] text-slate-400">
+          <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
+          <p className="text-[11px] text-slate-400 font-mono select-all">Tegenrekening: {tx.counterpartyIban || "—"}</p>
+          <p className="text-[11px] text-slate-400">
             {tx.date.toLocaleDateString("nl-NL")} · {tx.confidence.label}
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function UncertainTransactionsModal({
         </span>
         {tx.transferLocked ? (
           <span
-            className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-[11px] font-medium cursor-help"
+            className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-xs font-medium cursor-help"
             title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."
           >
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(tx.category)}
@@ -89,7 +89,7 @@ export default function UncertainTransactionsModal({
           <select
             value={mainCategoryOf(tx.category)}
             onChange={(e) => onRequestChange(tx, { category: categoryForMainChange(e.target.value, tx.category), type: tx.type })}
-            className={`shrink-0 rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
+            className={`shrink-0 rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
           >
             {MAIN_CATEGORY_ALFA.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -99,7 +99,7 @@ export default function UncertainTransactionsModal({
           <select
             value={displayCategory(tx.category)}
             onChange={(e) => onRequestChange(tx, { category: storedCategoryForChoice(e.target.value, tx.category), type: tx.type })}
-            className="shrink-0 rounded-md border border-slate-300 px-1.5 py-1 text-[10px] max-w-[8rem]"
+            className="shrink-0 rounded-md border border-slate-300 px-1.5 py-1 text-[11px] max-w-[8rem]"
             title="Subtype (bepaalt BTW-percentage en vast/variabel)"
           >
             {subtypeChoicesFor(mainCategoryOf(tx.category)).map((s) => (
@@ -111,7 +111,7 @@ export default function UncertainTransactionsModal({
             <select
               value={tx.category}
               onChange={(e) => onRequestChange(tx, { category: e.target.value, type: tx.type })}
-              className="shrink-0 rounded-md border border-slate-200 px-1.5 py-1 text-[10px] text-slate-500 max-w-[7rem]"
+              className="shrink-0 rounded-md border border-slate-200 px-1.5 py-1 text-[11px] text-slate-500 max-w-[7rem]"
               title="Soort — bepaalt het zakelijke percentage per soort"
             >
               {soortenVoor(tx.category).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
@@ -119,14 +119,14 @@ export default function UncertainTransactionsModal({
           )}
         </>)}
         <span
-          className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-[11px] font-medium cursor-help ${(tx.accountType || tx.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+          className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-xs font-medium cursor-help ${(tx.accountType || tx.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
           title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen en kan niet los worden aangepast."
         >
           {(tx.accountType || tx.type) === "Prive" ? "Privé" : (tx.accountType || tx.type)}
         </span>
         <button
           onClick={() => (meer ? onConfirmAll(g.txs) : onConfirmCorrect(tx))}
-          className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[10px] font-medium hover:bg-emerald-100"
+          className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[11px] font-medium hover:bg-emerald-100"
           title={meer ? `Klopt zo — bevestig alle ${g.txs.length} transacties van deze groep` : "Klopt zo — markeer als bevestigd (wordt voortaan 🟢)"}
         >
           <Check className="h-3 w-3" /> {meer ? `Klopt (${g.txs.length})` : "Klopt"}
@@ -255,12 +255,12 @@ export default function UncertainTransactionsModal({
                     <div className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
                       <div className="flex-1 min-w-[9rem]">
                         <p className="font-medium">{g.naam} <span className="font-normal text-slate-500">· {g.txs.length} transacties ▾</span></p>
-                        <p className="text-[10px] text-slate-400">Geschat als "Winkels divers" — klik om de transacties één voor één te bekijken of aan te passen</p>
+                        <p className="text-[11px] text-slate-400">Geschat als "Winkels divers" — klik om de transacties één voor één te bekijken of aan te passen</p>
                       </div>
                       <span className="shrink-0 font-mono text-slate-500 w-24 text-right">{eur(g.totaal)}</span>
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onConfirmAll(g.txs); }}
-                        className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[10px] font-medium hover:bg-emerald-100"
+                        className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[11px] font-medium hover:bg-emerald-100"
                       >
                         <Check className="h-3 w-3" /> Alles klopt ({g.txs.length})
                       </button>
@@ -268,7 +268,7 @@ export default function UncertainTransactionsModal({
                   </summary>
                   <div className="bg-slate-50/60 divide-y divide-slate-100 border-t border-slate-100">
                     {g.txs.slice(0, 100).map((tx) => renderRow(tx, null))}
-                    {g.txs.length > 100 && <p className="p-2 text-[10px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
+                    {g.txs.length > 100 && <p className="p-2 text-[11px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
                   </div>
                 </details>
               ) : renderRow(g.eerste, g))}

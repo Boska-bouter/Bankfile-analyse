@@ -32,12 +32,12 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
               <div key={t.id} className="flex items-center gap-2 p-2 text-xs">
                 <div className="flex-1 min-w-0">
                   <p className="truncate">{t.counterparty || t.description || "(geen omschrijving)"}</p>
-                  <ExpandableDescription tx={t} className="text-[10px] text-slate-400" />
+                  <ExpandableDescription tx={t} className="text-[11px] text-slate-400" />
                 </div>
                 <span className="shrink-0 font-mono text-slate-400">{eur(t.amount)}</span>
               </div>
             ))}
-            {matches.length > 10 && <p className="p-2 text-[10px] text-slate-400">en {matches.length - 10} andere...</p>}
+            {matches.length > 10 && <p className="p-2 text-[11px] text-slate-400">en {matches.length - 10} andere...</p>}
           </div>
           <p>Nu meteen zo indelen en de gegevens invullen?</p>
         </div>

@@ -3124,7 +3124,7 @@ export default function App() {
               oude dossier in deze browser overschreven.
             </p>
           )}
-          <p className="text-[11px] text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
             <br />
             <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
@@ -3291,7 +3291,7 @@ export default function App() {
             <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-teal-100">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-teal-100">
                     {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
                   </div>
                   <div className="truncate text-base font-bold">

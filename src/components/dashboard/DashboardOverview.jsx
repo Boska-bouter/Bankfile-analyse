@@ -45,7 +45,7 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
               }`}
               title={card.hint}
             >
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
                 {card.icon}
                 <span>{card.title}</span>
               </div>
@@ -61,7 +61,7 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
                       krimpen. Voor de bestaande korte labels (IB/Zvw) oogt dit nauwelijks anders. */}
                   {card.lines.map((l) => (
                     <div key={l.label}>
-                      <div className="text-[10px] text-slate-500 leading-tight">{l.label}</div>
+                      <div className="text-[11px] text-slate-500 leading-tight">{l.label}</div>
                       <div className={`text-sm font-semibold tabular-nums leading-tight ${TONE_VALUE[tone]}`}>{metBolletjes(l.value)}</div>
                     </div>
                   ))}
@@ -69,13 +69,13 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
               ) : (
                 <div className={`mt-1 text-2xl font-semibold leading-tight ${TONE_VALUE[tone]}`}>{typeof card.value === "string" ? metBolletjes(card.value) : card.value}</div>
               )}
-              {card.subtitle && <div className="mt-0.5 text-[11px] text-slate-500 leading-snug">{metBolletjes(card.subtitle)}</div>}
+              {card.subtitle && <div className="mt-0.5 text-xs text-slate-500 leading-snug">{metBolletjes(card.subtitle)}</div>}
               {/* v258 — punt 11 uit de ChatGPT-aanbevelingen: "status → korte uitleg → actieknop".
                   Gericht toegepast op kaarten die al een compleet/onvolledig-telling hebben (Leningen,
                   Lease, Activa) i.p.v. op alle kaarten — voor een cijfer- of bedragkaart (Resultaat,
                   IB/Zvw) voegt een actieknop niets toe, die tonen geen actionLabel. */}
               {card.actionLabel && (
-                <div className={`mt-1.5 text-[11px] font-semibold ${TONE_VALUE[tone]}`}>{card.actionLabel} →</div>
+                <div className={`mt-1.5 text-xs font-semibold ${TONE_VALUE[tone]}`}>{card.actionLabel} →</div>
               )}
             </button>
           );

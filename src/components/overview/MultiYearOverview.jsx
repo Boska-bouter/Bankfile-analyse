@@ -187,7 +187,7 @@ export default function MultiYearOverview({
                       {!prev ? (
                         <span className="text-slate-300">—</span>
                       ) : !beideJarenVolledig ? (
-                        <span className="text-slate-400 text-[10px]">— (jaar niet compleet)</span>
+                        <span className="text-slate-400 text-[11px]">— (jaar niet compleet)</span>
                       ) : Math.abs(trendDelta) < 1 ? (
                         <span className="text-slate-500">≈ gelijk aan vorig jaar</span>
                       ) : trendDelta > 0 ? (

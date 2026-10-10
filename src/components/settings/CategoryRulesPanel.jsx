@@ -96,7 +96,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                             <button onClick={() => toggleCard(r.name)} className="w-full flex items-center justify-between gap-2 p-3 text-left">
                               <span className="flex items-center gap-2 min-w-0">
                                 <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate ${r.color}`}>{r.name}</span>
-                                <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap">{r.keywords.length} zoekwoord{r.keywords.length === 1 ? "" : "en"}</span>
+                                <span className="text-[11px] text-slate-400 shrink-0 whitespace-nowrap">{r.keywords.length} zoekwoord{r.keywords.length === 1 ? "" : "en"}</span>
                               </span>
                               {isOpenCard ? <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                             </button>

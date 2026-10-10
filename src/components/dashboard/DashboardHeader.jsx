@@ -97,17 +97,17 @@ export default function DashboardHeader({
                   <div className="flex items-start gap-1.5">
                     <span className="mt-1 rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
                     <div className="flex flex-col leading-tight">
-                      <span className="text-[11px] text-slate-400">Hele dossier · {pct}%</span>
+                      <span className="text-xs text-slate-400">Hele dossier · {pct}%</span>
                       <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
                         {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
                       </span>
-                      {heeftOpenPunten && openBreakdown && <span className="text-[10.5px] text-slate-400">{openBreakdown}</span>}
+                      {heeftOpenPunten && openBreakdown && <span className="text-[11px] text-slate-400">{openBreakdown}</span>}
                     </div>
                   </div>
                   <div className="flex items-start gap-1.5">
                     <span className="mt-1 rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
                     <div className="flex flex-col leading-tight">
-                      <span className="text-[11px] text-slate-400">{yearRing.jaar} · {yearRing.pct}%</span>
+                      <span className="text-xs text-slate-400">{yearRing.jaar} · {yearRing.pct}%</span>
                       <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
                         {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
                       </span>
@@ -125,10 +125,10 @@ export default function DashboardHeader({
                     <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
                       {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
                     </span>
-                    <span className="text-[10.5px] text-slate-400">{heeftOpenPunten && openBreakdown ? openBreakdown : `${pct}% verwerkt`}</span>
+                    <span className="text-[11px] text-slate-400">{heeftOpenPunten && openBreakdown ? openBreakdown : `${pct}% verwerkt`}</span>
                   </>
                 ) : (
-                  <span className="text-[11px] text-slate-400">{pct >= 100 ? "gegevens compleet" : "gegevens nog niet compleet"}</span>
+                  <span className="text-xs text-slate-400">{pct >= 100 ? "gegevens compleet" : "gegevens nog niet compleet"}</span>
                 )}
               </div>
             </div>
@@ -138,7 +138,7 @@ export default function DashboardHeader({
               <ProgressGauge pct={0} accent="#CBD5E1" label="–" />
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
-                <span className="text-[11px] text-slate-400">nog geen data</span>
+                <span className="text-xs text-slate-400">nog geen data</span>
               </div>
             </div>
           )}
@@ -183,16 +183,16 @@ export default function DashboardHeader({
               className={`flex flex-col items-start gap-1 text-left ${werkelijkItems?.length ? "cursor-pointer" : "cursor-default"}`}
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
-              <span className="text-[11px] font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· IB · Zvw · BTW</span></span>
+              <span className="text-xs font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· IB · Zvw · BTW</span></span>
               <span className="flex items-center gap-2">
                 {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
                 <span className="text-xs text-slate-500 whitespace-nowrap">{werkelijkTekst}</span>
-                {werkelijkItems?.length > 0 && <span className="text-[11px] text-teal-700 underline">welke?</span>}
+                {werkelijkItems?.length > 0 && <span className="text-xs text-teal-700 underline">welke?</span>}
               </span>
             </button>
             {toonAangiftes && werkelijkItems?.length > 0 && (
               <div className="absolute right-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">Aangiftes dit jaar</p>
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Aangiftes dit jaar</p>
                 <ul className="space-y-1">
                   {[...werkelijkItems].sort((a, b) => Number(a.done) - Number(b.done)).map((it, i) => (
                     <li key={i}>

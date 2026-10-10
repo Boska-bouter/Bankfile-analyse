@@ -22,13 +22,13 @@ export default function StickyYearNav({ years, activeYear, onSelectYear, yearlyP
           <button
             key={year}
             onClick={() => onSelectYear(year)}
-            className={`shrink-0 flex flex-col items-center rounded-lg px-1.5 sm:px-2 py-1.5 text-[11px] sm:text-xs font-medium leading-tight ${
+            className={`shrink-0 flex flex-col items-center rounded-lg px-1.5 sm:px-2 py-1.5 text-xs sm:text-xs font-medium leading-tight ${
               year === activeYear ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
             title={`Jaar ${year}${yp ? ` — ${yp.pct}% klaar. ${STATUS_LABEL[yp.status]}` : ""}`}
           >
             <span>{yp?.status && <span className="mr-0.5">{metBolletjes(STATUS_EMOJI[yp.status])}</span>}{year}</span>
-            {yp && <span className="tabular-nums opacity-80 text-[9px] sm:text-[10px]">{yp.pct}%</span>}
+            {yp && <span className="tabular-nums opacity-80 text-[11px] sm:text-[11px]">{yp.pct}%</span>}
           </button>
         );
       })}

@@ -196,11 +196,11 @@ export default function SetupWizardModal({
           <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
             <div className="h-full bg-white/80" style={{ width: `${Math.round((doneIds.size / Math.max(initialSteps.length, 1)) * 100)}%` }} />
           </div>
-          <button type="button" onClick={() => setShowStepList((v) => !v)} className="mt-1.5 text-[11px] text-teal-100 hover:text-white underline decoration-dotted">
+          <button type="button" onClick={() => setShowStepList((v) => !v)} className="mt-1.5 text-xs text-teal-100 hover:text-white underline decoration-dotted">
             {showStepList ? "Overzicht verbergen" : `Alle schermen (${Math.max(initialSteps.length - doneIds.size, 0)} nog open)`}
           </button>
           {showStepList && (
-            <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+            <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
               {initialSteps.map((id) => (
                 <li key={id} className={`flex items-center gap-1 truncate ${id === currentStepId ? "font-semibold text-white" : doneIds.has(id) ? "text-teal-100" : "text-teal-200/70"}`}>
                   {doneIds.has(id) ? <Check className="h-3 w-3 shrink-0" /> : <span className="inline-block h-3 w-3 shrink-0 text-center leading-3">{id === currentStepId ? "›" : "·"}</span>}
@@ -219,7 +219,7 @@ export default function SetupWizardModal({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {["CSV", "XLS / XLSX", "MT940 (.sta / .940)", "CAMT.053 (.xml)"].map((f) => (
-                  <span key={f} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">{f}</span>
+                  <span key={f} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{f}</span>
                 ))}
               </div>
               <button
@@ -392,15 +392,15 @@ function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [], dubbelT
       )}
       {open.length > 0 && !vol && (
         <div className="space-y-1">
-          <p className="text-[11px] text-slate-400">Gevonden in je bankdata — klik om toe te voegen:</p>
+          <p className="text-xs text-slate-400">Gevonden in je bankdata — klik om toe te voegen:</p>
           <div className="flex flex-wrap gap-1.5">
             {open.map((s) => (
-              <button key={s.naam} type="button" onClick={() => voeg(s.naam)} className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-[11px] text-teal-800 hover:bg-teal-100">
+              <button key={s.naam} type="button" onClick={() => voeg(s.naam)} className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs text-teal-800 hover:bg-teal-100">
                 + {s.naam} <span className="text-teal-600">({s.count}×)</span>
               </button>
             ))}
             {open.length > 1 && (
-              <button type="button" onClick={() => onChange([...lijst, ...open.map((s) => s.naam)].slice(0, max ?? 99))} className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-slate-50">
+              <button type="button" onClick={() => onChange([...lijst, ...open.map((s) => s.naam)].slice(0, max ?? 99))} className="rounded-full border border-slate-300 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50">
                 Alles overnemen
               </button>
             )}
@@ -618,7 +618,7 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
               + Toevoegen
             </button>
           </div>
-          <p className="text-[11px] text-slate-400">Meerdere rekeningen? Klik na elke rekening op <strong>"+ Toevoegen"</strong>.</p>
+          <p className="text-xs text-slate-400">Meerdere rekeningen? Klik na elke rekening op <strong>"+ Toevoegen"</strong>.</p>
         </Sectie>
       )}
 
@@ -976,7 +976,7 @@ function Scherm35({
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
             {aovSug.length > 0 && !t.aovNaam && (
-              <p className="text-[11px] text-slate-400">Gevonden in je bankdata: {aovSug.map((s) => `${s.naam} (${s.count}×)`).join(", ")}</p>
+              <p className="text-xs text-slate-400">Gevonden in je bankdata: {aovSug.map((s) => `${s.naam} (${s.count}×)`).join(", ")}</p>
             )}
           </JaNee>
         </Sectie>

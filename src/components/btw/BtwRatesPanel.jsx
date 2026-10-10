@@ -104,7 +104,7 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
                         <span className={`rounded-md px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
                           {main} <span className="opacity-60">({subtypes.length})</span>
                         </span>
-                        <span className="ml-auto text-[11px] text-slate-400 shrink-0 font-mono">
+                        <span className="ml-auto text-xs text-slate-400 shrink-0 font-mono">
                           0%: {perTarief[0]} · 9%: {perTarief[9]} · 21%: {perTarief[21]}
                         </span>
                         {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
@@ -118,7 +118,7 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
                               <div key={c} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
                                 <span className="min-w-0 flex flex-col">
                                   <span className={`rounded-md px-2 py-0.5 text-xs font-medium truncate ${CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
-                                  <span className="mt-0.5 px-2 text-[11px] text-slate-400 font-mono">
+                                  <span className="mt-0.5 px-2 text-xs text-slate-400 font-mono">
                                     {(() => { const n = telPerCategorie[c] || 0; const t = tariefVan(c); return `0%: ${t === 0 ? n : 0} · 9%: ${t === 9 ? n : 0} · 21%: ${t === 21 ? n : 0}`; })()}
                                   </span>
                                 </span>

@@ -48,7 +48,7 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
             </button>
           ))}
           {items.length > 5 && (
-            <span className="pt-1.5 text-[11px] font-medium text-slate-400">+ {items.length - 5} meer</span>
+            <span className="pt-1.5 text-xs font-medium text-slate-400">+ {items.length - 5} meer</span>
           )}
         </div>
       ) : (

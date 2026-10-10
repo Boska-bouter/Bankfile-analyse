@@ -43,7 +43,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
-        <label className="ml-auto inline-flex items-center gap-1 text-[10px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
+        <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
           <input type="checkbox" checked={toonFijn} onChange={(e) => setToonFijn(e.target.checked)} className="h-3 w-3" />
           fijne categorieën
         </label>
@@ -89,11 +89,11 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   subtypesPresent.map((s) => (
                     <tr key={`${c}__${s}`} className="border-b border-slate-50 bg-slate-50/60">
                       <td className="py-1 pl-6">
-                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
-                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
-                      <td className="py-1 px-2 text-right font-mono text-[11px] whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
-                      <td className="py-1 text-right font-mono text-[11px] whitespace-nowrap text-slate-500">{eur(subRows[s].amount - subRows[s].btw)}</td>
+                      <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
+                      <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
+                      <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount - subRows[s].btw)}</td>
                     </tr>
                   ))}
               </Fragment>
@@ -317,11 +317,11 @@ export function DetailTable({
                   <p className="text-xs text-slate-500 mb-2">Filter op periode</p>
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-0.5">Van</label>
+                      <label className="block text-[11px] text-slate-400 mb-0.5">Van</label>
                       <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-0.5">Tot en met</label>
+                      <label className="block text-[11px] text-slate-400 mb-0.5">Tot en met</label>
                       <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full min-w-0 max-w-full box-border rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box", WebkitAppearance: "none", appearance: "none", display: "block" }} />
                     </div>
                   </div>
@@ -393,7 +393,7 @@ export function DetailTable({
                         {onConfirmCorrect && (
                           <button
                             onClick={() => onConfirmCorrect(t)}
-                            className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100"
+                            className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
                             title="Categorie en subtype kloppen — bevestigen (wordt voortaan 🟢)"
                           >
                             ✓ OK
@@ -425,7 +425,7 @@ export function DetailTable({
                     <select
                       value={displayCategory(t.category)}
                       onChange={(e) => applyChange(t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
-                      className="block mt-1 rounded-md px-1 py-0 text-[10px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+                      className="block mt-1 rounded-md px-1 py-0 text-[11px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
                       title="Subtype (bepaalt BTW-percentage en vast/variabel)"
                     >
                       {subtypeChoicesFor(mainCategoryOf(t.category)).map((s) => (
@@ -437,7 +437,7 @@ export function DetailTable({
                       <select
                         value={t.category}
                         onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
-                        className="block mt-0.5 rounded-md px-1 py-0 text-[10px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+                        className="block mt-0.5 rounded-md px-1 py-0 text-[11px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
                         title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
                       >
                         {soortenVoor(t.category).map((o) => (
@@ -457,7 +457,7 @@ export function DetailTable({
                           "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
                           "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
                       >
-                        Privé <span className="text-[10px] font-normal">↔ spiegel</span>
+                        Privé <span className="text-[11px] font-normal">↔ spiegel</span>
                       </span>
                     ) : (
                     <span

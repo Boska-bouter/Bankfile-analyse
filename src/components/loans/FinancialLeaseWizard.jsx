@@ -74,13 +74,13 @@ function Veld({ label, hint, children }) {
     <label className="block text-sm">
       <span className="block text-xs font-medium text-slate-600 mb-1">{label}</span>
       {children}
-      {hint && <span className="block text-[11px] text-slate-400 mt-0.5">{hint}</span>}
+      {hint && <span className="block text-xs text-slate-400 mt-0.5">{hint}</span>}
     </label>
   );
 }
 function Voorstel({ tekst, onNeem }) {
   return (
-    <button type="button" onClick={onNeem} className="mt-1 text-[11px] text-teal-700 underline decoration-dotted hover:text-teal-900">
+    <button type="button" onClick={onNeem} className="mt-1 text-xs text-teal-700 underline decoration-dotted hover:text-teal-900">
       Voorstel uit je bank: {tekst} — overnemen
     </button>
   );
@@ -226,7 +226,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
           <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
             <div className="h-full bg-white/80" style={{ width: `${Math.round((pos / Math.max(stappen.length, 1)) * 100)}%` }} />
           </div>
-          <p className="mt-1.5 text-[11px] text-teal-100">Stap {pos + 1} van {stappen.length}</p>
+          <p className="mt-1.5 text-xs text-teal-100">Stap {pos + 1} van {stappen.length}</p>
         </div>
 
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
@@ -318,10 +318,10 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                     anderen={contracts.filter((c, i) => i !== cIdx && c.soort === "auto" && normalizeKenteken(c.kenteken) && normalizeKenteken(c.kenteken) === normalizeKenteken(form.kenteken))}
                     onChange={(map) => set({ privegebruikMeerDan500kmPerJaar: map })}
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">Alleen bij meer dan 500 km privé per jaar geldt de bijtelling. Voor dezelfde auto telt een vinkje voor alle contracten.</p>
+                  <p className="text-xs text-slate-400 mt-1">Alleen bij meer dan 500 km privé per jaar geldt de bijtelling. Voor dezelfde auto telt een vinkje voor alle contracten.</p>
                 </div>
               )}
-              <p className="text-[11px] text-slate-400">KIA-beoordeling stel je in via "Meer opties" (alles op één scherm).</p>
+              <p className="text-xs text-slate-400">KIA-beoordeling stel je in via "Meer opties" (alles op één scherm).</p>
             </>
           )}
 

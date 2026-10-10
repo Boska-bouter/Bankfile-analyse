@@ -81,10 +81,10 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                   <span className="shrink-0">{metBolletjes(LEVEL_ICON[tx.confidence.level])}</span>
                   <div className="flex-1 min-w-0">
                     <p className="truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
-                    <ExpandableDescription tx={tx} className="text-[10px] text-slate-400" />
-                    <p className="text-[10px] text-slate-400">{tx.confidence.label}</p>
+                    <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
+                    <p className="text-[11px] text-slate-400">{tx.confidence.label}</p>
                   </div>
-                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(tx.category)}</span>
+                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(tx.category)}</span>
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (
                     <button
@@ -98,7 +98,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                 </div>
               ))}
             </div>
-            {needsReview.length > 200 && <p className="mt-1.5 text-[10px] text-slate-400">Eerste 200 getoond van {needsReview.length}.</p>}
+            {needsReview.length > 200 && <p className="mt-1.5 text-[11px] text-slate-400">Eerste 200 getoond van {needsReview.length}.</p>}
           </div>
         )}
       </div>

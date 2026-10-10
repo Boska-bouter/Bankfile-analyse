@@ -91,7 +91,7 @@ export default function HelpPanel({ onClose, openChapter }) {
             if (lijst.length === 0) return null;
             return (
               <div key={groep.key}>
-                <h3 className="px-5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-teal-700 bg-slate-50/60">{groep.titel}</h3>
+                <h3 className="px-5 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-teal-700 bg-slate-50/60">{groep.titel}</h3>
                 <div className="mb-2" style={{ marginLeft: 20, marginRight: 12, borderLeft: "2px solid #ccfbf1" }}>
                 {lijst.map((chapter) => (
                   <div key={chapter.key}>

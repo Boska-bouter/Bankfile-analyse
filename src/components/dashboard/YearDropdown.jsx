@@ -44,7 +44,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
       {/* V73 — per jaar zichtbaar welke rekeningen data hebben: een jaar zonder privé- (of zakelijk) bestand
           toont daar € 0,00, wat anders op een fout lijkt. */}
       {yearCoverage && activeYear && yearCoverage[activeYear] && coverageTekst(yearCoverage[activeYear]) && (
-        <div className={`text-[11px] text-left mb-0.5 leading-snug ${coverageNote(yearCoverage[activeYear]) && showBreakdown ? "text-amber-600" : "text-slate-400"}`} style={{ maxWidth: 170 }}>{coverageTekst(yearCoverage[activeYear])}</div>
+        <div className={`text-xs text-left mb-0.5 leading-snug ${coverageNote(yearCoverage[activeYear]) && showBreakdown ? "text-amber-600" : "text-slate-400"}`} style={{ maxWidth: 170 }}>{coverageTekst(yearCoverage[activeYear])}</div>
       )}
       </div>
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
@@ -71,7 +71,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
                 {status && <span>{metBolletjes(STATUS_EMOJI[status] || "⚪")}</span>}
                 <span className="flex-1 font-medium text-slate-700">{year}{yearPeriod[year] && <span className="ml-1.5 text-xs font-normal text-slate-400">· {yearPeriod[year].label}</span>}</span>
                 {showBreakdown && yearCoverage?.[year] && coverageNote(yearCoverage[year]) && (
-                  <span className="text-[10px] text-amber-600" title={coverageNote(yearCoverage[year])}>{yearCoverage[year].zakelijk ? "alleen Z" : "alleen P"}</span>
+                  <span className="text-[11px] text-amber-600" title={coverageNote(yearCoverage[year])}>{yearCoverage[year].zakelijk ? "alleen Z" : "alleen P"}</span>
                 )}
                 {year === activeYear && <Check className="h-4 w-4 text-teal-600" />}
               </button>

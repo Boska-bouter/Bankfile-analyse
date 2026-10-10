@@ -107,7 +107,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                         {eur(q.voorbelasting)}
                       </button>
                       {q.voorbelasting < 0 && (
-                        <div className="flex items-center justify-end gap-1 text-[10px] font-normal text-rose-700 normal-case whitespace-normal max-w-[9rem]">
+                        <div className="flex items-center justify-end gap-1 text-[11px] font-normal text-rose-700 normal-case whitespace-normal max-w-[9rem]">
                           <AlertCircle className="h-3 w-3 shrink-0" /> Kan niet negatief zijn — klik voor de uitsplitsing
                         </div>
                       )}

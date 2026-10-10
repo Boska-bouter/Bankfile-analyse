@@ -77,7 +77,7 @@ export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
           {geenResultaat && <p className="text-sm text-slate-400 text-center py-6">Niets gevonden voor "{query}".</p>}
           {secties.map((sec) => (
             <div key={sec.titel} className="space-y-3">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1">{sec.titel}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1">{sec.titel}</div>
               {sec.groups.map(({ main, subtypes }) => (
                 <div key={main}>
                   <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
@@ -86,7 +86,7 @@ export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
                   {subtypes.filter((x) => x !== main).length > 0 ? (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {subtypes.filter((x) => x !== main).map((x) => (
-                        <span key={x} className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[x] || "bg-slate-100 text-slate-600"}`}>
+                        <span key={x} className={`inline-block rounded-md px-1.5 py-0.5 text-xs font-medium ${CATEGORY_COLOR[x] || "bg-slate-100 text-slate-600"}`}>
                           {x}
                         </span>
                       ))}
@@ -99,7 +99,7 @@ export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
         </div>
 
         <div className="px-5 py-2.5 border-t border-slate-200 shrink-0">
-          <p className="text-[11px] text-slate-400">
+          <p className="text-xs text-slate-400">
             Alleen ter oriëntatie — trefwoorden en indeling zelf aanpassen kan bij "Categorieregels".
           </p>
         </div>

@@ -19,7 +19,7 @@ export default function PeriodeSignaal({ items, onConfirm, onMove }) {
           <div key={tx.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white border border-sky-100 px-2.5 py-1.5">
             <span className="flex-1 min-w-[12rem] text-slate-700">
               {tx.date.toLocaleDateString("nl-NL")} · {eur(tx.amount)} · {tx.counterparty || tx.description || "(geen omschrijving)"}
-              <span className="block text-[11px] text-slate-500">Boekdatum {boekingKwartaal} — periode lijkt {voorgesteldKwartaal}</span>
+              <span className="block text-xs text-slate-500">Boekdatum {boekingKwartaal} — periode lijkt {voorgesteldKwartaal}</span>
             </span>
             <button type="button" onClick={() => onMove(tx, voorgesteldKwartaal)} className="rounded-full bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1 text-[11.5px]">
               Verplaats naar {voorgesteldKwartaal}

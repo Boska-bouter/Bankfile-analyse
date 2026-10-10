@@ -26,7 +26,7 @@ export default function ProgressGauge({ pct = 0, size = 46, strokeWidth = 6, acc
           transform={`rotate(-90 ${center} ${center})`}
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-900">
+      <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-900">
         {label ?? `${clamped}%`}
       </div>
     </div>

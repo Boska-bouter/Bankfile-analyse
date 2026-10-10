@@ -572,7 +572,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 placeholder={String(MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)}
                 className="w-full rounded-lg border border-slate-300 px-2 py-1.5"
               />
-              <span className="block text-[11px] text-slate-400 mt-0.5">
+              <span className="block text-xs text-slate-400 mt-0.5">
                 = {(100 / Math.max(Number(form.afschrijvingstermijnJaren) || 0, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN)).toFixed(2).replace(".", ",")}% per jaar van het af te schrijven bedrag. Langer afschrijven kan; het percentage gaat dan evenredig omlaag (6 jaar = 16,67%).
               </span>
             </label>

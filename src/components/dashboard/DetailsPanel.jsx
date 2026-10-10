@@ -167,7 +167,7 @@ export default function DetailsPanel({
           <h3 className="text-sm font-bold text-slate-900 mr-1">
             Details en overzichten
             {kanVegen && aanraking && (
-              <span className="ml-2 text-[10.5px] font-normal text-slate-400" title="Veeg naar links of rechts om van jaar te wisselen">
+              <span className="ml-2 text-[11px] font-normal text-slate-400" title="Veeg naar links of rechts om van jaar te wisselen">
                 {jaarIdx > 0 ? "‹ " : ""}veeg voor ander jaar{jaarIdx >= 0 && jaarIdx < years.length - 1 ? " ›" : ""}
               </span>
             )}

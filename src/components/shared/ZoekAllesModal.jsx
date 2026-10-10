@@ -62,7 +62,7 @@ export default function ZoekAllesModal({ transacties, jaren = [], onClose, onGaN
                 <tr key={t.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => onGaNaarJaar?.(String(t.year))} title={`Ga naar ${t.year}`}>
                   <td className="px-3 py-1.5 whitespace-nowrap font-mono text-slate-500">{t.date.toLocaleDateString("nl-NL")}</td>
                   <td className={`px-3 py-1.5 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
-                  <td className="px-3 py-1.5 text-slate-700">{displayCategory(t.category)}<span className="ml-1 text-[10px] text-slate-400">{t.accountType === "Prive" ? "privé" : "zakelijk"}</span></td>
+                  <td className="px-3 py-1.5 text-slate-700">{displayCategory(t.category)}<span className="ml-1 text-[11px] text-slate-400">{t.accountType === "Prive" ? "privé" : "zakelijk"}</span></td>
                   <td className="px-3 py-1.5 text-slate-800 max-w-[14rem] truncate">{t.counterparty}</td>
                   <td className="px-3 py-1.5 text-slate-500 max-w-[18rem] truncate">{t.description}</td>
                 </tr>

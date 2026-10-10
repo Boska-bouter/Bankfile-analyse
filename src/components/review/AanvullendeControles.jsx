@@ -55,7 +55,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
                 ) : <p className="mt-1.5 text-emerald-700">Geen gaten gevonden.</p>}
               </div>
             ))}
-            <p className="text-[11px] text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
+            <p className="text-xs text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
           </div>
 
           <div>
@@ -90,7 +90,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
             {sprongen.length > 1 && (
               <div className="mb-2"><Knop primair onClick={() => (onBevestigAlles ? onBevestigAlles(sprongen.map((s) => s.key)) : sprongen.forEach((s) => onBevestig(s.key)))}>Alles klopt zo ({sprongen.length})</Knop></div>
             )}
-            <p className="text-[11px] text-slate-400">Alleen volledige, opeenvolgende jaren; alleen grote verschillen (minimaal €750 én 40%); maximaal 5 per jaar.</p>
+            <p className="text-xs text-slate-400">Alleen volledige, opeenvolgende jaren; alleen grote verschillen (minimaal €750 én 40%); maximaal 5 per jaar.</p>
           </div>
         </div>
       )}
