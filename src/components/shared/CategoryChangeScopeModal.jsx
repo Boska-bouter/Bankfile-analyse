@@ -26,9 +26,9 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               <>Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met hetzelfde teken.</>
             )}{" "}
             {isConfirmOnly ? (
-              <>Ook voor die transacties bevestigen dat <strong>{displayCategory(patch.category)}</strong> ({patch.type}) klopt?</>
+              <>Ook voor die transacties bevestigen dat <strong>{displayCategory(patch.category)}</strong> ({patch.type === "Prive" ? "Privé" : patch.type}) klopt?</>
             ) : (
-              <>Naar <strong>{displayCategory(patch.category)}</strong> ({patch.type}).</>
+              <>Naar <strong>{displayCategory(patch.category)}</strong> ({patch.type === "Prive" ? "Privé" : patch.type}).</>
             )}{" "}
             Alleen deze ene transactie {isConfirmOnly ? "bevestigen" : "aanpassen"}, of ook de andere?
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}

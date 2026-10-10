@@ -2,6 +2,7 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw } from "./btw.js";
 import { AUTOKOSTEN_CATEGORIEN } from "./autoBijtelling.js";
 import { effectiveZakelijkPercentage } from "./categorySplit.js";
+import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./gedeeldeHuur.js";
 
 // Koppeling naar de aangifte inkomstenbelasting (winst uit onderneming, eenmanszaak/zzp) — in
 // exact dezelfde volgorde en rubrieken als de winst-en-verliesrekening op de Belastingdienst-
@@ -16,19 +17,24 @@ const RUBRIEK_INKOOP = ["Zakelijke inkoop/uitgaven", "Inhuur personeel"];
 // (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en daarom een eigen plek
 // onder Overige bedrijfskosten houden.
 const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)"];
-const RUBRIEK_HUISVESTING = ["Huur", "Huur (deels zakelijk)", "Energie-water", "Gemeentelijke kosten"];
+const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten"];
+// De "(deels zakelijk)"-categorieën staan NIET in de gewone rubrieken: alleen het zakelijke deel is
+// aftrekbaar en dat wordt als aparte regel in "Huisvestingskosten" opgenomen (zie computeIbBoxMapping).
+// Eerder stond "Huur (deels zakelijk)" hier wél in tegen 100% én kwam het zakelijke deel er nog eens
+// bij als aparte regel — de rubrieken telden dan niet op tot de winst.
+const RUBRIEK_HUISVESTING_DEELS = ["Huur (deels zakelijk)", "Energie-water (deels zakelijk)", "Gemeentelijke kosten (deels zakelijk)"];
 const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
   "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel/internet",
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
-  "Webshops & online aankopen", "Winkels divers", "Personeel: overig", "Loonadministratie", "Uitbetalen loon",
+  "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
   // De twee "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) horen in dezelfde
   // rubriek als de andere abonnementen/kosten hierboven.
   "Streaming diensten", "Software & Online diensten",
 ];
-const RUBRIEK_ONTTREKKINGEN = ["Prive opnames", "Ontvangen van zakelijk"];
-const RUBRIEK_STORTINGEN = ["Terugboeking van prive", "Terugboeking naar zakelijk"];
+const RUBRIEK_ONTTREKKINGEN = ["Privé opnames", "Ontvangen van zakelijk"];
+const RUBRIEK_STORTINGEN = ["Terugboeking van privé", "Terugboeking naar zakelijk"];
 const BELASTINGEN_GEEN_KOSTENPOST = [
   "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
   "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
@@ -43,7 +49,9 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 // deze rubrieken (Opbrengsten, Privéonttrekkingen/-stortingen, Belastingafdrachten, Leningen/Lease
 // financieel) blijven hier altijd ongewijzigd. Weggelaten (`year` null, het gedrag van vóór dit
 // mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
-export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null) {
+const eur0 = (n) => `€ ${Number(n || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null, gedeeldeStatus = null) {
   // leaseAutoKostenForYear is hier al berekend als combineAutoKosten(...) van financial-lease-
   // en koop/operational-lease-autokosten (zie autoActiva.js) — dus niet-null zodra één van de drie
   // autovormen geregistreerd staat. Dat is precies dezelfde voorwaarde als
@@ -87,9 +95,24 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       }
     : null;
 
+  // Zakelijk deel van "Huur/Energie-water/Gemeentelijke kosten (deels zakelijk)" — netto, naar het
+  // ingestelde percentage; het privédeel valt buiten de aangifte.
+  const gedeeldeRegels = year == null ? [] : [
+    { label: "Huur (deels zakelijk)", cat: "Huur (deels zakelijk)", gh: computeGedeeldeHuurVoorJaar(zakItems, year, gedeeldeStatus?.huur, categoryBtwRates || {}, btwVerlegd) },
+    { label: "Energie-water (deels zakelijk)", cat: "Energie-water (deels zakelijk)", gh: computeGedeeldeEnergieVoorJaar(zakItems, year, gedeeldeStatus?.energie, categoryBtwRates || {}, btwVerlegd) },
+    { label: "Gemeentelijke kosten (deels zakelijk)", cat: "Gemeentelijke kosten (deels zakelijk)", gh: computeGedeeldeGemeentelijkeKostenVoorJaar(zakItems, year, gedeeldeStatus?.gemeentelijk, categoryBtwRates || {}, btwVerlegd) },
+  ].filter((r) => !!r.gh).map(({ label, cat, gh }) => ({
+    naam: `${label} — aftrekbaar (${gh.percentage}% zakelijk)`,
+    categorieen: [cat],
+    totaal: gh.aftrekbaarBedrag,
+    toelichting: `Totaal netto ${eur0(gh.totaalNetto)}, niet aftrekbaar (privédeel): ${eur0(gh.nietAftrekbaarBedrag)}.`,
+    perCategorie: [],
+  }));
+
   const overigeBedrijfskosten = [
     rubriekNetto("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
     rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING),
+    ...gedeeldeRegels,
     rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
     rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
     ...(kmVergoedingRubriek ? [kmVergoedingRubriek] : []),
@@ -108,7 +131,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   const verkoopActivaTotal = sumCat(["Verkoop activa"]);
 
   const alleGenoemdeCategorieen = [
-    ...RUBRIEK_OPBRENGSTEN, ...RUBRIEK_INKOOP, ...RUBRIEK_OVERIG_VERVOER, ...AUTOKOSTEN_CATEGORIEN, ...RUBRIEK_HUISVESTING, ...RUBRIEK_VERKOOP,
+    ...RUBRIEK_OPBRENGSTEN, ...RUBRIEK_INKOOP, ...RUBRIEK_OVERIG_VERVOER, ...AUTOKOSTEN_CATEGORIEN, ...RUBRIEK_HUISVESTING, ...RUBRIEK_HUISVESTING_DEELS, ...RUBRIEK_VERKOOP,
     ...RUBRIEK_ANDERE_KOSTEN, ...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST,
     ...AL_APART_BEHANDELD,
   ];
@@ -182,7 +205,7 @@ export function rubriekVanCategorie(c) {
   if (RUBRIEK_OPBRENGSTEN.includes(c)) return "1. Opbrengsten";
   if (RUBRIEK_INKOOP.includes(c)) return "2. Inkoopkosten en uitbesteed werk";
   if (AUTOKOSTEN_CATEGORIEN.includes(c) || c === "Zakelijk - apparatuur/machines") return "3. Auto's en machines";
-  if ([...RUBRIEK_OVERIG_VERVOER, ...RUBRIEK_HUISVESTING, ...RUBRIEK_VERKOOP, ...RUBRIEK_ANDERE_KOSTEN].includes(c)) return "4. Overige bedrijfskosten";
+  if ([...RUBRIEK_OVERIG_VERVOER, ...RUBRIEK_HUISVESTING, ...RUBRIEK_HUISVESTING_DEELS, ...RUBRIEK_VERKOOP, ...RUBRIEK_ANDERE_KOSTEN].includes(c)) return "4. Overige bedrijfskosten";
   if (AL_APART_BEHANDELD.includes(c)) return "5. Financiering en bedrijfsmiddelen";
   if ([...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST].includes(c)) return null; // geen onderdeel van de winst
   return "6. Nog niet ingedeeld";

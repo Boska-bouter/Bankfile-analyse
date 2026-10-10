@@ -12,10 +12,10 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "AOV (arbeidsongeschiktheidsverzekering)",
   "Verzekeringen", // privé-verzekeringen — net als hun zakelijke tegenhangers vrijgesteld van BTW
   "Uitbetalen loon",
-  "Prive opnames",
-  "Terugboeking van prive",
+  "Privé opnames",
+  "Terugboeking van privé",
   "Ontvangen van zakelijk", // v213: privé-kant van "Uitbetaling aan prive" (zie classify.js)
-  "Terugboeking naar zakelijk", // v213: privé-kant van "Terugboeking van prive"
+  "Terugboeking naar zakelijk", // v213: privé-kant van "Terugboeking van privé"
   "Overboeking van bekenden", // v213: geldbeweging tussen bekenden, nooit BTW-belast
   // BV-specifiek: loon/dividend/kapitaal/rekening-courant zijn nooit met BTW belast — dit stond hier
   // per abuis niet bij toen deze categorieën zijn toegevoegd, waardoor het toolstandaardtarief van
@@ -29,14 +29,12 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Interne overboeking: privé sparen",
   "Interne overboeking",
   "Huur",
-  "Huur (deels zakelijk)", // net als "Huur" standaard vrijgesteld — override desgewenst per dossier bij "belaste verhuur"
   "Incasso, juridisch & schulden",
   "Hypotheek",
   "Lease (financieel)",
   "Leningen",
   "Leningen (privé)",
   "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
-  "Gemeentelijke kosten (deels zakelijk)", // v291 — zelfde reden als "Gemeentelijke kosten" hierboven
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
   "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
@@ -67,13 +65,13 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 };
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
-  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)", "Webshops & online aankopen",
-  "Kinderopvang", "Prive - huur", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - mobiel/internet", "Prive overige abonnementen", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
-  // v288 — zelfde standaard-uitsluiting als de andere "Prive - ..."-categorieën hierboven: het
+  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
+  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel/internet", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
+  // v288 — zelfde standaard-uitsluiting als de andere "Privé - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
   // de BTW erover wordt hier standaard niet als voorbelasting geclaimd — desgewenst per dossier aan
   // te passen in het BTW-tarievenpaneel.
-  "Prive - streaming diensten",
+  "Privé - streaming diensten",
   "Verkoop activa",
 ];
 
@@ -137,7 +135,7 @@ const BTW_AANGIFTE_NIET_RELEVANT = [
 // v291 — `energieZakelijkPercentageStatus`/`gemeentelijkeKostenZakelijkPercentageStatus`: dezelfde
 // soort { jaar: percentage }-map, nu ook voor "Energie-water (deels zakelijk)" en "Gemeentelijke
 // kosten (deels zakelijk)" (zie tax/gedeeldeHuur.js) — ook hier optioneel, ontbrekend = 100%.
-export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false, energieZakelijkPercentageStatus = null, gemeentelijkeKostenZakelijkPercentageStatus = null) {
+export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides = {}, huurZakelijkPercentageStatus = null, categoryZakelijkPercentage = null, autoStatus = null, heeftLeaseAuto = false, energieZakelijkPercentageStatus = null, gemeentelijkeKostenZakelijkPercentageStatus = null, btwPrivegebruikAuto = null) {
   const map = {};
   for (const tx of classified) {
     if (tx.isMirror) continue;
@@ -218,6 +216,17 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
         map[key].voorbelasting += -btw * (gedeeldeHuisvestingPercentage / 100);
       }
     }
+  }
+  // Btw-correctie privégebruik auto (tax/btwPrivegebruikAuto.js): hoort in de laatste aangifte van het
+  // jaar (Q4). Ze staat los van omzet-btw en voorbelasting in het veld `btwPrivegebruikAuto`
+  // en wordt in elk saldo (verschuldigd - voorbelasting) erbij opgeteld.
+  if (btwPrivegebruikAuto && btwPrivegebruikAuto.bedrag > 0.004 && btwPrivegebruikAuto.year === year) {
+    const key = `${year}-Q4`;
+    if (!map[key]) {
+      map[key] = { year, kwartaal: 4, omzetBruto21: 0, verschuldigdBtw21: 0, omzetBruto9: 0, verschuldigdBtw9: 0, omzetBruto0: 0, omzetBrutoVerlegd: 0, kostenBruto: 0, voorbelasting: 0 };
+    }
+    map[key].btwPrivegebruikAuto = btwPrivegebruikAuto.bedrag;
+    map[key].btwPrivegebruikAutoDetail = btwPrivegebruikAuto;
   }
   return Object.values(map).sort((a, b) => a.year - b.year || a.kwartaal - b.kwartaal);
 }

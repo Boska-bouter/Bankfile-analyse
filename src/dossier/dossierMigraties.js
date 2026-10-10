@@ -34,12 +34,12 @@ export function migrateOverridesCategories(overrides) {
       out[key] = val;
       continue;
     }
-    // "Terugboeking van prive" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
+    // "Terugboeking van privé" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
     // (geld terug náár zakelijk) — sindsdien heet dat aan de privékant "Terugboeking naar zakelijk"
     // (zie classify.js), zodat de twee kanten van deze boeking niet meer dezelfde naam delen. De
     // generieke migrateLegacyCategoryName hieronder kan deze migratie niet doen (die kent geen
     // `type`), dus dit specifieke geval eerst, vóór de generieke hernoeming.
-    const category = val.category === "Terugboeking van prive" && val.type === "Prive"
+    const category = val.category === "Terugboeking van privé" && val.type === "Prive"
       ? "Terugboeking naar zakelijk"
       : migrateLegacyCategoryName(val.category);
     out[key] = { ...val, category };
@@ -59,3 +59,45 @@ export function normalizeAutoWizard(v) {
   return v.status === "beide" ? { ...v, status: "prive", soort: null } : v;
 }
 
+
+// 14V9 — de aparte categorieën "Huur/Energie-water/Gemeentelijke kosten (deels zakelijk)" bestaan niet
+// meer: transacties, regels en BTW-tarieven zijn via LEGACY_CATEGORY_RENAMES al naar de gewone
+// categorie gegaan. Hier verhuist ook het ingestelde percentage zakelijk (eerder een apart veld per jaar)
+// naar de generieke "Percentage zakelijk per categorie". Het oude, jaarspecifieke percentage wint van
+// een eventueel al ingesteld categorie-percentage voor datzelfde jaar — dat was het percentage dat op de
+// transacties in de aparte categorie daadwerkelijk werd toegepast.
+// Geeft { categoryZakelijkPercentage, meldingen } terug; meldingen is leeg als er niets te migreren was.
+export function migreerGedeeldeHuisvesting(categoryZakelijkPercentage, statussen) {
+  const basis = categoryZakelijkPercentage && typeof categoryZakelijkPercentage === "object" ? categoryZakelijkPercentage : {};
+  const paren = [
+    ["Huur", statussen?.huur],
+    ["Energie-water", statussen?.energie],
+    ["Gemeentelijke kosten", statussen?.gemeentelijk],
+  ];
+  const result = { ...basis };
+  const meldingen = [];
+  for (const [categorie, status] of paren) {
+    if (!status || typeof status !== "object") continue;
+    const perJaar = { ...(result[categorie] || {}) };
+    let gewijzigd = false;
+    for (const [jaar, waarde] of Object.entries(status)) {
+      const nieuw = Number(waarde);
+      if (!Number.isFinite(nieuw)) continue;
+      const oud = perJaar[jaar];
+      if (oud != null && Number(oud) !== nieuw) {
+        meldingen.push(`${categorie} ${jaar}: ${nieuw}% zakelijk overgenomen van "(deels zakelijk)" (stond bij de gewone categorie op ${oud}%).`);
+      }
+      perJaar[jaar] = nieuw;
+      gewijzigd = true;
+    }
+    if (gewijzigd) result[categorie] = perJaar;
+  }
+  return { categoryZakelijkPercentage: result, meldingen };
+}
+
+// Lijsten met categorienamen (bijv. voorbelastingExcluded, fixedCategories) kunnen nog een hernoemde
+// categorie bevatten; zet ze om en haal dubbelen weg.
+export function migreerCategorieLijst(lijst) {
+  if (!Array.isArray(lijst)) return lijst;
+  return [...new Set(lijst.map((n) => (typeof n === "string" ? migrateLegacyCategoryName(n) : n)))];
+}

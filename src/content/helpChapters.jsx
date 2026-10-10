@@ -146,20 +146,20 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Zak. Ink.</strong> is de categorie "Zakelijke inkomsten"; <strong>WUO (bruto)</strong> is de winst
           uit onderneming vóór persoonlijke belastingen (Zakelijke inkomsten min de overige zakelijke kosten, na
-          aftrek van BTW — "Prive opnames"/"Ontvangen van zakelijk"/"Terugboeking van prive"/"Terugboeking naar zakelijk", "Belastingen:
+          aftrek van BTW — "Privé opnames"/"Ontvangen van zakelijk"/"Terugboeking van privé"/"Terugboeking naar zakelijk", "Belastingen:
           ZVW"/"Belastingen: IH", en "Belastingen: Naheffingen OB/IB voorgaande jaren" tellen bewust niet mee: de
           eerste drie zijn onttrekkingen aan/inbreng in de winst, de rest zijn persoonlijke belastingen of een
           balansmutatie — geen van alle zijn het zakelijke kosten of omzet. "Belastingen: Naheffingen LH voorgaande
           jaren" telt WEL gewoon mee als kosten, net als reguliere LH.
         </p>
         <p>
-          <strong>Totaal prive uitgegeven</strong> is al het geld dat dat jaar daadwerkelijk privé is uitgegeven — is
-          er geen privé-rekening geüpload, dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar prive"
+          <strong>Totaal privé uitgegeven</strong> is al het geld dat dat jaar daadwerkelijk privé is uitgegeven — is
+          er geen privé-rekening geüpload, dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar privé"
           ook echt is uitgegeven (gemarkeerd met *). De handmatige <strong>correctie</strong> komt daar altijd
           bovenop (gemarkeerd met †).
         </p>
         <p>
-          <strong>Tekort / Over</strong> is WUO min Totaal prive uitgegeven, min Te betalen OB, min Basisindicatie
+          <strong>Tekort / Over</strong> is WUO min Totaal privé uitgegeven, min Te betalen OB, min Basisindicatie
           IB/IH — dus wat er overblijft nadat zowel al het privé uitgegeven geld als de nog te betalen belastingen
           zijn meegerekend. Een tekort betekent dat de winst dat niet dekt.
         </p>
@@ -243,7 +243,7 @@ export const HELP_CHAPTERS = [
   {
     key: "categorieen-overzicht",
     groep: "overzicht",
-    titel: "Categorieën — Zakelijk/Prive",
+    titel: "Categorieën — Zakelijk/Privé",
     inhoud: (
       <p>
         Alle transacties van dat jaar en type, opgeteld per categorie, met de BTW ernaast. Let op het verschil met{" "}
@@ -263,8 +263,8 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Voor privé-boekingen zijn er negen keuzes in plaats van de vele fijne categorieën van vroeger. Vier horen bij
-          de koppeling met zakelijk: <strong>Prive opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
-          <strong>Terugboeking van prive</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
+          de koppeling met zakelijk: <strong>Privé opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
+          <strong>Terugboeking van privé</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
           <strong>Incasso, juridisch &amp; schulden</strong> en <strong>Leningen (privé)</strong>.
         </p>
         <p>
@@ -309,7 +309,7 @@ export const HELP_CHAPTERS = [
           dan is het klaar.
         </p>
         <p>
-          Bij "Overig opruimen" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive opnames" (voor een
+          Bij "Overig opruimen" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Privé opnames" (voor een
           zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
       </div>
@@ -387,7 +387,7 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Privé of zakelijk:</strong> het type volgt altijd de rekening waarvan is betaald. Bankkosten,
           energie/water, gemeentelijke kosten, huur, mobiel/abonnementen en leningen op een privérekening krijgen de
-          bijbehorende "Prive - …"-categorie, tenzij het duidelijk een zakelijke uitgave is. Brandstof, parkeren en
+          bijbehorende "Privé - …"-categorie, tenzij het duidelijk een zakelijke uitgave is. Brandstof, parkeren en
           zakelijke inkoop vanaf een privérekening tellen wel mee als zakelijke kosten.
         </p>
         <p>
@@ -431,8 +431,20 @@ export const HELP_CHAPTERS = [
           zakelijk gebruikt" — controleer zo'n jaar even.
         </p>
         <p>
-          Zijn er dat jaar transacties in "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)",
-          dan staat hier ook per categorie het percentage zakelijk gebruik, net als bij huur. Leeg betekent 100%.
+          <strong>Btw bij privégebruik van een auto op de zaak</strong> — heb je btw op de auto afgetrokken (gekocht incl.
+          btw, of een financiële lease met een bedrag bij "Te betalen BTW"; bij operationele lease alleen als je dat zelf
+          aanvinkt), dan moet je in de laatste btw-aangifte van het jaar btw afdragen voor het privégebruik. De app
+          rekent standaard het forfait: 2,7% van de cataloguswaarde (incl. btw en bpm) per jaar, 1,5% vanaf het vijfde
+          jaar na de aanschaf, en in het eerste jaar naar rato van de maanden. Het bedrag is nooit hoger dan de btw die
+          je op onderhoud en gebruik hebt afgetrokken plus (tot en met het vierde jaar na aanschaf) 1/5 van de btw bij
+          aanschaf. Je ziet het terug bij Q4 in het btw-overzicht en het aangiftevoorstel. Per jaar kun je kiezen voor
+          werkelijk privégebruik of geen correctie (bij "Auto op de zaak" voor gekocht of operationele lease). Bij een
+          privéauto of zonder btw-aftrek is er geen correctie. Alleen voor een zzp; bron: Belastingdienst, "Privégebruik
+          auto van de zaak".
+        </p>
+        <p>
+          Gebruik je een pand deels zakelijk? Het percentage zakelijk voor huur, energie-water en gemeentelijke
+          kosten stel je in bij "Percentage zakelijk per categorie" — zie "Huur (deels zakelijk)" voor de uitleg.
         </p>
         <p>
           <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan
@@ -443,11 +455,6 @@ export const HELP_CHAPTERS = [
           <strong>Investeringsaftrek (KIA)</strong> wordt hier automatisch voorgesteld op basis van wat er in het
           Activa-paneel aan bedrijfsmiddel-investeringen dat jaar is ingevuld — niet elk bedrijfsmiddel telt mee
           (personenauto's en grond meestal niet), dus dit is een mogelijke, geen definitieve aftrek.
-        </p>
-        <p>
-          Zijn er dat jaar transacties in de categorie "Huur (deels zakelijk)", dan staat hier ook het{" "}
-          <strong>percentage zakelijk gebruik</strong> van die huur — zie "Huur (deels zakelijk)" voor de uitleg
-          daarvan.
         </p>
         <p className="text-xs text-slate-400">
           Dit paneel toont een snelle indicatie voor het actieve jaar alleen. Genereer het Indicatieve
@@ -464,22 +471,20 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Voor de situatie dat je maar een déél van een gehuurde ruimte zakelijk gebruikt — bijvoorbeeld een deel van
-          een schuur, magazijn of woning die je ook privé gebruikt. Ken transacties hiervoor toe aan de aparte
-          categorie <strong>"Huur (deels zakelijk)"</strong> (in plaats van de gewone categorie "Huur", die er
-          vanuit gaat dat alles zakelijk is).
+          Gebruik je maar een déél van een gehuurde ruimte zakelijk — bijvoorbeeld een deel van een schuur, magazijn
+          of woning die je ook privé gebruikt? Laat de transacties dan gewoon in <strong>"Huur"</strong> staan en vul
+          bij <strong>"Percentage zakelijk per categorie"</strong> per jaar het percentage zakelijk gebruik in. Hetzelfde
+          geldt voor "Energie-water" en "Gemeentelijke kosten" van dat pand.
         </p>
         <p>
-          Bij "Persoonlijke aannames voor IB" vul je vervolgens per jaar het <strong>percentage zakelijk gebruik</strong>{" "}
-          in. Alleen dat percentage van de huur telt mee als aftrekbare zakelijke kosten in de winstberekening; de
-          rest is privé en telt niet mee. Zit er BTW op de huur, dan geldt hetzelfde percentage voor de aftrekbare
-          voorbelasting — de rest van de BTW is niet aftrekbaar. Leeg/niet ingevuld betekent 100% (volledig
-          aftrekbaar, hetzelfde resultaat als bij gewone "Huur"), en het percentage is per jaar apart instelbaar,
-          voor als de verhouding zakelijk/privé in de loop van de tijd verandert.
+          Alleen dat percentage van de kosten telt mee in de winstberekening; de rest is privé. Zit er BTW op, dan geldt
+          hetzelfde percentage voor de aftrekbare voorbelasting. Leeg betekent 100% zakelijk. Het percentage is per jaar
+          apart instelbaar.
         </p>
         <p className="text-xs text-slate-400">
-          Deze categorie bestaat naast de gewone "Huur"-categorie — gebruik "Huur" gewoon zolang een ruimte volledig
-          zakelijk is, en alleen "Huur (deels zakelijk)" voor het gedeeltelijke geval.
+          Vroeger bestonden hiervoor aparte categorieën "Huur (deels zakelijk)", "Energie-water (deels zakelijk)" en
+          "Gemeentelijke kosten (deels zakelijk)". Die zijn samengevoegd; bij het openen van een ouder dossier worden
+          transacties en percentages automatisch omgezet (zie het logboek voor eventuele afwijkingen).
         </p>
       </div>
     ),
@@ -493,7 +498,7 @@ export const HELP_CHAPTERS = [
         <p>
           Voor kosten die deels zakelijk en deels privé zijn, ongeacht van welke rekening ze betaald zijn — bijv.
           brandstof, telefonie/internet, reiskosten OV of parkeren die je ook privé gebruikt. In tegenstelling tot
-          "Huur (deels zakelijk)" hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
+          Net als bij huur hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
           blijven gewoon in hun eigen categorie (bijv. "Brandstof") staan.
         </p>
         <p>
@@ -673,7 +678,7 @@ export const HELP_CHAPTERS = [
         <p>
           Standaard staat alles op 21% (Reiskosten OV op 9%), met
         uitzondering van categorieën waar geen BTW op zit: Bankkosten, alle Belastingen en Gemeentelijke kosten, alle
-        Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Prive opnames/Ontvangen van zakelijk,
+        Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Privé opnames/Ontvangen van zakelijk,
         interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. 
         </p>
         <p>

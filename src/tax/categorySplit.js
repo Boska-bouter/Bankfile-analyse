@@ -46,18 +46,18 @@ export const SPLITSBARE_CATEGORIEEN = [
   // Het privé-tegenhangster van "Zakelijk mobiel/internet" — anders dan "Brandstof" (dat op BEIDE
   // rekeningen gewoon dezelfde categorienaam houdt, zie SPLIT_CATEGORY_NAMES in categories.js)
   // krijgt een mobiel/internet-abonnement dat vanaf de privérekening wordt betaald een eigen naam
-  // ("Prive - mobiel/internet") zodra het niet als bevestigde zakelijke uitgave herkend is — zonder
+  // ("Privé - mobiel/internet") zodra het niet als bevestigde zakelijke uitgave herkend is — zonder
   // deze regel viel zo'n transactie dus BUITEN dit paneel, en kon een deels-zakelijk telefoon-/
   // internetabonnement dat toevallig vanaf privé betaald is nooit een percentage zakelijk krijgen.
-  "Prive - mobiel/internet",
+  "Privé - mobiel/internet",
   "Reiskosten (OV)",
   "Parkeren",
   "Huur",
   "Streaming diensten",
   // v288 — privé-tegenhanger van "Streaming diensten" hierboven (zie categories.js), zelfde reden
-  // als "Prive - mobiel/internet": zonder eigen entry hier zou een streamingabonnement dat je onder
+  // als "Privé - mobiel/internet": zonder eigen entry hier zou een streamingabonnement dat je onder
   // hoofdcategorie "Privé" indeelt nooit een instelbaar percentage zakelijk gebruik kunnen krijgen.
-  "Prive - streaming diensten",
+  "Privé - streaming diensten",
   "Software & Online diensten",
   // v288 — op verzoek: een boekhouder/accountant/adviesbureau wordt in de praktijk soms ook voor
   // privézaken (bijv. de aangifte IB naast de aangifte OB) ingeschakeld, dus niet per se voor 100%
@@ -67,7 +67,7 @@ export const SPLITSBARE_CATEGORIEEN = [
   // V49 — huisvesting: gewone energie/gemeentelijke kosten (zakelijke rekening) en de privé-tegenhangers
   // voor kosten vanaf een privérekening (standaard 0% zakelijk) waren niet instelbaar. "Huur" stond er al.
   "Energie-water", "Gemeentelijke kosten",
-  "Prive - huur", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - overige kosten",
+  "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - overige kosten",
 ];
 
 export function isSplitsbareCategorie(category) {

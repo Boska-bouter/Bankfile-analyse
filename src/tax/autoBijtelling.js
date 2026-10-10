@@ -130,7 +130,7 @@ function computeLeaseRenteVoorJaarVoorEenLease(lease, details, year) {
 // per definitie een singleton: dezelfde segmenten, in dezelfde volgorde, elk onafhankelijk
 // doorgerekend. Groepen ontstaan alleen als er daadwerkelijk 2+ segmenten met hetzelfde
 // (genormaliseerde) kenteken zijn.
-function groupSegmentenOpKenteken(segments) {
+export function groupSegmentenOpKenteken(segments) {
   const groups = [];
   const byKenteken = new Map();
   for (const segment of segments) {

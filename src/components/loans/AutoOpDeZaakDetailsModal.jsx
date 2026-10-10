@@ -9,9 +9,14 @@ import { eur } from "../../utils/amounts.js";
 // formFromSegment in FinancialLeaseDetailsModal.jsx, maar dan voor een gekochte of
 // operational-leaseauto op de zaak (geen leningschema om aan op te hangen, dus geen
 // aankoop/leasestructuur-velden zoals daar).
-function formFromDetails(details) {
+function formFromDetails(details, soort) {
   const d = details || {};
   return {
+    // Btw-correctie privégebruik: gekocht incl. btw = standaard aan, operationele lease = standaard uit.
+    btwAfgetrokken: soort === "koop" ? d.btwAfgetrokken !== false : d.btwAfgetrokken === true,
+    btwAanschaf: d.btwAanschaf ?? "",
+    ingebruiknamedatum: d.ingebruiknamedatum ?? "",
+    btwPrivegebruikPerJaar: d.btwPrivegebruikPerJaar ?? {},
     aanschafwaarde: d.aanschafwaarde ?? "",
     aanschafdatum: d.aanschafdatum ?? "",
     restwaarde: d.restwaarde ?? "",
@@ -25,6 +30,10 @@ function formFromDetails(details) {
 function cleanDetails(form, soort) {
   const n = (v) => (v === "" ? null : Number(v));
   return {
+    btwAfgetrokken: !!form.btwAfgetrokken,
+    btwAanschaf: soort === "koop" ? n(form.btwAanschaf) : null,
+    ingebruiknamedatum: soort === "operational" ? (form.ingebruiknamedatum || null) : null,
+    btwPrivegebruikPerJaar: form.btwPrivegebruikPerJaar || {},
     aanschafwaarde: soort === "koop" ? n(form.aanschafwaarde) : null,
     aanschafdatum: soort === "koop" ? (form.aanschafdatum || null) : null,
     restwaarde: soort === "koop" ? n(form.restwaarde) : null,
@@ -40,7 +49,7 @@ function cleanDetails(form, soort) {
 // (categorie "Lease (operationeel)") — er is dan niets te kapitaliseren/af te schrijven, alleen de
 // bijtelling/onttrekking bij privégebruik is relevant.
 export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave, onClose }) {
-  const [form, setForm] = useState(() => formFromDetails(details));
+  const [form, setForm] = useState(() => formFromDetails(details, soort));
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   const afschrijvingSchema = useMemo(() => {
@@ -54,7 +63,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
   }, [soort, form.aanschafwaarde, form.aanschafdatum, form.restwaarde, form.afschrijvingstermijnJaren]);
 
   const jarenVoorPrivegebruik = useMemo(() => {
-    const set = new Set(years || []);
+    const set = new Set((years || []).map(String));
     set.add(String(new Date().getFullYear()));
     return [...set].sort();
   }, [years]);
@@ -137,6 +146,71 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
           )}
 
           <div className="border-t border-slate-200 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Btw privégebruik auto</p>
+            <label className="flex items-start gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox" className="mt-1" checked={!!form.btwAfgetrokken}
+                onChange={(e) => setForm((f) => ({ ...f, btwAfgetrokken: e.target.checked }))}
+              />
+              <span>
+                {soort === "koop"
+                  ? "Bij de aanschaf is btw afgetrokken (auto gekocht incl. btw)"
+                  : "Op de leasetermijnen is btw betaald en afgetrokken (komt zelden voor)"}
+              </span>
+            </label>
+            <p className="text-xs text-slate-400 mt-1">
+              Alleen dan moet je btw afdragen voor privégebruik van de auto (laatste btw-aangifte van het jaar). Zonder btw-aftrek
+              is er geen correctie.
+            </p>
+            {form.btwAfgetrokken && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {soort === "koop" ? (
+                    <label className="text-sm">
+                      <span className="block text-xs font-medium text-slate-600 mb-1">Btw bij aanschaf (€, voor het wettelijke maximum)</span>
+                      <input type="number" min="0" step="0.01" value={form.btwAanschaf} onChange={set("btwAanschaf")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                    </label>
+                  ) : (
+                    <label className="text-sm">
+                      <span className="block text-xs font-medium text-slate-600 mb-1">Datum ingebruikname</span>
+                      <DatumVeld value={form.ingebruiknamedatum} onChange={set("ingebruiknamedatum")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">
+                  Standaard geldt het forfait: 2,7% van de cataloguswaarde (incl. btw en bpm) per jaar, 1,5% vanaf het vijfde jaar na de
+                  aanschaf, in het eerste jaar naar rato van de maanden. Vul de cataloguswaarde hieronder in.
+                </p>
+                <details>
+                  <summary className="text-xs font-medium text-slate-600 cursor-pointer">Per jaar een andere methode kiezen</summary>
+                  <div className="mt-2 space-y-2">
+                    {jarenVoorPrivegebruik.map((jaar) => {
+                      const inst = form.btwPrivegebruikPerJaar?.[jaar] || {};
+                      const setJaar = (patch) => setForm((f) => ({ ...f, btwPrivegebruikPerJaar: { ...(f.btwPrivegebruikPerJaar || {}), [jaar]: { ...inst, ...patch } } }));
+                      return (
+                        <div key={jaar} className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+                          <span className="w-10 font-medium">{jaar}</span>
+                          <select value={inst.methode || "forfait"} onChange={(e) => setJaar({ methode: e.target.value })} className="rounded-lg border border-slate-300 px-2 py-1">
+                            <option value="forfait">Forfait (2,7% / 1,5%)</option>
+                            <option value="werkelijk">Werkelijk privégebruik</option>
+                            <option value="geen">Geen correctie</option>
+                          </select>
+                          {inst.methode === "werkelijk" && (
+                            <label className="flex items-center gap-1">
+                              privé %
+                              <input type="number" min="0" max="100" step="1" value={inst.privePct ?? ""} onChange={(e) => setJaar({ privePct: e.target.value })} className="w-16 rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-slate-200 pt-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Bijtelling privégebruik (optioneel)</p>
             <p className="text-xs text-slate-400 mb-2">
               Alleen relevant bij meer dan 500 km privégebruik per jaar — laat leeg als dat niet van toepassing is,
@@ -145,7 +219,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
             {/* v289 — zelfde niet-responsieve grid als hierboven, zelfde fix. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm">
-                <span className="block text-xs font-medium text-slate-600 mb-1">Cataloguswaarde</span>
+                <span className="block text-xs font-medium text-slate-600 mb-1">Cataloguswaarde (incl. btw en bpm)</span>
                 <input type="number" min="0" step="0.01" value={form.cataloguswaarde} onChange={set("cataloguswaarde")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
               </label>
               <label className="text-sm">

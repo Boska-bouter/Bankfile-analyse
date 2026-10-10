@@ -20,7 +20,7 @@ export function koppelDoorsluisOverboekingen(base, heeftZakelijkeRekening) {
   if (kand.length === 0) return base;
   const zakelijkVrij = base.filter(
     (t) => t.accountType === "Zakelijk" && !t.isMirror && t.counterpartyIban &&
-      (t.category === "Prive opnames" || t.category === "Terugboeking van prive")
+      (t.category === "Privé opnames" || t.category === "Terugboeking van privé")
   );
   const gebruikt = new Set();
   const naarNeutraal = new Set();

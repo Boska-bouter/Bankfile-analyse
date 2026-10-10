@@ -8,7 +8,7 @@ import { normKey, counterpartyKey, textHasKeyword } from "../utils/normalization
 // overboekingen (bijv. naar de al bekende zakelijke rekening, of naar een eigen spaarrekening) een
 // lange rij overbodige controlevragen over geld dat feitelijk al verklaard is.
 const GEEN_KLANT_CATEGORIES = [
-  "Prive opnames", "Terugboeking van prive", // zakelijke kant (zie functie hieronder: wordt hier niet bereikt, maar voor de volledigheid)
+  "Privé opnames", "Terugboeking van privé", // zakelijke kant (zie functie hieronder: wordt hier niet bereikt, maar voor de volledigheid)
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
   "Interne overboeking: privé sparen",
   "Interne overboeking",

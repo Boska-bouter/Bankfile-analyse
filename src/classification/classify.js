@@ -1,4 +1,4 @@
-import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 
@@ -28,13 +28,17 @@ export function keywordInText(text, keyword) {
   }
   return false;
 }
-export function ruleMatchesText(rule, text) {
-  return rule.keywords.some((kw) => keywordInText(text, kw));
+export function ruleMatchesText(rule, text, accountType = null) {
+  return rule.keywords.some((kw) => {
+    if (!keywordInText(text, kw)) return false;
+    const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
+    return !voorkeur || !voorkeur[accountType] || voorkeur[accountType] === rule.name;
+  });
 }
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
 export function defaultTypeForCategory(category) {
-  return category === "Zakelijke inkomsten" || category === "Prive opnames"
+  return category === "Zakelijke inkomsten" || category === "Privé opnames"
     ? "Zakelijk"
     : "Prive";
 }
@@ -123,14 +127,14 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // De categorienaam is bewust voor elke rekening/richting-combinatie anders (v213) — elk van deze
   // vier benoemt de boeking zoals hij vanaf DIE rekening gezien wordt, in plaats van dat dezelfde
   // ("zakelijke-kant"-)naam ook op de privérekening zelf verschijnt:
-  //   - Zakelijk, geld gaat weg naar privé:      "Prive opnames"
-  //   - Zakelijk, geld komt terug van privé:     "Terugboeking van prive"
+  //   - Zakelijk, geld gaat weg naar privé:      "Privé opnames"
+  //   - Zakelijk, geld komt terug van privé:     "Terugboeking van privé"
   //   - Prive,    geld komt van zakelijk:        "Ontvangen van zakelijk"   (vóór v213: "Uitbetaling aan prive")
-  //   - Prive,    geld gaat terug naar zakelijk: "Terugboeking naar zakelijk" (vóór v213: ook "Terugboeking van prive")
+  //   - Prive,    geld gaat terug naar zakelijk: "Terugboeking naar zakelijk" (vóór v213: ook "Terugboeking van privé")
   // Vóór deze wijziging kreeg de privérekening dezelfde namen als de zakelijke kant ("Uitbetaling
-  // aan prive"/"Terugboeking van prive") — vanaf de privérekening zelf bekeken klopt die formulering
+  // aan prive"/"Terugboeking van privé") — vanaf de privérekening zelf bekeken klopt die formulering
   // niet ("uitbetaling AAN prive" alsof je zelf de betaler bent, terwijl je hier juist ontvangt), en
-  // "Terugboeking van prive" stond zo voor twee verschillende, tegenovergestelde boekingsrichtingen
+  // "Terugboeking van privé" stond zo voor twee verschillende, tegenovergestelde boekingsrichtingen
   // tegelijk (zowel het ontvangen ván als het terugstorten náár zakelijk). Fiscaal verandert er
   // niets: alle vier blijven "geen" (zie CATEGORY_FISCAL_TREATMENT) en tellen voor de spiegel-/
   // saldocontrole (App.jsx/checklist.js) nog steeds als hetzelfde soort overboeking.
@@ -182,7 +186,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     const matchedNaam = eigenNamen.find((naam) => naam && nameHaystack.includes(naam));
     if (matchedNaam) {
       if (accountType === "Zakelijk") {
-        return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
+        return isIncome ? { category: "Terugboeking van privé", type } : { category: "Privé opnames", type };
       }
       return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
     }
@@ -257,7 +261,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // niet bij "Inkomsten". Alleen voor trefwoorden uit de standaard-/eigen categorielijsten.
   if (isIncome && isCardPaymentTx(tx)) {
     for (const rule of rules) {
-      if (rule.name === "Prive opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
+      if (rule.name === "Privé opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
       if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
         const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
         const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
@@ -297,7 +301,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   if (/verhuur/.test(text)) return { category: "Overig", type };
 
   for (const rule of rules) {
-    if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+    if (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
@@ -306,7 +310,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // lening- en lease-categorieën blijven buiten schot: daar bepaalt de wizard/de aparte
       // berekening wat zakelijk is.
       if (!isBizExpense && accountType === "Prive" && categoryName === rule.name && fiscalTreatmentOf(categoryName) === "kosten" && !PRIVE_REKENING_BEHOUD_CATEGORIEEN.includes(categoryName)) {
-        categoryName = "Prive - overige kosten";
+        categoryName = "Privé - overige kosten";
       }
       return { category: categoryName, type };
     }
@@ -326,7 +330,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // zakelijke uitgave bij een buitenlandse leverancier (software, congres, hosting) alsnog
   // gecorrigeerd kan worden.
   if (accountType !== "Zakelijk" && looksLikeForeignCardPayment(tx)) {
-    return { category: "Prive - vrijetijd-uitgaan-vakantie & uit eten", type };
+    return { category: "Privé - vrijetijd-uitgaan-vakantie & uit eten", type };
   }
 
   if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
@@ -356,7 +360,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // vóór deze herkenning al eens (noodgedwongen) op "Overig" is gezet, voor altijd op de
 // controleerlijst blijven staan, terwijl identieke, nog niet eerder aangeraakte transacties
 // automatisch wél goed terechtkomen. Elke andere, bewust gekozen categorie (ook "Zakelijke
-// inkomsten" of "Prive: overig") blijft gewoon onaangetast — alleen "Overig" wordt op deze manier
+// inkomsten" of "Privé: overig") blijft gewoon onaangetast — alleen "Overig" wordt op deze manier
 // "heropend".
 //
 // Sinds v213 ook heropend op een IBAN-match met een eigen andere (elders geladen/opgegeven)
@@ -422,7 +426,7 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // autoClassify bovendien eerst op "Overig" (zie daar), zodat die bewust wordt beoordeeld.
   if (rule.name === "Huur" && /[a-zà-ÿ]huur/.test(text)) return true;
   // "Telecom" herkent "ziggo" (provider), maar "Ziggo Dome" is de concertzaal: een uitgaansuitgave.
-  if (text.includes("ziggo dome") && rule.name !== "Prive - vrijetijd-uitgaan-vakantie & uit eten") return true;
+  if (text.includes("ziggo dome") && rule.name !== "Privé - vrijetijd-uitgaan-vakantie & uit eten") return true;
   // "Betaalautomaat kosten" herkent o.a. "buckaroo" — op een zakelijke rekening zijn dat servicekosten van de
   // betaaldienst, op een privérekening vrijwel altijd een gewone online aankoop/uitje (zie Uitgaan).
   if (rule.name === "Betaalautomaat kosten" && accountType !== "Zakelijk" && accountType !== undefined && text.includes("buckaroo")) return true;
@@ -470,7 +474,7 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
   }
   const isIncome = tx.amount > 0;
   if (accountType === "Zakelijk") {
-    return isIncome ? { category: "Terugboeking van prive", type } : { category: "Prive opnames", type };
+    return isIncome ? { category: "Terugboeking van privé", type } : { category: "Privé opnames", type };
   }
   return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
 }
@@ -503,7 +507,7 @@ function withAccountType(override, accountType) {
   return { ...override, type, viewType };
 }
 
-// V50 — categorieën die op een privérekening NIET automatisch naar "Prive - overige kosten" gaan.
+// V50 — categorieën die op een privérekening NIET automatisch naar "Privé - overige kosten" gaan.
 const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
   "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop/uitgaven",
 ];

@@ -41,7 +41,7 @@ export function useControlerenCardGroups(p) {
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
-    zelfstandigenaftrekStatus,
+    zelfstandigenaftrekStatus, rechtsvorm,
   } = p;
 
   return useMemo(() => {
@@ -238,6 +238,7 @@ export function useControlerenCardGroups(p) {
         <div className="space-y-3">
           <div ref={aannamesSectionRef}>
             <PersoonlijkeAannamesPanel
+              rechtsvorm={rechtsvorm}
               activeYear={activeYear}
               winst={yearlySummary?.winst}
               zelfstandigenaftrekStatus={zelfstandigenaftrekStatus}
@@ -292,7 +293,7 @@ export function useControlerenCardGroups(p) {
     controlerenCardsByKey,
     instellingenCardsByKey,
     activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, verwachteLeaseOverig, loanSummary, privateLoanSummary, loanDetails,
-    zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
+    rechtsvorm, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
     expandedCardKeys,
     importDiagnostics, bevestigdeControles,
     fileContinuity,

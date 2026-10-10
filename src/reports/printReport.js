@@ -48,7 +48,7 @@ const PRINT_STYLES = `
 `;
 
 function buildReportHtml(groups) {
-  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Bankoverzicht Zakelijk & Prive</title>
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Bankoverzicht Zakelijk & Privé</title>
 <style>${PRINT_STYLES}</style></head><body onload="window.print()">${buildReportBodyContent(groups)}</body></html>`;
 }
 

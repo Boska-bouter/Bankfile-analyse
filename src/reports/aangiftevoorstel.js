@@ -15,6 +15,7 @@ import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAm
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "../tax/autoActiva.js";
+import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
@@ -277,7 +278,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     metZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, true, startersaftrekToegepast),
     zonderZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, false, startersaftrekToegepast),
   } : null;
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear, { huur: huurZakelijkPercentageStatus, energie: energieZakelijkPercentageStatus, gemeentelijk: gemeentelijkeKostenZakelijkPercentageStatus });
 
   // "Inkoopkosten, uitbesteed werk en andere externe kosten" hier uitgesplitst in 3 losse regels,
   // rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
@@ -313,7 +314,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   );
   const algemeneGegevensHtml = buildAlgemeneGegevensHtml(year, importDiagnostics, accountTypeByFile, classified, gatenDitJaar, geelGatenDitJaar);
 
-  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus);
+  const kwartalen = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(year, { leaseSummary: leaseSummary || [], leaseDetails: leaseDetails || {}, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates, btwVerlegd, rechtsvorm: "zzp" }));
   // Alle vier kwartalen tonen, ook als er in een kwartaal niets te betalen of terug te vragen is (dan € 0,00).
   const kwartalenVol = kwartalen.length ? [1, 2, 3, 4].map((n) => kwartalen.find((q) => q.kwartaal === n) || { kwartaal: n, verschuldigdBtw21: 0, verschuldigdBtw9: 0, voorbelasting: 0 }) : [];
 
@@ -459,17 +460,23 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalenVol.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
     <tbody><tr><td>Saldo</td>${kwartalenVol
       .map((q) => {
-        const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+        const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
         return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
       })
-      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
+      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
+  ${(() => {
+      const d = kwartalen.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
+      if (!d) return "";
+      const regels = d.items.map((i) => `${i.naam}: ${i.methode === "forfait" ? `forfait ${String(i.pct).replace(".", ",")}%${i.fractie < 1 ? ` × ${Math.round(i.fractie * 12)}/12` : ""} van catalogusprijs ${eur(i.catalogus)}${i.afgetopt ? `, afgetopt op het maximum van ${eur(i.maximum)}` : ""}` : `werkelijk privégebruik ${i.pct}%`} = ${eur(i.bedrag)}${i.meldingen.length ? ` (${i.meldingen.join(" ")})` : ""}`);
+      return `<p style="font-size:11px;color:#475569;margin:6px 0 0">Het saldo in Q4 bevat <strong>${eur(d.bedrag)}</strong> btw-correctie privégebruik auto (rubriek 1d van de laatste aangifte van het jaar). ${regels.join("; ")}.</p>`;
+    })()}
   </div>`
       : "";
 
   // V19 — slotregel: totaal te betalen / te ontvangen over het jaar = IB ná heffingskorting (dus incl.
   // zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen) + Zvw + BTW-saldo
   // (4 kwartalen; bij KOR geen BTW). Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
-  const btwJaarSaldo = korRegeling ? 0 : kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0);
+  const btwJaarSaldo = korRegeling ? 0 : kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
   const totaalTekst = (t) => `${eur(Math.abs(t))} ${t < 0 ? "te ontvangen" : "te betalen"}`;
   const ibNa = (ibE, hk) => Math.max(0, (ibE.belasting || 0) - (hk.totaal || 0));
   let jaarTotaalHtml;
@@ -638,16 +645,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // "Energie-water (deels zakelijk)"/"Gemeentelijke kosten (deels zakelijk)" — elk alleen zichtbaar
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
-  const gedeeldeHuisvestingHtml = [
-    { label: "Huur (deels zakelijk)", gh: gedeeldeHuurForYear },
-    { label: "Energie-water (deels zakelijk)", gh: gedeeldeEnergieForYear },
-    { label: "Gemeentelijke kosten (deels zakelijk)", gh: gedeeldeGemeentelijkeKostenForYear },
-  ]
-    .filter(({ gh }) => !!gh)
-    .map(({ label, gh }) => `
-  <div class="rubriek"><span>${label} — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
-  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}.<!--V--> Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de app zelf.<!--/V--></p>`)
-    .join("");
+  // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
+  const gedeeldeHuisvestingHtml = "";
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
@@ -707,10 +706,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
-          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
           return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
         })
-        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
+        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}

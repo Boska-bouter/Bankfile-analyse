@@ -70,7 +70,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             </thead>
             <tbody className="divide-y divide-slate-50">
               {quarters.map((q) => {
-                const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+                const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
                 const statusKey = `${q.year}-Q${q.kwartaal}`;
                 const status = kwartaalStatus[statusKey] || {};
                 return (
@@ -130,6 +130,24 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
               })}
             </tbody>
           </table>
+          {(() => {
+            const d = quarters.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
+            if (!d) return null;
+            return (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <p className="font-semibold">Btw privégebruik auto: {eur(d.bedrag)} in het saldo van Q4 (rubriek 1d)</p>
+                {d.items.map((i, n) => (
+                  <p key={n} className="mt-0.5">
+                    {i.naam}: {i.methode === "forfait"
+                      ? `forfait ${String(i.pct).replace(".", ",")}%${i.fractie < 1 ? ` × ${Math.round(i.fractie * 12)}/12` : ""} van catalogusprijs ${eur(i.catalogus)}${i.afgetopt ? `, afgetopt op het maximum van ${eur(i.maximum)}` : ""}`
+                      : `werkelijk privégebruik ${i.pct}%`} = {eur(i.bedrag)}
+                    {i.meldingen.length > 0 && <span className="text-amber-700"> — {i.meldingen.join(" ")}</span>}
+                  </p>
+                ))}
+                <p className="mt-1 text-amber-700">Instellen of uitzetten: Persoonlijke aannames → Auto op de zaak instellen → Btw privégebruik.</p>
+              </div>
+            );
+          })()}
         </div>
       )}
       {breakdownModal && (

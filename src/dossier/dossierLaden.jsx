@@ -4,7 +4,7 @@ import { readProjectFile } from "../storage/projectFile.js";
 import { clearPersistedData, clearPersistedSettings } from "../storage/projectStorage.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES } from "../classification/categories.js";
 import { DEFAULT_BTW_RATES, mergeBtwRates, DEFAULT_VOORBELASTING_EXCLUDED } from "../tax/btw.js";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossierMigraties.js";
 
 export async function laadDossierBestand(file, c) {
   const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
@@ -31,7 +31,7 @@ export async function laadDossierBestand(file, c) {
     setReviewedPersonKeys(Array.isArray(project.reviewedPersonKeys) ? project.reviewedPersonKeys : []);
     setReviewedOverigKeys(Array.isArray(project.reviewedOverigKeys) ? project.reviewedOverigKeys : []);
     setKwartaalStatus(project.kwartaalStatus && typeof project.kwartaalStatus === "object" ? project.kwartaalStatus : {});
-    setVoorbelastingExcluded(Array.isArray(project.voorbelastingExcluded) ? project.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
+    setVoorbelastingExcluded(Array.isArray(project.voorbelastingExcluded) ? migreerCategorieLijst(project.voorbelastingExcluded) : DEFAULT_VOORBELASTING_EXCLUDED);
     setPeriodeQuarterOverrides(project.periodeQuarterOverrides && typeof project.periodeQuarterOverrides === "object" ? project.periodeQuarterOverrides : {});
     setReviewedPeriodeKeys(Array.isArray(project.reviewedPeriodeKeys) ? project.reviewedPeriodeKeys : []);
     setLoanDetails(project.loanDetails && typeof project.loanDetails === "object" ? project.loanDetails : {});
@@ -67,7 +67,7 @@ export async function laadDossierBestand(file, c) {
     setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
     setVerwachteAangeboden(project.verwachteAangeboden && typeof project.verwachteAangeboden === "object" ? project.verwachteAangeboden : {});
     setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
-    setFixedCategories(Array.isArray(project.fixedCategories) ? project.fixedCategories : DEFAULT_FIXED_CATEGORIES);
+    setFixedCategories(Array.isArray(project.fixedCategories) ? migreerCategorieLijst(project.fixedCategories) : DEFAULT_FIXED_CATEGORIES);
     setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
     setTransactionNotes(project.transactionNotes && typeof project.transactionNotes === "object" ? project.transactionNotes : {});
     setIbStatus(project.ibStatus && typeof project.ibStatus === "object" ? project.ibStatus : {});
@@ -81,16 +81,20 @@ export async function laadDossierBestand(file, c) {
     setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
     setAutoStatusState(normalizeAutoStatus(project.autoStatus));
-    setHuurZakelijkPercentageStatusState(project.huurZakelijkPercentageStatus && typeof project.huurZakelijkPercentageStatus === "object" ? project.huurZakelijkPercentageStatus : {});
-    setEnergieZakelijkPercentageStatusState(project.energieZakelijkPercentageStatus && typeof project.energieZakelijkPercentageStatus === "object" ? project.energieZakelijkPercentageStatus : {});
-    setGemeentelijkeKostenZakelijkPercentageStatusState(project.gemeentelijkeKostenZakelijkPercentageStatus && typeof project.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? project.gemeentelijkeKostenZakelijkPercentageStatus : {});
-    setCategoryZakelijkPercentageState(project.categoryZakelijkPercentage && typeof project.categoryZakelijkPercentage === "object" ? project.categoryZakelijkPercentage : {});
+    // 14V9 — de aparte "(deels zakelijk)"-percentages gaan naar het generieke percentage per categorie.
+    const gedeeldeMig = migreerGedeeldeHuisvesting(project.categoryZakelijkPercentage, {
+      huur: project.huurZakelijkPercentageStatus, energie: project.energieZakelijkPercentageStatus, gemeentelijk: project.gemeentelijkeKostenZakelijkPercentageStatus,
+    });
+    setHuurZakelijkPercentageStatusState({});
+    setEnergieZakelijkPercentageStatusState({});
+    setGemeentelijkeKostenZakelijkPercentageStatusState({});
+    setCategoryZakelijkPercentageState(gedeeldeMig.categoryZakelijkPercentage);
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
     setLoadedProjectFileName(file.name);
     c.setDossierHerstelcode?.(project.__herstelcode || null);
     c.setDossierWachtwoord?.(project.__wachtwoord || null); // een beveiligd dossier blijft bij opslaan beveiligd
     c.setBevestigdeControles?.(project.bevestigdeControles && typeof project.bevestigdeControles === "object" ? project.bevestigdeControles : {});
-    c.setAuditLog?.(Array.isArray(project.auditLog) ? project.auditLog.slice(-300) : []);
+    c.setAuditLog?.([...(Array.isArray(project.auditLog) ? project.auditLog.slice(-290) : []), ...gedeeldeMig.meldingen.map((label) => ({ t: Date.now(), label: `Migratie: ${label}` }))]);
     // v286 — zie ook handleFiles hierboven: alle uitklapbare kaarten beginnen ingeklapt bij het
     // laden van een (ander) project, i.p.v. een kaart die van een vorig dossier in deze sessie nog
     // openstond gewoon open te laten staan.

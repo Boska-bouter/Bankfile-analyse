@@ -41,7 +41,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
         </select>
       )}
       <select value={type} onChange={(e) => apply(category, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
-        <option value="Prive">Prive</option>
+        <option value="Prive">Privé</option>
         <option value="Zakelijk">Zakelijk</option>
       </select>
       <button

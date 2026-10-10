@@ -287,13 +287,13 @@ export function useDashboardCards(p) {
               value: (() => {
                 const totaal = [1, 2, 3, 4].reduce((a, kwartaal) => {
                   const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
-                  return a + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0);
+                  return a + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0);
                 }, 0);
                 return `${eur(Math.abs(totaal))} ${totaal < 0 ? "te ontvangen" : "te betalen"}`;
               })(),
               lines: [1, 2, 3, 4].map((kwartaal) => {
                 const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
-                const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting : 0;
+                const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0;
                 // v283 — voorheen stond er bij een positief saldo alleen het bedrag (zonder "te
                 // betalen"), en bij een negatief saldo "terug" — op verzoek nu bij élk kwartaal
                 // expliciet "te betalen" of "te ontvangen" erachter, zodat het nooit dubbelzinnig is.

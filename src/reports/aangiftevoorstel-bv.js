@@ -156,7 +156,7 @@ function buildYearSectionBv(
   const leaseAutoWinstCorrectieBv = (leaseAutoKostenBv?.afschrijvingTotaal || 0) - (leaseAutoKostenBv?.boekresultaatBeeindigingTotaal || 0);
   const summary = computeBvSummary(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties);
   const vpbEstimate = estimateVpb(summary.winst, year);
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, null, year, null, null, null, { huur: opties.huurZakelijkPercentageStatus, energie: opties.energieZakelijkPercentageStatus, gemeentelijk: opties.gemeentelijkeKostenZakelijkPercentageStatus });
 
   // v204: KIA (kleinschaligheidsinvesteringsaftrek) gold tot nu toe alleen in het zzp-rapport, maar is
   // net zo goed van toepassing op een BV onder de Vpb — computeInvesteringenForYear/computeMogelijkeKia
@@ -223,7 +223,7 @@ function buildYearSectionBv(
   const kwartalenVol = kwartalen.length ? [1, 2, 3, 4].map((n) => kwartalen.find((q) => q.kwartaal === n) || { kwartaal: n, verschuldigdBtw21: 0, verschuldigdBtw9: 0, voorbelasting: 0 }) : [];
   const kwartaalRows = kwartalen
     .map((q) => {
-      const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+      const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
       return `<tr>
         <td>Q${q.kwartaal}</td>
         <td class="num">${eur(q.omzetBruto21)}</td><td class="num">${eur(q.verschuldigdBtw21)}</td>
@@ -340,16 +340,16 @@ function buildYearSectionBv(
     <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalenVol.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
     <tbody><tr><td>Saldo</td>${kwartalenVol
       .map((q) => {
-        const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+        const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
         return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
       })
-      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
+      .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
   </div>`
       : "";
 
   // V20 — slotregel: totaal te betalen / te ontvangen = geschatte Vpb + BTW-saldo (4 kwartalen).
   // Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
-  const btwJaarSaldo = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0);
+  const btwJaarSaldo = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
   const jaarTotaal = (vpbEstimate.belasting || 0) + btwJaarSaldo;
   JAAR_TOTALEN_BV.push({ year, totaal: jaarTotaal });
   const jaarTotaalHtml = `<div class="totaal-kaart">
@@ -485,10 +485,10 @@ function buildYearSectionBv(
       <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
-          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting;
+          const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
           return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
         })
-        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
+        .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr>
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>
@@ -503,7 +503,7 @@ function buildYearSectionBv(
     <tbody>${kwartaalRows}</tbody>
     <tfoot><tr class="total"><td>Totaal jaar</td>
       ${["omzetBruto21", "verschuldigdBtw21", "omzetBruto9", "verschuldigdBtw9", "omzetBrutoVerlegd", "kostenBruto", "voorbelasting"].map((k) => `<td class="num">${eur(kwartalen.reduce((a, q) => a + (q[k] || 0), 0))}</td>`).join("")}
-      ${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting, 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug te vragen"}</strong></td>`; })()}
+      ${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug te vragen"}</strong></td>`; })()}
     </tr></tfoot>
   </table>` : ""}
 
