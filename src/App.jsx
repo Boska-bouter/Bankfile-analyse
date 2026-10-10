@@ -991,7 +991,7 @@ export default function App() {
   // Voor elk bestand: de eigen rekeningnummers van al je ándere geladen bestanden (met hun
   // rekeningtype) — gebruikt om overboekingen tussen je eigen rekeningen te herkennen, ongeacht
   // bankformaat. Alleen bestanden waarvan het rekeningtype al bekend is tellen mee (anders is niet
-  // te bepalen of het bijv. "Terugboeking van prive" of "Uitbetaling aan prive" zou moeten zijn).
+  // te bepalen of het bijv. "Terugboeking van privé" of "Uitbetaling aan prive" zou moeten zijn).
   const ownAccountsElsewhereByFile = useOwnAccountsElsewhereByFile({
     accountTypeByFile, eigenRekeningenExtra, ownAccountByFile, parsedFiles,
   });
@@ -1443,7 +1443,7 @@ export default function App() {
   const overigZakelijkPending = pendingOverigReview.filter((i) => i.type === "Zakelijk");
   const overigPrivePending = pendingOverigReview.filter((i) => i.type !== "Zakelijk");
   const bulkMarkOverigAsPriveOpname = () => {
-    for (const item of overigZakelijkPending) markOverigItem(item, "Prive opnames", "Zakelijk");
+    for (const item of overigZakelijkPending) markOverigItem(item, "Privé opnames", "Zakelijk");
   };
   const bulkMarkOverigAsWinkelsDivers = () => {
     for (const item of overigPrivePending) markOverigItem(item, "Winkels divers", "Prive");
@@ -1934,7 +1934,7 @@ export default function App() {
     for (const tx of classified) {
       const vt = tx.viewType || tx.type;
       const key = `${vt} ${tx.year}`;
-      if (!map[key]) map[key] = { label: `${vt === "Zakelijk" ? "Zakelijk" : "Prive"} ${tx.year}`, type: vt, year: tx.year, items: [] };
+      if (!map[key]) map[key] = { label: `${vt === "Zakelijk" ? "Zakelijk" : "Privé"} ${tx.year}`, type: vt, year: tx.year, items: [] };
       map[key].items.push(tx);
     }
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
@@ -2055,7 +2055,7 @@ export default function App() {
     return c;
   }, [groups, importDiagnostics, accountTypeByFile]);
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
-  const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Prive ${activeYear}`, type: "Prive", year: activeYear, items: [] };
+  const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Privé ${activeYear}`, type: "Prive", year: activeYear, items: [] };
   // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
   // zakelijke categorie, die aan de zakelijke kant gespiegeld staan). Alleen voor weergave; controles
   // en checklists blijven op `priGroupForYear` rekenen zodat niets dubbel geteld wordt.
@@ -2648,6 +2648,7 @@ export default function App() {
     };
   };
   const controlerenCardGroups = useControlerenCardGroups({
+    rechtsvorm,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,

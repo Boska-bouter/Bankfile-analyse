@@ -34,12 +34,12 @@ export function migrateOverridesCategories(overrides) {
       out[key] = val;
       continue;
     }
-    // "Terugboeking van prive" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
+    // "Terugboeking van privé" was tot v213 ook de naam voor de PRIVÉ-kant van deze overboeking
     // (geld terug náár zakelijk) — sindsdien heet dat aan de privékant "Terugboeking naar zakelijk"
     // (zie classify.js), zodat de twee kanten van deze boeking niet meer dezelfde naam delen. De
     // generieke migrateLegacyCategoryName hieronder kan deze migratie niet doen (die kent geen
     // `type`), dus dit specifieke geval eerst, vóór de generieke hernoeming.
-    const category = val.category === "Terugboeking van prive" && val.type === "Prive"
+    const category = val.category === "Terugboeking van privé" && val.type === "Prive"
       ? "Terugboeking naar zakelijk"
       : migrateLegacyCategoryName(val.category);
     out[key] = { ...val, category };

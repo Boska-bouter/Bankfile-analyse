@@ -20,7 +20,7 @@ export const BEGRIPPEN = [
   { id: "ib", term: "IB", zoek: "IB", uitleg: "Inkomstenbelasting: de belasting over je inkomen, bij een eenmanszaak inclusief de winst uit onderneming." },
   { id: "voorbelasting", term: "Voorbelasting", zoek: "Voorbelasting|voorbelasting", uitleg: "De BTW die je betaalt op zakelijke inkopen. Die trek je af van de BTW die je zelf in rekening brengt." },
   { id: "aannames", term: "Aannames", zoek: "Aannames|aannames", uitleg: "Punten waarop de app een redelijke veronderstelling heeft gedaan (bijv. een zakelijk/privé-percentage). Jij bevestigt of past aan." },
-  { id: "spiegel", term: "spiegelboeking", zoek: "spiegelboeking(en)?|Prive ↔ spiegel", uitleg: "Een door de app aangemaakte tegenboeking aan de andere kant (zakelijk/privé) van een overboeking tussen je eigen rekeningen. Telt niet dubbel mee." },
+  { id: "spiegel", term: "spiegelboeking", zoek: "spiegelboeking(en)?|Privé ↔ spiegel", uitleg: "Een door de app aangemaakte tegenboeking aan de andere kant (zakelijk/privé) van een overboeking tussen je eigen rekeningen. Telt niet dubbel mee." },
 ];
 
 const RE = new RegExp(`(?<![\\p{L}\\p{N}])(${BEGRIPPEN.map((b) => `(?:${b.zoek})`).join("|")})(?![\\p{L}\\p{N}])`, "gu");

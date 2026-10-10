@@ -26,7 +26,7 @@ import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatches
 // veel onderlinge overboekingen ontstond zo een lange rij overbodige controlevragen over boekingen
 // die feitelijk al via de andere rekening zijn vastgelegd/beoordeeld.
 const PRIVE_TRANSFER_CATEGORIES = [
-  "Prive opnames", "Terugboeking van prive", // zakelijke kant
+  "Privé opnames", "Terugboeking van privé", // zakelijke kant
   "Ontvangen van zakelijk", "Terugboeking naar zakelijk", // privé kant (v213)
   "Interne overboeking", // V56 — tussen twee eigen rekeningen van hetzelfde type
 ];
@@ -86,7 +86,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   // (buitenlandse pinbetaling / kaartbetaling zonder tegenrekening-IBAN), geen inhoudelijke
   // herkenning. Bewust op "heuristic" (net als "Overboekingen aan personen"), zodat dit zichtbaar in
   // de "nog te controleren"-lijst blijft staan.
-  if (resolvedCategory === "Prive - vrijetijd-uitgaan-vakantie & uit eten" && looksLikeForeignCardPayment(tx)) {
+  if (resolvedCategory === "Privé - vrijetijd-uitgaan-vakantie & uit eten" && looksLikeForeignCardPayment(tx)) {
     return { level: "heuristic", label: "Geschat: buitenlandse pinbetaling, waarschijnlijk vakantie/uitje" };
   }
   if (resolvedCategory === "Winkels divers" && !tx.counterpartyIban) {

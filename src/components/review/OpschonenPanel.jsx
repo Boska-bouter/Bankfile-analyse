@@ -75,8 +75,8 @@ export default function OpschonenPanel({
               explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
               bulkAction={[
                 overigZakelijkCount > 0 && {
-                  label: `Alle zakelijke (${overigZakelijkCount}) naar "Prive opnames"`,
-                  confirmText: `${overigZakelijkCount} tegenpartij(en) in "Overig" die nu als Zakelijk staan, allemaal naar "Prive opnames" zetten?`,
+                  label: `Alle zakelijke (${overigZakelijkCount}) naar "Privé opnames"`,
+                  confirmText: `${overigZakelijkCount} tegenpartij(en) in "Overig" die nu als Zakelijk staan, allemaal naar "Privé opnames" zetten?`,
                   onApply: onBulkMarkOverigAsPriveOpname,
                 },
                 overigPriveCount > 0 && {

@@ -27,7 +27,7 @@ export function useClassified(p) {
       // Oudere dossiers hebben voor privé-boekingen soms nog de zakelijke fijne categorie als handmatige keuze
       // ("Huur", "Energie-water", …). Blijft de boeking privé en staat het %-zakelijk van die categorie in
       // dat jaar uitdrukkelijk op 0 (dus: geen bedrag verschuift), dan krijgt hij de privé-tegenhanger
-      // ("Prive - huur", …) zoals nieuwe boekingen. Is er een percentage > 0 of niets ingesteld, dan blijft
+      // ("Privé - huur", …) zoals nieuwe boekingen. Is er een percentage > 0 of niets ingesteld, dan blijft
       // alles ongewijzigd, zodat er nooit een bedrag stilzwijgend verspringt.
       const tegenhanger = SPLIT_CATEGORY_NAMES[resolved.category];
       if (tegenhanger && resolved.type === "Prive" && accountTypeByFile[tx.source] !== "Zakelijk") {
@@ -43,7 +43,7 @@ export function useClassified(p) {
     // (zakelijk -> andere privérekening -> deze rekening): noem hem dan "Ontvangen van zakelijk" /
     // "Terugboeking naar zakelijk", zodat beide kanten van het overzicht gelijk zijn.
     const dagen5 = 5 * 86400000;
-    const zakKandidaten = base0.filter((t) => t.type === "Zakelijk" && (t.category === "Prive opnames" || t.category === "Terugboeking van prive") && t.counterpartyIban);
+    const zakKandidaten = base0.filter((t) => t.type === "Zakelijk" && (t.category === "Privé opnames" || t.category === "Terugboeking van privé") && t.counterpartyIban);
     const gebruiktZak = new Set();
     const base1 = zakKandidaten.length === 0 ? base0 : base0.map((tx) => {
       if (tx.category !== "Interne overboeking" || tx.type !== "Prive" || tx.accountType !== "Prive" || !tx.counterpartyIban) return tx;
@@ -51,7 +51,7 @@ export function useClassified(p) {
         (o) => o.accountType === "Prive" && !o.isLoadedFile && ibansMatch(tx.counterpartyIban, o.iban)
       );
       if (!naarNietGeladen) return tx;
-      const wil = tx.amount > 0 ? "Prive opnames" : "Terugboeking van prive";
+      const wil = tx.amount > 0 ? "Privé opnames" : "Terugboeking van privé";
       const z = zakKandidaten.find((q) =>
         !gebruiktZak.has(q.id) && q.category === wil && Math.abs(q.amount + tx.amount) < 0.005 &&
         ibansMatch(q.counterpartyIban, tx.counterpartyIban) && Math.abs(q.date - tx.date) <= dagen5
@@ -61,7 +61,7 @@ export function useClassified(p) {
       return { ...tx, category: tx.amount > 0 ? "Ontvangen van zakelijk" : "Terugboeking naar zakelijk" };
     });
     const base = koppelDoorsluisOverboekingen(base1, Object.values(accountTypeByFile).includes("Zakelijk"));
-    // "Prive opnames"/"Terugboeking van prive" (zakelijke kant) zijn geld dat tussen zakelijk en
+    // "Privé opnames"/"Terugboeking van privé" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
     // zakelijk en privé in beide richtingen klopt, zonder de oorspronkelijke boeking te veranderen.
@@ -81,7 +81,7 @@ export function useClassified(p) {
     // zijn eigen rekeningnummer niet op een manier die computeOwnAccountByFile herkent) — met een
     // reëel geladen privérekening-bestand ernaast leverde dat dan EXACT dezelfde overboeking dubbel
     // op: één keer als de echte, correct geclassificeerde privé-transactie, en één keer als
-    // spiegelboeking die (per ongeluk) nog de zakelijke categorienaam ("Prive opnames"/"Terugboeking
+    // spiegelboeking die (per ongeluk) nog de zakelijke categorienaam ("Privé opnames"/"Terugboeking
     // van prive") droeg. Dit vangnet kiest bewust voor "geen spiegel" boven "misschien dubbel".
     const anyPriveFileLoaded = parsedFiles.some((pf) => accountTypeByFile[pf.fileName] === "Prive");
     const mirrors = [];
@@ -89,7 +89,7 @@ export function useClassified(p) {
       const otherSideAlsoLoaded =
         anyPriveFileLoaded || (ownAccountsElsewhereByFile[tx.source] || []).some((o) => o.accountType === "Prive" && o.isLoadedFile);
       if (
-        (tx.category === "Prive opnames" || tx.category === "Terugboeking van prive") &&
+        (tx.category === "Privé opnames" || tx.category === "Terugboeking van privé") &&
         tx.type === "Zakelijk" && !otherSideAlsoLoaded
       ) {
         // viewType expliciet "Prive": de spiegel hoort in het PRIVÉ-overzicht. Zonder dit erfde hij viewType "Zakelijk" van het origineel

@@ -68,7 +68,7 @@ function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw,
 // KIA die daarvan (en van eigen bedrijfsmiddel-investeringen) afhangen. Dit is bewust een apart,
 // expliciet paneel — de app mag hier niets stilzwijgend aannemen (zie ook het aangiftevoorstel).
 export default function PersoonlijkeAannamesPanel({
-  activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
+  rechtsvorm, activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
@@ -111,6 +111,7 @@ export default function PersoonlijkeAannamesPanel({
   // van berekening verandert. rawStatus (i.p.v. de geresolveerde status) bepaalt of de dropdown de
   // placeholder toont — het onderscheid tussen "nog niet gekozen" en "expliciet gekozen" blijft zo
   // zichtbaar, ook al is het gedrag al bepaald.
+  const isBv = rechtsvorm === "bv";
   const rawStatus = zelfstandigenaftrekStatus?.[activeYear];
   const status = resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, activeYear, zaLegacyJaDefault);
   const zelfstandigenaftrekToegepast = status !== "nee";
@@ -147,13 +148,14 @@ export default function PersoonlijkeAannamesPanel({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
         className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left cursor-pointer"
       >
-        <span>Persoonlijke aannames voor IB — zelfstandigenaftrek, heffingskortingen &amp; KIA</span>
+        <span>{isBv ? "Aannames — auto-status" : "Persoonlijke aannames voor IB — zelfstandigenaftrek, heffingskortingen & KIA"}</span>
         {onOpenHelp && <HelpHint chapter="persoonlijke-aannames" onOpen={onOpenHelp} />}
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </div>
       {open && (
         <div className="px-5 pb-5 space-y-4">
+          {!isBv && (<>
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Voldaan aan het urencriterium voor de zelfstandigenaftrek in {activeYear}?
@@ -245,8 +247,9 @@ export default function PersoonlijkeAannamesPanel({
               Indicatieve aangifteberekening-rapport (met alle jaren erin) voor die volledige berekening.
             </p>
           </div>
+          </>)}
 
-          <div className="pt-2 border-t border-slate-200">
+          <div className={isBv ? "" : "pt-2 border-t border-slate-200"}>
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Auto-status in {activeYear}
             </label>

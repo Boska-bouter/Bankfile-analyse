@@ -71,7 +71,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                           accountTypeByFile[d.fileName] === "Zakelijk" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
                         }`}
                       >
-                        {accountTypeByFile[d.fileName]}
+                        {accountTypeByFile[d.fileName] === "Prive" ? "Privé" : accountTypeByFile[d.fileName]}
                       </span>
                     )}
                   </p>

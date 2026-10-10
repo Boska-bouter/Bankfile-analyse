@@ -42,15 +42,15 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
   // tegenpartijnaam niet apart als "Prive" te hoeven labelen) voor geld dat wél vanaf de zakelijke
   // rekening is opgenomen voor iets persoonlijks/vertrouwelijks. Zonder correctie verdween zo'n
   // opname helemaal uit de Tekort/Over-berekening: niet als kostenpost (terecht, "geen"), maar ook
-  // niet als "naar privé gegaan" (want tx.category matchte geen van de expliciete "Prive opnames"/
+  // niet als "naar privé gegaan" (want tx.category matchte geen van de expliciete "Privé opnames"/
   // "Ontvangen van zakelijk"-categorieën hieronder) — waardoor de winst en het resultaat er beter
   // uitzagen dan de werkelijke geldstroom rechtvaardigde. Nu telt zo'n opname alsnog mee als
-  // "uitkeringenAanPrive" (net als een gewone "Prive opnames"), zodat het bedrag zichtbaar blijft in
+  // "uitkeringenAanPrive" (net als een gewone "Privé opnames"), zodat het bedrag zichtbaar blijft in
   // Tekort/Over — puur als bedrag, zonder de vertrouwelijke details verder te tonen.
   let persoonlijkVanZakelijkeRekening = 0;
   for (const tx of classified) {
     if (tx.type === "Prive" && !tx.isMirror && tx.amount < 0 && tx.year === year) {
-      // "Terugboeking van prive" (en de andere incomeTransferCategories) zijn geen persoonlijke
+      // "Terugboeking van privé" (en de andere incomeTransferCategories) zijn geen persoonlijke
       // uitgave maar een verschuiving tussen rekeningen — geld dat vanaf de privérekening
       // terugstroomt naar zakelijk telt dus niet mee als "priUitgegeven" (privé-uitgaven), net
       // zoals het al niet meetelde in priVast/priVariabel hieronder. Zonder deze uitsluiting werd
@@ -79,13 +79,13 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // hernoeming van een eerdere "Uitbetaling aan prive"-override, of als bewust gemarkeerde
       // "verkeerde rekening"-correctie). Zonder deze categorie hier mee te tellen verdween zo'n bedrag
       // ten onrechte uit "Totaal aan prive uitgekeerd".
-      if (tx.category === "Prive opnames" || tx.category === "Ontvangen van zakelijk") uitkeringenAanPrive += Math.abs(tx.amount);
-      // "Terugboeking van prive": geld dat vanuit privé terugkomt op de zakelijke rekening — dit
+      if (tx.category === "Privé opnames" || tx.category === "Ontvangen van zakelijk") uitkeringenAanPrive += Math.abs(tx.amount);
+      // "Terugboeking van privé": geld dat vanuit privé terugkomt op de zakelijke rekening — dit
       // verlaagt het bedrag dat per saldo naar privé is gegaan (dus aftrekken, niet los laten
       // staan). Zonder deze aftrek liet "Overboeking naar privé" (en de "Privé uitgaven"-schatting
       // die hierop terugvalt als de privérekening zelf niet is geladen) het volledige oorspronkelijk
       // opgenomen bedrag zien, ook als een deel daarvan later is teruggestort.
-      if (tx.category === "Terugboeking van prive") uitkeringenAanPrive -= Math.abs(tx.amount);
+      if (tx.category === "Terugboeking van privé") uitkeringenAanPrive -= Math.abs(tx.amount);
       // Zie de toelichting bij persoonlijkVanZakelijkeRekening hierboven — bewust NIET opgeteld bij
       // uitkeringenAanPrive zelf: computeBusinessAdvies (en MultiYearOverview.effectiefFor) gebruiken
       // ofwel priUitgegeven (als de privérekening is geladen) ofwel uitkeringenAanPrive (als niet) —
@@ -205,7 +205,7 @@ export function computeVolledigeJaren(classified) {
 // Kwalitatief advies voor het actieve jaar: is het resultaat per saldo positief of negatief,
 // en staan er wel typische privé-uitgaven tussen (anders is het beeld mogelijk vertekend omdat
 // niet alle privé-uitgaven zijn opgegeven).
-const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Prive - vrijetijd-uitgaan-vakantie & uit eten"];
+const TYPISCHE_PRIVE_CATEGORIEEN = ["Boodschappen", "Huur", "Hypotheek", "Energie-water", "Privé - vrijetijd-uitgaan-vakantie & uit eten"];
 export function computeBusinessAdvies(activeYear, summary, openOB, ibEstimate, priItems, zvwEstimate) {
   if (!activeYear || !summary) return null;
   const ibBelastingEffectief = ibEstimate.belasting + (zvwEstimate?.bijdrage || 0);

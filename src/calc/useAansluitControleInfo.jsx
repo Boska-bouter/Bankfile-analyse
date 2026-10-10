@@ -8,7 +8,7 @@ export function useAansluitControleInfo(p) {
   } = p;
 
   return useMemo(() => {
-    const isZakTransferCat = (c) => c === "Prive opnames" || c === "Terugboeking van prive";
+    const isZakTransferCat = (c) => c === "Privé opnames" || c === "Terugboeking van privé";
     const isPriTransferCat = (c) => c === "Ontvangen van zakelijk" || c === "Terugboeking naar zakelijk";
     const zakSum = zakGroupForYear.items.filter((t) => isZakTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);
     const priSum = priGroupForYear.items.filter((t) => isPriTransferCat(t.category)).reduce((a, t) => a + t.amount, 0);

@@ -146,20 +146,20 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Zak. Ink.</strong> is de categorie "Zakelijke inkomsten"; <strong>WUO (bruto)</strong> is de winst
           uit onderneming vóór persoonlijke belastingen (Zakelijke inkomsten min de overige zakelijke kosten, na
-          aftrek van BTW — "Prive opnames"/"Ontvangen van zakelijk"/"Terugboeking van prive"/"Terugboeking naar zakelijk", "Belastingen:
+          aftrek van BTW — "Privé opnames"/"Ontvangen van zakelijk"/"Terugboeking van privé"/"Terugboeking naar zakelijk", "Belastingen:
           ZVW"/"Belastingen: IH", en "Belastingen: Naheffingen OB/IB voorgaande jaren" tellen bewust niet mee: de
           eerste drie zijn onttrekkingen aan/inbreng in de winst, de rest zijn persoonlijke belastingen of een
           balansmutatie — geen van alle zijn het zakelijke kosten of omzet. "Belastingen: Naheffingen LH voorgaande
           jaren" telt WEL gewoon mee als kosten, net als reguliere LH.
         </p>
         <p>
-          <strong>Totaal prive uitgegeven</strong> is al het geld dat dat jaar daadwerkelijk privé is uitgegeven — is
-          er geen privé-rekening geüpload, dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar prive"
+          <strong>Totaal privé uitgegeven</strong> is al het geld dat dat jaar daadwerkelijk privé is uitgegeven — is
+          er geen privé-rekening geüpload, dan wordt aangenomen dat het hele bedrag "Uitbetaald/opgenomen naar privé"
           ook echt is uitgegeven (gemarkeerd met *). De handmatige <strong>correctie</strong> komt daar altijd
           bovenop (gemarkeerd met †).
         </p>
         <p>
-          <strong>Tekort / Over</strong> is WUO min Totaal prive uitgegeven, min Te betalen OB, min Basisindicatie
+          <strong>Tekort / Over</strong> is WUO min Totaal privé uitgegeven, min Te betalen OB, min Basisindicatie
           IB/IH — dus wat er overblijft nadat zowel al het privé uitgegeven geld als de nog te betalen belastingen
           zijn meegerekend. Een tekort betekent dat de winst dat niet dekt.
         </p>
@@ -243,7 +243,7 @@ export const HELP_CHAPTERS = [
   {
     key: "categorieen-overzicht",
     groep: "overzicht",
-    titel: "Categorieën — Zakelijk/Prive",
+    titel: "Categorieën — Zakelijk/Privé",
     inhoud: (
       <p>
         Alle transacties van dat jaar en type, opgeteld per categorie, met de BTW ernaast. Let op het verschil met{" "}
@@ -263,8 +263,8 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Voor privé-boekingen zijn er negen keuzes in plaats van de vele fijne categorieën van vroeger. Vier horen bij
-          de koppeling met zakelijk: <strong>Prive opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
-          <strong>Terugboeking van prive</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
+          de koppeling met zakelijk: <strong>Privé opnames</strong>, <strong>Ontvangen van zakelijk</strong>,{" "}
+          <strong>Terugboeking van privé</strong> en <strong>Terugboeking naar zakelijk</strong>. Daarnaast{" "}
           <strong>Incasso, juridisch &amp; schulden</strong> en <strong>Leningen (privé)</strong>.
         </p>
         <p>
@@ -309,7 +309,7 @@ export const HELP_CHAPTERS = [
           dan is het klaar.
         </p>
         <p>
-          Bij "Overig opruimen" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Prive opnames" (voor een
+          Bij "Overig opruimen" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Privé opnames" (voor een
           zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
       </div>
@@ -387,7 +387,7 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Privé of zakelijk:</strong> het type volgt altijd de rekening waarvan is betaald. Bankkosten,
           energie/water, gemeentelijke kosten, huur, mobiel/abonnementen en leningen op een privérekening krijgen de
-          bijbehorende "Prive - …"-categorie, tenzij het duidelijk een zakelijke uitgave is. Brandstof, parkeren en
+          bijbehorende "Privé - …"-categorie, tenzij het duidelijk een zakelijke uitgave is. Brandstof, parkeren en
           zakelijke inkoop vanaf een privérekening tellen wel mee als zakelijke kosten.
         </p>
         <p>
@@ -678,7 +678,7 @@ export const HELP_CHAPTERS = [
         <p>
           Standaard staat alles op 21% (Reiskosten OV op 9%), met
         uitzondering van categorieën waar geen BTW op zit: Bankkosten, alle Belastingen en Gemeentelijke kosten, alle
-        Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Prive opnames/Ontvangen van zakelijk,
+        Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Privé opnames/Ontvangen van zakelijk,
         interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. 
         </p>
         <p>

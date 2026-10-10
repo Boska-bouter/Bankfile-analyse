@@ -76,7 +76,7 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
                       <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
                         {mainCategoryOf(r.category)}
                       </span>{" "}
-                      · {displayCategory(r.category)} · {r.type}
+                      · {displayCategory(r.category)} · {r.type === "Prive" ? "Privé" : r.type}
                     </p>
                   </div>
                   <button onClick={() => removeRule(r.key)} className="shrink-0 text-slate-400 hover:text-rose-600" title="Regel verwijderen (transacties vallen terug op automatische classificatie)">

@@ -33,8 +33,8 @@ const RUBRIEK_ANDERE_KOSTEN = [
   // rubriek als de andere abonnementen/kosten hierboven.
   "Streaming diensten", "Software & Online diensten",
 ];
-const RUBRIEK_ONTTREKKINGEN = ["Prive opnames", "Ontvangen van zakelijk"];
-const RUBRIEK_STORTINGEN = ["Terugboeking van prive", "Terugboeking naar zakelijk"];
+const RUBRIEK_ONTTREKKINGEN = ["Privé opnames", "Ontvangen van zakelijk"];
+const RUBRIEK_STORTINGEN = ["Terugboeking van privé", "Terugboeking naar zakelijk"];
 const BELASTINGEN_GEEN_KOSTENPOST = [
   "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
   "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",

@@ -31,8 +31,8 @@ export default function UndoToast({ snapshot, onUndo, onDismiss, duration = 1000
       aria-live="polite"
       onMouseEnter={stop}
       onMouseLeave={start}
-      className="fixed z-50 flex items-center gap-3 rounded-xl bg-slate-900 text-white shadow-lg px-4 py-2.5 text-sm"
-      style={{ left: "50%", transform: "translateX(-50%)", bottom: "1.5rem", maxWidth: "calc(100vw - 2rem)" }}
+      className="fixed flex items-center gap-3 rounded-xl bg-slate-900 text-white shadow-lg px-4 py-2.5 text-sm"
+      style={{ zIndex: 80, left: "50%", transform: "translateX(-50%)", bottom: "calc(4rem + env(safe-area-inset-bottom, 0px))", maxWidth: "calc(100vw - 2rem)" }}
     >
       <Check className="h-4 w-4 text-emerald-400 shrink-0" />
       <span className="truncate">{snapshot.label}</span>

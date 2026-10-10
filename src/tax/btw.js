@@ -12,10 +12,10 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "AOV (arbeidsongeschiktheidsverzekering)",
   "Verzekeringen", // privé-verzekeringen — net als hun zakelijke tegenhangers vrijgesteld van BTW
   "Uitbetalen loon",
-  "Prive opnames",
-  "Terugboeking van prive",
+  "Privé opnames",
+  "Terugboeking van privé",
   "Ontvangen van zakelijk", // v213: privé-kant van "Uitbetaling aan prive" (zie classify.js)
-  "Terugboeking naar zakelijk", // v213: privé-kant van "Terugboeking van prive"
+  "Terugboeking naar zakelijk", // v213: privé-kant van "Terugboeking van privé"
   "Overboeking van bekenden", // v213: geldbeweging tussen bekenden, nooit BTW-belast
   // BV-specifiek: loon/dividend/kapitaal/rekening-courant zijn nooit met BTW belast — dit stond hier
   // per abuis niet bij toen deze categorieën zijn toegevoegd, waardoor het toolstandaardtarief van
@@ -66,12 +66,12 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
-  "Kinderopvang", "Prive - huur", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - mobiel/internet", "Prive overige abonnementen", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
-  // v288 — zelfde standaard-uitsluiting als de andere "Prive - ..."-categorieën hierboven: het
+  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel/internet", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
+  // v288 — zelfde standaard-uitsluiting als de andere "Privé - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
   // de BTW erover wordt hier standaard niet als voorbelasting geclaimd — desgewenst per dossier aan
   // te passen in het BTW-tarievenpaneel.
-  "Prive - streaming diensten",
+  "Privé - streaming diensten",
   "Verkoop activa",
 ];
 
