@@ -29,7 +29,12 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 
   return (
     <div className="flex items-center gap-3 text-sm rounded-lg border border-slate-100 p-2.5">
-      <span className="flex-1 min-w-[10rem] truncate font-medium">{categorie}</span>
+      <span className="flex-1 min-w-[10rem] font-medium">
+        <span className="block truncate">{categorie}</span>
+        {categorie === "Privé - overige kosten" && (
+          <span className="block text-xs font-normal text-slate-500">Uitgaven vanaf je privérekening die op zakelijke kosten lijken — mogelijk (deels) zakelijk, controleer ze.</span>
+        )}
+      </span>
       <span className="text-xs text-slate-400 font-mono">totaal {eur(totaal)}</span>
       <input
         type="number"

@@ -1,4 +1,4 @@
-import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 
@@ -28,8 +28,12 @@ export function keywordInText(text, keyword) {
   }
   return false;
 }
-export function ruleMatchesText(rule, text) {
-  return rule.keywords.some((kw) => keywordInText(text, kw));
+export function ruleMatchesText(rule, text, accountType = null) {
+  return rule.keywords.some((kw) => {
+    if (!keywordInText(text, kw)) return false;
+    const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
+    return !voorkeur || !voorkeur[accountType] || voorkeur[accountType] === rule.name;
+  });
 }
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
@@ -297,7 +301,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   if (/verhuur/.test(text)) return { category: "Overig", type };
 
   for (const rule of rules) {
-    if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+    if (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen

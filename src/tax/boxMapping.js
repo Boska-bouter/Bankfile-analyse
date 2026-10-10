@@ -27,7 +27,7 @@ const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
   "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel/internet",
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
-  "Webshops & online aankopen", "Winkels divers", "Personeel: overig", "Loonadministratie", "Uitbetalen loon",
+  "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
   // De twee "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) horen in dezelfde
   // rubriek als de andere abonnementen/kosten hierboven.
