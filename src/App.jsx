@@ -2158,10 +2158,11 @@ export default function App() {
       activeYear && rechtsvorm !== "bv"
         ? combineAutoKosten(
             computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
-            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd)
+            computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
+            autoStatus, activeYear
           )
         : null,
-    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus]
+    [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus, autoStatus]
   );
   // "Huur (deels zakelijk)" — null zolang er dit jaar geen enkele transactie in deze categorie
   // voorkomt (verreweg de meeste dossiers), dus zonder enige invloed op de winst/voorbelasting

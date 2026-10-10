@@ -131,7 +131,7 @@ const PRIVEAUTO_UITGESLOTEN = ["Autokosten", "Brandstof", "Parkeren", "Verzekeri
 export function isPriveAutoJaar(year, autoStatus) { return autoStatus?.[year] === "prive"; }
 
 export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false) {
-  if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus) && !heeftLeaseAuto) return 0;
+  if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus)) return 0;
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
   if (AUTO_SPLIT_UITSLUITING.includes(category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
     return defaultZakelijkPercentage(category);

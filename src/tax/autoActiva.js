@@ -103,7 +103,10 @@ export function computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardSta
 // voorkomen, maar wordt hier gewoon correct opgeteld), of geen van beide. Geeft `null` terug als
 // geen van beide iets opleverde — exact hetzelfde gedrag als voorheen (alleen leaseAutoKosten, of
 // niets) voor ieder dossier dat autoActivaDetails niet gebruikt.
-export function combineAutoKosten(leaseAutoKosten, autoActivaKosten) {
+export function combineAutoKosten(leaseAutoKosten, autoActivaKosten, autoStatus = null, year = null) {
+  // Privéauto zakelijk gebruikt in dit jaar: de km-vergoeding is de enige autoaftrek. Een elders in het
+  // dossier geregistreerde (lease)auto mag dan geen afschrijving/bijtelling/autokosten meer opleveren.
+  if (year != null && autoStatus?.[year] === "prive") return null;
   if (!leaseAutoKosten) return autoActivaKosten;
   if (!autoActivaKosten) return leaseAutoKosten;
   return {
