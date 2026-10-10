@@ -50,7 +50,7 @@ import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByF
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard } from "./dossier/dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
 import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
@@ -569,8 +569,8 @@ export default function App() {
     setReviewedPersonKeys(Array.isArray(settings.reviewedPersonKeys) ? settings.reviewedPersonKeys : []);
     setReviewedOverigKeys(Array.isArray(settings.reviewedOverigKeys) ? settings.reviewedOverigKeys : []);
     setKwartaalStatus(settings.kwartaalStatus && typeof settings.kwartaalStatus === "object" ? settings.kwartaalStatus : {});
-    setVoorbelastingExcluded(Array.isArray(settings.voorbelastingExcluded) ? settings.voorbelastingExcluded : DEFAULT_VOORBELASTING_EXCLUDED);
-    setFixedCategories(Array.isArray(settings.fixedCategories) ? settings.fixedCategories : DEFAULT_FIXED_CATEGORIES);
+    setVoorbelastingExcluded(Array.isArray(settings.voorbelastingExcluded) ? migreerCategorieLijst(settings.voorbelastingExcluded) : DEFAULT_VOORBELASTING_EXCLUDED);
+    setFixedCategories(Array.isArray(settings.fixedCategories) ? migreerCategorieLijst(settings.fixedCategories) : DEFAULT_FIXED_CATEGORIES);
     setPeriodeQuarterOverrides(settings.periodeQuarterOverrides && typeof settings.periodeQuarterOverrides === "object" ? settings.periodeQuarterOverrides : {});
     setReviewedPeriodeKeys(Array.isArray(settings.reviewedPeriodeKeys) ? settings.reviewedPeriodeKeys : []);
     setLoanDetails(settings.loanDetails && typeof settings.loanDetails === "object" ? settings.loanDetails : {});
@@ -603,10 +603,13 @@ export default function App() {
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
     setAutoStatusState(normalizeAutoStatus(settings.autoStatus));
-    setHuurZakelijkPercentageStatusState(settings.huurZakelijkPercentageStatus && typeof settings.huurZakelijkPercentageStatus === "object" ? settings.huurZakelijkPercentageStatus : {});
-    setEnergieZakelijkPercentageStatusState(settings.energieZakelijkPercentageStatus && typeof settings.energieZakelijkPercentageStatus === "object" ? settings.energieZakelijkPercentageStatus : {});
-    setGemeentelijkeKostenZakelijkPercentageStatusState(settings.gemeentelijkeKostenZakelijkPercentageStatus && typeof settings.gemeentelijkeKostenZakelijkPercentageStatus === "object" ? settings.gemeentelijkeKostenZakelijkPercentageStatus : {});
-    setCategoryZakelijkPercentageState(settings.categoryZakelijkPercentage && typeof settings.categoryZakelijkPercentage === "object" ? settings.categoryZakelijkPercentage : {});
+    const gedeeldeMig = migreerGedeeldeHuisvesting(settings.categoryZakelijkPercentage, {
+      huur: settings.huurZakelijkPercentageStatus, energie: settings.energieZakelijkPercentageStatus, gemeentelijk: settings.gemeentelijkeKostenZakelijkPercentageStatus,
+    });
+    setHuurZakelijkPercentageStatusState({});
+    setEnergieZakelijkPercentageStatusState({});
+    setGemeentelijkeKostenZakelijkPercentageStatusState({});
+    setCategoryZakelijkPercentageState(gedeeldeMig.categoryZakelijkPercentage);
     setOpeningBalanceCorrections(settings.openingBalanceCorrections && typeof settings.openingBalanceCorrections === "object" ? settings.openingBalanceCorrections : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
@@ -2261,7 +2264,7 @@ export default function App() {
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, kmVergoedingDetails,
     leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
-    years,
+    years, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
   });
   // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
   // BV-Aangiftevoorstel), maar hier al altijd bijgehouden — dezelfde Route B-redenering als de rest

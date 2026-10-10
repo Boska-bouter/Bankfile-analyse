@@ -56,15 +56,7 @@ export const DEFAULT_RULES = [
     "eneco emobility", "eneco e-mobility", "emobility", "e-mobility", "laadpas", "ev charging", "newmotion",
   ] },
   { name: "Energie-water", color: "bg-yellow-100 text-yellow-800", keywords: ["vattenfall", "nuon", "essent", "eneco", "greenchoice", "budget energie", "energiedirect", "energie direct", "oxxio", "vandebron", "pure energie", "engie", "delta energie", "qurrent", "powerpeers", "vitens", "waternet", "evides", "dunea", "wml", "waterbedrijf", "stedin", "joulz", "sepa green"] },
-  // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor energie/water: bewust
-  // GEEN zoekwoorden (nooit automatisch toegekend), de gebruiker wijst hier zelf een aansluiting aan
-  // die structureel deels zakelijk/deels privé gebruikt wordt (zie tax/gedeeldeHuur.js).
-  { name: "Energie-water (deels zakelijk)", color: "bg-yellow-100 text-yellow-800", keywords: [],
-    description: "Energie/water van een aansluiting (bijv. een schuur/loods of een gedeeltelijk zakelijk gebruikte woning) waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Energie-water\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Gemeentelijke kosten", color: "bg-stone-200 text-stone-800", keywords: ["gemeente", "waterschap", "brabant water", "belastingen", "bsgr", "bghu", "svhw", "belastingsamenwerking"] },
-  // v291 — zelfde principe als "Huur (deels zakelijk)" hieronder, nu ook voor gemeentelijke kosten.
-  { name: "Gemeentelijke kosten (deels zakelijk)", color: "bg-stone-200 text-stone-800", keywords: [],
-    description: "Gemeentelijke kosten (bijv. OZB) voor een pand waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Gemeentelijke kosten\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Huur", color: "bg-amber-100 text-amber-800", keywords: [
     "stichting halm", "huur ",
     // V58 — woningcorporaties en institutionele verhuurders (woonhuur): op een privérekening wordt dit
@@ -77,13 +69,6 @@ export const DEFAULT_RULES = [
     "woonzorg nederland", "habion", "area wonen", "woonconcept", "domijn", "de goede woning", "tiwos", "stichting trudo",
     "woonwenz", "woonpartners", "staedion", "waterland wonen", "huurpenningen",
   ] },
-  // Bewust GEEN zoekwoorden: dit subtype wordt nooit automatisch toegekend. Een deels-zakelijk
-  // verhuurde schuur/loods matcht anders via de "huur "-zoekwoorden hierboven gewoon bij het
-  // reguliere (100% zakelijke) "Huur" — de gebruiker moet zo'n transactie zelf, bewust, hierheen
-  // verplaatsen via de categorie-dropdown, want alleen dan is er een percentage-zakelijk-gebruik
-  // van toepassing (zie tax/gedeeldeHuur.js).
-  { name: "Huur (deels zakelijk)", color: "bg-amber-100 text-amber-800", keywords: [],
-    description: "Huur van een pand/ruimte (bijv. een schuur/loods) waarvan maar een deel zakelijk wordt gebruikt — in tegenstelling tot \"Huur\" (100% zakelijk) is hier maar een handmatig ingesteld percentage aftrekbaar/als voorbelasting te claimen. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
   { name: "Incasso, juridisch & schulden", color: "bg-rose-100 text-rose-800", keywords: [
     "cjib",
     "flanderijn", "kancelaria adwokacka", "ggn", "centraal justitieel incass", "pkg tax",
@@ -330,8 +315,8 @@ export const SPLIT_CATEGORY_NAMES = {
 
 export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
-  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)",
-  "Huur", "Huur (deels zakelijk)", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
+  "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)",
+  "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Personeel: overig", "Prive - bankkosten", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - huur", "Prive - overige kosten", "Prive - mobiel/internet", "Prive opnames", "Prive overige abonnementen", "Prive: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van prive", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Streaming diensten", "Prive - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -425,8 +410,8 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
   // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
   "Autokosten": "kosten", "Bankkosten": "kosten", "Belastingen: MRB": "kosten",
-  "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten", "Energie-water (deels zakelijk)": "kosten",
-  "Gemeentelijke kosten": "kosten", "Gemeentelijke kosten (deels zakelijk)": "kosten", "Huur": "kosten", "Huur (deels zakelijk)": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
+  "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten",
+  "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
   "Marketing-website": "kosten", "Onderhoud apparatuur/machines": "kosten", "Parkeren": "kosten",
   "Betaalautomaat kosten": "kosten", "Personeel: overig": "kosten", "Reiskosten (OV)": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
@@ -467,6 +452,11 @@ export const LEGACY_CATEGORY_RENAMES = {
   "Prive - vakantie/uitstapjes": "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   "Prive Hypotheek": "Hypotheek",
   "Lease": "Lease (operationeel)",
+  // 14V9: de aparte "(deels zakelijk)"-categorieën zijn samengevoegd met de gewone categorie; het
+  // percentage zakelijk stel je nu per categorie per jaar in (zie migreerGedeeldeHuisvesting in dossierMigraties.js).
+  "Huur (deels zakelijk)": "Huur",
+  "Energie-water (deels zakelijk)": "Energie-water",
+  "Gemeentelijke kosten (deels zakelijk)": "Gemeentelijke kosten",
   "Belastingen: Naheffingen voorgaande jaren": "Belastingen: Naheffingen OB voorgaande jaren",
   "Loonadministratie": "Boekhouder, accountant & administratie",
   "Boekhouder & advies": "Boekhouder, accountant & administratie",
@@ -598,11 +588,8 @@ export const SUBTYPE_TO_MAIN = {
   "Boodschappen": "Privé",
   "Brandstof": "Vervoer & auto",
   "Energie-water": "Huisvesting",
-  "Energie-water (deels zakelijk)": "Huisvesting",
   "Gemeentelijke kosten": "Huisvesting",
-  "Gemeentelijke kosten (deels zakelijk)": "Huisvesting",
   "Huur": "Huisvesting",
-  "Huur (deels zakelijk)": "Huisvesting",
   "Hypotheek": "Privé",
   "Incasso, juridisch & schulden": "Privé",
   "Inhuur personeel": "Personeel",
@@ -754,7 +741,7 @@ const lid = (...keys) => keys.map((key) => ({ key, label: key }));
 export const ZAK_GROEPEN = {
   "Apparatuur & inventaris": lid("Zakelijk - apparatuur/machines"),
   "Zakelijke inkomsten": lid("Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"),
-  "Huisvesting": lid("Huur", "Huur (deels zakelijk)", "Energie-water", "Energie-water (deels zakelijk)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)"),
+  "Huisvesting": lid("Huur", "Energie-water", "Gemeentelijke kosten"),
   "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)"),
   "Telecom & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel/internet", "Streaming diensten", "Software & Online diensten"),
   "Personeel": lid("Personeel: overig", "Inhuur personeel", "Uitbetalen loon"),

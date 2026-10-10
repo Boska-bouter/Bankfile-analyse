@@ -14,7 +14,7 @@ export function useKostenTotaalByYear(p) {
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, kmVergoedingDetails,
     leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
-    years,
+    years, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
   } = p;
 
   return useMemo(() => {
@@ -33,7 +33,7 @@ export function useKostenTotaalByYear(p) {
           )
         : null;
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
-      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentageEff, autoStatus, kmVergoeding);
+      const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentageEff, autoStatus, kmVergoeding, { huur: huurZakelijkPercentageStatus, energie: energieZakelijkPercentageStatus, gemeentelijk: gemeentelijkeKostenZakelijkPercentageStatus });
       map[y] =
         (ib.inkoopkosten.totaal || 0) +
         (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) +
@@ -45,5 +45,5 @@ export function useKostenTotaalByYear(p) {
         (ib.leaseAutoKosten?.onttrekking || 0);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails]);
+  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]);
 }

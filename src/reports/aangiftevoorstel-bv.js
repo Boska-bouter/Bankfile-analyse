@@ -156,7 +156,7 @@ function buildYearSectionBv(
   const leaseAutoWinstCorrectieBv = (leaseAutoKostenBv?.afschrijvingTotaal || 0) - (leaseAutoKostenBv?.boekresultaatBeeindigingTotaal || 0);
   const summary = computeBvSummary(year, classified, categoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, opties);
   const vpbEstimate = estimateVpb(summary.winst, year);
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, null, year, null, null, null, { huur: opties.huurZakelijkPercentageStatus, energie: opties.energieZakelijkPercentageStatus, gemeentelijk: opties.gemeentelijkeKostenZakelijkPercentageStatus });
 
   // v204: KIA (kleinschaligheidsinvesteringsaftrek) gold tot nu toe alleen in het zzp-rapport, maar is
   // net zo goed van toepassing op een BV onder de Vpb — computeInvesteringenForYear/computeMogelijkeKia

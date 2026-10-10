@@ -29,14 +29,12 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Interne overboeking: privé sparen",
   "Interne overboeking",
   "Huur",
-  "Huur (deels zakelijk)", // net als "Huur" standaard vrijgesteld — override desgewenst per dossier bij "belaste verhuur"
   "Incasso, juridisch & schulden",
   "Hypotheek",
   "Lease (financieel)",
   "Leningen",
   "Leningen (privé)",
   "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
-  "Gemeentelijke kosten (deels zakelijk)", // v291 — zelfde reden als "Gemeentelijke kosten" hierboven
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
   "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
@@ -67,7 +65,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 };
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
-  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Gemeentelijke kosten (deels zakelijk)", "Webshops & online aankopen",
+  "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
   "Kinderopvang", "Prive - huur", "Prive - energie-water", "Prive - gemeentelijke kosten", "Prive - mobiel/internet", "Prive overige abonnementen", "Prive - vrijetijd-uitgaan-vakantie & uit eten",
   // v288 — zelfde standaard-uitsluiting als de andere "Prive - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar

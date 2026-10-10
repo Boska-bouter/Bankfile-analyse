@@ -443,8 +443,8 @@ export const HELP_CHAPTERS = [
           auto van de zaak".
         </p>
         <p>
-          Zijn er dat jaar transacties in "Energie-water (deels zakelijk)" of "Gemeentelijke kosten (deels zakelijk)",
-          dan staat hier ook per categorie het percentage zakelijk gebruik, net als bij huur. Leeg betekent 100%.
+          Gebruik je een pand deels zakelijk? Het percentage zakelijk voor huur, energie-water en gemeentelijke
+          kosten stel je in bij "Percentage zakelijk per categorie" — zie "Huur (deels zakelijk)" voor de uitleg.
         </p>
         <p>
           <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan
@@ -455,11 +455,6 @@ export const HELP_CHAPTERS = [
           <strong>Investeringsaftrek (KIA)</strong> wordt hier automatisch voorgesteld op basis van wat er in het
           Activa-paneel aan bedrijfsmiddel-investeringen dat jaar is ingevuld — niet elk bedrijfsmiddel telt mee
           (personenauto's en grond meestal niet), dus dit is een mogelijke, geen definitieve aftrek.
-        </p>
-        <p>
-          Zijn er dat jaar transacties in de categorie "Huur (deels zakelijk)", dan staat hier ook het{" "}
-          <strong>percentage zakelijk gebruik</strong> van die huur — zie "Huur (deels zakelijk)" voor de uitleg
-          daarvan.
         </p>
         <p className="text-xs text-slate-400">
           Dit paneel toont een snelle indicatie voor het actieve jaar alleen. Genereer het Indicatieve
@@ -476,22 +471,20 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Voor de situatie dat je maar een déél van een gehuurde ruimte zakelijk gebruikt — bijvoorbeeld een deel van
-          een schuur, magazijn of woning die je ook privé gebruikt. Ken transacties hiervoor toe aan de aparte
-          categorie <strong>"Huur (deels zakelijk)"</strong> (in plaats van de gewone categorie "Huur", die er
-          vanuit gaat dat alles zakelijk is).
+          Gebruik je maar een déél van een gehuurde ruimte zakelijk — bijvoorbeeld een deel van een schuur, magazijn
+          of woning die je ook privé gebruikt? Laat de transacties dan gewoon in <strong>"Huur"</strong> staan en vul
+          bij <strong>"Percentage zakelijk per categorie"</strong> per jaar het percentage zakelijk gebruik in. Hetzelfde
+          geldt voor "Energie-water" en "Gemeentelijke kosten" van dat pand.
         </p>
         <p>
-          Bij "Persoonlijke aannames voor IB" vul je vervolgens per jaar het <strong>percentage zakelijk gebruik</strong>{" "}
-          in. Alleen dat percentage van de huur telt mee als aftrekbare zakelijke kosten in de winstberekening; de
-          rest is privé en telt niet mee. Zit er BTW op de huur, dan geldt hetzelfde percentage voor de aftrekbare
-          voorbelasting — de rest van de BTW is niet aftrekbaar. Leeg/niet ingevuld betekent 100% (volledig
-          aftrekbaar, hetzelfde resultaat als bij gewone "Huur"), en het percentage is per jaar apart instelbaar,
-          voor als de verhouding zakelijk/privé in de loop van de tijd verandert.
+          Alleen dat percentage van de kosten telt mee in de winstberekening; de rest is privé. Zit er BTW op, dan geldt
+          hetzelfde percentage voor de aftrekbare voorbelasting. Leeg betekent 100% zakelijk. Het percentage is per jaar
+          apart instelbaar.
         </p>
         <p className="text-xs text-slate-400">
-          Deze categorie bestaat naast de gewone "Huur"-categorie — gebruik "Huur" gewoon zolang een ruimte volledig
-          zakelijk is, en alleen "Huur (deels zakelijk)" voor het gedeeltelijke geval.
+          Vroeger bestonden hiervoor aparte categorieën "Huur (deels zakelijk)", "Energie-water (deels zakelijk)" en
+          "Gemeentelijke kosten (deels zakelijk)". Die zijn samengevoegd; bij het openen van een ouder dossier worden
+          transacties en percentages automatisch omgezet (zie het logboek voor eventuele afwijkingen).
         </p>
       </div>
     ),
@@ -505,7 +498,7 @@ export const HELP_CHAPTERS = [
         <p>
           Voor kosten die deels zakelijk en deels privé zijn, ongeacht van welke rekening ze betaald zijn — bijv.
           brandstof, telefonie/internet, reiskosten OV of parkeren die je ook privé gebruikt. In tegenstelling tot
-          "Huur (deels zakelijk)" hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
+          Net als bij huur hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
           blijven gewoon in hun eigen categorie (bijv. "Brandstof") staan.
         </p>
         <p>

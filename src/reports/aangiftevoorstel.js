@@ -278,7 +278,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     metZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, true, startersaftrekToegepast),
     zonderZelfstandigenaftrek: buildOnbekendScenario(winstNaKia, year, false, startersaftrekToegepast),
   } : null;
-  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear);
+  const ib = computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear, year, categoryZakelijkPercentage, autoStatus, kmVergoedingForYear, { huur: huurZakelijkPercentageStatus, energie: energieZakelijkPercentageStatus, gemeentelijk: gemeentelijkeKostenZakelijkPercentageStatus });
 
   // "Inkoopkosten, uitbesteed werk en andere externe kosten" hier uitgesplitst in 3 losse regels,
   // rechtstreeks uit dezelfde al berekende ib.inkoopkosten.perCategorie
@@ -645,16 +645,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // "Energie-water (deels zakelijk)"/"Gemeentelijke kosten (deels zakelijk)" — elk alleen zichtbaar
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
-  const gedeeldeHuisvestingHtml = [
-    { label: "Huur (deels zakelijk)", gh: gedeeldeHuurForYear },
-    { label: "Energie-water (deels zakelijk)", gh: gedeeldeEnergieForYear },
-    { label: "Gemeentelijke kosten (deels zakelijk)", gh: gedeeldeGemeentelijkeKostenForYear },
-  ]
-    .filter(({ gh }) => !!gh)
-    .map(({ label, gh }) => `
-  <div class="rubriek"><span>${label} — aftrekbaar (${gh.percentage}% zakelijk)</span><span class="num">${eur(gh.aftrekbaarBedrag)}</span></div>
-  <p class="toelichting">Niet aftrekbaar (privédeel): ${eur(gh.nietAftrekbaarBedrag)}${gh.totaalBtwOpHuur > 0 ? ` · aftrekbare voorbelasting: ${eur(gh.aftrekbareVoorbelasting)}` : ""}.<!--V--> Zie Bijlage: Toelichtingen voor de algemene uitleg — de volledige uitsplitsing staat in de app zelf.<!--/V--></p>`)
-    .join("");
+  // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
+  const gedeeldeHuisvestingHtml = "";
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
