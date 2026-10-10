@@ -8,7 +8,7 @@ import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 export default function OnverklaardeOverboekingenModal({ items, diff, jaar, onRequestChange, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
           <p className="text-sm font-semibold text-slate-800">
             Niet-gekoppelde overboekingen zakelijk ↔ privé {jaar} ({items.length})

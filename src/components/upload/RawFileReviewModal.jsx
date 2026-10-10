@@ -49,7 +49,7 @@ export default function RawFileReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-slate-800">Bekijk &amp; corrigeer — {fileName}</h2>

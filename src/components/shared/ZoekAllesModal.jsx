@@ -32,7 +32,7 @@ export default function ZoekAllesModal({ transacties, jaren = [], onClose, onGaN
 
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 flex items-start justify-center p-3 pt-10" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl max-h-[88vh] flex flex-col rounded-2xl bg-white shadow-2xl">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl max-h-[88dvh] flex flex-col rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center gap-3 px-5 pt-4 pb-2">
           <Search className="h-4 w-4 text-slate-400" />
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Escape" && onClose()}

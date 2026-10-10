@@ -49,7 +49,7 @@ export default function FeedbackModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
           <h2 className="text-sm font-semibold text-slate-800">Hulpvraag of feedback</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Sluiten"><X className="h-4 w-4" /></button>

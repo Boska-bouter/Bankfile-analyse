@@ -7,7 +7,7 @@ export default function VoorwaardenScherm({ onAkkoord }) {
   const [akkoord, setAkkoord] = useState(false);
   return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="max-w-2xl w-full rounded-xl border-2 border-slate-200 bg-white shadow-lg flex flex-col" style={{ maxHeight: "92vh" }}>
+      <div className="max-w-2xl w-full rounded-xl border-2 border-slate-200 bg-white shadow-lg flex flex-col" style={{ maxHeight: "92dvh" }}>
         <div className="px-6 pt-6 pb-3">
           <h1 className="text-lg font-semibold">Welkom bij Bankoverzicht</h1>
           <p className="text-sm text-slate-500 mt-1">Lees eerst waarvoor deze app bedoeld is en waarvoor niet.</p>

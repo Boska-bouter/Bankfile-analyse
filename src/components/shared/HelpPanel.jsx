@@ -65,7 +65,7 @@ export default function HelpPanel({ onClose, openChapter }) {
   // consistent als modaal venster verschijnt, ongeacht welk tabblad actief is.
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0 rounded-t-xl">
           <h2 className="text-sm font-semibold text-slate-800">Help en uitleg</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0">
