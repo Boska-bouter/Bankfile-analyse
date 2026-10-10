@@ -16,14 +16,17 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
-  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length + sprongen.length;
+  // 15V7: jaarverschillen (sprongen) zijn "inzicht" en tellen niet mee als punt om te bekijken.
+  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length;
+  const gatenAlleen = !!data.gatenAlleen;
   const open = openOverride === null ? totaal > 0 : openOverride;
+  const inzichtTekst = sprongen.length > 0 ? ` · inzicht: ${sprongen.length}` : "";
   return (
     <section className={`rounded-xl border-2 ${totaal > 0 ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
       <button onClick={() => setOpenOverride(!open)} className="w-full flex items-center gap-2 px-4 py-3 text-left">
         {totaal > 0 ? <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
         <span className={`text-sm font-semibold ${totaal > 0 ? "text-amber-900" : "text-emerald-900"}`}>
-          Aanvullende controles — {totaal > 0 ? `${totaal} punt${totaal === 1 ? "" : "en"} om te bekijken` : "geen bijzonderheden"}
+          Aanvullende controles — {totaal > 0 ? `${totaal} punt${totaal === 1 ? "" : "en"} om te bekijken` : "geen bijzonderheden"}{inzichtTekst}
         </span>
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
@@ -73,13 +76,16 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
             ))}
           </div>
 
-          <div>
-            <h4 className="font-semibold text-slate-800 mb-1.5">Grote verschillen tussen jaren (zakelijke kosten)</h4>
-            {sprongen.length === 0 ? <p className="text-emerald-700">Geen opvallende sprongen tussen volledige jaren.</p> : sprongen.map((s) => (
+          <div className={sprongen.length > 0 ? "rounded-lg border border-slate-200 bg-slate-50 p-3" : ""}>
+            <h4 className="font-semibold text-slate-800 mb-1.5">{gatenAlleen ? "Inzicht: mogelijk ontbrekende vaste betalingen" : "Inzicht: grote verschillen tussen jaren (zakelijke kosten)"}</h4>
+            {sprongen.length === 0 ? <p className="text-emerald-700">{gatenAlleen ? "Geen vaste betalingen gevonden die in een jaar ontbreken." : "Geen opvallende sprongen tussen volledige jaren."}</p> : (
+              <p className="text-slate-500 mb-2">Alleen ter info — verschillen tussen jaren zijn bij een eigen onderneming normaal (zakelijk en privé lopen vaak door elkaar). Je hoeft hier niets mee.</p>
+            )}
+            {sprongen.map((s) => (
               <div key={s.key} className="rounded-lg bg-white border border-slate-100 p-3 mb-2 flex flex-wrap items-center gap-2">
                 <p className="flex-1 min-w-[16rem]">
                   <strong>{s.categorie}</strong>: {eur(s.vorigTotaal)} in {s.vorig} → {eur(s.nuTotaal)} in {s.nu}
-                  {s.soort === "verdwenen" && " — in dit jaar geen enkele boeking. Ontbreken er betalingen of is dit gestopt?"}
+                  {s.soort === "verdwenen" && (gatenAlleen ? " — in dit jaar geen boeking, terwijl het jaar ervoor en erna wél boekingen heeft. Ontbreken er betalingen?" : " — in dit jaar geen enkele boeking. Ontbreken er betalingen of is dit gestopt?")}
                   {s.soort === "nieuw" && " — nieuw dit jaar. Klopt de categorie?"}
                   {s.soort === "hoger" && ` — ${eur(s.verschil)} hoger.`}
                   {s.soort === "lager" && ` — ${eur(-s.verschil)} lager.`}
@@ -90,7 +96,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
             {sprongen.length > 1 && (
               <div className="mb-2"><Knop primair onClick={() => (onBevestigAlles ? onBevestigAlles(sprongen.map((s) => s.key)) : sprongen.forEach((s) => onBevestig(s.key)))}>Alles klopt zo ({sprongen.length})</Knop></div>
             )}
-            <p className="text-xs text-slate-400">Alleen volledige, opeenvolgende jaren; alleen grote verschillen (minimaal €750 én 40%); maximaal 5 per jaar.</p>
+            <p className="text-xs text-slate-400">{gatenAlleen ? "Alleen volledige, opeenvolgende jaren; alleen vaste betalingen (minimaal 3 boekingen in het jaar ervoor en erna) die in één jaar helemaal ontbreken; maximaal 3 per jaar." : "Alleen volledige, opeenvolgende jaren; alleen grote verschillen (minimaal €750 én 40%); maximaal 5 per jaar."}</p>
           </div>
         </div>
       )}

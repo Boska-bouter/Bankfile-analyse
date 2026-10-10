@@ -2347,7 +2347,7 @@ export default function App() {
   // hergebruikt door de nieuwe "Bestanden geladen"-kaart op Overzicht (zie dashboardCards), zodat er
   // maar één plek is die zakSum/priSum/diff uitrekent.
   const aansluitControleInfo = useAansluitControleInfo({
-    priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen,
+    priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
   });
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
@@ -2535,9 +2535,10 @@ export default function App() {
     return {
       dekking: berekenDekking({ allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, bevestigd: bevestigdeControles }),
       terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
-      sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles }),
+      sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles, gatenAlleen: rechtsvorm !== "bv" }),
+      gatenAlleen: rechtsvorm !== "bv",
     };
-  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles]);
+  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm]);
   const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
   const bevestigControles = (sleutels) => setBevestigdeControles((prev) => { const next = { ...prev }; for (const k of sleutels) next[k] = true; return next; });
   const herroepControle = (sleutel) => setBevestigdeControles((prev) => { const next = { ...prev }; delete next[sleutel]; return next; });
@@ -3443,7 +3444,13 @@ export default function App() {
         {showOnverklaard && (
           <OnverklaardeOverboekingenModal
             items={aansluitControleInfo.onverklaard}
-            diff={aansluitControleInfo.diff}
+            toegelicht={aansluitControleInfo.toegelicht}
+            onToelichten={(lijst, uitleg) => {
+              setBevestigdeControles((prev) => { const next = { ...prev }; for (const x of lijst) next[x.sleutel] = { ...uitleg, t: Date.now() }; return next; });
+              setAuditLog((prev) => [...prev, { t: Date.now(), label: `Niet-gekoppelde overboeking${lijst.length === 1 ? "" : "en"} toegelicht (${lijst.length}x): ${uitleg.redenTekst}${uitleg.notitie ? ` — ${uitleg.notitie}` : ""}` }].slice(-300));
+            }}
+            onHerroepToelichting={(sleutel) => { herroepControle(sleutel); setAuditLog((prev) => [...prev, { t: Date.now(), label: "Toelichting niet-gekoppelde overboeking ingetrokken" }].slice(-300)); }}
+            diff={aansluitControleInfo.diffOpen}
             jaar={activeYear}
             onRequestChange={requestCategoryChange}
             onClose={() => setShowOnverklaard(false)}
