@@ -42,7 +42,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </div>
       {open && (
-        <div className="px-5 pb-5 overflow-x-auto">
+        <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
             De omzet- en kostenbedragen staan hier <strong>netto</strong> (excl. BTW), met het bruto bankbedrag er klein
             tussen haakjes onder.{" "}
@@ -54,6 +54,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             vooral een signaal om na te gaan waar het vandaan komt. "Aangegeven"/"betaald" hieronder is alleen een
             statusherinnering voor jezelf en verandert de getoonde bedragen niet.
           </p>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
@@ -138,6 +139,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
               })}
             </tbody>
           </table>
+          </div>
           {(() => {
             const details = quarters.map((q) => q.btwPrivegebruikAutoDetail).filter(Boolean);
             if (details.length === 0) return null;
