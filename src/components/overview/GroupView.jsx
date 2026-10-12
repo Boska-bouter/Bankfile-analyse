@@ -168,6 +168,7 @@ export function DetailTable({
   const [filterFallback, setFilterFallback] = useState(false); // 🔴 Onduidelijk
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [toonAantal, setToonAantal] = useState(50); // release19V7: eerst 50 rijen (elke rij heeft meerdere dropdowns — alles tegelijk renderen maakt het aanraken traag)
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
   // v203: eigen toelichting bij een transactie (bijv. "naheffing Q2 2025 LB"), voor als de
   // bank-omschrijving zelf niet duidelijk is. Eén rij tegelijk in bewerkstand.
@@ -378,6 +379,7 @@ export function DetailTable({
             {filteredItems
               .slice()
               .sort((a, b) => b.date - a.date)
+              .slice(0, toonAantal)
               .map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
@@ -535,6 +537,17 @@ export function DetailTable({
             {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+              </tr>
+            )}
+            {filteredItems.length > toonAantal && (
+              <tr>
+                <td colSpan={7} className="px-4 py-3 text-center">
+                  <span className="inline-flex flex-wrap items-center justify-center gap-2">
+                    <span className="text-xs text-slate-500">{toonAantal} van {filteredItems.length} getoond</span>
+                    <button type="button" onClick={() => setToonAantal((n) => n + 100)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Toon 100 meer</button>
+                    <button type="button" onClick={() => setToonAantal(filteredItems.length)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Toon alles</button>
+                  </span>
+                </td>
               </tr>
             )}
           </tbody>

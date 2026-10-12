@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
@@ -290,7 +290,7 @@ export default function App() {
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
     if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
-    setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+    startTransition(() => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] })));
   };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
@@ -3919,7 +3919,7 @@ export default function App() {
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
                       expandedTable={expandedTable}
-                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))}
+                      onToggleExpandTable={(zone) => startTransition(() => setExpandedTable((v) => (v === zone ? null : zone)))}
                       onRequestCategoryChange={requestCategoryChange}
                       onConfirmCorrect={confirmClassificationCorrect}
                       fingerprintByTxId={fingerprintByTxId}
