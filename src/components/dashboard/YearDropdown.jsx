@@ -40,11 +40,11 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
           totaal beslaat, en — alleen als er ook echt een privérekening is ingeladen (showBreakdown) —
           de uitsplitsing zakelijk/privé daaronder. Zonder privérekening is die uitsplitsing gelijk aan
           het totaal en dus overbodig. */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-w-0 whitespace-normal">
       {/* V73 — per jaar zichtbaar welke rekeningen data hebben: een jaar zonder privé- (of zakelijk) bestand
           toont daar € 0,00, wat anders op een fout lijkt. */}
       {yearCoverage && activeYear && yearCoverage[activeYear] && coverageTekst(yearCoverage[activeYear]) && (
-        <div className={`text-xs text-left mb-0.5 leading-snug ${coverageNote(yearCoverage[activeYear]) && showBreakdown ? "text-amber-600" : "text-slate-400"}`} style={{ maxWidth: 170 }}>{coverageTekst(yearCoverage[activeYear])}</div>
+        <div className={`text-xs text-left mb-0.5 leading-snug whitespace-normal ${coverageNote(yearCoverage[activeYear]) && showBreakdown ? "text-amber-600" : "text-slate-400"}`} style={{ maxWidth: 170 }}>{coverageTekst(yearCoverage[activeYear])}</div>
       )}
       </div>
       {/* v270 — groter/beter zichtbaar gemaakt op verzoek: was te klein om goed te zien. */}
