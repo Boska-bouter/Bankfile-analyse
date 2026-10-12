@@ -273,7 +273,7 @@ export default function AppSidebar({
           zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. release19V2: zweeft nu (fixed) linksonder naast de
           zijbalk in plaats van er een extra blok in te zijn, zodat de zijbalk niet gaat scrollen. */}
       {lastActionSnapshot && (
-        <div className={`fixed bottom-4 ${collapsed ? "left-[84px]" : "left-[232px]"} z-50 w-64 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2`}>
+        <div className={`fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] ${collapsed ? "left-[84px]" : "left-[232px]"} z-[80] w-64 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2`}>
           <div className="flex items-start justify-between gap-1">
             <p className="text-xs text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>
