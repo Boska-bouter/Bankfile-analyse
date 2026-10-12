@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import { CATEGORY_ORDER } from "../classification/categories.js";
 import { computeBtw } from "../tax/btw.js";
 
@@ -31,7 +30,8 @@ export function exportCsv(groups, categoryBtwRates, btwVerlegd) {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-export function exportExcel(groups, categoryBtwRates, btwVerlegd) {
+export async function exportExcel(groups, categoryBtwRates, btwVerlegd) {
+  const XLSX = await import("xlsx"); // pas laden bij het exporteren
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(platteRijen(groups, categoryBtwRates, btwVerlegd)), "Alle transacties");
   for (const g of groups) {
