@@ -80,19 +80,19 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                 return (
                   <tr key={statusKey}>
                     <td className="py-2 pr-4 font-medium whitespace-nowrap">{q.year} — Q{q.kwartaal}</td>
-                    <td className="py-2 px-3 text-right font-mono">
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
                       {eur(q.omzetBruto21 - q.verschuldigdBtw21)}
                       <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto21)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw21)}</td>
-                    <td className="py-2 px-3 text-right font-mono">
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap">{eur(q.verschuldigdBtw21)}</td>
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
                       {eur(q.omzetBruto9 - q.verschuldigdBtw9)}
                       <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto9)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw9)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">{eur(q.omzetBruto0)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap">{eur(q.verschuldigdBtw9)}</td>
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap text-slate-500">{eur(q.omzetBruto0)}</td>
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap text-slate-500">
                       <button
                         onClick={() => setBreakdownModal({ key: statusKey, veld: "netto" })}
                         className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
@@ -102,7 +102,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                       </button>
                       <div className="text-xs text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                    <td className="py-2 px-3 text-right font-mono whitespace-nowrap text-slate-500">
                       <button
                         onClick={() => setBreakdownModal({ key: statusKey, veld: "btw" })}
                         className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
@@ -117,11 +117,11 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                       )}
                     </td>
                     {heeftPriveAuto && (
-                      <td className="py-2 px-3 text-right font-mono text-amber-800">
+                      <td className="py-2 px-3 text-right font-mono whitespace-nowrap text-amber-800">
                         {q.btwPrivegebruikAuto > 0.004 ? `+ ${eur(q.btwPrivegebruikAuto)}` : ""}
                       </td>
                     )}
-                    <td className={`py-2 pl-3 text-right font-mono font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
+                    <td className={`py-2 pl-3 text-right font-mono whitespace-nowrap font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
                       {eur(Math.abs(saldo))} {saldo >= 0 ? "te betalen" : "terug"}
                     </td>
                     <td className="py-2 pl-4 whitespace-nowrap">
