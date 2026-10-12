@@ -74,7 +74,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, ui
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen, werkruimte = "", onSetWerkruimte,
+  defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen, werkruimte = "", onSetWerkruimte, werkruimteBetaling = {},
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
@@ -135,6 +135,28 @@ export default function CategoryPercentagePanel({
                 {werkruimte === "niet_zelfstandig" && "Een kamer of hoek in de eigen woning: huur, energie-water en gemeentelijke kosten zijn niet aftrekbaar en tellen voor dit jaar niet mee (0%). De ingevulde percentages blijven bewaard."}
                 {!werkruimte && "Kies wat van toepassing is: voor een thuiskantoor in de eigen woning gelden andere regels dan voor een zakelijk gehuurd pand."}
               </p>
+              {Object.keys(werkruimteBetaling).length > 0 && (
+                <table className="mt-2 w-full text-xs">
+                  <thead>
+                    <tr className="text-slate-400 uppercase"><th className="text-left font-medium pb-1">Betaald in {activeYear}</th><th className="text-right font-medium pb-1">Zakelijke rekening</th><th className="text-right font-medium pb-1">Privérekening</th></tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(werkruimteBetaling).map(([c, r]) => (
+                      <tr key={c} className="border-t border-slate-200">
+                        <td className="py-1">{c}</td>
+                        <td className="py-1 text-right font-mono">{r.aantalZakelijk > 0 ? `${eur(r.zakelijk)} (${r.aantalZakelijk}×)` : "—"}</td>
+                        <td className="py-1 text-right font-mono">{r.aantalPrive > 0 ? `${eur(r.prive)} (${r.aantalPrive}×)` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {Object.values(werkruimteBetaling).some((r) => r.beide) && (
+                <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+                  ⚠ {Object.entries(werkruimteBetaling).filter(([, r]) => r.beide).map(([c]) => c).join(", ")}: betaald vanaf zowel de zakelijke als de privérekening.
+                  {Object.values(werkruimteBetaling).some((r) => r.gelijk) ? " Bij een of meer is het bedrag op beide rekeningen gelijk — controleer of dit niet dubbel is geboekt." : " De bedragen verschillen; de app telt beide mee."}
+                </p>
+              )}
             </div>
           )}
           {autoOpDeZaakDitJaar && (

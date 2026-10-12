@@ -31,3 +31,22 @@ export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteS
   }
   return result;
 }
+
+// release20V4 — wat is er per categorie betaald vanaf de zakelijke en vanaf de privérekening? (netto betaald = som van de
+// bedragen, spiegelboekingen tellen niet mee). Zo is zichtbaar of het van één rekening komt of van beide, en of die bedragen gelijk zijn.
+export function betaaldPerRekening(classified, year) {
+  const uit = {};
+  for (const c of WERKRUIMTE_CATEGORIEEN) uit[c] = { zakelijk: 0, prive: 0, aantalZakelijk: 0, aantalPrive: 0 };
+  for (const tx of classified || []) {
+    if (tx.isMirror || tx.year !== year || !uit[tx.category]) continue;
+    const r = uit[tx.category];
+    if (tx.type === "Zakelijk") { r.zakelijk += -tx.amount; r.aantalZakelijk++; } else { r.prive += -tx.amount; r.aantalPrive++; }
+  }
+  for (const c of WERKRUIMTE_CATEGORIEEN) {
+    const r = uit[c];
+    r.zakelijk = Math.round(r.zakelijk * 100) / 100; r.prive = Math.round(r.prive * 100) / 100;
+    r.beide = r.aantalZakelijk > 0 && r.aantalPrive > 0;
+    r.gelijk = r.beide && Math.abs(r.zakelijk - r.prive) < 0.005;
+  }
+  return Object.fromEntries(Object.entries(uit).filter(([, r]) => r.aantalZakelijk + r.aantalPrive > 0));
+}

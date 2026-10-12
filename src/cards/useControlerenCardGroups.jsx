@@ -10,6 +10,7 @@ import ImportControlPanel from "../components/upload/ImportControlPanel.jsx";
 import LeaseInterestPanel from "../components/loans/LeaseInterestPanel.jsx";
 import LoanInterestPanel from "../components/loans/LoanInterestPanel.jsx";
 import OpschonenPanel from "../components/review/OpschonenPanel.jsx";
+import { betaaldPerRekening } from "../tax/werkruimte.js";
 import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannamesPanel.jsx";
 
 export function useControlerenCardGroups(p) {
@@ -288,6 +289,7 @@ export function useControlerenCardGroups(p) {
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
               werkruimte={activeYear ? werkruimteStatus?.[activeYear] || "" : ""}
               onSetWerkruimte={(waarde) => setWerkruimteStatus(activeYear, waarde)}
+              werkruimteBetaling={activeYear ? betaaldPerRekening(classified, activeYear) : {}}
               autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}
               onOpenHelp={setHelpPopupChapter}
               gedeeldeRijen={[
