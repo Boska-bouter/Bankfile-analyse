@@ -12,13 +12,13 @@
 // kruisgecontroleerd): zelfstandigenaftrek en belastingschijven 2020-2022 volgens gepubliceerde
 // overzichten.
 export const IB_TARIEVEN_BY_YEAR = {
-  2020: { brackets: [{ tot: 68508, tarief: 0.3735 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 7030, mkbPct: 14 },
-  2021: { brackets: [{ tot: 68508, tarief: 0.371 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6670, mkbPct: 14 },
-  2022: { brackets: [{ tot: 69398, tarief: 0.3707 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6310, mkbPct: 14 },
-  2023: { brackets: [{ tot: 73031, tarief: 0.3693 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 5030, mkbPct: 14 },
-  2024: { brackets: [{ tot: 75518, tarief: 0.3697 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 3750, mkbPct: 13.31 },
-  2025: { brackets: [{ tot: 38441, tarief: 0.3582 }, { tot: 76817, tarief: 0.3748 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 2470, mkbPct: 12.7 },
-  2026: { brackets: [{ tot: 38883, tarief: 0.3575 }, { tot: 78426, tarief: 0.3756 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 1200, mkbPct: 12.7 },
+  2020: { brackets: [{ tot: 68508, tarief: 0.3735 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 7030, mkbPct: 14, aftrekBeperkingPct: 46 },
+  2021: { brackets: [{ tot: 68508, tarief: 0.371 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6670, mkbPct: 14, aftrekBeperkingPct: 43 },
+  2022: { brackets: [{ tot: 69398, tarief: 0.3707 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 6310, mkbPct: 14, aftrekBeperkingPct: 40 },
+  2023: { brackets: [{ tot: 73031, tarief: 0.3693 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 5030, mkbPct: 14, aftrekBeperkingPct: 36.93 },
+  2024: { brackets: [{ tot: 75518, tarief: 0.3697 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 3750, mkbPct: 13.31, aftrekBeperkingPct: 36.97 },
+  2025: { brackets: [{ tot: 38441, tarief: 0.3582 }, { tot: 76817, tarief: 0.3748 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 2470, mkbPct: 12.7, aftrekBeperkingPct: 37.48 },
+  2026: { brackets: [{ tot: 38883, tarief: 0.3575 }, { tot: 78426, tarief: 0.3756 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 1200, mkbPct: 12.7, aftrekBeperkingPct: 37.56 },
 };
 // Ondergrens/bovengrens van de hierboven daadwerkelijk ingevulde jaren — computeBelastbaarWinst,
 // estimateIncomeTax en estimateZvw klemmen een jaar buiten dit bereik naar het dichtstbijzijnde
@@ -26,6 +26,58 @@ export const IB_TARIEVEN_BY_YEAR = {
 // `geëxtrapoleerd: true`. De heffingskortingen/arbeidskorting/KIA-tabellen verderop in dit bestand
 // beginnen nog bij 2023 (voor 2020-2022 kon geen betrouwbare, onderling consistente bron voor die
 // tabellen worden bevestigd) — die klemmen dus nog altijd naar 2023, ook voor 2020-2022.
+
+// ---------------------------------------------------------------------------------------------
+// Parameters per jaar: standaardtabellen (hierboven/hieronder) + eigen overschrijvingen.
+// ---------------------------------------------------------------------------------------------
+// Een jaar zonder eigen tabel (bijv. een jaar ná het laatst ingevulde jaar) gebruikt tijdelijk de
+// waarden van het dichtstbijzijnde eerdere jaar en krijgt status "benadering". Een door de gebruiker
+// ingevulde groep (dossier-instelling `tariefOverrides`, per jaar en per groep: ib/zvw/ahk/ak/kia)
+// wint altijd en krijgt status "aangepast". Het register wordt door App.jsx bij elke render gezet
+// (registerTariefInstellingen), zodat alle berekeningen hieronder zonder extra argumenten werken.
+let _overrides = {};
+let _overigInkomen = {};
+export function registerTariefInstellingen({ overrides, overigInkomen } = {}) {
+  _overrides = overrides && typeof overrides === "object" ? overrides : {};
+  _overigInkomen = overigInkomen && typeof overigInkomen === "object" ? overigInkomen : {};
+}
+export function getOverigInkomenBox1(year) {
+  const v = Number(_overigInkomen?.[year]);
+  return Number.isFinite(v) && v > 0 ? v : 0;
+}
+const TARIEF_GROEPEN = () => ({
+  ib: IB_TARIEVEN_BY_YEAR, zvw: ZVW_TARIEVEN_BY_YEAR, ahk: ALGEMENE_HEFFINGSKORTING_BY_YEAR,
+  ak: ARBEIDSKORTING_BY_YEAR, kia: KIA_STAFFEL_BY_YEAR,
+});
+export function standaardJaarVoor(groep, year) {
+  const tabel = TARIEF_GROEPEN()[groep];
+  const jaren = Object.keys(tabel).map(Number).sort((a, b) => a - b);
+  if (tabel[year]) return year;
+  const lager = jaren.filter((j) => j < year);
+  return lager.length ? lager[lager.length - 1] : jaren[0];
+}
+// → { waarde, status: "standaard" | "benadering" | "aangepast", bronJaar }
+export function resolveTariefGroep(groep, year) {
+  const eigen = _overrides?.[year]?.[groep];
+  const bronJaar = standaardJaarVoor(groep, year);
+  const basis = TARIEF_GROEPEN()[groep][bronJaar];
+  if (eigen && typeof eigen === "object") {
+    const waarde = { ...basis, ...eigen };
+    // JSON kent geen Infinity: de bovenste schijf wordt opgeslagen als tot: null.
+    if (Array.isArray(waarde.brackets)) waarde.brackets = waarde.brackets.map((b) => ({ ...b, tot: b.tot == null || !Number.isFinite(Number(b.tot)) ? Infinity : Number(b.tot) }));
+    return { waarde, status: "aangepast", bronJaar };
+  }
+  return { waarde: basis, status: bronJaar === year ? "standaard" : "benadering", bronJaar };
+}
+export function getIbParams(year) { return resolveTariefGroep("ib", year).waarde; }
+export function tariefStatusVoorJaar(year) {
+  const groepen = ["ib", "zvw", "ahk", "ak", "kia"];
+  const per = Object.fromEntries(groepen.map((g) => [g, resolveTariefGroep(g, year)]));
+  const statussen = groepen.map((g) => per[g].status);
+  const status = statussen.includes("aangepast") ? "aangepast" : statussen.includes("benadering") ? "benadering" : "standaard";
+  return { status, per };
+}
+
 export const IB_MIN_YEAR = 2020;
 export const IB_MAX_YEAR = 2026;
 
@@ -39,26 +91,48 @@ export const IB_MAX_YEAR = 2026;
 // dat weet deze app niet uit bankgegevens. Zet dit expliciet op false om het scenario "geen
 // zelfstandigenaftrek" te berekenen (bijv. omdat niet aan het urencriterium is voldaan).
 function computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast = true) {
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
-  const naZelfstandigenaftrek = zelfstandigenaftrekToegepast ? Math.max(0, winst - t.zelfstandigenaftrek) : Math.max(0, winst);
-  return naZelfstandigenaftrek * (1 - t.mkbPct / 100);
+  return computeBelastbareWinstUitsplitsing(winst, year, zelfstandigenaftrekToegepast ? Math.min(Math.max(0, winst || 0), getIbParams(year).zelfstandigenaftrek) : 0, false).belastbaar;
 }
 
-export function estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast = true) {
-  if (!winst || winst <= 0) return { belasting: 0, geëxtrapoleerd: false };
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
-  const belastbaar = computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast);
+function belastingOverSchijvenVoor(bedrag, t) {
+  if (!(bedrag > 0)) return 0;
   let belasting = 0;
   let vorige = 0;
   for (const schijf of t.brackets) {
-    const inDezeSchijf = Math.min(belastbaar, schijf.tot) - vorige;
+    const inDezeSchijf = Math.min(bedrag, schijf.tot) - vorige;
     if (inDezeSchijf > 0) belasting += inDezeSchijf * schijf.tarief;
     vorige = schijf.tot;
-    if (belastbaar <= schijf.tot) break;
+    if (bedrag <= schijf.tot) break;
   }
-  return { belasting, geëxtrapoleerd: clampedYear !== year };
+  return belasting;
+}
+
+// IB over de belastbare winst, rekening houdend met (a) overig inkomen box 1 uit de wizard — de IB
+// over de winst is dan het verschil tussen de belasting over winst + overig inkomen en over het
+// overige inkomen alleen — en (b) de beperking van het belastingvoordeel van aftrekposten bij hoog
+// inkomen: het deel van de aftrekposten (zelfstandigenaftrek, startersaftrek, mkb-winstvrijstelling)
+// dat in de hoogste schijf valt, geeft maar voordeel tegen `aftrekBeperkingPct` i.p.v. het
+// toptarief. Bron: Belastingdienst, "Afbouw tarief aftrekposten bij hoog inkomen".
+function berekenIbMetToevoegingen(belastbaar, year, aftrekposten) {
+  const { waarde: t, status } = resolveTariefGroep("ib", year);
+  const overig = getOverigInkomenBox1(year);
+  const b = Math.max(0, belastbaar || 0);
+  const basis = Math.max(0, belastingOverSchijvenVoor(b + overig, t) - belastingOverSchijvenVoor(overig, t));
+  const topGrens = t.brackets.length > 1 ? t.brackets[t.brackets.length - 2].tot : 0;
+  const toptarief = t.brackets[t.brackets.length - 1].tarief;
+  const verschil = Math.max(0, toptarief - (t.aftrekBeperkingPct || 0) / 100);
+  const inkomenZonderAftrek = (belastbaar || 0) + (aftrekposten || 0) + overig;
+  const deelInTopschijf = Math.max(0, Math.min(aftrekposten || 0, inkomenZonderAftrek - topGrens));
+  const beperking = t.aftrekBeperkingPct ? deelInTopschijf * verschil : 0;
+  return { belasting: basis + beperking, belastingVoorBeperking: basis, beperkingAftrek: beperking, overigInkomen: overig, tariefStatus: status };
+}
+
+export function estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast = true) {
+  if (!winst || winst <= 0) return { belasting: 0, geëxtrapoleerd: false, beperkingAftrek: 0, overigInkomen: getOverigInkomenBox1(year) };
+  const za = zelfstandigenaftrekToegepast ? Math.min(winst, getIbParams(year).zelfstandigenaftrek) : 0;
+  const u = computeBelastbareWinstUitsplitsing(winst, year, za, false);
+  const r = berekenIbMetToevoegingen(u.belastbaar, year, za + u.mkbVrijstellingBedrag);
+  return { ...r, geëxtrapoleerd: r.tariefStatus === "benadering" };
 }
 
 // Berekent zowel het scenario mét als zónder zelfstandigenaftrek — voor gebruik wanneer niet
@@ -104,14 +178,20 @@ export const ZVW_TARIEVEN_BY_YEAR = {
   2026: { pct: 4.85, maxBijdrageInkomen: 79409 },
 };
 
+function zvwBerekening(belastbaarRuw, year) {
+  const { waarde: z, status } = resolveTariefGroep("zvw", year);
+  const belastbaar = Math.max(0, belastbaarRuw);
+  // Over overig inkomen (loon/uitkering) is al Zvw-bijdrage betaald; het maximum bijdrage-inkomen geldt
+  // voor het totaal, dus er blijft minder ruimte voor de winst.
+  const max = Math.max(0, z.maxBijdrageInkomen - getOverigInkomenBox1(year));
+  const gemaximeerd = belastbaar > max;
+  const grondslag = Math.min(belastbaar, max);
+  return { bijdrage: grondslag * (z.pct / 100), geëxtrapoleerd: status === "benadering", grondslag, gemaximeerd };
+}
+
 export function estimateZvw(winst, year, zelfstandigenaftrekToegepast = true) {
   if (!winst || winst <= 0) return { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false };
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
-  const belastbaar = computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast);
-  const gemaximeerd = belastbaar > z.maxBijdrageInkomen;
-  const grondslag = Math.min(belastbaar, z.maxBijdrageInkomen);
-  return { bijdrage: grondslag * (z.pct / 100), geëxtrapoleerd: clampedYear !== year, grondslag, gemaximeerd };
+  return zvwBerekening(computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast), year);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -158,8 +238,7 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
       continue;
     }
 
-    const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-    const basisBedrag = IB_TARIEVEN_BY_YEAR[clampedYear].zelfstandigenaftrek;
+    const basisBedrag = getIbParams(year).zelfstandigenaftrek;
     const winstPositief = Math.max(0, winst || 0);
 
     // Winstbeperking op de zelfstandigenaftrek ("niet-gerealiseerd, reserveren voor later") geldt
@@ -208,53 +287,57 @@ function computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, 
 // hierboven al doet) — voor het compacte dashboard bovenaan de Indicatieve aangifteberekening, dat
 // elke stap los toont.
 export function computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe) {
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const mkbPct = IB_TARIEVEN_BY_YEAR[clampedYear].mkbPct;
+  const mkbPct = getIbParams(year).mkbPct;
   let naOndernemersaftrek = (winst || 0) - (ondernemersaftrekBedrag || 0);
   if (!staatNegatiefToe) naOndernemersaftrek = Math.max(0, naOndernemersaftrek);
   const mkbVrijstellingBedrag = naOndernemersaftrek * (mkbPct / 100);
   return { naOndernemersaftrek, mkbPct, mkbVrijstellingBedrag, belastbaar: naOndernemersaftrek - mkbVrijstellingBedrag };
 }
 
-function berekenBelastingOverSchijven(belastbaar, year) {
-  if (!(belastbaar > 0)) return 0;
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const t = IB_TARIEVEN_BY_YEAR[clampedYear];
-  let belasting = 0;
-  let vorige = 0;
-  for (const schijf of t.brackets) {
-    const inDezeSchijf = Math.min(belastbaar, schijf.tot) - vorige;
-    if (inDezeSchijf > 0) belasting += inDezeSchijf * schijf.tarief;
-    vorige = schijf.tot;
-    if (belastbaar <= schijf.tot) break;
-  }
-  return belasting;
-}
-
 // IB-schatting met een expliciet ondernemersaftrek-bedrag (voor gebruik samen met
 // computeOndernemersaftrekMetReserve, dat rekening houdt met verrekening van niet-gerealiseerde
 // zelfstandigenaftrek en met startersaftrek).
 export function estimateIncomeTaxMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const belastbaar = computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe);
-  return { belasting: berekenBelastingOverSchijven(belastbaar, year), geëxtrapoleerd: clampedYear !== year, belastbaar };
+  const u = computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe);
+  const toegepast = (winst || 0) - u.naOndernemersaftrek;
+  const r = berekenIbMetToevoegingen(u.belastbaar, year, toegepast + u.mkbVrijstellingBedrag);
+  return { ...r, geëxtrapoleerd: r.tariefStatus === "benadering", belastbaar: u.belastbaar };
 }
 
 export function estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
-  const clampedYear = Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year));
-  const z = ZVW_TARIEVEN_BY_YEAR[clampedYear];
-  const belastbaar = Math.max(0, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe));
-  const gemaximeerd = belastbaar > z.maxBijdrageInkomen;
-  const grondslag = Math.min(belastbaar, z.maxBijdrageInkomen);
-  return { bijdrage: grondslag * (z.pct / 100), geëxtrapoleerd: clampedYear !== year, grondslag, gemaximeerd };
+  return zvwBerekening(computeBelastbareWinstUitsplitsing(winst, year, ondernemersaftrekBedrag, staatNegatiefToe).belastbaar, year);
+}
+
+// Heffingskortingen over de winst, rekening houdend met overig inkomen box 1 (wizard): de korting
+// is het verschil tussen de kortingen over winst + overig inkomen en over het overige inkomen
+// alleen (dat al via de loonheffing is verrekend). Het overige inkomen telt hier als arbeidsinkomen
+// (loon/uitkering) — bij pensioen of ander niet-arbeidsinkomen is de arbeidskorting dus te hoog
+// ingeschat. Heeft de gebruiker de werkelijke heffingskorting ingevuld (tariefOverrides[jaar]
+// .werkelijkeHeffingskorting), dan vervangt die het totaal.
+function heffingskortingenVoor(winst, belastbaarInkomen, year) {
+  const overig = getOverigInkomenBox1(year);
+  const bi = Math.max(0, belastbaarInkomen);
+  const algemeneHeffingskorting = computeAlgemeneHeffingskorting(bi + overig, year) - (overig > 0 ? computeAlgemeneHeffingskorting(overig, year) : 0);
+  const arbeidskorting = computeArbeidskorting(winst + overig, year) - (overig > 0 ? computeArbeidskorting(overig, year) : 0);
+  const werkelijk = Number(_overrides?.[year]?.werkelijkeHeffingskorting);
+  const heeftWerkelijk = _overrides?.[year]?.werkelijkeHeffingskorting != null && _overrides?.[year]?.werkelijkeHeffingskorting !== "" && Number.isFinite(werkelijk) && werkelijk >= 0;
+  const geschat = algemeneHeffingskorting + arbeidskorting;
+  return {
+    algemeneHeffingskorting, arbeidskorting,
+    totaal: heeftWerkelijk ? werkelijk : geschat,
+    geschatTotaal: geschat,
+    werkelijkIngevuld: heeftWerkelijk,
+  };
 }
 
 export function estimateHeffingskortingenMetOndernemersaftrek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe = false) {
   if (!winst || winst <= 0) return { algemeneHeffingskorting: 0, arbeidskorting: 0, totaal: 0 };
-  const belastbaarInkomen = Math.max(0, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe));
-  const algemeneHeffingskorting = computeAlgemeneHeffingskorting(belastbaarInkomen, year);
-  const arbeidskorting = computeArbeidskorting(winst, year);
-  return { algemeneHeffingskorting, arbeidskorting, totaal: algemeneHeffingskorting + arbeidskorting };
+  return heffingskortingenVoor(winst, computeBelastbaarInkomenGeneriek(winst, year, ondernemersaftrekBedrag, staatNegatiefToe), year);
+}
+
+export function estimateHeffingskortingen(winst, year, zelfstandigenaftrekToegepast = true) {
+  if (!winst || winst <= 0) return { algemeneHeffingskorting: 0, arbeidskorting: 0, totaal: 0 };
+  return heffingskortingenVoor(winst, computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast), year);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -272,6 +355,10 @@ export function estimateHeffingskortingenMetOndernemersaftrek(winst, year, onder
 // gepubliceerde tabellen algemene heffingskorting/arbeidskorting van de Belastingdienst. Check
 // jaarlijks op belastingdienst.nl of deze bedragen nog kloppen.
 export const ALGEMENE_HEFFINGSKORTING_BY_YEAR = {
+  // 2020–2022: Belastingdienst, Fiscale Informatie (fisin2020/21/22 → Heffingskortingen).
+  2020: { max: 2711, afbouwGrens: 20711, afbouwPct: 5.672 },
+  2021: { max: 2837, afbouwGrens: 21043, afbouwPct: 5.977 },
+  2022: { max: 2888, afbouwGrens: 21317, afbouwPct: 6.007 },
   2023: { max: 3070, afbouwGrens: 22660, afbouwPct: 6.095 },
   2024: { max: 3362, afbouwGrens: 24812, afbouwPct: 6.63 },
   2025: { max: 3068, afbouwGrens: 28406, afbouwPct: 6.337 },
@@ -282,8 +369,7 @@ export const ALGEMENE_HEFFINGSKORTING_BY_YEAR = {
 // IB-schatting hierboven, ervan uitgaande dat dit het enige inkomen is).
 export function computeAlgemeneHeffingskorting(belastbaarInkomen, year) {
   if (!belastbaarInkomen || belastbaarInkomen <= 0) return 0;
-  const clampedYear = Math.max(2023, Math.min(2026, year));
-  const a = ALGEMENE_HEFFINGSKORTING_BY_YEAR[clampedYear];
+  const a = resolveTariefGroep("ahk", year).waarde;
   if (belastbaarInkomen <= a.afbouwGrens) return a.max;
   return Math.max(0, a.max - (belastbaarInkomen - a.afbouwGrens) * (a.afbouwPct / 100));
 }
@@ -293,6 +379,37 @@ export function computeAlgemeneHeffingskorting(belastbaarInkomen, year) {
 // ("basis") waar vanaf verder wordt opgebouwd; de laatste stap se "tot" is tegelijk het punt
 // waarop de afbouw begint (waar het maximum "max" wordt bereikt).
 export const ARBEIDSKORTING_BY_YEAR = {
+  // 2020–2022: Belastingdienst, Fiscale Informatie (fisin2020/21/22 → Heffingskortingen).
+  2020: {
+    opbouw: [
+      { tot: 9921, pct: 2.812 },
+      { tot: 21430, van: 9921, basis: 279, pct: 28.812 },
+      { tot: 34954, van: 21430, basis: 3595, pct: 1.656 },
+    ],
+    max: 3819,
+    afbouwVanaf: 34954,
+    afbouwPct: 6,
+  },
+  2021: {
+    opbouw: [
+      { tot: 10108, pct: 4.581 },
+      { tot: 21835, van: 10108, basis: 463, pct: 28.771 },
+      { tot: 35652, van: 21835, basis: 3837, pct: 2.663 },
+    ],
+    max: 4205,
+    afbouwVanaf: 35652,
+    afbouwPct: 6,
+  },
+  2022: {
+    opbouw: [
+      { tot: 10350, pct: 4.541 },
+      { tot: 22356, van: 10350, basis: 470, pct: 28.461 },
+      { tot: 36649, van: 22356, basis: 3887, pct: 2.61 },
+    ],
+    max: 4260,
+    afbouwVanaf: 36649,
+    afbouwPct: 5.86,
+  },
   2023: {
     opbouw: [
       { tot: 10740, pct: 8.231 },
@@ -340,8 +457,7 @@ export const ARBEIDSKORTING_BY_YEAR = {
 // gebruikt), niet de belastbare winst ná die aftrekken.
 export function computeArbeidskorting(arbeidsinkomen, year) {
   if (!arbeidsinkomen || arbeidsinkomen <= 0) return 0;
-  const clampedYear = Math.max(2023, Math.min(2026, year));
-  const a = ARBEIDSKORTING_BY_YEAR[clampedYear];
+  const a = resolveTariefGroep("ak", year).waarde;
   if (arbeidsinkomen >= a.afbouwVanaf) {
     return Math.max(0, a.max - (arbeidsinkomen - a.afbouwVanaf) * (a.afbouwPct / 100));
   }
@@ -356,13 +472,6 @@ export function computeArbeidskorting(arbeidsinkomen, year) {
 // Combineert beide kortingen tot één indicatief totaal, gebruik makend van dezelfde
 // zelfstandigenaftrek-aanname als de IB-schatting (zodat "IB ná heffingskortingen" en de
 // onderliggende belastbare winst altijd bij elkaar aansluiten).
-export function estimateHeffingskortingen(winst, year, zelfstandigenaftrekToegepast = true) {
-  if (!winst || winst <= 0) return { algemeneHeffingskorting: 0, arbeidskorting: 0, totaal: 0 };
-  const belastbaarInkomen = computeBelastbaarWinst(winst, year, zelfstandigenaftrekToegepast);
-  const algemeneHeffingskorting = computeAlgemeneHeffingskorting(belastbaarInkomen, year);
-  const arbeidskorting = computeArbeidskorting(winst, year);
-  return { algemeneHeffingskorting, arbeidskorting, totaal: algemeneHeffingskorting + arbeidskorting };
-}
 
 // ---------------------------------------------------------------------------------------------
 // Kleinschaligheidsinvesteringsaftrek (KIA) — GROVE INDICATIE.
@@ -380,8 +489,7 @@ export const KIA_STAFFEL_BY_YEAR = {
 };
 export function computeMogelijkeKia(totaalInvestering, year) {
   if (!totaalInvestering || totaalInvestering <= 0) return 0;
-  const clampedYear = Math.max(2023, Math.min(2026, year));
-  const s = KIA_STAFFEL_BY_YEAR[clampedYear];
+  const s = resolveTariefGroep("kia", year).waarde;
   if (totaalInvestering <= s.drempel) return 0;
   if (totaalInvestering <= s.vast1Tot) return totaalInvestering * (s.pct1 / 100);
   if (totaalInvestering <= s.vastTot) return s.vastBedrag;

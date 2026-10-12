@@ -97,7 +97,8 @@ export function computeAutoPrivegebruikOnttrekking(totaleAutokosten, cataloguswa
 // aftopping op "totale autokosten" te hoog laten uitvallen.
 export function sumAutokostenTransactiesVoorJaar(classified, year, categoryBtwRates, btwVerlegd) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
-  return Math.abs(
+  // 15V5: geen Math.abs — een netto teruggave is een negatieve kostenpost (zie boxMapping.js).
+  return -(
     (classified || [])
       .filter((tx) => !tx.isMirror && tx.year === year && AUTOKOSTEN_CATEGORIEN.includes(tx.category))
       .reduce((a, tx) => a + nettoOf(tx), 0)

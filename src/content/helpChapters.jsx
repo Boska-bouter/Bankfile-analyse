@@ -438,8 +438,8 @@ export const HELP_CHAPTERS = [
           jaar na de aanschaf, en in het eerste jaar naar rato van de maanden. Het bedrag is nooit hoger dan de btw die
           je op onderhoud en gebruik hebt afgetrokken plus (tot en met het vierde jaar na aanschaf) 1/5 van de btw bij
           aanschaf. Je ziet het terug bij Q4 in het btw-overzicht en het aangiftevoorstel. Per jaar kun je kiezen voor
-          werkelijk privégebruik of geen correctie (bij "Auto op de zaak" voor gekocht of operationele lease). Bij een
-          privéauto of zonder btw-aftrek is er geen correctie. Alleen voor een zzp; bron: Belastingdienst, "Privégebruik
+          werkelijk privégebruik of geen correctie (bij "Auto op de zaak" voor gekocht of operationele lease). Is er bij aanschaf of lease geen btw afgetrokken maar wel op brandstof en onderhoud, dan rekent de app 1,5% van de
+          cataloguswaarde per jaar (maximaal die afgetrokken btw op gebruikskosten). Bij een privéauto is er geen correctie. Alleen voor een zzp; bron: Belastingdienst, "Privégebruik
           auto van de zaak".
         </p>
         <p>

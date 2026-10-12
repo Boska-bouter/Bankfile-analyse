@@ -111,7 +111,10 @@ export function vindTerugkerendeInconsistenties({ classified = [], overridesByRo
 }
 
 // ---------- C3 ----------
-export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar = 5, minEuro = 750, minPercentage = 40 }) {
+// 15V7: voor een zzp'er (gatenAlleen) alleen nog "mogelijk ontbrekende vaste betaling": een kostencategorie die
+// in jaar N op 0 uitkomt terwijl het jaar ervoor én erna wél regelmatig (>=3 boekingen) voorkomt. Gewone
+// hoger/lager-verschillen zijn bij zzp'ers (gemengd zakelijk/privé) ruis en worden niet meer gemeld.
+export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar = 5, minEuro = 750, minPercentage = 40, gatenAlleen = false }) {
   const maandenPerJaar = {};
   const perJaarCat = {};
   for (const tx of classified) {
@@ -132,6 +135,7 @@ export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar =
     const vorig = jaren[i - 1], nu = jaren[i];
     if (nu !== vorig + 1 || !volledig(vorig) || !volledig(nu)) continue; // alleen opeenvolgende, volledige jaren
     const kandidaten = [];
+    const maxJaar = gatenAlleen ? 3 : maxPerJaar;
     for (const [cat, perJaar] of Object.entries(perJaarCat)) {
       const a = perJaar[vorig]?.totaal || 0, b = perJaar[nu]?.totaal || 0;
       const verschil = b - a;
@@ -140,10 +144,11 @@ export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar =
       if ((Math.abs(verschil) / basis) * 100 < minPercentage) continue;
       if (bevestigd[`sprong|${cat}|${nu}`]) continue;
       const soort = b === 0 ? "verdwenen" : a === 0 ? "nieuw" : verschil > 0 ? "hoger" : "lager";
+      if (gatenAlleen && !(soort === "verdwenen" && (perJaar[vorig]?.aantal || 0) >= 3 && (perJaar[nu + 1]?.aantal || 0) >= 3)) continue;
       kandidaten.push({ key: `sprong|${cat}|${nu}`, categorie: cat, vorig, nu, vorigTotaal: Math.round(a), nuTotaal: Math.round(b), verschil: Math.round(verschil), soort, aantalVorig: perJaar[vorig]?.aantal || 0, aantalNu: perJaar[nu]?.aantal || 0 });
     }
     kandidaten.sort((x, y) => Math.abs(y.verschil) - Math.abs(x.verschil));
-    meldingen.push(...kandidaten.slice(0, maxPerJaar));
+    meldingen.push(...kandidaten.slice(0, maxJaar));
   }
   return meldingen;
 }

@@ -26,7 +26,8 @@ const AUTOKOSTEN_CATEGORIEN_OPERATIONAL_LEASE = [...AUTOKOSTEN_CATEGORIEN, "Leas
 // met een hardcoded lijst.
 function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorieen) {
   const nettoOf = (tx) => tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd);
-  return Math.abs(
+  // 15V5: geen Math.abs — een netto teruggave is een negatieve kostenpost (zie boxMapping.js).
+  return -(
     (classified || [])
       .filter((tx) => !tx.isMirror && tx.year === year && categorieen.includes(tx.category))
       .reduce((a, tx) => a + nettoOf(tx), 0)

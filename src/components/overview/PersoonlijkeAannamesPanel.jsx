@@ -8,6 +8,7 @@ import { computeInvesteringenForYear } from "../../tax/activa.js";
 import { computeLeaseInvesteringenForYear } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import TarievenJaarEditor from "./TarievenJaarEditor.jsx";
 import { toetsStartersaftrek } from "../../tax/startersaftrekToets.js";
 
 // v291 — gedeeld blok voor Huur/Energie-water/Gemeentelijke kosten "(deels zakelijk)": drie losse
@@ -70,6 +71,7 @@ function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw,
 export default function PersoonlijkeAannamesPanel({
   rechtsvorm, activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
+  years, tariefOverrides, onSetTariefOverrides, overigInkomenBox1, onSetOverigInkomenBox1,
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
   kmVergoedingDetails, onSetKmVergoedingField,
@@ -205,6 +207,30 @@ export default function PersoonlijkeAannamesPanel({
             ))}
           </div>
 
+          <div className="pt-2 border-t border-slate-200">
+            <label className="text-sm font-medium text-slate-700 block mb-1">
+              Overig inkomen box 1 in {activeYear} (loon, uitkering — bruto per jaar)
+            </label>
+            <input
+              key={`overig-${activeYear}`}
+              type="number" min="0" step="100" inputMode="decimal" placeholder="€ 0 (geen ander inkomen)"
+              value={overigInkomenBox1?.[activeYear] ?? ""}
+              onChange={(e) => {
+                const next = { ...(overigInkomenBox1 || {}) };
+                const v = parseFloat(e.target.value);
+                if (Number.isFinite(v) && v > 0) next[activeYear] = v; else delete next[activeYear];
+                onSetOverigInkomenBox1(next);
+              }}
+              className="w-44 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+            />
+            <p className="mt-1.5 text-xs text-slate-400">
+              Bepaalt in welke schijf je winst valt en hoeveel heffingskorting daarbovenop nog meetelt. Is er geen ander
+              inkomen, laat dit dan leeg. Pensioen of ander niet-arbeidsinkomen: de arbeidskorting is dan te hoog geschat.
+            </p>
+          </div>
+
+          <TarievenJaarEditor activeYear={activeYear} years={years} tariefOverrides={tariefOverrides} onSetTariefOverrides={onSetTariefOverrides} />
+
           <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
             {scenarios ? (
               <>
@@ -224,6 +250,12 @@ export default function PersoonlijkeAannamesPanel({
               {" "}— ervan uitgaande dat de winst je enige inkomen is, je nog geen AOW-leeftijd hebt bereikt en er geen
               fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is dit minder betrouwbaar.
             </p>
+            {(overigInkomenBox1?.[activeYear] || 0) > 0 && (
+              <p className="text-slate-500">
+                Overig inkomen {eur(overigInkomenBox1[activeYear])} is meegenomen: belasting en kortingen zijn het verschil met en zonder winst.
+                Een negatieve heffingskorting betekent dat je door de winst korting verliest die je op het overige inkomen alleen wél had.
+              </p>
+            )}
             <p>
               Mogelijke investeringsaftrek (KIA) {activeYear}: {totaalInvestering > 0 ? (
                 <strong>{eur(mogelijkeKia)}</strong>

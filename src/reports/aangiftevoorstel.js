@@ -3,7 +3,7 @@ import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
-  IB_TARIEVEN_BY_YEAR, IB_MIN_YEAR, IB_MAX_YEAR, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
+  getIbParams, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
   resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
@@ -168,7 +168,7 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
 // "mét zelfstandigenaftrek"-scenario: het is een aanvulling óp de zelfstandigenaftrek, niet een los
 // toe te passen aftrekpost (zie ook de toelichting bij STARTERSAFTREK_BEDRAG in tax/incomeTax.js).
 function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftrekToegepast) {
-  const basisBedrag = IB_TARIEVEN_BY_YEAR[Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year))].zelfstandigenaftrek;
+  const basisBedrag = getIbParams(year).zelfstandigenaftrek;
   const staToegepast = metZelfstandigenaftrek && startersaftrekToegepast;
   const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? STARTERSAFTREK_BEDRAG : 0) : 0;
   return {
@@ -231,7 +231,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // hieronder bij zaScenarios) — die jaren doen niet mee in de reserveketen.
   const ondernemersaftrekBedrag = ondernemersaftrekVoorJaar
     ? ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag + ondernemersaftrekVoorJaar.startersaftrekBedrag
-    : (zelfstandigenaftrekToegepast ? IB_TARIEVEN_BY_YEAR[Math.max(IB_MIN_YEAR, Math.min(IB_MAX_YEAR, year))].zelfstandigenaftrek : 0);
+    : (zelfstandigenaftrekToegepast ? getIbParams(year).zelfstandigenaftrek : 0);
   const ibEstimate = ondernemersaftrekVoorJaar
     ? estimateIncomeTaxMetOndernemersaftrek(summary.winst, year, ondernemersaftrekBedrag, startersaftrekToegepast)
     : estimateIncomeTax(summary.winst, year, zelfstandigenaftrekToegepast);
@@ -431,7 +431,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         <tr><td>Zonder zelfstandigenaftrek</td><td class="num">€ 0</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
       </tbody>
     </table>
-    <p class="kerncijfers-voetnoot">* Ná heffingskortingen, exclusief overig inkomen.</p>`
+    <p class="kerncijfers-voetnoot">* Ná heffingskortingen; overig inkomen alleen voor zover opgegeven in de wizard.</p>`
     : `
     <div class="kerncijfers-hoofd">
       <span class="label">Winst uit onderneming</span>
@@ -489,7 +489,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>BTW-saldo</th><th>Totaal</th></tr></thead><tbody>
       ${rij("Mét zelfstandigenaftrek", zaScenarios.metZelfstandigenaftrek)}
       ${rij("Zonder zelfstandigenaftrek", zaScenarios.zonderZelfstandigenaftrek)}
-    </tbody></table><p class="kerncijfers-voetnoot">Indicatief, exclusief overig inkomen en zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
+    </tbody></table><p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
     JAAR_TOTALEN.push({ year, onbekend: true });
   } else {
     const i = ibNa(ibEstimate, heffingskortingen);
@@ -500,7 +500,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
       ${korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>`}
       <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${totaalTekst(t)}</span></div>
-      <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; exclusief overig inkomen en zonder verrekening van voorschotten of voorlopige aanslagen.</p>
+      <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
     </div>`;
   }
 
@@ -739,7 +739,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
 
   <h3>Geschatte heffingskortingen (indicatief)</h3>
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
+  ${heffingskortingen.werkelijkIngevuld ? `<p class="toelichting">Heffingskorting: werkelijk ingevuld bedrag gebruikt (geschat was ${eur(heffingskortingen.geschatTotaal)}).</p>` : ""}
   <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
+  ${ibEstimate.overigInkomen > 0 ? `<p class="toelichting">Inclusief effect van overig inkomen box 1 (${eur(ibEstimate.overigInkomen)}, opgegeven in de wizard): de belasting en de heffingskortingen zijn berekend als het verschil tussen winst + overig inkomen en overig inkomen alleen. Een negatieve heffingskorting betekent dat je door de winst korting verliest die je op het overige inkomen alleen wél had.</p>` : ""}
+  ${ibEstimate.beperkingAftrek > 0 ? `<p>Beperking aftrek (aftrekposten in de hoogste schijf maar beperkt aftrekbaar): <strong>${eur(ibEstimate.beperkingAftrek)}</strong> extra IB, al opgenomen in de IB hierboven.</p>` : ""}
+  ${ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard" ? `<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>` : ""}
   `}
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>
@@ -791,7 +795,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const onbekendeJaren = JAAR_TOTALEN.filter((j) => j.onbekend).map((j) => j.year);
   const grandTotaal = bepaald.reduce((a, j) => a + j.totaal, 0);
   const totaalAlleJarenHtml = yearsToInclude.length > 1 && bepaald.length > 0
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -1054,8 +1058,8 @@ function buildBijlageToelichtingenHtml() {
     Deze schatting gaat uit van het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de
     onderneming besteed) voor de zelfstandigenaftrek — geef in de app aan ("Persoonlijke aannames
     voor IB") of daaraan is voldaan zodra dat bekend is; zonder die aangave rekent de app voorlopig
-    mét zelfstandigenaftrek. De IB-schatting is exclusief heffingskortingen en overig inkomen (die
-    volgen apart hieronder in de jaarsectie). Zijn de belastingschijven of het Zvw-percentage van een
+    mét zelfstandigenaftrek. De IB-schatting is exclusief heffingskortingen (die
+    volgen apart hieronder in de jaarsectie); overig inkomen box 1 telt alleen mee voor zover opgegeven in de wizard. Zijn de belastingschijven of het Zvw-percentage van een
     jaar nog niet officieel bekend, dan benadert de app die met de dichtstbijzijnde bekende
     schijven/het dichtstbijzijnde bekende percentage. Dit is in alle gevallen een indicatie, geen
     belastingadvies — vergelijk het altijd met wat daadwerkelijk is aangegeven/betaald.
@@ -1064,7 +1068,7 @@ function buildBijlageToelichtingenHtml() {
   <h2>Heffingskortingen — aannames</h2>
   <p class="toelichting">
     ⚠ Persoonlijke heffingskortingen zijn niet volledig meegenomen: deze schatting gaat ervan uit dat
-    de winst uit onderneming je enige inkomen is, dat je nog geen AOW-leeftijd hebt bereikt, en dat er
+    de winst uit onderneming je enige inkomen is (tenzij je overig inkomen box 1 in de wizard hebt opgegeven), dat je nog geen AOW-leeftijd hebt bereikt, en dat er
     geen fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is deze
     indicatie minder betrouwbaar. Geen belastingadvies.
   </p>

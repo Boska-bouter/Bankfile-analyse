@@ -179,7 +179,8 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
                 </div>
                 <p className="text-xs text-slate-400">
                   Standaard geldt het forfait: 2,7% van de cataloguswaarde (incl. btw en bpm) per jaar, 1,5% vanaf het vijfde jaar na de
-                  aanschaf, in het eerste jaar naar rato van de maanden. Vul de cataloguswaarde hieronder in.
+                  aanschaf, in het eerste jaar naar rato van de maanden. Is er bij aanschaf/lease géén btw afgetrokken, maar wel op brandstof en
+                  onderhoud, dan geldt 1,5% van de cataloguswaarde (maximaal die afgetrokken btw). Vul de cataloguswaarde hieronder in.
                 </p>
                 <details>
                   <summary className="text-xs font-medium text-slate-600 cursor-pointer">Per jaar een andere methode kiezen</summary>

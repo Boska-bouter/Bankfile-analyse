@@ -77,6 +77,9 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // zodat de losse regels van deze winst-en-verliesrekening optellen tot hetzelfde resultaat.
   const nettoOf = (tx) => (tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd)) * factorFor(tx.category);
   const sumCatNetto = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0));
+  // 15V5: voor KOSTEN-categorieën met per saldo een teruggave (bijv. een netto creditboeking op Brandstof):
+  // geen abs, want de winst telt zo'n teruggave als opbrengst — met abs() telde ze in de rubrieken als kosten.
+  const sumKostenNettoGetekend = (cats) => -zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0);
   const perCategorieVanNetto = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCatNetto([c]) })).filter((r) => r.totaal > 0);
   const rubriekNetto = (naam, cats, toelichting) => ({
@@ -123,7 +126,11 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // bedrijfskosten" — ook als er (nog) geen enkel leasecontract met "soort" is ingevuld (dan is dit
   // gewoon de volledige aftrekpost, zonder bijtellingscorrectie). Netto, exact dezelfde
   // sumCatNetto-conventie als de rest van deze functie.
-  const autokostenOverig = rubriekNetto("Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", AUTOKOSTEN_CATEGORIEN);
+  const autokostenOverig = {
+    ...rubriekNetto("Overige autokosten (MRB, verzekering, brandstof, parkeren, onderhoud)", AUTOKOSTEN_CATEGORIEN),
+    totaal: sumKostenNettoGetekend(AUTOKOSTEN_CATEGORIEN),
+    perCategorie: AUTOKOSTEN_CATEGORIEN.map((c) => ({ categorie: c, totaal: sumKostenNettoGetekend([c]) })).filter((r) => Math.abs(r.totaal) >= 0.005),
+  };
 
   const apparatuurInvestering = sumCat(["Zakelijk - apparatuur/machines"]);
   const leaseFinancieelTotal = sumCat(["Lease (financieel)"]);
