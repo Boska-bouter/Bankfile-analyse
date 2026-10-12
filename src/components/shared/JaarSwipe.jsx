@@ -26,7 +26,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     drag.current = null;
     if (!kanVegen || e.touches.length !== 1) return;
     const t = e.target;
-    if (t.closest && t.closest("input, select, textarea, [contenteditable=true]")) return;
+    if (t.closest && t.closest("input, select, textarea")) return;
     if (zijdelingsScrollbaar(t)) return;
     drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, dx: 0 };
     const el = contentRef.current; if (el) zet(el, "none", "1", "none");
@@ -38,7 +38,6 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     if (d.mode === null) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
       d.mode = Math.abs(dx) > Math.abs(dy) * 1.4 ? "h" : "v";
-      if (d.mode === "h") el.style.willChange = "transform";
     }
     if (d.mode !== "h") return;
     if (e.cancelable) e.preventDefault();
@@ -47,7 +46,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     el.style.transform = `translateX(${dx * (heeftDoel ? 0.8 : 0.2)}px)`;
     el.style.opacity = String(heeftDoel ? Math.max(0.4, 1 - Math.abs(dx) / 450) : 1);
   };
-  const klaar = () => { const el = contentRef.current; if (el) el.style.willChange = ""; };
+  const klaar = () => {};
   const onTouchCancel = () => { drag.current = null; terugveren(); klaar(); };
   const onTouchEnd = () => {
     const d = drag.current; drag.current = null;
@@ -67,6 +66,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
       }));
     }, 130);
   };
+  // Native listeners op het paneel zelf (touchmove niet-passief) — exact dezelfde opzet als in "Details en overzichten".
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return undefined;
@@ -89,7 +89,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
   }, [kanVegen]);
   return (
     <div ref={panelRef} style={{ overflowX: "clip", ...style }} data-testid="jaar-swipe">
-      <div ref={contentRef}>{children}</div>
+      <div ref={contentRef} style={{ willChange: "transform" }}>{children}</div>
     </div>
   );
 }
