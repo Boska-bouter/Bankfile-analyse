@@ -20,9 +20,10 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
   const resultaatHtml = `<table>${kop}${heeftOmzet ? rij("Omzet (excl. BTW)", jaren.map((j) => (isNum(j.omzetNetto) ? eur(j.omzetNetto) : "—"))) : ""}${heeftOmzet && heeftWinst ? rij("Zakelijke kosten", jaren.map((j) => (isNum(j.omzetNetto) && isNum(j.winst) && j.omzetNetto - j.winst >= 0 ? eur(j.omzetNetto - j.winst) : "—"))) : ""}${heeftWinst ? rij(isBV ? "Resultaat vóór Vpb" : "Winst uit onderneming", jaren.map((j) => (isNum(j.winst) ? eur(j.winst) : "—")), true) : ""}</table>`;
   const labels = [...new Set(jaren.flatMap((j) => (j.belasting?.delen || []).map((d) => d.label)))];
   const heeftBelasting = jaren.some((j) => j.belasting);
-  const totaalLabel = jaren.length === 1 && jaren[0].belasting?.totaal < 0 ? "Totaal terug te krijgen" : "Totaal te betalen";
+  const heeftBtw = jaren.some((j) => j.belasting && j.belasting.btw != null);
+  const totaalLabel = jaren.length === 1 && jaren[0].belasting?.totaal < 0 ? "Jaarlijks terug te krijgen" : "Jaarlijks te betalen";
   const belastingHtml = heeftBelasting
-    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? bedrag(d.bedrag) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? bedrag(j.belasting.totaal) : "—")), true)}</table>`
+    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? bedrag(d.bedrag) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? bedrag(j.belasting.totaal) : "—")), true)}</table>${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? bedrag(j.belasting.btw) : "—")))}</table>` : ""}`
     : `<p>Nog niet te berekenen.</p>`;
   const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");
@@ -38,7 +39,7 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:12px;line-height:1.4}
  h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;margin-bottom:18px}
  h2{font-size:13px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:20px 0 8px}
- h3{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin:0 0 3px}
+ h3{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin:0 0 3px} h3.btw-kop{margin-top:10px}
  table{width:100%;border-collapse:collapse} td{padding:5px 6px;border-bottom:1px solid #f1f5f9}
  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums} tr.sterk td{font-weight:bold;border-top:2px solid #0f172a;border-bottom:none;font-size:13px;padding-top:8px}
  .blokken{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px} .blok ul,ul{margin:0;padding-left:16px} .blok li,li{margin:1px 0}

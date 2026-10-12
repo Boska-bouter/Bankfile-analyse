@@ -221,7 +221,7 @@ export default function DetailsPanel({
         {belastingTotaal && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-paneel border border-slate-200 bg-slate-50 px-4 py-3">
             <div>
-              <p className="text-sm font-bold text-slate-900">Totaal te betalen / terug te krijgen {year}</p>
+              <p className="text-sm font-bold text-slate-900">Jaarlijks te betalen / terug te krijgen {year}</p>
               <p className="text-klein text-slate-500">
                 {belastingTotaal.delen.map((d) => `${d.label} ${eur(d.bedrag)}`).join(" + ")} · indicatief
               </p>
@@ -230,6 +230,12 @@ export default function DetailsPanel({
               {eur(Math.abs(belastingTotaal.totaal))}{" "}
               <span className="text-xs font-semibold text-slate-500">{belastingTotaal.totaal < 0 ? "terug te krijgen" : "te betalen"}</span>
             </p>
+            {belastingTotaal.btw != null && (
+              <p className="basis-full text-klein text-slate-500 border-t border-slate-200 pt-2 mt-1">
+                Daarnaast, per kwartaal aangegeven en los van het jaarbedrag: BTW-saldo {year}{" "}
+                <span className="font-semibold text-slate-700">{eur(Math.abs(belastingTotaal.btw))} {belastingTotaal.btw < 0 ? "terug te krijgen" : "te betalen"}</span>
+              </p>
+            )}
           </div>
         )}
 

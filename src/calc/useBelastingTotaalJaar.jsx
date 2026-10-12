@@ -14,7 +14,7 @@ export function useBelastingTotaalJaar(p) {
       const q = quarterlyBtwData.find((item) => item.kwartaal === k);
       return acc + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0);
     }, 0);
-    let delen = [{ label: "BTW", bedrag: btw }];
+    let delen = [];
     if (rechtsvorm === "bv") {
       if (!dashboardVpbIndicatie) return null;
       delen.push({ label: "Vpb", bedrag: dashboardVpbIndicatie.belasting || 0 });
@@ -24,6 +24,6 @@ export function useBelastingTotaalJaar(p) {
       delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (dashboardAangifteIndicatie.ib?.belasting || 0) - hk) });
       delen.push({ label: "Zvw", bedrag: dashboardAangifteIndicatie.zvw?.bijdrage || 0 });
     }
-    return { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) };
+    return { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0), btw: korRegeling ? null : btw };
   }, [activeYear, korRegeling, quarterlyBtwData, rechtsvorm, dashboardVpbIndicatie, dashboardAangifteIndicatie]);
 }

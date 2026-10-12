@@ -478,27 +478,28 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const btwJaarSaldo = korRegeling ? 0 : kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
   const totaalTekst = (t) => `${eur(Math.abs(t))} ${t < 0 ? "te ontvangen" : "te betalen"}`;
   const ibNa = (ibE, hk) => Math.max(0, (ibE.belasting || 0) - (hk.totaal || 0));
+  const btwRegelHtml = korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo ${year} (per kwartaal aangegeven, niet in het jaartotaal)</span><span>${eur(Math.abs(btwJaarSaldo))} ${btwJaarSaldo < 0 ? "terug te ontvangen" : "te betalen"}</span></div>`;
   let jaarTotaalHtml;
   if (zaScenarios) {
     const rij = (label, sc) => {
       const i = ibNa(sc.ib, sc.heffingskortingen);
-      const t = i + sc.zvw.bijdrage + btwJaarSaldo;
-      return `<tr><td>${label}</td><td class="num">${eur(i)}</td><td class="num">${eur(sc.zvw.bijdrage)}</td><td class="num">${korRegeling ? "—" : (btwJaarSaldo < 0 ? "- " : "") + eur(Math.abs(btwJaarSaldo))}</td><td class="num"><strong>${totaalTekst(t)}</strong></td></tr>`;
+      const t = i + sc.zvw.bijdrage;
+      return `<tr><td>${label}</td><td class="num">${eur(i)}</td><td class="num">${eur(sc.zvw.bijdrage)}</td><td class="num"><strong>${totaalTekst(t)}</strong></td></tr>`;
     };
-    jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>BTW-saldo</th><th>Totaal</th></tr></thead><tbody>
+    jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>Totaal (jaarlijks)</th></tr></thead><tbody>
       ${rij("Mét zelfstandigenaftrek", zaScenarios.metZelfstandigenaftrek)}
       ${rij("Zonder zelfstandigenaftrek", zaScenarios.zonderZelfstandigenaftrek)}
-    </tbody></table><p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
+    </tbody></table>${btwRegelHtml}<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
     JAAR_TOTALEN.push({ year, onbekend: true });
   } else {
     const i = ibNa(ibEstimate, heffingskortingen);
-    const t = i + zvwEstimate.bijdrage + btwJaarSaldo;
+    const t = i + zvwEstimate.bijdrage;
     JAAR_TOTALEN.push({ year, totaal: t });
     jaarTotaalHtml = `<div class="totaal-kaart">
       <div class="totaal-regel"><span>Indicatieve IB na heffingskorting</span><span>${eur(i)}</span></div>
       <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
-      ${korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>`}
-      <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${totaalTekst(t)}</span></div>
+      <div class="totaal-regel totaal-eind"><span>Totaal ${year} (jaarlijks: IB + Zvw)</span><span>${totaalTekst(t)}</span></div>
+      ${btwRegelHtml}
       <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
     </div>`;
   }
@@ -795,7 +796,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const onbekendeJaren = JAAR_TOTALEN.filter((j) => j.onbekend).map((j) => j.year);
   const grandTotaal = bepaald.reduce((a, j) => a + j.totaal, 0);
   const totaalAlleJarenHtml = yearsToInclude.length > 1 && bepaald.length > 0
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren, jaarlijks: IB + Zvw (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
     : "";
 
   return `<!DOCTYPE html>

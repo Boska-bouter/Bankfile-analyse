@@ -1597,10 +1597,11 @@ export default function App() {
     const s = yearlySummaries[y];
     if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
     let delen = [];
+    let btwSaldo = null;
     if (!korRegeling) {
       const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }));
-      delen.push({ label: "BTW", bedrag: [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting + (r.btwPrivegebruikAuto || 0) : 0); }, 0) });
-    } else delen.push({ label: "BTW", bedrag: 0 });
+      btwSaldo = [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting + (r.btwPrivegebruikAuto || 0) : 0); }, 0);
+    }
     if (rechtsvorm === "bv") {
       delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
     } else {
@@ -1613,7 +1614,7 @@ export default function App() {
       delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (ib?.belasting || 0) - hk) });
       delen.push({ label: "Zvw", bedrag: zvw?.bijdrage || 0 });
     }
-    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0) } };
+    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0), btw: btwSaldo } };
   };
   const [onderbouwingKeuze, setOnderbouwingKeuze] = useState(null);
   const [onderbouwingHtml, setOnderbouwingHtml] = useState(null);
