@@ -182,8 +182,10 @@ export default function SetupWizardModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[88dvh] flex flex-col">
+    // Onderin blijft ruimte vrij voor de "Ongedaan maken"-melding (UndoToast), zodat die niet over de
+    // knoppen van de wizard heen valt. Inline stijl, omdat dit niet van de Tailwind-build mag afhangen.
+    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" style={{ paddingBottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col" style={{ maxHeight: "calc(100dvh - 10.5rem - env(safe-area-inset-bottom, 0px))" }}>
         <div className="relative px-5 py-3 border-b border-slate-200 bg-teal-700 text-white shrink-0">
           <button
             type="button"
