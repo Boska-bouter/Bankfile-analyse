@@ -333,7 +333,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const yearStatus =
     gatenDitJaar.length > 0
       ? "rood"
-      : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
+      : yc.categorizedPct === 100 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
       ? "groen"
       : "oranje";
 
