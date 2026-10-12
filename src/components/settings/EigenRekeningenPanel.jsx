@@ -42,7 +42,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
   const wijzigType = (idx, t) => onChange(lijst.map((r, i) => (i === idx ? { ...r, accountType: t } : r)));
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm space-y-3">
+    <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm space-y-3">
       <h3 className="text-sm font-semibold">Eigen rekeningen</h3>
       <p className="text-xs text-slate-500">
         Heb je nog een rekening (zakelijk of privé) die niet is geladen? Geef het rekeningnummer hier op. Boekingen van en naar die

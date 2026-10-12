@@ -3114,7 +3114,7 @@ export default function App() {
     const nieuwStarten = () => { startEmpty(); setActiveTab("overzicht"); setManualWizardOpen(true); };
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+        <div className="max-w-md w-full rounded-paneel border border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">{heeftBewaard ? "Vorig dossier gevonden" : "Bankoverzicht"}</h1>
           <p className="text-sm text-slate-500 mb-3">
             {heeftBewaard
@@ -3600,7 +3600,7 @@ export default function App() {
             placeholder was dat een compleet wit scherm i.p.v. een duidelijke lege staat. */}
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
-            <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
+            <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
               <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets te controleren.</p>
             </section>
           </div>
@@ -3778,7 +3778,7 @@ export default function App() {
             tabsVisible altijd true is, v271) met een leeg dossier werd geopend. */}
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
-            <section className="rounded-xl border-2 border-slate-200 bg-white p-8 shadow-sm text-center">
+            <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
               <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets in te stellen.</p>
             </section>
           </div>

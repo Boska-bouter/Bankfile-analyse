@@ -24,7 +24,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
   const pct = (n) => Math.round((n / total) * 100);
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       {/* v253 — <div role="button"> i.p.v. <button>: de HelpHint hieronder is zelf ook een button,
           en een button-in-button is ongeldige HTML (en liet een klik op "uitleg" ook de sectie
           in-/uitklappen). Zelfde patroon als QuarterlyBtwPanel.jsx. */}

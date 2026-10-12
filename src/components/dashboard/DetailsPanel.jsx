@@ -218,7 +218,7 @@ export default function DetailsPanel({
         )}
 
         {belastingTotaal && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-paneel border border-slate-200 bg-slate-50 px-4 py-3">
             <div>
               <p className="text-sm font-bold text-slate-900">Totaal te betalen / terug te krijgen {year}</p>
               <p className="text-klein text-slate-500">

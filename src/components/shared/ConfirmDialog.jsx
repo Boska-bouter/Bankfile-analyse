@@ -20,7 +20,7 @@ export default function ConfirmDialog({ dialog, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-w-md w-full rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg"
+        className="max-w-md w-full rounded-paneel border border-slate-200 bg-white p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold mb-1">{title}</h2>

@@ -20,7 +20,7 @@ export default function HoldingBoekingenPanel({ years, holdingBoekingen, onSetFi
   if (years.length === 0) return null;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       <button onClick={toggleOpen} className="w-full flex items-center justify-between p-4 text-sm font-semibold">
         <span>Holding-boekingen (handmatig)</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
