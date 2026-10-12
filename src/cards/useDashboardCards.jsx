@@ -14,7 +14,7 @@ export function useDashboardCards(p) {
     leasesSectionRef, loanDetails, loanSummary, loansSectionRef, overigReviewSectionRef,
     pendingDuplicateCount, pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef,
     quarterlyBtwData, rechtsvorm, setDismissedDuplicateNotice, setOpenConfidenceLevel, setShowAangifteYearPicker,
-    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions,
+    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions, startBtwOverzicht,
     vpbStatus, yearlyProgress, yearlySummary, zvwStatus,
   } = p;
 
@@ -306,6 +306,7 @@ export function useDashboardCards(p) {
               tone: quartersOpenCount > 0 ? "attention" : "ok",
               hint: "Naar het BTW-kwartaaloverzicht",
               onClick: () => setShowQuarterlyBtwModal(true),
+              secondaryAction: !korRegeling && startBtwOverzicht ? { label: "Overzicht als document", onClick: startBtwOverzicht } : null,
             },
             // v240 — vervangt de "Factuurperiode"-kaart die hier stond (die is verhuisd naar het
             // Controleren-tabblad) — zelfde stijl als "BTW-kwartalen" hierboven: een getal per
@@ -420,5 +421,6 @@ export function useDashboardCards(p) {
     korRegeling,
     btwVerlegd,
     quarterlyBtwData,
+    startBtwOverzicht,
   ]);
 }

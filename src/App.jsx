@@ -140,6 +140,7 @@ import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinst
 import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
 import { jarenBereik } from "./dossier/dossierProfiel.js";
 import { buildOnderbouwingHtml, downloadOnderbouwing } from "./reports/onderbouwing.js";
+import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./reports/btwOverzicht.js";
 import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
@@ -1594,6 +1595,28 @@ export default function App() {
     setOnderbouwingJaren(jaren);
     setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified }));
   };
+  // BTW-aangifte per kwartaal als los document (één of meer jaren).
+  const [btwOverzichtKeuze, setBtwOverzichtKeuze] = useState(null);
+  const [btwOverzichtHtml, setBtwOverzichtHtml] = useState(null);
+  const [btwOverzichtJaren, setBtwOverzichtJaren] = useState([]);
+  const openBtwOverzicht = (gekozen) => {
+    const jaren = [...gekozen].sort();
+    if (jaren.length === 0) return;
+    setBtwOverzichtKeuze(null);
+    setBtwOverzichtJaren(jaren);
+    setBtwOverzichtHtml(buildBtwOverzichtHtml({
+      klantNaam: eigenNamen?.ondernemer, kwartaalStatus,
+      jaren: jaren.map((y) => ({
+        year: y,
+        quarters: computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm })),
+      })),
+    }));
+  };
+  const startBtwOverzicht = () => {
+    if (!activeYear) return;
+    if ((years || []).length > 1) setBtwOverzichtKeuze([activeYear]);
+    else openBtwOverzicht([activeYear]);
+  };
   const startOnderbouwing = () => {
     if (!activeYear) return;
     if ((years || []).length > 1) setOnderbouwingKeuze([activeYear]);
@@ -2512,7 +2535,7 @@ export default function App() {
     leasesSectionRef, loanDetails, loanSummary, loansSectionRef, overigReviewSectionRef,
     pendingDuplicateCount, pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef,
     quarterlyBtwData, rechtsvorm, setDismissedDuplicateNotice, setOpenConfidenceLevel, setShowAangifteYearPicker,
-    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions,
+    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions, startBtwOverzicht,
     vpbStatus, yearlyProgress, yearlySummary, zvwStatus,
   });
 
@@ -3882,6 +3905,14 @@ export default function App() {
         {onderbouwingHtml && (
           <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
             onDownload={() => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
+        )}
+        {btwOverzichtKeuze && (
+          <KlantJaarKeuzeModal years={years} selected={btwOverzichtKeuze} setSelected={setBtwOverzichtKeuze} onOpen={openBtwOverzicht} onClose={() => setBtwOverzichtKeuze(null)}
+            vraag="Voor welke jaren wil je het BTW-overzicht per kwartaal?" knop="Overzicht tonen" />
+        )}
+        {btwOverzichtHtml && (
+          <AangifteVoorstelPreviewModal html={btwOverzichtHtml} years={btwOverzichtJaren} titel={`BTW per kwartaal ${jarenBereik(btwOverzichtJaren)}`}
+            onDownload={() => downloadBtwOverzicht(btwOverzichtHtml, btwOverzichtJaren)} onPrint={() => printHtmlDocument(btwOverzichtHtml)} onClose={() => setBtwOverzichtHtml(null)} />
         )}
         {klantJaarKeuze && (
           <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
