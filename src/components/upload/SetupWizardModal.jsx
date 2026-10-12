@@ -52,7 +52,6 @@ export default function SetupWizardModal({
   zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap,
   startersaftrekStatus, onSeedStartersaftrekStatus,
   overigInkomenBox1, onSetOverigInkomenBox1,
-  eenvoudig = false,
   heeftVoorraad, setHeeftVoorraad,
   activaGevraagd, onActivaBeantwoord, activaAantalBank = 0,
   eigenNamen, setEigenNamen,
@@ -125,12 +124,10 @@ export default function SetupWizardModal({
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
     if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
-    // Eenvoudige weergave: geen klanten/leveranciers-scherm (optionele verfijning), en bij de fiscale jaren
-    // alleen de startersaftrek (geen overig inkomen en geen btw-kwartalenstatus).
-    if (needs.klanten && !eenvoudig) list.push(33);
+    if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
-    if (needs.starters || (!eenvoudig && (needs.overig || needs.kwartalen))) list.push(36);
+    if (needs.starters || needs.overig || needs.kwartalen) list.push(36);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -146,7 +143,7 @@ export default function SetupWizardModal({
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
     if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || needs.uren)))) return false;
     // Scherm 36: startersaftrek niet bij een BV; kwartalen niet bij KOR.
-    if (id === 36 && !(((needs.starters || (needs.overig && !eenvoudig)) && !isBV) || (!eenvoudig && needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
+    if (id === 36 && !(((needs.starters || needs.overig) && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
     return true;
   });
 
@@ -181,7 +178,7 @@ export default function SetupWizardModal({
     autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
     setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV, onActivaBeantwoord, activaAantalBank,
     onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, zelfstandigenaftrekStatus,
-    onSeedStartersaftrekStatus, onSetOverigInkomenBox1, eenvoudig, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+    onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
   };
 
   return (
@@ -1086,13 +1083,13 @@ function Scherm35({
 // ---------------------------------------------------------------------------------------------
 function Scherm36({
   typedNow, zet, needs, isBV, goNext, years, korRegeling,
-  onSeedStartersaftrekStatus, onSetOverigInkomenBox1, eenvoudig, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+  onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
 }) {
-  const toonOverig = needs.overig && !isBV && !eenvoudig;
+  const toonOverig = needs.overig && !isBV;
   const overigJa = typedNow.overigJa === true;
   const overigBedragen = typedNow.overigBedragen || {};
   const toonStarters = needs.starters && !isBV;
-  const toonKwartalen = !eenvoudig && needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
+  const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
   const starterJaren = typedNow.starterJaren || [];
   return (
     <div className="space-y-4">

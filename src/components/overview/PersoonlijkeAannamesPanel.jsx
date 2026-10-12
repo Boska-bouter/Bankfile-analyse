@@ -71,7 +71,7 @@ function GedeeldeHuisvestingBlock({ label, helpChapter, gedeelde, percentageRaw,
 export default function PersoonlijkeAannamesPanel({
   rechtsvorm, activeYear, winst, zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
-  years, tariefOverrides, onSetTariefOverrides, overigInkomenBox1, onSetOverigInkomenBox1, eenvoudig = false,
+  years, tariefOverrides, onSetTariefOverrides, overigInkomenBox1, onSetOverigInkomenBox1,
   autoStatus, onSetAutoStatus,
   autoWizardStatus, onOpenAutoActivaModal,
   kmVergoedingDetails, onSetKmVergoedingField,
@@ -207,12 +207,6 @@ export default function PersoonlijkeAannamesPanel({
             ))}
           </div>
 
-          {eenvoudig && (Object.keys(tariefOverrides || {}).length > 0 || Object.keys(overigInkomenBox1 || {}).length > 0) && (
-            <p className="rounded-md border border-sky-300 bg-sky-50 px-2.5 py-1.5 text-xs text-sky-900">
-              Eenvoudige weergave: aangepaste tarieven of overig inkomen uit de volledige weergave blijven wél meetellen in de berekening. Schakel in de zijbalk naar "Volledig" om ze te bekijken of te wijzigen.
-            </p>
-          )}
-          {!eenvoudig && (<>
           <div className="pt-2 border-t border-slate-200">
             <label className="text-sm font-medium text-slate-700 block mb-1">
               Overig inkomen box 1 in {activeYear} (loon, uitkering — bruto per jaar)
@@ -236,7 +230,6 @@ export default function PersoonlijkeAannamesPanel({
           </div>
 
           <TarievenJaarEditor activeYear={activeYear} years={years} tariefOverrides={tariefOverrides} onSetTariefOverrides={onSetTariefOverrides} />
-          </>)}
 
           <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
             {scenarios ? (
