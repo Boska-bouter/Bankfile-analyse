@@ -35,7 +35,7 @@ export default function JaarKeuzelijsten({
   year, rechtsvorm,
   zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
-  autoStatus, onSetAutoStatus,
+  autoStatus,
   gedeeldeHuur, huurPct, onSetHuurPct,
   gedeeldeEnergie, energiePct, onSetEnergiePct,
   gedeeldeGemeentelijkeKosten, gemeentePct, onSetGemeentePct,
@@ -72,14 +72,6 @@ export default function JaarKeuzelijsten({
             </Kies>
           </>
         )}
-        <Kies label="Auto" breed="w-56">
-          <select key={`auto-${year}`} value={autoStatus?.[year] || ""} className={selectCls}
-            onChange={(e) => onSetAutoStatus(year, e.target.value || null)}>
-            <option value="">Onbekend / niet aangegeven</option>
-            <option value="zaak">Auto op de zaak</option>
-            <option value="prive">Privéauto zakelijk (km-vergoeding)</option>
-          </select>
-        </Kies>
         {autoStatus?.[year] === "zaak" && privegebruikAutos.length > 0 && (() => {
           const jaIds = privegebruikAutos.filter((a) => heeftPrivegebruik(a, year, privegebruikBron)).map((a) => a.id);
           const waarde = jaIds.length === 0 ? "" : jaIds.length === 1 ? jaIds[0] : "meerdere";

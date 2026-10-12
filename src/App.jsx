@@ -749,7 +749,7 @@ export default function App() {
   // (tax/kmVergoeding.js) zetten 'm om naar een getal; overal elders (vermenigvuldiging, > 0-check,
   // tekst-interpolatie) werkt een numerieke string door JS' eigen coercion toch al.
   const setKmVergoedingField = (year, veld, waarde) => {
-    snapshotBeforeAction("Kilometervergoeding aangepast");
+    snapshotBeforeAction("Kilometervergoeding aangepast", { samenvoegen: true });
     setKmVergoedingDetailsState((prev) => {
       const next = { ...prev };
       const huidig = { ...(next[year] || {}) };
@@ -1043,12 +1043,19 @@ export default function App() {
   // ---- Ongedaan maken laatste actie — momentopname/herstel voor de grote, risicovolle acties
   // (duplicaten verwijderen, wis alles). Bewust maar 1 stap terug — elke volgende momentopname
   // overschrijft de vorige. ----
-  const snapshotBeforeAction = (label) => {
+  // samenvoegen: bij typen in een veld (elke toets roept dit aan) blijft de toestand van VÓÓR het typen bewaard zolang
+  // je binnen 2 seconden doorgaat, zodat "Ongedaan maken" terugzet naar de waarde van voor je begon te typen.
+  const snapMeta = useRef({ label: null, t: 0 });
+  const snapshotBeforeAction = (label, { samenvoegen = false } = {}) => {
+    const nu = Date.now();
+    const doorgaand = samenvoegen && snapMeta.current.label === label && nu - snapMeta.current.t < 2000;
+    snapMeta.current = { label: samenvoegen ? label : null, t: nu };
     setAuditLog((prev) => {
       const laatste = prev[prev.length - 1];
       if (laatste && laatste.label === label && Date.now() - laatste.t < 2000) return prev;
       return [...prev, { t: Date.now(), label }].slice(-300);
     });
+    if (doorgaand) return;
     setLastActionSnapshot({
       label,
       state: {
@@ -1068,6 +1075,7 @@ export default function App() {
     /^(Nieuw dossier|Dossier geladen|Duplicaten verwijderen|Alle transacties|Bestand ")/.test(label || "");
   const undoLastAction = () => {
     if (!lastActionSnapshot) return;
+    snapMeta.current = { label: null, t: 0 };
     const s = lastActionSnapshot.state;
     setParsedFiles(s.parsedFiles);
     setAccountTypeByFile(s.accountTypeByFile);
@@ -3451,7 +3459,7 @@ export default function App() {
                 year={activeYear} rechtsvorm={rechtsvorm}
                 zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
                 startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
-                autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
+                autoStatus={autoStatus}
                 privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
                 privegebruikBron={{ leaseDetails, autoActivaDetails }}
                 kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
