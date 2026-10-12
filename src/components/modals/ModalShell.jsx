@@ -1,8 +1,10 @@
 import { X } from "lucide-react";
+import JaarSwipe from "../shared/JaarSwipe.jsx";
 
+// Met `swipe={{ years, year, onSelectYear }}` kun je in het venster links/rechts vegen om van jaar te wisselen.
 // Gedeelde pop-up-schil (donkere achtergrond, witte kaart, titelbalk met sluitknop) voor de grotere
 // vensters van de app. Klik naast het venster of op het kruisje sluit het.
-export default function ModalShell({ title, onClose, maxWidth = "max-w-4xl", children }) {
+export default function ModalShell({ title, onClose, maxWidth = "max-w-4xl", swipe, children }) {
   return (
     <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
       <div className={`bg-white rounded-xl shadow-xl w-full ${maxWidth} max-h-[85dvh] flex flex-col`} onClick={(e) => e.stopPropagation()}>
@@ -12,7 +14,9 @@ export default function ModalShell({ title, onClose, maxWidth = "max-w-4xl", chi
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        <div className="px-5 py-4 overflow-y-auto">
+          {swipe ? <JaarSwipe years={swipe.years} year={swipe.year} onSelectYear={swipe.onSelectYear}>{children}</JaarSwipe> : children}
+        </div>
       </div>
     </div>
   );

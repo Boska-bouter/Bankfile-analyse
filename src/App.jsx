@@ -3284,6 +3284,8 @@ export default function App() {
         <QuarterlyBtwModal
           onClose={() => setShowQuarterlyBtwModal(false)}
           activeYear={activeYear}
+          years={years}
+          onSelectYear={setActiveYear}
           korRegeling={korRegeling}
           periodeSignalenActiefJaar={periodeSignalenActiefJaar}
           confirmPeriodeAsIs={confirmPeriodeAsIs}
@@ -3861,6 +3863,7 @@ export default function App() {
                   <AangifteYearPickerModal
                     onClose={() => setShowAangifteYearPicker(false)}
                     activeYear={activeYear}
+                    onSelectYear={setActiveYear}
                     years={years}
                     yearProgress={yearlyProgress[activeYear]}
                     aangifteOpenPunten={aangifteOpenPunten}

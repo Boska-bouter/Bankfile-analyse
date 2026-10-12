@@ -5,11 +5,11 @@ import QuarterlyBtwPanel from "../btw/QuarterlyBtwPanel.jsx";
 
 // BTW-aangifte per kwartaal als pop-up. Puur weergave: gegevens en acties komen als props uit App.jsx.
 export default function QuarterlyBtwModal({
-  onClose, activeYear, korRegeling, periodeSignalenActiefJaar, confirmPeriodeAsIs, movePeriodeToQuarter,
+  onClose, activeYear, years, onSelectYear, korRegeling, periodeSignalenActiefJaar, confirmPeriodeAsIs, movePeriodeToQuarter,
   quarterlyBtwData, kwartaalStatus, setKwartaalStatusField, costBreakdownByQuarter, onOpenHelp, obIbSectionRef,
 }) {
   return (
-    <ModalShell title={`BTW-aangifte per kwartaal ${activeYear}`} onClose={onClose}>
+    <ModalShell title={`BTW-aangifte per kwartaal ${activeYear}`} onClose={onClose} swipe={{ years, year: activeYear, onSelectYear }}>
       {!korRegeling ? (
         <>
           <PeriodeSignaal items={periodeSignalenActiefJaar} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />
