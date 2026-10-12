@@ -16,6 +16,13 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
   // Als de opgeslagen waarde van buitenaf verandert (bijv. na het beantwoorden van de "voor welke
   // jaren?"-vraag, of bij het wisselen van jaar), moet het veld dat overnemen.
   useEffect(() => setDraft(raw ?? ""), [raw]);
+  // release19V9: sluit je de "voor welke jaren?"-vraag met X, dan is er niets toegepast — het getypte
+  // percentage hoort dan terug te springen naar de opgeslagen waarde (App.jsx stuurt dit signaal).
+  useEffect(() => {
+    const onReset = (e) => { if (e.detail?.category === categorie) setDraft(raw ?? ""); };
+    window.addEventListener("percentage-concept-terugzetten", onReset);
+    return () => window.removeEventListener("percentage-concept-terugzetten", onReset);
+  }, [categorie, raw]);
 
   const commit = () => {
     if (draft === "" || draft == null) {

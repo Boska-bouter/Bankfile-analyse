@@ -3529,7 +3529,11 @@ export default function App() {
             }}
             onApplyAllYears={() => applyCategoryPercentageToYears(pendingCategoryPercentage.years)}
             onApplyYears={(selectedYears) => applyCategoryPercentageToYears(selectedYears)}
-            onClose={() => volgendePending()}
+            onClose={() => {
+              const c = pendingCategoryPercentage?.category;
+              window.dispatchEvent(new CustomEvent("percentage-concept-terugzetten", { detail: { category: c } }));
+              volgendePending();
+            }}
           />
         )}
 
