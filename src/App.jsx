@@ -3340,7 +3340,7 @@ export default function App() {
       {/* Tabblad-pijlen in de marge naast de inhoud (alleen waar die marge breed genoeg is): één tik naar het
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}

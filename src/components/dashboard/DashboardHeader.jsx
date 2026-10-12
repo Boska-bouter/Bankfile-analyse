@@ -75,7 +75,7 @@ export default function DashboardHeader({
   }
   return (
     <div className="flex flex-col 2xl:flex-row 2xl:items-start 2xl:justify-between gap-4">
-      <div className="2xl:max-w-xs shrink-0">
+      <div className="2xl:max-w-[17rem] shrink-0">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>
           {title}
         </h1>
@@ -87,10 +87,10 @@ export default function DashboardHeader({
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
-        <div className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm min-w-0 max-w-full">
+        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
           {pct != null ? (
             yearRing ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
                 <ConcentricGauge outerPct={pct} innerPct={yearRing.pct} outerColor={accent} />
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
@@ -152,14 +152,14 @@ export default function DashboardHeader({
                     <span className="font-semibold text-slate-800">{metBolletjes(line.value)}</span>
                   </div>
                 ))}
-                {yearControl && <div className="mt-2">{yearControl}</div>}
+                {yearControl && <div className="mt-2 shrink-0 whitespace-nowrap">{yearControl}</div>}
               </div>
             </>
           ) : pct != null ? (
             yearControl ? (
               <>
                 <div className="w-px self-stretch bg-slate-200" />
-                <div className="flex flex-col gap-1.5">{yearControl}</div>
+                <div className="flex flex-col gap-1.5 shrink-0 whitespace-nowrap">{yearControl}</div>
               </>
             ) : null
           ) : (
