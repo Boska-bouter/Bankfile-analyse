@@ -51,6 +51,7 @@ export default function SetupWizardModal({
   years, onSeedAutoStatus,
   zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap,
   startersaftrekStatus, onSeedStartersaftrekStatus,
+  overigInkomenBox1, onSetOverigInkomenBox1,
   heeftVoorraad, setHeeftVoorraad,
   activaGevraagd, onActivaBeantwoord, activaAantalBank = 0,
   eigenNamen, setEigenNamen,
@@ -98,6 +99,7 @@ export default function SetupWizardModal({
       aov: vol && verwachteAOV === null,
       uren: vol && Object.keys(zelfstandigenaftrekStatus || {}).length === 0,
       starters: vol && Object.keys(startersaftrekStatus || {}).length === 0,
+      overig: vol && Object.keys(overigInkomenBox1 || {}).length === 0,
       kor: vol && korRegeling === null,
       verlegd: vol && korRegeling !== true && btwVerlegd === null,
       // Niet op quartersToAsk.length bij het openen baseren: in een leeg dossier (bestanden laden in de
@@ -125,7 +127,7 @@ export default function SetupWizardModal({
     if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
-    if (needs.starters || needs.kwartalen) list.push(36);
+    if (needs.starters || needs.overig || needs.kwartalen) list.push(36);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -141,7 +143,7 @@ export default function SetupWizardModal({
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
     if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || needs.uren)))) return false;
     // Scherm 36: startersaftrek niet bij een BV; kwartalen niet bij KOR.
-    if (id === 36 && !((needs.starters && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
+    if (id === 36 && !(((needs.starters || needs.overig) && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
     return true;
   });
 
@@ -176,7 +178,7 @@ export default function SetupWizardModal({
     autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
     setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV, onActivaBeantwoord, activaAantalBank,
     onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, zelfstandigenaftrekStatus,
-    onSeedStartersaftrekStatus, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+    onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
   };
 
   return (
@@ -1077,12 +1079,15 @@ function Scherm35({
 }
 
 // ---------------------------------------------------------------------------------------------
-// Scherm 36 — fiscale jaren: startersaftrek en BTW-kwartalen
+// Scherm 36 — fiscale jaren: startersaftrek, ander inkomen box 1 en BTW-kwartalen
 // ---------------------------------------------------------------------------------------------
 function Scherm36({
   typedNow, zet, needs, isBV, goNext, years, korRegeling,
-  onSeedStartersaftrekStatus, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+  onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
 }) {
+  const toonOverig = needs.overig && !isBV;
+  const overigJa = typedNow.overigJa === true;
+  const overigBedragen = typedNow.overigBedragen || {};
   const toonStarters = needs.starters && !isBV;
   const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
   const starterJaren = typedNow.starterJaren || [];
@@ -1108,6 +1113,33 @@ function Scherm36({
               );
             })}
           </div>
+        </Sectie>
+      )}
+
+      {toonOverig && (
+        <Sectie
+          titel="Had je naast je bedrijf nog een andere bron van inkomsten, en in welke jaren?"
+          uitleg="Bijvoorbeeld loon uit een baan of een uitkering. Dit bepaalt in welke belastingschijf je winst valt en hoeveel heffingskorting je daarover krijgt. Vul per jaar het bruto jaarbedrag ongeveer in; leeg = geen ander inkomen."
+        >
+          <div className="flex gap-2">
+            <button type="button" onClick={() => zet({ overigJa: false })} className={`${KNOP} ${!overigJa ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ overigJa: true })} className={`${KNOP} ${overigJa ? KNOP_AAN : KNOP_UIT}`}>Ja</button>
+          </div>
+          {overigJa && (
+            <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
+              {years.map((y) => (
+                <label key={y} className="flex items-center gap-3 p-2.5 text-sm">
+                  <span className="w-16 font-medium">{y}</span>
+                  <input
+                    type="number" min="0" step="100" inputMode="decimal" placeholder="€ per jaar"
+                    value={overigBedragen[y] ?? ""}
+                    onChange={(e) => zet({ overigBedragen: { ...overigBedragen, [y]: e.target.value } })}
+                    className="w-40 rounded border border-slate-300 px-2 py-1 text-sm"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
         </Sectie>
       )}
 
@@ -1145,6 +1177,7 @@ function Scherm36({
         type="button"
         onClick={() => {
           if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
+          if (toonOverig && overigJa) onSetOverigInkomenBox1(Object.fromEntries(years.map((y) => [y, Number(overigBedragen[y]) || 0]).filter(([, v]) => v > 0)));
           goNext();
         }}
         className={PRIMAIR}

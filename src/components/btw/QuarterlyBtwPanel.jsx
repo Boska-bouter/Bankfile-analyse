@@ -14,6 +14,8 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
     return !s.aangegeven || !s.betaald;
   }).length;
 
+  const heeftPriveAuto = quarters.some((q) => (q.btwPrivegebruikAuto || 0) > 0.004);
+
   if (quarters.length === 0) return null;
 
   return (
@@ -64,6 +66,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                 <th className="text-right font-medium py-2 px-3">Omzet 0%/vrijgesteld</th>
                 <th className="text-right font-medium py-2 px-3">Uitgaven (netto)</th>
                 <th className="text-right font-medium py-2 px-3">Voorbelasting (5b)</th>
+                {heeftPriveAuto && <th className="text-right font-medium py-2 px-3">Privégebruik auto (1d)</th>}
                 <th className="text-right font-medium py-2 pl-3">Saldo</th>
                 <th className="text-left font-medium py-2 pl-4">Status</th>
               </tr>
@@ -112,6 +115,11 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                         </div>
                       )}
                     </td>
+                    {heeftPriveAuto && (
+                      <td className="py-2 px-3 text-right font-mono text-amber-800">
+                        {q.btwPrivegebruikAuto > 0.004 ? `+ ${eur(q.btwPrivegebruikAuto)}` : ""}
+                      </td>
+                    )}
                     <td className={`py-2 pl-3 text-right font-mono font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
                       {eur(Math.abs(saldo))} {saldo >= 0 ? "te betalen" : "terug"}
                     </td>
@@ -131,11 +139,11 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             </tbody>
           </table>
           {(() => {
-            const d = quarters.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
-            if (!d) return null;
-            return (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                <p className="font-semibold">Btw privégebruik auto: {eur(d.bedrag)} in het saldo van Q4 (rubriek 1d)</p>
+            const details = quarters.map((q) => q.btwPrivegebruikAutoDetail).filter(Boolean);
+            if (details.length === 0) return null;
+            return details.map((d) => (
+              <div key={d.year} className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <p className="font-semibold">{d.bedrag > 0.004 ? `Btw privégebruik auto: ${eur(d.bedrag)} in het saldo van ${d.year} — Q4 (rubriek 1d)` : `Btw privégebruik auto ${d.year}: nog niet berekend — gegevens ontbreken`}</p>
                 {d.items.map((i, n) => (
                   <p key={n} className="mt-0.5">
                     {i.naam}: {i.methode === "forfait"
@@ -146,7 +154,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                 ))}
                 <p className="mt-1 text-amber-700">Instellen of uitzetten: Persoonlijke aannames → Auto op de zaak instellen → Btw privégebruik.</p>
               </div>
-            );
+            ));
           })()}
         </div>
       )}

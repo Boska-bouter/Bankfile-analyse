@@ -245,14 +245,12 @@ function buildYearSectionBv(
   const yearStatus =
     gatenDitJaar.length > 0
       ? "rood"
-      : yc.categorizedPct === 100 && yc.quartersOpen.length === 0 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
+      : yc.categorizedPct === 100 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
       ? "groen"
       : "oranje";
 
   const openPunten = [];
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
-  if (yc.quartersNietAangegeven.length > 0) openPunten.push(`Nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
-  if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`Nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
   else if (geelGatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(geelGatenDitJaar[0].fileA)} en ${esc(geelGatenDitJaar[0].fileB)} sluit niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}, nog geen echt gat)`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);

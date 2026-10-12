@@ -4,7 +4,7 @@ import { computeBelastbareWinstUitsplitsing, estimateHeffingskortingenMetOnderne
 
 export function useDashboardAangifteIndicatie(p) {
   const {
-    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus, yearlySummary,
+    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus, yearlySummary, tariefOverrides, overigInkomenBox1,
   } = p;
 
   return useMemo(() => {
@@ -28,5 +28,5 @@ export function useDashboardAangifteIndicatie(p) {
       // apart doorgegeven.
       belastbareWinst: winstUitsplitsing.belastbaar,
     };
-  }, [rechtsvorm, activeYear, yearlySummary, ondernemersaftrekPerJaar, startersaftrekStatus]);
+  }, [rechtsvorm, activeYear, yearlySummary, ondernemersaftrekPerJaar, startersaftrekStatus, tariefOverrides, overigInkomenBox1]);
 }

@@ -7,6 +7,9 @@
 //    jaar van ingebruikname. In het jaar van ingebruikname naar evenredigheid (aankoop 1 sept = 4/12).
 //  - Maximum: btw op onderhoud/gebruik die dat jaar is afgetrokken + (tot en met het 4e jaar na het
 //    aankoopjaar) 1/5 van de btw op de aanschaf.
+//  - Auto zonder btw-aftrek bij aanschaf/lease (bijv. gekocht van een particulier, lease zonder btw-aftrek)
+//    maar met btw-aftrek op de gebruikskosten (brandstof, onderhoud): 1,5% van de cataloguswaarde per jaar
+//    (naar evenredigheid in het jaar van ingebruikname), maximaal de afgetrokken btw op die gebruikskosten.
 //  - Alternatief: werkelijk privégebruik (privé-% van dezelfde grondslag), of geen correctie.
 // De correctie hoort in de laatste btw-aangifte van het jaar (Q4, rubriek privégebruik).
 import { AUTOKOSTEN_CATEGORIEN, groupSegmentenOpKenteken } from "./autoBijtelling.js";
@@ -67,10 +70,11 @@ function verzamelAutos(leaseSummary, leaseDetails, autoActivaDetails, autoWizard
 }
 
 // Afgetrokken btw op onderhoud en gebruik van de auto in dit jaar (basis voor het maximum).
-function btwOpGebruik(classified, year, categoryBtwRates, btwVerlegd) {
+function btwOpGebruik(classified, year, categoryBtwRates, btwVerlegd, metLease = true) {
+  const cats = metLease ? GEBRUIK_CATEGORIEEN : AUTOKOSTEN_CATEGORIEN;
   let som = 0;
   for (const tx of classified || []) {
-    if (tx.isMirror || tx.year !== year || !GEBRUIK_CATEGORIEEN.includes(tx.category)) continue;
+    if (tx.isMirror || tx.year !== year || !cats.includes(tx.category)) continue;
     som += -rawBtw(tx, categoryBtwRates || {}, btwVerlegd);
   }
   return Math.max(0, som);
@@ -82,12 +86,14 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
   if (rechtsvorm === "bv" || !year) return null;
   const status = autoStatus?.[year];
   if (status === "prive" || status === "geen") return null;
-  const autos = verzamelAutos(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus).filter((a) => a.btwAfgetrokken);
+  const autos = verzamelAutos(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus);
   if (autos.length === 0) return null;
 
   const instelling = autoActivaDetails?.btwPrivegebruikPerJaar?.[year] || {};
   const methode = BTW_PRIVE_METHODES.includes(instelling.methode) ? instelling.methode : "forfait";
-  const gebruik = btwOpGebruik(classified, year, categoryBtwRates, btwVerlegd);
+  const gebruikMetLease = btwOpGebruik(classified, year, categoryBtwRates, btwVerlegd, true);
+  // Zonder btw-aftrek op de aanschaf/leasetermijnen tellen die termijnen niet mee als afgetrokken btw.
+  const gebruikZonderLease = btwOpGebruik(classified, year, categoryBtwRates, btwVerlegd, false);
 
   const items = [];
   for (const auto of autos) {
@@ -101,8 +107,13 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
       const vanaf = auto.start && auto.start.jaar === year ? auto.start.maand : 1;
       fractie = Math.max(0, (auto.einde.maand - vanaf + 1) / 12);
     }
-    const binnenAanschafperiode = auto.start ? year <= auto.start.jaar + 4 : true;
-    if (!auto.start) meldingen.push("Datum ingebruikname ontbreekt: 2,7% voor het hele jaar toegepast.");
+    // Geen btw-aftrek bij aanschaf/lease: alleen een correctie als er btw op de gebruikskosten is afgetrokken.
+    const route = auto.btwAfgetrokken ? "aanschaf" : "gebruik";
+    const gebruik = route === "gebruik" ? gebruikZonderLease : gebruikMetLease;
+    if (route === "gebruik" && gebruik < 0.005) continue;
+    const binnenAanschafperiode = route === "gebruik" ? false : (auto.start ? year <= auto.start.jaar + 4 : true);
+    if (!auto.start) meldingen.push(`Datum ingebruikname ontbreekt: ${route === "gebruik" ? "1,5%" : "2,7%"} voor het hele jaar toegepast.`);
+    if (route === "gebruik") meldingen.push("Geen btw afgetrokken bij aanschaf/lease, wel op gebruikskosten: 1,5% van de cataloguswaarde, maximaal de afgetrokken btw op die kosten.");
 
     // Maximum
     let maximum = gebruik;
@@ -115,7 +126,7 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
     let pct = null;
     let berekend = 0;
     if (methode === "forfait") {
-      pct = binnenAanschafperiode ? 2.7 : 1.5;
+      pct = route === "gebruik" ? 1.5 : (binnenAanschafperiode ? 2.7 : 1.5);
       if (!(auto.catalogus > 0)) meldingen.push("Cataloguswaarde (incl. btw en bpm) ontbreekt: vul die in bij de bijtelling-gegevens.");
       berekend = auto.catalogus * (pct / 100) * fractie;
     } else if (methode === "werkelijk") {
@@ -127,9 +138,10 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
     let bedrag = berekend;
     let afgetopt = false;
     if (methode === "forfait" && maximumControleerbaar && berekend > maximum) { bedrag = maximum; afgetopt = true; }
-    items.push({ naam: auto.naam, bron: auto.bron, methode, pct, fractie, catalogus: auto.catalogus, berekend, maximum: maximumControleerbaar ? maximum : null, bedrag, afgetopt, meldingen });
+    const onvolledig = methode === "forfait" && !(auto.catalogus > 0);
+    items.push({ naam: auto.naam, bron: auto.bron, route, methode, onvolledig, pct, fractie, catalogus: auto.catalogus, berekend, maximum: maximumControleerbaar ? maximum : null, bedrag, afgetopt, meldingen });
   }
   if (items.length === 0) return null;
   const bedrag = methode === "geen" ? 0 : items.reduce((a, i) => a + i.bedrag, 0);
-  return { year, methode, bedrag, items };
+  return { year, methode, bedrag, items, onvolledig: items.some((i) => i.onvolledig) };
 }

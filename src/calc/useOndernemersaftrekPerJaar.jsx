@@ -4,7 +4,7 @@ import { computeOndernemersaftrekMetReserve, resolveZelfstandigenaftrekStatusFor
 
 export function useOndernemersaftrekPerJaar(p) {
   const {
-    rechtsvorm, startersaftrekStatus, yearlySummaries, years, zaLegacyJaDefault,
+    rechtsvorm, startersaftrekStatus, yearlySummaries, years, zaLegacyJaDefault, tariefOverrides,
     zelfstandigenaftrekStatus,
   } = p;
 
@@ -17,5 +17,5 @@ export function useOndernemersaftrekPerJaar(p) {
       startersaftrekToegepast: startersaftrekStatus?.[y] === "ja",
     }));
     return computeOndernemersaftrekMetReserve(jarenData);
-  }, [rechtsvorm, years, yearlySummaries, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus]);
+  }, [rechtsvorm, years, yearlySummaries, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides]);
 }

@@ -15,7 +15,7 @@ import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, compu
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
 import { computeSplitsbareCategorieTotalenVoorJaar, heeftGeregistreerdeAutoOpDeZaak } from "./tax/categorySplit.js";
 import {
-  estimateIncomeTax, estimateZvw, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
+  estimateIncomeTax, estimateZvw, registerTariefInstellingen, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
@@ -240,6 +240,12 @@ export default function App() {
   const [zaLegacyJaDefault, setZaLegacyJaDefault] = useState(false);
   // { "2025": "ja" | "nee" } — ontbrekend jaar = niet aangegeven, geen startersaftrek toegepast.
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
+  // Eigen tarief-overschrijvingen per jaar ({ "2027": { ib: {...}, ahk: {...}, werkelijkeHeffingskorting: 1234 } })
+  // en overig inkomen box 1 per jaar ({ "2025": 24000 }) — zie tax/incomeTax.js (resolveTariefGroep).
+  const [tariefOverrides, setTariefOverridesState] = useState({});
+  const [overigInkomenBox1, setOverigInkomenBox1State] = useState({});
+  // Tijdens de render zetten (idempotent), zodat alle berekeningen in deze render al de actuele waarden zien.
+  registerTariefInstellingen({ overrides: tariefOverrides, overigInkomen: overigInkomenBox1 });
   // Wat de berekening gebruikt: startersaftrek alleen in jaren waarin ze mag (max. 3x, binnen 5 jaar, met zelfstandigenaftrek).
   // De keuze zelf (startersaftrekStatus) blijft ongewijzigd in het dossier staan.
   const startersaftrekEff = useMemo(() => effectieveStartersaftrekStatus(startersaftrekStatus, zelfstandigenaftrekStatus), [startersaftrekStatus, zelfstandigenaftrekStatus]);
@@ -602,6 +608,8 @@ export default function App() {
     // (onbeantwoord jaar = "ja") in plaats van de nieuwe, veiligere default ("onbekend").
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
+    setTariefOverridesState(settings.tariefOverrides && typeof settings.tariefOverrides === "object" ? settings.tariefOverrides : {});
+    setOverigInkomenBox1State(settings.overigInkomenBox1 && typeof settings.overigInkomenBox1 === "object" ? settings.overigInkomenBox1 : {});
     setAutoStatusState(normalizeAutoStatus(settings.autoStatus));
     const gedeeldeMig = migreerGedeeldeHuisvesting(settings.categoryZakelijkPercentage, {
       huur: settings.huurZakelijkPercentageStatus, energie: settings.energieZakelijkPercentageStatus, gemeentelijk: settings.gemeentelijkeKostenZakelijkPercentageStatus,
@@ -898,7 +906,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
@@ -912,7 +920,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     changesSinceExport, lastExportAt,
@@ -937,7 +945,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
@@ -1045,7 +1053,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
@@ -1110,6 +1118,8 @@ export default function App() {
     // staan, alleen het paneel las hem uit alsof er niets gebeurd was).
     setZelfstandigenaftrekStatusState(s.zelfstandigenaftrekStatus || {});
     setStartersaftrekStatusState(s.startersaftrekStatus || {});
+    setTariefOverridesState(s.tariefOverrides || {});
+    setOverigInkomenBox1State(s.overigInkomenBox1 || {});
     setAutoStatusState(normalizeAutoStatus(s.autoStatus));
     setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
     setEnergieZakelijkPercentageStatusState(s.energieZakelijkPercentageStatus || {});
@@ -1539,7 +1549,7 @@ export default function App() {
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const aandachtspuntenBlok = aandachtspuntenHtml(bepaalAandachtspunten({
       years: targetYears, yearPeriod, classified, incompleteLeases: incompleteLeasesCount, incompleteLoans: incompleteLoansCount,
-      zelfstandigenaftrekStatus, startersaftrekStatus, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
+      zelfstandigenaftrekStatus, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
     }));
     const html = rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok })
@@ -2225,11 +2235,11 @@ export default function App() {
   );
   const ibEstimate = useMemo(
     () => (yearlySummary ? estimateIncomeTax(yearlySummary.winst, activeYear) : { belasting: 0, geëxtrapoleerd: false }),
-    [yearlySummary, activeYear]
+    [yearlySummary, activeYear, tariefOverrides, overigInkomenBox1]
   );
   const zvwEstimate = useMemo(
     () => (yearlySummary ? estimateZvw(yearlySummary.winst, activeYear) : { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false }),
-    [yearlySummary, activeYear]
+    [yearlySummary, activeYear, tariefOverrides, overigInkomenBox1]
   );
   const yearlySummaries = useYearlySummaries({
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
@@ -2250,10 +2260,10 @@ export default function App() {
   // "Indicatieve aangifteberekening" zelf, waar deze kaarten ook naartoe doorklikken.
   const ondernemersaftrekPerJaar = useOndernemersaftrekPerJaar({
     rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummaries, years, zaLegacyJaDefault,
-    zelfstandigenaftrekStatus,
+    zelfstandigenaftrekStatus, tariefOverrides,
   });
   const dashboardAangifteIndicatie = useDashboardAangifteIndicatie({
-    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummary,
+    activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummary, tariefOverrides, overigInkomenBox1,
   });
   // "Zakelijke kosten" per jaar, exact dezelfde optelsom als "Zakelijke kosten" in het
   // Aangiftevoorstel (zie buildYearSection/kostenTotaal in aangiftevoorstel.js): inkoopkosten +
@@ -2674,7 +2684,7 @@ export default function App() {
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
-    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
+    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus,
@@ -2978,7 +2988,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
     });
@@ -3021,7 +3031,7 @@ export default function App() {
     setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
     setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
     setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setTariefOverridesState, setOverigInkomenBox1State,
     setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
     setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
     setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
@@ -3618,6 +3628,8 @@ export default function App() {
             suggesties={wizardSuggesties}
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
+            overigInkomenBox1={overigInkomenBox1}
+            onSetOverigInkomenBox1={setOverigInkomenBox1State}
             activaGevraagd={!!bevestigdeControles.activaWizard}
             activaAantalBank={activaSummary.filter((a) => !a.handmatig).length}
             onActivaBeantwoord={(namen) => { setBevestigdeControles((p) => ({ ...p, activaWizard: true })); voegActivaToe(namen); }}

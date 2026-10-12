@@ -38,7 +38,7 @@ export function useControlerenCardGroups(p) {
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
-    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, transactionNotes,
+    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus, rechtsvorm,
@@ -251,6 +251,11 @@ export function useControlerenCardGroups(p) {
               zaLegacyJaDefault={zaLegacyJaDefault}
               startersaftrekStatus={startersaftrekStatus}
               onSetStartersaftrekStatus={setStartersaftrekStatus}
+              years={years}
+              tariefOverrides={tariefOverrides}
+              onSetTariefOverrides={setTariefOverridesState}
+              overigInkomenBox1={overigInkomenBox1}
+              onSetOverigInkomenBox1={setOverigInkomenBox1State}
               autoStatus={autoStatus}
               onSetAutoStatus={setAutoStatus}
               autoWizardStatus={autoWizardStatus}
@@ -298,7 +303,7 @@ export function useControlerenCardGroups(p) {
     controlerenCardsByKey,
     instellingenCardsByKey,
     activaSummary, activaDetails, activeYear, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, leaseMerges, verwachteLeaseOverig, loanSummary, privateLoanSummary, loanDetails,
-    rechtsvorm, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
+    rechtsvorm, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, kmVergoedingDetails, gedeeldeHuurForActiveYear, huurZakelijkPercentageStatus, gedeeldeEnergieForActiveYear, energieZakelijkPercentageStatus, gedeeldeGemeentelijkeKostenForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, yearlySummary,
     expandedCardKeys,
     importDiagnostics, bevestigdeControles,
     fileContinuity,
