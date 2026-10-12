@@ -1,4 +1,5 @@
 import { toetsStartersaftrek } from "../../tax/startersaftrekToets.js";
+import { leesPrivegebruik } from "../../tax/privegebruikAuto500.js";
 
 // Keuzelijsten boven "Indicatieve aangifte {jaar}" (Overzicht → Details en overzichten): de aannames per jaar die het
 // totaal het meest beïnvloeden, direct bij het totaal. Het zijn dezelfde instellingen als in "Persoonlijke aannames"
@@ -38,6 +39,8 @@ export default function JaarKeuzelijsten({
   gedeeldeHuur, huurPct, onSetHuurPct,
   gedeeldeEnergie, energiePct, onSetEnergiePct,
   gedeeldeGemeentelijkeKosten, gemeentePct, onSetGemeentePct,
+  privegebruikAutos = [], privegebruikBron, onSetPrivegebruik,
+  overigInkomen, onSetOverigInkomen,
 }) {
   if (!year) return null;
   const isBv = rechtsvorm === "bv";
@@ -77,6 +80,38 @@ export default function JaarKeuzelijsten({
             <option value="prive">Privéauto zakelijk (km-vergoeding)</option>
           </select>
         </Kies>
+        {autoStatus?.[year] !== "prive" && privegebruikAutos.map((auto) => {
+          const { ja, km } = leesPrivegebruik(auto, year, privegebruikBron);
+          const kmGetal = parseFloat(String(km).replace(",", "."));
+          return (
+            <div key={auto.id} className="flex flex-wrap items-end gap-3">
+              <Kies label={`Privégebruik > 500 km${privegebruikAutos.length > 1 ? ` — ${auto.naam}` : ""}`}>
+                <select key={`p500-${auto.id}-${year}`} value={ja ? "ja" : "nee"} className={selectCls}
+                  onChange={(e) => onSetPrivegebruik(auto, year, { ja: e.target.value === "ja" })}>
+                  <option value="nee">Nee</option>
+                  <option value="ja">Ja</option>
+                </select>
+              </Kies>
+              {ja && (
+                <Kies label="Privékilometers per jaar">
+                  <input key={`km-${auto.id}-${year}`} type="text" inputMode="decimal" placeholder="bijv. 4.500" defaultValue={km}
+                    onBlur={(e) => { const v = e.target.value.replace(",", "."); if (v === "" || /^\d*\.?\d*$/.test(v)) onSetPrivegebruik(auto, year, { km: v }); }}
+                    className={`${selectCls} w-32`} />
+                </Kies>
+              )}
+              {ja && Number.isFinite(kmGetal) && kmGetal > 0 && kmGetal <= 500 && (
+                <p className="basis-full rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">⚠ {kmGetal} km is niet meer dan 500 km: dan geldt geen bijtelling. Kies "Nee" als dit klopt.</p>
+              )}
+            </div>
+          );
+        })}
+        {!isBv && (
+          <Kies label="Overig inkomen box 1 (€ per jaar)">
+            <input key={`overig-${year}`} type="text" inputMode="decimal" placeholder="€ 0" defaultValue={overigInkomen ?? ""}
+              onBlur={(e) => onSetOverigInkomen(year, e.target.value)}
+              className={`${selectCls} w-36`} />
+          </Kies>
+        )}
         <PctKies label="Huur" jaar={year} gedeelde={gedeeldeHuur} waarde={huurPct} onSet={onSetHuurPct} />
         <PctKies label="Energie-water" jaar={year} gedeelde={gedeeldeEnergie} waarde={energiePct} onSet={onSetEnergiePct} />
         <PctKies label="Gemeentelijke kosten" jaar={year} gedeelde={gedeeldeGemeentelijkeKosten} waarde={gemeentePct} onSet={onSetGemeentePct} />

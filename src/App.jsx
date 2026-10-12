@@ -90,6 +90,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
+import { lijstPrivegebruikAutos, pasPrivegebruikToe } from "./tax/privegebruikAuto500.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -3451,6 +3452,20 @@ export default function App() {
                 zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
                 startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
                 autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
+                privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
+                privegebruikBron={{ leaseDetails, autoActivaDetails }}
+                onSetPrivegebruik={(auto, jaar, patch) => {
+                  const r = pasPrivegebruikToe(auto, jaar, patch, { leaseDetails, autoActivaDetails });
+                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails); else setLeaseDetailField(r.leaseKey, r.leaseDetails);
+                }}
+                overigInkomen={overigInkomenBox1?.[activeYear]}
+                onSetOverigInkomen={(jaar, tekst) => {
+                  const next = { ...(overigInkomenBox1 || {}) };
+                  const t = String(tekst).trim();
+                  const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
+                  if (Number.isFinite(v) && v > 0) next[jaar] = v; else delete next[jaar];
+                  setOverigInkomenBox1State(next);
+                }}
                 gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
                 gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
                 gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear} gemeentePct={gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear]} onSetGemeentePct={setGemeentelijkeKostenZakelijkPercentageStatus}

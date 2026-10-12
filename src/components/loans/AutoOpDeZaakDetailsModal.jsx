@@ -24,6 +24,7 @@ function formFromDetails(details, soort) {
     cataloguswaarde: d.cataloguswaarde ?? "",
     bijtellingspercentage: d.bijtellingspercentage ?? "",
     privegebruikMeerDan500kmPerJaar: d.privegebruikMeerDan500kmPerJaar ?? {},
+    privegebruikKmPerJaar: d.privegebruikKmPerJaar ?? {},
   };
 }
 
@@ -41,6 +42,7 @@ function cleanDetails(form, soort) {
     cataloguswaarde: n(form.cataloguswaarde),
     bijtellingspercentage: n(form.bijtellingspercentage),
     privegebruikMeerDan500kmPerJaar: form.privegebruikMeerDan500kmPerJaar || {},
+    privegebruikKmPerJaar: form.privegebruikKmPerJaar || {},
   };
 }
 

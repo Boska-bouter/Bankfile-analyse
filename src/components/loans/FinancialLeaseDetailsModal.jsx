@@ -71,6 +71,7 @@ export function formFromSegment(segment) {
     cataloguswaarde: s.cataloguswaarde ?? "",
     bijtellingspercentage: s.bijtellingspercentage ?? "",
     privegebruikMeerDan500kmPerJaar: s.privegebruikMeerDan500kmPerJaar ?? {},
+    privegebruikKmPerJaar: s.privegebruikKmPerJaar ?? {},
     // Kenteken: koppelt contractsegmenten van DEZELFDE auto aan elkaar bij een tussentijds
     // vervangen/geherfinancierd leasecontract — zie tax/autoBijtelling.js. Alleen relevant/getoond
     // bij soort "auto". Optioneel en standaard leeg, dus geen enkel bestaand contract heeft dit al
@@ -128,6 +129,7 @@ export function cleanSegment(form) {
     cataloguswaarde: form.soort === "auto" ? n(form.cataloguswaarde) : null,
     bijtellingspercentage: form.soort === "auto" ? n(form.bijtellingspercentage) : null,
     privegebruikMeerDan500kmPerJaar: form.soort === "auto" ? form.privegebruikMeerDan500kmPerJaar || {} : null,
+    privegebruikKmPerJaar: form.soort === "auto" ? form.privegebruikKmPerJaar || {} : null,
     kenteken: form.soort === "auto" ? (form.kenteken || null) : null,
     voertuigtype: form.soort === "auto" ? (form.voertuigtype || null) : null,
     kiaStatus: form.soort ? (form.kiaStatus || null) : null,
