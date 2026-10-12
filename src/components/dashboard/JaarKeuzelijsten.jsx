@@ -24,7 +24,7 @@ function BedragVeld({ waarde, onChange, className }) {
   );
 }
 
-const veldCls = "w-44 max-w-[58%] rounded-lg border bg-white px-2 py-1 text-basis font-normal text-slate-800";
+const veldCls = "w-44 max-w-[58%] rounded-veld border bg-white px-2 py-1 text-basis font-normal text-slate-800";
 const normaal = "border-slate-300";
 const open = "border-amber-400 bg-amber-50";
 

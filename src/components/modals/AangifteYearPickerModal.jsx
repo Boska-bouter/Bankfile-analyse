@@ -1,5 +1,6 @@
 import { metBolletjes } from "../shared/StatusDot.jsx";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Keuzevenster "Indicatieve aangifteberekening": toont de status van het gekozen jaar en laat het
 // rapport voor dat jaar (of meerdere jaren) openen. Puur weergave; de selectie en het genereren van het
 // rapport zitten in App.jsx.
@@ -47,7 +48,7 @@ export default function AangifteYearPickerModal({
             <div className="flex gap-2 flex-wrap pt-1">
               <button
                 onClick={() => onExport([activeYear])}
-                className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
+                className={KNOP_PRIMAIR}
               >
                 Berekening bekijken
               </button>
@@ -82,10 +83,10 @@ export default function AangifteYearPickerModal({
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onExport()} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
+              <button onClick={() => onExport()} className={KNOP_PRIMAIR}>
                 Berekening tonen
               </button>
-              <button onClick={() => setMeerdereJaren(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              <button onClick={() => setMeerdereJaren(false)} className={KNOP_SECUNDAIR}>
                 Terug
               </button>
             </div>

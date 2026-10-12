@@ -5,6 +5,7 @@ import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
 import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PIL } from "../ui/stijl.js";
 // Fase 1, dashboard-restyling (Stijl F) — "Details en overzichten"-paneel onderaan het Overzicht-
 // tabblad, met sub-tabs (Jaaroverzicht/Transacties/Categorieën/Activa/Leningen/Lease/BTW/
 // Rapportages) zoals in het mockup-canvas. Dit paneel bouwt GEEN nieuwe interactieve tabellen na —
@@ -26,7 +27,7 @@ function LinkOut({ label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-full px-3 py-1.5"
+      className={KNOP_PIL}
     >
       {label} →
     </button>

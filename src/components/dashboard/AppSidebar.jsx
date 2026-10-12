@@ -121,7 +121,8 @@ export default function AppSidebar({
     // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
-      onMouseOver={toonTip} onMouseOut={() => setSbTip(null)} onFocus={toonTip} onBlur={() => setSbTip(null)}
+      onPointerOver={(e) => { if (e.pointerType === "mouse") toonTip(e); }} onPointerOut={() => setSbTip(null)} onPointerDown={() => setSbTip(null)}
+      onFocus={(e) => { if (e.target.matches && e.target.matches(":focus-visible")) toonTip(e); }} onBlur={() => setSbTip(null)}
       className={`sb-root ${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
       style={{
         paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
@@ -269,9 +270,10 @@ export default function AppSidebar({
       {/* v269 — "Laatste actie / Ongedaan maken" stond eerst bovenaan (v268); op verzoek nu hieronder,
           direct onder de Acties-knoppen (los van showActies, want een actie kan ook al ongedaan te
           maken zijn vóórdat er een actief jaar is). Bewust wit/opvallend i.p.v. de donkere
-          zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. */}
+          zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. release19V2: zweeft nu (fixed) linksonder naast de
+          zijbalk in plaats van er een extra blok in te zijn, zodat de zijbalk niet gaat scrollen. */}
       {lastActionSnapshot && (
-        <div className="mt-3 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
+        <div className={`fixed bottom-4 ${collapsed ? "left-[84px]" : "left-[232px]"} z-50 w-64 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2`}>
           <div className="flex items-start justify-between gap-1">
             <p className="text-xs text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>

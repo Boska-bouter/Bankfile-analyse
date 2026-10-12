@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ibansMatch } from "../../utils/normalization.js";
 
+import { KNOP_PRIMAIR, VELD_KLEIN } from "../ui/stijl.js";
 // V57 — eigen rekeningen die wel bestaan maar (nog) niet zijn geladen. Net als in de wizard: met het
 // IBAN weet de app dat een boeking naar/van die rekening een overboeking tussen je eigen rekeningen is
 // (zakelijk ↔ privé: prive opname/ontvangen van zakelijk; zelfde type: "Interne overboeking") in
@@ -95,11 +96,11 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
           placeholder="Rekeningnummer (IBAN)"
           className="w-64 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-mono"
         />
-        <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+        <select value={type} onChange={(e) => setType(e.target.value)} className={VELD_KLEIN}>
           <option value="Prive">Privérekening</option>
           <option value="Zakelijk">Zakelijke rekening</option>
         </select>
-        <button onClick={voegToe} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">Toevoegen</button>
+        <button onClick={voegToe} className={`${KNOP_PRIMAIR} !text-xs`}>Toevoegen</button>
       </div>
       {fout && <p className="text-xs text-red-600">{fout}</p>}
     </section>

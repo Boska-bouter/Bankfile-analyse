@@ -1,3 +1,4 @@
+import { KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Jaarkeuze voor "Samenvatting voor klant" — zelfde patroon als bij de indicatieve aangifteberekening.
 export default function KlantJaarKeuzeModal({ years, selected, setSelected, onOpen, onClose, vraag = "Voor welke jaren wil je de samenvatting voor de klant?", knop = "Samenvatting tonen" }) {
   return (
@@ -17,7 +18,7 @@ export default function KlantJaarKeuzeModal({ years, selected, setSelected, onOp
           <button disabled={selected.length === 0} onClick={() => onOpen(selected)} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-40">
             {knop}
           </button>
-          <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
+          <button onClick={onClose} className={KNOP_SECUNDAIR}>Annuleren</button>
         </div>
       </div>
     </div>

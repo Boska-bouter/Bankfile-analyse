@@ -1,3 +1,4 @@
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Eigen bevestigingsvenster in plaats van window.confirm() — die werkt onbetrouwbaar in de
 // app-op-beginscherm-modus op iOS. Dit is vooralsnog de eenvoudige variant zonder
 // jaar-selectie — die complexere versie (voor bulkwijzigingen over meerdere jaren) hoort bij
@@ -9,10 +10,10 @@ export default function ConfirmBanner({ message, onConfirm, onCancel }) {
       <section className="w-full max-w-2xl rounded-xl border-2 border-teal-700 bg-white px-4 py-3 shadow-xl">
         <p className="text-sm text-slate-800 whitespace-pre-line">{message}</p>
         <div className="mt-3 flex gap-2">
-          <button onClick={onConfirm} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
+          <button onClick={onConfirm} className={KNOP_PRIMAIR}>
             OK
           </button>
-          <button onClick={onCancel} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          <button onClick={onCancel} className={KNOP_SECUNDAIR}>
             Annuleren
           </button>
         </div>
