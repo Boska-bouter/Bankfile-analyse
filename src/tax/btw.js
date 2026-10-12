@@ -220,12 +220,12 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
   // Btw-correctie privégebruik auto (tax/btwPrivegebruikAuto.js): hoort in de laatste aangifte van het
   // jaar (Q4). Ze staat los van omzet-btw en voorbelasting in het veld `btwPrivegebruikAuto`
   // en wordt in elk saldo (verschuldigd - voorbelasting) erbij opgeteld.
-  if (btwPrivegebruikAuto && btwPrivegebruikAuto.bedrag > 0.004 && btwPrivegebruikAuto.year === year) {
+  if (btwPrivegebruikAuto && (btwPrivegebruikAuto.bedrag > 0.004 || btwPrivegebruikAuto.onvolledig) && btwPrivegebruikAuto.year === year) {
     const key = `${year}-Q4`;
     if (!map[key]) {
       map[key] = { year, kwartaal: 4, omzetBruto21: 0, verschuldigdBtw21: 0, omzetBruto9: 0, verschuldigdBtw9: 0, omzetBruto0: 0, omzetBrutoVerlegd: 0, kostenBruto: 0, voorbelasting: 0 };
     }
-    map[key].btwPrivegebruikAuto = btwPrivegebruikAuto.bedrag;
+    map[key].btwPrivegebruikAuto = btwPrivegebruikAuto.bedrag > 0.004 ? btwPrivegebruikAuto.bedrag : 0;
     map[key].btwPrivegebruikAutoDetail = btwPrivegebruikAuto;
   }
   return Object.values(map).sort((a, b) => a.year - b.year || a.kwartaal - b.kwartaal);

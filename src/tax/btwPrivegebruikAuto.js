@@ -138,9 +138,10 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
     let bedrag = berekend;
     let afgetopt = false;
     if (methode === "forfait" && maximumControleerbaar && berekend > maximum) { bedrag = maximum; afgetopt = true; }
-    items.push({ naam: auto.naam, bron: auto.bron, route, methode, pct, fractie, catalogus: auto.catalogus, berekend, maximum: maximumControleerbaar ? maximum : null, bedrag, afgetopt, meldingen });
+    const onvolledig = methode === "forfait" && !(auto.catalogus > 0);
+    items.push({ naam: auto.naam, bron: auto.bron, route, methode, onvolledig, pct, fractie, catalogus: auto.catalogus, berekend, maximum: maximumControleerbaar ? maximum : null, bedrag, afgetopt, meldingen });
   }
   if (items.length === 0) return null;
   const bedrag = methode === "geen" ? 0 : items.reduce((a, i) => a + i.bedrag, 0);
-  return { year, methode, bedrag, items };
+  return { year, methode, bedrag, items, onvolledig: items.some((i) => i.onvolledig) };
 }

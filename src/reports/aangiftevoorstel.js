@@ -344,8 +344,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   if (zaStatusRaw == null) openPunten.push(`Urencriterium: niet aangegeven<!--V--> (zie Bijlage)<!--/V-->`);
   if (mogelijkeKia > 0) openPunten.push(`KIA: mogelijk, nog te bevestigen`);
   if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
-  if (yc.quartersNietAangegeven.length > 0) openPunten.push(`BTW nog niet aangegeven: ${yc.quartersNietAangegeven.map((q) => `Q${q.kwartaal}`).join(", ")}`);
-  if (yc.quartersAangegevenNietBetaald.length > 0) openPunten.push(`BTW nog niet betaald: ${yc.quartersAangegevenNietBetaald.map((q) => `Q${q.kwartaal}`).join(", ")}`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
   else if (geelGatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(geelGatenDitJaar[0].fileA)} en ${esc(geelGatenDitJaar[0].fileB)} sluit niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}, nog geen echt gat)`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} nog onzeker geclassificeerd`);
@@ -467,6 +465,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${(() => {
       const d = kwartalen.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
       if (!d) return "";
+      if (!(d.bedrag > 0.004)) return `<p style="font-size:11px;color:#b45309;margin:6px 0 0">⚠ Btw-correctie privégebruik auto nog niet berekend: ${d.items.flatMap((i) => i.meldingen).join(" ")}</p>`;
       const regels = d.items.map((i) => `${i.naam}: ${i.methode === "forfait" ? `forfait ${String(i.pct).replace(".", ",")}%${i.fractie < 1 ? ` × ${Math.round(i.fractie * 12)}/12` : ""} van catalogusprijs ${eur(i.catalogus)}${i.afgetopt ? `, afgetopt op het maximum van ${eur(i.maximum)}` : ""}` : `werkelijk privégebruik ${i.pct}%`} = ${eur(i.bedrag)}${i.meldingen.length ? ` (${i.meldingen.join(" ")})` : ""}`);
       return `<p style="font-size:11px;color:#475569;margin:6px 0 0">Het saldo in Q4 bevat <strong>${eur(d.bedrag)}</strong> btw-correctie privégebruik auto (rubriek 1d van de laatste aangifte van het jaar). ${regels.join("; ")}.</p>`;
     })()}

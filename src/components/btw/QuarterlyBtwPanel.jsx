@@ -143,7 +143,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             if (details.length === 0) return null;
             return details.map((d) => (
               <div key={d.year} className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                <p className="font-semibold">Btw privégebruik auto: {eur(d.bedrag)} in het saldo van {d.year} — Q4 (rubriek 1d)</p>
+                <p className="font-semibold">{d.bedrag > 0.004 ? `Btw privégebruik auto: ${eur(d.bedrag)} in het saldo van ${d.year} — Q4 (rubriek 1d)` : `Btw privégebruik auto ${d.year}: nog niet berekend — gegevens ontbreken`}</p>
                 {d.items.map((i, n) => (
                   <p key={n} className="mt-0.5">
                     {i.naam}: {i.methode === "forfait"
