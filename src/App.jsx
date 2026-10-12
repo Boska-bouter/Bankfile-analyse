@@ -90,6 +90,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
+import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
 import BvSignaleringPanel from "./components/overview/BvSignaleringPanel.jsx";
@@ -3445,6 +3446,15 @@ export default function App() {
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
+              keuzelijsten={<JaarKeuzelijsten
+                year={activeYear} rechtsvorm={rechtsvorm}
+                zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
+                startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
+                autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
+                gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
+                gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
+                gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear} gemeentePct={gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear]} onSetGemeentePct={setGemeentelijkeKostenZakelijkPercentageStatus}
+              />}
             />}
           </div>
         </div>
