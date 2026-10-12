@@ -18,6 +18,7 @@ import { computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
+import { werkruimteBlokHtml } from "./werkruimteBlok.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
@@ -362,6 +363,7 @@ function buildYearSectionBv(
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
+  ${werkruimteBlokHtml(year, classified, opties.categoryZakelijkPercentage, opties.werkruimteStatus, opties.autoStatus, !!opties.heeftLeaseAuto)}
   ${jaarTotaalHtml}
   <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
     <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>

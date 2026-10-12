@@ -80,6 +80,7 @@ export async function laadDossierBestand(file, c) {
     // nieuwe, veiligere default ("onbekend") voor een nog onbeantwoord jaar.
     setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
+    c.setWerkruimteStatusState?.(project.werkruimteStatus && typeof project.werkruimteStatus === "object" ? project.werkruimteStatus : {});
     setTariefOverridesState(project.tariefOverrides && typeof project.tariefOverrides === "object" ? project.tariefOverrides : {});
     setOverigInkomenBox1State(project.overigInkomenBox1 && typeof project.overigInkomenBox1 === "object" ? project.overigInkomenBox1 : {});
     setAutoStatusState(normalizeAutoStatus(project.autoStatus));
@@ -165,6 +166,7 @@ export async function wisDossier(c, askWizard = false) {
   // gegevens van het vorige, inmiddels gewiste dossier.
   setZelfstandigenaftrekStatusState({});
   setStartersaftrekStatusState({});
+  c.setWerkruimteStatusState?.({});
   setTariefOverridesState({});
   setOverigInkomenBox1State({});
   setAutoStatusState({});
