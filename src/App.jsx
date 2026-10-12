@@ -3378,7 +3378,7 @@ export default function App() {
             het "Details en overzichten"-paneel met sub-tabs. Alle data hier is dezelfde die al
             bestond (dashboardCards/controlerenDashboardCards/instellingenDashboardCards/
             yearlySummaries) — alleen anders gegroepeerd, zie RollupCard.jsx/DetailsPanel.jsx. */}
-        <div style={sectionTabStyle("overzicht")} className="space-y-5">
+        <div style={sectionTabStyle("overzicht")} className="space-y-5 mt-6">
           <DashboardHeader
             title="Overzicht"
             subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}

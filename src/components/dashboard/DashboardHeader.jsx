@@ -83,11 +83,11 @@ export default function DashboardHeader({
         {dossierInfo && <p className="mt-0.5 text-xs text-slate-400">{dossierInfo}</p>}
       </div>
 
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3 min-w-0 max-w-full">
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
-        <div className="flex items-center gap-5 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm shrink-0">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm min-w-0 max-w-full">
           {pct != null ? (
             yearRing ? (
               <div className="flex items-center gap-3">

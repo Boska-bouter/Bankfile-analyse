@@ -316,7 +316,7 @@ export default function AppSidebar({
           );
         })()}
         {saveState && (
-          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
+          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500 leading-snug" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…

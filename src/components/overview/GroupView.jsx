@@ -78,7 +78,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   <td className="py-1">
                     <span className="inline-flex items-center gap-1">
                       {canExpand && (isOpen ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" /> : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />)}
-                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[16rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
@@ -89,7 +89,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   subtypesPresent.map((s) => (
                     <tr key={`${c}__${s}`} className="border-b border-slate-50 bg-slate-50/60">
                       <td className="py-1 pl-6">
-                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[16rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
                       <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
                       <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
