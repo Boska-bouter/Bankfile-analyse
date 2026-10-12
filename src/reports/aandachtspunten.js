@@ -9,9 +9,16 @@ const jarenTekst = (js) => [...js].sort().join(", ");
 export function bepaalAandachtspunten({
   years = [], yearPeriod = {}, classified = [], incompleteLeases = 0, incompleteLoans = 0,
   zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, autoStatus = {}, priveRekeningGeladen = true, heeftVoorraad = null, rechtsvorm,
+  appModus = "volledig", tariefOverrides = {}, overigInkomenBox1 = {},
 }) {
   const jaren = years.map(String);
   const p = [];
+  if (appModus === "eenvoudig" && rechtsvorm !== "bv") {
+    const aangepast = Object.keys(tariefOverrides || {}).length > 0 || Object.keys(overigInkomenBox1 || {}).length > 0;
+    p.push(aangepast
+      ? "Eenvoudige weergave: de standaardtarieven en -aannames worden gebruikt, met uitzondering van de aangepaste tarieven of het overige inkomen die eerder in de volledige weergave zijn ingevuld."
+      : "Eenvoudige weergave: standaardtarieven en standaardaannames gebruikt (geen overig inkomen, geen aangepaste tarieven of heffingskorting). Dit is een snel indicatief overzicht.");
+  }
   const onvolledig = jaren.filter((y) => yearPeriod[y] && !yearPeriod[y].heel);
   if (onvolledig.length) p.push(`Niet-volledig jaar: ${onvolledig.map((y) => `${y} (${yearPeriod[y].label})`).join(", ")}. De cijfers gaan alleen over de periode met bankgegevens; een eventuele extrapolatie of jaarcorrectie is niet beoordeeld.`);
 

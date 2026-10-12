@@ -61,6 +61,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
 }
 
 export default function AppSidebar({
+  appModus, onSetModus,
   orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
   onEditRekeninghouder,
@@ -164,6 +165,22 @@ export default function AppSidebar({
           </button>
         )}
       </div>
+
+      {/* Weergavemodus: eenvoudig (standaardwaarden, minder invoer) of volledig. Alleen de weergave
+          verschilt; de berekeningen zijn in beide standen gelijk. */}
+      {onSetModus && (
+        <div className="sb-label mb-4 -mt-1 px-0.5" role="group" aria-label="Weergavemodus">
+          <span className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase pb-1">Weergave</span>
+          <div className="flex rounded-lg bg-[#1E2A4A] border border-[#2C3A61] p-0.5 text-xs">
+            {[["eenvoudig", "Eenvoudig"], ["volledig", "Volledig"]].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => onSetModus(k)} aria-pressed={appModus === k}
+                className={`flex-1 rounded-md px-2 py-1 font-semibold ${appModus === k ? "bg-teal-700 text-white" : "text-slate-300 hover:text-white"}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       {tabsVisible && (
