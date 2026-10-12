@@ -13,7 +13,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // genest zitten in de klikbare kaart-knop (ongeldige/onvoorspelbare HTML, geneste <button>s). Alleen
 // de kop (titel/waarde/regels/actieknop-label) zit daarom in de klikbare knop; het uitgeklapte
 // paneel staat er als aparte, gewone sectie naast/onder, buiten die knop.
-const TONE = {
+export const TONE = {
   ok: { border: "border-emerald-200", bg: "bg-emerald-50", dot: "bg-emerald-500", text: "text-emerald-700" },
   attention: { border: "border-amber-300", bg: "bg-amber-50", dot: "bg-amber-500", text: "text-amber-700" },
   neutral: { border: "border-slate-200", bg: "bg-slate-100", dot: "bg-slate-300", text: "text-slate-700" },

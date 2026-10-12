@@ -90,6 +90,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
+import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -748,7 +749,7 @@ export default function App() {
   // (tax/kmVergoeding.js) zetten 'm om naar een getal; overal elders (vermenigvuldiging, > 0-check,
   // tekst-interpolatie) werkt een numerieke string door JS' eigen coercion toch al.
   const setKmVergoedingField = (year, veld, waarde) => {
-    snapshotBeforeAction("Kilometervergoeding aangepast");
+    snapshotBeforeAction("Kilometervergoeding aangepast", { samenvoegen: true });
     setKmVergoedingDetailsState((prev) => {
       const next = { ...prev };
       const huidig = { ...(next[year] || {}) };
@@ -759,6 +760,11 @@ export default function App() {
       else next[year] = huidig;
       return next;
     });
+  };
+  // Overig inkomen box 1: met "Ongedaan maken"; typen binnen 2 seconden telt als één wijziging.
+  const setOverigInkomenBox1Met = (next) => {
+    snapshotBeforeAction("Overig inkomen box 1 aangepast", { samenvoegen: true });
+    setOverigInkomenBox1State(next);
   };
   const setHuurZakelijkPercentageStatus = (year, percentage) => {
     snapshotBeforeAction("Percentage zakelijk gebruik huur aangepast");
@@ -1042,12 +1048,19 @@ export default function App() {
   // ---- Ongedaan maken laatste actie — momentopname/herstel voor de grote, risicovolle acties
   // (duplicaten verwijderen, wis alles). Bewust maar 1 stap terug — elke volgende momentopname
   // overschrijft de vorige. ----
-  const snapshotBeforeAction = (label) => {
+  // samenvoegen: bij typen in een veld (elke toets roept dit aan) blijft de toestand van VÓÓR het typen bewaard zolang
+  // je binnen 2 seconden doorgaat, zodat "Ongedaan maken" terugzet naar de waarde van voor je begon te typen.
+  const snapMeta = useRef({ label: null, t: 0 });
+  const snapshotBeforeAction = (label, { samenvoegen = false } = {}) => {
+    const nu = Date.now();
+    const doorgaand = samenvoegen && snapMeta.current.label === label && nu - snapMeta.current.t < 2000;
+    snapMeta.current = { label: samenvoegen ? label : null, t: nu };
     setAuditLog((prev) => {
       const laatste = prev[prev.length - 1];
       if (laatste && laatste.label === label && Date.now() - laatste.t < 2000) return prev;
       return [...prev, { t: Date.now(), label }].slice(-300);
     });
+    if (doorgaand) return;
     setLastActionSnapshot({
       label,
       state: {
@@ -1067,6 +1080,7 @@ export default function App() {
     /^(Nieuw dossier|Dossier geladen|Duplicaten verwijderen|Alle transacties|Bestand ")/.test(label || "");
   const undoLastAction = () => {
     if (!lastActionSnapshot) return;
+    snapMeta.current = { label: null, t: 0 };
     const s = lastActionSnapshot.state;
     setParsedFiles(s.parsedFiles);
     setAccountTypeByFile(s.accountTypeByFile);
@@ -2708,7 +2722,7 @@ export default function App() {
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
-    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
+    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State: setOverigInkomenBox1Met, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus,
@@ -3447,10 +3461,27 @@ export default function App() {
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
               keuzelijsten={<JaarKeuzelijsten
+                card={instellingenDashboardCards.find((c) => c.key === "aannames")}
                 year={activeYear} rechtsvorm={rechtsvorm}
                 zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
                 startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
-                autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
+                autoStatus={autoStatus}
+                privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
+                privegebruikBron={{ leaseDetails, autoActivaDetails }}
+                kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
+                onSetPrivegebruik={(autos, gekozenId, jaar) => {
+                  const r = zetPrivegebruikKeuze(autos, gekozenId, jaar, { leaseDetails, autoActivaDetails });
+                  for (const [key, d] of Object.entries(r.leaseDetails)) setLeaseDetailField(key, d);
+                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails);
+                }}
+                overigInkomen={overigInkomenBox1?.[activeYear]}
+                onSetOverigInkomen={(jaar, tekst) => {
+                  const next = { ...(overigInkomenBox1 || {}) };
+                  const t = String(tekst).trim();
+                  const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
+                  if (Number.isFinite(v) && v > 0) next[jaar] = v; else delete next[jaar];
+                  setOverigInkomenBox1Met(next);
+                }}
                 gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
                 gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
                 gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear} gemeentePct={gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear]} onSetGemeentePct={setGemeentelijkeKostenZakelijkPercentageStatus}
@@ -3664,7 +3695,7 @@ export default function App() {
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
             overigInkomenBox1={overigInkomenBox1}
-            onSetOverigInkomenBox1={setOverigInkomenBox1State}
+            onSetOverigInkomenBox1={setOverigInkomenBox1Met}
             activaGevraagd={!!bevestigdeControles.activaWizard}
             activaAantalBank={activaSummary.filter((a) => !a.handmatig).length}
             onActivaBeantwoord={(namen) => { setBevestigdeControles((p) => ({ ...p, activaWizard: true })); voegActivaToe(namen); }}
