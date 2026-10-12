@@ -1,4 +1,5 @@
 import { metBolletjes } from "../shared/StatusDot.jsx";
+import JaarSwipe from "../shared/JaarSwipe.jsx";
 // Keuzevenster "Indicatieve aangifteberekening": toont de status van het gekozen jaar en laat het
 // rapport voor dat jaar (of meerdere jaren) openen. Puur weergave; de selectie en het genereren van het
 // rapport zitten in App.jsx.
@@ -15,14 +16,15 @@ function aangifteStatusTekst(status, aantalPunten) {
 }
 
 export default function AangifteYearPickerModal({
-  onClose, activeYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
+  onClose, activeYear, onSelectYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
   selectedYears, setSelectedYears, onExport,
 }) {
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
         {!meerdereJaren ? (
-          <>
+          <JaarSwipe years={years} year={activeYear} onSelectYear={onSelectYear} style={{ display: "block" }}>
+          <div className="space-y-3">
             <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
             {yearProgress && (
               <div>
@@ -62,7 +64,8 @@ export default function AangifteYearPickerModal({
                 Annuleren
               </button>
             </div>
-          </>
+          </div>
+          </JaarSwipe>
         ) : (
           <>
             <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
