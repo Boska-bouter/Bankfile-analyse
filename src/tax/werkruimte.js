@@ -4,7 +4,7 @@
 //  - zelfstandig:    zelfstandige werkruimte in de eigen woning → kosten naar rato aftrekbaar als bedrijfskosten.
 //  - niet_zelfstandig: thuiskantoor/kamer/hoek in de eigen woning → huur, energie en gemeentelijke lasten NIET aftrekbaar.
 // Niet aangegeven = ongewijzigd gedrag (zoals voor deze release): de ingestelde percentages gelden.
-export const WERKRUIMTE_CATEGORIEEN = ["Huur", "Energie-water", "Gemeentelijke kosten"];
+export const WERKRUIMTE_CATEGORIEEN = ["Huur", "Energie-water", "Gemeentelijke kosten", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten"];
 
 export const WERKRUIMTE_LABELS = {
   bedrijfsruimte: "Zakelijk gehuurd pand/bedrijfsruimte (betaald vanaf privé)",

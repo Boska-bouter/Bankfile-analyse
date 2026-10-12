@@ -12,7 +12,7 @@ import { WERKRUIMTE_CATEGORIEEN, WERKRUIMTE_LABELS } from "../../tax/werkruimte.
 // wijziging (en bij meerdere jaren dus ook de "voor welke jaren?"-vraag, zie App.jsx) in gang
 // zetten — met een halve, nog niet afgemaakte waarde, en het veld verdwijnt dan meteen achter die
 // vraag voordat de rest is ingetypt.
-function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, uitgeschakeld = false }) {
+function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, uitgeschakeld = false, betaling = null }) {
   const [draft, setDraft] = useState(raw ?? "");
   // Als de opgeslagen waarde van buitenaf verandert (bijv. na het beantwoorden van de "voor welke
   // jaren?"-vraag, of bij het wisselen van jaar), moet het veld dat overnemen.
@@ -39,6 +39,12 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, ui
     <div className="flex items-center gap-3 text-sm rounded-lg border border-slate-100 p-2.5">
       <span className="flex-1 min-w-[10rem] font-medium">
         <span className="block truncate">{categorie}</span>
+        {betaling && (
+          <span className="block text-xs font-normal text-slate-500">
+            Zakelijke rekening: {betaling.aantalZakelijk > 0 ? `${eur(betaling.zakelijk)} (${betaling.aantalZakelijk}×)` : "—"} · Privérekening: {betaling.aantalPrive > 0 ? `${eur(betaling.prive)} (${betaling.aantalPrive}×)` : "—"}
+            {betaling.beide && <span className="ml-1 font-medium text-amber-700">⚠ beide rekeningen{betaling.gelijk ? ", gelijke bedragen" : ", verschillende bedragen"}</span>}
+          </span>
+        )}
         {categorie === "Privé - overige kosten" && (
           <span className="block text-xs font-normal text-slate-500">Uitgaven vanaf je privérekening die op zakelijke kosten lijken — mogelijk (deels) zakelijk, controleer ze.</span>
         )}
@@ -135,22 +141,6 @@ export default function CategoryPercentagePanel({
                 {werkruimte === "niet_zelfstandig" && "Een kamer of hoek in de eigen woning: huur, energie-water en gemeentelijke kosten zijn niet aftrekbaar en tellen voor dit jaar niet mee (0%). De ingevulde percentages blijven bewaard."}
                 {!werkruimte && "Kies wat van toepassing is: voor een thuiskantoor in de eigen woning gelden andere regels dan voor een zakelijk gehuurd pand."}
               </p>
-              {Object.keys(werkruimteBetaling).length > 0 && (
-                <table className="mt-2 w-full text-xs">
-                  <thead>
-                    <tr className="text-slate-400 uppercase"><th className="text-left font-medium pb-1">Betaald in {activeYear}</th><th className="text-right font-medium pb-1">Zakelijke rekening</th><th className="text-right font-medium pb-1">Privérekening</th></tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(werkruimteBetaling).map(([c, r]) => (
-                      <tr key={c} className="border-t border-slate-200">
-                        <td className="py-1">{c}</td>
-                        <td className="py-1 text-right font-mono">{r.aantalZakelijk > 0 ? `${eur(r.zakelijk)} (${r.aantalZakelijk}×)` : "—"}</td>
-                        <td className="py-1 text-right font-mono">{r.aantalPrive > 0 ? `${eur(r.prive)} (${r.aantalPrive}×)` : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
               {Object.values(werkruimteBetaling).some((r) => r.beide) && (
                 <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
                   ⚠ {Object.entries(werkruimteBetaling).filter(([, r]) => r.beide).map(([c]) => c).join(", ")}: betaald vanaf zowel de zakelijke als de privérekening.
@@ -189,6 +179,7 @@ export default function CategoryPercentagePanel({
                 raw={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
                 standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
                 uitgeschakeld={nietZelfstandig && WERKRUIMTE_CATEGORIEEN.includes(categorie)}
+                betaling={werkruimteBetaling[categorie] || null}
                 onCommit={(percentage) => onSetCategoryZakelijkPercentage(categorie, activeYear, percentage)}
               />
             ))}
