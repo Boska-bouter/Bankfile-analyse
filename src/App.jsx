@@ -50,7 +50,7 @@ import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByF
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
-import { percentagesMetWerkruimte } from "./tax/werkruimte.js";
+import { percentagesMetWerkruimte, werkruimteSoorten } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
@@ -246,9 +246,16 @@ export default function App() {
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
   // release20V3 — soort ruimte per jaar voor huur/energie/gemeentelijke lasten: bedrijfsruimte | zelfstandig | niet_zelfstandig.
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
-  const setWerkruimteStatus = (year, waarde) => {
+  const setWerkruimteStatus = (year, rekening, waarde) => {
     snapshotBeforeAction("Soort ruimte (huur/energie/gemeentelijke lasten) aangepast");
-    setWerkruimteStatusState((prev) => { const next = { ...prev }; if (waarde) next[year] = waarde; else delete next[year]; return next; });
+    setWerkruimteStatusState((prev) => {
+      const next = { ...prev };
+      const huidig = werkruimteSoorten(prev, year);
+      const nieuw = { ...huidig, [rekening]: waarde || null };
+      if (!nieuw.zakelijk && !nieuw.prive) delete next[year];
+      else next[year] = { ...(nieuw.zakelijk ? { zakelijk: nieuw.zakelijk } : {}), ...(nieuw.prive ? { prive: nieuw.prive } : {}) };
+      return next;
+    });
   };
   // Eigen tarief-overschrijvingen per jaar ({ "2027": { ib: {...}, ahk: {...}, werkelijkeHeffingskorting: 1234 } })
   // en overig inkomen box 1 per jaar ({ "2025": 24000 }) — zie tax/incomeTax.js (resolveTariefGroep).
@@ -2748,7 +2755,7 @@ export default function App() {
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
-    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
+    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State: setOverigInkomenBox1Met, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,

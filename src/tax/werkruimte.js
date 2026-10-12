@@ -7,27 +7,45 @@
 export const WERKRUIMTE_CATEGORIEEN = ["Huur", "Energie-water", "Gemeentelijke kosten", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten"];
 
 export const WERKRUIMTE_LABELS = {
-  bedrijfsruimte: "Zakelijk gehuurd pand/bedrijfsruimte (betaald vanaf privé)",
+  bedrijfsruimte: "Zakelijk gehuurd pand/bedrijfsruimte",
   zelfstandig: "Zelfstandige werkruimte in de eigen woning",
-  niet_zelfstandig: "Werkruimte in de eigen woning, niet zelfstandig (kamer/hoek)",
+  niet_zelfstandig: "Kamer/hoek in de eigen woning (niet zelfstandig)",
+  prive: "Privé (geen zakelijk gebruik)",
 };
 
 export const WERKRUIMTE_KORT = {
   bedrijfsruimte: "zakelijk gehuurde bedrijfsruimte",
   zelfstandig: "zelfstandige werkruimte in de eigen woning",
   niet_zelfstandig: "niet-zelfstandige werkruimte in de eigen woning",
+  prive: "privé",
 };
 
-// Maakt van de ingestelde percentages de "effectieve": een jaar met niet_zelfstandig telt huur, energie-water en
-// gemeentelijke kosten voor 0% mee. De ingevulde percentages zelf blijven in het dossier staan.
+// Soorten die niet aftrekbaar zijn: het percentage staat dan vast op 0%.
+export const WERKRUIMTE_NIET_AFTREKBAAR = ["niet_zelfstandig", "prive"];
+
+// De keuze staat per jaar en per rekening: { jaar: { zakelijk: soort, prive: soort } }. Een oudere keuze als losse tekst
+// ({ jaar: soort }) gold voor beide rekeningen.
+export function werkruimteSoorten(werkruimteStatus, year) {
+  const v = werkruimteStatus?.[year];
+  if (!v) return { zakelijk: null, prive: null };
+  if (typeof v === "string") return { zakelijk: v, prive: v };
+  return { zakelijk: v.zakelijk || null, prive: v.prive || null };
+}
+
+// Maakt van de ingestelde percentages de "effectieve": voor een rekening met een niet-aftrekbare soort tellen huur, energie-water en
+// gemeentelijke kosten (ook de privé-varianten) voor 0% mee. De ingevulde percentages zelf blijven in het dossier staan.
 export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus) {
-  const jaren = Object.entries(werkruimteStatus || {}).filter(([, v]) => v === "niet_zelfstandig").map(([y]) => y);
+  const jaren = Object.keys(werkruimteStatus || {});
   if (jaren.length === 0) return categoryZakelijkPercentage;
   const result = { ...(categoryZakelijkPercentage || {}) };
-  for (const cat of WERKRUIMTE_CATEGORIEEN) {
-    const perJaar = { ...(result[cat] || {}) };
-    for (const y of jaren) perJaar[y] = 0;
-    result[cat] = perJaar;
+  for (const y of jaren) {
+    const soorten = werkruimteSoorten(werkruimteStatus, y);
+    for (const rek of ["zakelijk", "prive"]) {
+      if (!WERKRUIMTE_NIET_AFTREKBAAR.includes(soorten[rek])) continue;
+      for (const cat of WERKRUIMTE_CATEGORIEEN) {
+        result[cat] = { ...(result[cat] || {}), [`${y}:${rek}`]: 0 };
+      }
+    }
   }
   return result;
 }

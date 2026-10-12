@@ -647,7 +647,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
   // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
-  const gedeeldeHuisvestingHtml = werkruimteBlokHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus, autoStatus, false);
+  const gedeeldeHuisvestingHtml = werkruimteBlokHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus);
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
