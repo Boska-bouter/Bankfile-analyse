@@ -47,3 +47,21 @@ body:has(.fixed.inset-0.bg-slate-900\/50) .onderbalk { display: none; }
 
 /* Bedragen en cijfers: cijfers van gelijke breedte, zodat kolommen en totalen onder elkaar goed te vergelijken zijn. */
 body { font-variant-numeric: tabular-nums; }
+
+/* release18V5 — invoervelden en keuzelijsten overal wit. Op iPad/Safari krijgen ze zonder eigen achtergrond een
+   grijze vulling, waardoor dezelfde keuze op het ene scherm wit en op het andere grijs oogt. Een klasse als
+   bg-slate-50 (disabled/uitgelicht) wint hier nog steeds van, want :where() geeft deze regel specificiteit nul. */
+:where(
+  select,
+  textarea,
+  input:not([type]),
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="date"]
+) {
+  background-color: #fff;
+}

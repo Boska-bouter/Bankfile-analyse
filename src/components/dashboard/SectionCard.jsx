@@ -51,7 +51,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
             {icon}
           </div>
-          <span className={`flex-grow text-[13px] font-bold text-slate-900 truncate ${helpChapter ? "pr-4" : ""}`}>{title}</span>
+          <span className={`flex-grow text-basis font-bold text-slate-900 truncate ${helpChapter ? "pr-4" : ""}`}>{title}</span>
           {/* v284 — voorheen verborgen zodra een kaart ook `lines` toont (elke kaart met `lines` zette
               tot nu toe geen top-level `value`, dus dit veranderde tot nu toe niets) — "BTW-kwartalen"
               wil nu juist wél een badge (het jaartotaal) tonen NAAST de per-kwartaal regels. */}
@@ -67,7 +67,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
                 <span className="text-klein text-slate-500">{metBegrippen(l.label)}</span>
-                <span className={`text-[13px] font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
+                <span className={`text-basis font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
               </div>
             ))}
           </div>
@@ -124,7 +124,7 @@ export default function SectionCardGrid({ title, cards, onOpenHelp, swipe }) {
       </div>
       {cards.filter((c) => c.expanded && c.expandedContent).map((card) => (
         <div key={`open-${card.key}`} className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-[13px] font-bold text-slate-900 mb-3">{card.title}</h3>
+          <h3 className="text-basis font-bold text-slate-900 mb-3">{card.title}</h3>
           {swipe ? <JaarSwipe years={swipe.years} year={swipe.year} onSelectYear={swipe.onSelectYear}>{card.expandedContent}</JaarSwipe> : card.expandedContent}
         </div>
       ))}

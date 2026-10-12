@@ -24,7 +24,7 @@ function BedragVeld({ waarde, onChange, className }) {
   );
 }
 
-const veldCls = "w-44 max-w-[58%] rounded-lg border bg-white px-2 py-1 text-[13px] font-normal text-slate-800";
+const veldCls = "w-44 max-w-[58%] rounded-lg border bg-white px-2 py-1 text-basis font-normal text-slate-800";
 const normaal = "border-slate-300";
 const open = "border-amber-400 bg-amber-50";
 
@@ -77,7 +77,7 @@ export default function AannamesKaart({
     <div className={`rounded-paneel border ${t.border} bg-white p-4 flex flex-col gap-2 shadow-sm`} data-testid="jaar-keuzelijsten">
       <div className="flex items-center gap-2 mb-0.5">
         <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>{card?.icon}</div>
-        <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{card?.title || `Persoonlijke aannames ${year}`}</span>
+        <span className="flex-grow text-basis font-bold text-slate-900 truncate">{card?.title || `Persoonlijke aannames ${year}`}</span>
       </div>
       {!isBv && (
         <>
@@ -100,7 +100,7 @@ export default function AannamesKaart({
         </>
       )}
       <Rij label="Auto">
-        <span className={`text-[13px] font-semibold ${autoStatus?.[year] ? t.text : "text-amber-700"}`}>{autoTekst}</span>
+        <span className={`text-basis font-semibold ${autoStatus?.[year] ? t.text : "text-amber-700"}`}>{autoTekst}</span>
       </Rij>
       {autoStatus?.[year] === "zaak" && privegebruikAutos.length > 0 && (
         <Rij label={privegebruikAutos.every((a) => a.bron === "lease") ? "Privégebruik leaseauto?" : "Privégebruik auto?"}>

@@ -141,7 +141,7 @@ export default function PersoonlijkeAannamesPanel({
   const gemeentelijkeKostenBtwTarief = categoryBtwRates?.["Gemeentelijke kosten (deels zakelijk)"] || 0;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       {/* <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
       <div
         role="button"
@@ -166,7 +166,7 @@ export default function PersoonlijkeAannamesPanel({
               key={`za-${activeYear}`}
               value={rawStatus == null ? "" : rawStatus}
               onChange={(e) => onSetZelfstandigenaftrekStatus(activeYear, e.target.value || null)}
-              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-veld border border-slate-300 bg-white px-2.5 py-1.5 text-sm"
             >
               <option value="">
                 {zaLegacyJaDefault ? "Niet aangegeven (rekent voorlopig met \"Ja\")" : "Niet aangegeven (toont voorlopig beide scenario's)"}
@@ -192,7 +192,7 @@ export default function PersoonlijkeAannamesPanel({
               key={`starters-${activeYear}`}
               value={startersaftrekAan ? "ja" : ""}
               onChange={(e) => onSetStartersaftrekStatus(activeYear, e.target.value || null)}
-              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-veld border border-slate-300 bg-white px-2.5 py-1.5 text-sm"
             >
               <option value="">Nee / niet van toepassing</option>
               <option value="ja">Ja</option>
@@ -289,7 +289,7 @@ export default function PersoonlijkeAannamesPanel({
               key={`auto-${activeYear}`}
               value={autoStatus?.[activeYear] || ""}
               onChange={(e) => onSetAutoStatus(activeYear, e.target.value || null)}
-              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="rounded-veld border border-slate-300 bg-white px-2.5 py-1.5 text-sm"
             >
               <option value="">Onbekend/niet aangegeven — huidige percentage-splitsing op Brandstof/Parkeren blijft bruikbaar</option>
               <option value="zaak">Auto op de zaak (koop, operationele lease of financiële lease)</option>

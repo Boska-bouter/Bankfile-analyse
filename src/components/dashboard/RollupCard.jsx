@@ -16,7 +16,7 @@ const TONE = {
 export default function RollupCard({ title, icon, tone = "info", count, items, ctaLabel, onCta, helpChapter, onOpenHelp }) {
   const t = TONE[tone] || TONE.info;
   return (
-    <div className={`rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-3 shadow-sm`}>
+    <div className={`rounded-paneel border ${t.border} bg-white p-4 flex flex-col gap-3 shadow-sm`}>
       {/* v301 — "? uitleg" toegevoegd op verzoek. De titelregel hier is (anders dan bij SectionCard)
           gewoon een <div>, geen <button> — alleen de losse item-regels en de CTA eronder zijn dat —
           dus dit kan gewoon inline in de titelregel, geen aparte absolute positionering nodig. */}
@@ -24,7 +24,7 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
         <div className={`rounded-full ${t.bg} flex items-center justify-center shrink-0`} style={{ width: 26, height: 26 }}>
           {icon}
         </div>
-        <span className="flex-grow text-[13px] font-bold text-slate-900">{title}</span>
+        <span className="flex-grow text-basis font-bold text-slate-900">{title}</span>
         {helpChapter && onOpenHelp && <HelpHint chapter={helpChapter} onOpen={onOpenHelp} label="" />}
         {count != null && (
           <span className={`text-xs font-bold rounded-full px-2 py-0.5 text-white ${t.badge}`}>{count}</span>
@@ -39,7 +39,7 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
               type="button"
               onClick={item.onClick}
               disabled={!item.onClick}
-              className="flex items-center justify-between gap-2 py-1.5 text-left text-[12.5px] border-b border-slate-100 last:border-0 disabled:cursor-default"
+              className="flex items-center justify-between gap-2 py-1.5 text-left text-label border-b border-slate-100 last:border-0 disabled:cursor-default"
             >
               <span className="text-slate-600 truncate">{item.label}</span>
               <span className="flex items-center gap-1 text-slate-500 font-semibold shrink-0">
@@ -52,14 +52,14 @@ export default function RollupCard({ title, icon, tone = "info", count, items, c
           )}
         </div>
       ) : (
-        <p className="text-[12.5px] text-slate-400">Niets openstaand</p>
+        <p className="text-label text-slate-400">Niets openstaand</p>
       )}
 
       {ctaLabel && (
         <button
           type="button"
           onClick={onCta}
-          className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.cta}`}
+          className={`mt-auto text-center rounded-full py-1.5 text-klein font-bold ${t.cta}`}
         >
           {ctaLabel} →
         </button>

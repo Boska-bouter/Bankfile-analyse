@@ -13,6 +13,7 @@ export default {
       },
       fontSize: {
         micro: "11px",
+        basis: "13px",
         klein: "11.5px",
         label: "12.5px",
       },
