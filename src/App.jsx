@@ -3461,6 +3461,7 @@ export default function App() {
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
               keuzelijsten={<JaarKeuzelijsten
+                card={instellingenDashboardCards.find((c) => c.key === "aannames")}
                 year={activeYear} rechtsvorm={rechtsvorm}
                 zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
                 startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}

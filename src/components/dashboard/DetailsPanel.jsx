@@ -175,7 +175,6 @@ export default function DetailsPanel({
           <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
         ) : (
           <>
-        {keuzelijsten}
         {(
           rechtsvorm === "bv" ? (
             // v282 — BV kent geen IB/Zvw-indicatie (dat bestaat alleen in de IB), maar wél een
@@ -193,6 +192,7 @@ export default function DetailsPanel({
               />
               <div className="flex flex-col gap-4">
                 {CardTile(holdingCard)}
+                {keuzelijsten}
                 {CardTile(btwQuarters)}
               </div>
             </div>
@@ -208,12 +208,12 @@ export default function DetailsPanel({
                 onShowFullCalculation={onShowFullCalculation}
               />
               <div className="flex flex-col gap-4">
-                {CardTile(aannamesCard)}
+                {keuzelijsten}
                 {CardTile(btwQuarters)}
               </div>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(btwQuarters)}</div>
+            <div className="grid md:grid-cols-2 gap-4 items-start">{keuzelijsten}{CardTile(btwQuarters)}</div>
           )
         )}
 
