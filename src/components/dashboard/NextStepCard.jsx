@@ -1,3 +1,4 @@
+import { useState } from "react";
 import HelpHint from "../shared/HelpHint.jsx";
 
 // V89 — vervangt de vier RollupCards op Overzicht ("Nog te controleren", "Nog in te stellen",
@@ -10,6 +11,8 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
   const alle = stappen.map((i) => ({ ...i, soort: i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
   const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
+  // release19V8: de lijst met alle open punten is standaard ingeklapt, zodat Overzicht compact blijft.
+  const [lijstOpen, setLijstOpen] = useState(false);
 
   // Alles afgehandeld en niets te hervatten: de route-balk erboven zegt al hetzelfde, dus geen aparte kaart.
   if (alle.length === 0 && !hervat) return null;
@@ -31,7 +34,7 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
         </div>
       ) : (
         <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-          <div className="md:w-[38%] flex flex-col gap-1.5 justify-center">
+          <div className={`${lijstOpen ? "md:w-[38%]" : "md:flex-1"} flex flex-col gap-1.5 justify-center`}>
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Eerstvolgende stap</span>
             <span className="text-[15px] font-bold text-slate-900 leading-snug">{volgende.label}</span>
             <span className="text-[12px] text-slate-500">
@@ -44,9 +47,14 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
                 </button>
               )}
               {onOverslaan && <button type="button" onClick={onOverslaan} className="text-[12px] text-slate-500 underline">Overslaan</button>}
+              {alle.length > 1 && (
+                <button type="button" onClick={() => setLijstOpen((v) => !v)} aria-expanded={lijstOpen} className="text-[12px] font-medium text-teal-700 underline">
+                  {lijstOpen ? "Verberg open punten" : `Alle open punten (${alle.length})`}
+                </button>
+              )}
             </div>
           </div>
-          <div className="flex-1 min-w-0">
+          {lijstOpen && alle.length > 1 && <div className="flex-1 min-w-0">
             <div className="grid sm:grid-cols-2 gap-x-6">
               {alle.slice(0, 8).map((item) => (
                 <button
@@ -67,7 +75,7 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
               ))}
             </div>
             {alle.length > 8 && <span className="block pt-1.5 text-xs font-medium text-slate-400">+ {alle.length - 8} meer — zie Controleren en Instellingen</span>}
-          </div>
+          </div>}
         </div>
       )}
 

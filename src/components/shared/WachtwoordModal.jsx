@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Lock, X } from "lucide-react";
 
+import { KNOP_PRIMAIR_VET } from "../ui/stijl.js";
 // Wachtwoord vragen (laden van een beveiligd dossier) of instellen/wijzigen/verwijderen (opslaan).
 export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, onAnnuleer, onVerwijder }) {
   const [pw, setPw] = useState("");
@@ -46,7 +47,7 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
         <div className="flex flex-wrap gap-2 justify-end">
           {instellen && heeftWachtwoord && <button type="button" onClick={onVerwijder} className="mr-auto text-xs text-rose-600 underline decoration-dotted">Wachtwoord verwijderen</button>}
           <button type="button" onClick={onAnnuleer} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Annuleren</button>
-          <button type="submit" className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-800">{instellen ? "Instellen" : "Openen"}</button>
+          <button type="submit" className={KNOP_PRIMAIR_VET}>{instellen ? "Instellen" : "Openen"}</button>
         </div>
       </form>
     </div>

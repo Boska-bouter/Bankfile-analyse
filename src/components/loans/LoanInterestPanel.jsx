@@ -5,6 +5,7 @@ import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
+import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
@@ -52,12 +53,12 @@ export default function LoanInterestPanel({ defaultOpen = false, loanSummary, pr
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{loan.name}</span>
                     <span className="text-xs text-slate-400 font-mono">{loan.count}x, totaal {eur(loan.total)}</span>
                     {isOnbekend ? (
-                      <button onClick={() => onUnmarkUnknown(loan.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <button onClick={() => onUnmarkUnknown(loan.key)} className={KNOP_SECUNDAIR_XS}>
                         Toch invullen
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => onOpenModal(loan.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onOpenModal(loan.key)} className={KNOP_SECUNDAIR_XS}>
                           {details?.leningbedrag && details?.startdatum ? "Gegevens bewerken" : "Gegevens invullen"}
                         </button>
                         {!(details?.leningbedrag && details?.startdatum) && (

@@ -4,6 +4,7 @@ import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, Ale
 import { eur } from "../../utils/amounts.js";
 import DossierProfielLijst from "../shared/DossierProfielLijst.jsx";
 
+import { KNOP_PRIMAIR_GROOT, KNOP_SECUNDAIR_KLEIN } from "../ui/stijl.js";
 // V65 — de wizard is herindeeld van 17 losse vragen naar 7 schermen. Elk scherm bundelt vragen die bij
 // elkaar horen; de antwoorden worden met één "Doorgaan" vastgelegd via exact dezelfde setters als voorheen.
 //   20 Bankbestanden laden            (alleen bij een leeg dossier)
@@ -314,7 +315,7 @@ export default function SetupWizardModal({
           {(currentStepId === 4 || (currentStepId === 20 && loadedFileNames.length > 0)) && (
             <button
               onClick={goNext}
-              className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+              className={KNOP_PRIMAIR_GROOT}
             >
               {isLastStep ? "Klaar" : "Doorgaan"} <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -617,7 +618,7 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
                 if (!e) return;
                 zet({ eigenRekeningenLijst: [...lijst, e], eigenRekeningIban: "", eigenRekeningSoort: null });
               }}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              className={KNOP_SECUNDAIR_KLEIN}
             >
               + Toevoegen
             </button>
