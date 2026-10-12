@@ -90,7 +90,7 @@ import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
-import { lijstPrivegebruikAutos, pasPrivegebruikToe } from "./tax/privegebruikAuto500.js";
+import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -3454,9 +3454,11 @@ export default function App() {
                 autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
                 privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
                 privegebruikBron={{ leaseDetails, autoActivaDetails }}
-                onSetPrivegebruik={(auto, jaar, patch) => {
-                  const r = pasPrivegebruikToe(auto, jaar, patch, { leaseDetails, autoActivaDetails });
-                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails); else setLeaseDetailField(r.leaseKey, r.leaseDetails);
+                kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
+                onSetPrivegebruik={(autos, gekozenId, jaar) => {
+                  const r = zetPrivegebruikKeuze(autos, gekozenId, jaar, { leaseDetails, autoActivaDetails });
+                  for (const [key, d] of Object.entries(r.leaseDetails)) setLeaseDetailField(key, d);
+                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails);
                 }}
                 overigInkomen={overigInkomenBox1?.[activeYear]}
                 onSetOverigInkomen={(jaar, tekst) => {

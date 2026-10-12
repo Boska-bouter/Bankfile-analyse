@@ -1,9 +1,8 @@
 import { groupSegmentenOpKenteken } from "./autoBijtelling.js";
 
-// Per auto: staat het vinkje "privégebruik meer dan 500 km" voor een jaar aan, en hoeveel privékilometers zijn er opgegeven.
-// De gegevens staan bij de auto zelf: bij een financiële lease in het (eerste) contractsegment van die auto (zelfde
-// kenteken = zelfde auto, een vinkje bij een van de segmenten geldt voor de hele auto), bij een gekochte of operationeel
-// geleasete auto in autoActivaDetails. De bijtelling hangt alleen af van het vinkje; de kilometers zijn onderbouwing.
+// Per auto: staat het vinkje "privégebruik meer dan 500 km" voor een jaar aan? De gegevens staan bij de auto zelf: bij een
+// financiële lease in het (eerste) contractsegment van die auto (zelfde kenteken = zelfde auto, een vinkje bij een van de
+// segmenten geldt voor de hele auto), bij een gekochte of operationeel geleasete auto in autoActivaDetails.
 export function lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus }) {
   const autos = [];
   for (const lease of leaseSummary || []) {
@@ -13,50 +12,51 @@ export function lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaD
     const segments = Array.isArray(details.contracts) && details.contracts.length > 0 ? details.contracts : [details];
     for (const group of groupSegmentenOpKenteken(segments)) {
       if (group[0].soort !== "auto") continue;
+      const kenteken = group[0].kenteken;
+      const naam = String(lease.name || "Lease").replace(/\s*—?\s*contract\s*/i, " ").replace(/\s+/g, " ").trim();
       autos.push({
         id: `lease:${lease.key}:${segments.indexOf(group[0])}`,
-        naam: group[0].kenteken ? `${lease.name || "Auto"} (${group[0].kenteken})` : (lease.name || "Auto (financiële lease)"),
-        bron: "lease", leaseKey: lease.key, segments, groep: group.map((s) => segments.indexOf(s)),
+        kort: kenteken || (naam.length > 22 ? `${naam.slice(0, 21)}…` : naam),
+        bron: "lease", leaseKey: lease.key, groep: group.map((s) => segments.indexOf(s)),
       });
     }
   }
   const soort = autoWizardStatus?.soort;
   if ((soort === "koop" || soort === "operational") && autoActivaDetails) {
-    autos.push({ id: "eigen", naam: soort === "koop" ? "Auto (eigendom)" : "Auto (operationele lease)", bron: "eigen" });
+    autos.push({ id: "eigen", kort: soort === "koop" ? "Auto (eigendom)" : "Auto (operationele lease)", bron: "eigen" });
   }
   return autos;
 }
 
-export function leesPrivegebruik(auto, jaar, { leaseDetails, autoActivaDetails }) {
-  if (auto.bron === "eigen") {
-    const d = autoActivaDetails || {};
-    return { ja: !!d.privegebruikMeerDan500kmPerJaar?.[jaar], km: d.privegebruikKmPerJaar?.[jaar] ?? "" };
-  }
+export function heeftPrivegebruik(auto, jaar, { leaseDetails, autoActivaDetails }) {
+  if (auto.bron === "eigen") return !!autoActivaDetails?.privegebruikMeerDan500kmPerJaar?.[jaar];
   const details = leaseDetails?.[auto.leaseKey];
   const segments = Array.isArray(details?.contracts) && details.contracts.length > 0 ? details.contracts : [details];
-  return {
-    ja: auto.groep.some((i) => !!segments[i]?.privegebruikMeerDan500kmPerJaar?.[jaar]),
-    km: segments[auto.groep[0]]?.privegebruikKmPerJaar?.[jaar] ?? "",
-  };
+  return auto.groep.some((i) => !!segments[i]?.privegebruikMeerDan500kmPerJaar?.[jaar]);
 }
 
-// patch: { ja?: boolean, km?: string|number|null }. Geeft { leaseKey, leaseDetails } of { autoActivaDetails } terug.
-export function pasPrivegebruikToe(auto, jaar, patch, { leaseDetails, autoActivaDetails }) {
-  const werk = (seg, isPrimair) => {
-    const ja = { ...(seg.privegebruikMeerDan500kmPerJaar || {}) };
-    const km = { ...(seg.privegebruikKmPerJaar || {}) };
-    if (patch.ja !== undefined) {
-      if (patch.ja) { if (isPrimair) ja[jaar] = true; } else { delete ja[jaar]; delete km[jaar]; }
-    }
-    if (patch.km !== undefined && isPrimair) {
-      if (patch.km === "" || patch.km == null) delete km[jaar]; else km[jaar] = patch.km;
-    }
-    return { ...seg, privegebruikMeerDan500kmPerJaar: ja, privegebruikKmPerJaar: km };
+// Zet het vinkje voor dit jaar: alleen `gekozenId` krijgt "ja", alle andere auto's "nee" (gekozenId null = geen).
+// Geeft { leaseDetails: { [leaseKey]: nieuweDetails }, autoActivaDetails } met alleen wat is veranderd.
+export function zetPrivegebruikKeuze(autos, gekozenId, jaar, staat) {
+  let leaseDetails = staat.leaseDetails;
+  let autoActivaDetails = staat.autoActivaDetails;
+  const gewijzigdeLeases = {};
+  let eigenGewijzigd = false;
+  const met = (seg, ja, isPrimair) => {
+    const map = { ...(seg.privegebruikMeerDan500kmPerJaar || {}) };
+    if (ja) { if (isPrimair) map[jaar] = true; } else delete map[jaar];
+    return { ...seg, privegebruikMeerDan500kmPerJaar: map };
   };
-  if (auto.bron === "eigen") return { autoActivaDetails: werk(autoActivaDetails || {}, true) };
-  const details = leaseDetails[auto.leaseKey];
-  if (Array.isArray(details.contracts) && details.contracts.length > 0) {
-    return { leaseKey: auto.leaseKey, leaseDetails: { ...details, contracts: details.contracts.map((s, i) => (auto.groep.includes(i) ? werk(s, i === auto.groep[0]) : s)) } };
+  for (const auto of autos) {
+    const ja = auto.id === gekozenId;
+    if (heeftPrivegebruik(auto, jaar, { leaseDetails, autoActivaDetails }) === ja) continue;
+    if (auto.bron === "eigen") { autoActivaDetails = met(autoActivaDetails || {}, ja, true); eigenGewijzigd = true; continue; }
+    const details = leaseDetails[auto.leaseKey];
+    const nieuw = Array.isArray(details.contracts) && details.contracts.length > 0
+      ? { ...details, contracts: details.contracts.map((s, i) => (auto.groep.includes(i) ? met(s, ja, i === auto.groep[0]) : s)) }
+      : met(details, ja, true);
+    leaseDetails = { ...leaseDetails, [auto.leaseKey]: nieuw };
+    gewijzigdeLeases[auto.leaseKey] = nieuw;
   }
-  return { leaseKey: auto.leaseKey, leaseDetails: werk(details, true) };
+  return { leaseDetails: gewijzigdeLeases, autoActivaDetails: eigenGewijzigd ? autoActivaDetails : null };
 }
