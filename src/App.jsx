@@ -809,12 +809,27 @@ export default function App() {
   // heeft (anders is er toch maar 1 mogelijk antwoord) én er een percentage wordt INgevuld (leeg
   // maken/wissen blijft altijd meteen alleen voor het actieve jaar, geen vraag nodig).
   const [pendingCategoryPercentage, setPendingCategoryPercentage] = useState(null); // { category, percentage, activeYear, years } | null
+  // release19V4 — wachtrij i.p.v. één plek. Tikte je (terwijl de "voor welke jaren?"-vraag openstond of net opkwam)
+  // meteen in een volgend veld, dan verliet het eerste veld focus → tweede vraag verving de eerste, en de
+  // ingevulde % van het voorgaande veld ging verloren. Nu komen de vragen na elkaar, in volgorde.
+  const pendingQueueRef = useRef([]);
+  const pendingHuidigRef = useRef(null);
+  const toonPending = (item) => { pendingHuidigRef.current = item; setPendingCategoryPercentage(item); };
+  const volgendePending = () => toonPending(pendingQueueRef.current.shift() || null);
   const requestSetCategoryZakelijkPercentage = (category, year, percentage) => {
     if (percentage == null || percentage === "" || years.length <= 1) {
       setCategoryZakelijkPercentage(category, year, percentage);
       return;
     }
-    setPendingCategoryPercentage({ category, percentage: Number(percentage), activeYear: year, years });
+    const item = { category, percentage: Number(percentage), activeYear: year, years };
+    if (pendingHuidigRef.current) {
+      // Zelfde categorie + jaar nog niet beantwoord: de nieuwste waarde vervangt de oude in de wachtrij.
+      const q = pendingQueueRef.current.filter((p) => !(p.category === category && p.activeYear === year));
+      q.push(item);
+      pendingQueueRef.current = q;
+    } else {
+      toonPending(item);
+    }
   };
   const applyCategoryPercentageToYears = (yearsToApply) => {
     if (!pendingCategoryPercentage || yearsToApply.length === 0) return;
@@ -827,7 +842,7 @@ export default function App() {
       next[category] = forCategory;
       return next;
     });
-    setPendingCategoryPercentage(null);
+    volgendePending();
   };
 
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
@@ -3509,11 +3524,11 @@ export default function App() {
             pending={pendingCategoryPercentage}
             onApplyActiveYear={() => {
               setCategoryZakelijkPercentage(pendingCategoryPercentage.category, pendingCategoryPercentage.activeYear, pendingCategoryPercentage.percentage);
-              setPendingCategoryPercentage(null);
+              volgendePending();
             }}
             onApplyAllYears={() => applyCategoryPercentageToYears(pendingCategoryPercentage.years)}
             onApplyYears={(selectedYears) => applyCategoryPercentageToYears(selectedYears)}
-            onClose={() => setPendingCategoryPercentage(null)}
+            onClose={() => volgendePending()}
           />
         )}
 
