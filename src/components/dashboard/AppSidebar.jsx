@@ -122,7 +122,7 @@ export default function AppSidebar({
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
       onMouseOver={toonTip} onMouseOut={() => setSbTip(null)} onFocus={toonTip} onBlur={() => setSbTip(null)}
-      className={`${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
+      className={`sb-root ${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
       style={{
         paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
         paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",

@@ -65,3 +65,15 @@ body { font-variant-numeric: tabular-nums; }
 ) {
   background-color: #fff;
 }
+
+/* release18V9 — toegankelijkheid.
+   1) Contrast: de lichtgrijze hulptekst (slate-400, ca. 2,6:1 op wit) is voor veel lezers te vaag; donkerder maken tot
+      ca. 4,6:1 (WCAG AA voor gewone tekst). De donkere zijbalk houdt zijn eigen, lichtere tint. */
+.text-slate-400 { color: #67768c; }
+.sb-root .text-slate-400 { color: #94a3b8; }
+/* 2) Toetsenbord: duidelijke focusrand (alleen zichtbaar bij toetsenbordbediening, niet bij tikken met de vinger). */
+:focus-visible { outline: 2px solid #0f766e; outline-offset: 2px; }
+/* 3) Wie "beweging verminderen" aan heeft staan in iPadOS krijgt geen animaties/overgangen. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
