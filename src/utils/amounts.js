@@ -20,8 +20,14 @@ export function parseEuroNumber(raw) {
   return neg ? -v : v;
 }
 
-export const eur = (n) =>
-  new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(n || 0);
+const EUR_FORMAT = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+// Negatieve bedragen overal als "− € 1.078,73" (echt minteken, zelfde schrijfwijze als de aftrekregels in de
+// aangifte), niet meer als "€ -1.078,73". Bedragen die op nul afronden krijgen geen minteken ("€ 0,00").
+export const eur = (n) => {
+  const v = n || 0;
+  const tekst = EUR_FORMAT.format(Math.abs(v));
+  return v < 0 && Math.round(Math.abs(v) * 100) > 0 ? `\u2212\u00a0${tekst}` : tekst;
+};
 
 // Zelfde als eur(), maar zonder de spatie die Intl.NumberFormat standaard tussen "€" en het
 // getal zet — gebruikt in dichte tabellen zoals het Jaaroverzicht, waar elke centimeter telt.

@@ -574,20 +574,26 @@ export const MAIN_CATEGORY_ORDER = [
 export const sortNl = (arr, by = (x) => x) => [...arr].sort((a, b) => String(by(a)).localeCompare(String(by(b)), "nl", { sensitivity: "base" }));
 export const MAIN_CATEGORY_ALFA = sortNl(MAIN_CATEGORY_ORDER);
 
+// Vier rustige kleurgroepen i.p.v. een eigen kleur per hoofdcategorie (release19V0):
+//   groen = inkomsten, blauw = zakelijke kosten, grijs = privé/intern, oranje = nog te beoordelen,
+//   donker = persoonlijk & vertrouwelijk.
+const KLEUR_INKOMSTEN = "bg-emerald-100 text-emerald-800";
+const KLEUR_KOSTEN = "bg-sky-100 text-sky-900";
+const KLEUR_NEUTRAAL = "bg-slate-100 text-slate-700";
 export const MAIN_CATEGORY_COLOR = {
-  "Zakelijke inkomsten": "bg-emerald-100 text-emerald-800",
-  "Huisvesting": "bg-amber-100 text-amber-800",
-  "Vervoer & auto": "bg-orange-100 text-orange-800",
-  "Inkoop & zakelijke uitgaven": "bg-sky-200 text-sky-900",
-  "Apparatuur & inventaris": "bg-orange-50 text-orange-700",
-  "Personeel": "bg-indigo-200 text-indigo-900",
-  "Telecom & abonnementen": "bg-indigo-100 text-indigo-800",
-  "Financiering": "bg-teal-200 text-teal-900",
-  "Interne overboekingen": "bg-cyan-100 text-cyan-800",
-  "Belastingen & heffingen": "bg-fuchsia-200 text-fuchsia-900",
-  "Privé": "bg-stone-200 text-stone-700",
+  "Zakelijke inkomsten": KLEUR_INKOMSTEN,
+  "Huisvesting": KLEUR_KOSTEN,
+  "Vervoer & auto": KLEUR_KOSTEN,
+  "Inkoop & zakelijke uitgaven": KLEUR_KOSTEN,
+  "Apparatuur & inventaris": KLEUR_KOSTEN,
+  "Personeel": KLEUR_KOSTEN,
+  "Telecom & abonnementen": KLEUR_KOSTEN,
+  "Financiering": KLEUR_KOSTEN,
+  "Interne overboekingen": KLEUR_NEUTRAAL,
+  "Belastingen & heffingen": KLEUR_KOSTEN,
+  "Privé": KLEUR_NEUTRAAL,
   "Persoonlijk & vertrouwelijk": "bg-slate-700 text-slate-100",
-  "Nog te beoordelen": "bg-slate-200 text-slate-700",
+  "Nog te beoordelen": "bg-amber-100 text-amber-800",
 };
 
 // Elk (fijnmazig) subtype hoort bij precies één hoofdcategorie. Structurele subtypes die de app
