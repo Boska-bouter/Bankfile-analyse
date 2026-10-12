@@ -20,7 +20,7 @@ const TONE = {
   risk: { border: "border-red-300", bg: "bg-red-50", dot: "bg-red-500", text: "text-red-700" },
 };
 
-export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp, inGrid }) {
+export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp, inGrid, secondaryAction }) {
   const t = TONE[tone] || TONE.neutral;
   const clickable = !!onClick;
   const Wrapper = clickable ? "button" : "div";
@@ -79,6 +79,13 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
 
         {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
       </Wrapper>
+
+      {/* Tweede, losse knop onder de kaart (staat bewust buiten de <Wrapper>-knop: geen knop in een knop). */}
+      {secondaryAction && (
+        <button type="button" onClick={secondaryAction.onClick} className="rounded-full border border-slate-300 bg-white py-1.5 text-[11.5px] font-bold text-slate-700 hover:bg-slate-50">
+          {secondaryAction.label}
+        </button>
+      )}
 
       {/* v312 (V33) — de uitgeklapte inhoud staat niet meer in de kaart zelf (die de overige kaarten naar
           beneden duwde) maar in SectionCardGrid, onder het hele rooster van kaarten. */}

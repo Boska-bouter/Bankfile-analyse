@@ -12,14 +12,6 @@ import { eur } from "../../utils/amounts.js";
 // Controleren/Instellingen staan, exact zoals het al werkte. Elke sub-tab hier toont een korte,
 // realistische samenvatting (uit dezelfde dashboardCards-data) plus een knop die naar de bijbehorende
 // plek springt (dezelfde jumpToSection-functie als de rest van de app al gebruikt).
-const TABS = [
-  { key: "jaaroverzicht", label: "Jaaroverzicht" },
-  { key: "transacties", label: "Transacties" },
-  { key: "categorieen", label: "Categorieën" },
-  { key: "activa", label: "Activa" },
-  { key: "leningen", label: "Leningen" },
-  { key: "lease", label: "Lease" },
-];
 
 // dashboardCards-objecten dragen een `key`-veld (voor React-lijsten in SectionCardGrid) — dat mag
 // nooit meegespreid worden in JSX (React reserveert `key` en waarschuwt anders), dus hier eruit
@@ -60,9 +52,8 @@ export default function DetailsPanel({
   zakCount,
   priCount,
   onJump, herkenningsregelsCount,
-  years = [], onSelectYear,
+  years = [], onSelectYear, keuzelijsten = null,
 }) {
-  const [tab, setTab] = useState("jaaroverzicht");
   // Veegbeweging (links/rechts) wisselt van jaar. De inhoud schuift tijdens het vegen mee met je vinger; bij
   // loslaten na een duidelijke veeg schuift hij weg en komt het andere jaar rustig van de andere kant binnen,
   // anders veert hij terug. Bewust voorzichtig: een veeg die begint in iets wat zelf zijdelings kan scrollen
@@ -150,12 +141,6 @@ export default function DetailsPanel({
   }, [kanVegen]);
   const aanraking = typeof window !== "undefined" && "ontouchstart" in window;
   const jaarIdx = years.indexOf(year);
-  // De route-balk ("Advies") vraagt om het Jaaroverzicht-tabblad met de indicatieve aangifte.
-  useEffect(() => {
-    const h = () => setTab("jaaroverzicht");
-    window.addEventListener("bankoverzicht-toon-advies", h);
-    return () => window.removeEventListener("bankoverzicht-toon-advies", h);
-  }, []);
   const btwQuarters = cardsByKey.btwQuarters;
   const loans = cardsByKey.loans;
   const leases = cardsByKey.leases;
@@ -179,19 +164,6 @@ export default function DetailsPanel({
             <LinkOut label="Print" onClick={() => onJump("print")} />
           </div>
         </div>
-        <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                tab === t.key ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div style={{ overflowX: "clip" }}>
@@ -203,7 +175,8 @@ export default function DetailsPanel({
           <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
         ) : (
           <>
-        {tab === "jaaroverzicht" && (
+        {keuzelijsten}
+        {(
           rechtsvorm === "bv" ? (
             // v282 — BV kent geen IB/Zvw-indicatie (dat bestaat alleen in de IB), maar wél een
             // eigen indicatieve Vpb-berekening plus (als er een holding is) de holding-boekingen
@@ -244,7 +217,7 @@ export default function DetailsPanel({
           )
         )}
 
-        {tab === "jaaroverzicht" && belastingTotaal && (
+        {belastingTotaal && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
             <div>
               <p className="text-sm font-bold text-slate-900">Totaal te betalen / terug te krijgen {year}</p>
@@ -256,53 +229,6 @@ export default function DetailsPanel({
               {eur(Math.abs(belastingTotaal.totaal))}{" "}
               <span className="text-xs font-semibold text-slate-500">{belastingTotaal.totaal < 0 ? "terug te krijgen" : "te betalen"}</span>
             </p>
-          </div>
-        )}
-
-        {tab === "transacties" && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm text-slate-600">
-                {zakCount} zakelijke en {priCount} privé-transacties in {year}.
-              </p>
-              <LinkOut label="Bekijk detailoverzicht" onClick={() => onJump("details")} />
-            </div>
-            {/* v286 — op verzoek: hoeveel bestanden zakelijk/privé geladen zijn stond nergens, en of
-                ze onderling matchen (overboekingen zakelijk ↔ privé) al helemaal niet op dit
-                tabblad — zelfde kaart/berekening als op Controleren ("Controle zakelijk ↔ privé"). */}
-            <div className="grid md:grid-cols-2 gap-4 items-start">{CardTile(cardsByKey.bestandenOverzicht)}</div>
-          </div>
-        )}
-
-        {tab === "categorieen" && (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-slate-600">Categorieën zakelijk/privé, inclusief BTW per categorie voor {year}.</p>
-            <LinkOut label="Bekijk categorieën" onClick={() => onJump("categorieen")} />
-          </div>
-        )}
-
-        {tab === "activa" && (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-slate-600">Activa en afschrijving worden bij Instellingen bijgehouden.</p>
-            <LinkOut label="Bekijk activa" onClick={() => onJump("activa")} />
-          </div>
-        )}
-
-        {tab === "leningen" && (
-          <div className="grid md:grid-cols-2 gap-4 items-start">
-            {CardTile(loans)}
-            <div className="flex items-center">
-              <LinkOut label="Leningdetails bewerken" onClick={() => onJump("leningen")} />
-            </div>
-          </div>
-        )}
-
-        {tab === "lease" && (
-          <div className="grid md:grid-cols-2 gap-4 items-start">
-            {CardTile(leases)}
-            <div className="flex items-center">
-              <LinkOut label="Leasedetails bewerken" onClick={() => onJump("lease")} />
-            </div>
           </div>
         )}
 

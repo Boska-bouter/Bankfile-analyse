@@ -10,14 +10,17 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
   const contentRef = useRef(null);
   const drag = useRef(null);
   const kanVegen = years.length > 1 && typeof onSelectYear === "function";
-  const zijdelingsScrollbaar = (el) => {
+  // Dichtstbijzijnde element dat zelf zijdelings scrolt (brede tabel), of null. Alleen binnen dit paneel zoeken.
+  const zijdelingsScroller = (el) => {
+    const grens = panelRef.current;
     for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
       if (n.scrollWidth > n.clientWidth + 2) {
         const ox = getComputedStyle(n).overflowX;
-        if (ox === "auto" || ox === "scroll") return true;
+        if (ox === "auto" || ox === "scroll") return n;
       }
+      if (n === grens) break;
     }
-    return false;
+    return null;
   };
   const doelJaar = (dx) => { const i = years.indexOf(year); return i < 0 ? undefined : (dx < 0 ? years[i + 1] : years[i - 1]); };
   const zet = (el, transform, opacity, transition) => { el.style.transition = transition; el.style.transform = transform; el.style.opacity = opacity; };
@@ -26,9 +29,8 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     drag.current = null;
     if (!kanVegen || e.touches.length !== 1) return;
     const t = e.target;
-    if (t.closest && t.closest("input, select, textarea, [contenteditable=true]")) return;
-    if (zijdelingsScrollbaar(t)) return;
-    drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, dx: 0 };
+    if (t.closest && t.closest("input, select, textarea")) return;
+    drag.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, dx: 0, scroller: zijdelingsScroller(t) };
     const el = contentRef.current; if (el) zet(el, "none", "1", "none");
   };
   const onTouchMove = (e) => {
@@ -38,7 +40,13 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     if (d.mode === null) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
       d.mode = Math.abs(dx) > Math.abs(dy) * 1.4 ? "h" : "v";
-      if (d.mode === "h") el.style.willChange = "transform";
+      // Veeg begon op een zijdelings scrollende tabel: die gaat voor zolang hij die kant op nog kan scrollen.
+      // Staat hij al helemaal links (veeg naar rechts) of rechts (veeg naar links), dan wisselt het jaar wel.
+      if (d.mode === "h" && d.scroller) {
+        const sc = d.scroller;
+        const kanNog = dx < 0 ? sc.scrollLeft < sc.scrollWidth - sc.clientWidth - 2 : sc.scrollLeft > 2;
+        if (kanNog) { drag.current = null; terugveren(); return; }
+      }
     }
     if (d.mode !== "h") return;
     if (e.cancelable) e.preventDefault();
@@ -47,7 +55,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
     el.style.transform = `translateX(${dx * (heeftDoel ? 0.8 : 0.2)}px)`;
     el.style.opacity = String(heeftDoel ? Math.max(0.4, 1 - Math.abs(dx) / 450) : 1);
   };
-  const klaar = () => { const el = contentRef.current; if (el) el.style.willChange = ""; };
+  const klaar = () => {};
   const onTouchCancel = () => { drag.current = null; terugveren(); klaar(); };
   const onTouchEnd = () => {
     const d = drag.current; drag.current = null;
@@ -67,6 +75,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
       }));
     }, 130);
   };
+  // Native listeners op het paneel zelf (touchmove niet-passief) — exact dezelfde opzet als in "Details en overzichten".
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return undefined;
@@ -89,7 +98,7 @@ export default function JaarSwipe({ years = [], year, onSelectYear, children, st
   }, [kanVegen]);
   return (
     <div ref={panelRef} style={{ overflowX: "clip", ...style }} data-testid="jaar-swipe">
-      <div ref={contentRef}>{children}</div>
+      <div ref={contentRef} style={{ willChange: "transform" }}>{children}</div>
     </div>
   );
 }
