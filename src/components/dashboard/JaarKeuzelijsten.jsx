@@ -31,7 +31,7 @@ const open = "border-amber-400 bg-amber-50";
 function Rij({ label, children, titel }) {
   return (
     <div className="flex items-center justify-between gap-3 min-h-[30px]" title={titel}>
-      <span className="text-[11.5px] text-slate-500">{label}</span>
+      <span className="text-klein text-slate-500">{label}</span>
       {children}
     </div>
   );
@@ -74,7 +74,7 @@ export default function AannamesKaart({
   const pgWaarde = jaIds.length === 0 ? "" : jaIds.length === 1 ? jaIds[0] : "meerdere";
   const enkel = privegebruikAutos.length === 1;
   return (
-    <div className={`rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2 shadow-sm`} data-testid="jaar-keuzelijsten">
+    <div className={`rounded-paneel border ${t.border} bg-white p-4 flex flex-col gap-2 shadow-sm`} data-testid="jaar-keuzelijsten">
       <div className="flex items-center gap-2 mb-0.5">
         <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>{card?.icon}</div>
         <span className="flex-grow text-[13px] font-bold text-slate-900 truncate">{card?.title || `Persoonlijke aannames ${year}`}</span>
@@ -132,8 +132,8 @@ export default function AannamesKaart({
       ))}
       {card?.subtitle && (
         <div className="flex items-center justify-between gap-2 pt-1 mt-0.5 border-t border-slate-100">
-          <p className={`text-[11.5px] ${card.tone === "attention" ? "text-amber-700" : "text-slate-500"}`}>{card.subtitle}</p>
-          {card.onClick && <button type="button" onClick={card.onClick} className="text-[11.5px] font-bold text-teal-700 hover:underline">Alle aannames →</button>}
+          <p className={`text-klein ${card.tone === "attention" ? "text-amber-700" : "text-slate-500"}`}>{card.subtitle}</p>
+          {card.onClick && <button type="button" onClick={card.onClick} className="text-klein font-bold text-teal-700 hover:underline">Alle aannames →</button>}
         </div>
       )}
     </div>

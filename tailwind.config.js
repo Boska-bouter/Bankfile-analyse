@@ -12,13 +12,13 @@ export default {
         mono: ['"IBM Plex Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       fontSize: {
-        micro: ["11px", { lineHeight: "1.35" }],
-        klein: ["11.5px", { lineHeight: "1.4" }],
-        label: ["12.5px", { lineHeight: "1.4" }],
+        micro: "11px",
+        klein: "11.5px",
+        label: "12.5px",
       },
       borderRadius: {
         kaart: "1rem",
-        paneel: "1.25rem",
+        paneel: "1.25rem", // 20px, de hoek van alle dashboardkaarten
         veld: "0.5rem",
       },
       colors: {
