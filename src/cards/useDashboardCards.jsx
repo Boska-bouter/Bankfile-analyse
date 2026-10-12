@@ -299,7 +299,7 @@ export function useDashboardCards(p) {
                 // expliciet "te betalen" of "te ontvangen" erachter, zodat het nooit dubbelzinnig is.
                 return {
                   label: `Q${kwartaal}`,
-                  value: `${eur(Math.abs(saldo))} ${saldo < 0 ? "te ontvangen" : "te betalen"}`,
+                  value: `${eur(Math.abs(saldo))} ${saldo < 0 ? "te ontvangen" : "te betalen"}${q && (q.btwPrivegebruikAuto || 0) > 0.004 ? ` (incl. ${eur(q.btwPrivegebruikAuto)} privégebruik auto)` : ""}`,
                 };
               }),
               subtitle: quartersOpenCount > 0 ? "nog niet aangegeven/betaald" : "Alle kwartalen bijgewerkt",

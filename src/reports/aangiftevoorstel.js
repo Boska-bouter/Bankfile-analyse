@@ -458,7 +458,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ? `
   <div class="btw-kaart">
     <table class="samenvatting-btw"><thead><tr><th>BTW-saldo per kwartaal</th>${kwartalenVol.map((q) => `<th>Q${q.kwartaal}</th>`).join("")}<th>Totaal jaar</th></tr></thead>
-    <tbody><tr><td>Saldo</td>${kwartalenVol
+    <tbody>${kwartalenVol.some((q) => (q.btwPrivegebruikAuto || 0) > 0.004) ? `<tr><td>Waarvan privégebruik auto (1d)</td>${kwartalenVol.map((q) => `<td class="num">${(q.btwPrivegebruikAuto || 0) > 0.004 ? eur(q.btwPrivegebruikAuto) : ""}</td>`).join("")}<td class="num">${eur(kwartalenVol.reduce((a, q) => a + (q.btwPrivegebruikAuto || 0), 0))}</td></tr>` : ""}<tr><td>Saldo</td>${kwartalenVol
       .map((q) => {
         const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
         return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
@@ -704,6 +704,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <tr><td>1b Omzet 9%</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBruto9 - q.verschuldigdBtw9)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBruto9 - q.verschuldigdBtw9), 0))}</strong></td></tr>
       <tr><td>1e Verlegd</td>${kwartalen.map((q) => `<td class="num">${eur(q.omzetBrutoVerlegd)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.omzetBrutoVerlegd), 0))}</strong></td></tr>
       <tr><td>5b Voorbelasting</td>${kwartalen.map((q) => `<td class="num">${eur(q.voorbelasting)}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.voorbelasting), 0))}</strong></td></tr>
+      ${kwartalen.some((q) => (q.btwPrivegebruikAuto || 0) > 0.004) ? `<tr><td>1d Privégebruik auto</td>${kwartalen.map((q) => `<td class="num">${(q.btwPrivegebruikAuto || 0) > 0.004 ? eur(q.btwPrivegebruikAuto) : ""}</td>`).join("")}<td class="num"><strong>${eur(kwartalen.reduce((a, q) => a + (q.btwPrivegebruikAuto || 0), 0))}</strong></td></tr>` : ""}
       <tr class="total"><td>Saldo</td>${kwartalen
         .map((q) => {
           const saldo = q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0);
