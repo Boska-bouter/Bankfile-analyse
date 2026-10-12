@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { toetsStartersaftrek } from "../../tax/startersaftrekToets.js";
 import { heeftPrivegebruik } from "../../tax/privegebruikAuto500.js";
 
@@ -28,6 +29,22 @@ function PctKies({ label, jaar, gedeelde, waarde, onSet }) {
         {opties.map((p) => <option key={p} value={p}>{p}%</option>)}
       </select>
     </Kies>
+  );
+}
+
+// Invoerveld dat live meerekent en toch de ingetypte tekst laat staan (bijv. "30." of "30,5"); wijzigt de waarde van buiten
+// (bijv. door "Ongedaan maken" of een ander jaar), dan volgt het veld die.
+function parseBedrag(t) {
+  const x = String(t).trim();
+  const v = parseFloat(x.includes(",") ? x.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(x) ? x.replace(/\./g, "") : x);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+function BedragVeld({ waarde, onChange, className }) {
+  const [tekst, setTekst] = useState(waarde ?? "");
+  useEffect(() => { if (parseBedrag(tekst) !== (waarde ?? null)) setTekst(waarde ?? ""); }, [waarde]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <input type="text" inputMode="decimal" placeholder="€ 0" value={tekst} className={className}
+      onChange={(e) => { setTekst(e.target.value); onChange(e.target.value); }} />
   );
 }
 
@@ -96,9 +113,7 @@ export default function JaarKeuzelijsten({
         )}
         {!isBv && (
           <Kies label="Overig inkomen box 1 (€/jaar)" breed="w-44">
-            <input key={`overig-${year}`} type="text" inputMode="decimal" placeholder="€ 0" defaultValue={overigInkomen ?? ""}
-              onBlur={(e) => onSetOverigInkomen(year, e.target.value)}
-              className={selectCls} />
+            <BedragVeld key={`overig-${year}`} waarde={overigInkomen} onChange={(t) => onSetOverigInkomen(year, t)} className={selectCls} />
           </Kies>
         )}
         <PctKies label="Huur" jaar={year} gedeelde={gedeeldeHuur} waarde={huurPct} onSet={onSetHuurPct} />

@@ -761,6 +761,11 @@ export default function App() {
       return next;
     });
   };
+  // Overig inkomen box 1: met "Ongedaan maken"; typen binnen 2 seconden telt als één wijziging.
+  const setOverigInkomenBox1Met = (next) => {
+    snapshotBeforeAction("Overig inkomen box 1 aangepast", { samenvoegen: true });
+    setOverigInkomenBox1State(next);
+  };
   const setHuurZakelijkPercentageStatus = (year, percentage) => {
     snapshotBeforeAction("Percentage zakelijk gebruik huur aangepast");
     setHuurZakelijkPercentageStatusState((prev) => {
@@ -2717,7 +2722,7 @@ export default function App() {
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
     setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
-    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
+    showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State: setOverigInkomenBox1Met, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus,
@@ -3474,7 +3479,7 @@ export default function App() {
                   const t = String(tekst).trim();
                   const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
                   if (Number.isFinite(v) && v > 0) next[jaar] = v; else delete next[jaar];
-                  setOverigInkomenBox1State(next);
+                  setOverigInkomenBox1Met(next);
                 }}
                 gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
                 gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
@@ -3689,7 +3694,7 @@ export default function App() {
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
             overigInkomenBox1={overigInkomenBox1}
-            onSetOverigInkomenBox1={setOverigInkomenBox1State}
+            onSetOverigInkomenBox1={setOverigInkomenBox1Met}
             activaGevraagd={!!bevestigdeControles.activaWizard}
             activaAantalBank={activaSummary.filter((a) => !a.handmatig).length}
             onActivaBeantwoord={(namen) => { setBevestigdeControles((p) => ({ ...p, activaWizard: true })); voegActivaToe(namen); }}
