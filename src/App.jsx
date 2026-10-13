@@ -2962,6 +2962,13 @@ export default function App() {
         { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
       ],
     });
+  // release21V0 — zijn de vragen per jaar al eens beantwoord? De wizard gold voorheen als "al ingericht"
+  // zodra een bestand een rekeningtype had. Wie de wizard zonder bestand doorliep en daarna een bestand
+  // laadde (zakelijk/privé al gekozen), kreeg de jaarvragen (urencriterium, startersaftrek, werkruimte,
+  // overig inkomen, BTW-kwartalen) en eerder overgeslagen vragen dus nooit meer te zien. Beantwoorde
+  // vragen herhaalt de wizard niet (needs = alleen wat nog leeg is).
+  const jaarvragenGesteld = [zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, overigInkomenBox1]
+    .some((m) => Object.keys(m || {}).length > 0);
   const kiesRouteStap = (s) => {
     if (parsedFiles.length === 0) { if (s.key === "import") startBankbestandToevoegen(); return; } // zonder bestanden: Import opent het toevoegen van een bankbestand, de rest wacht
     if (s.advies) {
@@ -3657,7 +3664,7 @@ export default function App() {
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
             <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets te controleren.</p>
+              <p className="text-sm text-slate-400 italic">Voeg een bankbestand toe of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets te controleren.</p>
             </section>
           </div>
         )}
@@ -3715,7 +3722,7 @@ export default function App() {
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
-            alreadyEstablished={Object.keys(accountTypeByFile).length > 0}
+            alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
             korRegeling={korRegeling}
@@ -3837,7 +3844,7 @@ export default function App() {
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
             <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets in te stellen.</p>
+              <p className="text-sm text-slate-400 italic">Voeg een bankbestand toe of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets in te stellen.</p>
             </section>
           </div>
         )}
