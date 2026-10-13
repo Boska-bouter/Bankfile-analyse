@@ -2789,8 +2789,10 @@ export default function App() {
   const groupCards = (membersByKey, memberKeys, extra) => {
     const members = memberKeys.map((k) => membersByKey[k]).filter(Boolean);
     if (members.length === 0) return extra || null;
-    const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
-    const worstTone = members.reduce((acc, m) => (toneRank[m.tone] > toneRank[acc] ? m.tone : acc), "ok");
+    // release22V4 — "niets te controleren" (neutral) telt niet zwaarder dan "in orde" (ok): de kaart wordt
+    // alleen grijs als álle onderdelen grijs zijn; oranje/rood gaan zoals altijd voor.
+    const toneRank = { risk: 3, attention: 2, ok: 1, neutral: 0 };
+    const worstTone = members.reduce((acc, m) => (toneRank[m.tone] > toneRank[acc] ? m.tone : acc), "neutral");
     const primary = members.find((m) => m.tone === "risk") || members.find((m) => m.tone === "attention") || members[0];
     const lines = members.flatMap((m) =>
       m.lines
