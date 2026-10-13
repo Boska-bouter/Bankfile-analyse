@@ -2930,9 +2930,15 @@ export default function App() {
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
     return lijst;
   })();
+  // release21V7 — leeg dossier waarin nog geen enkele basisvraag beantwoord is (bijv. wizard direct
+  // afgebroken na "Nieuw dossier"): geen gele lijst van 9 open punten en geen badge, maar één rustige
+  // regel "Basisvragen nog niet doorlopen". De gele kaart komt pas zodra er een bestand is of iets is ingevuld.
+  const basisvragenNietGestart = parsedFiles.length === 0 &&
+    [eigenNamen, rechtsvorm, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, heeftVoorraad, verwachteAOV, korRegeling].every((v) => v === null);
+  const openBasisvragenTelling = basisvragenNietGestart ? 0 : openBasisvragen.length;
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragen.length,
-    [instellingenDashboardCards, openBasisvragen.length]
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragenTelling,
+    [instellingenDashboardCards, openBasisvragenTelling]
   );
 
   const dossierOpenPoints = controlerenBadge + instellingenBadge;
@@ -3050,7 +3056,7 @@ export default function App() {
       maak("aannames", "Instellingen", ["aannames"], "afgehandeld", "instellingen"),
     ];
     // release21V1 — openstaande basisvragen horen bij stap "Instellingen"; een klik opent de wizard
-    if (openBasisvragen.length > 0) {
+    if (openBasisvragenTelling > 0) {
       const st = lijst[lijst.length - 1];
       st.open += openBasisvragen.length;
       if (!st.geenData) st.sub = `${st.open} open`;
@@ -3577,7 +3583,7 @@ export default function App() {
           <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
           {!activeYear && <p className="px-1 text-sm italic text-slate-500">Voeg links bij "Dossier" een bankbestand toe (of klik op stap 1 "Import"), of laad een eerder opgeslagen dossier.</p>}
           {!(showSetupWizard || manualWizardOpen || openVragenWizard) && (
-            <OpenBasisvragenCard vragen={openBasisvragen} onBeantwoorden={() => setOpenVragenWizard(true)} />
+            <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
           )}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
