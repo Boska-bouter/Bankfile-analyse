@@ -105,7 +105,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
       // zakelijk-percentage >0 hebben (bijv. 30% van Boodschappen blijkt toch zakelijk) — dan
       // telt dat deel hieronder alsnog mee als kostenpost. Zonder ingesteld percentage (verreweg
       // de meeste dossiers/categorieën) is dit exact 0, dus identiek aan de oude "continue" hierboven.
-      const percentage = effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto);
+      const percentage = effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx);
       if (percentage <= 0) continue;
       const factor = percentage / 100;
       const btw = rawBtw(tx, categoryBtwRates, btwVerlegd) * factor;
@@ -125,7 +125,7 @@ export function computeYearlySummary(classified, year, categoryBtwRates, btwVerl
     // maar 70% van Brandstof is zakelijk) — ontbreekt dat, dan is percentage/factor exact 100/1 en
     // verandert er niets aan de berekening hieronder (100% backwards compatible). "omzet" en
     // "financiering" doen bewust niet mee aan dit mechanisme (percentage blijft dan altijd 100).
-    const percentage = behandeling === "kosten" ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto) : 100;
+    const percentage = behandeling === "kosten" ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) : 100;
     const factor = percentage / 100;
     const btwVol = rawBtw(tx, categoryBtwRates, btwVerlegd);
     const btw = btwVol * factor;
@@ -260,7 +260,7 @@ export function computeYearlyOpenOB(classified, categoryBtwRates, btwVerlegd, vo
     // "geen" geldt effectiveZakelijkPercentage (100/0 zonder ingesteld percentage, dus ongewijzigd
     // gedrag zolang niemand een percentage instelt).
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const kwartaal = Math.ceil(Number(m) / 3);

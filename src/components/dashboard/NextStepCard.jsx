@@ -10,6 +10,8 @@ export default function NextStepCard({ stappen, overgeslagen = [], onAlsnogDoen,
   const alle = stappen.map((i) => ({ ...i, soort: i.key === "btwSettings" ? "Instellingen" : "Controleren" }));
   const volgende = volgendeIn ? { ...volgendeIn, soort: alle.find((x) => x.key === volgendeIn.key)?.soort } : alle[0];
   const totaal = (controleCount || 0) + (instellingCount || 0);
+  // release19V8: de lijst met alle open punten is standaard ingeklapt, zodat Overzicht compact blijft.
+  const lijstOpen = true; // release19V10: lijst met open punten weer altijd zichtbaar (ingeklapt gaf een groot wit vlak)
 
   // Alles afgehandeld en niets te hervatten: de route-balk erboven zegt al hetzelfde, dus geen aparte kaart.
   if (alle.length === 0 && !hervat) return null;

@@ -59,11 +59,11 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // leaseSummary/leaseDetails/autoActivaDetails/autoWizardStatus-doorgifte nodig om Brandstof/Parkeren
   // ook hier uit te sluiten van de generieke %-splitsing.
   const heeftLeaseAuto = !!leaseAutoKostenForYear;
-  const factorFor = (category) => {
+  const factorFor = (category, tx = null) => {
     if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
-    return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto) / 100;
+    return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) / 100;
   };
-  const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount * factorFor(tx.category), 0));
+  const sumCat = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + tx.amount * factorFor(tx.category, tx), 0));
   const perCategorieVan = (cats) =>
     cats.map((c) => ({ categorie: c, totaal: sumCat([c]) })).filter((r) => r.totaal > 0);
   const rubriek = (naam, cats, toelichting) => ({
@@ -75,7 +75,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // correctie die elders al gebeurt (summary.winst in yearlySummary.js, en de netto-kolom van het
   // categorieoverzicht in het aangiftevoorstel zelf), nu ook toegepast op de rubrieken hieronder
   // zodat de losse regels van deze winst-en-verliesrekening optellen tot hetzelfde resultaat.
-  const nettoOf = (tx) => (tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd)) * factorFor(tx.category);
+  const nettoOf = (tx) => (tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd)) * factorFor(tx.category, tx);
   const sumCatNetto = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0));
   // 15V5: voor KOSTEN-categorieën met per saldo een teruggave (bijv. een netto creditboeking op Brandstof):
   // geen abs, want de winst telt zo'n teruggave als opbrengst — met abs() telde ze in de rubrieken als kosten.

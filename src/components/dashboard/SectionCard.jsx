@@ -26,7 +26,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
   const Wrapper = clickable ? "button" : "div";
   return (
     <div
-      className={`relative rounded-[20px] border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
+      className={`relative rounded-paneel border ${t.border} bg-white p-4 flex flex-col gap-2.5 shadow-sm transition-colors ${
         clickable ? "hover:border-slate-300" : ""
       } ${expanded ? "ring-2 ring-teal-600/40" : ""}`}
     >
@@ -51,7 +51,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           <div className={`rounded-full ${t.bg} flex items-center justify-center text-sm shrink-0`} style={{ width: 26, height: 26 }}>
             {icon}
           </div>
-          <span className={`flex-grow text-[13px] font-bold text-slate-900 truncate ${helpChapter ? "pr-4" : ""}`}>{title}</span>
+          <span className={`flex-grow text-basis font-bold text-slate-900 truncate ${helpChapter ? "pr-4" : ""}`}>{title}</span>
           {/* v284 — voorheen verborgen zodra een kaart ook `lines` toont (elke kaart met `lines` zette
               tot nu toe geen top-level `value`, dus dit veranderde tot nu toe niets) — "BTW-kwartalen"
               wil nu juist wél een badge (het jaartotaal) tonen NAAST de per-kwartaal regels. */}
@@ -66,8 +66,8 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
           <div className="flex flex-col gap-1.5">
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
-                <span className="text-[11.5px] text-slate-500">{metBegrippen(l.label)}</span>
-                <span className={`text-[13px] font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
+                <span className="text-klein text-slate-500">{metBegrippen(l.label)}</span>
+                <span className={`text-basis font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
               </div>
             ))}
           </div>
@@ -75,14 +75,14 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
         {/* v286 — voorheen alleen getoond als er GEEN `lines` waren; sommige kaarten (Dossierstatus,
             Bestanden geladen) zetten beide en willen de subtitle als extra toelichting ónder de
             regels tonen (bijv. of zakelijk/privé-overboekingen matchen), niet in plaats ervan. */}
-        {subtitle && <p className="text-[11.5px] text-slate-500 leading-snug">{metBolletjes(subtitle)}</p>}
+        {subtitle && <p className="text-klein text-slate-500 leading-snug">{metBolletjes(subtitle)}</p>}
 
-        {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-[11.5px] font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
+        {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-klein font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
       </Wrapper>
 
       {/* Tweede, losse knop onder de kaart (staat bewust buiten de <Wrapper>-knop: geen knop in een knop). */}
       {secondaryAction && (
-        <button type="button" onClick={secondaryAction.onClick} className="rounded-full border border-slate-300 bg-white py-1.5 text-[11.5px] font-bold text-slate-700 hover:bg-slate-50">
+        <button type="button" onClick={secondaryAction.onClick} className="rounded-full border border-slate-300 bg-white py-1.5 text-klein font-bold text-slate-700 hover:bg-slate-50">
           {secondaryAction.label}
         </button>
       )}
@@ -123,8 +123,8 @@ export default function SectionCardGrid({ title, cards, onOpenHelp, swipe }) {
         ))}
       </div>
       {cards.filter((c) => c.expanded && c.expandedContent).map((card) => (
-        <div key={`open-${card.key}`} className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="text-[13px] font-bold text-slate-900 mb-3">{card.title}</h3>
+        <div key={`open-${card.key}`} className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
+          <h3 className="text-basis font-bold text-slate-900 mb-3">{card.title}</h3>
           {swipe ? <JaarSwipe years={swipe.years} year={swipe.year} onSelectYear={swipe.onSelectYear}>{card.expandedContent}</JaarSwipe> : card.expandedContent}
         </div>
       ))}

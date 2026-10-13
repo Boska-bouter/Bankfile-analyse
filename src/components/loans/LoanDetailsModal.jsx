@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 export default function LoanDetailsModal({ loan, details, onSave, onClose, kind = "lening" }) {
   const isLease = kind === "lease";
   const bedragVeld = isLease ? "leasebedrag" : "leningbedrag";
@@ -99,8 +100,8 @@ export default function LoanDetailsModal({ loan, details, onSave, onClose, kind 
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>
+            <button onClick={onClose} className={KNOP_SECUNDAIR}>Annuleren</button>
+            <button onClick={handleSave} className={KNOP_PRIMAIR}>Opslaan</button>
           </div>
         </div>
       </div>

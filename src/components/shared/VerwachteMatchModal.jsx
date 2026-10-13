@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import ExpandableDescription from "./ExpandableDescription.jsx";
 
+import { KNOP_PRIMAIR_KLEIN, KNOP_SECUNDAIR_KLEIN } from "../ui/stijl.js";
 const LABELS = {
   lease: { titel: "Leaseauto gevonden?", werkwoord: "financiële lease" },
   "lease-overig": { titel: "Lease machine/ander middel gevonden?", werkwoord: "financiële lease van een machine of ander bedrijfsmiddel" },
@@ -42,10 +43,10 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
           <p>Nu meteen zo indelen en de gegevens invullen?</p>
         </div>
         <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-end gap-2">
-          <button onClick={onDismiss} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          <button onClick={onDismiss} className={KNOP_SECUNDAIR_KLEIN}>
             Nee, dit is het niet
           </button>
-          <button onClick={onAccept} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
+          <button onClick={onAccept} className={KNOP_PRIMAIR_KLEIN}>
             Ja, indelen
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Download, X } from "lucide-react";
 
+import { KNOP_PRIMAIR_VET } from "../ui/stijl.js";
 // Dossier opslaan: met of zonder wachtwoord. Verschijnt alleen als er nog geen keuze is gemaakt.
 export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
   const [met, setMet] = useState(false);
@@ -41,7 +42,7 @@ export default function OpslaanModal({ onOpslaan, onAnnuleer }) {
         {fout && <p className="text-xs text-rose-600">{fout}</p>}
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={onAnnuleer} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Annuleren</button>
-          <button type="submit" className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-800">Opslaan</button>
+          <button type="submit" className={KNOP_PRIMAIR_VET}>Opslaan</button>
         </div>
       </form>
     </div>

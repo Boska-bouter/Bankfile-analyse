@@ -39,7 +39,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   const [expandedMain, setExpandedMain] = useState(null);
 
   return (
-    <div className="rounded-xl border-2 border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
@@ -78,7 +78,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   <td className="py-1">
                     <span className="inline-flex items-center gap-1">
                       {canExpand && (isOpen ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" /> : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />)}
-                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[9rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[16rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
@@ -89,7 +89,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   subtypesPresent.map((s) => (
                     <tr key={`${c}__${s}`} className="border-b border-slate-50 bg-slate-50/60">
                       <td className="py-1 pl-6">
-                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[8rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
+                        <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[16rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
                       <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
                       <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
@@ -168,6 +168,7 @@ export function DetailTable({
   const [filterFallback, setFilterFallback] = useState(false); // 🔴 Onduidelijk
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [toonAantal, setToonAantal] = useState(50); // release19V7: eerst 50 rijen (elke rij heeft meerdere dropdowns — alles tegelijk renderen maakt het aanraken traag)
   const [expandedCell, setExpandedCell] = useState(null); // `${txId}:cp` of `${txId}:desc`
   // v203: eigen toelichting bij een transactie (bijv. "naheffing Q2 2025 LB"), voor als de
   // bank-omschrijving zelf niet duidelijk is. Eén rij tegelijk in bewerkstand.
@@ -249,7 +250,7 @@ export function DetailTable({
   const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
-    <div className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <div className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center gap-3 mb-2">
           <div className="flex items-center gap-2 shrink-0">
@@ -378,6 +379,7 @@ export function DetailTable({
             {filteredItems
               .slice()
               .sort((a, b) => b.date - a.date)
+              .slice(0, toonAantal)
               .map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
@@ -535,6 +537,17 @@ export function DetailTable({
             {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+              </tr>
+            )}
+            {filteredItems.length > toonAantal && (
+              <tr>
+                <td colSpan={7} className="px-4 py-3 text-center">
+                  <span className="inline-flex flex-wrap items-center justify-center gap-2">
+                    <span className="text-xs text-slate-500">{toonAantal} van {filteredItems.length} getoond</span>
+                    <button type="button" onClick={() => setToonAantal((n) => n + 100)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Toon 100 meer</button>
+                    <button type="button" onClick={() => setToonAantal(filteredItems.length)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Toon alles</button>
+                  </span>
+                </td>
               </tr>
             )}
           </tbody>

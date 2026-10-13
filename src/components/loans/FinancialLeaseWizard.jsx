@@ -9,6 +9,7 @@ import {
 import { eur } from "../../utils/amounts.js";
 import { formFromSegment, blankVervolgContract, cleanSegment, jarenVoorPrivegebruikVan, PrivegebruikJaren, restantAfschrijving, restantTekst } from "./FinancialLeaseDetailsModal.jsx";
 
+import { KNOP_PRIMAIR_GROOT } from "../ui/stijl.js";
 // Stappenscherm voor het invullen van een financiële lease. Gebruikt exact hetzelfde opslagformaat
 // (en dezelfde berekeningen) als het volledige gegevensscherm (FinancialLeaseDetailsModal) — het is een
 // andere, begeleide manier om dezelfde velden in te vullen: Contract → Aankoop → Leasevoorwaarden →
@@ -393,10 +394,10 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             {pos < stappen.length - 1 ? (
               <>
                 <button onClick={klaar} className="text-xs text-slate-500 hover:text-slate-700 underline decoration-dotted">Opslaan en sluiten</button>
-                <button onClick={() => setStap(stappen[pos + 1])} className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800">Volgende <ChevronRight className="h-3.5 w-3.5" /></button>
+                <button onClick={() => setStap(stappen[pos + 1])} className={KNOP_PRIMAIR_GROOT}>Volgende <ChevronRight className="h-3.5 w-3.5" /></button>
               </>
             ) : (
-              <button onClick={afronden} className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"><Check className="h-3.5 w-3.5" /> Opslaan en afronden</button>
+              <button onClick={afronden} className={KNOP_PRIMAIR_GROOT}><Check className="h-3.5 w-3.5" /> Opslaan en afronden</button>
             )}
           </div>
         </div>

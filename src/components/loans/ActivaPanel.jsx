@@ -5,6 +5,7 @@ import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
+import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 function isCompleteActivaDetails(details) {
   return !!(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
 }
@@ -21,7 +22,7 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
   }).length;
 
   return (
-    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Activa (bedrijfsmiddelen) — afschrijving</span>
         <span className="text-xs font-normal text-slate-400">({activaSummary.length})</span>
@@ -54,12 +55,12 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
                     <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}{activum.handmatig && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 align-middle">handmatig</span>}</span>
                     {!(activum.handmatig && !activum.tx.amount) && <span className="text-xs text-slate-400 font-mono">{eur(Math.abs(activum.tx.amount))}, {activum.tx.date.toLocaleDateString("nl-NL")}</span>}
                     {isOnbekend ? (
-                      <button onClick={() => onUnmarkUnknown(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                      <button onClick={() => onUnmarkUnknown(activum.key)} className={KNOP_SECUNDAIR_XS}>
                         Toch invullen
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => onOpenModal(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onOpenModal(activum.key)} className={KNOP_SECUNDAIR_XS}>
                           {compleet ? "Gegevens bewerken" : "Gegevens invullen"}
                         </button>
                         {activum.handmatig && onRemove && (

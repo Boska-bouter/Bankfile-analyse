@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
@@ -7,7 +7,6 @@ import KwartaalUitgavenModal from "./KwartaalUitgavenModal.jsx";
 export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaalStatusField, activeYear, costBreakdownByQuarter, onOpenHelp, obIbSectionRef }) {
   // v273 — dit paneel toont nu alleen nog in de BTW-per-kwartaal-pop-up, dus standaard uitgeklapt
   // i.p.v. dichtgeklapt (zelfde reden als MultiYearOverview.jsx).
-  const [open, setOpen] = useState(true);
   const [breakdownModal, setBreakdownModal] = useState(null); // { key: "2023-Q2", veld: "netto" | "btw" }
   const openCount = quarters.filter((q) => {
     const s = kwartaalStatus[`${q.year}-Q${q.kwartaal}`] || {};
@@ -19,30 +18,14 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
   if (quarters.length === 0) return null;
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
-      {/* Een <div role="button"> in plaats van een <button> voor de hele balk, omdat de
-          "Waar vind ik dit op het aangifteformulier?"-link daarbinnen zelf ook een button is —
-          een button-in-button is ongeldige HTML en laat een klik op de link per ongeluk ook de
-          balk in-/uitklappen. */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((v) => !v); } }}
-        ref={obIbSectionRef}
-        className="w-full flex items-center gap-2 p-5 text-sm font-semibold cursor-pointer"
-      >
-        <span>BTW-aangifte per kwartaal (OB) {activeYear}</span>
-        {openCount > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {openCount}
-          </span>
-        )}
-        <span className="flex-1" />
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </div>
-      {open && (
-        <div className="px-5 pb-5">
+    <section ref={obIbSectionRef}>
+      {/* Staat alleen nog in de BTW-per-kwartaal-pop-up, dus geen in-/uitklapbare kop meer (release19V3). */}
+      {openCount > 0 && (
+        <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-xs font-semibold">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {openCount} {openCount === 1 ? "kwartaal" : "kwartalen"} nog niet aangegeven/betaald
+        </p>
+      )}
+      <div>
           <p className="text-xs text-slate-500 mb-3">
             De omzet- en kostenbedragen staan hier <strong>netto</strong> (excl. BTW), met het bruto bankbedrag er klein
             tussen haakjes onder.{" "}
@@ -59,17 +42,17 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
                 <th className="text-left font-medium py-2 pr-4">Kwartaal</th>
-                <th className="text-right font-medium py-2 px-3">Omzet 21%</th>
-                <th className="text-right font-medium py-2 px-3">BTW 21% (1a)</th>
-                <th className="text-right font-medium py-2 px-3">Omzet 9%</th>
-                <th className="text-right font-medium py-2 px-3">BTW 9% (1b)</th>
-                <th className="text-right font-medium py-2 px-3">Omzet verlegd (1e)</th>
-                <th className="text-right font-medium py-2 px-3">Omzet 0%/vrijgesteld</th>
-                <th className="text-right font-medium py-2 px-3">Uitgaven (netto)</th>
-                <th className="text-right font-medium py-2 px-3">Voorbelasting (5b)</th>
-                {heeftPriveAuto && <th className="text-right font-medium py-2 px-3">Privégebruik auto (1d)</th>}
+                <th className="text-right font-medium py-2 px-2">Omzet 21%</th>
+                <th className="text-right font-medium py-2 px-2">BTW 21% (1a)</th>
+                <th className="text-right font-medium py-2 px-2">Omzet 9%</th>
+                <th className="text-right font-medium py-2 px-2">BTW 9% (1b)</th>
+                <th className="text-right font-medium py-2 px-2">Omzet verlegd (1e)</th>
+                <th className="text-right font-medium py-2 px-2">Omzet 0%/vrijgesteld</th>
+                <th className="text-right font-medium py-2 px-2">Uitgaven (netto)</th>
+                <th className="text-right font-medium py-2 px-2">Voorbelasting (5b)</th>
+                {heeftPriveAuto && <th className="text-right font-medium py-2 px-2">Privégebruik auto (1d)</th>}
                 <th className="text-right font-medium py-2 pl-3">Saldo</th>
-                <th className="text-left font-medium py-2 pl-4">Status</th>
+                <th className="text-left font-medium py-2 pl-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -80,19 +63,19 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                 return (
                   <tr key={statusKey}>
                     <td className="py-2 pr-4 font-medium whitespace-nowrap">{q.year} — Q{q.kwartaal}</td>
-                    <td className="py-2 px-3 text-right font-mono">
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap">
                       {eur(q.omzetBruto21 - q.verschuldigdBtw21)}
                       <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto21)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw21)}</td>
-                    <td className="py-2 px-3 text-right font-mono">
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap">{eur(q.verschuldigdBtw21)}</td>
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap">
                       {eur(q.omzetBruto9 - q.verschuldigdBtw9)}
                       <div className="text-xs text-slate-400 font-normal">({eur(q.omzetBruto9)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">{eur(q.verschuldigdBtw9)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">{eur(q.omzetBruto0)}</td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap">{eur(q.verschuldigdBtw9)}</td>
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap text-amber-700">{eur(q.omzetBrutoVerlegd)}</td>
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap text-slate-500">{eur(q.omzetBruto0)}</td>
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap text-slate-500">
                       <button
                         onClick={() => setBreakdownModal({ key: statusKey, veld: "netto" })}
                         className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
@@ -102,7 +85,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                       </button>
                       <div className="text-xs text-slate-400 font-normal">({eur(q.kostenBruto)} bruto)</div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-500">
+                    <td className="py-2 px-2 text-right font-mono whitespace-nowrap text-slate-500">
                       <button
                         onClick={() => setBreakdownModal({ key: statusKey, veld: "btw" })}
                         className="underline decoration-dotted hover:decoration-solid hover:text-slate-700"
@@ -117,19 +100,19 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
                       )}
                     </td>
                     {heeftPriveAuto && (
-                      <td className="py-2 px-3 text-right font-mono text-amber-800">
+                      <td className="py-2 px-2 text-right font-mono whitespace-nowrap text-amber-800">
                         {q.btwPrivegebruikAuto > 0.004 ? `+ ${eur(q.btwPrivegebruikAuto)}` : ""}
                       </td>
                     )}
-                    <td className={`py-2 pl-3 text-right font-mono font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
+                    <td className={`py-2 pl-3 text-right font-mono whitespace-nowrap font-semibold ${saldo >= 0 ? "text-slate-900" : "text-emerald-700"}`}>
                       {eur(Math.abs(saldo))} {saldo >= 0 ? "te betalen" : "terug"}
                     </td>
-                    <td className="py-2 pl-4 whitespace-nowrap">
-                      <label className="inline-flex items-center gap-1 text-xs text-slate-500 mr-3">
+                    <td className="py-2 pl-3 whitespace-nowrap">
+                      <label className="flex items-center gap-1 text-xs text-slate-500">
                         <input type="checkbox" checked={!!status.aangegeven} onChange={(e) => setKwartaalStatusField(statusKey, "aangegeven", e.target.checked)} />
                         Aangegeven
                       </label>
-                      <label className="inline-flex items-center gap-1 text-xs text-slate-500">
+                      <label className="flex items-center gap-1 text-xs text-slate-500">
                         <input type="checkbox" checked={!!status.betaald} onChange={(e) => setKwartaalStatusField(statusKey, "betaald", e.target.checked)} />
                         Betaald
                       </label>
@@ -158,8 +141,7 @@ export default function QuarterlyBtwPanel({ quarters, kwartaalStatus, setKwartaa
               </div>
             ));
           })()}
-        </div>
-      )}
+      </div>
       {breakdownModal && (
         <KwartaalUitgavenModal
           titel={`${breakdownModal.veld === "btw" ? "Voorbelasting" : "Uitgaven (netto)"} — ${breakdownModal.key.replace("-Q", " — Q")}`}

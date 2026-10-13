@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PRIMAIR_KLEIN } from "../ui/stijl.js";
 // v237 — Toont de originele regels van één "mogelijk dubbele transactie"-groep naast elkaar, zodat de
 // gebruiker zelf kan beoordelen of het écht om dezelfde boeking gaat (bijv. omdat een bankexport twee
 // keer overlapt) of toevallig om twee losse, identieke betalingen. Elke rij is één ingelezen regel
@@ -103,7 +104,7 @@ export default function DuplicateGroupDetailModal({ group, onClose, removed, onR
                   Verwijderen (bewaar de eerste regel)
                 </button>
               ))}
-            <button onClick={onClose} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">
+            <button onClick={onClose} className={KNOP_PRIMAIR_KLEIN}>
               Sluiten
             </button>
           </div>

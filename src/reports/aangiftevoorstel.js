@@ -8,6 +8,7 @@ import {
   resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { werkruimteBlokHtml } from "./werkruimteBlok.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { classifyContinuityGap } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
@@ -181,7 +182,7 @@ function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftr
   };
 }
 
-function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus) {
+function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekVoorJaar, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, werkruimteStatus = null) {
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
@@ -478,27 +479,28 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const btwJaarSaldo = korRegeling ? 0 : kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
   const totaalTekst = (t) => `${eur(Math.abs(t))} ${t < 0 ? "te ontvangen" : "te betalen"}`;
   const ibNa = (ibE, hk) => Math.max(0, (ibE.belasting || 0) - (hk.totaal || 0));
+  const btwRegelHtml = korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo ${year} (per kwartaal aangegeven, niet in het jaartotaal)</span><span>${eur(Math.abs(btwJaarSaldo))} ${btwJaarSaldo < 0 ? "terug te ontvangen" : "te betalen"}</span></div>`;
   let jaarTotaalHtml;
   if (zaScenarios) {
     const rij = (label, sc) => {
       const i = ibNa(sc.ib, sc.heffingskortingen);
-      const t = i + sc.zvw.bijdrage + btwJaarSaldo;
-      return `<tr><td>${label}</td><td class="num">${eur(i)}</td><td class="num">${eur(sc.zvw.bijdrage)}</td><td class="num">${korRegeling ? "—" : (btwJaarSaldo < 0 ? "- " : "") + eur(Math.abs(btwJaarSaldo))}</td><td class="num"><strong>${totaalTekst(t)}</strong></td></tr>`;
+      const t = i + sc.zvw.bijdrage;
+      return `<tr><td>${label}</td><td class="num">${eur(i)}</td><td class="num">${eur(sc.zvw.bijdrage)}</td><td class="num"><strong>${totaalTekst(t)}</strong></td></tr>`;
     };
-    jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>BTW-saldo</th><th>Totaal</th></tr></thead><tbody>
+    jaarTotaalHtml = `<div class="totaal-kaart"><table class="samenvatting-scenarios"><thead><tr><th>Totaal ${year} (urencriterium onbekend)</th><th>IB na heffingskorting</th><th>Zvw</th><th>Totaal (jaarlijks)</th></tr></thead><tbody>
       ${rij("Mét zelfstandigenaftrek", zaScenarios.metZelfstandigenaftrek)}
       ${rij("Zonder zelfstandigenaftrek", zaScenarios.zonderZelfstandigenaftrek)}
-    </tbody></table><p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
+    </tbody></table>${btwRegelHtml}<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
     JAAR_TOTALEN.push({ year, onbekend: true });
   } else {
     const i = ibNa(ibEstimate, heffingskortingen);
-    const t = i + zvwEstimate.bijdrage + btwJaarSaldo;
+    const t = i + zvwEstimate.bijdrage;
     JAAR_TOTALEN.push({ year, totaal: t });
     jaarTotaalHtml = `<div class="totaal-kaart">
       <div class="totaal-regel"><span>Indicatieve IB na heffingskorting</span><span>${eur(i)}</span></div>
       <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
-      ${korRegeling ? "" : `<div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>`}
-      <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${totaalTekst(t)}</span></div>
+      <div class="totaal-regel totaal-eind"><span>Totaal ${year} (jaarlijks: IB + Zvw)</span><span>${totaalTekst(t)}</span></div>
+      ${btwRegelHtml}
       <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
     </div>`;
   }
@@ -645,7 +647,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
   // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
-  const gedeeldeHuisvestingHtml = "";
+  const gedeeldeHuisvestingHtml = werkruimteBlokHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus);
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
@@ -758,7 +760,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${algemeneGegevensHtml}`;
 }
 
-export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok = "") {
+export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok = "", werkruimteStatus = null) {
   // Pre-pass: winst per jaar bepalen (los van de rest van de sectie-opbouw hieronder) zodat de
   // verrekening van niet-gerealiseerde zelfstandigenaftrek chronologisch over de jaren in DIT
   // rapport kan worden doorgerekend, vóórdat de jaarsecties zelf worden gebouwd. Jaren die
@@ -789,13 +791,13 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 
   JAAR_TOTALEN = [];
   const sections = yearsToInclude
-    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus))
+    .map((year) => buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, ondernemersaftrekPerJaar[year], startersaftrekStatus, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, werkruimteStatus))
     .join(PAGE_BREAK_DIVIDER);
   const bepaald = JAAR_TOTALEN.filter((j) => !j.onbekend);
   const onbekendeJaren = JAAR_TOTALEN.filter((j) => j.onbekend).map((j) => j.year);
   const grandTotaal = bepaald.reduce((a, j) => a + j.totaal, 0);
   const totaalAlleJarenHtml = yearsToInclude.length > 1 && bepaald.length > 0
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren, jaarlijks: IB + Zvw (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -1033,15 +1035,15 @@ function buildBijlageToelichtingenHtml() {
     restschuld/overwaarde bij verkoop) tot gevolg.
   </p>
 
-  <h2>Huur (deels zakelijk) — percentage zakelijk gebruik</h2>
+  <h2>Huur, energie en gemeentelijke lasten — werkruimte</h2>
   <p class="toelichting">
-    Van deze huur is maar een deel zakelijk (bijv. een deels verhuurd/gebruikt pand of schuur) — het
-    privédeel mag de winst niet verlagen, en is bij een belaste huur ook niet aftrekbaar als
-    voorbelasting. Het volledige brutobedrag stroomt via de gewone categorie-indeling mee in
-    "Inkoopkosten"/"Overige bedrijfskosten" in de jaarsectie (net als "Huur") — het niet-aftrekbare
-    deel wordt daar apart weer bij de winst opgeteld, zodat "Resultaat uit onderneming" al de juiste,
-    gecorrigeerde winst toont.
-  </p>
+    Wordt de huur, energie of gemeentelijke lasten (deels) vanaf de privérekening betaald, dan hangt de
+    behandeling af van waarvoor het is: (1) een zakelijk gehuurde bedrijfsruimte — gewone zakelijke
+    huisvestingskosten voor het zakelijke deel; (2) een zelfstandige werkruimte in de eigen woning — de
+    kosten zijn voor het zakelijke deel bedrijfskosten van de werkruimte (geen aparte aftrekpost naast de
+    zelfstandigenaftrek); (3) een kamer of hoek in de eigen woning die niet zelfstandig is — huur, energie en
+    gemeentelijke lasten zijn niet aftrekbaar. Per jaar staat bij de berekening welke keuze is gemaakt.
+    Controleer de voorwaarden voor een zelfstandige werkruimte zelf; dit is een indicatie, geen advies.</p>
 
   <h2>Zelfstandigenaftrek, startersaftrek en de 9-jaars-reserve</h2>
   <p class="toelichting">

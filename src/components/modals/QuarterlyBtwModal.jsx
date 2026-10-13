@@ -9,7 +9,7 @@ export default function QuarterlyBtwModal({
   quarterlyBtwData, kwartaalStatus, setKwartaalStatusField, costBreakdownByQuarter, onOpenHelp, obIbSectionRef,
 }) {
   return (
-    <ModalShell title={`BTW-aangifte per kwartaal ${activeYear}`} onClose={onClose} swipe={{ years, year: activeYear, onSelectYear }}>
+    <ModalShell title={`BTW-aangifte per kwartaal ${activeYear}`} onClose={onClose} maxWidth="max-w-7xl" swipe={{ years, year: activeYear, onSelectYear }}>
       {!korRegeling ? (
         <>
           <PeriodeSignaal items={periodeSignalenActiefJaar} onConfirm={confirmPeriodeAsIs} onMove={movePeriodeToQuarter} />

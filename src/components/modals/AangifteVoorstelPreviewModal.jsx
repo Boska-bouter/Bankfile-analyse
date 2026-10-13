@@ -1,5 +1,6 @@
 import { Download, Printer } from "lucide-react";
 
+import { KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Voorbeeldvenster van het gegenereerde aangiftevoorstel (iframe) met Downloaden/Printen/Sluiten.
 export default function AangifteVoorstelPreviewModal({ html, years, onDownload, onPrint, onClose, titel, uitleg, setUitleg }) {
   return (
@@ -23,7 +24,7 @@ export default function AangifteVoorstelPreviewModal({ html, years, onDownload, 
           >
             <Printer className="h-4 w-4" /> Printen
           </button>
-          <button onClick={() => onClose()} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          <button onClick={() => onClose()} className={KNOP_SECUNDAIR}>
             Sluiten
           </button>
         </div>

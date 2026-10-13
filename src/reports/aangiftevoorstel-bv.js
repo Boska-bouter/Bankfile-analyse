@@ -18,6 +18,7 @@ import { computeMogelijkeKia } from "../tax/incomeTax.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
+import { werkruimteBlokHtml } from "./werkruimteBlok.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 
@@ -345,15 +346,15 @@ function buildYearSectionBv(
   </div>`
       : "";
 
-  // V20 — slotregel: totaal te betalen / te ontvangen = geschatte Vpb + BTW-saldo (4 kwartalen).
+  // V20 — slotregel: jaartotaal = geschatte Vpb; BTW-saldo (4 kwartalen) staat apart.
   // Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
   const btwJaarSaldo = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
-  const jaarTotaal = (vpbEstimate.belasting || 0) + btwJaarSaldo;
+  const jaarTotaal = (vpbEstimate.belasting || 0);
   JAAR_TOTALEN_BV.push({ year, totaal: jaarTotaal });
   const jaarTotaalHtml = `<div class="totaal-kaart">
     <div class="totaal-regel"><span>Geschatte Vpb</span><span>${eur(vpbEstimate.belasting || 0)}</span></div>
-    <div class="totaal-regel"><span>BTW-saldo jaar</span><span>${btwJaarSaldo < 0 ? "- " : ""}${eur(Math.abs(btwJaarSaldo))}</span></div>
-    <div class="totaal-regel totaal-eind"><span>Totaal ${year}</span><span>${eur(Math.abs(jaarTotaal))} ${jaarTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>
+    <div class="totaal-regel totaal-eind"><span>Totaal ${year} (jaarlijks: Vpb)</span><span>${eur(Math.abs(jaarTotaal))} ${jaarTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>
+    <div class="totaal-regel"><span>BTW-saldo ${year} (per kwartaal aangegeven, niet in het jaartotaal)</span><span>${eur(Math.abs(btwJaarSaldo))} ${btwJaarSaldo < 0 ? "terug te ontvangen" : "te betalen"}</span></div>
     <p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
   </div>`;
 
@@ -362,6 +363,7 @@ function buildYearSectionBv(
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
+  ${werkruimteBlokHtml(year, classified, opties.categoryZakelijkPercentage, opties.werkruimteStatus)}
   ${jaarTotaalHtml}
   <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
     <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>
@@ -655,7 +657,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     .join('\n  <div style="page-break-before: always;"></div>\n');
   const grandTotaalBv = JAAR_TOTALEN_BV.reduce((a, j) => a + j.totaal, 0);
   const totaalAlleJarenHtml = JAAR_TOTALEN_BV.length > 1
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren (${JAAR_TOTALEN_BV.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaalBv))} ${grandTotaalBv < 0 ? "te ontvangen" : "te betalen"}</span></div><p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`
+    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren, jaarlijks: Vpb (${JAAR_TOTALEN_BV.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaalBv))} ${grandTotaalBv < 0 ? "te ontvangen" : "te betalen"}</span></div><p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`
     : "";
 
   return `<!DOCTYPE html>

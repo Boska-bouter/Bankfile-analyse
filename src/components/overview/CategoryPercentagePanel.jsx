@@ -4,6 +4,7 @@ import { defaultZakelijkPercentage } from "../../tax/categorySplit.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
+import { WERKRUIMTE_CATEGORIEEN, WERKRUIMTE_LABELS, WERKRUIMTE_NIET_AFTREKBAAR } from "../../tax/werkruimte.js";
 
 // Eén categorie-rij met een eigen "concept"-waarde (draft) — de wijziging wordt bewust pas
 // doorgegeven bij het verlaten van het veld (blur) of op Enter, niet bij elke toetsaanslag. Zou dat
@@ -11,11 +12,18 @@ import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 // wijziging (en bij meerdere jaren dus ook de "voor welke jaren?"-vraag, zie App.jsx) in gang
 // zetten — met een halve, nog niet afgemaakte waarde, en het veld verdwijnt dan meteen achter die
 // vraag voordat de rest is ingetypt.
-function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) {
+function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, uitgeschakeld = false, betaling = null }) {
   const [draft, setDraft] = useState(raw ?? "");
   // Als de opgeslagen waarde van buitenaf verandert (bijv. na het beantwoorden van de "voor welke
   // jaren?"-vraag, of bij het wisselen van jaar), moet het veld dat overnemen.
   useEffect(() => setDraft(raw ?? ""), [raw]);
+  // release19V9: sluit je de "voor welke jaren?"-vraag met X, dan is er niets toegepast — het getypte
+  // percentage hoort dan terug te springen naar de opgeslagen waarde (App.jsx stuurt dit signaal).
+  useEffect(() => {
+    const onReset = (e) => { if (e.detail?.category === categorie) setDraft(raw ?? ""); };
+    window.addEventListener("percentage-concept-terugzetten", onReset);
+    return () => window.removeEventListener("percentage-concept-terugzetten", onReset);
+  }, [categorie, raw]);
 
   const commit = () => {
     if (draft === "" || draft == null) {
@@ -31,6 +39,12 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
     <div className="flex items-center gap-3 text-sm rounded-lg border border-slate-100 p-2.5">
       <span className="flex-1 min-w-[10rem] font-medium">
         <span className="block truncate">{categorie}</span>
+        {betaling && (
+          <span className="block text-xs font-normal text-slate-500">
+            Zakelijke rekening: {betaling.aantalZakelijk > 0 ? `${eur(betaling.zakelijk)} (${betaling.aantalZakelijk}×)` : "—"} · Privérekening: {betaling.aantalPrive > 0 ? `${eur(betaling.prive)} (${betaling.aantalPrive}×)` : "—"}
+            {betaling.beide && <span className="ml-1 font-medium text-amber-700">⚠ beide rekeningen{betaling.gelijk ? ", gelijke bedragen" : ", verschillende bedragen"}</span>}
+          </span>
+        )}
         {categorie === "Privé - overige kosten" && (
           <span className="block text-xs font-normal text-slate-500">Uitgaven vanaf je privérekening die op zakelijke kosten lijken — mogelijk (deels) zakelijk, controleer ze.</span>
         )}
@@ -41,7 +55,9 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
         min={0}
         max={100}
         step={1}
-        value={draft}
+        value={uitgeschakeld ? 0 : draft}
+        disabled={uitgeschakeld}
+        title={uitgeschakeld ? "Niet aftrekbaar: werkruimte in de eigen woning is niet zelfstandig" : undefined}
         placeholder={String(standaard)}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -55,6 +71,52 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
   );
 }
 
+// release20V6 — één rekening (zakelijk of privé) van een huisvestingscategorie: eigen bedrag, eigen percentage.
+function RekeningVeld({ label, bedrag, aantal, raw, soort, standaard, onCommit }) {
+  const uit = WERKRUIMTE_NIET_AFTREKBAAR.includes(soort);
+  const [draft, setDraft] = useState(raw ?? "");
+  useEffect(() => setDraft(raw ?? ""), [raw]);
+  const commit = () => {
+    if (draft === "" || draft == null) { if (raw != null) onCommit(null); return; }
+    const n = Math.max(0, Math.min(100, Number(draft)));
+    if (n !== raw) onCommit(n); else setDraft(n);
+  };
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <span className="flex-1 min-w-[10rem] text-xs text-slate-600">{label}: <span className="font-mono">{eur(bedrag)}</span> ({aantal}×)</span>
+      <input
+        type="number" min={0} max={100} step={1}
+        value={uit ? 0 : draft}
+        disabled={uit}
+        title={uit ? "Niet aftrekbaar bij de gekozen soort" : undefined}
+        placeholder={String(standaard)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        className="w-20 rounded-veld border border-slate-300 px-2 py-1 text-sm"
+      />
+      <span className="text-xs text-slate-400">% zakelijk</span>
+    </div>
+  );
+}
+
+function WerkruimteCategorieRij({ categorie, betaling, rawPlain, rawZakelijk, rawPrive, werkruimte, standaard, onCommit }) {
+  return (
+    <div className="rounded-veld border border-slate-100 p-2.5 text-sm space-y-2">
+      <div className="font-medium">
+        {categorie}
+        {betaling.beide && <span className="ml-2 text-xs font-medium text-amber-700">⚠ beide rekeningen{betaling.gelijk ? ", gelijke bedragen" : ", verschillende bedragen"}</span>}
+      </div>
+      {betaling.aantalZakelijk > 0 && (
+        <RekeningVeld label="Zakelijke rekening" bedrag={betaling.zakelijk} aantal={betaling.aantalZakelijk} raw={rawZakelijk ?? rawPlain} soort={werkruimte?.zakelijk} standaard={standaard} onCommit={(p) => onCommit("zakelijk", p)} />
+      )}
+      {betaling.aantalPrive > 0 && (
+        <RekeningVeld label="Privérekening" bedrag={betaling.prive} aantal={betaling.aantalPrive} raw={rawPrive ?? rawPlain} soort={werkruimte?.prive} standaard={standaard} onCommit={(p) => onCommit("prive", p)} />
+      )}
+    </div>
+  );
+}
+
 // Generieke %-splitsing zakelijk/privé per bestaande categorie (zie tax/categorySplit.js) — in
 // tegenstelling tot "Huur (deels zakelijk)" (zie PersoonlijkeAannamesPanel.jsx) hoeft hiervoor geen
 // aparte categorie te bestaan: transacties blijven gewoon in hun eigen categorie staan (en tx.type
@@ -64,7 +126,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit }) 
 // lang wordt met categorieën die toch niet relevant zijn. Alfabetisch gesorteerd, niet op bedrag —
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
-  defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen,
+  defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen, werkruimte = { zakelijk: null, prive: null }, onSetWerkruimte, werkruimteBetaling = {}, onSetRekeningPercentage,
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
@@ -75,10 +137,14 @@ export default function CategoryPercentagePanel({
   const gedeeldeZichtbaar = (gedeeldeRijen || []).filter((r) => r.gedeelde);
   if (!activeYear || (categorieen.length === 0 && !autoOpDeZaakDitJaar && gedeeldeZichtbaar.length === 0)) return null;
 
+  const heeftHuisvesting = categorieen.some((c) => WERKRUIMTE_CATEGORIEEN.includes(c)) || gedeeldeZichtbaar.length > 0;
+  const rekeningTotaal = (rek) => Object.values(werkruimteBetaling).reduce((a, r) => ({ som: a.som + (rek === "zakelijk" ? r.zakelijk : r.prive), n: a.n + (rek === "zakelijk" ? r.aantalZakelijk : r.aantalPrive) }), { som: 0, n: 0 });
+  const rekeningen = ["zakelijk", "prive"].filter((rek) => rekeningTotaal(rek).n > 0);
+  const toonWerkruimte = rekeningen.length > 0 && !!onSetWerkruimte;
   const aangepast = gedeeldeZichtbaar.filter((r) => r.raw != null).length + categorieen.filter((c) => categoryZakelijkPercentage?.[c]?.[activeYear] != null).length;
 
   return (
-    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Percentage zakelijk per categorie</span>
         {aangepast > 0 && <span className="text-xs font-normal text-slate-400">({aangepast} aangepast)</span>}
@@ -102,6 +168,47 @@ export default function CategoryPercentagePanel({
             Energie-water en/of Gemeentelijke kosten het percentage zakelijk voor het jaar. Dit vervangt de
             vroegere aparte categorieën "… (deels zakelijk)"; in oudere dossiers zijn die automatisch omgezet.
           </p>
+          {toonWerkruimte && (
+            <div className="rounded-veld border border-slate-200 bg-slate-50 p-3 mb-3 space-y-3">
+              <p className="text-sm font-medium text-slate-700">
+                Huur, energie-water en gemeentelijke kosten in {activeYear}: waarvoor is het betaald? Kies dit per rekening.
+              </p>
+              {rekeningen.map((rek) => {
+                const t = rekeningTotaal(rek);
+                const soort = werkruimte[rek] || "";
+                return (
+                  <div key={rek}>
+                    <label className="text-xs font-medium text-slate-600 block mb-1" htmlFor={`werkruimte-${rek}`}>
+                      Betaald vanaf de {rek === "zakelijk" ? "zakelijke rekening" : "privérekening"} ({eur(t.som)}, {t.n}×)
+                    </label>
+                    <select
+                      id={`werkruimte-${rek}`}
+                      key={`werkruimte-${rek}-${activeYear}`}
+                      value={soort}
+                      onChange={(e) => onSetWerkruimte(rek, e.target.value || null)}
+                      className="rounded-veld border border-slate-300 bg-white px-2.5 py-1.5 text-sm max-w-full"
+                    >
+                      <option value="">Niet aangegeven (rekent met de percentages hieronder)</option>
+                      {Object.entries(WERKRUIMTE_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                    </select>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {soort === "bedrijfsruimte" && "Zakelijk gehuurde ruimte: zakelijke huisvestingskosten voor het percentage zakelijk hieronder."}
+                      {soort === "zelfstandig" && "Zelfstandige werkruimte (eigen ingang en voorzieningen, niet via de woonruimte bereikbaar, en aan de extra voorwaarden voldaan): het percentage hieronder telt mee als bedrijfskosten. Controleer de voorwaarden zelf."}
+                      {soort === "niet_zelfstandig" && "Kamer of hoek in de eigen woning: niet aftrekbaar, telt voor deze rekening niet mee (0%). De ingevulde percentages blijven bewaard."}
+                      {soort === "prive" && "Privé: telt niet mee als zakelijke kosten (0%)."}
+                      {!soort && "Kies wat van toepassing is: voor een thuiskantoor in de eigen woning gelden andere regels dan voor een zakelijk gehuurd pand."}
+                    </p>
+                  </div>
+                );
+              })}
+              {Object.values(werkruimteBetaling).some((r) => r.beide) && (
+                <p className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+                  ⚠ {Object.entries(werkruimteBetaling).filter(([, r]) => r.beide).map(([c]) => c).join(", ")}: betaald vanaf zowel de zakelijke als de privérekening.
+                  {Object.values(werkruimteBetaling).some((r) => r.gelijk) ? " Bij een of meer is het bedrag op beide rekeningen gelijk — controleer of dit niet dubbel is geboekt." : " De bedragen verschillen; de app telt beide mee, elk met het percentage van die rekening."}
+                </p>
+              )}
+            </div>
+          )}
           {autoOpDeZaakDitJaar && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
               Je hebt voor {activeYear} "Auto op de zaak" aangegeven — Brandstof en Parkeren staan daarom
@@ -124,14 +231,28 @@ export default function CategoryPercentagePanel({
               />
             ))}
             {categorieen.map((categorie) => (
-              <CategoryPercentageRow
-                key={categorie}
-                categorie={categorie}
-                totaal={categorieTotalen[categorie]}
-                raw={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
-                standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
-                onCommit={(percentage) => onSetCategoryZakelijkPercentage(categorie, activeYear, percentage)}
-              />
+              onSetRekeningPercentage && WERKRUIMTE_CATEGORIEEN.includes(categorie) && werkruimteBetaling[categorie] ? (
+                <WerkruimteCategorieRij
+                  key={categorie}
+                  categorie={categorie}
+                  betaling={werkruimteBetaling[categorie]}
+                  rawPlain={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
+                  rawZakelijk={categoryZakelijkPercentage?.[categorie]?.[`${activeYear}:zakelijk`]}
+                  rawPrive={categoryZakelijkPercentage?.[categorie]?.[`${activeYear}:prive`]}
+                  werkruimte={werkruimte}
+                  standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
+                  onCommit={(rek, percentage) => onSetRekeningPercentage(categorie, rek, percentage)}
+                />
+              ) : (
+                <CategoryPercentageRow
+                  key={categorie}
+                  categorie={categorie}
+                  totaal={categorieTotalen[categorie]}
+                  raw={categoryZakelijkPercentage?.[categorie]?.[activeYear]}
+                  standaard={huisvestingStandaardNul.includes(categorie) ? 0 : defaultZakelijkPercentage(categorie)}
+                  onCommit={(percentage) => onSetCategoryZakelijkPercentage(categorie, activeYear, percentage)}
+                />
+              )
             ))}
           </div>
         </div>

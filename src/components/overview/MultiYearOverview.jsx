@@ -62,7 +62,7 @@ export default function MultiYearOverview({
   };
 
   return (
-    <section className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       {/* v253 — <div role="button"> i.p.v. <button>: HelpHint hieronder is zelf ook een button. */}
       <div
         role="button"

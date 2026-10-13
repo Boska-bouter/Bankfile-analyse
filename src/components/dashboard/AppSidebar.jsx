@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useState } from "react";
 import { APP_RELEASE } from "../../version.js";
 import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
@@ -121,8 +122,9 @@ export default function AppSidebar({
     // zodra de app als "toegevoegd aan beginscherm" (standalone) wordt gebruikt; op een gewone
     // laptop/desktop vallen die op 0px terug en blijft de iets grotere vaste basis-padding over.
     <div
-      onMouseOver={toonTip} onMouseOut={() => setSbTip(null)} onFocus={toonTip} onBlur={() => setSbTip(null)}
-      className={`${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
+      onPointerOver={(e) => { if (e.pointerType === "mouse") toonTip(e); }} onPointerOut={() => setSbTip(null)} onPointerDown={() => setSbTip(null)}
+      onFocus={(e) => { if (e.target.matches && e.target.matches(":focus-visible")) toonTip(e); }} onBlur={() => setSbTip(null)}
+      className={`sb-root ${collapsed ? "sb-collapsed w-[68px] px-2" : "w-[216px] px-3.5"} transition-[width] duration-150 shrink-0 bg-[#16203A] flex flex-col sticky top-0 h-screen overflow-y-auto`}
       style={{
         paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))",
         paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
@@ -184,9 +186,9 @@ export default function AppSidebar({
         <span className="sb-label text-[11px] font-bold tracking-wider text-slate-500 uppercase px-0.5 pb-0.5">Dossier</span>
 
         {canClearAll && (
-          <button onClick={onClearAll} title="Nieuw dossier starten (sluit het huidige dossier)" className={`sb-btn flex items-center gap-2 rounded-xl px-3 py-2 ${canSaveProject ? "border border-slate-600 hover:bg-white/5" : "bg-teal-700 hover:bg-teal-600"}`}>
+          <button onClick={onClearAll} title="Nieuw dossier starten (sluit het huidige dossier)" className="sb-btn flex items-center gap-2 rounded-xl px-3 py-2 border border-slate-600 hover:bg-white/5">
             <FolderPlus className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-            <span className={`sb-label text-xs ${canSaveProject ? "font-semibold text-slate-300" : "font-bold text-white"}`}>Nieuw dossier</span>
+            <span className="sb-label text-xs font-semibold text-slate-300">Nieuw dossier</span>
           </button>
         )}
 
@@ -219,11 +221,12 @@ export default function AppSidebar({
           <span className="sb-label text-xs font-semibold text-slate-200">Dossier laden</span>
         </button>
 
-        {canSaveProject && !showActies && (
-        <button onClick={onLoadFile} title="Extra bankbestand toevoegen" className="sb-btn flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
+        {/* release20V10 — ook zichtbaar zonder bestanden (wizard doorlopen zonder bestand te laden) */}
+        {!showActies && (
+        <button onClick={onLoadFile} title={canSaveProject ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen"} className="sb-btn flex items-center gap-2 bg-teal-700 hover:bg-teal-600 rounded-xl px-3 py-2 text-left">
           <Upload className="h-3.5 w-3.5 text-white shrink-0" />
           <div className="sb-label flex flex-col leading-tight">
-            <span className="text-xs font-bold text-white">Extra bankbestand toevoegen</span>
+            <span className="text-xs font-bold text-white">{canSaveProject ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen"}</span>
             <span className="text-[9.5px] text-teal-100">CSV/XLS, MT940, CAMT.053</span>
           </div>
         </button>
@@ -269,9 +272,10 @@ export default function AppSidebar({
       {/* v269 — "Laatste actie / Ongedaan maken" stond eerst bovenaan (v268); op verzoek nu hieronder,
           direct onder de Acties-knoppen (los van showActies, want een actie kan ook al ongedaan te
           maken zijn vóórdat er een actief jaar is). Bewust wit/opvallend i.p.v. de donkere
-          zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. */}
-      {lastActionSnapshot && (
-        <div className="mt-3 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2">
+          zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. release19V2: zweeft nu (fixed) linksonder naast de
+          zijbalk in plaats van er een extra blok in te zijn, zodat de zijbalk niet gaat scrollen. */}
+      {lastActionSnapshot && createPortal(
+        <div className={`fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] ${collapsed ? "left-[84px]" : "left-[232px]"} z-[80] w-64 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2`}>
           <div className="flex items-start justify-between gap-1">
             <p className="text-xs text-slate-600 leading-tight">
               Laatste actie: <strong>{lastActionSnapshot.label}</strong>
@@ -284,7 +288,7 @@ export default function AppSidebar({
             Ongedaan maken
           </button>
         </div>
-      )}
+        , document.body)}
 
       <div className="flex-grow" />
 
@@ -316,7 +320,7 @@ export default function AppSidebar({
           );
         })()}
         {saveState && (
-          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
+          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500 leading-snug" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…

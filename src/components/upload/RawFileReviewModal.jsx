@@ -4,6 +4,7 @@ import { checkBalanceConsistency } from "../../importers/transactions.js";
 import { eur } from "../../utils/amounts.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 
+import { KNOP_PRIMAIR_KLEIN } from "../ui/stijl.js";
 // Toont alle ruwe, ingelezen regels van 1 bestand (dus vóór classificatie) in een los venster —
 // voor als het saldo niet klopt en je wilt narekenen waar het misgaat. Een regel uitsluiten
 // verbergt 'm voortaan overal in de app (net als bij dubbele transacties) — de keuze wordt
@@ -143,7 +144,7 @@ export default function RawFileReviewModal({
         </div>
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Uitgesloten regels tellen nergens meer mee — terugzetten kan hier altijd.</p>
-          <button onClick={onClose} className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800">Sluiten</button>
+          <button onClick={onClose} className={KNOP_PRIMAIR_KLEIN}>Sluiten</button>
         </div>
       </div>
     </div>

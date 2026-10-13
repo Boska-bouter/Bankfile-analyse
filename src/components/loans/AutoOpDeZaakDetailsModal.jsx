@@ -5,6 +5,7 @@ import { computeAfschrijvingSchema } from "../../tax/activa.js";
 import { MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../../tax/autoBijtelling.js";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Vult opgeslagen (of nog lege) gegevens aan tot het volledige formuliershape — zelfde aanpak als
 // formFromSegment in FinancialLeaseDetailsModal.jsx, maar dan voor een gekochte of
 // operational-leaseauto op de zaak (geen leningschema om aan op te hangen, dus geen
@@ -262,8 +263,8 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
         <div className="px-5 py-3 border-t border-slate-200 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>
+            <button onClick={onClose} className={KNOP_SECUNDAIR}>Annuleren</button>
+            <button onClick={handleSave} className={KNOP_PRIMAIR}>Opslaan</button>
           </div>
         </div>
       </div>

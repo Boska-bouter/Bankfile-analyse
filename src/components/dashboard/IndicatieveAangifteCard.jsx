@@ -17,11 +17,11 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, breakd
   const pct = showTrend && prevWinst != null && prevWinst !== 0 ? Math.round(((winst - prevWinst) / Math.abs(prevWinst)) * 100) : null;
 
   return (
-    <div id="advies-sectie" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col gap-4">
+    <div id="advies-sectie" className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm h-full flex flex-col justify-between gap-4">
       <h4 className="text-sm font-bold text-slate-900">Indicatieve aangifte {year}</h4>
 
       {breakdown && (
-        <div className="space-y-1 text-[12.5px] text-slate-500">
+        <div className="space-y-1 text-label text-slate-500">
           <div className="flex items-center justify-between">
             <span>Omzet bruto (incl. BTW{breakdown.toonOmzetInclBtw ? `, ${breakdown.btwTariefLabel}` : ""})</span>
             <span className="font-semibold text-slate-800">{eur(breakdown.omzetInclBtw)}</span>
@@ -47,7 +47,7 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, breakd
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-1.5 text-[12.5px] justify-center">
+        <div className="flex flex-col gap-1.5 text-label justify-center">
           <div className="flex justify-between gap-3">
             <span className="text-slate-500">Zelfstandigenaftrek</span>
             <span className="font-semibold text-slate-800">− {eur(indicatie.zelfstandigenaftrekBedrag)}</span>
@@ -69,7 +69,7 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, breakd
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-[12.5px]">
+      <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-label">
         <div className="flex justify-between gap-3">
           <span className="text-slate-500">Indicatieve IB (vóór heffingskorting)</span>
           <span className="font-semibold text-slate-800">{eur(indicatie.ib?.belasting || 0)}</span>

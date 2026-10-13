@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyRound } from "lucide-react";
 
+import { KNOP_PRIMAIR_VET } from "../ui/stijl.js";
 // Toont de herstelcode van een dossier met wachtwoord.
 export default function HerstelcodeModal({ code, nieuw, onSluit, onBevestig }) {
   const [gekopieerd, setGekopieerd] = useState(false);
@@ -17,7 +18,7 @@ export default function HerstelcodeModal({ code, nieuw, onSluit, onBevestig }) {
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={kopieer} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">{gekopieerd ? "Gekopieerd" : "Kopiëren"}</button>
           {onBevestig && <button type="button" onClick={onSluit} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Annuleren</button>}
-          <button type="button" onClick={onBevestig || onSluit} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-800">{onBevestig ? "Code bewaard — opslaan" : "Sluiten"}</button>
+          <button type="button" onClick={onBevestig || onSluit} className={KNOP_PRIMAIR_VET}>{onBevestig ? "Code bewaard — opslaan" : "Sluiten"}</button>
         </div>
       </div>
     </div>

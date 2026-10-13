@@ -33,7 +33,7 @@ export default function TegenpartijenPanel({
       className={expandedBusinessIncomeList || expandedBusinessExpenseList ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4"}
     >
       {!expandedBusinessExpenseList && (
-        <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold mb-1">Zakelijke tegenpartijen (inkomsten)</h2>
           <p className="text-xs text-slate-500 mb-3">
             Namen van klanten/opdrachtgevers waarvan binnenkomende betalingen als zakelijke inkomsten gelden.
@@ -72,7 +72,7 @@ export default function TegenpartijenPanel({
         </section>
       )}
       {!expandedBusinessIncomeList && (
-        <section className="rounded-xl border-2 border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop/uitgaven (leveranciers)</h2>
           <p className="text-xs text-slate-500 mb-3">
             Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt

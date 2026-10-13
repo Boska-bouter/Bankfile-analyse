@@ -11,6 +11,7 @@ import { computeLeaseAfschrijvingVoorJaar, buildLeaseActivumFromSegment, MINIMAL
 import { computeAfschrijvingPerJaar } from "../../tax/activa.js";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 const FIELDS_AANKOOP = [
   ["koopprijs", "Koopprijs (excl. BTW)"],
   ["teBetalenBtw", "Te betalen BTW"],
@@ -397,7 +398,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   };
 
   return (
-    <div className="rounded-xl border-2 border-slate-200 p-4 space-y-5">
+    <div className="rounded-paneel border border-slate-200 p-4 space-y-5">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-800">{title}</p>
         {canRemove && (
@@ -1167,8 +1168,8 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
             <p className="text-xs text-slate-400">Later altijd aan te passen.</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={onClose} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Annuleren</button>
-            <button onClick={handleSave} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">Opslaan</button>
+            <button onClick={onClose} className={KNOP_SECUNDAIR}>Annuleren</button>
+            <button onClick={handleSave} className={KNOP_PRIMAIR}>Opslaan</button>
           </div>
         </div>
       </div>

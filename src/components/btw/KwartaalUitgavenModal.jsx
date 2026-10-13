@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PRIMAIR } from "../../components/ui/stijl.js";
 // Herbruikbare uitsplitsings-pop-up: bij "netto" toont 'm hoe "Uitgaven (netto)" is opgebouwd, bij
 // "btw" hoe "Voorbelasting" is opgebouwd — zelfde soort waarschuwing in beide gevallen: een
 // categorie die het totaal juist verlaagt (negatief bedrag hier) is ongewoon, meestal een
@@ -39,7 +40,7 @@ export default function KwartaalUitgavenModal({ titel, categorieen, veld = "nett
           })}
         </div>
         <div className="px-4 py-3 border-t border-slate-200 shrink-0 flex justify-end">
-          <button onClick={onClose} className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
+          <button onClick={onClose} className={KNOP_PRIMAIR}>
             Sluiten
           </button>
         </div>

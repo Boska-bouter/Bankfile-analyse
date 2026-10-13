@@ -5,6 +5,7 @@ import IndicatieveAangifteCard from "./IndicatieveAangifteCard.jsx";
 import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
 import { eur } from "../../utils/amounts.js";
 
+import { KNOP_PIL } from "../ui/stijl.js";
 // Fase 1, dashboard-restyling (Stijl F) — "Details en overzichten"-paneel onderaan het Overzicht-
 // tabblad, met sub-tabs (Jaaroverzicht/Transacties/Categorieën/Activa/Leningen/Lease/BTW/
 // Rapportages) zoals in het mockup-canvas. Dit paneel bouwt GEEN nieuwe interactieve tabellen na —
@@ -26,7 +27,7 @@ function LinkOut({ label, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-full px-3 py-1.5"
+      className={KNOP_PIL}
     >
       {label} →
     </button>
@@ -146,13 +147,13 @@ export default function DetailsPanel({
   const leases = cardsByKey.leases;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm" ref={panelRef} data-testid="details-panel">
+    <div className="rounded-paneel border border-slate-200 bg-white shadow-sm" ref={panelRef} data-testid="details-panel">
       <div className="px-5 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
           <h3 className="text-sm font-bold text-slate-900 mr-1">
             Details en overzichten
             {kanVegen && aanraking && (
-              <span className="ml-2 text-[11px] font-normal text-slate-400" title="Veeg naar links of rechts om van jaar te wisselen">
+              <span className="ml-2 text-micro font-normal text-slate-400" title="Veeg naar links of rechts om van jaar te wisselen">
                 {jaarIdx > 0 ? "‹ " : ""}veeg voor ander jaar{jaarIdx >= 0 && jaarIdx < years.length - 1 ? " ›" : ""}
               </span>
             )}
@@ -172,7 +173,7 @@ export default function DetailsPanel({
             toont het altijd de kop + sub-tabs, met deze neutrale lege-staat als body i.p.v. content
             die uitgaat van bestaande jaardata (zakCount/priCount/cardsByKey e.d.). */}
         {!year ? (
-          <p className="text-sm text-slate-400 italic">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
+          <p className="text-sm text-slate-400 italic">Voeg een bankbestand toe of laad een eerder opgeslagen dossier (links bij "Dossier") om deze gegevens te zien.</p>
         ) : (
           <>
         {(
@@ -218,10 +219,10 @@ export default function DetailsPanel({
         )}
 
         {belastingTotaal && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-paneel border border-slate-200 bg-slate-50 px-4 py-3">
             <div>
-              <p className="text-sm font-bold text-slate-900">Totaal te betalen / terug te krijgen {year}</p>
-              <p className="text-[11.5px] text-slate-500">
+              <p className="text-sm font-bold text-slate-900">Jaarlijks te betalen / terug te krijgen {year}</p>
+              <p className="text-klein text-slate-500">
                 {belastingTotaal.delen.map((d) => `${d.label} ${eur(d.bedrag)}`).join(" + ")} · indicatief
               </p>
             </div>
@@ -229,6 +230,12 @@ export default function DetailsPanel({
               {eur(Math.abs(belastingTotaal.totaal))}{" "}
               <span className="text-xs font-semibold text-slate-500">{belastingTotaal.totaal < 0 ? "terug te krijgen" : "te betalen"}</span>
             </p>
+            {belastingTotaal.btw != null && (
+              <p className="basis-full text-klein text-slate-500 border-t border-slate-200 pt-2 mt-1">
+                Daarnaast, per kwartaal aangegeven en los van het jaarbedrag: BTW-saldo {year}{" "}
+                <span className="font-semibold text-slate-700">{eur(Math.abs(belastingTotaal.btw))} {belastingTotaal.btw < 0 ? "terug te krijgen" : "te betalen"}</span>
+              </p>
+            )}
           </div>
         )}
 

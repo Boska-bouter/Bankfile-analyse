@@ -8,6 +8,7 @@ import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
+import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 function computeFinancialLeaseAmortization(lease, details) {
   if (!isCompleteFinancialLeaseDetails(details)) return null;
   return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
@@ -97,7 +98,7 @@ function LeaseGroepPanel({
   }).length;
 
   return (
-    <section ref={sectionRef} className="rounded-xl border-2 border-slate-200 bg-white shadow-sm">
+    <section ref={sectionRef} className="rounded-paneel border border-slate-200 bg-white shadow-sm">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>{titel}</span>
         <span className="text-xs font-normal text-slate-400">({leaseSummary.length})</span>
@@ -240,10 +241,10 @@ function LeaseGroepPanel({
                     )}
                     {!typeConfirmed ? (
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => onConfirmType(lease, "operationeel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onConfirmType(lease, "operationeel")} className={KNOP_SECUNDAIR_XS}>
                           Operationeel
                         </button>
-                        <button onClick={() => onConfirmType(lease, "financieel")} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                        <button onClick={() => onConfirmType(lease, "financieel")} className={KNOP_SECUNDAIR_XS}>
                           Financieel
                         </button>
                       </div>
@@ -265,16 +266,16 @@ function LeaseGroepPanel({
                         </div>
                         {isFinancieel && (
                           isOnbekend ? (
-                            <button onClick={() => onUnmarkUnknown(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                            <button onClick={() => onUnmarkUnknown(lease.key)} className={KNOP_SECUNDAIR_XS}>
                               Toch invullen
                             </button>
                           ) : (
                             <>
-                              <button onClick={() => (onOpenWizard || onOpenModal)(lease.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              <button onClick={() => (onOpenWizard || onOpenModal)(lease.key)} className={KNOP_SECUNDAIR_XS}>
                                 {isCompleteFinancialLeaseDetails(details) ? "Gegevens bewerken" : segments.length > 0 ? "Verder invullen" : "Gegevens invullen"}
                               </button>
                               {isCompleteFinancialLeaseDetails(details) && onOpenWizard && (
-                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true, soort: groep === "overig" ? "machine" : "auto" })} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                <button onClick={() => onOpenWizard(lease.key, { nieuw: true, soort: groep === "overig" ? "machine" : "auto" })} className={KNOP_SECUNDAIR_XS}>
                                   + Vervolgcontract
                                 </button>
                               )}

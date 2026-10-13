@@ -144,7 +144,7 @@ export function computeQuarterlyBtwForYear(classified, year, categoryBtwRates, b
     // "geen" geldt effectiveZakelijkPercentage — zonder ingesteld percentage 100 resp. 0, dus
     // ongewijzigd gedrag zolang niemand een percentage instelt.
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     // Standaard: kwartaal op basis van boekingsdatum. Is er een bevestigde periode-verplaatsing
@@ -261,7 +261,7 @@ export function computeQuarterlyCostBreakdown(classified, year, categoryBtwRates
     const behandeling = fiscalTreatmentOf(tx.category);
     if (behandeling === "omzet" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const factor = percentage / 100;
@@ -290,7 +290,7 @@ export function computeYearlyCostBreakdown(classified, year, categoryBtwRates, b
     const behandeling = fiscalTreatmentOf(tx.category);
     if (behandeling === "omzet" || BTW_AANGIFTE_NIET_RELEVANT.includes(tx.category)) continue;
     const percentage = (behandeling === "kosten" || behandeling === "geen")
-      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto)
+      ? effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx)
       : 100;
     if (behandeling === "geen" && percentage <= 0) continue;
     const factor = percentage / 100;

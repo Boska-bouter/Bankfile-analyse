@@ -130,11 +130,22 @@ export function heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, auto
 const PRIVEAUTO_UITGESLOTEN = ["Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB"];
 export function isPriveAutoJaar(year, autoStatus) { return autoStatus?.[year] === "prive"; }
 
-export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false) {
+// release20V6 — rekening waarvan een transactie is betaald ("zakelijk" of "prive"): zo kan huur/energie/gemeentelijke
+// kosten vanaf de zakelijke en vanaf de privérekening elk een eigen percentage hebben (sleutel "jaar:zakelijk"/"jaar:prive"
+// in dezelfde { categorie: { jaar: % } }-map). Zonder zo'n eigen waarde geldt het gewone percentage voor het jaar.
+export function rekeningVan(tx) {
+  return tx && tx.type === "Zakelijk" ? "zakelijk" : "prive";
+}
+
+export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false, tx = null) {
   if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus)) return 0;
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
   if (AUTO_SPLIT_UITSLUITING.includes(category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
     return defaultZakelijkPercentage(category);
+  }
+  if (tx) {
+    const perRekening = categoryZakelijkPercentage?.[category]?.[`${year}:${rekeningVan(tx)}`];
+    if (perRekening != null) return perRekening;
   }
   const override = categoryZakelijkPercentage?.[category]?.[year];
   return override != null ? override : defaultZakelijkPercentage(category);
