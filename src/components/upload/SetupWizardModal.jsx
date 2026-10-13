@@ -144,9 +144,10 @@ export default function SetupWizardModal({
     if (doneIds.has(id) && !(id === 31 && pendingFileNames.length > 0)) return false;
     if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !needs.holding) return false;
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
-    if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || needs.uren)))) return false;
+    const heeftJaren = (years || []).length > 0;
+    if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || (needs.uren && heeftJaren))))) return false;
     // Scherm 36: startersaftrek niet bij een BV; kwartalen niet bij KOR.
-    if (id === 36 && !(needs.werkruimte || ((needs.starters || needs.overig) && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
+    if (id === 36 && !((needs.werkruimte && heeftJaren) || ((needs.starters || needs.overig) && !isBV && heeftJaren) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
     return true;
   });
 
@@ -221,8 +222,9 @@ export default function SetupWizardModal({
         <div className="p-5 overflow-y-auto flex-1">
           {currentStepId === 20 && (
             <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-800">Wil je al bankbestand(en) toevoegen?</p>
               <p className="text-sm text-slate-600">
-                Laad de afschriften van een Nederlandse bank, zakelijk en privé, per jaar of over meerdere jaren.
+                Afschriften van een Nederlandse bank, zakelijk en privé, per jaar of over meerdere jaren. Je kunt ze ook later altijd nog laden.
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {["CSV", "XLS / XLSX", "MT940 (.sta / .940)", "CAMT.053 (.xml)"].map((f) => (
@@ -234,8 +236,22 @@ export default function SetupWizardModal({
                 onClick={() => onPickFiles && onPickFiles()}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800"
               >
-                <FileSpreadsheet className="h-4 w-4" /> {loadedFileNames.length > 0 ? "Nog een bestand kiezen" : "Bestanden kiezen"}
+                <FileSpreadsheet className="h-4 w-4" /> {loadedFileNames.length > 0 ? "Nog een bestand kiezen" : "Ja, bestanden kiezen"}
               </button>
+              {loadedFileNames.length === 0 && (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Nee, ik laad ze later — eerst de vragen doorlopen
+                </button>
+              )}
+              {loadedFileNames.length === 0 && (
+                <p className="text-xs text-slate-500">
+                  Zonder bestanden slaat de wizard de vragen per jaar over (zoals startersaftrek en urencriterium). Die komen vanzelf aan bod zodra je later bestanden laadt.
+                </p>
+              )}
               {loadedFileNames.length > 0 && (
                 <ul className="rounded-lg border border-slate-200 divide-y divide-slate-100">
                   {loadedFileNames.map((n) => (
@@ -296,7 +312,9 @@ export default function SetupWizardModal({
                 <ChevronLeft className="h-3.5 w-3.5" /> Terug
               </button>
             )}
-            {currentStepId !== 4 ? (
+            {currentStepId === 20 ? (
+              <span />
+            ) : currentStepId !== 4 ? (
               <button
                 onClick={() => {
                   if (currentStepId === 33 && opdrachtgeversGevraagd === null) {
@@ -306,7 +324,7 @@ export default function SetupWizardModal({
                 }}
                 className="text-xs text-slate-400 hover:text-slate-600"
               >
-                {currentStepId === 20 ? "Later bestanden laden" : "Later invullen"}
+                Later invullen
               </button>
             ) : (
               <span />
@@ -946,7 +964,7 @@ function Scherm35({
   const toonKor = needs.kor && !isBV;
   const kor = korRegeling; // direct vastgelegd bij een klik (zoals voorheen)
   const toonVerlegd = needs.verlegd && !isBV && kor !== true;
-  const toonUren = needs.uren && !isBV;
+  const toonUren = needs.uren && !isBV && years.length > 0;
   const tarieven = t.btwTarieven || [];
   const urenModus = t.urenModus ?? null; // "ja" | "nee" | "onbekend" | "perjaar"
   const urenPerJaar = t.urenPerJaar || {};
@@ -1090,15 +1108,24 @@ function Scherm36({
   typedNow, zet, needs, isBV, goNext, years, korRegeling,
   onSeedStartersaftrekStatus, onSeedWerkruimteStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
 }) {
-  const toonOverig = needs.overig && !isBV;
+  const toonOverig = needs.overig && !isBV && years.length > 0;
   const overigJa = typedNow.overigJa === true;
+  const overigNee = typedNow.overigJa === false;
   const overigBedragen = typedNow.overigBedragen || {};
-  const toonStarters = needs.starters && !isBV;
+  const toonStarters = needs.starters && !isBV && years.length > 0;
   const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
   const starterJaren = typedNow.starterJaren || [];
-  const toonWerkruimte = needs.werkruimte;
+  const starterNee = typedNow.starterNee === true && starterJaren.length === 0;
+  const toonWerkruimte = needs.werkruimte && years.length > 0;
   const werkPand = typedNow.werkPand === true;
-  const werkWoning = typedNow.werkWoning || "nee"; // "nee" | "zelfstandig" | "niet_zelfstandig"
+  const werkPandNee = typedNow.werkPand === false;
+  const werkWoning = typedNow.werkWoning || null; // "nee" | "zelfstandig" | "niet_zelfstandig"
+  // "Doorgaan" werkt pas als alle vragen op dit scherm beantwoord zijn (de BTW-kwartalen tellen niet mee: die zijn niet nodig voor de berekening).
+  const overigBeantwoord = overigNee || (overigJa && Object.values(overigBedragen).some((v) => Number(v) > 0));
+  const klaar =
+    (!toonStarters || starterNee || starterJaren.length > 0) &&
+    (!toonOverig || overigBeantwoord) &&
+    (!toonWerkruimte || ((werkPand || werkPandNee) && werkWoning !== null));
   return (
     <div className="space-y-4">
       {toonWerkruimte && (
@@ -1107,7 +1134,7 @@ function Scherm36({
           uitleg="Bijvoorbeeld een kantoor, winkel, loods of schuur. Huur, energie en gemeentelijke kosten daarvan zijn zakelijke kosten, ook als je ze (deels) vanaf je privérekening betaalt."
         >
           <div className="flex gap-2">
-            <button type="button" onClick={() => zet({ werkPand: false })} className={`${KNOP} ${!werkPand ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ werkPand: false })} className={`${KNOP} ${werkPandNee ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
             <button type="button" onClick={() => zet({ werkPand: true })} className={`${KNOP} ${werkPand ? KNOP_AAN : KNOP_UIT}`}>Ja</button>
           </div>
         </Sectie>
@@ -1132,13 +1159,20 @@ function Scherm36({
           uitleg="Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als je aan het urencriterium voldoet). Geen enkel jaar aangevinkt = geen startersaftrek."
         >
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => zet({ starterJaren: [], starterNee: true })}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${starterNee ? KNOP_AAN : KNOP_UIT}`}
+            >
+              Geen startersaftrek
+            </button>
             {years.map((y) => {
               const aan = starterJaren.includes(y);
               return (
                 <button
                   key={y}
                   type="button"
-                  onClick={() => zet({ starterJaren: aan ? starterJaren.filter((j) => j !== y) : [...starterJaren, y] })}
+                  onClick={() => zet({ starterNee: false, starterJaren: aan ? starterJaren.filter((j) => j !== y) : [...starterJaren, y] })}
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? KNOP_AAN : KNOP_UIT}`}
                 >
                   {y}
@@ -1155,7 +1189,7 @@ function Scherm36({
           uitleg="Bijvoorbeeld loon uit een baan of een uitkering. Dit bepaalt in welke belastingschijf je winst valt en hoeveel heffingskorting je daarover krijgt. Vul per jaar het bruto jaarbedrag ongeveer in; leeg = geen ander inkomen."
         >
           <div className="flex gap-2">
-            <button type="button" onClick={() => zet({ overigJa: false })} className={`${KNOP} ${!overigJa ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ overigJa: false })} className={`${KNOP} ${overigNee ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
             <button type="button" onClick={() => zet({ overigJa: true })} className={`${KNOP} ${overigJa ? KNOP_AAN : KNOP_UIT}`}>Ja</button>
           </div>
           {overigJa && (
@@ -1208,6 +1242,7 @@ function Scherm36({
 
       <button
         type="button"
+        disabled={!klaar}
         onClick={() => {
           if (toonWerkruimte) onSeedWerkruimteStatus?.(years, { pand: werkPand, woning: werkWoning });
           if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
@@ -1216,7 +1251,7 @@ function Scherm36({
         }}
         className={PRIMAIR}
       >
-        {toonStarters && starterJaren.length === 0 ? "Geen startersaftrek — doorgaan" : "Doorgaan"}
+        Doorgaan
       </button>
     </div>
   );
