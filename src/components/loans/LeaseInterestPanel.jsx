@@ -475,9 +475,28 @@ export default function LeaseInterestPanel(props) {
   const auto = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("auto"));
   const overig = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("overig"));
   const gemeenschappelijk = { ...props, alleLeases: leaseSummary, onJump: () => setOpenSignal((n) => n + 1), openSignal };
+  // release21V5 — de lease-wizard opent niet meer vanzelf bij het openklappen van de kaart; in plaats
+  // daarvan deze melding zolang een (bevestigde) financiële lease nog helemaal leeg is.
+  const { confirmedLeaseTypeKeys = [], onOpenWizard, onOpenModal } = props;
+  const nogLeeg = leaseSummary.filter((l) => {
+    if (l.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(l.key)) return false;
+    const d = leaseDetails[l.key];
+    if (d?.onbekend) return false;
+    return !getLeaseSegments(d).some((sg) => sg && (sg.koopprijs || sg.looptijd || sg.maandbedrag || sg.startdatum));
+  });
   // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
   return (
     <div className="space-y-3">
+      {nogLeeg.length > 0 && (onOpenWizard || onOpenModal) && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1.5">
+          {nogLeeg.map((l) => (
+            <div key={l.key} className="flex flex-wrap items-center gap-2">
+              <span className="flex-1 min-w-[12rem]">Financiële lease <strong>{l.name}</strong>: contractgegevens nog invullen.</span>
+              <button type="button" onClick={() => (onOpenWizard || onOpenModal)(l.key)} className="rounded-lg bg-teal-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-teal-800">Contract invullen</button>
+            </div>
+          ))}
+        </div>
+      )}
       <LeaseGroepPanel {...gemeenschappelijk} soort="auto" groep="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
       <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>

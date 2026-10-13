@@ -1,4 +1,5 @@
 import LeaseContractenVraag, { contractenVan, syncContracten } from "./LeaseContractenVraag.jsx";
+import LeaseControleScherm from "./LeaseControleScherm.jsx";
 import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
@@ -23,6 +24,7 @@ const STEP_LABELS = {
   34: "Auto, lease en lening",
   35: "Verzekering en BTW",
   36: "Fiscale jaren",
+  37: "Lease-controle",
   4: "Dossierprofiel en opslaan",
 };
 
@@ -62,6 +64,7 @@ export default function SetupWizardModal({
   opdrachtgeversGevraagd, onAddBusinessKeywords, onAddBusinessExpenseKeywords,
   suggesties = {},
   dossierProfiel = null,
+  leaseControle = null,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -131,6 +134,8 @@ export default function SetupWizardModal({
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
     if (needs.starters || needs.overig || needs.kwartalen || needs.werkruimte) list.push(36);
+    // release21V6 — lease-controle na het laden van bankbestanden (zie LeaseControleScherm.jsx)
+    if (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0) list.push(37);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -146,6 +151,7 @@ export default function SetupWizardModal({
     // leeg in beeld bij een zzp'er (holdingvraag staat open maar hoort alleen bij een BV) en scherm 32 bij
     // een openstaande privé-spaarvraag zonder geladen privérekening — alleen een knop "Doorgaan".
     if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
+    if (id === 37 && !leaseControle?.nodig) return false;
     if (id === 32 && !needs.andere && !needs.spaar && !(needs.spaarPrive && sessionFiles.some((f) => typedNow[f] === "Prive"))) return false;
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
     const heeftJaren = (years || []).length > 0;
@@ -279,6 +285,7 @@ export default function SetupWizardModal({
           {currentStepId === 34 && <Scherm34 {...props} />}
           {currentStepId === 35 && <Scherm35 {...props} />}
           {currentStepId === 36 && <Scherm36 {...props} />}
+          {currentStepId === 37 && leaseControle && <LeaseControleScherm controle={leaseControle} goNext={goNext} />}
           {currentStepId === 4 && (
             <div className="space-y-3">
               {dossierProfiel && dossierProfiel.length > 0 && (
@@ -921,11 +928,12 @@ function Scherm34({
             }
             if (needs.lease) {
               const groepen = toonLeaseAuto && leaseAutoJa ? contractenVan(t.leaseLijst || [], t.leaseContracten ?? null) || [] : [];
-              setVerwachteLease(groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
+              // release21V6 — "Ja" zonder naam telde als "geen leaseauto" (lege lijst); nu een opgave zonder naam.
+              setVerwachteLease(groepen.length === 0 && toonLeaseAuto && leaseAutoJa ? [{ naam: null, aliassen: [], gevonden: false }] : groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
             }
             if (needs.leaseOverig) {
               const groepen = t.leaseOverigJa ? contractenVan(t.leaseOverigLijst || [], t.leaseOverigContracten ?? null) || [] : [];
-              setVerwachteLeaseOverig(groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
+              setVerwachteLeaseOverig(groepen.length === 0 && t.leaseOverigJa ? [{ naam: null, aliassen: [], gevonden: false }] : groepen.map((g) => ({ naam: g[0], aliassen: g.slice(1), gevonden: false })));
             }
             if (needs.lening) {
               const l = t.leningJa ? t.leningLijst || [] : [];

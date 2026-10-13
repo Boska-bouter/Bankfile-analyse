@@ -84,7 +84,8 @@ export function bouwDossierProfiel(p) {
       auto.push(`Auto: ${soorten.map((v) => `${naam[v]} (${jarenBereik(perJaar.filter(([, x]) => x === v).map(([j]) => j))})`).join("; ")}`);
     } else auto.push("Auto: nog niet opgegeven");
   }
-  const lease = lijstNamen(verwachteLease), leaseO = lijstNamen(verwachteLeaseOverig), lening = lijstNamen(verwachteLening);
+  // release21V6 — een opgave zonder naam (naam: null) telt ook als opgegeven lease
+  const lease = (verwachteLease || []).map((x) => x?.naam || "?"), leaseO = (verwachteLeaseOverig || []).map((x) => x?.naam || "?"), lening = lijstNamen(verwachteLening);
   // Kort en bondig: alleen WAT is aangegeven (geen namen/aliassen — die staan bij Controleren > Bedrijfsmiddelen).
   const leaseSoorten = [];
   const autoAlGenoemd = autoWizardStatus?.status === "zaak" && autoWizardStatus?.soort === "financial";

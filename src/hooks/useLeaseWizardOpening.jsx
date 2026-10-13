@@ -111,6 +111,15 @@ export function useLeaseWizardOpening() {
     ));
   };
   const registreer = (ctx) => { contextRef.current = ctx; };
+  // release21V5 — bij het openklappen van de kaart Bedrijfsmiddelen: wél het lease-type uit de wizard
+  // stil bevestigen, maar géén venster openen (je wilde misschien naar iets anders kijken). Het
+  // invullen start via de melding bovenin de kaart, "Ga naar deze stap" of stap 3 in de routebalk.
+  const stilBevestigen = () => {
+    const ctx = contextRef.current;
+    if (!ctx) return;
+    const k = bepaalLeaseWizardKandidaat(ctx);
+    if (k?.bevestig) setTimeout(() => contextRef.current?.confirmLeaseType?.(k.lease, k.bevestig, { zonderWizard: true }), 0);
+  };
   const autoOpenLeaseWizard = () => {
     const ctx = contextRef.current;
     if (!ctx) return;
@@ -147,5 +156,5 @@ export function useLeaseWizardOpening() {
       />
     );
   };
-  return { openLeaseWizard, autoOpenLeaseWizard, registreer, renderLeaseWizard, leaseWizardOpen: !!leaseWizard };
+  return { openLeaseWizard, autoOpenLeaseWizard, stilBevestigen, registreer, renderLeaseWizard, leaseWizardOpen: !!leaseWizard };
 }

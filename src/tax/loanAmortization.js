@@ -263,6 +263,14 @@ const LEASECONTRACT_RE = /leasecontract\s+(\S+)(?:\s+([A-Z0-9-]{5,9}))?/i;
 // Lease (operationeel + financieel) — zelfde opzet als computeLoanSummary, maar dan voor beide
 // lease-categorieën samen, met de categorie van de eerste transactie erbij (voor de "is dit al
 // beantwoord als operationeel/financieel?"-weergave).
+// release21V6 — zelfde sleutel als computeLeaseSummary hieronder, voor één transactie (gebruikt door de
+// lease-controle in de wizard om een zojuist als lease aangewezen betaling meteen te kunnen bevestigen).
+export function leaseKeyVanTx(tx) {
+  const baseName = (tx.counterparty || tx.description || "").trim();
+  const contractMatch = `${tx.description} ${tx.fullDescription}`.match(LEASECONTRACT_RE);
+  return contractMatch ? `contract::${contractMatch[1].toLowerCase()}` : baseName.toLowerCase();
+}
+
 export function computeLeaseSummary(classified) {
   const map = {};
   for (const tx of classified) {

@@ -4,7 +4,7 @@ import { ClipboardList, Upload } from "lucide-react";
 // wat er via de wizard al vastligt, zodat je die antwoorden kunt nalopen vóór de import. Alleen
 // lezen; wijzigen gaat via "Basisvragen bewerken" (de wizard). Per jaar ingestelde zaken (uren,
 // startersaftrek, werkruimte, kwartalen) bestaan pas als er jaren zijn en staan hier dus niet.
-const namen = (lijst) => (lijst || []).map((x) => x.naam).filter(Boolean).join(", ");
+const namen = (lijst) => (lijst || []).map((x) => x.naam || "Ja (naam onbekend)").join(", ");
 const jaNee = (v, ja = "Ja", nee = "Nee") => (v === true ? ja : v === false ? nee : null);
 
 export default function VastgelegdeBasisgegevens({

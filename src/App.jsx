@@ -22,7 +22,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -149,7 +149,7 @@ import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./reports/btwOverzi
 import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
-import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear, suggestLeaseMerges, leaseKeyVanTx } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
@@ -321,7 +321,7 @@ export default function App() {
   const wizardWasOpenRef = useRef(false);
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
-    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
+    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) stilLeaseBevestigen(); // release21V5 — geen venster meer bij openklappen
     startTransition(() => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] })));
   };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
@@ -333,7 +333,7 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
-  const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
+  const { openLeaseWizard, autoOpenLeaseWizard, stilBevestigen: stilLeaseBevestigen, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
   // Tijdens en kort na een lease-wizard klapt het overzicht niet vanzelf in: je wilt het resultaat kunnen controleren.
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
@@ -1804,6 +1804,82 @@ export default function App() {
   });
   const removeManualLease = (key) => { geenAutoInklapRef.current = Date.now() + 2000; removeManualLeaseRaw(key); };
   registreerLeaseWizard({ leaseSummary, confirmedLeaseTypeKeys, leaseDetails, autoWizardStatus, verwachteLease, verwachteLeaseOverig, confirmLeaseType });
+
+  // release21V6 — lease-controle in de start-wizard (scherm 37, zie LeaseControleScherm.jsx): direct na
+  // het laden laten bevestigen welke leasebetalingen gevonden zijn. Komt alleen terug als er sindsdien
+  // nieuwe leasebetalingen (of een nog niet gevonden opgave) bij zijn gekomen; wat gezien is staat in
+  // bevestigdeControles.leaseControle.
+  const pendingLeaseInvullenRef = useRef(false);
+  const leaseControle = useMemo(() => {
+    if (classified.length === 0) return null;
+    const leases = leaseSummary.filter((l) => !l.handmatig && !l.splitVan && (l.transactions || []).length > 0);
+    const verwachte = [
+      ...(verwachteLease || []).map((v, idx) => ({ ...v, lijst: "auto", idx })),
+      ...(verwachteLeaseOverig || []).map((v, idx) => ({ ...v, lijst: "overig", idx })),
+    ];
+    const ids = [
+      ...leases.flatMap((l) => l.transactions.map((t) => `tx:${t.id}`)),
+      ...verwachte.filter((v) => !v.gevonden).map((v) => `verwacht:${v.lijst}:${v.idx}:${v.naam || ""}`),
+    ];
+    const gezien = new Set(bevestigdeControles?.leaseControle || []);
+    const nieuw = ids.filter((id) => !gezien.has(id));
+    const nodig = nieuw.length > 0 && (leases.length > 0 || verwachte.some((v) => !v.gevonden));
+    // Vaste maandelijkse betalingen die (nog) niet als lease staan: om een niet gevonden lease aan te wijzen.
+    const groepen = {};
+    for (const tx of classified) {
+      if (tx.isMirror || tx.amount >= 0 || String(tx.category || "").startsWith("Lease")) continue;
+      const k = extractRecurringName(tx);
+      if (!k) continue;
+      if (!groepen[k]) groepen[k] = { key: k, name: (tx.counterparty || tx.description || "").trim(), category: tx.category, txs: [], maanden: new Set() };
+      groepen[k].txs.push(tx);
+      groepen[k].maanden.add(tx.month);
+    }
+    const kandidaten = Object.values(groepen)
+      .filter((g) => g.maanden.size >= 3)
+      .map((g) => ({ ...g, count: g.txs.length, gem: g.txs.reduce((a, t) => a + t.amount, 0) / g.txs.length }))
+      .sort((a, b) => b.maanden.size - a.maanden.size || a.gem - b.gem)
+      .slice(0, 12);
+    return {
+      nodig, leases, verwachte, kandidaten, ids,
+      autoSoort: autoWizardStatus?.soort || null,
+      wizardZeiGeenLease: Array.isArray(verwachteLease) && verwachteLease.length === 0 && (verwachteLeaseOverig || []).length === 0 && autoWizardStatus?.soort !== "financial" && autoWizardStatus?.soort !== "operational",
+      mergeGroepen: suggestLeaseMerges(leases),
+      confirmedLeaseTypeKeys,
+    };
+  }, [classified, leaseSummary, verwachteLease, verwachteLeaseOverig, autoWizardStatus, confirmedLeaseTypeKeys, bevestigdeControles]);
+  const pasLeaseControleToe = ({ keuzes, samenvoegen, aanwijzingen, naamloosKoppelen, nuInvullen }) => {
+    if (!leaseControle) return;
+    const extraIds = [];
+    for (const { lease, type } of keuzes) {
+      if (type === "financieel" || type === "operationeel") confirmLeaseType(lease, type, { zonderWizard: true });
+      else if (type === "geen") {
+        snapshotBeforeAction("Lease op Overig gezet");
+        for (const tx of lease.transactions) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Overig", type: tx.type }, tx.counterpartyIban);
+        setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== lease.key));
+      }
+    }
+    for (const [bron, doel] of samenvoegen) mergeLeaseInto(bron, doel);
+    const zetNaam = (v, naam) => {
+      const setter = v.lijst === "overig" ? setVerwachteLeaseOverig : setVerwachteLease;
+      setter((prev) => (prev || []).map((it, i) => {
+        if (i !== v.idx) return it;
+        if (!it.naam) return { ...it, naam };
+        const al = [it.naam, ...(it.aliassen || [])].some((n) => n.toLowerCase() === naam.toLowerCase());
+        return al ? it : { ...it, aliassen: [...(it.aliassen || []), naam] };
+      }));
+    };
+    for (const { verwacht, kandidaat } of aanwijzingen) {
+      if (!kandidaat) continue;
+      behandelAlsLease(kandidaat.txs);
+      const key = leaseKeyVanTx(kandidaat.txs[0]);
+      setConfirmedLeaseTypeKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+      zetNaam(verwacht, kandidaat.name);
+      extraIds.push(...kandidaat.txs.map((t) => `tx:${t.id}`));
+    }
+    for (const { verwacht, lease } of naamloosKoppelen) zetNaam(verwacht, (lease.transactions[0]?.counterparty || lease.name).trim());
+    setBevestigdeControles((p) => ({ ...p, leaseControle: [...new Set([...(p.leaseControle || []), ...leaseControle.ids, ...extraIds])] }));
+    if (nuInvullen) pendingLeaseInvullenRef.current = true;
+  };
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
@@ -3817,9 +3893,14 @@ export default function App() {
             setZakelijkeSpaarRekening={(v) => { snapshotBeforeAction("Zakelijke spaarrekening ingevuld"); setZakelijkeSpaarRekening(v); }}
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
             dossierProfiel={dossierProfiel}
+            leaseControle={leaseControle ? { ...leaseControle, onToepassen: pasLeaseControleToe } : null}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
-            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
+            onClose={() => {
+              setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false);
+              // release21V6 — "na de wizard meteen de contractgegevens invullen" (lease-controle)
+              if (pendingLeaseInvullenRef.current) { pendingLeaseInvullenRef.current = false; setTimeout(() => autoOpenLeaseWizard(), 400); }
+            }}
           />
         )}
 
