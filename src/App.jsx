@@ -77,6 +77,7 @@ import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
@@ -414,6 +415,7 @@ export default function App() {
   // (zzp/BV) altijd in de wizard-wachtrij komen, ook als hij al eerder beantwoord is (zie
   // forceRechtsvormStep op SetupWizardModal), zodat je rechtsvorm achteraf nog kunt omzetten.
   const [manualWizardOpen, setManualWizardOpen] = useState(false);
+  const [openVragenWizard, setOpenVragenWizard] = useState(false); // release21V1 — wizard via "Nu beantwoorden"
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -2063,7 +2065,7 @@ export default function App() {
   // en/of betaald aangevinkt, of bewust op "nee" gelaten via de checkboxen), blijft die stap er dus
   // buiten; een kwartaal dat écht nog nooit is bekeken (bijv. een nieuw jaar) komt wél weer langs.
   // V65 — suggesties uit de al ingelezen bankdata voor de wizard (lease, lening, AOV, klanten, leveranciers).
-  const wizardSuggesties = useMemo(() => ((showSetupWizard || manualWizardOpen) ? computeWizardSuggesties(classified) : {}), [showSetupWizard, manualWizardOpen, classified]);
+  const wizardSuggesties = useMemo(() => ((showSetupWizard || manualWizardOpen || openVragenWizard) ? computeWizardSuggesties(classified) : {}), [showSetupWizard, manualWizardOpen, openVragenWizard, classified]);
   const wizardQuarters = useMemo(() => {
     const now = new Date();
     const list = [];
@@ -2827,9 +2829,33 @@ export default function App() {
     () => controlerenDashboardCards.reduce((a, c) => a + openPointsOf(c), 0) + instellingenDashboardCards.filter((c) => VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
     [controlerenDashboardCards, instellingenDashboardCards]
   );
+  // release21V1 — basisvragen uit de wizard die nog openstaan (null = nooit beantwoord). Zelfde regels
+  // als de wizard: vragen per jaar pas als er jaren zijn, en zzp-vragen (uren, starters, overig inkomen,
+  // KOR) niet bij een BV. Telt mee in de Instellingen-badge en de routebalk.
+  const openBasisvragen = (() => {
+    const isBV = rechtsvorm === "bv";
+    const heeftJaren = years.length > 0;
+    const leeg = (m) => Object.keys(m || {}).length === 0;
+    const lijst = [];
+    const voeg = (key, label, open) => { if (open) lijst.push({ key, label }); };
+    voeg("naam", "Naam rekeninghouder", eigenNamen === null);
+    voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
+    voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null);
+    voeg("lease", "Leaseauto", verwachteLease === null);
+    voeg("leaseOverig", "Overige lease", verwachteLeaseOverig === null);
+    voeg("lening", "Leningen", verwachteLening === null);
+    voeg("voorraad", "Voorraad", heeftVoorraad === null);
+    voeg("aov", "AOV", verwachteAOV === null);
+    voeg("kor", "KOR", !isBV && korRegeling === null);
+    voeg("uren", "Urencriterium", heeftJaren && !isBV && leeg(zelfstandigenaftrekStatus));
+    voeg("starters", "Startersaftrek", heeftJaren && !isBV && leeg(startersaftrekStatus));
+    voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
+    voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
+    return lijst;
+  })();
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0),
-    [instellingenDashboardCards]
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragen.length,
+    [instellingenDashboardCards, openBasisvragen.length]
   );
 
   const dossierOpenPoints = controlerenBadge + instellingenBadge;
@@ -2946,6 +2972,13 @@ export default function App() {
       maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren"),
       maak("aannames", "Instellingen", ["aannames"], "afgehandeld", "instellingen"),
     ];
+    // release21V1 — openstaande basisvragen horen bij stap "Instellingen"; een klik opent de wizard
+    if (openBasisvragen.length > 0) {
+      const st = lijst[lijst.length - 1];
+      st.open += openBasisvragen.length;
+      if (!st.geenData) st.sub = `${st.open} open`;
+      st.basisvragen = true;
+    }
     const vorigOpen = lijst.reduce((n, s) => n + s.open, 0);
     lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen input" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
     return lijst;
@@ -2971,6 +3004,7 @@ export default function App() {
     .some((m) => Object.keys(m || {}).length > 0);
   const kiesRouteStap = (s) => {
     if (parsedFiles.length === 0) { if (s.key === "import") startBankbestandToevoegen(); return; } // zonder bestanden: Import opent het toevoegen van een bankbestand, de rest wacht
+    if (s.basisvragen && openBasisvragen.length > 0) { setOpenVragenWizard(true); return; }
     if (s.advies) {
       setActiveTab("overzicht");
       window.dispatchEvent(new Event("bankoverzicht-toon-advies"));
@@ -3465,6 +3499,9 @@ export default function App() {
 
           <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
           {!activeYear && <p className="px-1 text-sm italic text-slate-500">Voeg links bij "Dossier" een bankbestand toe (of klik op stap 1 "Import"), of laad een eerder opgeslagen dossier.</p>}
+          {!(showSetupWizard || manualWizardOpen || openVragenWizard) && (
+            <OpenBasisvragenCard vragen={openBasisvragen} onBeantwoorden={() => setOpenVragenWizard(true)} />
+          )}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3716,13 +3753,13 @@ export default function App() {
           />
         )}
 
-        {(showSetupWizard || manualWizardOpen) && (
+        {(showSetupWizard || manualWizardOpen || openVragenWizard) && (
           <SetupWizardModal
             forceRechtsvormStep={manualWizardOpen}
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
-            alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld}
+            alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
             korRegeling={korRegeling}
@@ -3776,7 +3813,7 @@ export default function App() {
             dossierProfiel={dossierProfiel}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
-            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); }}
+            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
           />
         )}
 
