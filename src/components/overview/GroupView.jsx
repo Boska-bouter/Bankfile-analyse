@@ -514,7 +514,7 @@ export function DetailTable({
                           return note ? (
                             <button
                               onClick={() => startEditNote(t)}
-                              className="mt-1 flex items-start gap-1 text-left text-xs italic text-sky-700 hover:text-sky-900"
+                              className="mt-1 flex items-start gap-1 text-left text-xs text-sky-700 hover:text-sky-900"
                               title="Toelichting bewerken"
                             >
                               <Pencil className="h-3 w-3 shrink-0 mt-0.5" /> <span className="break-words">{note}</span>

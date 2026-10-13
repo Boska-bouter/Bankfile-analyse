@@ -53,7 +53,7 @@ export default function JaaroverzichtCard({ year, summary, previousSummary, show
         )}
       </div>
       {!hasSummary && (
-        <p className="text-xs text-slate-400 italic -mt-1">Voeg een bankbestand toe of laad een dossier om cijfers te zien</p>
+        <p className="text-xs text-slate-500 -mt-1">Voeg een bankbestand toe of laad een dossier om cijfers te zien</p>
       )}
       <div className="grid grid-cols-3 gap-4">
         <div>

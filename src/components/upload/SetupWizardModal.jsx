@@ -169,6 +169,9 @@ export default function SetupWizardModal({
   const currentStepId = remainingSteps[0];
   if (currentStepId === 36) kwartalenVast.current = true;
   const isLastStep = remainingSteps.length === 1;
+  // release22V3 — voortgang over de schermen die echt getoond worden (afgerond of nog te doen), zodat
+  // "Scherm X van N" niet verspringt doordat schermen zonder vragen achteraf wegvallen.
+  const zichtbareStappen = initialSteps.filter((id) => doneIds.has(id) || remainingSteps.includes(id));
 
   const goNext = () => {
     setHistory((prev) => [...prev, currentStepId]);
@@ -209,17 +212,19 @@ export default function SetupWizardModal({
           >
             <X className="h-4 w-4" /> Afbreken
           </button>
-          <p className="text-xs text-slate-300">Scherm {initialSteps.indexOf(currentStepId) + 1} van {initialSteps.length}</p>
+          <p className="text-xs text-slate-300">Stap {zichtbareStappen.indexOf(currentStepId) + 1} van {zichtbareStappen.length}</p>
           <h2 className="text-sm font-semibold mt-0.5">{STEP_LABELS[currentStepId]}</h2>
-          <div className="mt-2 h-1 rounded-full bg-white/20 overflow-hidden" aria-hidden="true">
-            <div className="h-full bg-white/80" style={{ width: `${Math.round((doneIds.size / Math.max(initialSteps.length, 1)) * 100)}%` }} />
+          <div className="mt-2 flex gap-1" aria-hidden="true">
+            {zichtbareStappen.map((id) => (
+              <span key={id} title={STEP_LABELS[id]} className={`h-1.5 flex-1 rounded-full ${id === currentStepId ? "bg-white" : doneIds.has(id) ? "bg-white/70" : "bg-white/20"}`} />
+            ))}
           </div>
           <button type="button" onClick={() => setShowStepList((v) => !v)} className="mt-1.5 text-xs text-teal-100 hover:text-white underline decoration-dotted">
-            {showStepList ? "Overzicht verbergen" : `Alle schermen (${Math.max(initialSteps.length - doneIds.size, 0)} nog open)`}
+            {showStepList ? "Overzicht verbergen" : `Alle stappen (${remainingSteps.length} nog open)`}
           </button>
           {showStepList && (
             <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
-              {initialSteps.map((id) => (
+              {zichtbareStappen.map((id) => (
                 <li key={id} className={`flex items-center gap-1 truncate ${id === currentStepId ? "font-semibold text-white" : doneIds.has(id) ? "text-teal-100" : "text-teal-200/70"}`}>
                   {doneIds.has(id) ? <Check className="h-3 w-3 shrink-0" /> : <span className="inline-block h-3 w-3 shrink-0 text-center leading-3">{id === currentStepId ? "›" : "·"}</span>}
                   <span className="truncate">{STEP_LABELS[id]}</span>

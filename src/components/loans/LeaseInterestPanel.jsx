@@ -366,7 +366,7 @@ function LeaseGroepPanel({
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
                         <strong>Bij welk contract horen deze betalingen?</strong> Er staan {lease.splitKandidaten.length} betalingen van ongeveer {eur(lease.splitBedrag)} bij het
-                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan ik kan zien bij welk contract ze horen — dat bepaal jij.
+                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan te zien is bij welk contract ze horen — dat bepaal jij.
                       </p>
                       <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
                         {lease.splitKandidaten.slice(0, 12).map((tx, i) => (
