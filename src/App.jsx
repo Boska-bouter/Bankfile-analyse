@@ -78,6 +78,7 @@ import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeMod
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
+import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
@@ -3557,7 +3558,8 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5 mt-6">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            compact={parsedFiles.length === 0} // release22V0 — zonder data geen ringmeter/aangifteblok met "nog geen data"
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : parsedFiles.length === 0 ? "Nog geen bankgegevens in dit dossier" : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3578,14 +3580,24 @@ export default function App() {
           {/* v273 — deze rij stond volledig verborgen zolang er geen jaren/project geladen waren;
               op verzoek toont het standaard-dashboard nu altijd deze sectie, met JaaroverzichtCard
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
-          <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+          {/* release22V0 — leeg dossier: één welkomstkaart met drie stappen i.p.v. losse blokken */}
+          {parsedFiles.length === 0 && (
+            <WelkomKaart
+              basisStatus={basisvragenNietGestart ? "nog-niet" : openBasisvragen.length > 0 ? "deels" : "klaar"}
+              basisOpen={openBasisvragen.length}
+              onBasisvragen={() => setOpenVragenWizard(true)}
+              onBankbestand={startBankbestandToevoegen}
+              onDossierLaden={startLoadProject}
+            />
+          )}
+          {parsedFiles.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
 
-          <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
-          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Voeg links bij "Dossier" een bankbestand toe (of klik op stap 1 "Import"), of laad een eerder opgeslagen dossier.</p>}
-          {!(showSetupWizard || manualWizardOpen || openVragenWizard) && (
+          {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
+          {parsedFiles.length > 0 && !(showSetupWizard || manualWizardOpen || openVragenWizard) && (
             <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
           )}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
+          {parsedFiles.length > 0 && (
           <NextStepCard
             stappen={alleStappen}
             overgeslagen={overgeslagenStappen}
@@ -3607,6 +3619,7 @@ export default function App() {
                 : null
             }
           />
+          )}
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
@@ -3746,15 +3759,7 @@ export default function App() {
           />
         )}
 
-        {parsedFiles.length === 0 && (
-          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
-            <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
-            <p className="text-sm text-emerald-900">
-              <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
-              naar een server gestuurd — alles blijft op dit apparaat, ook wat automatisch wordt bewaard.
-            </p>
-          </div>
-        )}
+        {/* release22V0 — de grote groene privacybalk is vervallen: dezelfde zin staat nu in de welkomstkaart (WelkomKaart.jsx) en linksonder in de zijbalk. */}
 
         {error && (
           <section className="rounded-xl border-2 border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
@@ -3802,7 +3807,7 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3991,7 +3996,7 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}

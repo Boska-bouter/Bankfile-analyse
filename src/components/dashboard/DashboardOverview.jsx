@@ -75,7 +75,7 @@ export default function DashboardOverview({ title = "Overzicht", cards }) {
                   Lease, Activa) i.p.v. op alle kaarten — voor een cijfer- of bedragkaart (Resultaat,
                   IB/Zvw) voegt een actieknop niets toe, die tonen geen actionLabel. */}
               {card.actionLabel && (
-                <div className={`mt-1.5 text-xs font-semibold ${TONE_VALUE[tone]}`}>{card.actionLabel} →</div>
+                <div className={`mt-1.5 text-xs font-semibold ${TONE_VALUE[tone]}`}>{card.actionLabel}{/[↑↓]$/.test(card.actionLabel) ? "" : " →"}</div>
               )}
             </button>
           );

@@ -79,13 +79,13 @@ export default function LeaseControleScherm({ controle, goNext }) {
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
         {leases.length > 0
-          ? "Dit zijn de leasebetalingen die ik in de bankbestanden vond. Klopt de indeling?"
-          : "Ik heb in de bankbestanden geen leasebetalingen herkend."}
+          ? "Deze leasebetalingen zijn in de bankbestanden gevonden. Klopt de indeling?"
+          : "In de bankbestanden zijn geen leasebetalingen herkend."}
       </p>
 
       {wizardZeiGeenLease && leases.length > 0 && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Je gaf in de basisvragen aan dat er geen lease is, maar ik vond wel betalingen die op lease lijken. Geef hieronder per regel aan wat het is.
+          Je gaf in de basisvragen aan dat er geen lease is, maar er zijn wel betalingen gevonden die op lease lijken. Geef hieronder per regel aan wat het is.
         </p>
       )}
 
@@ -126,7 +126,7 @@ export default function LeaseControleScherm({ controle, goNext }) {
         return (
           <div key={k} className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
             <p className="text-xs text-amber-900">
-              <strong>Niet gevonden:</strong> je gaf {v.lijst === "overig" ? "een ander leaseobject" : "een leaseauto"} op{naam ? ` bij "${naam}"` : ""}, maar ik zie daar geen betalingen voor.
+              <strong>Niet gevonden:</strong> je gaf {v.lijst === "overig" ? "een ander leaseobject" : "een leaseauto"} op{naam ? ` bij "${naam}"` : ""}, maar daar zijn geen betalingen voor gevonden.
               {kandidaten.length > 0 ? " Staat de lease hieronder bij de vaste maandelijkse betalingen?" : ""}
             </p>
             {kandidaten.length > 0 && (

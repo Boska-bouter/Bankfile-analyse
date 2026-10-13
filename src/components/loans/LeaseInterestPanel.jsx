@@ -348,7 +348,7 @@ function LeaseGroepPanel({
                   {lease.zoekKandidaten?.length > 0 && onBehandelAlsLease && (
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
-                        <strong>Betalingen gevonden voor "{lease.name}".</strong> Ik vond {lease.zoekKandidaten.length} betalingen aan een naam die hierop lijkt, die nu onder een andere categorie staan
+                        <strong>Betalingen gevonden voor "{lease.name}".</strong> Er zijn {lease.zoekKandidaten.length} betalingen gevonden aan een naam die hierop lijkt, die nu onder een andere categorie staan
                         ({[...new Set(lease.zoekKandidaten.map((tx) => tx.category))].slice(0, 3).join(", ")}) — mogelijk omdat bij het inlezen nog niet bekend was dat het om lease gaat. Zijn dit leasebetalingen?
                       </p>
                       <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
@@ -408,7 +408,7 @@ function LeaseGroepPanel({
                     ) : (
                       (lease.splitVan || lease.handmatig) && isCompleteFinancialLeaseDetails(details) ? (
                         <div className="mt-2 text-xs">
-                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst{lease.splitVan ? "" : ". Ik heb in de bankgegevens niets gevonden met deze naam — laad eventueel ook de bankbestanden waarop deze lease wordt betaald."} (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
+                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst{lease.splitVan ? "" : ". In de bankgegevens is niets gevonden met deze naam — laad eventueel ook de bankbestanden waarop deze lease wordt betaald."} (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
                           {onKoppelBetalingen && (lease.splitBron?.transactions?.length > 0) && (
                             koppelOpen === lease.key ? (
                               <div className="mt-1.5 rounded-lg border border-slate-200 bg-white p-2">
