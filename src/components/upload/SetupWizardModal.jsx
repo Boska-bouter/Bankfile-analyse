@@ -142,7 +142,11 @@ export default function SetupWizardModal({
   const remainingSteps = initialSteps.filter((id) => {
     // Scherm 31 komt terug zolang er een ongetypeerd bestand is (bijv. na "Terug" naar 20 nog een bestand geladen).
     if (doneIds.has(id) && !(id === 31 && pendingFileNames.length > 0)) return false;
-    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !needs.holding) return false;
+    // release21V2 — een scherm alleen tonen als er ook echt een vraag op staat. Voorheen kwam scherm 31
+    // leeg in beeld bij een zzp'er (holdingvraag staat open maar hoort alleen bij een BV) en scherm 32 bij
+    // een openstaande privé-spaarvraag zonder geladen privérekening — alleen een knop "Doorgaan".
+    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
+    if (id === 32 && !needs.andere && !needs.spaar && !(needs.spaarPrive && sessionFiles.some((f) => typedNow[f] === "Prive"))) return false;
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
     const heeftJaren = (years || []).length > 0;
     if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || (needs.uren && heeftJaren))))) return false;
