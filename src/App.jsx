@@ -78,6 +78,7 @@ import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeMod
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
+import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
 import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
@@ -3700,9 +3701,14 @@ export default function App() {
             placeholder was dat een compleet wit scherm i.p.v. een duidelijke lege staat. */}
         {transactions.length === 0 && (
           <div style={sectionTabStyle("controleren")}>
-            <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Voeg een bankbestand toe of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets te controleren.</p>
-            </section>
+            {/* release21V4 — i.p.v. alleen een lege-staat-tekst: wat via de wizard al vastligt */}
+            <VastgelegdeBasisgegevens
+                modus="controleren"
+                eigenNamen={eigenNamen} rechtsvorm={rechtsvorm} heeftHolding={heeftHolding} korRegeling={korRegeling} btwVerlegd={btwVerlegd}
+                autoWizardStatus={autoWizardStatus} verwachteLease={verwachteLease} verwachteLeaseOverig={verwachteLeaseOverig} verwachteLening={verwachteLening} verwachteAOV={verwachteAOV} heeftVoorraad={heeftVoorraad}
+                eigenRekeningenExtra={eigenRekeningenExtra} zakelijkeSpaarRekening={zakelijkeSpaarRekening} opdrachtgeversGevraagd={opdrachtgeversGevraagd}
+                onBewerken={() => setManualWizardOpen(true)} onBankbestand={startBankbestandToevoegen}
+            />
           </div>
         )}
 
@@ -3880,9 +3886,14 @@ export default function App() {
             tabsVisible altijd true is, v271) met een leeg dossier werd geopend. */}
         {parsedFiles.length === 0 && (
           <div style={sectionTabStyle("instellingen")}>
-            <section className="rounded-paneel border border-slate-200 bg-white p-8 shadow-sm text-center">
-              <p className="text-sm text-slate-400 italic">Voeg een bankbestand toe of laad een eerder opgeslagen dossier (links bij "Dossier") om hier iets in te stellen.</p>
-            </section>
+            {/* release21V4 — i.p.v. alleen een lege-staat-tekst: wat via de wizard al vastligt */}
+            <VastgelegdeBasisgegevens
+                modus="instellingen"
+                eigenNamen={eigenNamen} rechtsvorm={rechtsvorm} heeftHolding={heeftHolding} korRegeling={korRegeling} btwVerlegd={btwVerlegd}
+                autoWizardStatus={autoWizardStatus} verwachteLease={verwachteLease} verwachteLeaseOverig={verwachteLeaseOverig} verwachteLening={verwachteLening} verwachteAOV={verwachteAOV} heeftVoorraad={heeftVoorraad}
+                eigenRekeningenExtra={eigenRekeningenExtra} zakelijkeSpaarRekening={zakelijkeSpaarRekening} opdrachtgeversGevraagd={opdrachtgeversGevraagd}
+                onBewerken={() => setManualWizardOpen(true)} onBankbestand={startBankbestandToevoegen}
+            />
           </div>
         )}
 
