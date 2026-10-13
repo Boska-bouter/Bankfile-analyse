@@ -1250,7 +1250,9 @@ function Scherm36({
         onClick={() => {
           if (toonWerkruimte) onSeedWerkruimteStatus?.(years, { pand: werkPand, woning: werkWoning });
           if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
-          if (toonOverig && overigJa) onSetOverigInkomenBox1(Object.fromEntries(years.map((y) => [y, Number(overigBedragen[y]) || 0]).filter(([, v]) => v > 0)));
+          // release21V3 — ook "Nee" vastleggen (0 per jaar): een lege lijst gold als "nooit beantwoord",
+          // waardoor de vraag bleef terugkomen in de wizard en op de kaart "Nog niet beantwoord".
+          if (toonOverig && (overigJa || overigNee)) onSetOverigInkomenBox1(Object.fromEntries(years.map((y) => [y, overigJa ? Number(overigBedragen[y]) || 0 : 0])));
           goNext();
         }}
         className={PRIMAIR}

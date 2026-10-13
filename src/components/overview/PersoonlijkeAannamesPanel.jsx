@@ -214,11 +214,11 @@ export default function PersoonlijkeAannamesPanel({
             <input
               key={`overig-${activeYear}`}
               type="number" min="0" step="100" inputMode="decimal" placeholder="€ 0 (geen ander inkomen)"
-              value={overigInkomenBox1?.[activeYear] ?? ""}
+              value={overigInkomenBox1?.[activeYear] || ""}
               onChange={(e) => {
                 const next = { ...(overigInkomenBox1 || {}) };
                 const v = parseFloat(e.target.value);
-                if (Number.isFinite(v) && v > 0) next[activeYear] = v; else delete next[activeYear];
+                next[activeYear] = Number.isFinite(v) && v > 0 ? v : 0; // 0 = beantwoord, geen ander inkomen
                 onSetOverigInkomenBox1(next);
               }}
               className="w-44 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"

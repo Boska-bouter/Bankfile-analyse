@@ -3570,12 +3570,12 @@ export default function App() {
                   for (const [key, d] of Object.entries(r.leaseDetails)) setLeaseDetailField(key, d);
                   if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails);
                 }}
-                overigInkomen={overigInkomenBox1?.[activeYear]}
+                overigInkomen={overigInkomenBox1?.[activeYear] || null}
                 onSetOverigInkomen={(jaar, tekst) => {
                   const next = { ...(overigInkomenBox1 || {}) };
                   const t = String(tekst).trim();
                   const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
-                  if (Number.isFinite(v) && v > 0) next[jaar] = v; else delete next[jaar];
+                  next[jaar] = Number.isFinite(v) && v > 0 ? v : 0; // 0 = beantwoord, geen ander inkomen
                   setOverigInkomenBox1Met(next);
                 }}
                 gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
