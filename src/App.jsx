@@ -2950,8 +2950,20 @@ export default function App() {
     lijst.push({ key: "advies", label: "Advies", open: vorigOpen > 0 ? 1 : 0, geenData: parsedFiles.length === 0, sub: parsedFiles.length === 0 ? "nog geen input" : vorigOpen > 0 ? "na bovenstaande stappen" : "klaar om te bekijken", advies: true });
     return lijst;
   })();
+  // release20V10 — dialoog voor het (extra) bankbestand als losse functie, zodat ook de knop in de
+  // zijbalk bij een leeg dossier (wizard doorlopen zonder bestand) en stap 1 "Import" hem gebruiken.
+  const startBankbestandToevoegen = () =>
+    setDialog({
+      title: parsedFiles.length > 0 ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen",
+      message: <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>,
+      actions: [
+        { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
+        { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
+        { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
+      ],
+    });
   const kiesRouteStap = (s) => {
-    if (parsedFiles.length === 0) { if (s.key === "import") clearAllData(); return; } // zonder dossier: Import start een nieuw dossier, de rest wacht
+    if (parsedFiles.length === 0) { if (s.key === "import") startBankbestandToevoegen(); return; } // zonder bestanden: Import opent het toevoegen van een bankbestand, de rest wacht
     if (s.advies) {
       setActiveTab("overzicht");
       window.dispatchEvent(new Event("bankoverzicht-toon-advies"));
@@ -3269,17 +3281,7 @@ export default function App() {
         tabsVisible={tabsVisible}
         controlerenBadge={controlerenBadge}
         instellingenBadge={instellingenBadge}
-        onLoadFile={() =>
-          setDialog({
-            title: "Extra bankbestand toevoegen",
-            message: <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>,
-            actions: [
-              { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
-              { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
-              { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
-            ],
-          })
-        }
+        onLoadFile={startBankbestandToevoegen}
         onSaveProject={startOpslaan}
         heeftWachtwoord={!!dossierWachtwoord}
         onWachtwoord={() => setWachtwoordModal({ modus: "instellen" })}
@@ -3431,7 +3433,7 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5 mt-6">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3455,7 +3457,7 @@ export default function App() {
           <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
 
           <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
-          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Start een nieuw dossier of laad een eerder opgeslagen dossier (links bij "Dossier") om te beginnen.</p>}
+          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Voeg links bij "Dossier" een bankbestand toe (of klik op stap 1 "Import"), of laad een eerder opgeslagen dossier.</p>}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           <NextStepCard
             stappen={alleStappen}
@@ -3668,7 +3670,7 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3847,7 +3849,7 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Start een nieuw dossier (links) om te beginnen"}
+            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
