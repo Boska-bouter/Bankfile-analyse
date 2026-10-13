@@ -52,6 +52,7 @@ export default function SetupWizardModal({
   years, onSeedAutoStatus,
   zelfstandigenaftrekStatus, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap,
   startersaftrekStatus, onSeedStartersaftrekStatus,
+  werkruimteStatus, onSeedWerkruimteStatus,
   overigInkomenBox1, onSetOverigInkomenBox1,
   heeftVoorraad, setHeeftVoorraad,
   activaGevraagd, onActivaBeantwoord, activaAantalBank = 0,
@@ -100,6 +101,7 @@ export default function SetupWizardModal({
       aov: vol && verwachteAOV === null,
       uren: vol && Object.keys(zelfstandigenaftrekStatus || {}).length === 0,
       starters: vol && Object.keys(startersaftrekStatus || {}).length === 0,
+      werkruimte: vol && Object.keys(werkruimteStatus || {}).length === 0,
       overig: vol && Object.keys(overigInkomenBox1 || {}).length === 0,
       kor: vol && korRegeling === null,
       verlegd: vol && korRegeling !== true && btwVerlegd === null,
@@ -128,7 +130,7 @@ export default function SetupWizardModal({
     if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
-    if (needs.starters || needs.overig || needs.kwartalen) list.push(36);
+    if (needs.starters || needs.overig || needs.kwartalen || needs.werkruimte) list.push(36);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -144,7 +146,7 @@ export default function SetupWizardModal({
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
     if (id === 35 && !(needs.aov || (!isBV && (needs.kor || needs.verlegd || needs.uren)))) return false;
     // Scherm 36: startersaftrek niet bij een BV; kwartalen niet bij KOR.
-    if (id === 36 && !(((needs.starters || needs.overig) && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
+    if (id === 36 && !(needs.werkruimte || ((needs.starters || needs.overig) && !isBV) || (needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0))) return false;
     return true;
   });
 
@@ -179,7 +181,7 @@ export default function SetupWizardModal({
     autoWizardStatus, setAutoWizardStatus, onSeedAutoStatus,
     setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setHeeftVoorraad, setVerwachteAOV, onActivaBeantwoord, activaAantalBank,
     onSetIncomeBtwRateChoice, onSeedZelfstandigenaftrekStatus, onSeedZelfstandigenaftrekMap, zelfstandigenaftrekStatus,
-    onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+    onSeedStartersaftrekStatus, onSeedWerkruimteStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
   };
 
   return (
@@ -1086,7 +1088,7 @@ function Scherm35({
 // ---------------------------------------------------------------------------------------------
 function Scherm36({
   typedNow, zet, needs, isBV, goNext, years, korRegeling,
-  onSeedStartersaftrekStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
+  onSeedStartersaftrekStatus, onSeedWerkruimteStatus, onSetOverigInkomenBox1, kwartalenLijst, kwartaalStatus, setKwartaalStatusField,
 }) {
   const toonOverig = needs.overig && !isBV;
   const overigJa = typedNow.overigJa === true;
@@ -1094,8 +1096,36 @@ function Scherm36({
   const toonStarters = needs.starters && !isBV;
   const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
   const starterJaren = typedNow.starterJaren || [];
+  const toonWerkruimte = needs.werkruimte;
+  const werkPand = typedNow.werkPand === true;
+  const werkWoning = typedNow.werkWoning || "nee"; // "nee" | "zelfstandig" | "niet_zelfstandig"
   return (
     <div className="space-y-4">
+      {toonWerkruimte && (
+        <Sectie
+          titel="Huur je een zakelijk pand of bedrijfsruimte?"
+          uitleg="Bijvoorbeeld een kantoor, winkel, loods of schuur. Huur, energie en gemeentelijke kosten daarvan zijn zakelijke kosten, ook als je ze (deels) vanaf je privérekening betaalt."
+        >
+          <div className="flex gap-2">
+            <button type="button" onClick={() => zet({ werkPand: false })} className={`${KNOP} ${!werkPand ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ werkPand: true })} className={`${KNOP} ${werkPand ? KNOP_AAN : KNOP_UIT}`}>Ja</button>
+          </div>
+        </Sectie>
+      )}
+
+      {toonWerkruimte && (
+        <Sectie
+          titel="Gebruik je een werkruimte in je eigen woning (thuiskantoor)?"
+          uitleg="Alleen een zelfstandige werkruimte (eigen ingang en voorzieningen, niet via de woonruimte bereikbaar, en aan de extra voorwaarden voldaan) maakt het zakelijke deel van huur, energie en gemeentelijke kosten aftrekbaar. Voor een kamer of hoek in je woning is dat niet zo. Controleer de voorwaarden zelf; je kunt dit later per jaar en per rekening aanpassen."
+        >
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={() => zet({ werkWoning: "nee" })} className={`${KNOP} ${werkWoning === "nee" ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ werkWoning: "zelfstandig" })} className={`${KNOP} ${werkWoning === "zelfstandig" ? KNOP_AAN : KNOP_UIT}`}>Ja, een zelfstandige werkruimte</button>
+            <button type="button" onClick={() => zet({ werkWoning: "niet_zelfstandig" })} className={`${KNOP} ${werkWoning === "niet_zelfstandig" ? KNOP_AAN : KNOP_UIT}`}>Ja, een kamer of hoek (niet zelfstandig)</button>
+          </div>
+        </Sectie>
+      )}
+
       {toonStarters && (
         <Sectie
           titel="In welke jaren heb je startersaftrek toegepast?"
@@ -1179,6 +1209,7 @@ function Scherm36({
       <button
         type="button"
         onClick={() => {
+          if (toonWerkruimte) onSeedWerkruimteStatus?.(years, { pand: werkPand, woning: werkWoning });
           if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
           if (toonOverig && overigJa) onSetOverigInkomenBox1(Object.fromEntries(years.map((y) => [y, Number(overigBedragen[y]) || 0]).filter(([, v]) => v > 0)));
           goNext();

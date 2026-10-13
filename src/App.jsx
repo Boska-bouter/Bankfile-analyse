@@ -246,6 +246,22 @@ export default function App() {
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
   // release20V3 — soort ruimte per jaar voor huur/energie/gemeentelijke lasten: bedrijfsruimte | zelfstandig | niet_zelfstandig.
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
+  // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
+  // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
+  const seedWerkruimteStatus = (yearsList, { pand, woning }) => {
+    if (!yearsList || yearsList.length === 0) return;
+    snapshotBeforeAction("Zakelijk pand/werkruimte ingesteld (wizard)");
+    setWerkruimteStatusState((prev) => {
+      const next = { ...prev };
+      for (const y of yearsList) {
+        if (next[y]) continue;
+        const prive = woning === "zelfstandig" || woning === "niet_zelfstandig" ? woning : pand ? "bedrijfsruimte" : null;
+        const zakelijk = pand ? "bedrijfsruimte" : null;
+        next[y] = { ...(zakelijk ? { zakelijk } : {}), ...(prive ? { prive } : {}), ...(!zakelijk && !prive ? { gevraagd: true } : {}) };
+      }
+      return next;
+    });
+  };
   const setWerkruimteStatus = (year, rekening, waarde) => {
     snapshotBeforeAction("Soort ruimte (huur/energie/gemeentelijke lasten) aangepast");
     setWerkruimteStatusState((prev) => {
@@ -3732,6 +3748,8 @@ export default function App() {
             suggesties={wizardSuggesties}
             startersaftrekStatus={startersaftrekStatus}
             onSeedStartersaftrekStatus={seedStartersaftrekStatus}
+            werkruimteStatus={werkruimteStatus}
+            onSeedWerkruimteStatus={seedWerkruimteStatus}
             overigInkomenBox1={overigInkomenBox1}
             onSetOverigInkomenBox1={setOverigInkomenBox1Met}
             activaGevraagd={!!bevestigdeControles.activaWizard}
