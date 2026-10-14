@@ -1,20 +1,59 @@
-// window.storage-polyfill bovenop localStorage — dezelfde interface die het Claude-artifact
-// gebruikt, zodat de rest van de app (persistData/persistSettings in App.jsx) ongewijzigd werkt
-// tussen de artifact-variant en de standalone GitHub Pages-build.
+// window.storage-polyfill — dezelfde interface die het Claude-artifact gebruikt, zodat de rest van de
+// app (persistData/persistSettings in App.jsx) ongewijzigd werkt.
+// release22V6 — opslag in IndexedDB i.p.v. localStorage. localStorage heeft (o.a. in Safari op de iPad)
+// een limiet van ca. 5 MB per site; een dossier met meerdere jaren en bankbestanden paste daar niet meer
+// in ("Opslaan mislukt"), waardoor bij het heropenen "Verder met dit dossier" ontbrak. IndexedDB heeft
+// ruim genoeg ruimte. Bestaande gegevens in localStorage worden bij het eerste lezen nog gevonden en bij
+// de eerstvolgende opslag naar IndexedDB verplaatst. Lukt IndexedDB niet, dan valt alles terug op localStorage.
+const IDB_NAAM = "bankoverzicht";
+const IDB_STORE = "kv";
+let dbBelofte = null;
+function openDb() {
+  if (dbBelofte) return dbBelofte;
+  dbBelofte = new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("geen IndexedDB")); return; }
+    const req = indexedDB.open(IDB_NAAM, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }).catch((e) => { dbBelofte = null; throw e; });
+  return dbBelofte;
+}
+async function idb(modus, actie) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, modus);
+    const req = actie(tx.objectStore(IDB_STORE));
+    tx.oncomplete = () => resolve(req?.result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("afgebroken"));
+  });
+}
+const lsGet = (key) => { try { return localStorage.getItem(key); } catch { return null; } };
+const lsDel = (key) => { try { localStorage.removeItem(key); } catch { /* ignore */ } };
+
 export function installStoragePolyfill() {
   if (typeof window === "undefined" || window.storage) return;
   window.storage = {
     get: async (key) => {
-      const v = localStorage.getItem(key);
+      let v = null;
+      try { v = await idb("readonly", (st) => st.get(key)); } catch { v = null; }
+      if (v == null) v = lsGet(key); // oude opslag (vóór release22V6) of IndexedDB niet beschikbaar
       return v == null ? null : { key, value: v };
     },
     set: async (key, value) => {
-      localStorage.setItem(key, value);
+      try {
+        await idb("readwrite", (st) => st.put(value, key));
+        lsDel(key); // ruimte vrijmaken in localStorage; de gegevens staan nu in IndexedDB
+      } catch {
+        localStorage.setItem(key, value); // terugval; gooit bij een volle opslag zoals voorheen
+      }
       return { key, value };
     },
     delete: async (key) => {
-      const existed = localStorage.getItem(key) != null;
-      localStorage.removeItem(key);
+      const existed = lsGet(key) != null;
+      lsDel(key);
+      try { await idb("readwrite", (st) => st.delete(key)); } catch { /* ignore */ }
       return { key, deleted: existed };
     },
   };
