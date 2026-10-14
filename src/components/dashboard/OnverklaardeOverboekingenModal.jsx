@@ -3,6 +3,8 @@ import { X, Lock, Check } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { displayCategory } from "../../classification/categories.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
+import { betaalSoort } from "../../classification/classify.js";
 
 // V73 — bij een verschil in "Controle zakelijk ↔ privé": toont precies welke boekingen aan de andere
 // kant geen tegenboeking hebben (zelfde bedrag, binnen 5 dagen), met per boeking wat je eraan kunt doen.
@@ -35,12 +37,17 @@ function ToelichtForm({ aantal, onOpslaan, onAnnuleer }) {
 }
 
 const STANDAARD_UITLEG = { reden: REDENEN[0].k, redenTekst: REDENEN[0].t, notitie: "" };
+// release31V2 — voorstel per boeking: een opwaardering van een betaaldienst (PayPal, bunq, ...) komt niet op de privérekening.
+const OPWAARDEER_UITLEG = { reden: "contant", redenTekst: "Opgewaardeerd tegoed bij een betaaldienst (bijv. PayPal) — niet op de privérekening", notitie: "" };
+const voorstelVoor = (tx, kant) => (kant === "Zakelijk" && betaalSoort(tx) === "opwaardering" ? OPWAARDEER_UITLEG : STANDAARD_UITLEG);
 const normIban = (x) => String(x || "").replace(/\s/g, "").toUpperCase();
 const ibanTekst = (x) => normIban(x).replace(/(.{4})(?=.)/g, "$1 ");
 
 // release22V10 — één niet-gekoppelde boeking: de voorgestelde toelichting staat er direct bij, met
 // "Akkoord" (die toelichting overnemen) en "Andere toelichting" (het formulier).
 function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten, onRequestChange }) {
+  const voorstel = voorstelVoor(tx, kant);
+  const [wijzig, setWijzig] = useState(false);
   return (
                 <div className="p-2.5 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
@@ -59,9 +66,17 @@ function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten,
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     {onToelichten && (
                       <>
-                        <button onClick={() => onToelichten([{ sleutel }], STANDAARD_UITLEG)} className="rounded-lg bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800">Akkoord</button>
+                        <button onClick={() => onToelichten([{ sleutel }], voorstel)} className="rounded-lg bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800">Akkoord</button>
                         <button onClick={() => setOpenSleutel(openSleutel === sleutel ? null : sleutel)} className="rounded-lg border border-teal-600 bg-white px-2 py-1 text-xs font-medium text-teal-800 hover:bg-teal-50">Andere toelichting</button>
                       </>
+                    )}
+                    {/* release31V2 — klopt de categorie zelf niet (bijv. geen privé-opname maar een zakelijke uitgave)? */}
+                    {onRequestChange && !tx.transferLocked && (
+                      wijzig ? (
+                        <CategorieSelect value={tx.category} onChange={(c) => { setWijzig(false); onRequestChange(tx, { category: c, type: tx.type }); }} className="rounded-lg border border-slate-300 px-2 py-1 text-xs max-w-[16rem]" />
+                      ) : (
+                        <button onClick={() => setWijzig(true)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Categorie wijzigen</button>
+                      )
                     )}
                     {kant === "Prive" && !tx.transferLocked ? (
                       <>
@@ -76,6 +91,10 @@ function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten,
                       </>
                     ) : kant === "Prive" ? (
                       <span className="inline-flex items-center gap-1 text-[11px] text-slate-500"><Lock className="h-3 w-3" /> Herkend op rekeningnummer — de categorie ligt vast. Controleer of het zakelijke bankbestand compleet is.</span>
+                    ) : voorstel === OPWAARDEER_UITLEG ? (
+                      <span className="text-[11px] text-slate-500">
+                        Dit is een opwaardering van een betaaldienst: het geld staat daarna als tegoed bij die dienst, niet op de privérekening.
+                      </span>
                     ) : (
                       <span className="text-[11px] text-slate-500">
                         Op de privérekening staat geen ontvangst met dit bedrag. Het geld ging waarschijnlijk naar een andere eigen rekening: laad het bestand van die rekening, of controleer of de privé-afschriften van deze periode compleet zijn.
@@ -83,7 +102,7 @@ function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten,
                     )}
                   </div>
                   {onToelichten && openSleutel !== sleutel && (
-                    <p className="mt-1 text-[11px] text-slate-500">Voorgestelde toelichting bij "Akkoord": <span className="text-slate-700">{STANDAARD_UITLEG.redenTekst}</span></p>
+                    <p className="mt-1 text-[11px] text-slate-500">Voorgestelde toelichting bij "Akkoord": <span className="text-slate-700">{voorstel.redenTekst}</span></p>
                   )}
                   {openSleutel === sleutel && (
                     <ToelichtForm aantal={1} onAnnuleer={() => setOpenSleutel(null)} onOpslaan={(u) => { onToelichten([{ sleutel }], u); setOpenSleutel(null); }} />

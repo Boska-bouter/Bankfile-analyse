@@ -94,6 +94,22 @@ function kanPersoonZijn(tx) {
   return !isCardPaymentTx(tx) && !(tx.heeftIbanKolom && !tx.counterpartyIban);
 }
 
+const zonderBetaalmiddel = (t) => t.replace(/\b(google|apple|samsung|garmin) pay\b|\bbetaalpas\b/g, " ");
+
+// release31V2 — soort betaling, los van de categorie: contante opname, pinbetaling of opwaardering van een
+// betaaldienst. Gebruikt door de classificatie en door de controle zakelijk ↔ privé (die zulke boekingen
+// zelf kan verklaren: ze komen nooit als ontvangst op een privérekening).
+const CONTANT_TEKST = /\bgeldautomaat\b|\bgeldmaat\b|^gea[,\s]|\bpinopname\b|\bcontant opgenomen\b/i;
+const OPWAARDEREN_TEKST = /opwaarder|\btop-?up\b/i;
+export function betaalSoort(tx) {
+  const bw = String(tx.betaalwijze || "").trim();
+  const tekst = `${tx.counterparty || ""} ${tx.description || ""}`;
+  if (tx.amount < 0 && (/geldautomaat/i.test(bw) || /^(ga|gea)$/i.test(bw) || CONTANT_TEKST.test(tekst) || CONTANT_TEKST.test(String(tx.description || "").trim()))) return "contant";
+  if (tx.amount < 0 && OPWAARDEREN_TEKST.test(`${tekst} ${tx.fullDescription || ""}`)) return "opwaardering";
+  if (isCardPaymentTx(tx)) return "pin";
+  return null;
+}
+
 export function looksLikeForeignCardPayment(tx) {
   const check = (val) => {
     const m = (val || "").trim().match(/\b([A-Z]{3})$/);
@@ -126,7 +142,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // voorkomen dat ze als stukje van een ander woord matchen — maar zonder deze kopspatie zou zo'n
   // trefwoord nooit matchen wanneer het merk toevallig het allereerste woord is (bijv. een
   // tegenpartij "BP Boxtel" of "Action 1234 Boxtel").
-  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  // release31V2 — betaalmiddel-woorden ("Google Pay", "Apple Pay", "betaalpas") zeggen niets over de winkel en
+  // mogen geen trefwoord laten matchen (een trefwoord "google" ving zo alle ABN-pinbetalingen).
+  const text = zonderBetaalmiddel(` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase());
   const isIncome = tx.amount > 0;
 
   // Een overboeking naar/van een van je eigen andere geladen rekeningen — herkend op
@@ -312,8 +330,11 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
   // release30V8 — betaalwijze "Onbemand tanken" (Knab) is altijd brandstof, ook bij een onbekende pompnaam.
   const tankRegel = /onbemand tanken/i.test(tx.betaalwijze || "") ? rules.find((r) => r.name === "Brandstof") : null;
-  for (const rule of tankRegel ? [tankRegel, ...rules] : rules) {
-    if (rule === tankRegel || (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType))) {
+  // release31V2 — contante opname (geldautomaat, ook ABN "GEA, ..." en betaalwijze "Geldautomaat") → Privé opnames.
+  const contantRegel = !tankRegel && betaalSoort(tx) === "contant" ? rules.find((r) => r.name === "Privé opnames") : null;
+  const vasteRegel = tankRegel || contantRegel;
+  for (const rule of vasteRegel ? [vasteRegel, ...rules] : rules) {
+    if (rule === vasteRegel || (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType))) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
@@ -493,7 +514,9 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
 
 function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) {
   if (!override || override.category !== "Overig") return false;
-  const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
+  // release31V2 — betaalmiddel-woorden ("Google Pay", "Apple Pay", "betaalpas") zeggen niets over de winkel en
+  // mogen geen trefwoord laten matchen (een trefwoord "google" ving zo alle ABN-pinbetalingen).
+  const text = zonderBetaalmiddel(` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase());
   if (ZAKELIJK_SPAAR_KEYWORDS.some((kw) => text.includes(kw))) return true;
   if (spaarKeywordsVoor(accountType, zakelijkeSpaarKeywords).some((kw) => text.includes(kw))) return true;
   if (tx.counterpartyIban && ownAccountsElsewhere && ownAccountsElsewhere.length > 0) {
@@ -524,6 +547,19 @@ const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
   "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop/uitgaven",
 ];
 
+// release31V2 — een keuze per tegenpartijnaam geldt voor alle rekeningen. Maar "Privé opnames"/"Terugboeking van
+// privé" bestaan alleen op de zakelijke rekening, en "Ontvangen van zakelijk"/"Terugboeking naar zakelijk" alleen
+// op de privérekening. Dezelfde winkel op de andere rekening (bijv. "Tabak Boschdijk" met zakelijke én privépas)
+// krijgt zo'n keuze dus niet over, maar wordt gewoon zelf ingedeeld.
+const ALLEEN_ZAKELIJK = new Set(["Privé opnames", "Terugboeking van privé"]);
+const ALLEEN_PRIVE = new Set(["Ontvangen van zakelijk", "Terugboeking naar zakelijk"]);
+function hoortBijAndereRekening(override, accountType) {
+  const c = override?.category;
+  if (!c || !override.type) return false;
+  if (accountType === "Zakelijk") return ALLEEN_PRIVE.has(c) && override.type !== "Zakelijk";
+  return ALLEEN_ZAKELIJK.has(c) && override.type === "Zakelijk";
+}
+
 export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
   if (lockedTransfer) return lockedTransfer;
@@ -535,8 +571,9 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   const ibanOverride = ik && overridesByCounterparty[ik];
   if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(ibanOverride, accountType);
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-  const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(keyOverride, accountType);
+  // release31V2 — keuzes die vóór het uitlezen van de winkelnaam (ABN "BEA, ...") op de volledige regel zijn gemaakt, blijven gelden.
+  const keyOverride = (key && overridesByCounterparty[key]) || (tx.counterpartyOrigineel && overridesByCounterparty[counterpartyKey(tx.counterpartyOrigineel, tx.amount)]);
+  if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) && !hoortBijAndereRekening(keyOverride, accountType)) return withAccountType(keyOverride, accountType);
   // V37 — een storno/terugboeking (bijv. een teruggeboekte incasso, "Reden: Terugboeking op verzoek klant")
   // hoort bij dezelfde categorie als de oorspronkelijke afschrijving van dezelfde tegenpartij (op IBAN).
   if (tx.amount > 0 && /\b(terugboeking|storno|terugbetaling|restitutie)\b/i.test(`${tx.description} ${tx.fullDescription}`)) {

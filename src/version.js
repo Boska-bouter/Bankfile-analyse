@@ -1,1 +1,1 @@
-export const APP_RELEASE = "release31V1";
+export const APP_RELEASE = "release31V2";

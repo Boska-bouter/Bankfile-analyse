@@ -14,7 +14,7 @@ export function computeDuplicateInfo(allTransactions) {
   const fingerprintByTxId = {};
   const byFingerprintKey = {};
   for (const tx of allTransactions) {
-    const key = `${tx.date.getTime()}::${tx.amount}::${normKey(tx.counterparty)}::${normKey(tx.description)}`;
+    const key = `${tx.date.getTime()}::${tx.amount}::${normKey(tx.counterpartyOrigineel ?? tx.counterparty)}::${normKey(tx.description)}`;
     const i = counters[key] || 0;
     counters[key] = i + 1;
     const fingerprint = `${key}::${i}`;

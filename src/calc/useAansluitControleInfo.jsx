@@ -1,12 +1,13 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
 import { eur } from "../utils/amounts.js";
+import { betaalSoort } from "../classification/classify.js";
 
 // Sleutel waaronder een toegelichte (bekende) niet-gekoppelde overboeking in bevestigdeControles staat.
 // Bewust géén tx.id (een teller die per keer laden kan verschuiven) maar datum + bedrag + tegenrekening/naam.
 export function onverklaardSleutel(tx, kant) {
   const d = tx.date instanceof Date ? tx.date.toISOString().slice(0, 10) : String(tx.date || "");
-  return `onverklaard|${kant}|${d}|${Math.round(tx.amount * 100)}|${tx.counterpartyIban || tx.counterparty || ""}`;
+  return `onverklaard|${kant}|${d}|${Math.round(tx.amount * 100)}|${tx.counterpartyIban || tx.counterpartyOrigineel || tx.counterparty || ""}`;
 }
 
 export function useAansluitControleInfo(p) {
@@ -42,11 +43,24 @@ export function useAansluitControleInfo(p) {
     const nietGeladen = new Set(eigenRekeningenNietGeladen.map(norm));
     const autoUitleg = (x) => {
       const iban = norm(x.tx.counterpartyIban);
-      return iban && nietGeladen.has(iban)
-        ? { reden: "eigen-rekening", redenTekst: `Eigen rekening ${iban.replace(/(.{4})(?=.)/g, "$1 ")}, niet geladen`, notitie: "", automatisch: true }
-        : null;
+      if (iban && nietGeladen.has(iban)) return { reden: "eigen-rekening", redenTekst: `Eigen rekening ${iban.replace(/(.{4})(?=.)/g, "$1 ")}, niet geladen`, notitie: "", automatisch: true };
+      // release31V2 — een contante opname of een pinbetaling met de zakelijke pas komt nooit als ontvangst op een
+      // privérekening; daar is dus nooit een tegenboeking te verwachten.
+      if (x.kant === "Zakelijk") {
+        const soort = betaalSoort(x.tx);
+        if (soort === "contant") return { reden: "contant", redenTekst: "Contant opgenomen — komt niet op een privérekening", notitie: "", automatisch: true };
+        if (soort === "pin") return { reden: "pin", redenTekst: "Privé-uitgave met de zakelijke pas — komt niet op een privérekening", notitie: "", automatisch: true };
+      }
+      return null;
     };
-    const uitlegVan = (x) => toegelicht[x.sleutel] || autoUitleg(x);
+    const uitlegVan = (x) => {
+      const handmatig = toegelicht[x.sleutel];
+      const auto = autoUitleg(x);
+      // Eerder met "Akkoord" de algemene tekst "bestand ontbreekt" gegeven bij een contante opname of pinbetaling:
+      // dan is de automatische (juiste) reden beter. Een eigen notitie of andere reden blijft staan.
+      if (auto && (auto.reden === "contant" || auto.reden === "pin") && handmatig && handmatig.reden === "bestand" && !handmatig.notitie) return auto;
+      return handmatig || auto;
+    };
     // 15V7: bekende boekingen waarvan je de oorzaak hebt toegelicht tellen niet meer als "niet gekoppeld".
     const onverklaard = onverklaardAlle.filter((x) => !uitlegVan(x));
     const toegelichtLijst = onverklaardAlle.filter((x) => uitlegVan(x)).map((x) => ({ ...x, uitleg: uitlegVan(x) }));

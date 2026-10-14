@@ -16,6 +16,9 @@ export function herstelMapping(pf) {
 }
 
 const BETAALWIJZE_KOLOMMEN = ["Betaalwijze", "Mutatiesoort", "Code", "Transactiecode"];
+// "BEA, GOOGLE PAY    JUMBO BOXTEL,PAS011NR:02101911, 05.06.25/07:25   EINDHOVEN" en de nieuwere vorm
+// "BEA,BETAALPAS    BP EXPRESS EINDHOVENNR:41120687,2025-11-04/08:32   EINDHOVEN,NLD".
+const ABN_PAS_RE = /^(BEA|GEA)\s*,\s*(?:[A-Z]+(?: [A-Z]+)?)\s{2,}(.+?)(?:,\s*PAS\s*\d{2,3}\s*NR:|NR:)/i;
 
 export function buildTransactions(parsedFiles) {
   const out = [];
@@ -39,7 +42,7 @@ export function buildTransactions(parsedFiles) {
         const isBij = tok === "c" || ["bij", "credit", "+"].some((v) => afbijRaw.includes(v));
         amount = Math.abs(amount) * (isAf && !isBij ? -1 : 1);
       }
-      const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
+      let counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
       let counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
       // release30V2 — een in de wizard ingevuld rekeningnummer (pf.eigenRekening) gaat vóór de kolom.
       const ownAccount = pf.eigenRekening ? normalizeIban(pf.eigenRekening) : mapping.ownAccount ? normalizeIban(r[mapping.ownAccount]) : "";
@@ -57,6 +60,15 @@ export function buildTransactions(parsedFiles) {
       // ASN/SNS "Transactiecode"): onderscheidt een pinbetaling van een overboeking, ook zonder "Pasvolgnr".
       let betaalwijze = "";
       for (const k of BETAALWIJZE_KOLOMMEN) { if (r[k] != null && String(r[k]).trim()) { betaalwijze = String(r[k]).trim(); break; } }
+      // release31V2 — ABN AMRO (MT940) zet bij elke pin-/geldautomaatbetaling als "naam" alleen "BEA, GOOGLE PAY"
+      // of "GEA, BETAALPAS" + de hele omschrijving. Daardoor vielen honderden verschillende winkels onder één
+      // tegenpartij (één keuze gold voor allemaal). Nu: de winkelnaam als tegenpartij, en de betaalwijze erbij.
+      const counterpartyOrigineel = counterparty;
+      const abnPas = ABN_PAS_RE.exec(counterparty);
+      if (abnPas) {
+        counterparty = abnPas[2].trim();
+        if (!betaalwijze) betaalwijze = abnPas[1].toUpperCase() === "GEA" ? "Geldautomaat" : "Betaalautomaat";
+      }
       fileTx.push({
         id: id++,
         date,
@@ -64,6 +76,8 @@ export function buildTransactions(parsedFiles) {
         month: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
         amount,
         counterparty,
+        // Zoals in het bestand; blijft de basis voor vingerafdrukken (duplicaten, toelichtingen) en oude keuzes.
+        ...(counterpartyOrigineel !== counterparty ? { counterpartyOrigineel } : {}),
         counterpartyIban,
         ownAccount,
         description,

@@ -52,6 +52,8 @@ export const DEFAULT_RULES = [
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
+    // release31V2 — buitenlandse ketens en algemene woorden die in de dossiers als vakantie/winkel eindigden.
+    "aral", "agip", "tankstelle", "tankstation", "ok express", "omv ",
     // V58 — laden van een elektrische auto valt onder brandstof (en niet onder huisenergie via "eneco")
     "eneco emobility", "eneco e-mobility", "emobility", "e-mobility", "laadpas", "ev charging", "newmotion",
   ] },
