@@ -3,12 +3,15 @@ import { Check, ClipboardList, Lock, Upload, ListChecks } from "lucide-react";
 // release22V0 — lege staat van Overzicht (nog geen bankbestand). Vervangt de stapel losse blokken
 // (ringmeter "nog geen data", aangifteblok, reconstructielink, routebalk met 5× "nog geen input",
 // hulpregel, basisvragenkaart en de grote privacybalk) door één kaart met drie stappen.
+// release30V4 — status: "klaar" (vinkje), "nu" (de stap die aan de beurt is: gevuld rondje + gevulde knop),
+// "later" (kan al, maar is niet aan de beurt: grijs rondje + omlijnde knop), "wacht" (nog niet mogelijk).
 function Stap({ nr, titel, tekst, status, knop, Icon }) {
   const klaar = status === "klaar";
   const uit = status === "wacht";
+  const nu = status === "nu";
   return (
     <li className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 ${uit ? "border-slate-100 bg-slate-50/60" : "border-slate-200 bg-white"}`}>
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${klaar ? "bg-emerald-600 text-white" : uit ? "bg-slate-200 text-slate-400" : "bg-teal-700 text-white"}`}>
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${klaar ? "bg-emerald-600 text-white" : nu ? "bg-teal-700 text-white" : uit ? "bg-slate-200 text-slate-400" : "border-2 border-slate-300 bg-white text-slate-500"}`}>
         {klaar ? <Check className="h-4 w-4" /> : nr}
       </span>
       <div className="flex-1 min-w-[12rem]">
@@ -17,7 +20,7 @@ function Stap({ nr, titel, tekst, status, knop, Icon }) {
       </div>
       {knop && (
         <button type="button" onClick={knop.onClick}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${knop.primair ? "bg-teal-700 text-white hover:bg-teal-800" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${nu ? "bg-teal-700 text-white hover:bg-teal-800" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
           {Icon && <Icon className="h-4 w-4" />} {knop.label}
         </button>
       )}
@@ -38,10 +41,10 @@ export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onB
         <p className="text-sm text-slate-500 mt-0.5">Drie stappen, in deze volgorde. Je kunt tussendoor stoppen; alles wordt bewaard.</p>
       </div>
       <ol className="space-y-2">
-        <Stap nr={1} titel="Basisvragen" tekst={basisTekst} status={basisStatus === "klaar" ? "klaar" : "actief"} Icon={ClipboardList}
-          knop={basisStatus === "klaar" ? null : { label: basisStatus === "deels" ? "Verder" : "Start", onClick: onBasisvragen, primair: true }} />
-        <Stap nr={2} titel="Bankbestanden toevoegen" tekst="Zakelijk en privé · CSV, Excel, MT940 of CAMT.053 · per jaar of meerdere jaren." status="actief" Icon={Upload}
-          knop={{ label: "Toevoegen", onClick: onBankbestand, primair: basisStatus === "klaar" }} />
+        <Stap nr={1} titel="Basisvragen" tekst={basisTekst} status={basisStatus === "klaar" ? "klaar" : "nu"} Icon={ClipboardList}
+          knop={basisStatus === "klaar" ? null : { label: basisStatus === "deels" ? "Verder" : "Start", onClick: onBasisvragen }} />
+        <Stap nr={2} titel="Bankbestanden toevoegen" tekst="Zakelijk en privé · CSV, Excel, MT940 of CAMT.053 · per jaar of meerdere jaren." status={basisStatus === "klaar" ? "nu" : "later"} Icon={Upload}
+          knop={{ label: "Toevoegen", onClick: onBankbestand }} />
         <Stap nr={3} titel="Controleren" tekst="Indeling, bedrijfsmiddelen en instellingen nalopen. Beschikbaar na de import." status="wacht" Icon={ListChecks} />
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">

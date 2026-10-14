@@ -12,6 +12,8 @@ const COMPANY_HINTS = [
   // Generieke Nederlandse bedrijfswoorden — "bedri" (i.p.v. het volledige "bedrijf") omdat een
   // bank een lange tegenpartijnaam kan afkappen vóór het einde van het woord.
   "bedri", "commercial cards", "cjib",
+  // release30V8 — gezien in een Knab/ING-dossier als "persoon": administratiekantoor, CBR, Sony, platenzaak.
+  "administratie", "bureau", "entertainment", "records",
 ];
 
 // Getest tegen echte bankbestanden (ING, ABN MT940, Knab — 6000+ regels in totaal): de eerdere,
@@ -28,6 +30,7 @@ export function looksLikePerson(text) {
   const raw = String(text || "").trim();
   const t = raw.toLowerCase();
   if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
+  if (/\s(ag|se|sarl|srl)$/i.test(raw)) return false; // buitenlandse rechtsvorm achteraan (bijv. "Autodoc AG")
   if (PERSON_TITLES.some((p) => t.startsWith(p))) return true;
   // Kaarttransactie-voorvoegsels (CCV*, BCK*, MOL*, ...) en een land-/plaatscode-achtervoegsel
   // ("... NLD") zijn typerend voor automatisch gegenereerde pin-omschrijvingen, nooit een mens.

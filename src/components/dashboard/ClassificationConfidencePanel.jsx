@@ -1,3 +1,5 @@
+import { counterpartyKey } from "../../utils/normalization.js";
+import { sleutelZonderNaam } from "../../classification/reviewSummaries.js";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CATEGORY_COLOR, displayCategory } from "../../classification/categories.js";
@@ -11,14 +13,23 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel }) {
+export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
 
-  const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword");
-  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic");
-  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback");
+  // release31V0 — "Klopt zo" in het venster Overig / Overboekingen aan personen telt als beoordeeld, net als
+  // in de telling op de kaart en in het venster dat je hier opent. Voorheen telde dit blok ze nog als
+  // "controleren", terwijl het geopende venster er 0 toonde.
+  const overigSet = new Set(reviewedOverigKeys), personenSet = new Set(reviewedPersonKeys);
+  const bevestigd = (tx) => {
+    if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
+    return (tx.category === "Overig" ? overigSet : personenSet).has(k);
+  };
+  const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigd(tx));
+  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx));
+  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback" && !bevestigd(tx));
   const needsReview = [...unclear, ...review]; // onduidelijk eerst — dat verdient de meeste aandacht
   const total = nonMirror.length;
   const pct = (n) => Math.round((n / total) * 100);

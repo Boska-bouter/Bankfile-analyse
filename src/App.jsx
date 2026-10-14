@@ -9,7 +9,7 @@ import { resolveClassification, detectOwnAccountTransfer } from "./classificatio
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
 import { scoreClassification } from "./classification/confidence.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf, setActieveRechtsvorm } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
@@ -20,7 +20,7 @@ import {
 } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
-import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
+import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -77,6 +77,8 @@ import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import { voorladenExcel } from "./importers/excel.js";
+import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
 import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
@@ -93,6 +95,7 @@ import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
+import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
@@ -188,6 +191,7 @@ export default function App() {
   // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
   // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
   const [rechtsvorm, setRechtsvorm] = useState(null);
+  setActieveRechtsvorm(rechtsvorm); // release30V6 — BV-categorieën alleen in keuzelijsten bij een BV
   // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
   const [heeftHolding, setHeeftHolding] = useState(null);
   // Handmatig ingevoerde boekingen van de holding zelf — géén los bankbestand/eigen classificatie
@@ -418,6 +422,11 @@ export default function App() {
   // forceRechtsvormStep op SetupWizardModal), zodat je rechtsvorm achteraf nog kunt omzetten.
   const [manualWizardOpen, setManualWizardOpen] = useState(false);
   const [openVragenWizard, setOpenVragenWizard] = useState(false); // release21V1 — wizard via "Nu beantwoorden"
+  // release30V7 — inlezen van bankbestanden zichtbaar maken in de wizard (bezig / foutmelding).
+  const [importBezig, setImportBezig] = useState(false);
+  const [showInkomenPerMaand, setShowInkomenPerMaand] = useState(false); // release31V5
+  const [importHerladen, setImportHerladen] = useState(false);
+  useEffect(() => { const t = setTimeout(voorladenExcel, 4000); return () => clearTimeout(t); }, []);
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -1057,16 +1066,25 @@ export default function App() {
     setError(null);
     const presetType = pendingAccountTypeRef.current;
     pendingAccountTypeRef.current = null;
-    const files = Array.from(fileList).filter((f) => /\.(csv|xlsx|xls|940|sta|mt940|swi|txt|xml)$/i.test(f.name));
+    const gekozen = Array.from(fileList || []);
+    const files = gekozen.filter((f) => /\.(csv|xlsx|xls|940|sta|mt940|swi|txt|xml)$/i.test(f.name));
     const results = [];
     const failed = [];
-    for (const f of files) {
-      try {
-        const { headers, rows, mapping } = await parseFile(f);
-        results.push({ headers, rows, mapping, sourceLabel: f.name, fileName: f.name });
-      } catch (e) {
-        failed.push(`${f.name}: ${e.message || e}`);
+    // release30V7 — niet-ondersteunde bestanden werden stil overgeslagen ("er gebeurt niets").
+    for (const f of gekozen) if (!files.includes(f)) failed.push(`${f.name}: dit bestandstype wordt niet ondersteund (wel: CSV, XLS/XLSX, MT940, CAMT.053).`);
+    setImportBezig(files.length > 0);
+    try {
+      for (const f of files) {
+        try {
+          const { headers, rows, mapping } = await parseFile(f);
+          results.push({ headers, rows, mapping, sourceLabel: f.name, fileName: f.name });
+        } catch (e) {
+          failed.push(`${f.name}: ${e.message || e}`);
+          if (e?.herladen) setImportHerladen(true);
+        }
       }
+    } finally {
+      setImportBezig(false);
     }
     if (failed.length > 0) setError(failed.join("\n"));
     if (results.length > 0) {
@@ -1287,6 +1305,24 @@ export default function App() {
     () => parsedFiles.map((f) => f.fileName).filter((name) => !(name in accountTypeByFile)),
     [parsedFiles, accountTypeByFile]
   );
+  // release30V2 — zelf ingevuld/gecorrigeerd eigen rekeningnummer per bestand (in de wizard). Wordt op het
+  // bestand zelf bewaard (parsedFiles → ook in het dossierbestand) en gaat vóór wat uit het bestand gelezen is.
+  const setEigenRekeningVoorBestanden = (fileNames, iban) => {
+    snapshotBeforeAction("Rekeningnummer van bestand aangepast");
+    setParsedFiles((prev) => prev.map((f) => (fileNames.includes(f.fileName) ? { ...f, eigenRekening: iban || undefined } : f)));
+  };
+  const bestandInfo = useMemo(() => {
+    const info = {};
+    for (const tx of allTransactions) {
+      if (!tx.date) continue;
+      const i = (info[tx.source] ||= { van: tx.date, tot: tx.date });
+      if (tx.date < i.van) i.van = tx.date;
+      if (tx.date > i.tot) i.tot = tx.date;
+    }
+    return info;
+  }, [allTransactions]);
+  // release31V4 — periode per rekeningsoort (zakelijk / privé), voor de controle zakelijk ↔ privé.
+  const periodePerSoort = useMemo(() => periodesPerSoort(bestandInfo, accountTypeByFile), [bestandInfo, accountTypeByFile]);
   const setAccountType = (fileName, type) => {
     snapshotBeforeAction("Rekeningtype aangepast");
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
@@ -1450,12 +1486,12 @@ export default function App() {
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
   const bevestigdInBulkVenster = (tx) => {
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
-    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-    return !!k && (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
+    return (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
   };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
-    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set();
+    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set(), reviewExBulk = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -1467,11 +1503,14 @@ export default function App() {
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
-      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") reviewExBulk.add(gk); }
       else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
-    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+    // release31V1 — `openExBulk`: alleen wat NIET al in "Overig opruimen" of "Overboekingen aan personen" staat.
+    // Die twee hebben een eigen kaart; voorheen telden dezelfde boekingen dubbel mee in de open punten
+    // (bijv. 347 bij Classificatie, terwijl het venster "0 groepen + 555 elders" toonde).
+    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
@@ -1494,12 +1533,14 @@ export default function App() {
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
+    setShowPersonReview(false);
     jumpToSection(overigReviewSectionRef);
   };
   const jumpToPersonenFromModal = () => {
     setOpenConfidenceLevel(null);
     if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
     setShowPersonReview(true);
+    setShowOverigReview(false);
     jumpToSection(personReviewSectionRef);
   };
 
@@ -1527,10 +1568,12 @@ export default function App() {
   };
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
-  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen"), [classified]);
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true }), [classified]);
   const pendingPersonReview = useMemo(() => personSummary.filter((i) => !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
+  const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
   const markPersonSource = (item, category, type) => {
-    setCounterpartyOverride(item.name, item.amount, { category, type });
+    zetVoorItem(item, { category, type });
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
   const confirmPersonAsIs = (item) => {
@@ -1538,10 +1581,10 @@ export default function App() {
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
-  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig"), [classified]);
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true }), [classified]);
   const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
-    setCounterpartyOverride(item.name, item.amount, { category, type });
+    zetVoorItem(item, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
   // V90 — de bulkknoppen werken per TYPE: alleen de tegenpartijen die nu als Zakelijk (resp. Privé) staan.
@@ -2258,6 +2301,29 @@ export default function App() {
     }
     return c;
   }, [groups, importDiagnostics, accountTypeByFile]);
+  // release22V10 — rekeningnummer(s) bij de categorietabellen: de geladen rekeningen waarvan dit jaar
+  // transacties in de tabel staan, plus de bij Eigen rekeningen opgegeven (niet geladen) rekeningen van die soort.
+  const ibanTekst = (iban) => String(iban).replace(/\s/g, "").toUpperCase().replace(/(.{4})(?=.)/g, "$1 ");
+  const rekeningenVoorGroep = (group, soort) => {
+    const gezien = new Set();
+    const lijst = [];
+    for (const tx of group?.items || []) {
+      if (tx.isMirror) continue;
+      const iban = ownAccountByFile[tx.source];
+      const id = iban ? normKey(iban) : `bestand:${tx.source}`;
+      if (gezien.has(id)) continue;
+      gezien.add(id);
+      lijst.push({ id, tekst: iban ? ibanTekst(iban) : String(tx.source || "onbekend bestand") });
+    }
+    for (const r of eigenRekeningenExtra || []) {
+      if (!r?.iban || r.accountType !== soort) continue;
+      const id = normKey(r.iban);
+      if (gezien.has(id)) continue;
+      gezien.add(id);
+      lijst.push({ id, tekst: ibanTekst(r.iban), opgegeven: true });
+    }
+    return { lijst, leegTekst: soort === "Zakelijk" ? "Geen zakelijke rekening geladen of opgegeven" : "Geen privérekening geladen of opgegeven" };
+  };
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Privé ${activeYear}`, type: "Prive", year: activeYear, items: [] };
   // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
@@ -2554,6 +2620,8 @@ export default function App() {
   // maar één plek is die zakSum/priSum/diff uitrekent.
   const aansluitControleInfo = useAansluitControleInfo({
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
+    eigenRekeningenNietGeladen: (eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean),
+    periodeZak: periodePerSoort.Zakelijk || null, periodePri: periodePerSoort.Prive || null,
   });
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
@@ -2640,6 +2708,15 @@ export default function App() {
   const activeTabLiveRef = useRef(activeTab);
   activeTabLiveRef.current = activeTab;
   // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
+  // release30V7 — scrollen met ruimte voor de vaste stappenbalk bovenaan (Controleren/Instellingen):
+  // anders viel de kop van het doelpaneel eronder en zag je alleen het paneel dáárna.
+  const scrollNaarSectie = (el) => {
+    if (!el) return;
+    const balk = document.querySelector("[data-stappenbalk]");
+    const ruimte = balk && balk.offsetParent !== null ? Math.ceil(balk.getBoundingClientRect().height) + 24 : 16;
+    el.style.scrollMarginTop = `${ruimte}px`;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
     if (ref === leasesSectionRef) autoOpenLeaseWizard();
@@ -2672,7 +2749,7 @@ export default function App() {
     }
     if (!ref.current) { setPendingScrollRef(ref); return; }
     openPaneelIn(ref.current);
-    setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => scrollNaarSectie(ref.current), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
   // geworden — requestAnimationFrame wacht op de eerstvolgende render/paint na de tabwissel. Ook
@@ -2688,7 +2765,7 @@ export default function App() {
       const el = pendingScrollRef.current;
       if (el) {
         openPaneelIn(el);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollNaarSectie(el);
         setPendingScrollRef(null);
       } else if (pogingen++ < 40) {
         raf = requestAnimationFrame(probeer);
@@ -2743,14 +2820,20 @@ export default function App() {
       terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
       sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles, gatenAlleen: rechtsvorm !== "bv" }),
       gatenAlleen: rechtsvorm !== "bv",
+      eenzijdig: gezamenlijkePeriode(periodePerSoort.Zakelijk, periodePerSoort.Prive)?.eenzijdig || [],
     };
-  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm]);
+  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm, periodePerSoort]);
   const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
   const bevestigControles = (sleutels) => setBevestigdeControles((prev) => { const next = { ...prev }; for (const k of sleutels) next[k] = true; return next; });
   const herroepControle = (sleutel) => setBevestigdeControles((prev) => { const next = { ...prev }; delete next[sleutel]; return next; });
   const toepassenTerugkerend = (t) => {
     snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
+  };
+  // release22V9 — alle betalingen van deze terugkerende reeks op een zelf gekozen categorie zetten.
+  const toepassenTerugkerendAlle = (t, categorie, type) => {
+    snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${categorie}`);
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.alle || []) next[a.id] = { ...(prev[a.id] || {}), category: categorie, type }; return next; });
   };
   const controlerenDashboardCards = useControlerenDashboardCards({
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
@@ -2866,7 +2949,7 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
@@ -2875,6 +2958,7 @@ export default function App() {
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
+    reviewedOverigKeys, reviewedPersonKeys,
     priGroupForYear, priGroupShown, privateLoanSummary, priveOnlyDossier, priveRekeningGeladen,
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
@@ -2980,7 +3064,7 @@ export default function App() {
   // "Overig") en kon het 99% tonen bij honderden open punten.
   const dossierPct = useMemo(() => {
     if (!classified.length) return null;
-    const classOpen = confidenceSummary.needsReview;
+    const classOpen = confidenceSummary.openExBulk;
     const overige = Math.max(0, dossierOpenPoints - classOpen);
     const totaal = Math.max(confidenceSummary.groupsTotal + overige, dossierOpenPoints, 1);
     if (dossierOpenPoints === 0) return 100;
@@ -3154,6 +3238,12 @@ export default function App() {
   // dezelfde refs/handlers die de rest van de app al gebruikt, geen nieuwe navigatielogica.
   const handleDetailsJump = (target) => {
     switch (target) {
+      case "inkomen":
+        setShowInkomenPerMaand(true);
+        break;
+      case "onderbouwing":
+        startOnderbouwing();
+        break;
       case "details":
       case "categorieen":
         jumpToSection(detailsSectionRef);
@@ -3457,7 +3547,7 @@ export default function App() {
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
         onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
-        onOnderbouwing={activeYear ? startOnderbouwing : null}
+        onInkomenPerMaand={activeYear ? () => setShowInkomenPerMaand(true) : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3558,7 +3648,7 @@ export default function App() {
           const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
           const pct = maxStappen > 0 ? Math.round((100 * stappenKlaar) / maxStappen) : 0;
           return alleStappen.length > 0 ? (
-            <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
+            <div data-stappenbalk className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold uppercase tracking-wide text-teal-100">
@@ -3748,6 +3838,8 @@ export default function App() {
           <OnverklaardeOverboekingenModal
             items={aansluitControleInfo.onverklaard}
             toegelicht={aansluitControleInfo.toegelicht}
+            buitenPeriode={aansluitControleInfo.buitenPeriode}
+            eenzijdigTekst={aansluitControleInfo.eenzijdigTekst}
             onToelichten={(lijst, uitleg) => {
               setBevestigdeControles((prev) => { const next = { ...prev }; for (const x of lijst) next[x.sleutel] = { ...uitleg, t: Date.now() }; return next; });
               setAuditLog((prev) => [...prev, { t: Date.now(), label: `Niet-gekoppelde overboeking${lijst.length === 1 ? "" : "en"} toegelicht (${lijst.length}x): ${uitleg.redenTekst}${uitleg.notitie ? ` — ${uitleg.notitie}` : ""}` }].slice(-300));
@@ -3756,6 +3848,11 @@ export default function App() {
             diff={aansluitControleInfo.diffOpen}
             jaar={activeYear}
             onRequestChange={requestCategoryChange}
+            bekendeIbans={[...eigenRekeningenGeladen.map((r) => r.iban), ...(eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean)]}
+            onEigenRekeningToevoegen={(iban, accountType) => {
+              snapshotBeforeAction("Eigen rekening toegevoegd (niet-gekoppelde overboekingen)");
+              setEigenRekeningenExtra((prev) => [...(prev || []).filter((r) => normKey(r?.iban || "") !== normKey(iban)), { iban, accountType }]);
+            }}
             onClose={() => setShowOnverklaard(false)}
           />
         )}
@@ -3882,6 +3979,9 @@ export default function App() {
             forceRechtsvormStep={manualWizardOpen}
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}
+            importBezig={importBezig}
+            importFout={error}
+            importHerladen={importHerladen}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
@@ -3899,6 +3999,11 @@ export default function App() {
             kwartaalStatus={kwartaalStatus}
             setKwartaalStatusField={setKwartaalStatusField}
             fileContinuity={fileContinuity}
+            ownAccountByFile={ownAccountByFile}
+            bestandInfo={bestandInfo}
+            accountTypeByFile={accountTypeByFile}
+            onRekeningWijzig={setEigenRekeningVoorBestanden}
+            alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
             onSaveProject={saveProjectFile}
             verwachteLease={verwachteLease}
             setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}
@@ -4024,6 +4129,10 @@ export default function App() {
             dossiercontrole-regels + jaar-dropdown) i.p.v. alleen de losse titel+dropdown-regel
             hierboven — zelfde databron (yearlyProgress/dashboardCards "yearStatus"), alleen ook
             hier getoond i.p.v. alleen op Overzicht. */}
+        {/* release31V1 — openstaande basisvragen tellen mee in de Instellingen-badge; dan moeten ze hier ook te zien zijn */}
+        {parsedFiles.length > 0 && activeTab === "instellingen" && !(showSetupWizard || manualWizardOpen || openVragenWizard) && openBasisvragen.length > 0 && (
+          <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
+        )}
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
@@ -4060,7 +4169,10 @@ export default function App() {
             de uitgeklapte kaart (zie controlerenCardGroups hierboven) — niet meer standaard
             zichtbaar op de pagina. */}
 
-        {transactions.length > 0 && pendingIncomeReview.length === 0 && (
+        {/* release30V9 — stond ook op "pendingIncomeReview.length === 0": zodra een wijziging een nieuwe
+            inkomstenbron opleverde (Herkomst van inkomsten: 1 open), verdwenen de categoriekaarten én de
+            detailtabellen van Controleren. Die blijven nu altijd staan. */}
+        {transactions.length > 0 && (
           <>
 
             {/* Op verzoek (v281) staat "Opschonen" (OpschonenPanel.jsx) alleen nog binnen de
@@ -4105,8 +4217,8 @@ export default function App() {
                     Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
                 {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} />
+                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} rekeningen={rekeningenVoorGroep(priGroupShown, "Prive")} />
                 </div>
                 )}
 
@@ -4139,7 +4251,7 @@ export default function App() {
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
                       expandedTable={expandedTable}
-                      onToggleExpandTable={(zone) => startTransition(() => setExpandedTable((v) => (v === zone ? null : zone)))}
+                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))} /* release30V10 — direct i.p.v. startTransition */
                       onRequestCategoryChange={requestCategoryChange}
                       onConfirmCorrect={confirmClassificationCorrect}
                       fingerprintByTxId={fingerprintByTxId}
@@ -4213,6 +4325,22 @@ export default function App() {
             onDownload={downloadAangiftevoorstelPreview}
             onPrint={printAangiftevoorstelPreview}
             onClose={() => setAangiftevoorstelPreview(null)}
+            extraKnop={{ label: "Onderbouwing tonen", title: "Overzicht van de transacties achter de bedragen in deze berekening", onClick: () => { const jaren = selectedAangifteYears; setAangiftevoorstelPreview(null); openOnderbouwing(jaren); } }}
+          />
+        )}
+        {showInkomenPerMaand && years.length > 0 && (
+          <InkomenPerMaandModal
+            classified={classified}
+            years={years}
+            beginJaar={activeYear}
+            categoryBtwRates={effectiveCategoryBtwRates}
+            btwVerlegd={btwVerlegd}
+            periodeZak={periodePerSoort.Zakelijk || null}
+            periodePri={periodePerSoort.Prive || null}
+            isBV={rechtsvorm === "bv"}
+            klantNaam={eigenNamen?.ondernemer}
+            onPrint={(html) => printHtmlDocument(html)}
+            onClose={() => setShowInkomenPerMaand(false)}
           />
         )}
       </main>

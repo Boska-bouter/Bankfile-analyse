@@ -1,4 +1,5 @@
 import { normKey, counterpartyKey, textHasKeyword } from "../utils/normalization.js";
+import { isCardPaymentTx } from "./classify.js";
 
 // Categorieën die de classificatie (zie classify.js) al met harde zekerheid heeft bepaald als een
 // verschuiving tussen de eigen rekeningen van dezelfde rekeninghouder (IBAN-match met een eigen
@@ -30,6 +31,8 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
     if (tx.amount <= 0) continue;
     if (accountTypeByFile[tx.source] === "Zakelijk") continue;
     if (GEEN_KLANT_CATEGORIES.includes(tx.category)) continue;
+    // release31V2 — een bijschrijving met een pas (teruggeboekte pinbetaling, retourpinnen) is nooit een klant.
+    if (isCardPaymentTx(tx)) continue;
     if (kws.length > 0) {
       const text = ` ${tx.counterparty || ""} ${tx.description || ""} ${tx.fullDescription || ""}`.toLowerCase();
       if (kws.some((kw) => textHasKeyword(text, kw))) continue;
@@ -49,16 +52,25 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
 
 // Groepeert transacties in één categorie per tegenpartij + teken (ontvangen/betaald) — gebruikt
 // voor zowel "Overboekingen aan personen" als "Overig" opruimen (zelfde soort werkstroom).
-export function computeCategorySummary(classified, category) {
+// release31V0 — `metZonderNaam`: boekingen zonder bruikbare tegenpartijnaam (bijv. alleen "."), die
+// voorheen stil werden overgeslagen, komen er als losse regel bij (sleutel per transactie). Anders telde
+// "Classificatie zekerheid" ze wel als open, maar waren ze in "Overig opruimen" nergens te vinden.
+export const sleutelZonderNaam = (tx) => `tx::${tx.id}`;
+export function computeCategorySummary(classified, category, { metZonderNaam = false } = {}) {
   const map = {};
   for (const tx of classified) {
     if (tx.category !== category || tx.isMirror) continue;
-    const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-    if (!key) continue;
+    let key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    const zonderNaam = !key;
+    if (zonderNaam) {
+      if (!metZonderNaam) continue;
+      key = sleutelZonderNaam(tx);
+    }
     if (!map[key]) {
       map[key] = {
-        key, name: tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
+        key, name: zonderNaam ? (String(tx.description || "").trim() || `(geen naam) ${tx.date?.toLocaleDateString?.("nl-NL") || ""}`.trim()) : tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
         category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd,
+        ...(zonderNaam ? { zonderNaam: true, txId: tx.id } : {}),
       };
     }
     map[key].total += tx.amount;

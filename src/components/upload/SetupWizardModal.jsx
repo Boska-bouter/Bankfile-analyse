@@ -1,4 +1,5 @@
 import LeaseContractenVraag, { contractenVan, syncContracten } from "./LeaseContractenVraag.jsx";
+import { periodesPerSoort, gezamenlijkePeriode, maandTekst } from "../../calc/periodeDekking.js";
 import LeaseControleScherm from "./LeaseControleScherm.jsx";
 import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
@@ -38,6 +39,7 @@ export default function SetupWizardModal({
   alreadyEstablished = false,
   pendingFileNames, onAccountTypeChoose,
   loadFilesFirst = false, loadedFileNames = [], onPickFiles,
+  importBezig = false, importFout = null, importHerladen = false,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
   heeftHolding, setHeeftHolding,
@@ -65,6 +67,9 @@ export default function SetupWizardModal({
   suggesties = {},
   dossierProfiel = null,
   leaseControle = null,
+  ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig = null,
+  accountTypeByFile = {},
+  alleenVragen = null,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -86,7 +91,7 @@ export default function SetupWizardModal({
   // schermen worden live gefilterd (BV, KOR) — zie remainingSteps.
   const [needs] = useState(() => {
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
-    return {
+    const n = {
       naam: vol && eigenNamen === null,
       rechtsvorm: vol && (rechtsvorm === null || forceRechtsvormStep),
       holding: vol && heeftHolding === null,
@@ -112,6 +117,10 @@ export default function SetupWizardModal({
       // wizard zelf) zijn de jaren dan nog niet bekend. De lijst zelf wordt hieronder live opgebouwd.
       kwartalen: vol && korRegeling !== true,
     };
+    // release30V3 — geopend via "Nu beantwoorden": alleen de vragen die op die kaart staan. Voorheen kwamen
+    // er schermen bij voor vragen die niet op de kaart stonden (bijv. aangekochte machines, BTW-kwartalen).
+    if (Array.isArray(alleenVragen)) for (const k of Object.keys(n)) n[k] = n[k] && alleenVragen.includes(k);
+    return n;
   });
   // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt
   // dan vastgezet: een aangevinkt kwartaal verdwijnt anders direct uit `quartersToAsk` (het heeft dan
@@ -126,7 +135,7 @@ export default function SetupWizardModal({
   const [initialSteps] = useState(() => {
     const list = [];
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
-    if (vol && loadFilesFirst) list.push(20);
+    if (vol && loadFilesFirst && !Array.isArray(alleenVragen)) list.push(20);
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
     if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
@@ -135,7 +144,7 @@ export default function SetupWizardModal({
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
     if (needs.starters || needs.overig || needs.kwartalen || needs.werkruimte) list.push(36);
     // release21V6 — lease-controle na het laden van bankbestanden (zie LeaseControleScherm.jsx)
-    if (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0) list.push(37);
+    if (!Array.isArray(alleenVragen) && (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0)) list.push(37);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
@@ -187,7 +196,7 @@ export default function SetupWizardModal({
   const allTypedNow = sessionFiles.every((f) => typedNow[f]);
   const props = {
     typedNow, zet, needs, isBV, goNext, years: years || [],
-    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames,
+    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig, accountTypeByFile, onPickFiles,
     rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd,
     eigenNamen, setEigenNamen,
     eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
@@ -246,10 +255,28 @@ export default function SetupWizardModal({
                   <span key={f} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{f}</span>
                 ))}
               </div>
+              {importBezig && (
+                <p className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+                  <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+                  Bestanden worden ingelezen…
+                </p>
+              )}
+              {!importBezig && importFout && (
+                <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 space-y-2">
+                  <p className="text-sm font-semibold text-rose-900">Niet alles kon worden ingelezen</p>
+                  <p className="text-xs text-rose-900 whitespace-pre-line break-words">{importFout}</p>
+                  {importHerladen && (
+                    <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800">
+                      App opnieuw laden
+                    </button>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
+                disabled={importBezig}
                 onClick={() => onPickFiles && onPickFiles()}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800"
+                className="w-full disabled:opacity-50 inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800"
               >
                 <FileSpreadsheet className="h-4 w-4" /> {loadedFileNames.length > 0 ? "Nog een bestand kiezen" : "Ja, bestanden kiezen"}
               </button>
@@ -458,13 +485,92 @@ function jaMetSuggesties(huidigeLijst, suggestieLijst, max) {
   return (suggestieLijst || []).slice(0, max ?? 3).map((s) => s.naam);
 }
 
+// release30V2 — bestanden van dezelfde rekening samen: één keer zakelijk/privé kiezen per rekening,
+// met het gevonden rekeningnummer ter bevestiging (en invullen/wijzigen als het niet gevonden is of niet klopt).
+const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
+const ibanOpmaak = (x) => String(x || "").replace(/\s/g, "").toUpperCase().replace(/(.{4})(?=.)/g, "$1 ");
+function groepeerPerRekening(files, ownAccountByFile) {
+  const groepen = new Map();
+  for (const f of files) {
+    const iban = ownAccountByFile[f] || null;
+    const key = iban ? `iban:${iban}` : `bestand:${f}`;
+    if (!groepen.has(key)) groepen.set(key, { key, iban, files: [] });
+    groepen.get(key).files.push(f);
+  }
+  return [...groepen.values()];
+}
+const jaarVan = (d) => (d ? new Date(d).getFullYear() : null);
+function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, bestandInfo, onRekeningWijzig }) {
+  const [bewerk, setBewerk] = useState(!g.iban);
+  const [invoer, setInvoer] = useState(g.iban || "");
+  const typen = [...new Set(g.files.map((f) => typedNow[f]).filter(Boolean))];
+  const gekozen = typen.length === 1 && g.files.every((f) => typedNow[f]) ? typen[0] : null;
+  const kies = (type) => { for (const f of g.files) onAccountTypeChoose(f, type); zet(Object.fromEntries(g.files.map((f) => [f, type]))); };
+  const vans = g.files.map((f) => jaarVan(bestandInfo[f]?.van)).filter(Boolean);
+  const tots = g.files.map((f) => jaarVan(bestandInfo[f]?.tot)).filter(Boolean);
+  const periode = vans.length ? (Math.min(...vans) === Math.max(...tots) ? `${Math.min(...vans)}` : `${Math.min(...vans)}–${Math.max(...tots)}`) : "";
+  const bank = g.iban && g.iban.length >= 8 ? g.iban.slice(4, 8) : "";
+  const schoon = invoer.replace(/\s/g, "").toUpperCase();
+  const geldig = IBAN_RE.test(schoon);
+  const waarschuwingen = fileContinuity.filter((c) => !c.ok && (g.files.includes(c.fileA) || g.files.includes(c.fileB)));
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
+        <div className="flex-1 min-w-[10rem]">
+          {g.iban && !bewerk ? (
+            <p className="text-sm font-semibold font-mono text-slate-800">{ibanOpmaak(g.iban)}</p>
+          ) : (
+            <p className="text-sm font-medium text-amber-800">{g.iban ? "Rekeningnummer wijzigen" : "Rekeningnummer niet gevonden"}</p>
+          )}
+          <p className="text-xs text-slate-500">
+            {bank ? `${bank} · ` : ""}{g.files.length === 1 ? <span className="break-all">{g.files[0]}</span> : `${g.files.length} bestanden`}{periode ? ` · ${periode}` : ""}
+            {g.iban && !bewerk && onRekeningWijzig && <> · <button type="button" onClick={() => setBewerk(true)} className="underline decoration-dotted">wijzigen</button></>}
+          </p>
+        </div>
+        <button type="button" onClick={() => kies("Zakelijk")}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${gekozen === "Zakelijk" ? "border-emerald-500 bg-emerald-600 text-white" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}>
+          <Building2 className="h-3.5 w-3.5" /> Zakelijk
+        </button>
+        <button type="button" onClick={() => kies("Prive")}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${gekozen === "Prive" ? "border-slate-600 bg-slate-700 text-white" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
+          <Home className="h-3.5 w-3.5" /> Privé
+        </button>
+      </div>
+      {bewerk && onRekeningWijzig && (
+        <div className="flex flex-wrap items-center gap-2 pl-6">
+          <input value={invoer} onChange={(e) => setInvoer(e.target.value)} placeholder="IBAN, bijv. NL12 ABNA 0123 4567 89"
+            className="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-mono" />
+          <button type="button" disabled={!geldig} onClick={() => { onRekeningWijzig(g.files, schoon); setBewerk(false); }}
+            className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40">Opslaan</button>
+          {g.iban && <button type="button" onClick={() => { setInvoer(g.iban); setBewerk(false); }} className="text-xs text-slate-500 underline">Annuleren</button>}
+          {!g.iban && <p className="w-full text-[11px] text-slate-500">Niet verplicht. Zonder rekeningnummer herkent de app overboekingen tussen je eigen rekeningen minder goed.</p>}
+        </div>
+      )}
+      {gekozen && waarschuwingen.map((c) => (
+        <div key={`${c.fileA}|${c.fileB}`} className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>Saldo sluit niet aan tussen <strong>{c.fileA}</strong> en <strong>{c.fileB}</strong>: verschil {eur(c.diff)}{Math.abs(c.diff) < 100 ? " (meestal afronding)" : " — mogelijk ontbreekt een periode"}.</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
 // Scherm 31 — rekeningen en rekeninghouder
 // ---------------------------------------------------------------------------------------------
 function Scherm31({
-  typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow,
+  typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig,
   rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
+  accountTypeByFile = {}, onPickFiles,
 }) {
+  // release31V4 — dekken de zakelijke en de privébestanden dezelfde periode? Zo niet: melden welke maanden
+  // maar één kant hebben (daar kan de controle zakelijk ↔ privé niets koppelen).
+  const types = { ...accountTypeByFile };
+  for (const f of sessionFiles) if (typedNow[f] === "Zakelijk" || typedNow[f] === "Prive") types[f] = typedNow[f];
+  const pps = periodesPerSoort(bestandInfo, types);
+  const periode = gezamenlijkePeriode(pps.Zakelijk, pps.Prive);
   const toonRechtsvorm = needs.rechtsvorm;
   const toonHolding = needs.holding && rechtsvorm === "bv";
   const klaar =
@@ -476,45 +582,24 @@ function Scherm31({
   return (
     <div className="space-y-4">
       {sessionFiles.length > 0 && (
-        <Sectie titel="Is dit een zakelijke rekening of een privérekening?">
-          {sessionFiles.map((fileName) => {
-            const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
-            return (
-              <div key={fileName} className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
-                  <button
-                    type="button"
-                    onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); zet({ [fileName]: "Zakelijk" }); }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
-                  >
-                    <Building2 className="h-3.5 w-3.5" /> Zakelijk
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { onAccountTypeChoose(fileName, "Prive"); zet({ [fileName]: "Prive" }); }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-                  >
-                    <Home className="h-3.5 w-3.5" /> Privé
-                  </button>
-                </div>
-                {typedNow[fileName] && continuityMatch && (
-                  <div className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-                    {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
-                    <span>
-                      {continuityMatch.fileA === fileName ? (
-                        <>Dit bestand loopt door in <strong>{continuityMatch.fileB}</strong> — eindsaldo hier {eur(continuityMatch.aLastBalance)}, beginsaldo daar {eur(continuityMatch.bOpeningBalance)}.</>
-                      ) : (
-                        <>Dit lijkt een vervolg op <strong>{continuityMatch.fileA}</strong> — eindsaldo daar {eur(continuityMatch.aLastBalance)}, beginsaldo hier {eur(continuityMatch.bOpeningBalance)}.</>
-                      )}
-                      {!continuityMatch.ok && ` Verschil ${eur(continuityMatch.diff)} — kan een periodegrens zijn, of de moeite waard om na te gaan.${Math.abs(continuityMatch.diff) < 100 ? " Een verschil van een paar euro is meestal gewoon afronding." : ""}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <Sectie titel="Is dit een zakelijke rekening of een privérekening?" uitleg="Per rekening één keer kiezen. Het rekeningnummer is uit het bestand gehaald; klopt het niet, pas het dan aan.">
+          {groepeerPerRekening(sessionFiles, ownAccountByFile).map((g) => (
+            <RekeningGroep key={g.key} g={g} typedNow={typedNow} zet={zet} onAccountTypeChoose={onAccountTypeChoose}
+              fileContinuity={fileContinuity} bestandInfo={bestandInfo} onRekeningWijzig={onRekeningWijzig} />
+          ))}
+          {periode && periode.eenzijdig.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1.5">
+              <p>
+                <strong>Zakelijk:</strong> {maandTekst(pps.Zakelijk.van)} – {maandTekst(pps.Zakelijk.tot)} · <strong>Privé:</strong> {maandTekst(pps.Prive.van)} – {maandTekst(pps.Prive.tot)}.
+              </p>
+              <p>
+                {periode.eenzijdig.map((e) => `${e.tekst} alleen ${e.alleen}`).join("; ")}: in die maanden kan de app overboekingen tussen beide rekeningen niet controleren. De indeling in categorieën werkt gewoon. Heb je de afschriften van die maanden? Laad ze dan ook.
+              </p>
+              {onPickFiles && (
+                <button type="button" onClick={onPickFiles} className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100">Bestand toevoegen</button>
+              )}
+            </div>
+          )}
         </Sectie>
       )}
 

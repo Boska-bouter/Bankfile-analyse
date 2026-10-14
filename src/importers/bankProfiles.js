@@ -13,7 +13,10 @@ export const HEADER_ALIASES = {
   ],
   // Het eigen rekeningnummer van dit bestand zelf (niet de tegenpartij) — nodig om overboekingen
   // tussen je eigen rekeningen te herkennen wanneer je meerdere eigen bestanden tegelijk laadt.
-  ownAccount: ["rekening", "rekeningnummer", "eigen rekening", "iban rekening", "account iban"],
+  // release30V1 — "iban/bban" is bij de Rabobank de eigen rekening (de tegenpartij heet daar
+  // "Tegenrekening IBAN/BBAN"). Kolommen met "tegen" in de naam komen nooit in aanmerking: die
+  // bevatten de rekening van de tegenpartij (zie OWN_ACCOUNT_UITSLUITEN hieronder).
+  ownAccount: ["rekening", "rekeningnummer", "eigen rekening", "iban rekening", "account iban", "iban/bban", "eigen iban", "accountnumber", "account", "iban"],
   description: ["omschrijving", "mededelingen", "omschrijving-1", "description"],
   fullDescription: ["volledige omschrijving", "omschrijving-1", "mededelingen", "omschrijving-2", "omschrijving-3"],
   balance: [
@@ -23,17 +26,25 @@ export const HEADER_ALIASES = {
   ],
 };
 
-export function guessColumn(headers, aliases) {
+export function guessColumn(headers, aliases, uitsluiten = null) {
   const lower = headers.map((h) => String(h).trim().toLowerCase());
+  const mag = (i) => !uitsluiten || !uitsluiten.test(lower[i]);
   for (const alias of aliases) {
-    const idx = lower.indexOf(alias);
+    const idx = lower.findIndex((h, i) => h === alias && mag(i));
     if (idx !== -1) return headers[idx];
   }
   for (const alias of aliases) {
-    const idx = lower.findIndex((h) => h.includes(alias));
+    const idx = lower.findIndex((h, i) => h.includes(alias) && mag(i));
     if (idx !== -1) return headers[idx];
   }
   return null;
+}
+
+// release30V1 — kolommen die nooit de eigen rekening zijn.
+export const OWN_ACCOUNT_UITSLUITEN = /tegen|counterparty|begunstigde|ontvanger|creditor|debtor|valuta|munt|saldo|balance|currency/;
+export function guessOwnAccountColumn(headers, counterpartyColumn = null) {
+  const kol = guessColumn(headers, HEADER_ALIASES.ownAccount, OWN_ACCOUNT_UITSLUITEN);
+  return kol && kol !== counterpartyColumn ? kol : null;
 }
 
 export function buildColumnMapping(headers) {
@@ -43,7 +54,7 @@ export function buildColumnMapping(headers) {
     afbij: guessColumn(headers, HEADER_ALIASES.afbij),
     counterparty: guessColumn(headers, HEADER_ALIASES.counterparty),
     counterpartyIban: guessColumn(headers, HEADER_ALIASES.counterpartyIban),
-    ownAccount: guessColumn(headers, HEADER_ALIASES.ownAccount),
+    ownAccount: guessOwnAccountColumn(headers, guessColumn(headers, HEADER_ALIASES.counterpartyIban)),
     description: guessColumn(headers, HEADER_ALIASES.description),
     fullDescription: guessColumn(headers, HEADER_ALIASES.fullDescription),
     balance: guessColumn(headers, HEADER_ALIASES.balance),

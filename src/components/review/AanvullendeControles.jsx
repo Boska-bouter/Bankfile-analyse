@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { MAANDEN } from "../../tax/controleSuggesties.js";
 import { eur } from "../../utils/amounts.js";
+import { mainCategoryOf } from "../../classification/categories.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 
 const KLEUR = { data: "bg-emerald-400", "leeg-ok": "bg-slate-300", leeg: "bg-amber-400", buiten: "bg-slate-100" };
 const dat = (d) => new Date(d).toLocaleDateString("nl-NL");
@@ -12,7 +14,44 @@ function Knop({ children, onClick, primair }) {
 }
 
 // C1 + C2 + C3 in één opklapbare sectie. Zonder meldingen is hij dicht en groen.
-export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend }) {
+// release22V9 — per terugkerende reeks: afwijkende betalingen mét hun huidige categorie, het voorstel
+// (meest voorkomende categorie), "alle op: [eigen keuze]" en "verdeling laten zoals hij is".
+function TerugkerendItem({ t, onBevestig, onToepassenTerugkerend, onToepassenTerugkerendAlle }) {
+  const [keuze, setKeuze] = useState("");
+  const toon = t.afwijkend.slice(0, 6);
+  return (
+    <div className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
+      <p><strong>{t.naam}</strong> — {t.aantal}x {t.periodiek}, ongeveer {eur(t.gemBedrag)}</p>
+      <p className="text-slate-500">Nu ingedeeld als: {t.verdeling.map((v) => `${v.categorie} (${v.aantal}x)`).join(", ")}</p>
+      <p className="mt-1 text-slate-600">Afwijkend van {t.hoofdCategorie}:</p>
+      <ul className="text-slate-500">
+        {toon.map((a) => <li key={a.id}>{dat(a.date)} {eur(Math.abs(a.amount))} — nu: {a.category}</li>)}
+        {t.afwijkend.length > toon.length && <li>+ {t.afwijkend.length - toon.length} meer</li>}
+      </ul>
+      {t.nietInVoorstel > 0 && (
+        <p className="text-slate-400">{t.nietInVoorstel} andere betaling{t.nietInVoorstel === 1 ? "" : "en"} met een duidelijk ander bedrag of handmatig ingedeeld {t.nietInVoorstel === 1 ? "blijft" : "blijven"} buiten het voorstel.</p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Knop primair onClick={() => onToepassenTerugkerend(t)}>Zet {t.afwijkend.length} op {t.hoofdCategorie}</Knop>
+        {onToepassenTerugkerendAlle && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-slate-500">of alle {t.aantal} op:</span>
+            <CategorieSelect value={keuze || null} onChange={setKeuze} placeholder="kies categorie…" className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs max-w-[16rem]" />
+            {keuze && (
+              <Knop primair onClick={() => {
+                onToepassenTerugkerendAlle(t, keuze, mainCategoryOf(keuze) === "Privé" ? "Prive" : t.hoofdType);
+                setKeuze("");
+              }}>Toepassen</Knop>
+            )}
+          </span>
+        )}
+        <Knop onClick={() => onBevestig(`terug|${t.key}`)}>Verdeling laten zoals hij is</Knop>
+      </div>
+    </div>
+  );
+}
+
+export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle }) {
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
@@ -33,7 +72,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
       </button>
       {open && (
         <div className="px-4 pb-4 space-y-4 text-xs text-slate-700">
-          <p className="text-slate-500">Dit zijn suggesties, geen verplichte stappen. "Klopt zo" onthoudt je keuze in het dossier.</p>
+          <p className="text-slate-500">Dit zijn suggesties, geen verplichte stappen. "Klopt zo" en "Verdeling laten zoals hij is" laten alles ongewijzigd; de app onthoudt alleen dat je het hebt bekeken.</p>
 
           <div>
             <h4 className="font-semibold text-slate-800 mb-1.5">Dekking per rekening</h4>
@@ -58,21 +97,22 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
                 ) : <p className="mt-1.5 text-emerald-700">Geen gaten gevonden.</p>}
               </div>
             ))}
+            {/* release31V4 — maanden waarin maar één van beide rekeningen geladen is */}
+            {(data.eenzijdig || []).length > 0 && (
+              <div className="mb-2 rounded-md border border-sky-200 bg-sky-50 p-2 text-sky-900">
+                {data.eenzijdig.map((e) => (
+                  <p key={e.tekst + e.alleen}><strong>{e.tekst}</strong>: alleen {e.alleen} geladen.</p>
+                ))}
+                <p className="mt-1 text-sky-800">In die maanden kan de controle zakelijk ↔ privé overboekingen niet koppelen; ze tellen daar niet als open punt. De indeling in categorieën werkt gewoon. Heb je de afschriften van de andere rekening, laad ze dan ook.</p>
+              </div>
+            )}
             <p className="text-xs text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
           </div>
 
           <div>
             <h4 className="font-semibold text-slate-800 mb-1.5">Terugkerende betalingen in verschillende categorieën</h4>
             {terugkerend.length === 0 ? <p className="text-emerald-700">Geen afwijkingen gevonden.</p> : terugkerend.map((t) => (
-              <div key={t.key} className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
-                <p><strong>{t.naam}</strong> — {t.aantal}x {t.periodiek}, ongeveer {eur(t.gemBedrag)}</p>
-                <p className="text-slate-500">Verdeling: {t.verdeling.map((v) => `${v.categorie} (${v.aantal}x)`).join(", ")}</p>
-                <p className="text-slate-500">Afwijkend: {t.afwijkend.map((a) => `${dat(a.date)} ${eur(Math.abs(a.amount))}`).slice(0, 4).join(" · ")}{t.afwijkend.length > 4 ? ` · +${t.afwijkend.length - 4}` : ""}</p>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  <Knop primair onClick={() => onToepassenTerugkerend(t)}>Zet {t.afwijkend.length} op {t.hoofdCategorie}</Knop>
-                  <Knop onClick={() => onBevestig(`terug|${t.key}`)}>Klopt zo</Knop>
-                </div>
-              </div>
+              <TerugkerendItem key={t.key} t={t} onBevestig={onBevestig} onToepassenTerugkerend={onToepassenTerugkerend} onToepassenTerugkerendAlle={onToepassenTerugkerendAlle} />
             ))}
           </div>
 

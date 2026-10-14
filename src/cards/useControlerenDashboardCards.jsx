@@ -28,16 +28,17 @@ export function useControlerenDashboardCards(p) {
         key: "confidence",
         title: "Classificatie zekerheid",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        value: confidenceSummary.needsReview,
-        openCount: confidenceSummary.needsReview,
+        // release31V1 — zonder wat al in "Overig opruimen"/"Overboekingen aan personen" staat (eigen kaarten)
+        value: confidenceSummary.openExBulk,
+        openCount: confidenceSummary.openExBulk,
         subtitle:
-          confidenceSummary.needsReview > 0
-            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren (${confidenceSummary.needsReviewTx} transacties)`
+          confidenceSummary.openExBulk > 0
+            ? `${confidenceSummary.unclearExBulk} onduidelijk, ${confidenceSummary.reviewExBulk} controleren`
             : "Alles automatisch met vertrouwen ingedeeld",
-        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
+        tone: confidenceSummary.openExBulk > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.openExBulk > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
@@ -67,7 +68,9 @@ export function useControlerenDashboardCards(p) {
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
           if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
+          // release30V7 — één paneel tegelijk open: "Overig opruimen" eronder klapt in, zodat je ziet waar je mee bezig bent.
           setShowPersonReview(true);
+          setShowOverigReview(false);
           jumpToSection(personReviewSectionRef);
         },
       },
@@ -82,6 +85,7 @@ export function useControlerenDashboardCards(p) {
         hint: 'Openstaande "Overig"-tegenpartijen bekijken',
         onClick: () => {
           setShowOverigReview(true);
+          setShowPersonReview(false);
           jumpToSection(overigReviewSectionRef);
         },
       },

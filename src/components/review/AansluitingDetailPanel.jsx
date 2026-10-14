@@ -29,8 +29,10 @@ export default function AansluitingDetailPanel({
   return (
     <div className="space-y-3">
       <div ref={detailsRef} className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
-        {(!expandedTable || expandedTable === "Zakelijk") && (
-          <div>
+        {/* release30V10 — beide tabellen blijven gemount (de andere wordt alleen verborgen): voorheen werd de
+            andere tabel bij Uitvergroten/Verkleinen opnieuw opgebouwd, wat traag was en filters liet vergeten. */}
+        {(
+          <div className={expandedTable && expandedTable !== "Zakelijk" ? "hidden" : ""}>
             <DetailTable
               group={zakGroupForYear}
               onRequestChange={onRequestCategoryChange}
@@ -44,8 +46,8 @@ export default function AansluitingDetailPanel({
             />
           </div>
         )}
-        {(!expandedTable || expandedTable === "Prive") && (
-          <div>
+        {(
+          <div className={expandedTable && expandedTable !== "Prive" ? "hidden" : ""}>
             <DetailTable
               group={priGroupForYear}
               onRequestChange={onRequestCategoryChange}

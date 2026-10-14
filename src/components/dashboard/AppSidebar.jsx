@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3 } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -83,7 +83,7 @@ export default function AppSidebar({
   heeftWachtwoord, onWachtwoord, onHerstelcode, onOpenLog, logAantal = 0,
   showActies,
   onEditBasisvragen,
-  onOpenAangifteberekening, onKlantSamenvatting, onOnderbouwing,
+  onOpenAangifteberekening, onKlantSamenvatting, onInkomenPerMaand,
   lastActionSnapshot,
   onUndoLastAction,
   onDismissLastAction,
@@ -261,10 +261,12 @@ export default function AppSidebar({
               <span className="sb-label text-xs font-semibold text-slate-200">Samenvatting voor klant</span>
             </button>
           )}
-          {onOnderbouwing && (
-            <button onClick={onOnderbouwing} title="Overzicht van de transacties achter de bedragen in het voorstel (optioneel, voor op papier)" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
-              <ClipboardList className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-              <span className="sb-label text-xs font-semibold text-slate-200">Onderbouwing overzichten</span>
+          {/* release31V5 — "Onderbouwing overzichten" staat nu in het venster Indicatieve aangifteberekening
+              en bij Overzicht → Details en overzichten; op deze plek: inkomen per maand. */}
+          {onInkomenPerMaand && (
+            <button onClick={onInkomenPerMaand} title="Zakelijke omzet en privé-inkomen per maand, met jaartotaal en gemiddelde" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+              <BarChart3 className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="sb-label text-xs font-semibold text-slate-200">Inkomen per maand</span>
             </button>
           )}
           {canSaveProject && (

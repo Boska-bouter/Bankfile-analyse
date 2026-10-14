@@ -2,7 +2,7 @@ import { Download, Printer } from "lucide-react";
 
 import { KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Voorbeeldvenster van het gegenereerde aangiftevoorstel (iframe) met Downloaden/Printen/Sluiten.
-export default function AangifteVoorstelPreviewModal({ html, years, onDownload, onPrint, onClose, titel, uitleg, setUitleg }) {
+export default function AangifteVoorstelPreviewModal({ html, years, onDownload, onPrint, onClose, titel, uitleg, setUitleg, extraKnop = null }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-[92dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -13,6 +13,11 @@ export default function AangifteVoorstelPreviewModal({ html, years, onDownload, 
             <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 mr-1" title="Voegt de algemene uitleg (Bijlage: Toelichtingen) toe aan het document, ook bij downloaden en printen.">
               <input type="checkbox" checked={!!uitleg} onChange={(e) => setUitleg(e.target.checked)} /> Uitleg meenemen
             </label>
+          )}
+          {extraKnop && (
+            <button onClick={extraKnop.onClick} title={extraKnop.title} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-600 bg-white px-3 py-1.5 text-sm font-medium text-teal-800 hover:bg-teal-50">
+              {extraKnop.label}
+            </button>
           )}
           <button onClick={onDownload} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
             <Download className="h-4 w-4" /> Downloaden
