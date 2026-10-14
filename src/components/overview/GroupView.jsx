@@ -12,7 +12,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
 // op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
-export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp }) {
+export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp, rekeningen = null }) {
   const toonFijn = useToonFijn();
   const totals = useMemo(() => {
     const t = {};
@@ -48,6 +48,16 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
           fijne categorieën
         </label>
       </h3>
+      {/* release22V10 — welke rekening(en) achter deze tabel zitten */}
+      {rekeningen && (
+        <p className="-mt-2 mb-3 text-xs text-slate-500">
+          {rekeningen.lijst.length > 0
+            ? <>Rekening{rekeningen.lijst.length > 1 ? "en" : ""}: {rekeningen.lijst.map((r, i) => (
+                <span key={r.id}>{i > 0 && " · "}<span className="font-mono text-slate-700">{r.tekst}</span>{r.opgegeven ? <span className="text-slate-400"> (opgegeven, niet geladen)</span> : null}</span>
+              ))}</>
+            : rekeningen.leegTekst}
+        </p>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-slate-400 uppercase">

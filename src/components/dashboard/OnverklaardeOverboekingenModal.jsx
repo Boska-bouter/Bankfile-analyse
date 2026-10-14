@@ -34,28 +34,15 @@ function ToelichtForm({ aantal, onOpslaan, onAnnuleer }) {
   );
 }
 
-export default function OnverklaardeOverboekingenModal({ items, toegelicht = [], onToelichten, onHerroepToelichting, diff, jaar, onRequestChange, onClose }) {
-  const [openSleutel, setOpenSleutel] = useState(null); // sleutel van de boeking, of "ALLES"
+const STANDAARD_UITLEG = { reden: REDENEN[0].k, redenTekst: REDENEN[0].t, notitie: "" };
+const normIban = (x) => String(x || "").replace(/\s/g, "").toUpperCase();
+const ibanTekst = (x) => normIban(x).replace(/(.{4})(?=.)/g, "$1 ");
+
+// release22V10 — één niet-gekoppelde boeking: de voorgestelde toelichting staat er direct bij, met
+// "Akkoord" (die toelichting overnemen) en "Andere toelichting" (het formulier).
+function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten, onRequestChange }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
-          <p className="text-sm font-semibold text-slate-800">
-            Niet-gekoppelde overboekingen zakelijk ↔ privé {jaar} ({items.length})
-          </p>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="h-4 w-4" /></button>
-        </div>
-        <div className="px-4 pt-3 text-xs text-slate-600 shrink-0">
-          Verschil: <strong className="font-mono">{eur(diff)}</strong>. Dit zijn de boekingen waarvan aan de andere kant geen boeking met
-          hetzelfde bedrag (binnen 5 dagen) staat. Als je deze goed indeelt of het ontbrekende bestand laadt, wordt het verschil kleiner.
-        </div>
-        <div className="p-4 overflow-y-auto flex-1">
-          {items.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">Alle boekingen zijn gekoppeld.</p>
-          ) : (
-            <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
-              {items.map(({ tx, kant, sleutel }) => (
-                <div key={tx.id} className="p-2.5 text-xs">
+                <div className="p-2.5 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${kant === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                       {kant === "Zakelijk" ? "Zakelijke rekening" : "Privérekening"}
@@ -71,7 +58,10 @@ export default function OnverklaardeOverboekingenModal({ items, toegelicht = [],
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     {onToelichten && (
-                      <button onClick={() => setOpenSleutel(openSleutel === sleutel ? null : sleutel)} className="rounded-lg border border-teal-600 bg-white px-2 py-1 text-xs font-medium text-teal-800 hover:bg-teal-50">Bekend — toelichten</button>
+                      <>
+                        <button onClick={() => onToelichten([{ sleutel }], STANDAARD_UITLEG)} className="rounded-lg bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800">Akkoord</button>
+                        <button onClick={() => setOpenSleutel(openSleutel === sleutel ? null : sleutel)} className="rounded-lg border border-teal-600 bg-white px-2 py-1 text-xs font-medium text-teal-800 hover:bg-teal-50">Andere toelichting</button>
+                      </>
                     )}
                     {kant === "Prive" && !tx.transferLocked ? (
                       <>
@@ -92,19 +82,114 @@ export default function OnverklaardeOverboekingenModal({ items, toegelicht = [],
                       </span>
                     )}
                   </div>
+                  {onToelichten && openSleutel !== sleutel && (
+                    <p className="mt-1 text-[11px] text-slate-500">Voorgestelde toelichting bij "Akkoord": <span className="text-slate-700">{STANDAARD_UITLEG.redenTekst}</span></p>
+                  )}
                   {openSleutel === sleutel && (
                     <ToelichtForm aantal={1} onAnnuleer={() => setOpenSleutel(null)} onOpslaan={(u) => { onToelichten([{ sleutel }], u); setOpenSleutel(null); }} />
                   )}
                 </div>
-              ))}
-            </div>
-          )}
+  );
+}
+
+export default function OnverklaardeOverboekingenModal({ items, toegelicht = [], onToelichten, onHerroepToelichting, diff, jaar, onRequestChange, onClose, bekendeIbans = [], onEigenRekeningToevoegen }) {
+  const [openSleutel, setOpenSleutel] = useState(null); // sleutel van de boeking, "ALLES" of "GROEP:<iban>"
+  const [groepOpen, setGroepOpen] = useState({});
+  // release22V10 — boekingen met dezelfde tegenrekening (2 of meer) als groep bovenaan, met één keer
+  // akkoord of "toevoegen als eigen rekening"; de rest blijft per boeking.
+  const perIban = new Map();
+  for (const it of items) {
+    const k = normIban(it.tx.counterpartyIban);
+    if (!k) continue;
+    if (!perIban.has(k)) perIban.set(k, []);
+    perIban.get(k).push(it);
+  }
+  const groepen = [...perIban.entries()].filter(([, l]) => l.length >= 2).sort((a, b) => b[1].length - a[1].length);
+  const inGroep = new Set(groepen.flatMap(([, l]) => l.map((x) => x.sleutel)));
+  const losse = items.filter((x) => !inGroep.has(x.sleutel));
+  const bekend = new Set(bekendeIbans.map(normIban));
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+          <p className="text-sm font-semibold text-slate-800">
+            Niet-gekoppelde overboekingen zakelijk ↔ privé {jaar} ({items.length})
+          </p>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="px-4 pt-3 text-xs text-slate-600 shrink-0">
+          Verschil: <strong className="font-mono">{eur(diff)}</strong>. Dit zijn de boekingen waarvan aan de andere kant geen boeking met
+          hetzelfde bedrag (binnen 5 dagen) staat. Als je deze goed indeelt of het ontbrekende bestand laadt, wordt het verschil kleiner.
+        </div>
+        <div className="p-4 overflow-y-auto flex-1">
+          {/* release22V10 — "Alles toelichten" bovenaan, zodat het formulier direct in beeld komt */}
           {onToelichten && items.length > 1 && (
-            <div className="mt-3">
+            <div className="mb-3">
               <button onClick={() => setOpenSleutel(openSleutel === "ALLES" ? null : "ALLES")} className="rounded-full border border-teal-600 bg-white px-3 py-1 text-xs font-semibold text-teal-800 hover:bg-teal-50">Alles toelichten ({items.length})</button>
               {openSleutel === "ALLES" && (
                 <ToelichtForm aantal={items.length} onAnnuleer={() => setOpenSleutel(null)} onOpslaan={(u) => { onToelichten(items.map((x) => ({ sleutel: x.sleutel })), u); setOpenSleutel(null); }} />
               )}
+            </div>
+          )}
+          {groepen.map(([iban, lijst]) => {
+            const totaal = lijst.reduce((a, x) => a + x.tx.amount, 0);
+            const naam = lijst[0].tx.counterparty || lijst[0].tx.description || "";
+            const kanten = [...new Set(lijst.map((x) => x.kant))];
+            const kanToevoegen = onEigenRekeningToevoegen && !bekend.has(iban);
+            const gk = `GROEP:${iban}`;
+            return (
+              <div key={iban} className="mb-3 rounded-lg border border-teal-200 bg-teal-50/40 p-3 text-xs">
+                <div className="flex flex-wrap items-start gap-2">
+                  <div className="flex-1 min-w-[12rem]">
+                    <p className="font-semibold text-slate-800">{lijst.length} boekingen met tegenrekening <span className="font-mono">{ibanTekst(iban)}</span></p>
+                    <p className="text-slate-500">{naam}{naam ? " · " : ""}{kanten.map((k) => (k === "Zakelijk" ? "zakelijke rekening" : "privérekening")).join(" en ")} · totaal <span className="font-mono">{eur(totaal)}</span></p>
+                  </div>
+                </div>
+                {onToelichten && openSleutel !== gk && (
+                  <p className="mt-1.5 text-[11px] text-slate-500">Voorgestelde toelichting bij "Alle akkoord": <span className="text-slate-700">{STANDAARD_UITLEG.redenTekst}</span></p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {kanToevoegen && (
+                    <button onClick={() => {
+                      onEigenRekeningToevoegen(iban, kanten.includes("Zakelijk") ? "Prive" : "Zakelijk");
+                      onToelichten?.(lijst.map((x) => ({ sleutel: x.sleutel })), { reden: "contant", redenTekst: "Eigen rekening buiten dit dossier (niet geladen)", notitie: ibanTekst(iban) });
+                    }} className="rounded-lg bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800" title="Wordt opgenomen bij Instellingen → Eigen rekeningen (opgegeven, niet geladen)">
+                      Toevoegen als eigen rekening
+                    </button>
+                  )}
+                  {onToelichten && (
+                    <button onClick={() => onToelichten(lijst.map((x) => ({ sleutel: x.sleutel })), { ...STANDAARD_UITLEG, notitie: `Tegenrekening ${ibanTekst(iban)}` })}
+                      className={`rounded-lg px-2 py-1 text-xs font-medium ${kanToevoegen ? "border border-teal-600 bg-white text-teal-800 hover:bg-teal-50" : "bg-teal-700 text-white hover:bg-teal-800"}`}>
+                      Alle akkoord ({lijst.length})
+                    </button>
+                  )}
+                  {onToelichten && (
+                    <button onClick={() => setOpenSleutel(openSleutel === gk ? null : gk)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Andere toelichting</button>
+                  )}
+                  <button onClick={() => setGroepOpen((p) => ({ ...p, [iban]: !p[iban] }))} className="text-[11px] text-slate-500 underline decoration-dotted">
+                    {groepOpen[iban] ? "Boekingen verbergen" : "Boekingen tonen"}
+                  </button>
+                </div>
+                {openSleutel === gk && (
+                  <ToelichtForm aantal={lijst.length} onAnnuleer={() => setOpenSleutel(null)} onOpslaan={(u) => { onToelichten(lijst.map((x) => ({ sleutel: x.sleutel })), u); setOpenSleutel(null); }} />
+                )}
+                {groepOpen[iban] && (
+                  <div className="mt-2 divide-y divide-slate-100 border border-slate-100 rounded-lg bg-white">
+                    {lijst.map(({ tx, kant, sleutel }) => (
+                      <Boeking key={tx.id} tx={tx} kant={kant} sleutel={sleutel} openSleutel={openSleutel} setOpenSleutel={setOpenSleutel} onToelichten={onToelichten} onRequestChange={onRequestChange} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {items.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">Alle boekingen zijn gekoppeld.</p>
+          ) : losse.length === 0 ? null : (
+            <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
+              {losse.map(({ tx, kant, sleutel }) => (
+                <Boeking key={tx.id} tx={tx} kant={kant} sleutel={sleutel} openSleutel={openSleutel} setOpenSleutel={setOpenSleutel} onToelichten={onToelichten} onRequestChange={onRequestChange} />
+              ))}
             </div>
           )}
           {toegelicht.length > 0 && (

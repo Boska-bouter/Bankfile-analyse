@@ -2258,6 +2258,29 @@ export default function App() {
     }
     return c;
   }, [groups, importDiagnostics, accountTypeByFile]);
+  // release22V10 — rekeningnummer(s) bij de categorietabellen: de geladen rekeningen waarvan dit jaar
+  // transacties in de tabel staan, plus de bij Eigen rekeningen opgegeven (niet geladen) rekeningen van die soort.
+  const ibanTekst = (iban) => String(iban).replace(/\s/g, "").toUpperCase().replace(/(.{4})(?=.)/g, "$1 ");
+  const rekeningenVoorGroep = (group, soort) => {
+    const gezien = new Set();
+    const lijst = [];
+    for (const tx of group?.items || []) {
+      if (tx.isMirror) continue;
+      const iban = ownAccountByFile[tx.source];
+      const id = iban ? normKey(iban) : `bestand:${tx.source}`;
+      if (gezien.has(id)) continue;
+      gezien.add(id);
+      lijst.push({ id, tekst: iban ? ibanTekst(iban) : String(tx.source || "onbekend bestand") });
+    }
+    for (const r of eigenRekeningenExtra || []) {
+      if (!r?.iban || r.accountType !== soort) continue;
+      const id = normKey(r.iban);
+      if (gezien.has(id)) continue;
+      gezien.add(id);
+      lijst.push({ id, tekst: ibanTekst(r.iban), opgegeven: true });
+    }
+    return { lijst, leegTekst: soort === "Zakelijk" ? "Geen zakelijke rekening geladen of opgegeven" : "Geen privérekening geladen of opgegeven" };
+  };
   const zakGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Zakelijk") || { label: `Zakelijk ${activeYear}`, type: "Zakelijk", year: activeYear, items: [] };
   const priGroupForYear = groups.find((g) => g.year === activeYear && g.type === "Prive") || { label: `Privé ${activeYear}`, type: "Prive", year: activeYear, items: [] };
   // V46 — privé-only dossier: de privékant toont álle transacties van de rekening (ook die met een
@@ -3761,6 +3784,11 @@ export default function App() {
             diff={aansluitControleInfo.diffOpen}
             jaar={activeYear}
             onRequestChange={requestCategoryChange}
+            bekendeIbans={[...eigenRekeningenGeladen.map((r) => r.iban), ...(eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean)]}
+            onEigenRekeningToevoegen={(iban, accountType) => {
+              snapshotBeforeAction("Eigen rekening toegevoegd (niet-gekoppelde overboekingen)");
+              setEigenRekeningenExtra((prev) => [...(prev || []).filter((r) => normKey(r?.iban || "") !== normKey(iban)), { iban, accountType }]);
+            }}
             onClose={() => setShowOnverklaard(false)}
           />
         )}
@@ -4110,8 +4138,8 @@ export default function App() {
                     Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
                 {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} />
-                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} />
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} />
+                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} rekeningen={rekeningenVoorGroep(priGroupShown, "Prive")} />
                 </div>
                 )}
 
