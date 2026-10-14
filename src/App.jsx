@@ -1486,7 +1486,7 @@ export default function App() {
   };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
-    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set();
+    const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set(), reviewExBulk = new Set();
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -1498,11 +1498,14 @@ export default function App() {
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
-      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); }
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") reviewExBulk.add(gk); }
       else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
-    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+    // release31V1 — `openExBulk`: alleen wat NIET al in "Overig opruimen" of "Overboekingen aan personen" staat.
+    // Die twee hebben een eigen kaart; voorheen telden dezelfde boekingen dubbel mee in de open punten
+    // (bijv. 347 bij Classificatie, terwijl het venster "0 groepen + 555 elders" toonde).
+    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
@@ -3054,7 +3057,7 @@ export default function App() {
   // "Overig") en kon het 99% tonen bij honderden open punten.
   const dossierPct = useMemo(() => {
     if (!classified.length) return null;
-    const classOpen = confidenceSummary.needsReview;
+    const classOpen = confidenceSummary.openExBulk;
     const overige = Math.max(0, dossierOpenPoints - classOpen);
     const totaal = Math.max(confidenceSummary.groupsTotal + overige, dossierOpenPoints, 1);
     if (dossierOpenPoints === 0) return 100;
@@ -4110,6 +4113,10 @@ export default function App() {
             dossiercontrole-regels + jaar-dropdown) i.p.v. alleen de losse titel+dropdown-regel
             hierboven — zelfde databron (yearlyProgress/dashboardCards "yearStatus"), alleen ook
             hier getoond i.p.v. alleen op Overzicht. */}
+        {/* release31V1 — openstaande basisvragen tellen mee in de Instellingen-badge; dan moeten ze hier ook te zien zijn */}
+        {parsedFiles.length > 0 && activeTab === "instellingen" && !(showSetupWizard || manualWizardOpen || openVragenWizard) && openBasisvragen.length > 0 && (
+          <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
+        )}
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"

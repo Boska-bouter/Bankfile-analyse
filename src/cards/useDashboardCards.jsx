@@ -27,15 +27,15 @@ export function useDashboardCards(p) {
         key: "confidence",
         title: "Te controleren",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
-        value: confidenceSummary.needsReview,
+        value: confidenceSummary.openExBulk,
         subtitle:
-          confidenceSummary.needsReview > 0
-            ? `${confidenceSummary.unclear} onduidelijk, ${confidenceSummary.review} controleren (${confidenceSummary.needsReviewTx} transacties)`
+          confidenceSummary.openExBulk > 0
+            ? `${confidenceSummary.unclearExBulk} onduidelijk, ${confidenceSummary.reviewExBulk} controleren`
             : "Alles automatisch met vertrouwen ingedeeld",
-        tone: confidenceSummary.needsReview > 0 ? "attention" : "ok",
+        tone: confidenceSummary.openExBulk > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
-          if (confidenceSummary.needsReview > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 || confidenceSummary.review === 0 ? "fallback" : "heuristic");
+          if (confidenceSummary.openExBulk > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
       },
