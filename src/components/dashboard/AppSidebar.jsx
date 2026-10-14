@@ -369,7 +369,7 @@ export default function AppSidebar({
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
-        <p className="sb-label text-[10px] leading-snug text-slate-600" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
+        <p className="sb-label text-[11px] leading-snug text-slate-400" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
       </div>
       {sbTip && (
         <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-1/2 rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
