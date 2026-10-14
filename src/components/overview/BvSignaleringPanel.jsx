@@ -24,7 +24,7 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
       <p className="px-4 pb-3 text-xs text-rose-800">{signalering.tekst}</p>
       {open && (
         <div className="px-4 pb-4 text-xs text-rose-900 space-y-3">
-          <p className="italic text-rose-700">
+          <p className="text-rose-700">
             Dit is geen advies en geen keuze — dat is aan een boekhouder of jurist. Deze app laat alleen zien
             welke routes er in Nederland bestaan als de cijfers van een BV niet meer verbeteren.
           </p>

@@ -4,7 +4,7 @@ import { ClipboardList, Upload } from "lucide-react";
 // wat er via de wizard al vastligt, zodat je die antwoorden kunt nalopen vóór de import. Alleen
 // lezen; wijzigen gaat via "Basisvragen bewerken" (de wizard). Per jaar ingestelde zaken (uren,
 // startersaftrek, werkruimte, kwartalen) bestaan pas als er jaren zijn en staan hier dus niet.
-const namen = (lijst) => (lijst || []).map((x) => x.naam).filter(Boolean).join(", ");
+const namen = (lijst) => (lijst || []).map((x) => x.naam || "Ja (naam onbekend)").join(", ");
 const jaNee = (v, ja = "Ja", nee = "Nee") => (v === true ? ja : v === false ? nee : null);
 
 export default function VastgelegdeBasisgegevens({
@@ -90,7 +90,7 @@ export default function VastgelegdeBasisgegevens({
                 {g.rijen.map(([label, waarde]) => (
                   <div key={label} className="text-sm">
                     <dt className="text-xs text-slate-500">{label}</dt>
-                    <dd className={waarde == null ? "text-amber-700 italic" : "text-slate-800"}>{waarde ?? "Nog niet beantwoord"}</dd>
+                    <dd className={waarde == null ? "text-amber-700" : "text-slate-800"}>{waarde ?? "Nog niet beantwoord"}</dd>
                   </div>
                 ))}
               </dl>
@@ -98,7 +98,7 @@ export default function VastgelegdeBasisgegevens({
           ))}
         </div>
       ) : (
-        <p className="text-sm italic text-slate-400">Nog niets vastgelegd. Start met de basisvragen of voeg een bankbestand toe.</p>
+        <p className="text-sm text-slate-500">Nog niets vastgelegd. Start met de basisvragen of voeg een bankbestand toe.</p>
       )}
 
       <div className="flex flex-wrap gap-2 pt-1">

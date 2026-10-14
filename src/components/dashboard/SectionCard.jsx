@@ -77,7 +77,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
             regels tonen (bijv. of zakelijk/privé-overboekingen matchen), niet in plaats ervan. */}
         {subtitle && <p className="text-klein text-slate-500 leading-snug">{metBolletjes(subtitle)}</p>}
 
-        {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-klein font-bold ${t.bg} ${t.text}`}>{actionLabel} →</div>}
+        {actionLabel && <div className={`mt-auto text-center rounded-full py-1.5 text-klein font-bold ${t.bg} ${t.text}`}>{actionLabel}{/[↑↓]$/.test(actionLabel) ? "" : " →"}</div>}
       </Wrapper>
 
       {/* Tweede, losse knop onder de kaart (staat bewust buiten de <Wrapper>-knop: geen knop in een knop). */}

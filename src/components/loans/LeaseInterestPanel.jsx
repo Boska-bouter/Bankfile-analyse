@@ -348,7 +348,7 @@ function LeaseGroepPanel({
                   {lease.zoekKandidaten?.length > 0 && onBehandelAlsLease && (
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
-                        <strong>Betalingen gevonden voor "{lease.name}".</strong> Ik vond {lease.zoekKandidaten.length} betalingen aan een naam die hierop lijkt, die nu onder een andere categorie staan
+                        <strong>Betalingen gevonden voor "{lease.name}".</strong> Er zijn {lease.zoekKandidaten.length} betalingen gevonden aan een naam die hierop lijkt, die nu onder een andere categorie staan
                         ({[...new Set(lease.zoekKandidaten.map((tx) => tx.category))].slice(0, 3).join(", ")}) — mogelijk omdat bij het inlezen nog niet bekend was dat het om lease gaat. Zijn dit leasebetalingen?
                       </p>
                       <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
@@ -366,7 +366,7 @@ function LeaseGroepPanel({
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
                         <strong>Bij welk contract horen deze betalingen?</strong> Er staan {lease.splitKandidaten.length} betalingen van ongeveer {eur(lease.splitBedrag)} bij het
-                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan ik kan zien bij welk contract ze horen — dat bepaal jij.
+                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan te zien is bij welk contract ze horen — dat bepaal jij.
                       </p>
                       <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
                         {lease.splitKandidaten.slice(0, 12).map((tx, i) => (
@@ -408,7 +408,7 @@ function LeaseGroepPanel({
                     ) : (
                       (lease.splitVan || lease.handmatig) && isCompleteFinancialLeaseDetails(details) ? (
                         <div className="mt-2 text-xs">
-                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst{lease.splitVan ? "" : ". Ik heb in de bankgegevens niets gevonden met deze naam — laad eventueel ook de bankbestanden waarop deze lease wordt betaald."} (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
+                          <p className="text-slate-500">Contract is ingevuld, maar er zijn nog geen betalingen uit de bank aan dit contract gekoppeld — daarom kan de rente nog niet worden uitgesplitst{lease.splitVan ? "" : ". In de bankgegevens is niets gevonden met deze naam — laad eventueel ook de bankbestanden waarop deze lease wordt betaald."} (betalingen van vóór de startdatum van het contract tellen niet mee).</p>
                           {onKoppelBetalingen && (lease.splitBron?.transactions?.length > 0) && (
                             koppelOpen === lease.key ? (
                               <div className="mt-1.5 rounded-lg border border-slate-200 bg-white p-2">
@@ -475,9 +475,28 @@ export default function LeaseInterestPanel(props) {
   const auto = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("auto"));
   const overig = leaseSummary.filter((l) => leaseGroepenVan(l, leaseDetails[l.key], overigeLeaseNamen).includes("overig"));
   const gemeenschappelijk = { ...props, alleLeases: leaseSummary, onJump: () => setOpenSignal((n) => n + 1), openSignal };
+  // release21V5 — de lease-wizard opent niet meer vanzelf bij het openklappen van de kaart; in plaats
+  // daarvan deze melding zolang een (bevestigde) financiële lease nog helemaal leeg is.
+  const { confirmedLeaseTypeKeys = [], onOpenWizard, onOpenModal } = props;
+  const nogLeeg = leaseSummary.filter((l) => {
+    if (l.category !== "Lease (financieel)" || !confirmedLeaseTypeKeys.includes(l.key)) return false;
+    const d = leaseDetails[l.key];
+    if (d?.onbekend) return false;
+    return !getLeaseSegments(d).some((sg) => sg && (sg.koopprijs || sg.looptijd || sg.maandbedrag || sg.startdatum));
+  });
   // Eén van de twee leeg: alleen het andere paneel tonen; defaultOpen blijft zoals de kaart het bepaalt.
   return (
     <div className="space-y-3">
+      {nogLeeg.length > 0 && (onOpenWizard || onOpenModal) && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1.5">
+          {nogLeeg.map((l) => (
+            <div key={l.key} className="flex flex-wrap items-center gap-2">
+              <span className="flex-1 min-w-[12rem]">Financiële lease <strong>{l.name}</strong>: contractgegevens nog invullen.</span>
+              <button type="button" onClick={() => (onOpenWizard || onOpenModal)(l.key)} className="rounded-lg bg-teal-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-teal-800">Contract invullen</button>
+            </div>
+          ))}
+        </div>
+      )}
       <LeaseGroepPanel {...gemeenschappelijk} soort="auto" groep="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
       <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>

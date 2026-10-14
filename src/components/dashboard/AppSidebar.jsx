@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
 import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight } from "lucide-react";
 
@@ -55,7 +55,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
       <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#7DD3FC" : "#8992B4" }} />
       <span className={`sb-label text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
       {!!badge && (
-        <span className="sb-badge text-[11px] font-bold rounded-full px-1.5 py-0.5 bg-rose-600 text-white shrink-0">{badge}</span>
+        <span className="sb-badge text-[11px] font-bold rounded-full px-1.5 py-0.5 bg-amber-400 text-amber-950 shrink-0" title="Open punten">{badge}</span>
       )}
     </button>
   );
@@ -101,6 +101,15 @@ export default function AppSidebar({
     const r = el.getBoundingClientRect();
     setSbTip({ text: t, x: r.right + 8, y: r.top + r.height / 2 });
   };
+  // release22V0 — de zwevende melding "Laatste actie / Ongedaan maken" verdwijnt na 8 seconden vanzelf;
+  // daarna blijft ongedaan maken mogelijk via een kleine regel onderin de zijbalk.
+  const [undoIngeklapt, setUndoIngeklapt] = useState(false);
+  useEffect(() => {
+    setUndoIngeklapt(false);
+    if (!lastActionSnapshot) return undefined;
+    const t = setTimeout(() => setUndoIngeklapt(true), 8000);
+    return () => clearTimeout(t);
+  }, [lastActionSnapshot]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       const v = window.localStorage.getItem("bankoverzicht-sidebar-ingeklapt");
@@ -142,7 +151,8 @@ export default function AppSidebar({
         </div>
         <div className="sb-label flex flex-col min-w-0 flex-grow">
           <span className="text-[14.5px] font-bold text-white whitespace-nowrap">Bankoverzicht</span>
-          <span className="text-[11px] text-slate-400 leading-snug" title={`Versie van de app: ${APP_RELEASE}`}>{orgName}<br />{APP_RELEASE}</span>
+          {/* release22V1 — copyright en release staan nu onderaan de zijbalk (rustiger kop) */}
+          <span className="text-[11px] text-slate-400 leading-snug">Analyse van bankafschriften</span>
         </div>
       </div>
       <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
@@ -274,7 +284,7 @@ export default function AppSidebar({
           maken zijn vóórdat er een actief jaar is). Bewust wit/opvallend i.p.v. de donkere
           zijbalkstijl, zodat het duidelijk als tijdelijke melding oogt. release19V2: zweeft nu (fixed) linksonder naast de
           zijbalk in plaats van er een extra blok in te zijn, zodat de zijbalk niet gaat scrollen. */}
-      {lastActionSnapshot && createPortal(
+      {lastActionSnapshot && !undoIngeklapt && createPortal(
         <div className={`fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] ${collapsed ? "left-[84px]" : "left-[232px]"} z-[80] w-64 rounded-xl border-2 border-amber-300 bg-white shadow-lg p-2.5 flex flex-col gap-2`}>
           <div className="flex items-start justify-between gap-1">
             <p className="text-xs text-slate-600 leading-tight">
@@ -319,6 +329,13 @@ export default function AppSidebar({
             </div>
           );
         })()}
+        {lastActionSnapshot && undoIngeklapt && (
+          <button type="button" onClick={onUndoLastAction} title={`Laatste actie: ${lastActionSnapshot.label}`}
+            className="sb-label flex items-start gap-1.5 text-left text-[11px] text-slate-400 hover:text-slate-200">
+            <span aria-hidden="true">↶</span>
+            <span className="underline decoration-dotted">Ongedaan maken: {lastActionSnapshot.label}</span>
+          </button>
+        )}
         {saveState && (
           <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500 leading-snug" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
@@ -352,6 +369,7 @@ export default function AppSidebar({
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
+        <p className="sb-label text-[10px] leading-snug text-slate-600" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
       </div>
       {sbTip && (
         <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-1/2 rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"

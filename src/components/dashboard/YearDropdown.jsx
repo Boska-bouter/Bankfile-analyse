@@ -11,12 +11,12 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 
 const bestanden = (n) => `${n} bestand${n === 1 ? "" : "en"}`;
-const coverageNote = (c) => (c.zakelijk && c.prive ? null : c.zakelijk ? "dit jaar: alleen zakelijk geladen" : c.prive ? "dit jaar: alleen privé geladen" : null);
+const coverageNote = (c) => (c.zakelijk && c.prive ? null : c.zakelijk ? "Dit jaar: alleen zakelijk geladen" : c.prive ? "Dit jaar: alleen privé geladen" : null);
 // Altijd tonen wat er voor dit jaar is geladen (zakelijk/privé en hoeveel bestanden).
 const coverageTekst = (c) => {
   if (c.zakelijk && c.prive) return `dit jaar geladen: ${c.zakelijkBestanden} zakelijk en ${c.priveBestanden} privé bestand${c.priveBestanden === 1 && c.zakelijkBestanden === 1 ? "" : "en"}`;
-  if (c.zakelijk) return `dit jaar: alleen zakelijk geladen (${bestanden(c.zakelijkBestanden)})`;
-  if (c.prive) return `dit jaar: alleen privé geladen (${bestanden(c.priveBestanden)})`;
+  if (c.zakelijk) return `Dit jaar: alleen zakelijk geladen (${bestanden(c.zakelijkBestanden)})`;
+  if (c.prive) return `Dit jaar: alleen privé geladen (${bestanden(c.priveBestanden)})`;
   return null;
 };
 

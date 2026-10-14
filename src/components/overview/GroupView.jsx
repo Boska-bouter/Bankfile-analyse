@@ -40,7 +40,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
 
   return (
     <div className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
-      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+      <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
         Categorieën — {group.label}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
         <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
@@ -514,7 +514,7 @@ export function DetailTable({
                           return note ? (
                             <button
                               onClick={() => startEditNote(t)}
-                              className="mt-1 flex items-start gap-1 text-left text-xs italic text-sky-700 hover:text-sky-900"
+                              className="mt-1 flex items-start gap-1 text-left text-xs text-sky-700 hover:text-sky-900"
                               title="Toelichting bewerken"
                             >
                               <Pencil className="h-3 w-3 shrink-0 mt-0.5" /> <span className="break-words">{note}</span>

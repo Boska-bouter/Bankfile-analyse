@@ -207,7 +207,7 @@ export function useLoansAndLease({
     snapshotBeforeAction("Lease op onbekend gezet");
     setLeaseDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
   };
-  const confirmLeaseType = (lease, type) => {
+  const confirmLeaseType = (lease, type, opts) => {
     snapshotBeforeAction("Lease-type bevestigd");
     const category = type === "financieel" ? "Lease (financieel)" : "Lease (operationeel)";
     // Per transactie overriden, niet op lease.name (dat is de opgemaakte weergavenaam mét
@@ -217,7 +217,7 @@ export function useLoansAndLease({
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: "Zakelijk" }, tx.counterpartyIban);
     }
     setConfirmedLeaseTypeKeys((prev) => (prev.includes(lease.key) ? prev : [...prev, lease.key]));
-    if (type === "financieel") (openLeaseWizard || setLeaseDetailsModalKey)(lease.key);
+    if (type === "financieel" && !opts?.zonderWizard) (openLeaseWizard || setLeaseDetailsModalKey)(lease.key);
   };
   // Nieuwe lease zonder bankbetalingen (bijv. contract waarvan de client de betalingen niet aanleverde).
   const addManualLease = (naam, groep, extra) => {

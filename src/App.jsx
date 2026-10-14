@@ -22,7 +22,7 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import {
   loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
@@ -78,6 +78,7 @@ import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeMod
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
+import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
@@ -149,7 +150,7 @@ import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./reports/btwOverzi
 import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
 import { printReport, printHtmlDocument } from "./reports/printReport.js";
-import { computeLoanRenteForYear, computeLeaseRenteForYear } from "./tax/loanAmortization.js";
+import { computeLoanRenteForYear, computeLeaseRenteForYear, suggestLeaseMerges, leaseKeyVanTx } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
@@ -321,7 +322,7 @@ export default function App() {
   const wizardWasOpenRef = useRef(false);
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
-    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) autoOpenLeaseWizard();
+    if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) stilLeaseBevestigen(); // release21V5 — geen venster meer bij openklappen
     startTransition(() => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] })));
   };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
@@ -333,7 +334,7 @@ export default function App() {
   const [leaseDetails, setLeaseDetails] = useState({});
   const [leaseMergedInto, setLeaseMergedInto] = useState({}); // { bronKey: doelKey }
   const [leaseDetailsModalKey, setLeaseDetailsModalKey] = useState(null);
-  const { openLeaseWizard, autoOpenLeaseWizard, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
+  const { openLeaseWizard, autoOpenLeaseWizard, stilBevestigen: stilLeaseBevestigen, registreer: registreerLeaseWizard, renderLeaseWizard, leaseWizardOpen } = useLeaseWizardOpening();
   // Tijdens en kort na een lease-wizard klapt het overzicht niet vanzelf in: je wilt het resultaat kunnen controleren.
   const [activaDetails, setActivaDetails] = useState({});
   const [activaDetailsModalKey, setActivaDetailsModalKey] = useState(null);
@@ -1805,6 +1806,82 @@ export default function App() {
   const removeManualLease = (key) => { geenAutoInklapRef.current = Date.now() + 2000; removeManualLeaseRaw(key); };
   registreerLeaseWizard({ leaseSummary, confirmedLeaseTypeKeys, leaseDetails, autoWizardStatus, verwachteLease, verwachteLeaseOverig, confirmLeaseType });
 
+  // release21V6 — lease-controle in de start-wizard (scherm 37, zie LeaseControleScherm.jsx): direct na
+  // het laden laten bevestigen welke leasebetalingen gevonden zijn. Komt alleen terug als er sindsdien
+  // nieuwe leasebetalingen (of een nog niet gevonden opgave) bij zijn gekomen; wat gezien is staat in
+  // bevestigdeControles.leaseControle.
+  const pendingLeaseInvullenRef = useRef(false);
+  const leaseControle = useMemo(() => {
+    if (classified.length === 0) return null;
+    const leases = leaseSummary.filter((l) => !l.handmatig && !l.splitVan && (l.transactions || []).length > 0);
+    const verwachte = [
+      ...(verwachteLease || []).map((v, idx) => ({ ...v, lijst: "auto", idx })),
+      ...(verwachteLeaseOverig || []).map((v, idx) => ({ ...v, lijst: "overig", idx })),
+    ];
+    const ids = [
+      ...leases.flatMap((l) => l.transactions.map((t) => `tx:${t.id}`)),
+      ...verwachte.filter((v) => !v.gevonden).map((v) => `verwacht:${v.lijst}:${v.idx}:${v.naam || ""}`),
+    ];
+    const gezien = new Set(bevestigdeControles?.leaseControle || []);
+    const nieuw = ids.filter((id) => !gezien.has(id));
+    const nodig = nieuw.length > 0 && (leases.length > 0 || verwachte.some((v) => !v.gevonden));
+    // Vaste maandelijkse betalingen die (nog) niet als lease staan: om een niet gevonden lease aan te wijzen.
+    const groepen = {};
+    for (const tx of classified) {
+      if (tx.isMirror || tx.amount >= 0 || String(tx.category || "").startsWith("Lease")) continue;
+      const k = extractRecurringName(tx);
+      if (!k) continue;
+      if (!groepen[k]) groepen[k] = { key: k, name: (tx.counterparty || tx.description || "").trim(), category: tx.category, txs: [], maanden: new Set() };
+      groepen[k].txs.push(tx);
+      groepen[k].maanden.add(tx.month);
+    }
+    const kandidaten = Object.values(groepen)
+      .filter((g) => g.maanden.size >= 3)
+      .map((g) => ({ ...g, count: g.txs.length, gem: g.txs.reduce((a, t) => a + t.amount, 0) / g.txs.length }))
+      .sort((a, b) => b.maanden.size - a.maanden.size || a.gem - b.gem)
+      .slice(0, 12);
+    return {
+      nodig, leases, verwachte, kandidaten, ids,
+      autoSoort: autoWizardStatus?.soort || null,
+      wizardZeiGeenLease: Array.isArray(verwachteLease) && verwachteLease.length === 0 && (verwachteLeaseOverig || []).length === 0 && autoWizardStatus?.soort !== "financial" && autoWizardStatus?.soort !== "operational",
+      mergeGroepen: suggestLeaseMerges(leases),
+      confirmedLeaseTypeKeys,
+    };
+  }, [classified, leaseSummary, verwachteLease, verwachteLeaseOverig, autoWizardStatus, confirmedLeaseTypeKeys, bevestigdeControles]);
+  const pasLeaseControleToe = ({ keuzes, samenvoegen, aanwijzingen, naamloosKoppelen, nuInvullen }) => {
+    if (!leaseControle) return;
+    const extraIds = [];
+    for (const { lease, type } of keuzes) {
+      if (type === "financieel" || type === "operationeel") confirmLeaseType(lease, type, { zonderWizard: true });
+      else if (type === "geen") {
+        snapshotBeforeAction("Lease op Overig gezet");
+        for (const tx of lease.transactions) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Overig", type: tx.type }, tx.counterpartyIban);
+        setConfirmedLeaseTypeKeys((prev) => prev.filter((k) => k !== lease.key));
+      }
+    }
+    for (const [bron, doel] of samenvoegen) mergeLeaseInto(bron, doel);
+    const zetNaam = (v, naam) => {
+      const setter = v.lijst === "overig" ? setVerwachteLeaseOverig : setVerwachteLease;
+      setter((prev) => (prev || []).map((it, i) => {
+        if (i !== v.idx) return it;
+        if (!it.naam) return { ...it, naam };
+        const al = [it.naam, ...(it.aliassen || [])].some((n) => n.toLowerCase() === naam.toLowerCase());
+        return al ? it : { ...it, aliassen: [...(it.aliassen || []), naam] };
+      }));
+    };
+    for (const { verwacht, kandidaat } of aanwijzingen) {
+      if (!kandidaat) continue;
+      behandelAlsLease(kandidaat.txs);
+      const key = leaseKeyVanTx(kandidaat.txs[0]);
+      setConfirmedLeaseTypeKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+      zetNaam(verwacht, kandidaat.name);
+      extraIds.push(...kandidaat.txs.map((t) => `tx:${t.id}`));
+    }
+    for (const { verwacht, lease } of naamloosKoppelen) zetNaam(verwacht, (lease.transactions[0]?.counterparty || lease.name).trim());
+    setBevestigdeControles((p) => ({ ...p, leaseControle: [...new Set([...(p.leaseControle || []), ...leaseControle.ids, ...extraIds])] }));
+    if (nuInvullen) pendingLeaseInvullenRef.current = true;
+  };
+
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
   const activaSummary = useMemo(() => computeActivaSummary(classified, activaDetails), [classified, activaDetails]);
@@ -2712,8 +2789,10 @@ export default function App() {
   const groupCards = (membersByKey, memberKeys, extra) => {
     const members = memberKeys.map((k) => membersByKey[k]).filter(Boolean);
     if (members.length === 0) return extra || null;
-    const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
-    const worstTone = members.reduce((acc, m) => (toneRank[m.tone] > toneRank[acc] ? m.tone : acc), "ok");
+    // release22V4 — "niets te controleren" (neutral) telt niet zwaarder dan "in orde" (ok): de kaart wordt
+    // alleen grijs als álle onderdelen grijs zijn; oranje/rood gaan zoals altijd voor.
+    const toneRank = { risk: 3, attention: 2, ok: 1, neutral: 0 };
+    const worstTone = members.reduce((acc, m) => (toneRank[m.tone] > toneRank[acc] ? m.tone : acc), "neutral");
     const primary = members.find((m) => m.tone === "risk") || members.find((m) => m.tone === "attention") || members[0];
     const lines = members.flatMap((m) =>
       m.lines
@@ -2854,9 +2933,15 @@ export default function App() {
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
     return lijst;
   })();
+  // release21V7 — leeg dossier waarin nog geen enkele basisvraag beantwoord is (bijv. wizard direct
+  // afgebroken na "Nieuw dossier"): geen gele lijst van 9 open punten en geen badge, maar één rustige
+  // regel "Basisvragen nog niet doorlopen". De gele kaart komt pas zodra er een bestand is of iets is ingevuld.
+  const basisvragenNietGestart = parsedFiles.length === 0 &&
+    [eigenNamen, rechtsvorm, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, heeftVoorraad, verwachteAOV, korRegeling].every((v) => v === null);
+  const openBasisvragenTelling = basisvragenNietGestart ? 0 : openBasisvragen.length;
   const instellingenBadge = useMemo(
-    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragen.length,
-    [instellingenDashboardCards, openBasisvragen.length]
+    () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragenTelling,
+    [instellingenDashboardCards, openBasisvragenTelling]
   );
 
   const dossierOpenPoints = controlerenBadge + instellingenBadge;
@@ -2974,7 +3059,7 @@ export default function App() {
       maak("aannames", "Instellingen", ["aannames"], "afgehandeld", "instellingen"),
     ];
     // release21V1 — openstaande basisvragen horen bij stap "Instellingen"; een klik opent de wizard
-    if (openBasisvragen.length > 0) {
+    if (openBasisvragenTelling > 0) {
       const st = lijst[lijst.length - 1];
       st.open += openBasisvragen.length;
       if (!st.geenData) st.sub = `${st.open} open`;
@@ -3475,7 +3560,8 @@ export default function App() {
         <div style={sectionTabStyle("overzicht")} className="space-y-5 mt-6">
           <DashboardHeader
             title="Overzicht"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            compact={parsedFiles.length === 0} // release22V0 — zonder data geen ringmeter/aangifteblok met "nog geen data"
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : parsedFiles.length === 0 ? "Nog geen bankgegevens in dit dossier" : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3496,14 +3582,24 @@ export default function App() {
           {/* v273 — deze rij stond volledig verborgen zolang er geen jaren/project geladen waren;
               op verzoek toont het standaard-dashboard nu altijd deze sectie, met JaaroverzichtCard
               in een neutrale nul-stand i.p.v. helemaal te verdwijnen. */}
-          <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />
+          {/* release22V0 — leeg dossier: één welkomstkaart met drie stappen i.p.v. losse blokken */}
+          {parsedFiles.length === 0 && (
+            <WelkomKaart
+              basisStatus={basisvragenNietGestart ? "nog-niet" : openBasisvragen.length > 0 ? "deels" : "klaar"}
+              basisOpen={openBasisvragen.length}
+              onBasisvragen={() => setOpenVragenWizard(true)}
+              onBankbestand={startBankbestandToevoegen}
+              onDossierLaden={startLoadProject}
+            />
+          )}
+          {parsedFiles.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
 
-          <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />
-          {!activeYear && <p className="px-1 text-sm italic text-slate-500">Voeg links bij "Dossier" een bankbestand toe (of klik op stap 1 "Import"), of laad een eerder opgeslagen dossier.</p>}
-          {!(showSetupWizard || manualWizardOpen || openVragenWizard) && (
-            <OpenBasisvragenCard vragen={openBasisvragen} onBeantwoorden={() => setOpenVragenWizard(true)} />
+          {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
+          {parsedFiles.length > 0 && !(showSetupWizard || manualWizardOpen || openVragenWizard) && (
+            <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
           )}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
+          {parsedFiles.length > 0 && (
           <NextStepCard
             stappen={alleStappen}
             overgeslagen={overgeslagenStappen}
@@ -3525,6 +3621,7 @@ export default function App() {
                 : null
             }
           />
+          )}
 
           {/* checklistSectionRef zat voorheen op de (inmiddels verwijderde) "Aangifte {jaar}"-balk —
               nu hier, zodat bestaande kaarten die ernaartoe springen (dashboardCards "yearStatus"/
@@ -3664,15 +3761,7 @@ export default function App() {
           />
         )}
 
-        {parsedFiles.length === 0 && (
-          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 flex items-start gap-2.5" style={sectionTabStyle("overzicht")}>
-            <Lock className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
-            <p className="text-sm text-emerald-900">
-              <strong>Privacy:</strong> je bankgegevens worden volledig lokaal in deze browser verwerkt. Er wordt niets
-              naar een server gestuurd — alles blijft op dit apparaat, ook wat automatisch wordt bewaard.
-            </p>
-          </div>
-        )}
+        {/* release22V0 — de grote groene privacybalk is vervallen: dezelfde zin staat nu in de welkomstkaart (WelkomKaart.jsx) en linksonder in de zijbalk. */}
 
         {error && (
           <section className="rounded-xl border-2 border-rose-300 bg-rose-50 px-4 py-3 flex items-start gap-3" style={sectionTabStyle("overzicht")}>
@@ -3720,7 +3809,7 @@ export default function App() {
         <div style={sectionTabStyle("controleren")}>
           <DashboardHeader
             title="Controleren"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}
@@ -3817,9 +3906,14 @@ export default function App() {
             setZakelijkeSpaarRekening={(v) => { snapshotBeforeAction("Zakelijke spaarrekening ingevuld"); setZakelijkeSpaarRekening(v); }}
             opdrachtgeversGevraagd={opdrachtgeversGevraagd}
             dossierProfiel={dossierProfiel}
+            leaseControle={leaseControle ? { ...leaseControle, onToepassen: pasLeaseControleToe } : null}
             onAddBusinessKeywords={addBusinessKeywords}
             onAddBusinessExpenseKeywords={addBusinessExpenseKeywords}
-            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
+            onClose={() => {
+              setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false);
+              // release21V6 — "na de wizard meteen de contractgegevens invullen" (lease-controle)
+              if (pendingLeaseInvullenRef.current) { pendingLeaseInvullenRef.current = false; setTimeout(() => autoOpenLeaseWizard(), 400); }
+            }}
           />
         )}
 
@@ -3904,7 +3998,7 @@ export default function App() {
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
             title="Instellingen"
-            subtitle={activeYear ? `Dossierstatus voor boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
+            subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
             yearRing={yearRing}

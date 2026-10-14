@@ -102,7 +102,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                             </button>
                             {isOpenCard && (
                               <div className="px-3 pb-3">
-                                {r.description && <p className="text-xs text-slate-500 mb-2 italic">{r.description}</p>}
+                                {r.description && <p className="text-xs text-slate-500 mb-2">{r.description}</p>}
                                 <div className="flex flex-wrap gap-1.5">
                                   {r.keywords.map((kw) => (
                                     <span key={kw} className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">

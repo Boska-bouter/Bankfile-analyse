@@ -167,7 +167,7 @@ export default function DashboardHeader({
               <div className="w-px self-stretch bg-slate-200" />
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-400 italic">Voeg een bankbestand toe (links) om te beginnen</span>
+                  <span className="text-slate-500">Voeg een bankbestand toe (links) om te beginnen</span>
                 </div>
                 {yearControl}
               </div>
