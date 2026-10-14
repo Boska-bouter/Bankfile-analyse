@@ -97,6 +97,15 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
                 ) : <p className="mt-1.5 text-emerald-700">Geen gaten gevonden.</p>}
               </div>
             ))}
+            {/* release31V4 — maanden waarin maar één van beide rekeningen geladen is */}
+            {(data.eenzijdig || []).length > 0 && (
+              <div className="mb-2 rounded-md border border-sky-200 bg-sky-50 p-2 text-sky-900">
+                {data.eenzijdig.map((e) => (
+                  <p key={e.tekst + e.alleen}><strong>{e.tekst}</strong>: alleen {e.alleen} geladen.</p>
+                ))}
+                <p className="mt-1 text-sky-800">In die maanden kan de controle zakelijk ↔ privé overboekingen niet koppelen; ze tellen daar niet als open punt. De indeling in categorieën werkt gewoon. Heb je de afschriften van de andere rekening, laad ze dan ook.</p>
+              </div>
+            )}
             <p className="text-xs text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
           </div>
 

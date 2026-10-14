@@ -78,6 +78,7 @@ import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeMod
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import { voorladenExcel } from "./importers/excel.js";
+import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
 import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
@@ -94,6 +95,7 @@ import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
+import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
@@ -422,6 +424,7 @@ export default function App() {
   const [openVragenWizard, setOpenVragenWizard] = useState(false); // release21V1 — wizard via "Nu beantwoorden"
   // release30V7 — inlezen van bankbestanden zichtbaar maken in de wizard (bezig / foutmelding).
   const [importBezig, setImportBezig] = useState(false);
+  const [showInkomenPerMaand, setShowInkomenPerMaand] = useState(false); // release31V5
   const [importHerladen, setImportHerladen] = useState(false);
   useEffect(() => { const t = setTimeout(voorladenExcel, 4000); return () => clearTimeout(t); }, []);
   const [overigSearch, setOverigSearch] = useState("");
@@ -1318,6 +1321,8 @@ export default function App() {
     }
     return info;
   }, [allTransactions]);
+  // release31V4 — periode per rekeningsoort (zakelijk / privé), voor de controle zakelijk ↔ privé.
+  const periodePerSoort = useMemo(() => periodesPerSoort(bestandInfo, accountTypeByFile), [bestandInfo, accountTypeByFile]);
   const setAccountType = (fileName, type) => {
     snapshotBeforeAction("Rekeningtype aangepast");
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
@@ -2616,6 +2621,7 @@ export default function App() {
   const aansluitControleInfo = useAansluitControleInfo({
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
     eigenRekeningenNietGeladen: (eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean),
+    periodeZak: periodePerSoort.Zakelijk || null, periodePri: periodePerSoort.Prive || null,
   });
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
@@ -2814,8 +2820,9 @@ export default function App() {
       terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
       sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles, gatenAlleen: rechtsvorm !== "bv" }),
       gatenAlleen: rechtsvorm !== "bv",
+      eenzijdig: gezamenlijkePeriode(periodePerSoort.Zakelijk, periodePerSoort.Prive)?.eenzijdig || [],
     };
-  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm]);
+  }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm, periodePerSoort]);
   const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
   const bevestigControles = (sleutels) => setBevestigdeControles((prev) => { const next = { ...prev }; for (const k of sleutels) next[k] = true; return next; });
   const herroepControle = (sleutel) => setBevestigdeControles((prev) => { const next = { ...prev }; delete next[sleutel]; return next; });
@@ -3231,6 +3238,12 @@ export default function App() {
   // dezelfde refs/handlers die de rest van de app al gebruikt, geen nieuwe navigatielogica.
   const handleDetailsJump = (target) => {
     switch (target) {
+      case "inkomen":
+        setShowInkomenPerMaand(true);
+        break;
+      case "onderbouwing":
+        startOnderbouwing();
+        break;
       case "details":
       case "categorieen":
         jumpToSection(detailsSectionRef);
@@ -3534,7 +3547,7 @@ export default function App() {
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
         onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
-        onOnderbouwing={activeYear ? startOnderbouwing : null}
+        onInkomenPerMaand={activeYear ? () => setShowInkomenPerMaand(true) : null}
         onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
@@ -3825,6 +3838,8 @@ export default function App() {
           <OnverklaardeOverboekingenModal
             items={aansluitControleInfo.onverklaard}
             toegelicht={aansluitControleInfo.toegelicht}
+            buitenPeriode={aansluitControleInfo.buitenPeriode}
+            eenzijdigTekst={aansluitControleInfo.eenzijdigTekst}
             onToelichten={(lijst, uitleg) => {
               setBevestigdeControles((prev) => { const next = { ...prev }; for (const x of lijst) next[x.sleutel] = { ...uitleg, t: Date.now() }; return next; });
               setAuditLog((prev) => [...prev, { t: Date.now(), label: `Niet-gekoppelde overboeking${lijst.length === 1 ? "" : "en"} toegelicht (${lijst.length}x): ${uitleg.redenTekst}${uitleg.notitie ? ` — ${uitleg.notitie}` : ""}` }].slice(-300));
@@ -3986,6 +4001,7 @@ export default function App() {
             fileContinuity={fileContinuity}
             ownAccountByFile={ownAccountByFile}
             bestandInfo={bestandInfo}
+            accountTypeByFile={accountTypeByFile}
             onRekeningWijzig={setEigenRekeningVoorBestanden}
             alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
             onSaveProject={saveProjectFile}
@@ -4309,6 +4325,22 @@ export default function App() {
             onDownload={downloadAangiftevoorstelPreview}
             onPrint={printAangiftevoorstelPreview}
             onClose={() => setAangiftevoorstelPreview(null)}
+            extraKnop={{ label: "Onderbouwing tonen", title: "Overzicht van de transacties achter de bedragen in deze berekening", onClick: () => { const jaren = selectedAangifteYears; setAangiftevoorstelPreview(null); openOnderbouwing(jaren); } }}
+          />
+        )}
+        {showInkomenPerMaand && years.length > 0 && (
+          <InkomenPerMaandModal
+            classified={classified}
+            years={years}
+            beginJaar={activeYear}
+            categoryBtwRates={effectiveCategoryBtwRates}
+            btwVerlegd={btwVerlegd}
+            periodeZak={periodePerSoort.Zakelijk || null}
+            periodePri={periodePerSoort.Prive || null}
+            isBV={rechtsvorm === "bv"}
+            klantNaam={eigenNamen?.ondernemer}
+            onPrint={(html) => printHtmlDocument(html)}
+            onClose={() => setShowInkomenPerMaand(false)}
           />
         )}
       </main>

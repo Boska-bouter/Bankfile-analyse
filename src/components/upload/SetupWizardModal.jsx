@@ -1,4 +1,5 @@
 import LeaseContractenVraag, { contractenVan, syncContracten } from "./LeaseContractenVraag.jsx";
+import { periodesPerSoort, gezamenlijkePeriode, maandTekst } from "../../calc/periodeDekking.js";
 import LeaseControleScherm from "./LeaseControleScherm.jsx";
 import { useState, useEffect, useRef } from "react";
 import { Building2, Home, FileSpreadsheet, ChevronRight, ChevronLeft, Check, AlertCircle, X } from "lucide-react";
@@ -67,6 +68,7 @@ export default function SetupWizardModal({
   dossierProfiel = null,
   leaseControle = null,
   ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig = null,
+  accountTypeByFile = {},
   alleenVragen = null,
   onClose,
 }) {
@@ -194,7 +196,7 @@ export default function SetupWizardModal({
   const allTypedNow = sessionFiles.every((f) => typedNow[f]);
   const props = {
     typedNow, zet, needs, isBV, goNext, years: years || [],
-    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig,
+    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig, accountTypeByFile, onPickFiles,
     rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd,
     eigenNamen, setEigenNamen,
     eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
@@ -561,7 +563,14 @@ function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, 
 function Scherm31({
   typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig,
   rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
+  accountTypeByFile = {}, onPickFiles,
 }) {
+  // release31V4 — dekken de zakelijke en de privébestanden dezelfde periode? Zo niet: melden welke maanden
+  // maar één kant hebben (daar kan de controle zakelijk ↔ privé niets koppelen).
+  const types = { ...accountTypeByFile };
+  for (const f of sessionFiles) if (typedNow[f] === "Zakelijk" || typedNow[f] === "Prive") types[f] = typedNow[f];
+  const pps = periodesPerSoort(bestandInfo, types);
+  const periode = gezamenlijkePeriode(pps.Zakelijk, pps.Prive);
   const toonRechtsvorm = needs.rechtsvorm;
   const toonHolding = needs.holding && rechtsvorm === "bv";
   const klaar =
@@ -578,6 +587,19 @@ function Scherm31({
             <RekeningGroep key={g.key} g={g} typedNow={typedNow} zet={zet} onAccountTypeChoose={onAccountTypeChoose}
               fileContinuity={fileContinuity} bestandInfo={bestandInfo} onRekeningWijzig={onRekeningWijzig} />
           ))}
+          {periode && periode.eenzijdig.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1.5">
+              <p>
+                <strong>Zakelijk:</strong> {maandTekst(pps.Zakelijk.van)} – {maandTekst(pps.Zakelijk.tot)} · <strong>Privé:</strong> {maandTekst(pps.Prive.van)} – {maandTekst(pps.Prive.tot)}.
+              </p>
+              <p>
+                {periode.eenzijdig.map((e) => `${e.tekst} alleen ${e.alleen}`).join("; ")}: in die maanden kan de app overboekingen tussen beide rekeningen niet controleren. De indeling in categorieën werkt gewoon. Heb je de afschriften van die maanden? Laad ze dan ook.
+              </p>
+              {onPickFiles && (
+                <button type="button" onClick={onPickFiles} className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100">Bestand toevoegen</button>
+              )}
+            </div>
+          )}
         </Sectie>
       )}
 

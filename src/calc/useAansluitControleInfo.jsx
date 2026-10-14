@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { eur } from "../utils/amounts.js";
 import { betaalSoort } from "../classification/classify.js";
+import { gezamenlijkePeriode } from "./periodeDekking.js";
 
 // Sleutel waaronder een toegelichte (bekende) niet-gekoppelde overboeking in bevestigdeControles staat.
 // Bewust géén tx.id (een teller die per keer laden kan verschuiven) maar datum + bedrag + tegenrekening/naam.
@@ -13,6 +14,7 @@ export function onverklaardSleutel(tx, kant) {
 export function useAansluitControleInfo(p) {
   const {
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht = {}, eigenRekeningenNietGeladen = [],
+    periodeZak = null, periodePri = null,
   } = p;
 
   return useMemo(() => {
@@ -61,11 +63,20 @@ export function useAansluitControleInfo(p) {
       if (auto && (auto.reden === "contant" || auto.reden === "pin") && handmatig && handmatig.reden === "bestand" && !handmatig.notitie) return auto;
       return handmatig || auto;
     };
+    // release31V4 — buiten de periode die zakelijk én privé samen dekken kan een boeking nooit een tegenboeking
+    // vinden (de andere kant is niet geladen). Zulke boekingen tellen niet als open punt; ze staan apart.
+    const periode = gezamenlijkePeriode(periodeZak, periodePri);
+    const marge = 5 * 86400000;
+    const buiten = (x) => !!periode && (!periode.overlap || x.tx.date < periode.van - marge || x.tx.date > periode.tot.getTime() + marge);
     // 15V7: bekende boekingen waarvan je de oorzaak hebt toegelicht tellen niet meer als "niet gekoppeld".
-    const onverklaard = onverklaardAlle.filter((x) => !uitlegVan(x));
+    const buitenLijst = onverklaardAlle.filter((x) => !uitlegVan(x) && buiten(x));
+    const onverklaard = onverklaardAlle.filter((x) => !uitlegVan(x) && !buiten(x));
     const toegelichtLijst = onverklaardAlle.filter((x) => uitlegVan(x)).map((x) => ({ ...x, uitleg: uitlegVan(x) }));
     const toegelichtBedrag = Math.round(toegelichtLijst.reduce((a, x) => a + x.tx.amount, 0) * 100) / 100;
-    const diffOpen = Math.round((diff - toegelichtBedrag) * 100) / 100;
+    const buitenBedrag = Math.round(buitenLijst.reduce((a, x) => a + x.tx.amount, 0) * 100) / 100;
+    const diffOpen = Math.round((diff - toegelichtBedrag - buitenBedrag) * 100) / 100;
+    const eenzijdigTekst = periode ? periode.eenzijdig.map((e) => `${e.tekst} alleen ${e.alleen}`).join(", ") : "";
+    const buitenTekst = buitenLijst.length > 0 ? ` ${buitenLijst.length} boeking${buitenLijst.length === 1 ? "" : "en"} niet te controleren (${eenzijdigTekst || "buiten de gezamenlijke periode"}).` : "";
     // V71 — "geladen" is per jaar bekeken: een privébestand dat alleen 2024-2025 beslaat zegt niets
     // over 2020 — daar staat Privé dan op € 0,00 omdat er geen data is, niet omdat het niet klopt.
     const zijdeOntbreekt = !priveRekeningGeladen || priGroupForYear.items.length === 0 ? "Prive"
@@ -83,9 +94,9 @@ export function useAansluitControleInfo(p) {
       const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} toegelicht (${eur(toegelichtBedrag)}).` : "";
       tone = ok ? "ok" : "attention";
       subtitle = ok
-        ? (toegelichtLijst.length > 0 ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — verschil ${eur(diff)}, volledig toegelicht.${toegelichtTekst}` : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`)
-        : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diffOpen)}).${toegelichtTekst}`;
+        ? (toegelichtLijst.length > 0 || buitenLijst.length > 0 ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — verschil ${eur(diff)}, volledig verklaard.${toegelichtTekst}${buitenTekst}` : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`)
+        : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diffOpen)}).${toegelichtTekst}${buitenTekst}`;
     }
-    return { zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag };
-  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|")]);
+    return { zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag, buitenPeriode: buitenLijst, buitenBedrag, eenzijdigTekst };
+  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|"), periodeZak, periodePri]);
 }

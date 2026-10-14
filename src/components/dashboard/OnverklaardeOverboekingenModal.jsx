@@ -111,7 +111,7 @@ function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten,
   );
 }
 
-export default function OnverklaardeOverboekingenModal({ items, toegelicht = [], onToelichten, onHerroepToelichting, diff, jaar, onRequestChange, onClose, bekendeIbans = [], onEigenRekeningToevoegen }) {
+export default function OnverklaardeOverboekingenModal({ items, toegelicht = [], buitenPeriode = [], eenzijdigTekst = "", onToelichten, onHerroepToelichting, diff, jaar, onRequestChange, onClose, bekendeIbans = [], onEigenRekeningToevoegen }) {
   const [openSleutel, setOpenSleutel] = useState(null); // sleutel van de boeking, "ALLES" of "GROEP:<iban>"
   const [groepOpen, setGroepOpen] = useState({});
   // release22V10 — boekingen met dezelfde tegenrekening (2 of meer) als groep bovenaan, met één keer
@@ -203,13 +203,34 @@ export default function OnverklaardeOverboekingenModal({ items, toegelicht = [],
             );
           })}
           {items.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">Alle boekingen zijn gekoppeld.</p>
+            <p className="text-sm text-slate-400 text-center py-6">{buitenPeriode.length > 0 ? "Alle te controleren boekingen zijn gekoppeld." : "Alle boekingen zijn gekoppeld."}</p>
           ) : losse.length === 0 ? null : (
             <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
               {losse.map(({ tx, kant, sleutel }) => (
                 <Boeking key={tx.id} tx={tx} kant={kant} sleutel={sleutel} openSleutel={openSleutel} setOpenSleutel={setOpenSleutel} onToelichten={onToelichten} onRequestChange={onRequestChange} />
               ))}
             </div>
+          )}
+          {/* release31V4 — buiten de periode die beide rekeningen dekken: niet te controleren, geen open punt */}
+          {buitenPeriode.length > 0 && (
+            <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50">
+              <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">
+                Buiten de gezamenlijke periode — niet te controleren ({buitenPeriode.length})
+              </summary>
+              <p className="px-3 pb-2 text-[11px] text-slate-500">
+                {eenzijdigTekst ? `Geladen: ${eenzijdigTekst}. ` : ""}In die maanden is de andere rekening niet geladen, dus er kan geen tegenboeking zijn. Deze boekingen tellen niet als open punt. Laad je de ontbrekende afschriften alsnog, dan worden ze vanzelf gecontroleerd. De indeling (categorie) verandert hier niet door.
+              </p>
+              <div className="divide-y divide-slate-100 border-t border-slate-200 bg-white">
+                {buitenPeriode.map(({ tx, kant, sleutel }) => (
+                  <div key={sleutel} className="p-2.5 text-xs flex flex-wrap items-center gap-2">
+                    <div className="flex-1 min-w-[10rem]">
+                      <p className="font-medium truncate">{tx.counterparty || tx.description || "(geen omschrijving)"} <span className="text-slate-400 font-normal">· {kant === "Zakelijk" ? "zakelijk" : "privé"} · {tx.date.toLocaleDateString("nl-NL")} · {displayCategory(tx.category)}</span></p>
+                    </div>
+                    <span className="shrink-0 font-mono text-slate-700 w-24 text-right">{eur(tx.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
           {toegelicht.length > 0 && (
             <div className="mt-4">
