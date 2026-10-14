@@ -2752,6 +2752,11 @@ export default function App() {
     snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
   };
+  // release22V9 — alle betalingen van deze terugkerende reeks op een zelf gekozen categorie zetten.
+  const toepassenTerugkerendAlle = (t, categorie, type) => {
+    snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${categorie}`);
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.alle || []) next[a.id] = { ...(prev[a.id] || {}), category: categorie, type }; return next; });
+  };
   const controlerenDashboardCards = useControlerenDashboardCards({
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
@@ -2866,7 +2871,7 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,

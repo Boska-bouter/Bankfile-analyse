@@ -104,6 +104,10 @@ export function vindTerugkerendeInconsistenties({ classified = [], overridesByRo
       hoofdCategorie: hoofdCat, hoofdType: hoofdTxs[0].type,
       verdeling: gesorteerd.map(([c, ts]) => ({ categorie: c, aantal: ts.length })),
       afwijkend: af.map((t) => ({ id: t.id, date: t.date, amount: t.amount, category: t.category })),
+      // release22V9 — alle betalingen (voor "Alle op: [eigen keuze]") en hoeveel afwijkende betalingen
+      // buiten het voorstel blijven (duidelijk ander bedrag, handmatig gezet of structurele categorie).
+      alle: g.txs.map((t) => ({ id: t.id, category: t.category, type: t.type })),
+      nietInVoorstel: rest.length - af.length,
     });
   }
   resultaat.sort((a, b) => b.afwijkend.length - a.afwijkend.length);

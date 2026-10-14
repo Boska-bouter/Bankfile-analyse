@@ -15,7 +15,7 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
@@ -90,7 +90,7 @@ export function useControlerenCardGroups(p) {
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
-          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} />
+          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} />
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={classified}
