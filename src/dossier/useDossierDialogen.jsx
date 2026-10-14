@@ -4,7 +4,7 @@
 
 export function useDossierDialogen({
   parsedFilesCount, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
-  setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
+  setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen, heeftAntwoorden = false,
 }) {
   const wijzigingWaarschuwing = () => (
     <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -63,7 +63,11 @@ export function useDossierDialogen({
 
   const clearAllData = () => {
     // Leeg dossier (bijv. net een nieuw dossier gestart en de wizard afgebroken): niets om te wissen, dus direct de wizard.
-    if (parsedFilesCount === 0) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
+    // release22V5 — maar alleen als er ook nog geen antwoorden zijn: wie de wizard zonder bestand had doorlopen
+    // en dan "Nieuw dossier" koos, kreeg dezelfde (niet gewiste) antwoorden terug en de wizard sloeg die vragen
+    // (KOR, BTW-verlegd, AOV, ...) als "al beantwoord" over. Nu wordt dan eerst echt gewist (met ongedaan maken).
+    if (parsedFilesCount === 0 && !heeftAntwoorden) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
+    if (parsedFilesCount === 0) { doClearAllData(true); return; }
     // Niets gewijzigd sinds de laatste opslag/het laden: geen vraag nodig (het dossier is al in een bestand te vinden).
     if (changesSinceExport === 0) { doClearAllData(true); return; }
     const nieuw = () => doClearAllData(true);
