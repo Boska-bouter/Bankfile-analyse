@@ -20,7 +20,7 @@ import {
 } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
-import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary } from "./classification/reviewSummaries.js";
+import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -1481,8 +1481,8 @@ export default function App() {
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
   const bevestigdInBulkVenster = (tx) => {
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
-    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-    return !!k && (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
+    return (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
   };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
@@ -1560,10 +1560,12 @@ export default function App() {
   };
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
-  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen"), [classified]);
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true }), [classified]);
   const pendingPersonReview = useMemo(() => personSummary.filter((i) => !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
+  const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
   const markPersonSource = (item, category, type) => {
-    setCounterpartyOverride(item.name, item.amount, { category, type });
+    zetVoorItem(item, { category, type });
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
   const confirmPersonAsIs = (item) => {
@@ -1571,10 +1573,10 @@ export default function App() {
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
-  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig"), [classified]);
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true }), [classified]);
   const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
-    setCounterpartyOverride(item.name, item.amount, { category, type });
+    zetVoorItem(item, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
   // V90 — de bulkknoppen werken per TYPE: alleen de tegenpartijen die nu als Zakelijk (resp. Privé) staan.
@@ -2946,6 +2948,7 @@ export default function App() {
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
+    reviewedOverigKeys, reviewedPersonKeys,
     priGroupForYear, priGroupShown, privateLoanSummary, priveOnlyDossier, priveRekeningGeladen,
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
@@ -4225,7 +4228,7 @@ export default function App() {
                       priveRekeningGeladen={priveRekeningGeladen}
                       zakelijkRekeningGeladen={zakelijkRekeningGeladen}
                       expandedTable={expandedTable}
-                      onToggleExpandTable={(zone) => startTransition(() => setExpandedTable((v) => (v === zone ? null : zone)))}
+                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))} /* release30V10 — direct i.p.v. startTransition */
                       onRequestCategoryChange={requestCategoryChange}
                       onConfirmCorrect={confirmClassificationCorrect}
                       fingerprintByTxId={fingerprintByTxId}

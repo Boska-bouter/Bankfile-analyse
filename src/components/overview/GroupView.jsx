@@ -1,5 +1,5 @@
 import { useToonFijn } from "../../utils/useToonFijn.js";
-import { useEffect, useMemo, useRef, useState, Fragment } from "react";
+import { useEffect, useMemo, useRef, useState, Fragment, memo } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_ALFA, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
@@ -123,6 +123,166 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   );
 }
 
+// release30V10 — één detailrij als los, gememoriseerd onderdeel. Voorheen werden bij elke wijziging ergens in
+// de app (ook bij Uitvergroten/Verkleinen of het automatisch opslaan) álle getoonde rijen met hun keuzelijsten
+// opnieuw opgebouwd; bij "Toon alles" (honderden rijen) maakte dat een touchscreen traag. Nu alleen de rijen
+// waarvan iets verandert. Acties lopen via `acties.call(...)`, dat altijd de actuele functies aanroept.
+const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteDraft, note, heeftConfirm, heeftNote, acties }) {
+  return (
+    <tr key={t.id} className="hover:bg-slate-50">
+      <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
+        {t.date.toLocaleDateString("nl-NL")}
+      </td>
+      <td className="px-2 py-2 text-center">
+        {t.confidence && t.confidence.level !== "heuristic" && t.confidence.level !== "fallback" && (
+          <span title={t.confidence.label}>{metBolletjes("🟢")}</span>
+        )}
+        {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && (
+          <span className="inline-flex items-center gap-1" title={t.confidence.label}>
+            <span>{metBolletjes(t.confidence.level === "heuristic" ? "🟡" : "🔴")}</span>
+            {heeftConfirm && (
+              <button
+                onClick={() => acties.call("onConfirmCorrect", t)}
+                className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+                title="Categorie en subtype kloppen — bevestigen (wordt voortaan 🟢)"
+              >
+                ✓ OK
+              </button>
+            )}
+          </span>
+        )}
+      </td>
+      <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
+      <td className="px-4 py-2">
+        {t.transferLocked ? (
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+            title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
+          >
+            <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
+          </span>
+        ) : (<>
+        <select
+          value={mainCategoryOf(t.category)}
+          onChange={(e) => acties.call("applyChange", t, { category: categoryForMainChange(e.target.value, t.category), type: t.type })}
+          className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+        >
+          {MAIN_CATEGORY_ALFA.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        {subtypeChoicesFor(mainCategoryOf(t.category)).length > 1 && (
+        <select
+          value={displayCategory(t.category)}
+          onChange={(e) => acties.call("applyChange", t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
+          className="block mt-1 rounded-md px-1 py-0 text-[11px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+          title="Subtype (bepaalt BTW-percentage en vast/variabel)"
+        >
+          {subtypeChoicesFor(mainCategoryOf(t.category)).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        )}
+        {soortenVoor(t.category) && (
+          <select
+            value={t.category}
+            onChange={(e) => acties.call("applyChange", t, { category: e.target.value, type: t.type })}
+            className="block mt-0.5 rounded-md px-1 py-0 text-[11px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
+            title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
+          >
+            {soortenVoor(t.category).map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
+          </select>
+        )}
+        </>)}
+      </td>
+      <td className="px-4 py-2">
+        {t.isMirror ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
+            title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
+              `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
+              "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Privé. " +
+              "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
+              "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
+          >
+            Privé <span className="text-[11px] font-normal">↔ spiegel</span>
+          </span>
+        ) : (
+        <span
+          className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${(t.accountType || t.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+          title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Privé) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
+        >
+          {(t.accountType || t.type) === "Prive" ? "Privé" : (t.accountType || t.type)}
+        </span>
+        )}
+      </td>
+      <td
+        className={`px-4 py-2 cursor-pointer ${cpOpen ? "whitespace-normal break-words max-w-xs" : "max-w-[10rem] truncate"}`}
+        onClick={() => acties.call("setExpandedCell", (cur) => (cur === `${t.id}:cp` ? null : `${t.id}:cp`))}
+        title="Klik om de volledige tekst te tonen/verbergen"
+      >
+        {t.counterparty}
+      </td>
+      <td className="px-4 py-2 font-mono text-xs text-slate-500 whitespace-nowrap select-all">{t.counterpartyIban || "—"}</td>
+      <td className="px-4 py-2 text-slate-500 max-w-sm">
+        <div
+          className={`cursor-pointer ${descOpen ? "whitespace-normal break-words" : "max-w-[14rem] truncate"}`}
+          onClick={() => acties.call("setExpandedCell", (cur) => (cur === `${t.id}:desc` ? null : `${t.id}:desc`))}
+          title="Klik om de volledige tekst te tonen/verbergen"
+        >
+          {descOpen ? (t.fullDescription || t.description) : t.description}
+        </div>
+        {heeftNote && (
+          bewerken ? (
+            <div className="flex items-center gap-1 mt-1">
+              <input
+                type="text"
+                autoFocus
+                value={noteDraft}
+                onChange={(e) => acties.call("setNoteDraft", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") acties.call("saveNote", t);
+                  if (e.key === "Escape") acties.call("setEditingNoteTxId", null);
+                }}
+                placeholder="Toelichting, bijv. naheffing Q2 2025 LB"
+                className="flex-1 min-w-0 rounded-md border border-slate-300 px-1.5 py-0.5 text-xs"
+              />
+              <button onClick={() => acties.call("saveNote", t)} className="shrink-0 rounded-md border border-emerald-300 bg-emerald-50 p-1 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
+                <Check className="h-3 w-3" />
+              </button>
+              <button onClick={() => acties.call("setEditingNoteTxId", null)} className="shrink-0 rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50" title="Annuleren">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            (() => {
+                                        return note ? (
+                <button
+                  onClick={() => acties.call("startEditNote", t)}
+                  className="mt-1 flex items-start gap-1 text-left text-xs text-sky-700 hover:text-sky-900"
+                  title="Toelichting bewerken"
+                >
+                  <Pencil className="h-3 w-3 shrink-0 mt-0.5" /> <span className="break-words">{note}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => acties.call("startEditNote", t)}
+                  className="mt-1 text-xs text-slate-300 hover:text-slate-600"
+                  title="Toelichting toevoegen"
+                >
+                  + toelichting
+                </button>
+              );
+            })()
+          )
+        )}
+      </td>
+    </tr>
+  );
+});
+
 // Detailtabel: elke transactie apart, met Categorie en Type direct als dropdown aanpasbaar.
 // Een wijziging wordt tegenpartij-breed opgeslagen (geldt dan voor alle transacties van
 // diezelfde tegenpartij, in alle jaren) — tenzij er geen bruikbare tegenpartijnaam is, dan
@@ -195,6 +355,10 @@ export function DetailTable({
 
   // V53 — met een actieve zoekopdracht geldt een wijziging voor wat het zoekwoord vindt (niet voor alles met dezelfde IBAN).
   const applyChange = (tx, patch) => onRequestChange(tx, patch, { searchQuery: query.trim() });
+  const toonFijn = useToonFijn();
+  const actiesRef = useRef(null);
+  actiesRef.current = { applyChange, onConfirmCorrect, setExpandedCell, startEditNote, saveNote, setEditingNoteTxId, setNoteDraft };
+  const acties = useMemo(() => ({ call: (naam, ...args) => actiesRef.current[naam]?.(...args) }), []);
 
   const confidenceCounts = useMemo(() => {
     let heuristic = 0;
@@ -257,6 +421,7 @@ export function DetailTable({
     return rows;
   }, [group.items, query, amountMin, amountMax, amountSign, dateFrom, dateTo, filterHeuristic, filterFallback]);
 
+  const zichtbareRijen = useMemo(() => filteredItems.slice().sort((a, b) => b.date - a.date).slice(0, toonAantal), [filteredItems, toonAantal]);
   const hasActiveFilter = query.trim() !== "" || amountMin.trim() !== "" || amountMax.trim() !== "" || amountSign !== "beide" || dateFrom || dateTo || filterHeuristic || filterFallback;
 
   return (
@@ -267,7 +432,7 @@ export function DetailTable({
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Detail ({filteredItems.length} van {group.items.length})</h3>
             {onOpenHelp && <HelpHint chapter="detailtabel" onOpen={onOpenHelp} />}
             {onToggleExpand && (
-              <button onClick={onToggleExpand} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700" title={isExpanded ? "Terug naar naast elkaar" : "Deze tabel over de volle breedte tonen"}>
+              <button type="button" onClick={onToggleExpand} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 active:bg-slate-100" title={isExpanded ? "Terug naar naast elkaar" : "Deze tabel over de volle breedte tonen"}>
                 {isExpanded ? (
                   <>Verkleinen <ChevronRight className="h-3.5 w-3.5 rotate-180" /></>
                 ) : (
@@ -386,164 +551,21 @@ export function DetailTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredItems
-              .slice()
-              .sort((a, b) => b.date - a.date)
-              .slice(0, toonAantal)
-              .map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 whitespace-nowrap text-slate-500 font-mono text-xs">
-                    {t.date.toLocaleDateString("nl-NL")}
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    {t.confidence && t.confidence.level !== "heuristic" && t.confidence.level !== "fallback" && (
-                      <span title={t.confidence.label}>{metBolletjes("🟢")}</span>
-                    )}
-                    {t.confidence && (t.confidence.level === "heuristic" || t.confidence.level === "fallback") && (
-                      <span className="inline-flex items-center gap-1" title={t.confidence.label}>
-                        <span>{metBolletjes(t.confidence.level === "heuristic" ? "🟡" : "🔴")}</span>
-                        {onConfirmCorrect && (
-                          <button
-                            onClick={() => onConfirmCorrect(t)}
-                            className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
-                            title="Categorie en subtype kloppen — bevestigen (wordt voortaan 🟢)"
-                          >
-                            ✓ OK
-                          </button>
-                        )}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
-                  <td className="px-4 py-2">
-                    {t.transferLocked ? (
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
-                        title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
-                      >
-                        <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
-                      </span>
-                    ) : (<>
-                    <select
-                      value={mainCategoryOf(t.category)}
-                      onChange={(e) => applyChange(t, { category: categoryForMainChange(e.target.value, t.category), type: t.type })}
-                      className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
-                    >
-                      {MAIN_CATEGORY_ALFA.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                    {subtypeChoicesFor(mainCategoryOf(t.category)).length > 1 && (
-                    <select
-                      value={displayCategory(t.category)}
-                      onChange={(e) => applyChange(t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
-                      className="block mt-1 rounded-md px-1 py-0 text-[11px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-                      title="Subtype (bepaalt BTW-percentage en vast/variabel)"
-                    >
-                      {subtypeChoicesFor(mainCategoryOf(t.category)).map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                    )}
-                    {soortenVoor(t.category) && (
-                      <select
-                        value={t.category}
-                        onChange={(e) => applyChange(t, { category: e.target.value, type: t.type })}
-                        className="block mt-0.5 rounded-md px-1 py-0 text-[11px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-                        title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
-                      >
-                        {soortenVoor(t.category).map((o) => (
-                          <option key={o.key} value={o.key}>{o.label}</option>
-                        ))}
-                      </select>
-                    )}
-                    </>)}
-                  </td>
-                  <td className="px-4 py-2">
-                    {t.isMirror ? (
-                      <span
-                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help whitespace-nowrap"
-                        title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
-                          `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
-                          "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Privé. " +
-                          "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
-                          "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
-                      >
-                        Privé <span className="text-[11px] font-normal">↔ spiegel</span>
-                      </span>
-                    ) : (
-                    <span
-                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap cursor-help ${(t.accountType || t.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
-                      title="Type volgt altijd het bankbestand waaruit deze transactie is ingelezen (Zakelijk of Privé) en kan niet los worden aangepast — zo blijft zichtbaar wat er per rekening is betaald."
-                    >
-                      {(t.accountType || t.type) === "Prive" ? "Privé" : (t.accountType || t.type)}
-                    </span>
-                    )}
-                  </td>
-                  <td
-                    className={`px-4 py-2 cursor-pointer ${expandedCell === `${t.id}:cp` ? "whitespace-normal break-words max-w-xs" : "max-w-[10rem] truncate"}`}
-                    onClick={() => setExpandedCell((cur) => (cur === `${t.id}:cp` ? null : `${t.id}:cp`))}
-                    title="Klik om de volledige tekst te tonen/verbergen"
-                  >
-                    {t.counterparty}
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500 whitespace-nowrap select-all">{t.counterpartyIban || "—"}</td>
-                  <td className="px-4 py-2 text-slate-500 max-w-sm">
-                    <div
-                      className={`cursor-pointer ${expandedCell === `${t.id}:desc` ? "whitespace-normal break-words" : "max-w-[14rem] truncate"}`}
-                      onClick={() => setExpandedCell((cur) => (cur === `${t.id}:desc` ? null : `${t.id}:desc`))}
-                      title="Klik om de volledige tekst te tonen/verbergen"
-                    >
-                      {expandedCell === `${t.id}:desc` ? (t.fullDescription || t.description) : t.description}
-                    </div>
-                    {onSetNote && (
-                      editingNoteTxId === t.id ? (
-                        <div className="flex items-center gap-1 mt-1">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={noteDraft}
-                            onChange={(e) => setNoteDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") saveNote(t);
-                              if (e.key === "Escape") setEditingNoteTxId(null);
-                            }}
-                            placeholder="Toelichting, bijv. naheffing Q2 2025 LB"
-                            className="flex-1 min-w-0 rounded-md border border-slate-300 px-1.5 py-0.5 text-xs"
-                          />
-                          <button onClick={() => saveNote(t)} className="shrink-0 rounded-md border border-emerald-300 bg-emerald-50 p-1 text-emerald-700 hover:bg-emerald-100" title="Opslaan">
-                            <Check className="h-3 w-3" />
-                          </button>
-                          <button onClick={() => setEditingNoteTxId(null)} className="shrink-0 rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50" title="Annuleren">
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        (() => {
-                          const note = transactionNotes?.[fingerprintByTxId?.[t.id]];
-                          return note ? (
-                            <button
-                              onClick={() => startEditNote(t)}
-                              className="mt-1 flex items-start gap-1 text-left text-xs text-sky-700 hover:text-sky-900"
-                              title="Toelichting bewerken"
-                            >
-                              <Pencil className="h-3 w-3 shrink-0 mt-0.5" /> <span className="break-words">{note}</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => startEditNote(t)}
-                              className="mt-1 text-xs text-slate-300 hover:text-slate-600"
-                              title="Toelichting toevoegen"
-                            >
-                              + toelichting
-                            </button>
-                          );
-                        })()
-                      )
-                    )}
-                  </td>
-                </tr>
-              ))}
+            {zichtbareRijen.map((t) => (
+              <DetailRij
+                key={t.id}
+                t={t}
+                cpOpen={expandedCell === `${t.id}:cp`}
+                descOpen={expandedCell === `${t.id}:desc`}
+                bewerken={editingNoteTxId === t.id}
+                noteDraft={editingNoteTxId === t.id ? noteDraft : ""}
+                note={transactionNotes?.[fingerprintByTxId?.[t.id]] || ""}
+                heeftConfirm={!!onConfirmCorrect}
+                heeftNote={!!onSetNote}
+                toonFijn={toonFijn}
+                acties={acties}
+              />
+            ))}
             {filteredItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>

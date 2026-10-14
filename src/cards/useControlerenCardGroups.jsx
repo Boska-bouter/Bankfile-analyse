@@ -32,6 +32,7 @@ export function useControlerenCardGroups(p) {
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
+    reviewedOverigKeys, reviewedPersonKeys,
     priGroupForYear, priGroupShown, privateLoanSummary, priveOnlyDossier, priveRekeningGeladen,
     removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
@@ -97,6 +98,8 @@ export function useControlerenCardGroups(p) {
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
+              reviewedOverigKeys={reviewedOverigKeys}
+              reviewedPersonKeys={reviewedPersonKeys}
             />
           </div>
         </div>
@@ -338,9 +341,10 @@ export function useControlerenCardGroups(p) {
     priveRekeningGeladen,
     zakelijkRekeningGeladen,
     aansluitControleInfo,
-    expandedTable,
     fingerprintByTxId,
     transactionNotes,
     aanvullendeControles,
+    reviewedOverigKeys,
+    reviewedPersonKeys,
   ]);
 }
