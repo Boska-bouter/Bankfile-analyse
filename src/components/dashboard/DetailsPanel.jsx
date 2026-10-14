@@ -160,9 +160,9 @@ export default function DetailsPanel({
           </h3>
           <div className="flex flex-wrap items-center gap-2">
             <LinkOut label="Meerjarenoverzicht" onClick={() => onJump("meerjaren")} />
-            <LinkOut label="Inkomen per maand" onClick={() => onJump("inkomen")} />
+            {/* release31V6 — "Inkomen per maand" staat al in het linker menu; "Herkenningsregels" is een instelling
+                (Instellingen → Automatisering), geen overzicht van het jaar. */}
             <LinkOut label="Onderbouwing" onClick={() => onJump("onderbouwing")} />
-            <LinkOut label={`Herkenningsregels${herkenningsregelsCount != null ? ` (${herkenningsregelsCount})` : ""}`} onClick={() => onJump("herkenningsregels")} />
             <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
             <LinkOut label="Print" onClick={() => onJump("print")} />
           </div>
