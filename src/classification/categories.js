@@ -809,9 +809,46 @@ export function displayCategory(category) {
   return FIJN_NAAR_WEERGAVE[category] || category;
 }
 
+// release30V6 — categorieën die alleen bij een BV horen; bij een eenmanszaak/zzp niet in keuzelijsten
+// (een transactie die er al in staat, houdt zijn categorie wel zichtbaar).
+export const BV_CATEGORIEEN = new Set(["DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding"]);
+let _rechtsvorm = null;
+export function setActieveRechtsvorm(r) { _rechtsvorm = r || null; }
+export function categorieZichtbaar(c, huidige = null) { return _rechtsvorm === "bv" || !BV_CATEGORIEEN.has(c) || c === huidige; }
+
+// release30V6 — één keuzelijst met groepen: per hoofdcategorie direct alle soorten (bijv. onder "Inkoop &
+// zakelijke uitgaven" meteen "Verzekering: Zakelijk"), zodat je niet eerst een groep en dan een soort hoeft
+// te kiezen. Privé kosten algemeen blijft één keuze (geen fiscaal verschil tussen de 17 leden).
+export function keuzeGroepen(huidige = null) {
+  return MAIN_CATEGORY_ORDER.map((main) => {
+    const fijn = CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === main && categorieZichtbaar(c, huidige));
+    const opties = [];
+    const gezien = new Set();
+    for (const c of fijn) {
+      const w = _toonFijn ? null : FIJN_NAAR_WEERGAVE[c];
+      if (w && GEEN_SOORT.has(w)) {
+        if (!gezien.has(w)) { gezien.add(w); opties.push({ value: STANDAARD_FIJN[w], label: w }); }
+        continue;
+      }
+      if (w) {
+        const leden = CATEGORIE_GROEPEN[w];
+        const lid = leden.find((l) => l.key === c);
+        const label = leden.length > 1 ? (w === main ? lid.label : `${w} – ${lid.label}`) : w;
+        opties.push({ value: c, label });
+      } else opties.push({ value: c, label: c });
+    }
+    return { groep: main, opties: sortNl(opties, (o) => o.label) };
+  }).filter((g) => g.opties.length > 0);
+}
+// Welke optie hoort bij de huidige categorie (voor privé-algemeen: de standaardsoort van die groep).
+export function keuzeWaarde(category) {
+  const w = _toonFijn ? null : FIJN_NAAR_WEERGAVE[category];
+  return w && GEEN_SOORT.has(w) ? STANDAARD_FIJN[w] : category;
+}
+
 // Keuzes voor het subtype-keuzeveld.
 export function subtypeChoicesFor(mainCategory) {
-  const fijn = subtypesForMainCategory(mainCategory);
+  const fijn = subtypesForMainCategory(mainCategory).filter((c) => categorieZichtbaar(c));
   if (mainCategory === "Privé") {
     return sortNl(_toonFijn ? CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === "Privé") : PRIVE_KEUZE);
   }

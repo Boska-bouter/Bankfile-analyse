@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Check, AlertCircle } from "lucide-react";
 import { MAANDEN } from "../../tax/controleSuggesties.js";
 import { eur } from "../../utils/amounts.js";
-import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice } from "../../classification/categories.js";
+import { mainCategoryOf } from "../../classification/categories.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 
 const KLEUR = { data: "bg-emerald-400", "leeg-ok": "bg-slate-300", leeg: "bg-amber-400", buiten: "bg-slate-100" };
 const dat = (d) => new Date(d).toLocaleDateString("nl-NL");
@@ -17,7 +18,6 @@ function Knop({ children, onClick, primair }) {
 // (meest voorkomende categorie), "alle op: [eigen keuze]" en "verdeling laten zoals hij is".
 function TerugkerendItem({ t, onBevestig, onToepassenTerugkerend, onToepassenTerugkerendAlle }) {
   const [keuze, setKeuze] = useState("");
-  const KEUZE_OPTIES = sortNl([...new Set(CATEGORY_ORDER.map(displayCategory))]); // in render: volgt "fijne categorieën"
   const toon = t.afwijkend.slice(0, 6);
   return (
     <div className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
@@ -36,14 +36,10 @@ function TerugkerendItem({ t, onBevestig, onToepassenTerugkerend, onToepassenTer
         {onToepassenTerugkerendAlle && (
           <span className="inline-flex items-center gap-1.5">
             <span className="text-slate-500">of alle {t.aantal} op:</span>
-            <select value={keuze} onChange={(e) => setKeuze(e.target.value)} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs">
-              <option value="">kies categorie…</option>
-              {KEUZE_OPTIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <CategorieSelect value={keuze || null} onChange={setKeuze} placeholder="kies categorie…" className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs max-w-[16rem]" />
             {keuze && (
               <Knop primair onClick={() => {
-                const cat = storedCategoryForChoice(keuze, t.hoofdCategorie);
-                onToepassenTerugkerendAlle(t, cat, /^priv/i.test(keuze) ? "Prive" : t.hoofdType);
+                onToepassenTerugkerendAlle(t, keuze, mainCategoryOf(keuze) === "Privé" ? "Prive" : t.hoofdType);
                 setKeuze("");
               }}>Toepassen</Knop>
             )}

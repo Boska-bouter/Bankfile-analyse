@@ -67,7 +67,9 @@ export function useControlerenDashboardCards(p) {
         hint: "Openstaande overboekingen aan personen bekijken",
         onClick: () => {
           if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
+          // release30V7 — één paneel tegelijk open: "Overig opruimen" eronder klapt in, zodat je ziet waar je mee bezig bent.
           setShowPersonReview(true);
+          setShowOverigReview(false);
           jumpToSection(personReviewSectionRef);
         },
       },
@@ -82,6 +84,7 @@ export function useControlerenDashboardCards(p) {
         hint: 'Openstaande "Overig"-tegenpartijen bekijken',
         onClick: () => {
           setShowOverigReview(true);
+          setShowPersonReview(false);
           jumpToSection(overigReviewSectionRef);
         },
       },

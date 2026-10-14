@@ -51,7 +51,9 @@ export function useDashboardCards(p) {
           // V90 — "Overboekingen aan personen" verschijnt pas als de herkomst van inkomsten is beantwoord;
           // zolang die nog openstaat, ga je eerst daarheen (anders gebeurde er niets).
           if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
+          // release30V7 — één paneel tegelijk open: "Overig opruimen" eronder klapt in, zodat je ziet waar je mee bezig bent.
           setShowPersonReview(true);
+          setShowOverigReview(false);
           jumpToSection(personReviewSectionRef);
         },
       },
@@ -65,6 +67,7 @@ export function useDashboardCards(p) {
         hint: 'Openstaande "Overig"-tegenpartijen bekijken',
         onClick: () => {
           setShowOverigReview(true);
+          setShowPersonReview(false);
           jumpToSection(overigReviewSectionRef);
         },
       },

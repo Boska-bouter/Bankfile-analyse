@@ -9,7 +9,7 @@ import { resolveClassification, detectOwnAccountTransfer } from "./classificatio
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
 import { scoreClassification } from "./classification/confidence.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf } from "./classification/categories.js";
+import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf, setActieveRechtsvorm } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
@@ -77,6 +77,7 @@ import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import { voorladenExcel } from "./importers/excel.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
 import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
@@ -188,6 +189,7 @@ export default function App() {
   // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
   // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
   const [rechtsvorm, setRechtsvorm] = useState(null);
+  setActieveRechtsvorm(rechtsvorm); // release30V6 — BV-categorieën alleen in keuzelijsten bij een BV
   // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
   const [heeftHolding, setHeeftHolding] = useState(null);
   // Handmatig ingevoerde boekingen van de holding zelf — géén los bankbestand/eigen classificatie
@@ -418,6 +420,10 @@ export default function App() {
   // forceRechtsvormStep op SetupWizardModal), zodat je rechtsvorm achteraf nog kunt omzetten.
   const [manualWizardOpen, setManualWizardOpen] = useState(false);
   const [openVragenWizard, setOpenVragenWizard] = useState(false); // release21V1 — wizard via "Nu beantwoorden"
+  // release30V7 — inlezen van bankbestanden zichtbaar maken in de wizard (bezig / foutmelding).
+  const [importBezig, setImportBezig] = useState(false);
+  const [importHerladen, setImportHerladen] = useState(false);
+  useEffect(() => { const t = setTimeout(voorladenExcel, 4000); return () => clearTimeout(t); }, []);
   const [overigSearch, setOverigSearch] = useState("");
   const [activeYear, setActiveYear] = useState(null);
   const [error, setError] = useState(null);
@@ -1057,16 +1063,25 @@ export default function App() {
     setError(null);
     const presetType = pendingAccountTypeRef.current;
     pendingAccountTypeRef.current = null;
-    const files = Array.from(fileList).filter((f) => /\.(csv|xlsx|xls|940|sta|mt940|swi|txt|xml)$/i.test(f.name));
+    const gekozen = Array.from(fileList || []);
+    const files = gekozen.filter((f) => /\.(csv|xlsx|xls|940|sta|mt940|swi|txt|xml)$/i.test(f.name));
     const results = [];
     const failed = [];
-    for (const f of files) {
-      try {
-        const { headers, rows, mapping } = await parseFile(f);
-        results.push({ headers, rows, mapping, sourceLabel: f.name, fileName: f.name });
-      } catch (e) {
-        failed.push(`${f.name}: ${e.message || e}`);
+    // release30V7 — niet-ondersteunde bestanden werden stil overgeslagen ("er gebeurt niets").
+    for (const f of gekozen) if (!files.includes(f)) failed.push(`${f.name}: dit bestandstype wordt niet ondersteund (wel: CSV, XLS/XLSX, MT940, CAMT.053).`);
+    setImportBezig(files.length > 0);
+    try {
+      for (const f of files) {
+        try {
+          const { headers, rows, mapping } = await parseFile(f);
+          results.push({ headers, rows, mapping, sourceLabel: f.name, fileName: f.name });
+        } catch (e) {
+          failed.push(`${f.name}: ${e.message || e}`);
+          if (e?.herladen) setImportHerladen(true);
+        }
       }
+    } finally {
+      setImportBezig(false);
     }
     if (failed.length > 0) setError(failed.join("\n"));
     if (results.length > 0) {
@@ -1510,12 +1525,14 @@ export default function App() {
   const jumpToOverigFromModal = () => {
     setOpenConfidenceLevel(null);
     setShowOverigReview(true);
+    setShowPersonReview(false);
     jumpToSection(overigReviewSectionRef);
   };
   const jumpToPersonenFromModal = () => {
     setOpenConfidenceLevel(null);
     if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
     setShowPersonReview(true);
+    setShowOverigReview(false);
     jumpToSection(personReviewSectionRef);
   };
 
@@ -2680,6 +2697,15 @@ export default function App() {
   const activeTabLiveRef = useRef(activeTab);
   activeTabLiveRef.current = activeTab;
   // Klapt het inklapbare paneel in de doelsectie open (zie components/shared/useOpenOnJump.js).
+  // release30V7 — scrollen met ruimte voor de vaste stappenbalk bovenaan (Controleren/Instellingen):
+  // anders viel de kop van het doelpaneel eronder en zag je alleen het paneel dáárna.
+  const scrollNaarSectie = (el) => {
+    if (!el) return;
+    const balk = document.querySelector("[data-stappenbalk]");
+    const ruimte = balk && balk.offsetParent !== null ? Math.ceil(balk.getBoundingClientRect().height) + 24 : 16;
+    el.style.scrollMarginTop = `${ruimte}px`;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const openPaneelIn = (el) => { el?.querySelector?.("section")?.dispatchEvent(new Event("bankoverzicht-open")); };
   const jumpToSection = (ref) => {
     if (ref === leasesSectionRef) autoOpenLeaseWizard();
@@ -2712,7 +2738,7 @@ export default function App() {
     }
     if (!ref.current) { setPendingScrollRef(ref); return; }
     openPaneelIn(ref.current);
-    setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => scrollNaarSectie(ref.current), 50);
   };
   // Voert de scroll pas uit nadat het doel-tabblad daadwerkelijk actief (en dus zichtbaar) is
   // geworden — requestAnimationFrame wacht op de eerstvolgende render/paint na de tabwissel. Ook
@@ -2728,7 +2754,7 @@ export default function App() {
       const el = pendingScrollRef.current;
       if (el) {
         openPaneelIn(el);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollNaarSectie(el);
         setPendingScrollRef(null);
       } else if (pogingen++ < 40) {
         raf = requestAnimationFrame(probeer);
@@ -3603,7 +3629,7 @@ export default function App() {
           const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
           const pct = maxStappen > 0 ? Math.round((100 * stappenKlaar) / maxStappen) : 0;
           return alleStappen.length > 0 ? (
-            <div className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
+            <div data-stappenbalk className="sticky top-2 z-30 overflow-hidden rounded-2xl border-2 border-teal-600 bg-teal-700 text-white shadow-lg">
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold uppercase tracking-wide text-teal-100">
@@ -3932,6 +3958,9 @@ export default function App() {
             forceRechtsvormStep={manualWizardOpen}
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}
+            importBezig={importBezig}
+            importFout={error}
+            importHerladen={importHerladen}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
