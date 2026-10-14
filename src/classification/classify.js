@@ -80,8 +80,18 @@ const FOREIGN_COUNTRY_CODES = new Set([
 // V58 — een pin-/kaartbetaling (de bank zet er "Pasvolgnr" en een terminal bij) is een betaling aan een
 // winkel/dienst, nooit een overboeking aan een persoon, ook al bestaat de naam uit 2-4 woorden
 // ("Tenax Lederw.Eindh.", "BakkerijdeVocht Trudo", "Browns Lunchclub").
+// release30V8 — ook Knab ("... 20:54 Pas: 1710"), ABN AMRO ("BEA, ... PAS011") en de betaalwijze-kolom
+// (Knab "Betaalautomaat"/"Onbemand tanken"/"Geldautomaat", ING "Betaalautomaat", Rabobank "bc"/"ga", ASN "BEA"/"GEA").
+const PAS_IN_TEKST = /pasvolgnr|\bpas:?\s*\d{3,4}\s*$|^(bea|gea)[,\s]|\bpas\d{3}nr/i;
+const PAS_BETAALWIJZE = /betaalautomaat|geldautomaat|onbemand tanken|retourpinnen|pinbetaling|contactloos|^(bc|ga|bea|gea)$/i;
 export function isCardPaymentTx(tx) {
-  return /pasvolgnr/i.test(tx.fullDescription || "") || /pasvolgnr/i.test(tx.description || "");
+  return PAS_IN_TEKST.test(String(tx.fullDescription || "").trim()) || PAS_IN_TEKST.test(String(tx.description || "").trim())
+    || PAS_BETAALWIJZE.test(String(tx.betaalwijze || "").trim());
+}
+// Een overschrijving aan of van een persoon heeft altijd een tegenrekening. Bevat het bestand die kolom
+// maar is hij leeg, dan is het geen persoon (pinbetaling, kosten, ...).
+function kanPersoonZijn(tx) {
+  return !isCardPaymentTx(tx) && !(tx.heeftIbanKolom && !tx.counterpartyIban);
 }
 
 export function looksLikeForeignCardPayment(tx) {
@@ -284,7 +294,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     // generieke "Inkomsten"-emmer (die de "wie zijn je zakelijke klanten?"-review juist WEL
     // doorloopt — zie GEEN_KLANT_CATEGORIES in reviewSummaries.js) en verdient een eigen, herkenbare
     // categorie in plaats van elke keer opnieuw te moeten worden bevestigd als "geen klant".
-    if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
+    if (looksLikePerson(tx.counterparty || tx.description) && kanPersoonZijn(tx)) {
       return { category: "Overboeking van bekenden", type };
     }
     return { category: "Inkomsten", type };
@@ -300,8 +310,10 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // v312 (V33) — "verhuur" is niet hetzelfde als "huur": eerst op Overig laten beoordelen i.p.v. gokken.
   if (/verhuur/.test(text)) return { category: "Overig", type };
 
-  for (const rule of rules) {
-    if (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+  // release30V8 — betaalwijze "Onbemand tanken" (Knab) is altijd brandstof, ook bij een onbekende pompnaam.
+  const tankRegel = /onbemand tanken/i.test(tx.betaalwijze || "") ? rules.find((r) => r.name === "Brandstof") : null;
+  for (const rule of tankRegel ? [tankRegel, ...rules] : rules) {
+    if (rule === tankRegel || (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType))) {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
@@ -333,7 +345,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     return { category: "Privé - vrijetijd-uitgaan-vakantie & uit eten", type };
   }
 
-  if (looksLikePerson(tx.counterparty || tx.description) && !isCardPaymentTx(tx)) {
+  if (looksLikePerson(tx.counterparty || tx.description) && kanPersoonZijn(tx)) {
     return { category: "Overboekingen aan personen", type };
   }
 

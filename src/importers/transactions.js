@@ -15,6 +15,8 @@ export function herstelMapping(pf) {
   return { ...m, ownAccount: guessOwnAccountColumn(headers, m.counterpartyIban) };
 }
 
+const BETAALWIJZE_KOLOMMEN = ["Betaalwijze", "Mutatiesoort", "Code", "Transactiecode"];
+
 export function buildTransactions(parsedFiles) {
   const out = [];
   let id = 0;
@@ -51,6 +53,10 @@ export function buildTransactions(parsedFiles) {
         if (m) counterpartyIban = normalizeIban(m[1]);
       }
       const balance = mapping.balance ? parseEuroNumber(r[mapping.balance]) : NaN;
+      // release30V8 — betaalwijze uit de bank-export (Knab "Betaalwijze", ING "Mutatiesoort", Rabobank "Code",
+      // ASN/SNS "Transactiecode"): onderscheidt een pinbetaling van een overboeking, ook zonder "Pasvolgnr".
+      let betaalwijze = "";
+      for (const k of BETAALWIJZE_KOLOMMEN) { if (r[k] != null && String(r[k]).trim()) { betaalwijze = String(r[k]).trim(); break; } }
       fileTx.push({
         id: id++,
         date,
@@ -64,6 +70,9 @@ export function buildTransactions(parsedFiles) {
         fullDescription,
         source: sourceLabel,
         balance: isNaN(balance) ? null : balance,
+        betaalwijze,
+        // Heeft dit bestand een kolom voor de tegenrekening? Dan zegt een lege tegenrekening iets (geen overschrijving).
+        heeftIbanKolom: !!mapping.counterpartyIban,
       });
     }
     // Herkent of dit bestand overduidelijk over 1 kalenderjaar gaat. Zo ja, dan krijgen losse
