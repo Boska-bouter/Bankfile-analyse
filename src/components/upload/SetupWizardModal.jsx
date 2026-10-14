@@ -65,6 +65,7 @@ export default function SetupWizardModal({
   suggesties = {},
   dossierProfiel = null,
   leaseControle = null,
+  ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig = null,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -187,7 +188,7 @@ export default function SetupWizardModal({
   const allTypedNow = sessionFiles.every((f) => typedNow[f]);
   const props = {
     typedNow, zet, needs, isBV, goNext, years: years || [],
-    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames,
+    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig,
     rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd,
     eigenNamen, setEigenNamen,
     eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
@@ -458,11 +459,83 @@ function jaMetSuggesties(huidigeLijst, suggestieLijst, max) {
   return (suggestieLijst || []).slice(0, max ?? 3).map((s) => s.naam);
 }
 
+// release30V2 — bestanden van dezelfde rekening samen: één keer zakelijk/privé kiezen per rekening,
+// met het gevonden rekeningnummer ter bevestiging (en invullen/wijzigen als het niet gevonden is of niet klopt).
+const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
+const ibanOpmaak = (x) => String(x || "").replace(/\s/g, "").toUpperCase().replace(/(.{4})(?=.)/g, "$1 ");
+function groepeerPerRekening(files, ownAccountByFile) {
+  const groepen = new Map();
+  for (const f of files) {
+    const iban = ownAccountByFile[f] || null;
+    const key = iban ? `iban:${iban}` : `bestand:${f}`;
+    if (!groepen.has(key)) groepen.set(key, { key, iban, files: [] });
+    groepen.get(key).files.push(f);
+  }
+  return [...groepen.values()];
+}
+const jaarVan = (d) => (d ? new Date(d).getFullYear() : null);
+function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, bestandInfo, onRekeningWijzig }) {
+  const [bewerk, setBewerk] = useState(!g.iban);
+  const [invoer, setInvoer] = useState(g.iban || "");
+  const typen = [...new Set(g.files.map((f) => typedNow[f]).filter(Boolean))];
+  const gekozen = typen.length === 1 && g.files.every((f) => typedNow[f]) ? typen[0] : null;
+  const kies = (type) => { for (const f of g.files) onAccountTypeChoose(f, type); zet(Object.fromEntries(g.files.map((f) => [f, type]))); };
+  const vans = g.files.map((f) => jaarVan(bestandInfo[f]?.van)).filter(Boolean);
+  const tots = g.files.map((f) => jaarVan(bestandInfo[f]?.tot)).filter(Boolean);
+  const periode = vans.length ? (Math.min(...vans) === Math.max(...tots) ? `${Math.min(...vans)}` : `${Math.min(...vans)}–${Math.max(...tots)}`) : "";
+  const bank = g.iban && g.iban.length >= 8 ? g.iban.slice(4, 8) : "";
+  const schoon = invoer.replace(/\s/g, "").toUpperCase();
+  const geldig = IBAN_RE.test(schoon);
+  const waarschuwingen = fileContinuity.filter((c) => !c.ok && (g.files.includes(c.fileA) || g.files.includes(c.fileB)));
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 p-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
+        <div className="flex-1 min-w-[10rem]">
+          {g.iban && !bewerk ? (
+            <p className="text-sm font-semibold font-mono text-slate-800">{ibanOpmaak(g.iban)}</p>
+          ) : (
+            <p className="text-sm font-medium text-amber-800">{g.iban ? "Rekeningnummer wijzigen" : "Rekeningnummer niet gevonden"}</p>
+          )}
+          <p className="text-xs text-slate-500">
+            {bank ? `${bank} · ` : ""}{g.files.length === 1 ? <span className="break-all">{g.files[0]}</span> : `${g.files.length} bestanden`}{periode ? ` · ${periode}` : ""}
+            {g.iban && !bewerk && onRekeningWijzig && <> · <button type="button" onClick={() => setBewerk(true)} className="underline decoration-dotted">wijzigen</button></>}
+          </p>
+        </div>
+        <button type="button" onClick={() => kies("Zakelijk")}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${gekozen === "Zakelijk" ? "border-emerald-500 bg-emerald-600 text-white" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}>
+          <Building2 className="h-3.5 w-3.5" /> Zakelijk
+        </button>
+        <button type="button" onClick={() => kies("Prive")}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${gekozen === "Prive" ? "border-slate-600 bg-slate-700 text-white" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}>
+          <Home className="h-3.5 w-3.5" /> Privé
+        </button>
+      </div>
+      {bewerk && onRekeningWijzig && (
+        <div className="flex flex-wrap items-center gap-2 pl-6">
+          <input value={invoer} onChange={(e) => setInvoer(e.target.value)} placeholder="IBAN, bijv. NL12 ABNA 0123 4567 89"
+            className="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-mono" />
+          <button type="button" disabled={!geldig} onClick={() => { onRekeningWijzig(g.files, schoon); setBewerk(false); }}
+            className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40">Opslaan</button>
+          {g.iban && <button type="button" onClick={() => { setInvoer(g.iban); setBewerk(false); }} className="text-xs text-slate-500 underline">Annuleren</button>}
+          {!g.iban && <p className="w-full text-[11px] text-slate-500">Niet verplicht. Zonder rekeningnummer herkent de app overboekingen tussen je eigen rekeningen minder goed.</p>}
+        </div>
+      )}
+      {gekozen && waarschuwingen.map((c) => (
+        <div key={`${c.fileA}|${c.fileB}`} className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>Saldo sluit niet aan tussen <strong>{c.fileA}</strong> en <strong>{c.fileB}</strong>: verschil {eur(c.diff)}{Math.abs(c.diff) < 100 ? " (meestal afronding)" : " — mogelijk ontbreekt een periode"}.</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
 // Scherm 31 — rekeningen en rekeninghouder
 // ---------------------------------------------------------------------------------------------
 function Scherm31({
-  typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow,
+  typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig,
   rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
 }) {
   const toonRechtsvorm = needs.rechtsvorm;
@@ -476,45 +549,11 @@ function Scherm31({
   return (
     <div className="space-y-4">
       {sessionFiles.length > 0 && (
-        <Sectie titel="Is dit een zakelijke rekening of een privérekening?">
-          {sessionFiles.map((fileName) => {
-            const continuityMatch = fileContinuity.find((c) => c.fileA === fileName || c.fileB === fileName);
-            return (
-              <div key={fileName} className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span className="flex-1 min-w-[8rem] text-sm font-medium truncate">{fileName}</span>
-                  <button
-                    type="button"
-                    onClick={() => { onAccountTypeChoose(fileName, "Zakelijk"); zet({ [fileName]: "Zakelijk" }); }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Zakelijk" ? "border-emerald-400 bg-emerald-100 text-emerald-800" : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
-                  >
-                    <Building2 className="h-3.5 w-3.5" /> Zakelijk
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { onAccountTypeChoose(fileName, "Prive"); zet({ [fileName]: "Prive" }); }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${typedNow[fileName] === "Prive" ? "border-slate-400 bg-slate-200 text-slate-800" : "border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-                  >
-                    <Home className="h-3.5 w-3.5" /> Privé
-                  </button>
-                </div>
-                {typedNow[fileName] && continuityMatch && (
-                  <div className={`flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-xs ${continuityMatch.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-                    {continuityMatch.ok ? <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
-                    <span>
-                      {continuityMatch.fileA === fileName ? (
-                        <>Dit bestand loopt door in <strong>{continuityMatch.fileB}</strong> — eindsaldo hier {eur(continuityMatch.aLastBalance)}, beginsaldo daar {eur(continuityMatch.bOpeningBalance)}.</>
-                      ) : (
-                        <>Dit lijkt een vervolg op <strong>{continuityMatch.fileA}</strong> — eindsaldo daar {eur(continuityMatch.aLastBalance)}, beginsaldo hier {eur(continuityMatch.bOpeningBalance)}.</>
-                      )}
-                      {!continuityMatch.ok && ` Verschil ${eur(continuityMatch.diff)} — kan een periodegrens zijn, of de moeite waard om na te gaan.${Math.abs(continuityMatch.diff) < 100 ? " Een verschil van een paar euro is meestal gewoon afronding." : ""}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <Sectie titel="Is dit een zakelijke rekening of een privérekening?" uitleg="Per rekening één keer kiezen. Het rekeningnummer is uit het bestand gehaald; klopt het niet, pas het dan aan.">
+          {groepeerPerRekening(sessionFiles, ownAccountByFile).map((g) => (
+            <RekeningGroep key={g.key} g={g} typedNow={typedNow} zet={zet} onAccountTypeChoose={onAccountTypeChoose}
+              fileContinuity={fileContinuity} bestandInfo={bestandInfo} onRekeningWijzig={onRekeningWijzig} />
+          ))}
         </Sectie>
       )}
 

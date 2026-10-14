@@ -1,12 +1,26 @@
 import { parseDate } from "../utils/dates.js";
 import { parseEuroNumber } from "../utils/amounts.js";
 import { normalizeIban } from "../utils/normalization.js";
+import { guessOwnAccountColumn, OWN_ACCOUNT_UITSLUITEN } from "./bankProfiles.js";
+
+// release30V1 — herstel voor dossiers die vóór deze versie zijn ingelezen: bij Rabobank-CSV's werd
+// "Tegenrekening IBAN/BBAN" als eigen rekening gekozen (de zoekterm "rekening" zat in die kolomnaam).
+// Bij het opbouwen van de transacties wordt zo'n keuze nu alsnog gecorrigeerd, zonder opnieuw te laden.
+export function herstelMapping(pf) {
+  const m = pf.mapping || {};
+  const kol = m.ownAccount;
+  const fout = kol && (OWN_ACCOUNT_UITSLUITEN.test(String(kol).toLowerCase()) || kol === m.counterpartyIban);
+  if (!fout) return m;
+  const headers = pf.headers || Object.keys(pf.rows?.[0] || {});
+  return { ...m, ownAccount: guessOwnAccountColumn(headers, m.counterpartyIban) };
+}
 
 export function buildTransactions(parsedFiles) {
   const out = [];
   let id = 0;
   for (const pf of parsedFiles) {
-    const { rows, mapping, sourceLabel } = pf;
+    const { rows, sourceLabel } = pf;
+    const mapping = herstelMapping(pf);
     const fileTx = [];
     for (const r of rows) {
       const dateRaw = mapping.date ? r[mapping.date] : null;
@@ -25,7 +39,8 @@ export function buildTransactions(parsedFiles) {
       }
       const counterparty = mapping.counterparty ? String(r[mapping.counterparty] || "").trim() : "";
       let counterpartyIban = mapping.counterpartyIban ? normalizeIban(r[mapping.counterpartyIban]) : "";
-      const ownAccount = mapping.ownAccount ? normalizeIban(r[mapping.ownAccount]) : "";
+      // release30V2 — een in de wizard ingevuld rekeningnummer (pf.eigenRekening) gaat vóór de kolom.
+      const ownAccount = pf.eigenRekening ? normalizeIban(pf.eigenRekening) : mapping.ownAccount ? normalizeIban(r[mapping.ownAccount]) : "";
       const description = mapping.description ? String(r[mapping.description] || "").trim() : "";
       const fullDescription = mapping.fullDescription ? String(r[mapping.fullDescription] || "").trim() : description;
       // V37 — ING zet bij o.a. incasso-stornoboekingen de tegenrekening niet in de kolom "Tegenrekening"
@@ -76,7 +91,8 @@ export function buildTransactions(parsedFiles) {
 // hier maken we dat zichtbaar, samen met periode, ontbrekende tegenpartij en de saldo-check.
 export function computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections = {}) {
   return parsedFiles.map((pf) => {
-    const { rows, mapping, sourceLabel } = pf;
+    const { rows, sourceLabel } = pf;
+    const mapping = herstelMapping(pf);
     let skippedNoDate = 0, skippedBadAmount = 0;
     for (const r of rows) {
       const dateRaw = mapping.date ? r[mapping.date] : null;
@@ -226,10 +242,22 @@ const IBAN_IN_FILENAME_RE = /[A-Z]{2}\d{2}[A-Z0-9]{10,30}/;
 // rekeningnummer (sommige CSV-exports hebben geen "eigen rekening"-kolom), dan wordt de
 // bestandsnaam als fallback doorzocht op een IBAN-achtige reeks.
 export function computeOwnAccountByFile(allTransactions) {
-  const result = {};
+  // release30V1 — niet meer "de eerste waarde", maar de waarde die (vrijwel) bij elke transactie van het
+  // bestand gelijk is. Wisselt de waarde per regel, dan is het niet de eigen rekening (maar bijv. de
+  // tegenrekening) en geldt het rekeningnummer uit de bestandsnaam.
+  // Alleen waarden die op een rekeningnummer lijken (IBAN, of minstens 7 cijfers) — geen "EUR" uit een valutakolom.
+  const lijktRekening = (v) => /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(v) || /^\d{7,}$/.test(v);
+  const telling = {};
   for (const tx of allTransactions) {
-    if (result[tx.source]) continue;
-    if (tx.ownAccount) result[tx.source] = tx.ownAccount;
+    if (!tx.ownAccount || !lijktRekening(String(tx.ownAccount).replace(/\s/g, "").toUpperCase())) continue;
+    const t = (telling[tx.source] ||= { totaal: 0, per: {} });
+    t.totaal += 1;
+    t.per[tx.ownAccount] = (t.per[tx.ownAccount] || 0) + 1;
+  }
+  const result = {};
+  for (const [source, t] of Object.entries(telling)) {
+    const [waarde, aantal] = Object.entries(t.per).sort((a, b) => b[1] - a[1])[0];
+    if (aantal >= t.totaal * 0.9) result[source] = waarde;
   }
   const sources = new Set(allTransactions.map((tx) => tx.source));
   for (const source of sources) {

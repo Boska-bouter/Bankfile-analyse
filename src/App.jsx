@@ -1287,6 +1287,22 @@ export default function App() {
     () => parsedFiles.map((f) => f.fileName).filter((name) => !(name in accountTypeByFile)),
     [parsedFiles, accountTypeByFile]
   );
+  // release30V2 — zelf ingevuld/gecorrigeerd eigen rekeningnummer per bestand (in de wizard). Wordt op het
+  // bestand zelf bewaard (parsedFiles → ook in het dossierbestand) en gaat vóór wat uit het bestand gelezen is.
+  const setEigenRekeningVoorBestanden = (fileNames, iban) => {
+    snapshotBeforeAction("Rekeningnummer van bestand aangepast");
+    setParsedFiles((prev) => prev.map((f) => (fileNames.includes(f.fileName) ? { ...f, eigenRekening: iban || undefined } : f)));
+  };
+  const bestandInfo = useMemo(() => {
+    const info = {};
+    for (const tx of allTransactions) {
+      if (!tx.date) continue;
+      const i = (info[tx.source] ||= { van: tx.date, tot: tx.date });
+      if (tx.date < i.van) i.van = tx.date;
+      if (tx.date > i.tot) i.tot = tx.date;
+    }
+    return info;
+  }, [allTransactions]);
   const setAccountType = (fileName, type) => {
     snapshotBeforeAction("Rekeningtype aangepast");
     setAccountTypeByFile((prev) => ({ ...prev, [fileName]: type }));
@@ -3932,6 +3948,9 @@ export default function App() {
             kwartaalStatus={kwartaalStatus}
             setKwartaalStatusField={setKwartaalStatusField}
             fileContinuity={fileContinuity}
+            ownAccountByFile={ownAccountByFile}
+            bestandInfo={bestandInfo}
+            onRekeningWijzig={setEigenRekeningVoorBestanden}
             onSaveProject={saveProjectFile}
             verwachteLease={verwachteLease}
             setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}
