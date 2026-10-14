@@ -203,7 +203,9 @@ export default function OnverklaardeOverboekingenModal({ items, toegelicht = [],
                       <p className="text-[11px] text-slate-500">{uitleg?.redenTekst}{uitleg?.notitie ? ` — ${uitleg.notitie}` : ""}</p>
                     </div>
                     <span className="shrink-0 font-mono text-slate-700 w-24 text-right">{eur(tx.amount)}</span>
-                    {onHerroepToelichting && <button onClick={() => onHerroepToelichting(sleutel)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50">Intrekken</button>}
+                    {uitleg?.automatisch
+                      ? <span className="text-[11px] text-slate-400" title="Automatisch: deze rekening staat bij Instellingen → Eigen rekeningen als opgegeven (niet geladen). Verwijder hem daar om dit terug te draaien.">automatisch</span>
+                      : onHerroepToelichting && <button onClick={() => onHerroepToelichting(sleutel)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50">Intrekken</button>}
                   </div>
                 ))}
               </div>

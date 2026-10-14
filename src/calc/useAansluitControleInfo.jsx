@@ -11,7 +11,7 @@ export function onverklaardSleutel(tx, kant) {
 
 export function useAansluitControleInfo(p) {
   const {
-    priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht = {},
+    priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht = {}, eigenRekeningenNietGeladen = [],
   } = p;
 
   return useMemo(() => {
@@ -36,9 +36,20 @@ export function useAansluitControleInfo(p) {
       ...zakZonder.map((t) => ({ tx: t, kant: "Zakelijk" })),
       ...priZonder.map((t) => ({ tx: t, kant: "Prive" })),
     ].sort((a, b) => Math.abs(b.tx.amount) - Math.abs(a.tx.amount)).map((x) => ({ ...x, sleutel: onverklaardSleutel(x.tx, x.kant) }));
+    // release30V5 — boekingen naar/van een eigen rekening die bij "Eigen rekeningen" als opgegeven (niet geladen)
+    // staat, zijn vanzelf verklaard: daar is geen tegenboeking in de geladen bestanden te verwachten.
+    const norm = (x) => String(x || "").replace(/\s/g, "").toUpperCase();
+    const nietGeladen = new Set(eigenRekeningenNietGeladen.map(norm));
+    const autoUitleg = (x) => {
+      const iban = norm(x.tx.counterpartyIban);
+      return iban && nietGeladen.has(iban)
+        ? { reden: "eigen-rekening", redenTekst: `Eigen rekening ${iban.replace(/(.{4})(?=.)/g, "$1 ")}, niet geladen`, notitie: "", automatisch: true }
+        : null;
+    };
+    const uitlegVan = (x) => toegelicht[x.sleutel] || autoUitleg(x);
     // 15V7: bekende boekingen waarvan je de oorzaak hebt toegelicht tellen niet meer als "niet gekoppeld".
-    const onverklaard = onverklaardAlle.filter((x) => !toegelicht[x.sleutel]);
-    const toegelichtLijst = onverklaardAlle.filter((x) => toegelicht[x.sleutel]).map((x) => ({ ...x, uitleg: toegelicht[x.sleutel] }));
+    const onverklaard = onverklaardAlle.filter((x) => !uitlegVan(x));
+    const toegelichtLijst = onverklaardAlle.filter((x) => uitlegVan(x)).map((x) => ({ ...x, uitleg: uitlegVan(x) }));
     const toegelichtBedrag = Math.round(toegelichtLijst.reduce((a, x) => a + x.tx.amount, 0) * 100) / 100;
     const diffOpen = Math.round((diff - toegelichtBedrag) * 100) / 100;
     // V71 — "geladen" is per jaar bekeken: een privébestand dat alleen 2024-2025 beslaat zegt niets
@@ -62,5 +73,5 @@ export function useAansluitControleInfo(p) {
         : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diffOpen)}).${toegelichtTekst}`;
     }
     return { zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag };
-  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht]);
+  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|")]);
 }

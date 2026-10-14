@@ -2593,6 +2593,7 @@ export default function App() {
   // maar één plek is die zakSum/priSum/diff uitrekent.
   const aansluitControleInfo = useAansluitControleInfo({
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
+    eigenRekeningenNietGeladen: (eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean),
   });
   const checklistData = useMemo(
     () => computeChecklistLikeDataForYear(zakGroupForYear.items, priGroupForYear.items, quarterlyBtwData, kwartaalStatus, priveRekeningGeladen),
@@ -3951,6 +3952,7 @@ export default function App() {
             ownAccountByFile={ownAccountByFile}
             bestandInfo={bestandInfo}
             onRekeningWijzig={setEigenRekeningVoorBestanden}
+            alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
             onSaveProject={saveProjectFile}
             verwachteLease={verwachteLease}
             setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}

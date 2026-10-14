@@ -66,6 +66,7 @@ export default function SetupWizardModal({
   dossierProfiel = null,
   leaseControle = null,
   ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig = null,
+  alleenVragen = null,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -87,7 +88,7 @@ export default function SetupWizardModal({
   // schermen worden live gefilterd (BV, KOR) — zie remainingSteps.
   const [needs] = useState(() => {
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
-    return {
+    const n = {
       naam: vol && eigenNamen === null,
       rechtsvorm: vol && (rechtsvorm === null || forceRechtsvormStep),
       holding: vol && heeftHolding === null,
@@ -113,6 +114,10 @@ export default function SetupWizardModal({
       // wizard zelf) zijn de jaren dan nog niet bekend. De lijst zelf wordt hieronder live opgebouwd.
       kwartalen: vol && korRegeling !== true,
     };
+    // release30V3 — geopend via "Nu beantwoorden": alleen de vragen die op die kaart staan. Voorheen kwamen
+    // er schermen bij voor vragen die niet op de kaart stonden (bijv. aangekochte machines, BTW-kwartalen).
+    if (Array.isArray(alleenVragen)) for (const k of Object.keys(n)) n[k] = n[k] && alleenVragen.includes(k);
+    return n;
   });
   // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt
   // dan vastgezet: een aangevinkt kwartaal verdwijnt anders direct uit `quartersToAsk` (het heeft dan
@@ -127,7 +132,7 @@ export default function SetupWizardModal({
   const [initialSteps] = useState(() => {
     const list = [];
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
-    if (vol && loadFilesFirst) list.push(20);
+    if (vol && loadFilesFirst && !Array.isArray(alleenVragen)) list.push(20);
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
     if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
@@ -136,7 +141,7 @@ export default function SetupWizardModal({
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
     if (needs.starters || needs.overig || needs.kwartalen || needs.werkruimte) list.push(36);
     // release21V6 — lease-controle na het laden van bankbestanden (zie LeaseControleScherm.jsx)
-    if (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0) list.push(37);
+    if (!Array.isArray(alleenVragen) && (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0)) list.push(37);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });
