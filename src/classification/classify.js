@@ -9,6 +9,7 @@ import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword }
 // zoekwoorden blijven een gewone deelstring-match (die wil bijv. "bmk" ook binnen "CollactiveBMK" vinden).
 const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
+const HEEL_WOORD = new Set(["boss"]);
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
@@ -19,7 +20,8 @@ export function keywordInText(text, keyword) {
   // "apk" staat in de praktijk vaak vastgeplakt aan de garagenaam ("APKFriezenkamp") — daar geen eindgrens eisen.
   // "cafe" zit vrijwel altijd als achtervoegsel in een samenstelling ("Grandcafe", "Eetcafe", "Cafetaria") — geen beginsgrens eisen.
   if (trimmed === "cafe") return true;
-  const needEnd = trimmed.length <= 3 && trimmed !== "apk";
+  // release31V2 — "boss" (Hugo Boss) matchte "Bosstraat"; zulke korte merknamen moeten een heel woord zijn.
+  const needEnd = (trimmed.length <= 3 && trimmed !== "apk") || HEEL_WOORD.has(trimmed);
   while (i >= 0) {
     const before = text[i - 1] || " ";
     const after = text[i + kw.length] || " ";
