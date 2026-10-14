@@ -893,11 +893,26 @@ export default function App() {
     try { localStorage.setItem(VOORWAARDEN_SLEUTEL, VOORWAARDEN_VERSIE); } catch { /* geen opslag: scherm komt dan opnieuw */ }
     setVoorwaardenOk(true);
   };
-  // Startscherm (verder / nieuw / laden): één keer per tabblad. Een herlading in hetzelfde tabblad
-  // (bijv. na de nieuwe inlog bij Cloudflare) gaat direct verder.
-  const STARTGEZIEN_SLEUTEL = "bankoverzicht-start";
-  const startGezien = () => { try { return sessionStorage.getItem(STARTGEZIEN_SLEUTEL) === "1"; } catch { return false; } };
-  const markeerStartGezien = () => { try { sessionStorage.setItem(STARTGEZIEN_SLEUTEL, "1"); } catch { /* ignore */ } };
+  // Startscherm (verder / nieuw / laden). release22V8 — niet meer één keer per tabblad (op de iPad blijft
+  // dat tabblad open, dus kwam de vraag na het heropenen niet meer), maar zodra de app langer dan 60
+  // minuten niet gebruikt is. Een snelle herlading (bijv. na de nieuwe inlog bij Cloudflare of een update)
+  // gaat nog steeds direct verder.
+  const LAATST_ACTIEF_SLEUTEL = "bankoverzicht-laatst-actief";
+  const START_PAUZE_MS = 60 * 60 * 1000;
+  const startGezien = () => {
+    try { const t = Number(localStorage.getItem(LAATST_ACTIEF_SLEUTEL)); return t > 0 && Date.now() - t < START_PAUZE_MS; } catch { return false; }
+  };
+  const markeerStartGezien = () => { try { localStorage.setItem(LAATST_ACTIEF_SLEUTEL, String(Date.now())); } catch { /* ignore */ } };
+  // Zolang de app open en zichtbaar is: elke minuut "laatst actief" bijwerken, en ook bij wegklikken/sluiten.
+  useEffect(() => {
+    if (!loaded) return undefined;
+    const tik = () => { if (document.visibilityState === "visible") markeerStartGezien(); };
+    const weg = () => markeerStartGezien();
+    const iv = setInterval(tik, 60 * 1000);
+    document.addEventListener("visibilitychange", weg);
+    window.addEventListener("pagehide", weg);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", weg); window.removeEventListener("pagehide", weg); };
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     (async () => {
       const pendingData = await loadPersistedParsedFiles();
@@ -906,6 +921,12 @@ export default function App() {
         // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen (of ga direct
         // verder als het startscherm in dit tabblad al is geweest).
         pendingProjectRef.current = { parsedFiles: pendingData, settings: pendingSettings };
+        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
+      } else if (heeftBewaardeAntwoorden(pendingSettings)) {
+        // release22V8 — dossier met alleen antwoorden (wizard ingevuld, nog geen bankbestanden): ook dan
+        // "Vorig dossier gevonden" met "Verder met dit dossier". Instellingen pas inladen bij "Verder",
+        // zodat "Nieuw dossier" echt leeg begint.
+        pendingProjectRef.current = { parsedFiles: [], settings: pendingSettings };
         if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
       } else {
         // Geen bewaard dossier — eventuele losse instellingen (zonder bestanden) alsnog inladen.
@@ -917,6 +938,13 @@ export default function App() {
     })();
   }, []);
   const resumeLastProjectRef = useRef(null);
+  function heeftBewaardeAntwoorden(st) {
+    if (!st) return false;
+    const n = st.eigenNamen;
+    return !!(n && (n.ondernemer || n.partner)) ||
+      ["rechtsvorm", "korRegeling", "btwVerlegd", "autoWizardStatus", "verwachteLease", "verwachteLeaseOverig", "verwachteLening", "verwachteAOV", "heeftVoorraad"]
+        .some((k) => st[k] !== null && st[k] !== undefined);
+  }
   const resumeLastProject = () => {
     markeerStartGezien();
     const pending = pendingProjectRef.current;
@@ -3315,7 +3343,7 @@ export default function App() {
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 mb-5 text-sm">
               <p className="font-semibold text-slate-800">
                 {ondernemer || "Dossier zonder naam"}
-                <span className="font-normal text-slate-500"> · {fileCount} bankbestand{fileCount === 1 ? "" : "en"}</span>
+                <span className="font-normal text-slate-500"> · {fileCount === 0 ? "nog geen bankbestanden (alleen basisvragen)" : `${fileCount} bankbestand${fileCount === 1 ? "" : "en"}`}</span>
               </p>
               {pendingFileNames.length > 0 && (
                 <ul className="mt-1 text-xs text-slate-500 space-y-0.5">
