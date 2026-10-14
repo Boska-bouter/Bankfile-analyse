@@ -25,7 +25,11 @@ function leesJwt(token) {
   } catch { return null; }
 }
 const nlTijd = (sec) => (sec ? new Date(sec * 1000).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "—");
-const duur = (a, b) => (a && b ? `${Math.floor((b - a) / 3600)} uur ${Math.round(((b - a) % 3600) / 60)} min` : "—");
+const duur = (a, b) => {
+  if (!a || !b) return "—";
+  const min = Math.max(0, Math.round((b - a) / 60));
+  return `${Math.floor(min / 60)} uur ${min % 60} min`;
+};
 function samenvatting(p) {
   if (!p) return null;
   const nu = Math.floor(Date.now() / 1000);
