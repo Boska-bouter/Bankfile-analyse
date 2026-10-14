@@ -3289,6 +3289,7 @@ export default function App() {
   const { startLoadProject, clearAllData } = useDossierDialogen({
     parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
     setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
+    heeftAntwoorden: !basisvragenNietGestart,
   });
 
   if (!voorwaardenOk) return <VoorwaardenScherm onAkkoord={akkoordVoorwaarden} />;
