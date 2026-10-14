@@ -4143,7 +4143,10 @@ export default function App() {
             de uitgeklapte kaart (zie controlerenCardGroups hierboven) — niet meer standaard
             zichtbaar op de pagina. */}
 
-        {transactions.length > 0 && pendingIncomeReview.length === 0 && (
+        {/* release30V9 — stond ook op "pendingIncomeReview.length === 0": zodra een wijziging een nieuwe
+            inkomstenbron opleverde (Herkomst van inkomsten: 1 open), verdwenen de categoriekaarten én de
+            detailtabellen van Controleren. Die blijven nu altijd staan. */}
+        {transactions.length > 0 && (
           <>
 
             {/* Op verzoek (v281) staat "Opschonen" (OpschonenPanel.jsx) alleen nog binnen de
