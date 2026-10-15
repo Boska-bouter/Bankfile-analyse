@@ -95,6 +95,19 @@ export function priveDeelZakelijk(tx, { jaar, percentages, autoStatus, heeftLeas
   return null;
 }
 
+// Zakelijk deel van een boeking op de ZAKELIJKE rekening, excl. BTW (positief = kosten). Zelfde percentages als de aangifte.
+const ZAK_AFLOSSING = new Set(["Lease (financieel)", "Leningen"]);
+export function zakelijkDeelKosten(tx, { jaar, percentages, autoStatus, heeftLeaseAuto }, categoryBtwRates = {}, btwVerlegd = false) {
+  if (tx.isMirror || !tx.amount || (tx.accountType || tx.type) !== "Zakelijk") return 0;
+  const c = tx.category;
+  if (GEEN_UITGAVE.has(c) || c === "Privé opnames" || ZAKELIJKE_OMZET.has(c) || inkomenKolom(tx)) return 0;
+  if (tx.amount > 0 && !isTerugbetaling(tx)) return 0;
+  if (ZAK_AFLOSSING.has(c)) return tx.amount < 0 ? -tx.amount : 0; // uitbetaling van een lening is geen terugbetaling
+  const p = effectiveZakelijkPercentage(c, jaar, percentages, autoStatus, heeftLeaseAuto, tx);
+  if (!(p > 0)) return 0;
+  return -(tx.amount - computeBtw(tx, categoryBtwRates, btwVerlegd)) * Math.min(100, p) / 100;
+}
+
 const DAG = 86400000;
 // Een maand telt als gedekt als de bestanden de hele maand beslaan (met een week speling: de eerste/laatste
 // boeking valt zelden precies op de 1e of de laatste dag).
@@ -110,7 +123,7 @@ export function berekenInkomenPerMaand({
   percentages = {}, autoStatus = {}, heeftLeaseAuto = false, eigenPriveIbans = [],
 }) {
   const maanden = Array.from({ length: 12 }, (_, m) => ({
-    maand: m, omzetExcl: 0, omzetIncl: 0, loon: 0, toeslagen: 0, alimentatie: 0, viaPrive: 0, viaZak: 0, boekingen: {},
+    maand: m, omzetExcl: 0, omzetIncl: 0, loon: 0, toeslagen: 0, alimentatie: 0, viaPrive: 0, viaZak: 0, zakVanPrive: 0, zakKosten: 0, boekingen: {},
   }));
   const soorten = {};
   const opt = { jaar, percentages, autoStatus, heeftLeaseAuto, eigenPriveIbans };
@@ -118,9 +131,24 @@ export function berekenInkomenPerMaand({
     if (tx.year !== jaar || tx.isMirror) continue;
     const m = maanden[tx.date.getMonth()];
     if (isPriveUitgave(tx)) {
-      m.viaPrive += -tx.amount;
-      (m.boekingen.viaPrive ||= []).push(tx);
+      // release32V10 — zakelijke kosten die vanaf de privérekening zijn betaald (autokosten bij een lease-/zaakauto,
+      // het zakelijke deel van huur bij een werkruimte, …) zijn geen privé-uitgave: zelfde percentage als de aangifte.
+      const pZak = effectiveZakelijkPercentage(tx.category, jaar, percentages, autoStatus, heeftLeaseAuto, tx);
+      const deel = Math.max(0, Math.min(1, 1 - (pZak || 0) / 100));
+      if (deel > 0) {
+        m.viaPrive += -tx.amount * deel;
+        (m.boekingen.viaPrive ||= []).push(tx);
+      }
+      if (deel < 1) {
+        const netto = -(tx.amount - computeBtw(tx, categoryBtwRates, btwVerlegd)) * (1 - deel);
+        m.zakVanPrive += netto;
+        if (!isBV) { m.zakKosten += netto; (m.boekingen.zakKosten ||= []).push(tx); }
+      }
     } else {
+      // release33V0 — zakelijke kosten (excl. BTW, zakelijk deel volgens de aangifte) en aflossingen lease/lening vanaf de
+      // zakelijke rekening: geld dat niet beschikbaar is voor het huishouden. Bij een BV horen die bij de BV.
+      const zk = isBV ? 0 : zakelijkDeelKosten(tx, opt, categoryBtwRates, btwVerlegd);
+      if (zk) { m.zakKosten += zk; (m.boekingen.zakKosten ||= []).push(tx); }
       const d = priveDeelZakelijk(tx, opt);
       if (d && d.deel > 0) {
         const bedrag = -tx.amount * d.deel;
@@ -145,14 +173,14 @@ export function berekenInkomenPerMaand({
     }
   }
   for (const m of maanden) {
-    for (const k of ["omzetExcl", "omzetIncl", "loon", "toeslagen", "alimentatie", "viaPrive", "viaZak"]) m[k] = r2(m[k]);
+    for (const k of ["omzetExcl", "omzetIncl", "loon", "toeslagen", "alimentatie", "viaPrive", "viaZak", "zakVanPrive", "zakKosten"]) m[k] = r2(m[k]);
     m.zakGeladen = heleMaand(periodeZak, jaar, m.maand);
     m.priGeladen = heleMaand(periodePri, jaar, m.maand);
     m.prive = r2(m.loon + m.toeslagen + m.alimentatie);
     // Huishoudinkomen: bij een eenmanszaak omzet (excl. BTW) + privé; bij een BV is de omzet van de BV.
     m.totaal = r2((isBV ? 0 : m.omzetExcl) + m.prive);
     m.uitgaven = r2(m.viaPrive + m.viaZak);
-    m.verschil = r2(m.totaal - m.uitgaven);
+    m.verschil = r2(m.totaal - m.zakKosten - m.uitgaven);
     // Volledig: de privérekening is de hele maand geladen, en (als het dossier een zakelijke rekening heeft) die ook.
     m.volledig = m.priGeladen && (!periodeZak || m.zakGeladen);
     m.boekingen.uitgaven = [...(m.boekingen.viaPrive || []), ...(m.boekingen.viaZak || [])];
@@ -161,7 +189,7 @@ export function berekenInkomenPerMaand({
   const kolommen = INKOMEN_KOLOMMEN.filter((c) => c.soort === "zakelijk" ? !!periodeZak || maanden.some((m) => m[c.key] !== 0) : maanden.some((m) => m[c.key] !== 0));
   const volledig = maanden.filter((m) => m.volledig);
   const som = (k, lijst) => r2(lijst.reduce((a, m) => a + m[k], 0));
-  const sleutels = [...kolommen.map((c) => c.key), "prive", "totaal", "viaPrive", "viaZak", "uitgaven", "verschil"];
+  const sleutels = [...kolommen.map((c) => c.key), "prive", "totaal", "zakKosten", "viaPrive", "viaZak", "uitgaven", "verschil"];
   // Totalen en gemiddelden ALLEEN over de volledige maanden (inkomen én uitgaven), zodat ze vergelijkbaar zijn.
   const totalen = Object.fromEntries(sleutels.map((k) => [k, som(k, volledig)]));
   const gemiddeld = Object.fromEntries(sleutels.map((k) => [k, volledig.length ? r2(som(k, volledig) / volledig.length) : null]));
@@ -174,6 +202,7 @@ export function berekenInkomenPerMaand({
     heeftPriveInkomen: kolommen.some((c) => c.soort === "prive"),
     omzetJaar: { excl: som("omzetExcl", maanden), incl: som("omzetIncl", maanden) },
     zakelijkInDossier: !!periodeZak, priveInDossier: !!periodePri,
+    zakVanPrive: som("zakVanPrive", volledig),
     soorten: soortLijst, soortenTotaal: r2(soortLijst.reduce((a, s) => a + s.bedrag, 0)),
   };
 }
