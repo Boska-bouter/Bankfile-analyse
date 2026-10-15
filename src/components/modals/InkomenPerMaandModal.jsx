@@ -34,28 +34,87 @@ function fiscaalBlok(f) {
   return { ...f, ibZvw, nog, perMaand: nog != null ? Math.round((nog / 12) * 100) / 100 : null, btwJaar, btwPerMaand: btwJaar != null ? Math.round((btwJaar / 12) * 100) / 100 : null };
 }
 
+// release32V8 — het gedownloade/geprinte document is gelijk aan het scherm: grafiek, tabel, belasting en BTW, verschil
+// na belasting. A4 liggend. De details van privé-uitgaven via zakelijk staan er niet in (eigen download op die pagina).
 function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
+  const isBV = data.isBV;
   const kol = data.kolommen.filter((c) => !c.alleenInfo);
   const pv = data.heeftPriveInkomen;
-  const cel = (v) => `<td style="text-align:right;padding:4px 8px">${v == null ? "—" : eur(v)}</td>`;
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const td = (v, cls = "") => `<td class="r ${cls}">${v == null ? "—" : eur(v)}</td>`;
+  const nKol = 1 + kol.length + (pv ? 1 : 0) + 1 + 4;
+
+  // Grafiek (SVG), dezelfde opbouw als op het scherm.
+  const W = 1000, H = 150, stap = W / 12, bw = stap * 0.4;
+  const max = Math.max(1, ...data.maanden.map((m) => Math.max((isBV ? 0 : Math.max(0, m.omzetExcl)) + Math.max(0, m.prive), m.volledig ? m.uitgaven : 0)));
+  const y = (v) => (H * v) / max;
+  let svg = "";
+  for (const m of data.maanden) {
+    const x = m.maand * stap + stap * 0.08;
+    const z = isBV ? 0 : Math.max(0, m.omzetExcl), p = Math.max(0, m.prive);
+    const op = m.volledig ? 1 : 0.4;
+    svg += `<rect x="${x}" y="${H - y(z)}" width="${bw}" height="${y(z)}" fill="#0d9488" opacity="${op}"/>`;
+    if (p) svg += `<rect x="${x}" y="${H - y(z) - y(p)}" width="${bw}" height="${y(p)}" fill="#38bdf8" opacity="${op}"/>`;
+    const x2 = x + bw + stap * 0.04;
+    if (m.volledig) {
+      svg += `<rect x="${x2}" y="${H - y(m.viaPrive)}" width="${bw}" height="${y(m.viaPrive)}" fill="${ROOD}"/>`;
+      svg += `<rect x="${x2}" y="${H - y(m.viaPrive) - y(m.viaZak)}" width="${bw}" height="${y(m.viaZak)}" fill="${LICHTROOD}"/>`;
+    } else {
+      svg += `<text transform="translate(${x2 + bw / 2 + 3},${H - 3}) rotate(-90)" font-size="9" fill="#94a3b8">onbekend</text>`;
+    }
+    svg += `<text x="${m.maand * stap + stap / 2}" y="${H + 13}" font-size="10" fill="#64748b" text-anchor="middle">${KORT[m.maand]}</text>`;
+  }
+  svg = `<svg viewBox="0 0 ${W} ${H + 16}" width="100%" style="max-height:52mm"><line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="#cbd5e1"/>${svg}</svg>`;
+  const leg = (kleur, t) => `<span class="leg"><i style="background:${kleur}"></i>${t}</span>`;
+  const legenda = `${isBV ? "" : leg("#0d9488", "Omzet excl. BTW")}${pv ? leg("#38bdf8", "Privé-inkomen") : ""}${leg(ROOD, "Privé-uitgaven via privérekening")}${leg(LICHTROOD, "Privé-uitgaven via zakelijke rekening")}<span class="leg grijs">Lichter = maand zonder volledige gegevens</span>`;
+
   const rij = (m) => m.volledig
-    ? `<tr><td style="padding:4px 8px">${MAANDEN[m.maand]}</td>${kol.map((c) => cel(m[c.key])).join("")}${pv ? cel(m.prive) : ""}${cel(m.totaal)}${cel(-m.viaPrive)}${cel(-m.viaZak)}${cel(-m.uitgaven)}${cel(m.verschil)}</tr>`
-    : `<tr style="color:#94a3b8"><td style="padding:4px 8px">${MAANDEN[m.maand]} *</td>${kol.map((c) => cel(m[c.key])).join("")}${pv ? cel(m.prive) : ""}${cel(m.totaal)}<td colspan="4" style="text-align:center;font-style:italic">kan niet worden bepaald</td></tr>`;
-  const voet = (label, o) => `<tr><td style="padding:4px 8px">${label}</td>${kol.map((c) => cel(o[c.key])).join("")}${pv ? cel(o.prive) : ""}${cel(o.totaal)}${cel(o.viaPrive == null ? null : -o.viaPrive)}${cel(o.viaZak == null ? null : -o.viaZak)}${cel(o.uitgaven == null ? null : -o.uitgaven)}${cel(o.verschil)}</tr>`;
-  const bl = data.volledigeMaanden.length;
+    ? `<tr><td>${MAANDEN[m.maand]}</td>${kol.map((c) => td(m[c.key])).join("")}${pv ? td(m.prive) : ""}${td(m.totaal, "b")}${td(-m.viaPrive, "rood")}${td(-m.viaZak, "rood")}${td(-m.uitgaven, "rood b")}${td(m.verschil, `b ${m.verschil < 0 ? "rood" : "groen"}`)}</tr>`
+    : `<tr class="onv"><td>${MAANDEN[m.maand]} <span class="ster">*</span></td>${kol.map((c) => td(m[c.key], "grijs")).join("")}${pv ? td(m.prive, "grijs") : ""}${td(m.totaal, "grijs")}<td colspan="4" class="c nb">kan niet worden bepaald: ${!m.priGeladen ? "privérekening" : "zakelijke rekening"} niet (volledig) geladen</td></tr>`;
+  const voet = (label, o, cls) => `<tr class="${cls}"><td>${label}</td>${kol.map((c) => td(o[c.key])).join("")}${pv ? td(o.prive) : ""}${td(o.totaal)}${td(o.viaPrive == null ? null : -o.viaPrive, "rood")}${td(o.viaZak == null ? null : -o.viaZak, "rood")}${td(o.uitgaven == null ? null : -o.uitgaven, "rood")}${td(o.verschil)}</tr>`;
+  const nVol = data.aantalVolledig;
+  const onvolledig = data.maanden.filter((m) => !m.volledig).map((m) => m.maand);
+
+  const btwTxt = (v) => `<span class="${v < 0 ? "groen" : "rood"}">${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}</span>`;
   const f = fis;
-  const fisHtml = f ? `<h3>Belasting en BTW ${jaar} (indicatief)</h3><table style="width:auto">${f.ibZvw != null ? `<tr><td>IB ná heffingskorting</td>${cel(f.ib)}</tr><tr><td>Zvw-bijdrage</td>${cel(f.zvw)}</tr><tr><td>Al betaald in ${jaar} via de bank</td>${cel(f.betaald)}</tr><tr><td><b>Nog te betalen</b></td>${cel(f.nog)}</tr><tr><td>Per maand opzij te zetten</td>${cel(f.perMaand)}</tr>` : ""}${f.btw ? f.btw.map((v, i) => `<tr><td>BTW Q${i + 1}</td><td style="text-align:right;padding:4px 8px">${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}</td></tr>`).join("") + `<tr><td><b>BTW jaar</b></td><td style="text-align:right;padding:4px 8px">${eur(Math.abs(f.btwJaar))} ${f.btwJaar < 0 ? "terug" : "te betalen"}</td></tr>` : ""}</table>` : "";
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Inkomen per maand ${jaar}</title>
-<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#0f172a;margin:24px}table{border-collapse:collapse;width:100%}th{text-align:right;padding:4px 8px;border-bottom:1px solid #cbd5e1;font-weight:600}th:first-child{text-align:left}tfoot td{font-weight:700;border-top:1px solid #cbd5e1}p{color:#475569}h3{margin-top:18px}.noot{font-size:11px;margin-top:18px}.kern{color:#0f172a;font-size:13px;margin-top:14px}@media print{body{margin:0}}</style></head><body>
-<h2>Inkomen per maand ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h2>
-<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${data.isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th><th>Uitgaven via privérekening</th><th>Uitgaven via zakelijke rekening</th><th>Totaal privé-uitgaven</th><th>Verschil</th></tr></thead>
+  const ibBlok = !f ? "" : f.isBV ? `<p class="grijs">BV: de BV betaalt vennootschapsbelasting; die staat niet in dit overzicht.</p>`
+    : f.ibZvw == null ? `<p class="grijs">Geen indicatie beschikbaar voor dit jaar.</p>`
+    : `<table class="klein"><tr><td>IB ná heffingskorting</td>${td(f.ib)}</tr><tr><td>Zvw-bijdrage</td>${td(f.zvw)}</tr><tr class="grijs"><td>Al betaald in ${jaar} via de bank (IB/Zvw)</td>${td(f.betaald)}</tr><tr class="streep b"><td>Nog te betalen</td>${td(f.nog, "rood")}</tr><tr><td>Per maand opzij te zetten</td>${td(f.perMaand)}</tr></table>`;
+  const btwBlok = !f ? "" : (f.kor || !f.btw) ? `<p class="grijs">${f.kor ? "KOR: er wordt geen BTW afgedragen." : "Geen BTW-gegevens voor dit jaar."}</p>`
+    : `<table class="klein">${f.btw.map((v, i) => `<tr><td>Q${i + 1}</td><td class="r">${btwTxt(v)}</td></tr>`).join("")}<tr class="streep b"><td>Jaar</td><td class="r">${btwTxt(f.btwJaar)}</td></tr><tr><td>Gemiddeld per maand</td><td class="r">${eur(Math.abs(f.btwPerMaand))} ${f.btwPerMaand < 0 ? "terug" : "te betalen"}</td></tr></table>`;
+  const naRegel = verschilNa == null ? "" : `<div class="kader na"><b>Gemiddeld verschil per maand, na belasting en BTW (indicatief):</b> ${eur(data.gemiddeld.verschil)}${f.perMaand ? ` − ${eur(f.perMaand)} IB/Zvw` : ""}${f.btwPerMaand ? (f.btwPerMaand < 0 ? ` + ${eur(-f.btwPerMaand)} BTW terug` : ` − ${eur(f.btwPerMaand)} BTW`) : ""} = <b class="${verschilNa < 0 ? "rood" : "groen"}">${eur(verschilNa)}</b></div>`;
+
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inkomen per maand ${jaar}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
+<style>
+@page{size:A4 landscape;margin:10mm}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:-apple-system,"Segoe UI",Arial,Helvetica,sans-serif;color:#1e293b;margin:0 auto;padding:24px 28px;font-size:11px;line-height:1.35;max-width:1100px;background:#fff}
+h1{font-size:19px;margin:0 0 2px}.sub{color:#64748b;margin-bottom:12px}
+.leg{display:inline-flex;align-items:center;gap:4px;margin-right:14px;font-size:10px;color:#475569}.leg i{display:inline-block;width:9px;height:9px;border-radius:2px}
+table{border-collapse:collapse;width:100%}th{font-weight:600;color:#64748b;font-size:10px;text-align:right;padding:5px 6px;border-bottom:1px solid #e2e8f0;vertical-align:bottom}th:first-child{text-align:left}
+td{padding:3px 6px;border-bottom:1px solid #f1f5f9;font-variant-numeric:tabular-nums}.r{text-align:right;white-space:nowrap}.c{text-align:center}
+.b{font-weight:700}.rood{color:#be123c}.groen{color:#047857}.grijs{color:#94a3b8}.nb{font-style:italic;color:#64748b;font-size:10px}.ster{color:#d97706}
+tr.onv td{background:#f8fafc}th.rood{color:#be123c}
+tr.tot td{border-top:2px solid #cbd5e1;font-weight:700}tr.gem td{font-weight:700;color:#134e4a;border-bottom:0}
+.info{color:#64748b;font-size:10px;margin:6px 0 12px}
+.blokken{display:flex;gap:12px;margin-top:6px}.kader{border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;flex:1;break-inside:avoid}.kader h3{font-size:12px;margin:0 0 6px}.kader h3 span{font-weight:400;color:#64748b}
+table.klein td{border:0;padding:2px 0}table.klein tr.streep td{border-top:1px solid #e2e8f0;padding-top:4px}
+.na{margin-top:10px;background:#f8fafc}
+.noot{color:#64748b;font-size:9.5px;margin-top:12px}
+@media print{body{padding:0;max-width:none}}
+</style></head><body>
+<h1>Inkomen per maand ${jaar}</h1>
+<div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}indicatief overzicht · gemaakt op ${new Date().toLocaleDateString("nl-NL")}</div>
+${svg}
+<div style="margin:4px 0 12px">${legenda}</div>
+<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th><th class="rood">Uitgaven via<br>privérekening</th><th class="rood">Uitgaven via<br>zakelijke rekening</th><th class="rood">Totaal<br>privé-uitgaven</th><th>Verschil</th></tr></thead>
 <tbody>${data.maanden.map(rij).join("")}</tbody>
-<tfoot>${voet(`Totaal ${bl} volledige maanden`, data.totalen)}${voet("Gemiddeld per maand", data.gemiddeld)}</tfoot></table>
-<p>Ter informatie: omzet excl. BTW over het hele jaar (ook onvolledige maanden) ${eur(data.omzetJaar.excl)}. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil niet berekend, telt niet mee in totaal en gemiddelde. Privé-uitgaven via zakelijke rekening = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) plus het privédeel van gemengde kosten volgens de percentages van de aangifte.</p>
-${fisHtml}
-${verschilNa != null ? `<p class="kern">Gemiddeld verschil per maand, na belasting en BTW (indicatief): <b>${eur(verschilNa)}</b></p>` : ""}
-${data.soorten.length ? `<h3>Privé-uitgaven via de zakelijke rekening, heel ${jaar}</h3><table style="width:auto">${data.soorten.map((x) => `<tr><td>${x.soort} (${x.boekingen.length})</td>${cel(-x.bedrag)}</tr>`).join("")}<tr><td><b>Totaal</b></td><td style="text-align:right;padding:4px 8px"><b>${eur(-data.soortenTotaal)}</b></td></tr></table>` : ""}
-<p class="noot">Uitgaven via privérekening = alle afschrijvingen op de privérekening(en), zonder overboekingen tussen eigen rekeningen en sparen. Uitgaven via zakelijke rekening = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) vanaf de zakelijke rekening, plus het privédeel van gemengde kosten volgens de percentages zakelijk/privé en soort ruimte, plus autokosten bij een privéauto (zoals in de aangifte). Belasting en BTW zijn een indicatie. Gemaakt met Bankoverzicht ${new Date().toLocaleDateString("nl-NL")}.</p></body></html>`;
+<tfoot>${voet(`Totaal ${nVol} volledige maand${nVol === 1 ? "" : "en"}${nVol > 0 && nVol < 12 ? ` (${bereik(data.volledigeMaanden)})` : ""}`, data.totalen, "tot")}${voet("Gemiddeld per maand", data.gemiddeld, "gem")}</tfoot></table>
+${onvolledig.length ? `<p class="info">Ter informatie: omzet excl. BTW over het hele jaar (ook ${bereik(onvolledig)}) ${eur(data.omzetJaar.excl)}. Die wordt niet met de uitgaven vergeleken, omdat de uitgaven van die maanden niet bekend zijn.</p>` : ""}
+${f ? `<div class="blokken"><div class="kader"><h3>Inkomstenbelasting en Zvw ${jaar} <span>(indicatief)</span></h3>${ibBlok}</div><div class="kader"><h3>BTW per kwartaal ${jaar}</h3>${btwBlok}</div></div>` : ""}
+${naRegel}
+<p class="noot"><b>Uitgaven via privérekening</b> = alle afschrijvingen op de privérekening(en), zonder overboekingen tussen eigen rekeningen en sparen. <b>Uitgaven via zakelijke rekening</b> = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) vanaf de zakelijke rekening, plus het privédeel van gemengde kosten volgens de percentages zakelijk/privé en soort ruimte, plus autokosten bij een privéauto (zoals in de aangifte). Overboekingen naar de eigen privérekening tellen niet mee: die staan al aan de privékant. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil worden niet berekend (geen aanname) en de hele maand, ook het inkomen, telt niet mee in totaal en gemiddelde. Belasting en BTW zijn een indicatie.${nKol ? "" : ""}</p>
+</body></html>`;
 }
 
 function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
