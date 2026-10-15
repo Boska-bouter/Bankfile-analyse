@@ -16,6 +16,16 @@ const bereik = (lijst) => {
   return aaneen && lijst.length > 1 ? `${KORT[lijst[0]]} t/m ${KORT[lijst[lijst.length - 1]]}` : lijst.map((m) => KORT[m]).join(", ");
 };
 
+// release32V7 — downloaden als HTML-bestand (zoals de indicatieve aangifteberekening): werkt ook op de iPad,
+// waar printen vanuit de app niet lukt. Het bestand opent in de browser en kan daar als PDF bewaard worden.
+function downloadHtml(html, naam) {
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = naam.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_") + ".html";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 function fiscaalBlok(f) {
   if (!f) return null;
   const ibZvw = f.ib != null ? Math.round((f.ib + f.zvw) * 100) / 100 : null;
@@ -28,7 +38,6 @@ function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
   const kol = data.kolommen.filter((c) => !c.alleenInfo);
   const pv = data.heeftPriveInkomen;
   const cel = (v) => `<td style="text-align:right;padding:4px 8px">${v == null ? "—" : eur(v)}</td>`;
-  const n = 4 + kol.length + (pv ? 1 : 0);
   const rij = (m) => m.volledig
     ? `<tr><td style="padding:4px 8px">${MAANDEN[m.maand]}</td>${kol.map((c) => cel(m[c.key])).join("")}${pv ? cel(m.prive) : ""}${cel(m.totaal)}${cel(-m.viaPrive)}${cel(-m.viaZak)}${cel(-m.uitgaven)}${cel(m.verschil)}</tr>`
     : `<tr style="color:#94a3b8"><td style="padding:4px 8px">${MAANDEN[m.maand]} *</td>${kol.map((c) => cel(m[c.key])).join("")}${pv ? cel(m.prive) : ""}${cel(m.totaal)}<td colspan="4" style="text-align:center;font-style:italic">kan niet worden bepaald</td></tr>`;
@@ -37,15 +46,16 @@ function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
   const f = fis;
   const fisHtml = f ? `<h3>Belasting en BTW ${jaar} (indicatief)</h3><table style="width:auto">${f.ibZvw != null ? `<tr><td>IB ná heffingskorting</td>${cel(f.ib)}</tr><tr><td>Zvw-bijdrage</td>${cel(f.zvw)}</tr><tr><td>Al betaald in ${jaar} via de bank</td>${cel(f.betaald)}</tr><tr><td><b>Nog te betalen</b></td>${cel(f.nog)}</tr><tr><td>Per maand opzij te zetten</td>${cel(f.perMaand)}</tr>` : ""}${f.btw ? f.btw.map((v, i) => `<tr><td>BTW Q${i + 1}</td><td style="text-align:right;padding:4px 8px">${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}</td></tr>`).join("") + `<tr><td><b>BTW jaar</b></td><td style="text-align:right;padding:4px 8px">${eur(Math.abs(f.btwJaar))} ${f.btwJaar < 0 ? "terug" : "te betalen"}</td></tr>` : ""}</table>` : "";
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Inkomen per maand ${jaar}</title>
-<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#0f172a;margin:24px}table{border-collapse:collapse;width:100%}th{text-align:right;padding:4px 8px;border-bottom:1px solid #cbd5e1;font-weight:600}th:first-child{text-align:left}tfoot td{font-weight:700;border-top:1px solid #cbd5e1}p{color:#475569}h3{margin-top:18px}</style></head><body>
+<style>body{font-family:system-ui,sans-serif;font-size:12px;color:#0f172a;margin:24px}table{border-collapse:collapse;width:100%}th{text-align:right;padding:4px 8px;border-bottom:1px solid #cbd5e1;font-weight:600}th:first-child{text-align:left}tfoot td{font-weight:700;border-top:1px solid #cbd5e1}p{color:#475569}h3{margin-top:18px}.noot{font-size:11px;margin-top:18px}.kern{color:#0f172a;font-size:13px;margin-top:14px}@media print{body{margin:0}}</style></head><body>
 <h2>Inkomen per maand ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h2>
 <table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${data.isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th><th>Uitgaven via privérekening</th><th>Uitgaven via zakelijke rekening</th><th>Totaal privé-uitgaven</th><th>Verschil</th></tr></thead>
 <tbody>${data.maanden.map(rij).join("")}</tbody>
 <tfoot>${voet(`Totaal ${bl} volledige maanden`, data.totalen)}${voet("Gemiddeld per maand", data.gemiddeld)}</tfoot></table>
 <p>Ter informatie: omzet excl. BTW over het hele jaar (ook onvolledige maanden) ${eur(data.omzetJaar.excl)}. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil niet berekend, telt niet mee in totaal en gemiddelde. Privé-uitgaven via zakelijke rekening = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) plus het privédeel van gemengde kosten volgens de percentages van de aangifte.</p>
 ${fisHtml}
-${verschilNa != null ? `<p><b>Gemiddeld verschil per maand, na belasting en BTW (indicatief): ${eur(verschilNa)}</b></p>` : ""}
-<p style="display:none">${n}</p></body></html>`;
+${verschilNa != null ? `<p class="kern">Gemiddeld verschil per maand, na belasting en BTW (indicatief): <b>${eur(verschilNa)}</b></p>` : ""}
+${data.soorten.length ? `<h3>Privé-uitgaven via de zakelijke rekening, heel ${jaar}</h3><table style="width:auto">${data.soorten.map((x) => `<tr><td>${x.soort} (${x.boekingen.length})</td>${cel(-x.bedrag)}</tr>`).join("")}<tr><td><b>Totaal</b></td><td style="text-align:right;padding:4px 8px"><b>${eur(-data.soortenTotaal)}</b></td></tr></table>` : ""}
+<p class="noot">Uitgaven via privérekening = alle afschrijvingen op de privérekening(en), zonder overboekingen tussen eigen rekeningen en sparen. Uitgaven via zakelijke rekening = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) vanaf de zakelijke rekening, plus het privédeel van gemengde kosten volgens de percentages zakelijk/privé en soort ruimte, plus autokosten bij een privéauto (zoals in de aangifte). Belasting en BTW zijn een indicatie. Gemaakt met Bankoverzicht ${new Date().toLocaleDateString("nl-NL")}.</p></body></html>`;
 }
 
 function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
@@ -67,7 +77,8 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
           <ArrowLeft className="h-4 w-4" /> Inkomen per maand · Privé-uitgaven via zakelijke rekening {jaar}
         </button>
         <div className="flex gap-2">
-          <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Excel</button>
+          <button type="button" onClick={() => downloadHtml(html(), `Privé-uitgaven via zakelijk ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`)} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
+          <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
           {onPrint && <button type="button" onClick={() => onPrint(html())} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
         </div>
       </div>
@@ -192,7 +203,8 @@ export default function InkomenPerMaandModal({
             ) : <span className="text-sm text-slate-600">{jaar}</span>}
           </div>
           <div className="flex gap-2 items-center">
-            <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Excel</button>
+            <button type="button" onClick={() => downloadHtml(bouwHtml({ data, jaar, klantNaam, fis, verschilNa }), `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`)} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
+            <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
             {onPrint && <button type="button" onClick={() => onPrint(bouwHtml({ data, jaar, klantNaam, fis, verschilNa }))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200" title="Sluiten"><X className="h-5 w-5" /></button>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { APP_RELEASE } from "../../version.js";
+import { sessieVerlopen, meldSessieVerlopen } from "../../dossier/useSessieWaarschuwing.jsx";
 
 export const FEEDBACK_ENDPOINT = "/api/feedback";
 // Alleen als versturen niet lukt, bieden we een noodroute via de eigen mailapp aan.
@@ -14,6 +15,7 @@ export default function FeedbackModal({ onClose }) {
   const [naam, setNaam] = useState("");
   const [onderwerp, setOnderwerp] = useState("");
   const [bericht, setBericht] = useState("");
+  const [sessieWeg, setSessieWeg] = useState(false);
   const [status, setStatus] = useState("invullen"); // invullen | bezig | verstuurd | mislukt
   const [gekopieerd, setGekopieerd] = useState(false);
 
@@ -30,10 +32,13 @@ export default function FeedbackModal({ onClose }) {
         body: JSON.stringify({ soort, naam: naam.trim(), onderwerp: onderwerp.trim(), bericht: bericht.trim(), release: APP_RELEASE }),
       });
       const d = await r.json().catch(() => ({}));
-      setStatus(r.ok && d.ok ? "verstuurd" : "mislukt");
+      if (r.ok && d.ok) { setStatus("verstuurd"); return; }
+      setStatus("mislukt");
     } catch {
       setStatus("mislukt");
     }
+    // release32V6 — mislukt omdat de inlogsessie verlopen is? Dan dat melden (en de balk bovenaan rood maken).
+    if (await sessieVerlopen()) { setSessieWeg(true); meldSessieVerlopen(); }
   };
   const viaMailapp = () => {
     window.location.href = `mailto:${NOODMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -82,7 +87,9 @@ export default function FeedbackModal({ onClose }) {
             </p>
             {status === "mislukt" && (
               <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800 space-y-2">
-                <p>Versturen is niet gelukt. Probeer het later opnieuw, of stuur het bericht via je eigen mailapp.</p>
+                <p>{sessieWeg
+                  ? "Versturen is niet gelukt: je inlogsessie is verlopen. Kopieer eerst je tekst, klik dan bovenaan op \"Sessie vernieuwen\" en verstuur het opnieuw. Of stuur het via je eigen mailapp."
+                  : "Versturen is niet gelukt. Probeer het later opnieuw, of stuur het bericht via je eigen mailapp."}</p>
                 <div className="flex gap-2">
                   <button onClick={viaMailapp} className="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-medium hover:bg-red-100">Via mailapp</button>
                   <button onClick={kopieren} className="rounded-lg border border-red-300 bg-white px-3 py-1.5 font-medium hover:bg-red-100">{gekopieerd ? "Gekopieerd" : "Tekst kopiëren"}</button>
