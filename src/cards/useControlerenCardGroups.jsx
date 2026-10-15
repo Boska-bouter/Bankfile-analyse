@@ -39,7 +39,7 @@ export function useControlerenCardGroups(p) {
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
-    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
+    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setWerkruimteVoorJaren, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
@@ -292,6 +292,8 @@ export function useControlerenCardGroups(p) {
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
               werkruimte={activeYear ? werkruimteSoorten(werkruimteStatus, activeYear) : { zakelijk: null, prive: null }}
               onSetWerkruimte={(rekening, waarde) => setWerkruimteStatus(activeYear, rekening, waarde)}
+              andereJarenWerkruimte={(years || []).filter((y) => y !== activeYear).map((y) => ({ jaar: y, ...werkruimteSoorten(werkruimteStatus, y) }))}
+              onSetWerkruimteJaren={setWerkruimteVoorJaren}
               onSetRekeningPercentage={(categorie, rekening, percentage) => setCategoryZakelijkPercentage(categorie, `${activeYear}:${rekening}`, percentage)}
               werkruimteBetaling={activeYear ? betaaldPerRekening(classified, activeYear) : {}}
               autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}

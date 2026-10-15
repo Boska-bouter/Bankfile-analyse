@@ -25,6 +25,31 @@ export const WERKRUIMTE_NIET_AFTREKBAAR = ["niet_zelfstandig", "prive"];
 
 // De keuze staat per jaar en per rekening: { jaar: { zakelijk: soort, prive: soort } }. Een oudere keuze als losse tekst
 // ({ jaar: soort }) gold voor beide rekeningen.
+// release33V4 — standaard uit de wizard, voor jaren zonder eigen keuze (ook jaren die later bijkomen).
+export const WERKRUIMTE_STANDAARD = "_standaard";
+export function werkruimteUitWizard({ pand, woning }) {
+  if (pand) return { zakelijk: "bedrijfsruimte", prive: woning === "zelfstandig" || woning === "niet_zelfstandig" ? woning : "bedrijfsruimte" };
+  if (woning === "zelfstandig" || woning === "niet_zelfstandig") return { zakelijk: woning, prive: woning };
+  return { zakelijk: "prive", prive: "prive" };
+}
+// Vult de jaren zonder keuze met de standaard. Een jaar met alleen { gevraagd: true } (oude wizard: twee keer "Nee")
+// telt als zonder keuze; staat er nog geen standaard, dan is dat antwoord privé/privé. Geeft hetzelfde object terug
+// als er niets verandert.
+export function vulWerkruimteJaren(status, jaren) {
+  let std = status?.[WERKRUIMTE_STANDAARD];
+  const leegJaar = (v) => !v || (typeof v === "object" && v.gevraagd && !v.zakelijk && !v.prive);
+  const heeftGevraagd = Object.entries(status || {}).some(([k, v]) => k !== WERKRUIMTE_STANDAARD && v && typeof v === "object" && v.gevraagd && !v.zakelijk && !v.prive);
+  if (!std && heeftGevraagd) std = { zakelijk: "prive", prive: "prive" };
+  if (!std) return status;
+  let next = status;
+  const zet = (k, v) => { if (next === status) next = { ...status }; next[k] = v; };
+  if (!status[WERKRUIMTE_STANDAARD]) zet(WERKRUIMTE_STANDAARD, std);
+  for (const y of new Set([...(jaren || []).map(String), ...Object.keys(status || {}).filter((k) => k !== WERKRUIMTE_STANDAARD)])) {
+    if (leegJaar(status[y])) zet(y, { ...std });
+  }
+  return next;
+}
+
 export function werkruimteSoorten(werkruimteStatus, year) {
   const v = werkruimteStatus?.[year];
   if (!v) return { zakelijk: null, prive: null };
@@ -35,7 +60,7 @@ export function werkruimteSoorten(werkruimteStatus, year) {
 // Maakt van de ingestelde percentages de "effectieve": voor een rekening met een niet-aftrekbare soort tellen huur, energie-water en
 // gemeentelijke kosten (ook de privé-varianten) voor 0% mee. De ingevulde percentages zelf blijven in het dossier staan.
 export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus) {
-  const jaren = Object.keys(werkruimteStatus || {});
+  const jaren = Object.keys(werkruimteStatus || {}).filter((k) => k !== WERKRUIMTE_STANDAARD);
   if (jaren.length === 0) return categoryZakelijkPercentage;
   const result = { ...(categoryZakelijkPercentage || {}) };
   for (const y of jaren) {

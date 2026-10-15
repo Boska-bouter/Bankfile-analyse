@@ -50,7 +50,7 @@ import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByF
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
-import { percentagesMetWerkruimte, werkruimteSoorten } from "./tax/werkruimte.js";
+import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
@@ -256,16 +256,23 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
   // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
+  // release33V4 — het wizard-antwoord (zakelijk pand? werkruimte in de woning?) wordt de standaard voor álle jaren,
+  // ook voor jaren die later bijkomen (bewaard als werkruimteStatus._standaard). "Nee" + "Nee" = privé.
   const seedWerkruimteStatus = (yearsList, { pand, woning }) => {
-    if (!yearsList || yearsList.length === 0) return;
     snapshotBeforeAction("Zakelijk pand/werkruimte ingesteld (wizard)");
+    const std = werkruimteUitWizard({ pand, woning });
+    setWerkruimteStatusState((prev) => vulWerkruimteJaren({ ...prev, [WERKRUIMTE_STANDAARD]: std }, yearsList || []));
+  };
+  // release33V4 — dezelfde keuze voor meerdere jaren tegelijk (vraag "geldt dit ook voor de andere jaren?").
+  const setWerkruimteVoorJaren = (jaren, rekening, waarde) => {
+    if (!jaren?.length) return;
+    snapshotBeforeAction("Soort ruimte voor meerdere jaren aangepast");
     setWerkruimteStatusState((prev) => {
       const next = { ...prev };
-      for (const y of yearsList) {
-        if (next[y]) continue;
-        const prive = woning === "zelfstandig" || woning === "niet_zelfstandig" ? woning : pand ? "bedrijfsruimte" : null;
-        const zakelijk = pand ? "bedrijfsruimte" : null;
-        next[y] = { ...(zakelijk ? { zakelijk } : {}), ...(prive ? { prive } : {}), ...(!zakelijk && !prive ? { gevraagd: true } : {}) };
+      for (const y of jaren) {
+        const nieuw = { ...werkruimteSoorten(prev, y), [rekening]: waarde || null };
+        if (!nieuw.zakelijk && !nieuw.prive) next[y] = { leeg: true }; // bewust "niet aangegeven": niet opnieuw vullen
+        else next[y] = { ...(nieuw.zakelijk ? { zakelijk: nieuw.zakelijk } : {}), ...(nieuw.prive ? { prive: nieuw.prive } : {}) };
       }
       return next;
     });
@@ -276,7 +283,7 @@ export default function App() {
       const next = { ...prev };
       const huidig = werkruimteSoorten(prev, year);
       const nieuw = { ...huidig, [rekening]: waarde || null };
-      if (!nieuw.zakelijk && !nieuw.prive) delete next[year];
+      if (!nieuw.zakelijk && !nieuw.prive) next[year] = { leeg: true }; // bewust "niet aangegeven": niet opnieuw vullen
       else next[year] = { ...(nieuw.zakelijk ? { zakelijk: nieuw.zakelijk } : {}), ...(nieuw.prive ? { prive: nieuw.prive } : {}) };
       return next;
     });
@@ -2188,6 +2195,12 @@ export default function App() {
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
+  // release33V4 — jaren zonder soort ruimte krijgen de standaard uit de wizard (ook jaren die later bijkomen, en
+  // jaren die in een ouder dossier alleen als "gevraagd" stonden: dat was twee keer "Nee" = privé).
+  useEffect(() => {
+    if (years.length === 0) return;
+    setWerkruimteStatusState((prev) => vulWerkruimteJaren(prev, years));
+  }, [years, werkruimteStatus]);
   // v300 — gecorrigeerd op verzoek: de eerste versie telde jaren met minstens één transactie van
   // het TYPE "Prive" (tx.type, na classificatie) — maar een "prive opname"-boeking (en zijn
   // spiegelboeking) op de ZAKELIJKE rekening krijgt ook type "Prive", terwijl dat jaar geen eigen
@@ -2997,7 +3010,7 @@ export default function App() {
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
-    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
+    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setWerkruimteVoorJaren, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State: setOverigInkomenBox1Met, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
