@@ -7,13 +7,29 @@ import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import HelpHint from "../shared/HelpHint.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
+import { soortPriveOpname } from "../../calc/inkomenPerMaand.js";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026") — losstaand van de detailtabel zodat
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
 // op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
-export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp, rekeningen = null }) {
+export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp, rekeningen = null, eigenPriveIbans = null }) {
   const toonFijn = useToonFijn();
+  // release32V3 — "Privé opnames" uitgesplitst naar waar het geld heen ging (alleen zakelijke kant).
+  const ibansKey = (eigenPriveIbans || []).join("|");
+  const opnames = useMemo(() => {
+    if (!eigenPriveIbans) return null;
+    const t = {};
+    for (const tx of group.items) {
+      if (tx.category !== "Privé opnames" || !(tx.amount < 0)) continue;
+      const s = soortPriveOpname(tx, eigenPriveIbans);
+      const r = (t[s] ||= { bedrag: 0, n: 0 });
+      r.bedrag += tx.amount; r.n += 1;
+    }
+    const lijst = Object.entries(t).map(([soort, r]) => ({ soort, ...r })).sort((a, b) => a.bedrag - b.bedrag);
+    return lijst.length ? lijst : null;
+  }, [group.items, ibansKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [opnamesOpen, setOpnamesOpen] = useState(false);
   const totals = useMemo(() => {
     const t = {};
     for (const tx of group.items) t[tx.category] = (t[tx.category] || 0) + tx.amount;
@@ -119,6 +135,27 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
           </tr>
         </tfoot>
       </table>
+      {opnames && (
+        <div className="mt-3 rounded-lg border border-slate-200">
+          <button type="button" onClick={() => setOpnamesOpen((v) => !v)} className="w-full flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            {opnamesOpen ? <ChevronDown className="h-3 w-3 text-slate-400" /> : <ChevronRight className="h-3 w-3 text-slate-400" />}
+            Privé opnames uitgesplitst
+            <span className="ml-auto font-mono font-normal">{eur(opnames.reduce((a, r) => a + r.bedrag, 0))}</span>
+          </button>
+          {opnamesOpen && (
+            <table className="w-full text-xs border-t border-slate-100">
+              <tbody>
+                {opnames.map((r) => (
+                  <tr key={r.soort} className="border-b border-slate-50">
+                    <td className="py-1 pl-7">{r.soort} <span className="text-slate-400">({r.n})</span></td>
+                    <td className="py-1 pr-3 text-right font-mono">{eur(r.bedrag)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }

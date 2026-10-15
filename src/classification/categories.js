@@ -739,6 +739,8 @@ export function subtypesForMainCategory(mainCategory) {
 export const PRIVE_WONEN = "Privé - wonen & vaste lasten";
 export const PRIVE_TELECOM = "Privé - telecom & abonnementen";
 export const PRIVE_ALGEMEEN = "Privé kosten algemeen";
+// release32V4 — privéverzekeringen (zorg, inboedel, aansprakelijkheid, …) als eigen zichtbare keuze i.p.v. in "Privé kosten algemeen".
+export const PRIVE_VERZEKERINGEN = "Privé - verzekeringen";
 
 export const PRIVE_GROEPEN = {
   [PRIVE_WONEN]: [
@@ -751,18 +753,19 @@ export const PRIVE_GROEPEN = {
     { key: "Privé overige abonnementen", label: "Overige abonnementen" },
     { key: "Privé - streaming diensten", label: "Streaming" },
   ],
+  [PRIVE_VERZEKERINGEN]: [{ key: "Verzekeringen", label: "Verzekeringen" }],
   [PRIVE_ALGEMEEN]: [
     "Boodschappen", "Hypotheek", "Inkomsten", "Kinderopvang", "Medische uitgaven", "Overboekingen aan personen",
     "Overboeking van bekenden", "Privé - bankkosten", "Privé - overige kosten",
     "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
-    "Toeslagen", "Verzekeringen", "Winkels divers", "Webshops & online aankopen",
+    "Toeslagen", "Winkels divers", "Webshops & online aankopen",
   ].map((key) => ({ key, label: key })),
 };
 
 // De 9 zichtbare privé-keuzes (volgorde = volgorde in de keuzelijst).
 export const PRIVE_KEUZE = [
   "Privé opnames", "Ontvangen van zakelijk", "Terugboeking van privé", "Terugboeking naar zakelijk",
-  "Incasso, juridisch & schulden", PRIVE_WONEN, PRIVE_TELECOM, "Leningen (privé)", PRIVE_ALGEMEEN,
+  "Incasso, juridisch & schulden", PRIVE_WONEN, PRIVE_TELECOM, PRIVE_VERZEKERINGEN, "Leningen (privé)", PRIVE_ALGEMEEN,
 ];
 
 // V82 — dezelfde weergavelaag voor de ZAKELIJKE categorieën (~55 → ~18). Het eerste lid is telkens de
@@ -894,6 +897,7 @@ for (const [naam, leden] of Object.entries(ZAK_GROEPEN)) {
 }
 CATEGORY_COLOR[PRIVE_WONEN] = CATEGORY_COLOR["Privé - huur"] || "bg-stone-200 text-stone-800";
 CATEGORY_COLOR[PRIVE_TELECOM] = CATEGORY_COLOR["Privé - mobiel/internet"] || "bg-stone-200 text-stone-800";
+CATEGORY_COLOR[PRIVE_VERZEKERINGEN] = CATEGORY_COLOR["Verzekeringen"] || "bg-teal-100 text-teal-800";
 CATEGORY_COLOR[PRIVE_ALGEMEEN] = CATEGORY_COLOR["Privé: overig"] || "bg-stone-100 text-stone-700";
 
 // V89 — voor de instellingenpanelen (BTW-tarieven, vast/variabel, zoekwoorden): zet een lijst fijne

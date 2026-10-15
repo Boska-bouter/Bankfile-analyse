@@ -53,6 +53,7 @@ import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { percentagesMetWerkruimte, werkruimteSoorten } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
+import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
 import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
@@ -1364,7 +1365,7 @@ export default function App() {
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -2524,6 +2525,37 @@ export default function App() {
     rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus, tariefOverrides,
   });
+  // release32V3 — voor "Inkomen per maand": indicatieve IB/Zvw, wat er dat jaar al via de bank is betaald, en het
+  // BTW-saldo per kwartaal. Dezelfde berekeningen als de indicatieve aangifte en de BTW-kwartalen.
+  const eigenPriveIbans = useMemo(
+    () => [...eigenRekeningenGeladen, ...(eigenRekeningenExtra || [])].filter((r) => r?.accountType === "Prive" && r.iban).map((r) => r.iban),
+    [eigenRekeningenGeladen, eigenRekeningenExtra]
+  );
+  const fiscaalVoorJaar = (y) => {
+    const uit = { jaar: y, ib: null, zvw: null, betaald: 0, btw: null, isBV: rechtsvorm === "bv", kor: !!korRegeling };
+    const ys = yearlySummaries?.[y];
+    if (rechtsvorm !== "bv" && ys) {
+      const aftrek = ondernemersaftrekPerJaar[y];
+      const starters = startersaftrekEff?.[y] === "ja";
+      const bedrag = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
+      // Zelfde rekenwijze als de kaart "Totaal belasting en premies": IB ná heffingskorting + Zvw-bijdrage.
+      const ib = estimateIncomeTaxMetOndernemersaftrek(ys.winst, y, bedrag, starters);
+      const hk = estimateHeffingskortingenMetOndernemersaftrek(ys.winst, y, bedrag, starters);
+      const zvw = estimateZvwMetOndernemersaftrek(ys.winst, y, bedrag, starters);
+      uit.ib = Math.round(Math.max(0, (ib?.belasting || 0) - (hk?.totaal || 0)) * 100) / 100;
+      uit.zvw = Math.round((zvw?.bijdrage || 0) * 100) / 100;
+    }
+    uit.betaald = Math.round(-classified.filter((tx) => !tx.isMirror && tx.year === y && (tx.category === "Belastingen: IB" || tx.category === "Belastingen: ZVW")).reduce((a, tx) => a + tx.amount, 0) * 100) / 100;
+    if (!korRegeling) {
+      const privegebruik = computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm });
+      const qs = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, privegebruik);
+      uit.btw = [1, 2, 3, 4].map((k) => {
+        const q = qs.find((x) => x.kwartaal === k && x.year === y);
+        return q ? Math.round((q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0)) * 100) / 100 : 0;
+      });
+    }
+    return uit;
+  };
   const dashboardAangifteIndicatie = useDashboardAangifteIndicatie({
     activeYear, ondernemersaftrekPerJaar, rechtsvorm, startersaftrekStatus: startersaftrekEff, yearlySummary, tariefOverrides, overigInkomenBox1,
   });
@@ -3404,6 +3436,7 @@ export default function App() {
   // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
   // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
   const opslaanHerinnering = useOpslaanHerinnering({ changesSinceExport, hasData: parsedFiles.length > 0 });
+  const sessie = useSessieWaarschuwing(); // release32V1 — einde Cloudflare-inlogsessie
   const { startLoadProject, clearAllData } = useDossierDialogen({
     parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
     setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
@@ -3639,6 +3672,7 @@ export default function App() {
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
+        <SessieBalk sessie={sessie} onOpslaan={saveProjectFile} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
@@ -4217,7 +4251,7 @@ export default function App() {
                     Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
                 {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} />
+                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} eigenPriveIbans={eigenPriveIbans} />
                   <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} rekeningen={rekeningenVoorGroep(priGroupShown, "Prive")} />
                 </div>
                 )}
@@ -4338,6 +4372,11 @@ export default function App() {
             periodeZak={periodePerSoort.Zakelijk || null}
             periodePri={periodePerSoort.Prive || null}
             isBV={rechtsvorm === "bv"}
+            percentages={categoryZakelijkPercentageEff}
+            autoStatus={autoStatus}
+            heeftLeaseAuto={heeftLeaseAutoDossierBreed}
+            eigenPriveIbans={eigenPriveIbans}
+            fiscaalVoorJaar={fiscaalVoorJaar}
             klantNaam={eigenNamen?.ondernemer}
             onPrint={(html) => printHtmlDocument(html)}
             onClose={() => setShowInkomenPerMaand(false)}
