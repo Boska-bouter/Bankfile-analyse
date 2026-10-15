@@ -24,7 +24,7 @@ function fiscaalBlok(f) {
   return { ...f, ibZvw, nog, perMaand: nog != null ? Math.round((nog / 12) * 100) / 100 : null, btwJaar, btwPerMaand: btwJaar != null ? Math.round((btwJaar / 12) * 100) / 100 : null };
 }
 
-function bouwHtml({ data, jaar, klantNaam, fis }) {
+function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
   const kol = data.kolommen.filter((c) => !c.alleenInfo);
   const pv = data.heeftPriveInkomen;
   const cel = (v) => `<td style="text-align:right;padding:4px 8px">${v == null ? "—" : eur(v)}</td>`;
@@ -44,6 +44,7 @@ function bouwHtml({ data, jaar, klantNaam, fis }) {
 <tfoot>${voet(`Totaal ${bl} volledige maanden`, data.totalen)}${voet("Gemiddeld per maand", data.gemiddeld)}</tfoot></table>
 <p>Ter informatie: omzet excl. BTW over het hele jaar (ook onvolledige maanden) ${eur(data.omzetJaar.excl)}. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil niet berekend, telt niet mee in totaal en gemiddelde. Privé-uitgaven via zakelijke rekening = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) plus het privédeel van gemengde kosten volgens de percentages van de aangifte.</p>
 ${fisHtml}
+${verschilNa != null ? `<p><b>Gemiddeld verschil per maand, na belasting en BTW (indicatief): ${eur(verschilNa)}</b></p>` : ""}
 <p style="display:none">${n}</p></body></html>`;
 }
 
@@ -139,8 +140,23 @@ export default function InkomenPerMaandModal({
     rijen.push(regel(`Totaal ${nVol} volledige maanden`, data.totalen, ""));
     if (nVol) rijen.push(regel("Gemiddeld per maand", data.gemiddeld, ""));
     rijen.push(["Omzet excl. BTW hele jaar (ter informatie)", data.omzetJaar.excl]);
+    // release32V5 — ook de belasting- en BTW-indicatie en het verschil na belasting in de download.
+    if (fis) {
+      rijen.push([], [`Inkomstenbelasting en Zvw ${jaar} (indicatief)`]);
+      if (fis.isBV) rijen.push(["BV: de BV betaalt vennootschapsbelasting; die staat niet in dit overzicht."]);
+      else if (fis.ibZvw == null) rijen.push(["Geen indicatie beschikbaar voor dit jaar."]);
+      else rijen.push(["IB ná heffingskorting", fis.ib], ["Zvw-bijdrage", fis.zvw], [`Al betaald in ${jaar} via de bank (IB/Zvw)`, fis.betaald], ["Nog te betalen", fis.nog], ["Per maand opzij te zetten", fis.perMaand]);
+      rijen.push([], [`BTW per kwartaal ${jaar} (positief = te betalen, negatief = terug)`]);
+      if (fis.kor || !fis.btw) rijen.push([fis.kor ? "KOR: er wordt geen BTW afgedragen." : "Geen BTW-gegevens voor dit jaar."]);
+      else rijen.push(...fis.btw.map((v, i) => [`Q${i + 1}`, v]), ["Jaar", fis.btwJaar], ["Gemiddeld per maand", fis.btwPerMaand]);
+      if (verschilNa != null) rijen.push([], ["Gemiddeld verschil per maand, na belasting en BTW (indicatief)", verschilNa]);
+    }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([kop, ...rijen]), `Inkomen ${jaar}`);
+    if (data.soorten.length) {
+      const det = [["Privé-uitgaven via zakelijke rekening (hele jaar)", "Aantal", "Bedrag"], ...data.soorten.map((x) => [x.soort, x.boekingen.length, -x.bedrag]), ["Totaal", "", -data.soortenTotaal]];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), "Privé via zakelijk");
+    }
     XLSX.writeFile(wb, `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);
   };
 
@@ -177,7 +193,7 @@ export default function InkomenPerMaandModal({
           </div>
           <div className="flex gap-2 items-center">
             <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Excel</button>
-            {onPrint && <button type="button" onClick={() => onPrint(bouwHtml({ data, jaar, klantNaam, fis }))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
+            {onPrint && <button type="button" onClick={() => onPrint(bouwHtml({ data, jaar, klantNaam, fis, verschilNa }))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200" title="Sluiten"><X className="h-5 w-5" /></button>
           </div>
         </div>
