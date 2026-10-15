@@ -350,7 +350,7 @@ function buildYearSectionBv(
   // Voorschotten/voorlopige aanslagen zijn bewust niet verrekend.
   const btwJaarSaldo = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
   const jaarTotaal = (vpbEstimate.belasting || 0);
-  JAAR_TOTALEN_BV.push({ year, totaal: jaarTotaal });
+  JAAR_TOTALEN_BV.push({ year, totaal: jaarTotaal, winst: summary.winst, btw: kwartalen.length ? btwJaarSaldo : null });
   const jaarTotaalHtml = `<div class="totaal-kaart">
     <div class="totaal-regel"><span>Geschatte Vpb</span><span>${eur(vpbEstimate.belasting || 0)}</span></div>
     <div class="totaal-regel totaal-eind"><span>Totaal ${year} (jaarlijks: Vpb)</span><span>${eur(Math.abs(jaarTotaal))} ${jaarTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>
@@ -656,8 +656,14 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     )
     .join('\n  <div style="page-break-before: always;"></div>\n');
   const grandTotaalBv = JAAR_TOTALEN_BV.reduce((a, j) => a + j.totaal, 0);
-  const totaalAlleJarenHtml = JAAR_TOTALEN_BV.length > 1
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren, jaarlijks: Vpb (${JAAR_TOTALEN_BV.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaalBv))} ${grandTotaalBv < 0 ? "te ontvangen" : "te betalen"}</span></div><p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`
+  // release33V5 — bij meerdere jaren bovenaan een overzicht per jaar met totaal (vervangt het losse totaalblok onderaan).
+  const btwT = (v) => v == null ? "—" : `${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}`;
+  const overzichtJarenHtml = JAAR_TOTALEN_BV.length > 1
+    ? `<h2>Overzicht ${JAAR_TOTALEN_BV[0].year} – ${JAAR_TOTALEN_BV[JAAR_TOTALEN_BV.length - 1].year}</h2>
+  <div class="totaal-kaart"><table class="samenvatting-scenarios overzicht-jaren"><thead><tr><th>Jaar</th><th>Resultaat vóór belasting</th><th>Geschatte Vpb</th><th>BTW-saldo jaar</th></tr></thead><tbody>
+    ${JAAR_TOTALEN_BV.map((j) => `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num"><strong>${eur(j.totaal)}</strong></td><td class="num btw">${btwT(j.btw)}</td></tr>`).join("")}
+    <tr class="totaal"><td>Totaal</td><td class="num">${eur(JAAR_TOTALEN_BV.reduce((a, j) => a + (j.winst || 0), 0))}</td><td class="num">${eur(grandTotaalBv)}</td><td class="num btw">${btwT(JAAR_TOTALEN_BV.reduce((a, j) => a + (j.btw || 0), 0))}</td></tr>
+  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, zonder verrekening van voorschotten of voorlopige aanslagen. De BTW wordt per kwartaal aangegeven en staat daarom apart. Per jaar volgt hieronder de volledige berekening.</p></div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -725,6 +731,10 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   .vergelijk-hint { color: #2563eb; font-size: 9.5px; font-style: italic; margin: -4px 0 8px; }
   .disclaimer { margin-top: 28px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #64748b; font-size: 9.5px; }
   .bv-melding { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
+  .samenvatting-scenarios { width: 100%; margin: 8px 0; font-size: 10px; }
+  .samenvatting-scenarios th, .samenvatting-scenarios td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; text-align: left; }
+  .samenvatting-scenarios th:not(:first-child), .samenvatting-scenarios td.num { text-align: right; }
+  .overzicht-jaren { font-size: 11px; } .overzicht-jaren td.btw { color: #64748b; } .overzicht-jaren tr.totaal td { font-weight: bold; border-top: 2px solid #0f172a; border-bottom: none; }
   @page { size: A4 portrait; margin: 16mm; }
 </style></head>
 <body>
@@ -735,8 +745,8 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     eigen-vermogen-verloop (geen volledige jaarrekening). Gebruik dit als hulpmiddel, niet als vervanging van je
     boekhouder of accountant.
   </div>
+  ${overzichtJarenHtml}
   ${sections}
-  ${totaalAlleJarenHtml}
   <div style="page-break-before: always;"></div>
   <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">
