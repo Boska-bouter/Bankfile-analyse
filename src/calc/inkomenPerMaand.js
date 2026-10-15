@@ -38,11 +38,21 @@ const GEEN_UITGAVE = new Set([
   "Terugboeking naar zakelijk", "Ontvangen van zakelijk", "Terugboeking van privé", "Kapitaalstorting", "Rekening-courant DGA",
   "Inkomsten/betalingen niet dit jaar",
 ]);
-// Privé-uitgave vanaf de privérekening.
+// release32V9 — bijschrijvingen in een uitgavencategorie (terugboeking/storno van een incasso, retour, restitutie)
+// verlagen de uitgaven, zoals in de categorieoverzichten. Niet: geld van personen, leningen, stortingen en
+// boekingen die nog beoordeeld moeten worden.
+const GEEN_TERUGBETALING = new Set([
+  "Overboeking van bekenden", "Overboekingen aan personen", "Leningen", "Leningen (privé)", "Privé opnames",
+  "Overig", "Nog te beoordelen", "Inkomsten", "Toeslagen", "Partneralimentatie", "Kinderalimentatie", "DGA-salaris",
+]);
+const isTerugbetaling = (tx) => tx.amount > 0 && !GEEN_TERUGBETALING.has(tx.category) && !ZAKELIJKE_OMZET.has(tx.category) && !inkomenKolom(tx);
+
+// Privé-uitgave vanaf de privérekening (een terugbetaling telt negatief mee).
 export function isPriveUitgave(tx) {
-  if (tx.isMirror || !(tx.amount < 0)) return false;
+  if (tx.isMirror || !tx.amount) return false;
   if ((tx.accountType || tx.type) === "Zakelijk") return false;
-  return !GEEN_UITGAVE.has(tx.category);
+  if (GEEN_UITGAVE.has(tx.category)) return false;
+  return tx.amount < 0 || isTerugbetaling(tx);
 }
 
 const IB_ZVW = new Set(["Belastingen: IB", "Belastingen: ZVW", "Belastingen: Naheffingen IB voorgaande jaren"]);
@@ -64,7 +74,8 @@ export function soortPriveOpname(tx, eigenPriveIbans = []) {
 }
 
 export function priveDeelZakelijk(tx, { jaar, percentages, autoStatus, heeftLeaseAuto, eigenPriveIbans }) {
-  if (tx.isMirror || !(tx.amount < 0) || (tx.accountType || tx.type) !== "Zakelijk") return null;
+  if (tx.isMirror || !tx.amount || (tx.accountType || tx.type) !== "Zakelijk") return null;
+  if (tx.amount > 0 && !isTerugbetaling(tx)) return null; // alleen terugbetalingen in een privé-categorie tellen mee
   const c = tx.category;
   if (c === "Privé opnames") {
     if (naarEigenPrive(tx, eigenPriveIbans)) return null; // staat al als uitgave aan de privékant
