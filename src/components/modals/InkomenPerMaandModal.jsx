@@ -122,6 +122,8 @@ ${naRegel}
 
 function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
   const [open, setOpen] = useState(null);
+  const nV = data.aantalVolledig;
+  const periodeTekst = nV === 12 ? `heel ${jaar}` : `${nV} volledige maand${nV === 1 ? "" : "en"}${nV ? ` (${bereik(data.volledigeMaanden)} ${jaar})` : ""}`;
   const naarExcel = async () => {
     const XLSX = await import("xlsx");
     const rijen = [["Soort", "Datum", "Tegenpartij", "Categorie", "Bedrag", "Privédeel"]];
@@ -131,7 +133,7 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rijen), `Privé via zakelijk ${jaar}`);
     XLSX.writeFile(wb, `Privé-uitgaven via zakelijk ${jaar}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);
   };
-  const html = () => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Privé-uitgaven via zakelijke rekening ${jaar}</title><style>body{font-family:system-ui,sans-serif;font-size:12px;margin:24px}td{padding:4px 8px}</style></head><body><h2>Privé-uitgaven via zakelijke rekening ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h2><table>${data.soorten.map((s) => `<tr><td>${s.soort}</td><td style="text-align:right">${eur(-s.bedrag)}</td></tr>`).join("")}<tr><td><b>Totaal</b></td><td style="text-align:right"><b>${eur(-data.soortenTotaal)}</b></td></tr></table></body></html>`;
+  const html = () => `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Privé-uitgaven via zakelijke rekening ${jaar}</title><style>body{font-family:system-ui,sans-serif;font-size:12px;margin:24px}td{padding:4px 8px}</style></head><body><h2>Privé-uitgaven via zakelijke rekening ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h2><p>Over ${periodeTekst}, dezelfde maanden als in Inkomen per maand.</p><table>${data.soorten.map((s) => `<tr><td>${s.soort}</td><td style="text-align:right">${eur(-s.bedrag)}</td></tr>`).join("")}<tr><td><b>Totaal</b></td><td style="text-align:right"><b>${eur(-data.soortenTotaal)}</b></td></tr></table></body></html>`;
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
@@ -145,7 +147,7 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
         </div>
       </div>
       <div className="overflow-y-auto p-4">
-        <p className="text-xs text-slate-500 mb-3">Percentages zoals in de aangifte (soort ruimte, % zakelijk/privé, privéauto). Overboekingen naar de eigen privérekening staan hier niet: die tellen aan de privékant. Klik op een regel om de boekingen te zien.</p>
+        <p className="text-xs text-slate-500 mb-3">Percentages zoals in de aangifte (soort ruimte, % zakelijk/privé, privéauto). Overboekingen naar de eigen privérekening staan hier niet: die tellen aan de privékant. Over {periodeTekst}, dezelfde maanden als in de tabel{data.soortenBuiten ? <> (de maanden zonder volledige gegevens, samen {eur(-data.soortenBuiten)}, tellen niet mee)</> : ""}. Klik op een regel om de boekingen te zien.</p>
         {data.soorten.length === 0 && <p className="text-sm text-slate-500">Geen privé-uitgaven via de zakelijke rekening in {jaar}.</p>}
         <div className="divide-y divide-slate-100">
           {data.soorten.map((s) => (
@@ -170,7 +172,7 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
           ))}
           {data.soorten.length > 0 && (
             <div className="flex items-center justify-between py-2 text-sm font-semibold">
-              <span>Totaal via zakelijke rekening, heel {jaar} (ook maanden die in de tabel niet meetellen)</span><span className="font-mono text-rose-800">{eur(-data.soortenTotaal)}</span>
+              <span>Totaal via zakelijke rekening, {periodeTekst}</span><span className="font-mono text-rose-800">{eur(-data.soortenTotaal)}</span>
             </div>
           )}
         </div>
@@ -228,7 +230,7 @@ export default function InkomenPerMaandModal({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([kop, ...rijen]), `Inkomen ${jaar}`);
     if (data.soorten.length) {
-      const det = [["Privé-uitgaven via zakelijke rekening (hele jaar)", "Aantal", "Bedrag"], ...data.soorten.map((x) => [x.soort, x.boekingen.length, -x.bedrag]), ["Totaal", "", -data.soortenTotaal]];
+      const det = [[`Privé-uitgaven via zakelijke rekening (${data.aantalVolledig} volledige maanden)`, "Aantal", "Bedrag"], ...data.soorten.map((x) => [x.soort, x.boekingen.length, -x.bedrag]), ["Totaal", "", -data.soortenTotaal]];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), "Privé via zakelijk");
     }
     XLSX.writeFile(wb, `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);

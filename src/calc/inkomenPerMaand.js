@@ -195,8 +195,16 @@ export function berekenInkomenPerMaand({
   // Totalen en gemiddelden ALLEEN over de volledige maanden (inkomen én uitgaven), zodat ze vergelijkbaar zijn.
   const totalen = Object.fromEntries(sleutels.map((k) => [k, som(k, volledig)]));
   const gemiddeld = Object.fromEntries(sleutels.map((k) => [k, volledig.length ? r2(som(k, volledig) / volledig.length) : null]));
+  // release33V2 — de details gaan over dezelfde (volledige) maanden als de tabel, zodat de totalen gelijk zijn.
+  const volSet = new Set(volledig.map((m) => m.maand));
+  let soortenBuiten = 0;
   const soortLijst = Object.entries(soorten)
-    .map(([soort, s]) => ({ soort, bedrag: r2(s.bedrag), boekingen: s.boekingen.sort((a, b) => a.tx.date - b.tx.date) }))
+    .map(([soort, s]) => {
+      const binnen = s.boekingen.filter((b) => volSet.has(b.tx.date.getMonth()));
+      soortenBuiten += s.boekingen.filter((b) => !volSet.has(b.tx.date.getMonth())).reduce((a, b) => a + b.bedrag, 0);
+      return { soort, bedrag: r2(binnen.reduce((a, b) => a + b.bedrag, 0)), boekingen: binnen.sort((a, b) => a.tx.date - b.tx.date) };
+    })
+    .filter((x) => x.boekingen.length > 0)
     .sort((a, b) => b.bedrag - a.bedrag);
   return {
     maanden, kolommen, totalen, gemiddeld, aantalVolledig: volledig.length, isBV,
@@ -205,6 +213,6 @@ export function berekenInkomenPerMaand({
     omzetJaar: { excl: som("omzetExcl", maanden), incl: som("omzetIncl", maanden) },
     zakelijkInDossier: !!periodeZak, priveInDossier: !!periodePri,
     zakVanPrive: som("zakVanPrive", volledig),
-    soorten: soortLijst, soortenTotaal: r2(soortLijst.reduce((a, s) => a + s.bedrag, 0)),
+    soorten: soortLijst, soortenBuiten: r2(soortenBuiten), soortenTotaal: r2(soortLijst.reduce((a, s) => a + s.bedrag, 0)),
   };
 }

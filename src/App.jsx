@@ -1732,7 +1732,7 @@ export default function App() {
     if (jaren.length === 0) return;
     setOnderbouwingKeuze(null);
     setOnderbouwingJaren(jaren);
-    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified }));
+    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified, categoryZakelijkPercentage: categoryZakelijkPercentageEff, werkruimteStatus }));
   };
   // BTW-aangifte per kwartaal als los document (één of meer jaren).
   const [btwOverzichtKeuze, setBtwOverzichtKeuze] = useState(null);

@@ -62,3 +62,14 @@ export function werkruimteBlokHtml(year, classified, categoryZakelijkPercentage,
     <p class="toelichting">Vanaf de zakelijke rekening betaald: dat deel is door de onderneming betaald; het privé-deel wordt als privéonttrekking gezien. Vanaf de privérekening betaald: het zakelijke deel is een zakelijke kost die privé is voorgeschoten.</p>
   </div>`;
 }
+
+// release33V3 — in de indicatieve aangifteberekening alleen nog een korte regel, en alleen als er echt een zakelijk deel
+// van huur/energie/gemeentelijke lasten meetelt. De volledige tabel per rekening staat in de Onderbouwing.
+export function werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus) {
+  const { regels } = werkruimteRegelsVoorJaar(year, classified, categoryZakelijkPercentage, werkruimteStatus);
+  const metDeel = regels.filter((r) => Math.abs(r.zakelijk) >= 0.005);
+  if (metDeel.length === 0) return "";
+  const naam = (c) => c.replace(/^Privé - /, "").replace(/^./, (x) => x.toUpperCase());
+  const tekst = metDeel.map((r) => `${naam(r.categorie)} — ${REK_LABEL[r.rekening].toLowerCase()}${r.soort ? `, ${WERKRUIMTE_LABELS[r.soort].toLowerCase()}` : ", soort ruimte niet aangegeven"}: ${r.percentage}% van ${eur(r.bedrag)} = ${eur(r.zakelijk)}`).join("; ");
+  return `<p class="toelichting"><strong>Huisvesting, zakelijk deel ${year}:</strong> ${tekst}. Volledige verantwoording per rekening: zie Onderbouwing.</p>`;
+}
