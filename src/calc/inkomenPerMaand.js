@@ -44,6 +44,8 @@ const GEEN_UITGAVE = new Set([
 const GEEN_TERUGBETALING = new Set([
   "Overboeking van bekenden", "Overboekingen aan personen", "Leningen", "Leningen (privé)", "Privé opnames",
   "Overig", "Nog te beoordelen", "Inkomsten", "Toeslagen", "Partneralimentatie", "Kinderalimentatie", "DGA-salaris",
+  // release33V1 — ontvangen Tikkies/geld (Privé: overig) en teruggaven van de Belastingdienst zijn geen terugbetaling van een uitgave.
+  "Privé: overig", "Belastingen: overig",
 ]);
 const isTerugbetaling = (tx) => tx.amount > 0 && !GEEN_TERUGBETALING.has(tx.category) && !ZAKELIJKE_OMZET.has(tx.category) && !inkomenKolom(tx);
 
