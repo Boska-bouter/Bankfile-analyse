@@ -9,16 +9,18 @@ const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
 const KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 function bouwHtml({ data, jaar, klantNaam }) {
-  const kol = data.kolommen;
+  const kol = data.kolommen.filter((c) => !c.alleenInfo);
+  const pv = data.heeftPriveInkomen;
   const cel = (v) => `<td style="text-align:right;padding:4px 8px">${v == null ? "—" : eur(v)}</td>`;
-  const rij = (m) => `<tr><td style="padding:4px 8px">${MAANDEN[m.maand]}${m.volledig ? "" : " *"}</td>${kol.map((c) => cel(m[c.key])).join("")}${cel(m.prive)}${cel(m.totaal)}</tr>`;
+  const rij = (m) => `<tr><td style="padding:4px 8px">${MAANDEN[m.maand]}${m.volledig ? "" : " *"}</td>${kol.map((c) => cel(m[c.key])).join("")}${pv ? cel(m.prive) : ""}${cel(m.totaal)}${cel(-m.uitgaven)}${cel(m.verschil)}</tr>`;
+  const voet = (label, o) => `<tr><td style="padding:4px 8px">${label}</td>${kol.map((c) => cel(o[c.key])).join("")}${pv ? cel(o.prive) : ""}${cel(o.totaal)}${cel(o.uitgaven == null ? null : -o.uitgaven)}${cel(o.verschil)}</tr>`;
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Inkomen per maand ${jaar}</title>
 <style>body{font-family:system-ui,sans-serif;font-size:12px;color:#0f172a;margin:24px}table{border-collapse:collapse;width:100%}th{text-align:right;padding:4px 8px;border-bottom:1px solid #cbd5e1;font-weight:600}th:first-child{text-align:left}tr:nth-child(even) td{background:#f8fafc}tfoot td{font-weight:700;border-top:1px solid #cbd5e1}p{color:#475569}</style></head><body>
 <h2>Inkomen per maand ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h2>
-<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}<th>Privé totaal</th><th>${data.isBV ? "Huishouden (privé)" : "Totaal (omzet excl. + privé)"}</th></tr></thead>
+<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${data.isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th><th>Privé-uitgaven</th><th>Verschil</th></tr></thead>
 <tbody>${data.maanden.map(rij).join("")}</tbody>
-<tfoot><tr><td style="padding:4px 8px">Jaartotaal</td>${kol.map((c) => cel(data.totalen[c.key])).join("")}${cel(data.totalen.prive)}${cel(data.totalen.totaal)}</tr>
-<tr><td style="padding:4px 8px">Gemiddeld per maand</td>${kol.map((c) => cel(data.gemiddeld[c.key])).join("")}${cel(data.gemiddeld.prive)}${cel(data.gemiddeld.totaal)}</tr></tfoot></table>
+<tfoot>${voet("Jaartotaal", data.totalen)}${voet("Gemiddeld per maand", data.gemiddeld)}</tfoot></table>
+<p>Privé-uitgaven = afschrijvingen op de privérekening(en) plus privé-uitgaven met de zakelijke pas; overboekingen tussen eigen rekeningen en sparen tellen niet mee. Verschil = totaal inkomen − privé-uitgaven.</p>
 <p>* Maand zonder volledige gegevens (niet alle rekeningen geladen); telt niet mee in het gemiddelde (${data.aantalVolledig} van 12 maanden volledig).${data.isBV ? " BV: de omzet is van de BV en telt niet mee in het huishoudinkomen." : ""}</p>
 </body></html>`;
 }
@@ -30,17 +32,20 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
     () => berekenInkomenPerMaand({ classified, jaar, categoryBtwRates, btwVerlegd, periodeZak, periodePri, isBV }),
     [classified, jaar, categoryBtwRates, btwVerlegd, periodeZak, periodePri, isBV]
   );
-  const kol = data.kolommen;
-  const max = Math.max(1, ...data.maanden.map((m) => (isBV ? 0 : Math.max(0, m.omzetExcl)) + Math.max(0, m.prive)));
+  const kol = data.kolommen.filter((c) => !c.alleenInfo); // omzet incl. BTW alleen in de Excel-export
+  const pv = data.heeftPriveInkomen;
+  const max = Math.max(1, ...data.maanden.map((m) => Math.max((isBV ? 0 : Math.max(0, m.omzetExcl)) + Math.max(0, m.prive), m.uitgaven)));
   const openBoekingen = open ? (data.maanden[open.maand].boekingen[open.key] || []).slice().sort((a, b) => a.date - b.date) : [];
-  const openLabel = open ? (kol.find((c) => c.key === open.key)?.label || "") : "";
+  const openLabel = open ? (open.key === "uitgaven" ? "Privé-uitgaven" : kol.find((c) => c.key === open.key)?.label || "") : "";
 
   const naarExcel = async () => {
     const XLSX = await import("xlsx");
-    const kop = ["Maand", ...kol.map((c) => c.label), "Privé totaal", isBV ? "Huishouden (privé)" : "Totaal (omzet excl. + privé)", "Volledige gegevens"];
-    const rijen = data.maanden.map((m) => [MAANDEN[m.maand], ...kol.map((c) => m[c.key]), m.prive, m.totaal, m.volledig ? "ja" : "nee"]);
-    rijen.push(["Jaartotaal", ...kol.map((c) => data.totalen[c.key]), data.totalen.prive, data.totalen.totaal, ""]);
-    rijen.push(["Gemiddeld per maand", ...kol.map((c) => data.gemiddeld[c.key]), data.gemiddeld.prive, data.gemiddeld.totaal, `${data.aantalVolledig} van 12`]);
+    const alle = data.kolommen; // in Excel ook omzet incl. BTW
+    const kop = ["Maand", ...alle.map((c) => c.label), ...(pv ? ["Privé totaal"] : []), isBV ? "Inkomen huishouden" : "Totaal inkomen", "Privé-uitgaven", "Verschil", "Volledige gegevens"];
+    const regel = (label, o, vol) => [label, ...alle.map((c) => o[c.key]), ...(pv ? [o.prive] : []), o.totaal, o.uitgaven == null ? null : -o.uitgaven, o.verschil, vol];
+    const rijen = data.maanden.map((m) => regel(MAANDEN[m.maand], m, m.volledig ? "ja" : "nee"));
+    rijen.push(regel("Jaartotaal", data.totalen, ""));
+    rijen.push(regel("Gemiddeld per maand", data.gemiddeld, `${data.aantalVolledig} van 12`));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([kop, ...rijen]), `Inkomen ${jaar}`);
     XLSX.writeFile(wb, `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);
@@ -51,13 +56,15 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
     const geladen = k.startsWith("omzet") ? m.zakGeladen : m.priGeladen;
     if (!geladen && v === 0) return <td className="px-2 py-1.5 text-right text-[11px] text-slate-300" title="Rekening niet geladen voor deze maand">niet geladen</td>;
     const n = (m.boekingen[k] || []).length;
+    const uit = k === "uitgaven";
     return (
-      <td className="px-2 py-1.5 text-right font-mono">
+      <td className={`px-2 py-1.5 text-right font-mono ${uit ? `bg-rose-50/40 ${geladen ? "text-rose-700" : "text-slate-400"}` : ""}`} title={uit && !geladen ? "Privérekening niet geladen: alleen privé-uitgaven met de zakelijke pas" : undefined}>
         {n > 0 ? (
           <button type="button" onClick={() => setOpen(open && open.maand === m.maand && open.key === k ? null : { maand: m.maand, key: k })} className={`underline decoration-dotted hover:text-teal-800 ${open && open.maand === m.maand && open.key === k ? "text-teal-800 font-semibold" : ""}`} title={`${n} boeking${n === 1 ? "" : "en"} tonen`}>
-            {eur(v)}
+            {eur(uit ? -v : v)}
           </button>
         ) : <span className="text-slate-300">{eur(0)}</span>}
+        {uit && !geladen && n > 0 && " *"}
       </td>
     );
   };
@@ -89,9 +96,12 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
               {data.maanden.map((m) => {
                 const z = isBV ? 0 : Math.max(0, m.omzetExcl), p = Math.max(0, m.prive);
                 return (
-                  <div key={m.maand} className="flex-1 flex flex-col justify-end h-full" title={`${MAANDEN[m.maand]}: ${eur(m.totaal)}${m.volledig ? "" : " (onvolledig)"}`}>
-                    <div className={`w-full rounded-t-sm bg-sky-400 ${m.volledig ? "" : "opacity-40"}`} style={{ height: `${(100 * p) / max}%` }} />
-                    <div className={`w-full bg-teal-600 ${p > 0 ? "" : "rounded-t-sm"} ${m.volledig ? "" : "opacity-40"}`} style={{ height: `${(100 * z) / max}%` }} />
+                  <div key={m.maand} className={`flex-1 flex items-end gap-0.5 h-full ${m.volledig ? "" : "opacity-40"}`} title={`${MAANDEN[m.maand]}: inkomen ${eur(m.totaal)} · uitgaven ${eur(m.uitgaven)}${m.volledig ? "" : " (onvolledig)"}`}>
+                    <div className="flex-1 flex flex-col justify-end h-full">
+                      <div className="w-full rounded-t-sm bg-sky-400" style={{ height: `${(100 * p) / max}%` }} />
+                      <div className={`w-full bg-teal-600 ${p > 0 ? "" : "rounded-t-sm"}`} style={{ height: `${(100 * z) / max}%` }} />
+                    </div>
+                    <div className="flex-1 rounded-t-sm" style={{ background: "#fb7185", height: `${(100 * m.uitgaven) / max}%` }} />
                   </div>
                 );
               })}
@@ -99,7 +109,8 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
             <div className="flex gap-1.5 mt-1">{KORT.map((k) => <span key={k} className="flex-1 text-center text-[10px] text-slate-500">{k}</span>)}</div>
             <div className="flex flex-wrap gap-3 mt-1.5 text-[11px] text-slate-600">
               {!isBV && <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-teal-600" /> Omzet excl. BTW</span>}
-              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-sky-400" /> Privé-inkomen</span>
+              {pv && <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-sky-400" /> Privé-inkomen</span>}
+              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: "#fb7185" }} /> Privé-uitgaven</span>
               <span className="text-slate-400">Lichter = maand zonder volledige gegevens</span>
             </div>
           </div>
@@ -110,8 +121,10 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
                 <tr className="border-b border-slate-200">
                   <th className="px-2 py-1.5 text-left font-medium">Maand</th>
                   {kol.map((c) => <th key={c.key} className={`px-2 py-1.5 text-right font-medium ${c.alleenInfo ? "text-slate-400" : ""}`}>{c.label}</th>)}
-                  <th className="px-2 py-1.5 text-right font-medium">Privé totaal</th>
-                  <th className="px-2 py-1.5 text-right font-semibold text-slate-700">{isBV ? "Huishouden (privé)" : "Totaal"}</th>
+                  {pv && <th className="px-2 py-1.5 text-right font-medium">Privé totaal</th>}
+                  <th className="px-2 py-1.5 text-right font-semibold text-slate-700">{isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th>
+                  <th className="px-2 py-1.5 text-right font-semibold text-rose-700">Privé-uitgaven</th>
+                  <th className="px-2 py-1.5 text-right font-semibold text-slate-700">Verschil</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -119,8 +132,10 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
                   <tr key={m.maand} className={m.volledig ? "" : "bg-slate-50/70"}>
                     <td className="px-2 py-1.5">{MAANDEN[m.maand]}{!m.volledig && <span className="ml-1 text-amber-600" title="Niet alle rekeningen geladen voor deze maand">*</span>}</td>
                     {kol.map((c) => <Cel key={c.key} m={m} k={c.key} />)}
-                    <td className="px-2 py-1.5 text-right font-mono">{eur(m.prive)}</td>
+                    {pv && <td className="px-2 py-1.5 text-right font-mono">{eur(m.prive)}</td>}
                     <td className="px-2 py-1.5 text-right font-mono font-semibold">{eur(m.totaal)}</td>
+                    <Cel m={m} k="uitgaven" />
+                    <td className={`px-2 py-1.5 text-right font-mono font-semibold ${m.verschil < 0 ? "text-rose-700" : "text-emerald-700"}`}>{eur(m.verschil)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -128,14 +143,18 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
                 <tr>
                   <td className="px-2 py-1.5">Jaartotaal</td>
                   {kol.map((c) => <td key={c.key} className="px-2 py-1.5 text-right font-mono">{eur(data.totalen[c.key])}</td>)}
-                  <td className="px-2 py-1.5 text-right font-mono">{eur(data.totalen.prive)}</td>
+                  {pv && <td className="px-2 py-1.5 text-right font-mono">{eur(data.totalen.prive)}</td>}
                   <td className="px-2 py-1.5 text-right font-mono">{eur(data.totalen.totaal)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono text-rose-700">{eur(-data.totalen.uitgaven)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{eur(data.totalen.verschil)}</td>
                 </tr>
                 <tr className="text-teal-900">
                   <td className="px-2 py-1.5">Gemiddeld per maand</td>
                   {kol.map((c) => <td key={c.key} className="px-2 py-1.5 text-right font-mono">{data.gemiddeld[c.key] == null ? "—" : eur(data.gemiddeld[c.key])}</td>)}
-                  <td className="px-2 py-1.5 text-right font-mono">{data.gemiddeld.prive == null ? "—" : eur(data.gemiddeld.prive)}</td>
+                  {pv && <td className="px-2 py-1.5 text-right font-mono">{data.gemiddeld.prive == null ? "—" : eur(data.gemiddeld.prive)}</td>}
                   <td className="px-2 py-1.5 text-right font-mono">{data.gemiddeld.totaal == null ? "—" : eur(data.gemiddeld.totaal)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono text-rose-700">{data.gemiddeld.uitgaven == null ? "—" : eur(-data.gemiddeld.uitgaven)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{data.gemiddeld.verschil == null ? "—" : eur(data.gemiddeld.verschil)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -146,7 +165,8 @@ export default function InkomenPerMaandModal({ classified, years, beginJaar, cat
             {!data.priInJaar && <p>Dit jaar is geen privérekening geladen: privé-inkomen (loon, uitkering, toeslagen) ontbreekt.</p>}
             {!data.zakInJaar && !isBV && <p>Dit jaar is geen zakelijke rekening geladen: omzet ontbreekt.</p>}
             {isBV && <p>BV: de omzet is van de BV en telt niet mee in het huishoudinkomen; daarvoor telt het DGA-salaris op de privérekening.</p>}
-            <p>Loon, uitkering en overig = alle boekingen in de categorie "Inkomsten" op de privérekening. Overboekingen van de eigen zakelijke rekening (privé opnames) zijn geen inkomen en staan er niet in. Klik op een bedrag om de boekingen te zien.</p>
+            {pv && <p>Loon, uitkering en overig = alle boekingen in de categorie "Inkomsten" op de privérekening.</p>}
+            <p>Privé-uitgaven = afschrijvingen op de privérekening(en) plus privé-uitgaven met de zakelijke pas (pin en geldautomaat). Overboekingen tussen eigen rekeningen en naar sparen tellen niet mee, net als privé opnames per overboeking (dat is geen inkomen en geen uitgave). Verschil = totaal inkomen − privé-uitgaven. Klik op een bedrag om de boekingen te zien.</p>
           </div>
 
           {open && (
