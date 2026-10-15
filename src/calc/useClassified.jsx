@@ -5,15 +5,18 @@ import { ibansMatch } from "../utils/normalization.js";
 import { detectOwnAccountTransfer, resolveClassification } from "../classification/classify.js";
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
+import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
 
 export function useClassified(p) {
   const {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
   } = p;
 
   return useMemo(() => {
+    // release32V4 — zelfde percentages als de aangifte, dus ook "soort ruimte = privé / niet zelfstandig" telt als 0%.
+    const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
     const base0 = transactions.map((tx) => {
       let resolved = resolveClassification(
         tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
@@ -31,7 +34,7 @@ export function useClassified(p) {
       // alles ongewijzigd, zodat er nooit een bedrag stilzwijgend verspringt.
       const tegenhanger = SPLIT_CATEGORY_NAMES[resolved.category];
       if (tegenhanger && resolved.type === "Prive" && accountTypeByFile[tx.source] !== "Zakelijk") {
-        const pct = (c) => categoryZakelijkPercentage?.[c]?.[tx.year];
+        const pct = (c) => { const m = pctEff?.[c]; return m?.[`${tx.year}:prive`] ?? m?.[tx.year]; };
         if (pct(resolved.category) === 0 && !(pct(tegenhanger) > 0)) resolved = { ...resolved, category: tegenhanger };
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
@@ -107,5 +110,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
 }

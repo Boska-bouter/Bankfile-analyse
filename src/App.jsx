@@ -1365,7 +1365,7 @@ export default function App() {
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
