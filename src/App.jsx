@@ -59,7 +59,7 @@ import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
-import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
+import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen, vindInkomstenInKosten } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
 import OpslaanModal from "./components/shared/OpslaanModal.jsx";
 import HerstelcodeModal from "./components/shared/HerstelcodeModal.jsx";
@@ -2864,6 +2864,7 @@ export default function App() {
       dekking: berekenDekking({ allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, bevestigd: bevestigdeControles }),
       terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
       sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles, gatenAlleen: rechtsvorm !== "bv" }),
+      kostenIn: vindInkomstenInKosten({ classified, bevestigd: bevestigdeControles }),
       gatenAlleen: rechtsvorm !== "bv",
       eenzijdig: gezamenlijkePeriode(periodePerSoort.Zakelijk, periodePerSoort.Prive)?.eenzijdig || [],
     };
@@ -2874,6 +2875,11 @@ export default function App() {
   const toepassenTerugkerend = (t) => {
     snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
+  };
+  // release33V7 — bijschrijvingen van één tegenpartij in een kostencategorie naar een andere categorie (bijv. omzet).
+  const verplaatsBijschrijvingen = (ids, categorie, naam) => {
+    snapshotBeforeAction(`Bijschrijvingen ${naam} → ${categorie}`);
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category: categorie, type: "Zakelijk" }; return next; });
   };
   // release22V9 — alle betalingen van deze terugkerende reeks op een zelf gekozen categorie zetten.
   const toepassenTerugkerendAlle = (t, categorie, type) => {
@@ -2994,7 +3000,7 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,

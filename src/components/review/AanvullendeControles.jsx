@@ -51,12 +51,38 @@ function TerugkerendItem({ t, onBevestig, onToepassenTerugkerend, onToepassenTer
   );
 }
 
-export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle }) {
+// release33V7 — bijschrijvingen in een kostencategorie (vaak omzet of terugbetalingen die verkeerd staan).
+function KostenInItem({ k, onBevestig, onVerplaats }) {
+  const [keuze, setKeuze] = useState({});
+  return (
+    <div className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
+      <p><strong>{k.categorie} {k.jaar}</strong>: {k.aantalIn}× bijgeschreven, samen {eur(k.in)}; betaald {eur(k.uit)}.{k.positief ? <> Per saldo <strong>{eur(k.saldo)} ontvangen</strong> — voor een kostenpost is dat ongebruikelijk.</> : " Veel bijschrijvingen voor een kostenpost."}</p>
+      <p className="mt-1 text-slate-600">Grootste bijschrijvingen:</p>
+      {k.tegenpartijen.map((t) => (
+        <div key={t.naam} className="mt-1 flex flex-wrap items-center gap-2">
+          <span className="flex-1 min-w-[14rem]">{t.naam} — {t.aantal}× samen {eur(t.bedrag)}</span>
+          {onVerplaats && (
+            <span className="inline-flex items-center gap-1.5">
+              <Knop primair onClick={() => onVerplaats(t.ids, "Zakelijke inkomsten", t.naam)}>Zet op Zakelijke inkomsten</Knop>
+              <span className="text-slate-500">of op:</span>
+              <CategorieSelect value={keuze[t.naam] || null} onChange={(v) => setKeuze((p) => ({ ...p, [t.naam]: v }))} placeholder="kies categorie…" className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs max-w-[14rem]" />
+              {keuze[t.naam] && <Knop primair onClick={() => { onVerplaats(t.ids, keuze[t.naam], t.naam); setKeuze((p) => ({ ...p, [t.naam]: "" })); }}>Toepassen</Knop>}
+            </span>
+          )}
+        </div>
+      ))}
+      <div className="mt-2"><Knop onClick={() => onBevestig(k.key)}>Klopt zo (bijv. terugbetalingen)</Knop></div>
+    </div>
+  );
+}
+
+export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle, onVerplaatsBijschrijvingen }) {
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
+  const kostenIn = data.kostenIn || [];
   // 15V7: jaarverschillen (sprongen) zijn "inzicht" en tellen niet mee als punt om te bekijken.
-  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length;
+  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length + kostenIn.length;
   const gatenAlleen = !!data.gatenAlleen;
   const open = openOverride === null ? totaal > 0 : openOverride;
   const inzichtTekst = sprongen.length > 0 ? ` · inzicht: ${sprongen.length}` : "";
@@ -114,6 +140,14 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
             {terugkerend.length === 0 ? <p className="text-emerald-700">Geen afwijkingen gevonden.</p> : terugkerend.map((t) => (
               <TerugkerendItem key={t.key} t={t} onBevestig={onBevestig} onToepassenTerugkerend={onToepassenTerugkerend} onToepassenTerugkerendAlle={onToepassenTerugkerendAlle} />
             ))}
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-1.5">Bijschrijvingen in een kostencategorie</h4>
+            {kostenIn.length === 0 ? <p className="text-emerald-700">Geen kostencategorieën met opvallende bijschrijvingen.</p> : kostenIn.map((k) => (
+              <KostenInItem key={k.key} k={k} onBevestig={onBevestig} onVerplaats={onVerplaatsBijschrijvingen} />
+            ))}
+            <p className="text-xs text-slate-400">Gemeld als een kostencategorie in een jaar per saldo positief is met minstens € 1.000 aan bijschrijvingen, of minstens 10 bijschrijvingen van samen € 1.000 of meer heeft. Vaak omzet of terugbetalingen die in de verkeerde categorie staan.</p>
           </div>
 
           <div className={sprongen.length > 0 ? "rounded-lg border border-slate-200 bg-slate-50 p-3" : ""}>

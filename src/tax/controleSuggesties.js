@@ -156,3 +156,39 @@ export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar =
   }
   return meldingen;
 }
+
+// ---------- C4 (release33V7) ----------
+// Bijschrijvingen in een kostencategorie: een kostencategorie die in een jaar per saldo positief uitkomt, of met
+// veel/grote bijschrijvingen. Vaak omzet of terugbetalingen die verkeerd zijn ingedeeld (bijv. de dagelijkse
+// afrekeningen van een betaalterminal die als "Huur" stonden). Per categorie per jaar, met de grootste tegenpartijen.
+export function vindInkomstenInKosten({ classified = [], bevestigd = {}, minPositief = 1000, minAantal = 10, minBedrag = 1000 }) {
+  const per = {};
+  for (const tx of classified) {
+    if (tx.isMirror || !tx.date || tx.transferLocked) continue;
+    const cat = tx.category;
+    if (!cat || fiscalTreatmentOf(cat) !== "kosten") continue;
+    const y = tx.date.getFullYear();
+    const o = ((per[cat] ||= {})[y] ||= { in: 0, uit: 0, aantalIn: 0, tegen: {} });
+    if (tx.amount > 0) {
+      o.in += tx.amount; o.aantalIn += 1;
+      const naam = tx.counterparty || tx.description || "onbekend";
+      const t = (o.tegen[naam] ||= { naam, bedrag: 0, ids: [] });
+      t.bedrag += tx.amount; t.ids.push(tx.id);
+    } else o.uit += -tx.amount;
+  }
+  const meldingen = [];
+  for (const [cat, perJaar] of Object.entries(per)) {
+    for (const [y, o] of Object.entries(perJaar)) {
+      const saldo = o.in - o.uit;
+      const positief = saldo > 0 && o.in >= minPositief;
+      const veel = o.aantalIn >= minAantal && o.in >= minBedrag;
+      if (!positief && !veel) continue;
+      const key = `kostenIn|${cat}|${y}`;
+      if (bevestigd[key]) continue;
+      const tegenpartijen = Object.values(o.tegen).sort((a, b) => b.bedrag - a.bedrag).slice(0, 3)
+        .map((t) => ({ ...t, bedrag: Math.round(t.bedrag * 100) / 100, aantal: t.ids.length }));
+      meldingen.push({ key, categorie: cat, jaar: Number(y), in: Math.round(o.in * 100) / 100, uit: Math.round(o.uit * 100) / 100, saldo: Math.round(saldo * 100) / 100, aantalIn: o.aantalIn, positief, tegenpartijen });
+    }
+  }
+  return meldingen.sort((a, b) => b.in - a.in);
+}
