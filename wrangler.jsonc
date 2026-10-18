@@ -1,6 +1,7 @@
 {
   "name": "bankfile-analyse",
   "main": "worker/index.js",
+  "keep_vars": true ,
   "compatibility_date": "2026-09-17",
   "assets": {
     "directory": "./dist",
