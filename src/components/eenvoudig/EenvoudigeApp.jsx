@@ -191,14 +191,14 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
         <div className="grid gap-4 md:grid-cols-[1fr_20rem]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="text-lg font-bold">Je gegevens</h2>
-            <p className="mb-3 text-sm text-slate-600">Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe.</p>
+            <p className="mb-3 text-sm text-slate-600">{bestanden.length === 0 ? "Er zijn nog geen bankbestanden. Voeg de afschriften van je zakelijke (en eventueel privé) rekening toe; de app leest ze daarna in." : "Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe."}</p>
             <ul className="mb-3 space-y-1 text-sm">
               {bestanden.map((f) => <li key={f.naam} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="truncate">{f.naam}</span><span className="shrink-0 text-slate-500">{f.type === "Zakelijk" ? "zakelijk" : f.type === "Prive" ? "privé" : "?"}</span></li>)}
             </ul>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={onBestandToevoegen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50"><Upload className="h-4 w-4" /> Bankbestand toevoegen</button>
             </div>
-            <button type="button" onClick={() => setStap(2)} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 2: Nakijken →</button>
+            {bestanden.length > 0 && <button type="button" onClick={() => setStap(2)} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 2: Nakijken →</button>}
           </div>
           <Zekerheid b={b} compact />
         </div>
