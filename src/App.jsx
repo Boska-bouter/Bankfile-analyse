@@ -4515,6 +4515,10 @@ export default function App() {
         className="onderbalk sticky bottom-0 z-[70] flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-stone-50/95 px-3 sm:px-5 py-1"
         style={{ bottom: 0, paddingTop: 8, paddingBottom: "calc(0.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
+        {/* nieuw-V2R8 — in Eenvoudig (geen zijbalk) staan versie en copyright links in deze onderbalk */}
+        {eenvoudigActief && (
+          <span className="mr-auto text-[11px] text-slate-400">Gegevens blijven lokaal · © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</span>
+        )}
         <button
           onClick={() => setShowFeedback(true)}
           className="inline-flex items-center gap-2 rounded-full border-2 border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
