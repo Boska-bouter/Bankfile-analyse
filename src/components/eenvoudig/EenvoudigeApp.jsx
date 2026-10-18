@@ -61,7 +61,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -107,7 +107,8 @@ export default function EenvoudigeApp({
     if (!vraag) return;
     for (const g of vraag.groepen) {
       const patch = keuze.category ? keuze : categorieVoorAntwoord(keuze, g.teken, g.rekening);
-      onAntwoord(g.naam, g.txs[0].amount, patch);
+      if (g.perBoeking && onRijAntwoord) onRijAntwoord(g.txs.map((t) => t.id), patch);
+      else onAntwoord(g.naam, g.txs[0].amount, patch);
     }
     const k = typeof keuze === "string" ? keuze : `cat:${keuze.category}`;
     setGekozenKeys((p) => [...vraag.groepen.map((g) => g.key), ...p.filter((x) => !vraag.groepen.some((g) => g.key === x))]);
@@ -261,8 +262,13 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                 <p className="mb-3 text-sm text-slate-600">
                   {vraag.soort === "kleinePin"
                     ? "Kleine pinbetalingen die de app niet kon herkennen, bijvoorbeeld bij winkels. Je antwoord geldt voor allemaal."
-                    : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; je antwoord geldt voor allemaal, ook in andere jaren.</>}
+                    : vraag.groepen[0]?.perBoeking
+                      ? <>Betaling via een betaaldienst. De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b> van deze partij; je antwoord geldt alleen daarvoor.</>
+                      : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; je antwoord geldt voor allemaal, ook in andere jaren.</>}
                 </p>
+                {vraag.betaaldienst && !vraag.groepen[0]?.perBoeking && (
+                  <p className="-mt-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Dit is een betaaldienst: hierachter kunnen verschillende betalingen zitten, zakelijk en privé. Twijfel je? Kies <b>Weet ik niet</b>; dan kan het in Uitgebreid per boeking worden ingedeeld.</p>
+                )}
                 {(() => {
                   // nieuw-V3R2 — geen voorbeeldomschrijving meer in dit vak: het bedrag is het totaal van alle boekingen in het jaar.
                   const nJaar = vraag.groepen.flatMap((g) => g.txs).filter((t) => jaar == null || t.year === jaar).length;

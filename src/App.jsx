@@ -1927,6 +1927,10 @@ export default function App() {
     snapshotBeforeAction("Categorie/type aangepast");
     setOverridesByCounterparty((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
   };
+  const rijAntwoord = (ids, patch) => {
+    snapshotBeforeAction("Categorie/type aangepast");
+    setOverridesByRow((prev) => { const n = { ...prev }; for (const id of ids) n[id] = { ...(n[id] || {}), ...patch }; return n; });
+  };
   const wisAntwoord = (key) => {
     snapshotBeforeAction("Tegenpartijregel verwijderd");
     setOverridesByCounterparty((prev) => { const n = { ...prev }; delete n[key]; return n; });
@@ -3843,7 +3847,7 @@ export default function App() {
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
             onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
-            antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord}
+            antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }}
             onToegangAanvragen={() => setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " })}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
