@@ -140,9 +140,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
         <div className="leading-tight"><p className="font-bold">Bankoverzicht</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="flex min-w-0 flex-1 justify-center">
-          {!onUitgebreid && (
-            <div className="text-center leading-tight">
+          <div className="text-center leading-tight">
               <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudige weergave</span>
+              {!onUitgebreid && <>
               <p className="mt-1 text-[11px] text-slate-300">U heeft geen toegang tot de uitgebreide versie{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">toegang aanvragen</button></>}</p>
               {toegangInfo && <p className="mt-0.5 text-[10px] text-slate-400">{{
                 laden: "toegang wordt gecontroleerd…",
@@ -151,8 +151,8 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                 nietOpLijst: `ingelogd als ${toegangInfo.email} · niet in AccessAll`,
                 fout: "toegang kon niet worden gecontroleerd (/api/rol niet bereikbaar)",
               }[toegangInfo.status] || ""}</p>}
+              </>}
             </div>
-          )}
         </div>
         <div className="relative">
           <button type="button" onClick={() => setDossierMenu((v) => !v)} aria-expanded={dossierMenu} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><FolderOpen className="h-4 w-4" /> Dossier <ChevronDown className="h-3.5 w-3.5" /></button>
