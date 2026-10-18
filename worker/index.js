@@ -72,7 +72,8 @@ export default {
     if (url.pathname === "/api/sessie") return sessieInfo(request, url);
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
-      return json({ ok: true, email: email || null, uitgebreid: magUitgebreid(email, env.AccessAll) });
+      // lijst = staat de Secret AccessAll er (de inhoud wordt niet teruggegeven), voor de foutzoekregel in de app.
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim(), uitgebreid: magUitgebreid(email, env.AccessAll) });
     }
     // Alles behalve /api/feedback is de app zelf (statische bestanden): doorgeven aan de assets-binding.
     if (url.pathname !== "/api/feedback") return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });

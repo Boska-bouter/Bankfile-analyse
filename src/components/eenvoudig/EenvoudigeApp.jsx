@@ -59,7 +59,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null,
 }) {
   const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
@@ -144,6 +144,13 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             <div className="text-center leading-tight">
               <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudige weergave</span>
               <p className="mt-1 text-[11px] text-slate-300">U heeft geen toegang tot de uitgebreide versie{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">toegang aanvragen</button></>}</p>
+              {toegangInfo && <p className="mt-0.5 text-[10px] text-slate-400">{{
+                laden: "toegang wordt gecontroleerd…",
+                geenEmail: "geen inlogadres ontvangen van Cloudflare",
+                geenLijst: `ingelogd als ${toegangInfo.email} · toegangslijst AccessAll niet gevonden`,
+                nietOpLijst: `ingelogd als ${toegangInfo.email} · niet in AccessAll`,
+                fout: "toegang kon niet worden gecontroleerd (/api/rol niet bereikbaar)",
+              }[toegangInfo.status] || ""}</p>}
             </div>
           )}
         </div>

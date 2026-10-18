@@ -15,6 +15,7 @@ export function useMagUitgebreid() {
   // Lokaal ontwikkelen (vite dev) heeft geen Worker: dan alles open.
   const dev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
   const [mag, setMag] = useState(() => (dev ? true : leesCache() ?? false));
+  const [status, setStatus] = useState(dev ? "dev" : "laden"); // laden | ok | geenLijst | geenEmail | nietOpLijst | fout
   const [email, setEmail] = useState(() => { try { return localStorage.getItem(EMAIL_SLEUTEL) || null; } catch { return null; } });
   useEffect(() => {
     if (dev) return;
@@ -29,9 +30,10 @@ export function useMagUitgebreid() {
         const e = d?.email ? String(d.email).trim().toLowerCase() : null;
         try { if (e) localStorage.setItem(EMAIL_SLEUTEL, e); } catch { /* geen opslag */ }
         setEmail(e);
+        setStatus(v ? "ok" : !e ? "geenEmail" : d?.lijst === false ? "geenLijst" : "nietOpLijst");
       })
-      .catch(() => { /* offline of geen Worker: laatst bekende waarde blijft staan */ });
+      .catch(() => { if (!weg) setStatus("fout"); /* offline of geen Worker: laatst bekende waarde blijft staan */ });
     return () => { weg = true; };
   }, [dev]);
-  return { mag, email };
+  return { mag, email, status };
 }
