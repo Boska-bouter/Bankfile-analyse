@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
-import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen } from "lucide-react";
+import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
@@ -62,6 +63,15 @@ export default function EenvoudigeApp({
   onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null,
 }) {
   const [dossierMenu, setDossierMenu] = useState(false);
+  // nieuw-V3R0 — uitleg: de eerste keer (per gebruiker, per apparaat) vanzelf open, daarna via de knop "Uitleg".
+  const uitlegSleutel = `bankoverzicht.uitlegEenvoudigGezien${toegangInfo?.email ? `:${toegangInfo.email}` : ""}`;
+  const [uitleg, setUitleg] = useState(null); // null | "eerste" | "knop"
+  useEffect(() => {
+    if (toegangInfo?.status === "laden") return;
+    try { if (!localStorage.getItem(uitlegSleutel)) setUitleg("eerste"); } catch { /* geen opslag: niet automatisch tonen */ }
+  }, [uitlegSleutel, toegangInfo?.status]);
+  const sluitUitleg = () => { try { localStorage.setItem(uitlegSleutel, "1"); } catch { /* geen opslag */ } setUitleg(null); };
+  const [toonBoekingen, setToonBoekingen] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
   // Uitkomst (een volledig nagekeken dossier hoeft niet opnieuw doorlopen te worden). Elke stap blijft aanklikbaar.
   const [gekozenStap, setStap] = useState(null);
@@ -75,6 +85,7 @@ export default function EenvoudigeApp({
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
   const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
   const vraag = wachtrij[0] || null;
+  useEffect(() => setToonBoekingen(false), [vraag?.key]);
   const isTerug = vraag && overgeslagen.includes(vraag.key);
   // Hoeveel vragen (grootste eerst) zijn ongeveer nodig om op 90% herkend te komen?
   const nogVragen = useMemo(() => {
@@ -140,9 +151,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
         <div className="leading-tight"><p className="font-bold">Bankoverzicht</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="flex min-w-0 flex-1 justify-center">
-          {!onUitgebreid && (
-            <div className="text-center leading-tight">
+          <div className="text-center leading-tight">
               <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudige weergave</span>
+              {!onUitgebreid && <>
               <p className="mt-1 text-[11px] text-slate-300">U heeft geen toegang tot de uitgebreide versie{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">toegang aanvragen</button></>}</p>
               {toegangInfo && <p className="mt-0.5 text-[10px] text-slate-400">{{
                 laden: "toegang wordt gecontroleerd…",
@@ -151,8 +162,8 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                 nietOpLijst: `ingelogd als ${toegangInfo.email} · niet in AccessAll`,
                 fout: "toegang kon niet worden gecontroleerd (/api/rol niet bereikbaar)",
               }[toegangInfo.status] || ""}</p>}
+              </>}
             </div>
-          )}
         </div>
         <div className="relative">
           <button type="button" onClick={() => setDossierMenu((v) => !v)} aria-expanded={dossierMenu} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><FolderOpen className="h-4 w-4" /> Dossier <ChevronDown className="h-3.5 w-3.5" /></button>
@@ -167,6 +178,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </>
           )}
         </div>
+        <button type="button" onClick={() => setUitleg("knop")} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><BookOpen className="h-4 w-4" /> Uitleg</button>
         <button type="button" onClick={onBasisvragen} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
         {onUitgebreid && <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>}
         {onUitgebreid && <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>}
@@ -239,6 +251,34 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                   <span className="min-w-0 truncate">{vraag.naam}{vraag.voorbeeld?.description && vraag.soort !== "kleinePin" ? <span className="block truncate text-xs text-slate-500">{String(vraag.voorbeeld.description).replace(/^Naam:.*?Omschrijving:\s*/, "").slice(0, 90)}</span> : null}</span>
                   <b className="shrink-0 font-mono">{eur(vraag.bedrag)}</b>
                 </div>
+                {(() => {
+                  const alle = vraag.groepen.flatMap((g) => g.txs);
+                  const txs = alle.filter((t) => jaar == null || t.year === jaar).sort((x, y) => (y.date?.getTime?.() || 0) - (x.date?.getTime?.() || 0));
+                  const elders = alle.length - txs.length;
+                  return (
+                    <div className="-mt-2 mb-4">
+                      <button type="button" onClick={() => setToonBoekingen((v) => !v)} style={{ minHeight: 0 }} className="text-sm font-semibold text-teal-700 hover:underline">{toonBoekingen ? "Verberg de boekingen" : `Toon de ${txs.length === 1 ? "boeking" : `${txs.length} boekingen`}${jaar ? ` in ${jaar}` : ""}`}</button>
+                      {toonBoekingen && (
+                        <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-slate-200">
+                          <table className="w-full text-xs">
+                            <tbody>
+                              {txs.slice(0, 100).map((t) => (
+                                <tr key={t.id} className="border-b border-slate-100 align-top last:border-0">
+                                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-slate-500">{t.date?.toLocaleDateString?.("nl-NL")}</td>
+                                  <td className="px-2 py-1.5"><span className="block font-medium text-slate-800">{t.counterparty || "—"}</span><span className="block text-slate-500">{String(t.description || "").replace(/^Naam:.*?Omschrijving:\s*/, "").slice(0, 140)}</span></td>
+                                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-500">{t.accountType === "Zakelijk" ? "zakelijk" : "privé"}</td>
+                                  <td className={`whitespace-nowrap px-3 py-1.5 text-right font-mono ${t.amount < 0 ? "text-slate-800" : "text-emerald-700"}`}>{eur(t.amount)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {txs.length > 100 && <p className="px-3 py-1.5 text-xs text-slate-500">… en nog {txs.length - 100} boekingen</p>}
+                          {elders > 0 && <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">Daarnaast {elders} {elders === 1 ? "boeking" : "boekingen"} in andere jaren; je antwoord geldt ook daarvoor.</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {KEUZES.map((c) => (
                     <button key={c.k} type="button" onClick={() => beantwoord(c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${voorstel === c.k ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}>
@@ -329,6 +369,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           </div>
         </div>
       )}
+      {uitleg && <UitlegEenvoudig eersteKeer={uitleg === "eerste"} onClose={sluitUitleg} />}
     </div>
   );
 }
