@@ -2666,6 +2666,7 @@ export default function App() {
   const aansluitControleInfo = useAansluitControleInfo({
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
     eigenRekeningenNietGeladen: (eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean),
+    eigenIbansAlle: [...eigenRekeningenGeladen, ...(eigenRekeningenExtra || [])].map((r) => r?.iban).filter(Boolean),
     periodeZak: periodePerSoort.Zakelijk || null, periodePri: periodePerSoort.Prive || null,
   });
   const checklistData = useMemo(
