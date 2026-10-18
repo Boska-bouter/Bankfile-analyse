@@ -4,7 +4,8 @@
     "send_email": [{ "name": "EMAIL" }],
     "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
-      "FEEDBACK_FROM": "feedback@bankafschriftentool.app"
+      "FEEDBACK_FROM": "feedback@bankafschriftentool.app" , 
+         "AccessAll": "paulgerits@icloud.com, paul@paulgerits.eu, pgerits@overrood.nl"
     }
   },
   "main": "worker/index.js",
@@ -18,7 +19,6 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "FEEDBACK_TO": "paul@paulgerits.eu",
-    "FEEDBACK_FROM": "feedback@paulgerits.eu" ,
-    "AccessAll": "paulgerits@icloud.com, paul@paulgerits.eu, pgerits@overrood.nl"
+    "FEEDBACK_FROM": "feedback@paulgerits.eu"
   }
 }
