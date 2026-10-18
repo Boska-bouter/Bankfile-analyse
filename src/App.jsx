@@ -1903,6 +1903,34 @@ export default function App() {
       return changed ? next : prev;
     });
   };
+  // nieuw-V3R1 — "Mijn antwoorden" in de eenvoudige weergave: alle keuzes per tegenpartij, met bedrag in het gekozen jaar.
+  const eenvoudigAntwoordenLijst = useMemo(() => {
+    if (!eenvoudigActief) return [];
+    const per = {};
+    for (const tx of classified) {
+      if (tx.isMirror) continue;
+      const k = keyForTx(tx);
+      if (!k || !overridesByCounterparty[k]) continue;
+      const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1 });
+      g.aantal += 1;
+      if (tx.year === activeYear) g.bedragJaar += tx.amount;
+    }
+    return Object.entries(overridesByCounterparty)
+      .filter(([, o]) => o && o.category)
+      .map(([k, o]) => ({
+        key: k, naam: o.displayName || k, categorie: o.category,
+        teken: per[k]?.teken ?? (o.sign === "pos" ? 1 : -1), rekening: per[k]?.rekening || (o.type === "Zakelijk" ? "Zakelijk" : "Prive"),
+        aantal: per[k]?.aantal || 0, bedragJaar: Math.round((per[k]?.bedragJaar || 0) * 100) / 100,
+      }));
+  }, [eenvoudigActief, classified, overridesByCounterparty, activeYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  const wijzigAntwoord = (key, patch) => {
+    snapshotBeforeAction("Categorie/type aangepast");
+    setOverridesByCounterparty((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
+  };
+  const wisAntwoord = (key) => {
+    snapshotBeforeAction("Tegenpartijregel verwijderd");
+    setOverridesByCounterparty((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  };
   const setRowOverride = (id, patch) => {
     snapshotBeforeAction("Categorie/type aangepast");
     setOverridesByRow((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
@@ -3815,6 +3843,7 @@ export default function App() {
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
             onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
+            antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }}
             onToegangAanvragen={() => setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " })}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
