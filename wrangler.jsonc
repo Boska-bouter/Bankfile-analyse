@@ -19,6 +19,7 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     "FEEDBACK_TO": "paul@paulgerits.eu",
-    "FEEDBACK_FROM": "feedback@paulgerits.eu"
+    "FEEDBACK_FROM": "feedback@paulgerits.eu" ,
+    "AccessAll": "paulgerits@icloud.com, paul@paulgerits.eu, pgerits@overrood.nl"
   }
 }
