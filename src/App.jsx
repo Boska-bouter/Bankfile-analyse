@@ -335,7 +335,21 @@ export default function App() {
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
     if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) stilLeaseBevestigen(); // release21V5 — geen venster meer bij openklappen
-    startTransition(() => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] })));
+    // release33V9 — één kaart tegelijk open: een andere kaart openen klapt de vorige dicht, en het geopende
+    // paneel komt in beeld (anders bleef bijv. "Herkomst & opschonen" open staan en viel "Import & kwaliteit" buiten beeld).
+    const wordtOpen = !expandedLiveRef.current?.[key];
+    startTransition(() => setExpandedCardKeys((prev) => (prev[key] ? { ...prev, [key]: false } : { [key]: true })));
+    if (wordtOpen) {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-paneel="${key}"]`);
+        if (!el) return;
+        const balk = document.querySelector("[data-stappenbalk]");
+        const ruimte = balk && balk.offsetParent !== null ? Math.ceil(balk.getBoundingClientRect().height) + 24 : 16;
+        el.style.scrollMarginTop = `${ruimte}px`;
+        const r = el.getBoundingClientRect();
+        if (r.top < ruimte || r.top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    }
   };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);

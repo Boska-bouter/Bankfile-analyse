@@ -123,7 +123,7 @@ export default function SectionCardGrid({ title, cards, onOpenHelp, swipe }) {
         ))}
       </div>
       {cards.filter((c) => c.expanded && c.expandedContent).map((card) => (
-        <div key={`open-${card.key}`} className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
+        <div key={`open-${card.key}`} data-paneel={card.key} className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="text-basis font-bold text-slate-900 mb-3">{card.title}</h3>
           {swipe ? <JaarSwipe years={swipe.years} year={swipe.year} onSelectYear={swipe.onSelectYear}>{card.expandedContent}</JaarSwipe> : card.expandedContent}
         </div>
