@@ -153,6 +153,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           )}
         </div>
         <button type="button" onClick={onBasisvragen} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
+        {!onUitgebreid && <span className={`${KOPKNOP} border-amber-300/60 bg-amber-400/15 font-semibold text-amber-200`} title="De uitgebreide weergave is niet beschikbaar voor dit account">Eenvoudige weergave</span>}
         {onUitgebreid && <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>}
         {onUitgebreid && <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>}
       </div>
