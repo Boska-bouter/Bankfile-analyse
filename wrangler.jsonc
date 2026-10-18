@@ -1,6 +1,5 @@
 {
   "name": "bankfile-analyse",
-  "keep_vars": true ,
   "previews": {
     "send_email": [{ "name": "EMAIL" }],
     "vars": {
