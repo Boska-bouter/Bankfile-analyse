@@ -168,6 +168,7 @@ export async function wisDossier(c, askWizard = false) {
   setZelfstandigenaftrekStatusState({});
   setStartersaftrekStatusState({});
   c.setWerkruimteStatusState?.({});
+  c.setWeergave?.("uitgebreid");
   setTariefOverridesState({});
   setOverigInkomenBox1State({});
   setAutoStatusState({});
@@ -205,7 +206,7 @@ export async function wisDossier(c, askWizard = false) {
     setDialog({
       title: "Wizard starten?",
       message: <p>Het nieuwe dossier is leeg. Begin met het laden van je bankbestanden en beantwoord daarna de basisvragen (rechtsvorm, BTW, KOR enz.).</p>,
-      actions: [{ label: "Wizard starten", variant: "primary", onClick: () => setManualWizardOpen(true) }],
+      actions: [{ label: "Wizard starten", variant: "primary", onClick: () => (c.startNieuwDossierWizard ? c.startNieuwDossierWizard() : setManualWizardOpen(true)) }],
     });
   }
 }

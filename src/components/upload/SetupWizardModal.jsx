@@ -70,6 +70,7 @@ export default function SetupWizardModal({
   ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig = null,
   accountTypeByFile = {},
   alleenVragen = null,
+  eenvoudig = false,
   onClose,
 }) {
   // Concept-antwoorden per scherm (blijven bewaard bij "Terug").
@@ -120,6 +121,9 @@ export default function SetupWizardModal({
     // release30V3 — geopend via "Nu beantwoorden": alleen de vragen die op die kaart staan. Voorheen kwamen
     // er schermen bij voor vragen die niet op de kaart stonden (bijv. aangekochte machines, BTW-kwartalen).
     if (Array.isArray(alleenVragen)) for (const k of Object.keys(n)) n[k] = n[k] && alleenVragen.includes(k);
+    // nieuw-V1R02 — verkorte wizard in de eenvoudige weergave: alleen wat nodig is voor winst, belasting en BTW.
+    // Overgeslagen vragen blijven open (null) en komen in Uitgebreid terug als open punt bij Instellingen.
+    if (eenvoudig) for (const k of ["andere", "spaar", "spaarPrive", "klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"]) n[k] = false;
     return n;
   });
   // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt
@@ -144,7 +148,7 @@ export default function SetupWizardModal({
     if (needs.aov || needs.kor || needs.verlegd || needs.uren) list.push(35);
     if (needs.starters || needs.overig || needs.kwartalen || needs.werkruimte) list.push(36);
     // release21V6 — lease-controle na het laden van bankbestanden (zie LeaseControleScherm.jsx)
-    if (!Array.isArray(alleenVragen) && (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0)) list.push(37);
+    if (!eenvoudig && !Array.isArray(alleenVragen) && (leaseControle?.nodig || loadFilesFirst || pendingFileNames.length > 0)) list.push(37);
     list.push(4); // altijd als laatste: herinnering om het dossier op te slaan
     return list;
   });

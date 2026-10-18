@@ -60,13 +60,16 @@ export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
   onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV,
 }) {
-  const [stap, setStap] = useState(1);
+  // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
+  // Uitkomst (een volledig nagekeken dossier hoeft niet opnieuw doorlopen te worden). Elke stap blijft aanklikbaar.
+  const [gekozenStap, setStap] = useState(null);
   const [overgeslagen, setOvergeslagen] = useState([]);
   const [anders, setAnders] = useState("");
   const bevestigd = useMemo(() => maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), [reviewedOverigKeys, reviewedPersonKeys]);
   const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
+  const stap = gekozenStap ?? (alleVragen.length > 0 ? 2 : 3);
   const vraag = wachtrij[0] || null;
   const isTerug = vraag && overgeslagen.includes(vraag.key);
   // Hoeveel vragen (grootste eerst) zijn ongeveer nodig om op 90% herkend te komen?
@@ -130,7 +133,8 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             {jaren.map((j) => <option key={j} value={j} className="text-slate-900">{j}</option>)}
           </select>
         )}
-        <div className="ml-auto flex rounded-full bg-white/10 p-0.5 text-sm">
+        <button type="button" onClick={onBasisvragen} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/30 px-3 py-1 text-sm text-slate-100 hover:bg-white/10"><ClipboardList className="h-4 w-4" /> Basisvragen</button>
+        <div className="flex rounded-full bg-white/10 p-0.5 text-sm">
           <span className="rounded-full bg-white px-3 py-1 font-bold text-slate-900">Eenvoudig</span>
           <button type="button" onClick={onUitgebreid} className="rounded-full px-3 py-1 text-slate-200 hover:text-white">Uitgebreid</button>
         </div>
@@ -139,7 +143,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
       {/* Stappen */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
         {STAPPEN.map((n, i) => {
-          const nr = i + 1, klaar = nr < stap, nu = nr === stap;
+          const nr = i + 1, nu = nr === stap, klaar = !nu && ((nr === 1 && bestanden.length > 0) || (nr === 2 && alleVragen.length === 0));
           return (
             <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? "font-bold text-slate-900" : klaar ? "text-emerald-700" : "text-slate-400"}`}>
               <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? "border-emerald-700 bg-emerald-700 text-white" : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
@@ -253,8 +257,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setStap(4)} className="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 4: Bewaren →</button>
             <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
+            <button type="button" onClick={onBasisvragen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><ClipboardList className="h-4 w-4" /> Basisvragen bekijken</button>
+            {alleVragen.length > 0 && <button type="button" onClick={() => setStap(2)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Verder met nakijken</button>}
           </div>
         </div>
       )}

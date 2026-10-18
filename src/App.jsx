@@ -108,6 +108,7 @@ import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
+import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -257,6 +258,10 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
+  // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
+  const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
+  const startNieuwDossierWizard = () => setModusKeuzeOpen(true);
+  const kiesModus = (m) => { setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht"); setManualWizardOpen(true); };
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
   // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
   // release33V4 — het wizard-antwoord (zakelijk pand? werkruimte in de woning?) wordt de standaard voor álle jaren,
@@ -611,6 +616,7 @@ export default function App() {
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
   const eenvoudigActief = weergave === "eenvoudig" && parsedFiles.length > 0;
+  useEffect(() => { if (loadedProjectFileName) setModusKeuzeOpen(false); }, [loadedProjectFileName]); // een geladen dossier heeft zijn eigen weergave
   const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey && !eenvoudigActief ? undefined : "none" });
   // Wordt gezet door jumpToSection zodra er eerst nog van tabblad gewisseld moet worden — de
   // daadwerkelijke scrollIntoView gebeurt pas ná die tabwissel (zie de useEffect hieronder), anders
@@ -3447,7 +3453,7 @@ export default function App() {
     setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
     setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
     setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setTariefOverridesState, setOverigInkomenBox1State,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, startNieuwDossierWizard, setTariefOverridesState, setOverigInkomenBox1State,
     setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
     setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
     setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
@@ -3478,7 +3484,7 @@ export default function App() {
   const sessie = useSessieWaarschuwing(); // release32V1 — einde Cloudflare-inlogsessie
   const { startLoadProject, clearAllData } = useDossierDialogen({
     parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
-    setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen,
+    setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen: (v) => (v ? startNieuwDossierWizard() : setManualWizardOpen(false)),
     heeftAntwoorden: !basisvragenNietGestart,
   });
 
@@ -3491,7 +3497,7 @@ export default function App() {
     const pendingFileNames = pending ? pending.parsedFiles.map((f) => f.fileName).filter(Boolean) : [];
     const ondernemer = pending?.settings?.eigenNamen?.ondernemer;
     const nietGeexporteerd = Number(pending?.settings?.changesSinceExport) || 0;
-    const nieuwStarten = () => { startEmpty(); setActiveTab("overzicht"); setManualWizardOpen(true); };
+    const nieuwStarten = () => { startEmpty(); setActiveTab("overzicht"); setWeergave("uitgebreid"); startNieuwDossierWizard(); };
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-paneel border border-slate-200 bg-white p-6 shadow-lg">
@@ -3593,6 +3599,7 @@ export default function App() {
           alleen de plek van de knoppen is anders. Zie het bouwvoorstel-document. */}
       {!eenvoudigActief && <AppSidebar
         onEenvoudig={parsedFiles.length > 0 ? () => setWeergave("eenvoudig") : null}
+        weergave={weergave}
         rekeninghouderNaam={eigenNamen?.ondernemer}
         onEditRekeninghouder={() => setShowRekeninghouderModal(true)}
         activeTab={activeTab}
@@ -3714,6 +3721,7 @@ export default function App() {
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <SessieBalk sessie={sessie} onOpslaan={saveProjectFile} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
+        {modusKeuzeOpen && <ModusKeuze onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
         {eenvoudigActief && (
           <EenvoudigeApp
             klantNaam={eigenNamen?.ondernemer} jaar={activeYear} jaren={years} onJaar={setActiveYear}
@@ -4061,6 +4069,7 @@ export default function App() {
 
         {(showSetupWizard || manualWizardOpen || openVragenWizard) && (
           <SetupWizardModal
+            eenvoudig={weergave === "eenvoudig"}
             forceRechtsvormStep={manualWizardOpen}
             loadFilesFirst={parsedFiles.length === 0}
             loadedFileNames={parsedFiles.map((f) => f.fileName)}

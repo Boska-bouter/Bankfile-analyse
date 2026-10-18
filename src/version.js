@@ -1,1 +1,1 @@
-export const APP_RELEASE = "nieuw-V1R01";
+export const APP_RELEASE = "nieuw-V1R03";
