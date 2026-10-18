@@ -181,13 +181,13 @@ export default function AppSidebar({
 
       {/* nieuw-V1R01 — wisselen naar de eenvoudige weergave */}
       {onEenvoudig && (
-        <div className="px-1.5 pb-4 mb-4 border-b border-white/10">
+        <div className="px-1.5 pb-2.5 mb-2.5 border-b border-white/10">
           {collapsed ? (
-            <button type="button" onClick={onEenvoudig} title="Naar de eenvoudige weergave" className="w-full rounded-xl border border-slate-600 px-1 py-1.5 text-[10px] font-semibold text-slate-200 hover:bg-white/5">Een&shy;voudig</button>
+            <button type="button" onClick={onEenvoudig} title="Naar de eenvoudige weergave" style={{ minHeight: 0 }} className="w-full rounded-lg border border-slate-600 px-1 py-0.5 text-[10px] font-semibold text-slate-200 hover:bg-white/5">Eenv.</button>
           ) : (
-            <div className="flex rounded-full bg-white/10 p-0.5 text-xs">
-              <button type="button" onClick={onEenvoudig} className="flex-1 rounded-full px-2 py-1 text-slate-300 hover:text-white">Eenvoudig</button>
-              <span className="flex-1 rounded-full bg-white px-2 py-1 text-center font-bold text-slate-900">Uitgebreid</span>
+            <div className="flex rounded-full bg-white/10 p-0.5 text-[11px] leading-tight">
+              <button type="button" onClick={onEenvoudig} style={{ minHeight: 0 }} className="flex-1 rounded-full px-2 py-0.5 text-slate-300 hover:text-white">Eenvoudig</button>
+              <span className="flex-1 rounded-full bg-white px-2 py-0.5 text-center font-bold text-slate-900">Uitgebreid</span>
             </div>
           )}
         </div>

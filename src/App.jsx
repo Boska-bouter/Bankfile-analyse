@@ -109,6 +109,7 @@ import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
+import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -260,6 +261,7 @@ export default function App() {
   const [weergave, setWeergave] = useState("uitgebreid");
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
+  const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
   const startNieuwDossierWizard = () => setModusKeuzeOpen(true);
   const kiesModus = (m) => { setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht"); setManualWizardOpen(true); };
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
@@ -3592,6 +3594,35 @@ export default function App() {
   }
 
 
+  // nieuw-V1R04 — zelfde keuzelijsten per jaar ook in het Basisvragen-venster van de eenvoudige weergave.
+  const jaarKeuzelijsten = (card) => (
+                <JaarKeuzelijsten
+                card={card}
+                year={activeYear} rechtsvorm={rechtsvorm}
+                zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
+                startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
+                autoStatus={autoStatus}
+                privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
+                privegebruikBron={{ leaseDetails, autoActivaDetails }}
+                kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
+                onSetPrivegebruik={(autos, gekozenId, jaar) => {
+                  const r = zetPrivegebruikKeuze(autos, gekozenId, jaar, { leaseDetails, autoActivaDetails });
+                  for (const [key, d] of Object.entries(r.leaseDetails)) setLeaseDetailField(key, d);
+                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails);
+                }}
+                overigInkomen={overigInkomenBox1?.[activeYear] || null}
+                onSetOverigInkomen={(jaar, tekst) => {
+                  const next = { ...(overigInkomenBox1 || {}) };
+                  const t = String(tekst).trim();
+                  const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
+                  next[jaar] = Number.isFinite(v) && v > 0 ? v : 0; // 0 = beantwoord, geen ander inkomen
+                  setOverigInkomenBox1Met(next);
+                }}
+                gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
+                gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
+                gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear} gemeentePct={gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear]} onSetGemeentePct={setGemeentelijkeKostenZakelijkPercentageStatus}
+              />
+  );
   return (
     <div className="min-h-screen bg-stone-50 text-slate-900 font-sans flex">
       {/* Fase 1 van de dashboard-restyling: de donkere header-balk + StickyTopNav zijn vervangen
@@ -3722,13 +3753,23 @@ export default function App() {
         <SessieBalk sessie={sessie} onOpslaan={saveProjectFile} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
         {modusKeuzeOpen && <ModusKeuze onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
+        {basisEenvoudigOpen && eenvoudigActief && (
+          <BasisvragenEenvoudig
+            jaar={activeYear} eigenNamen={eigenNamen} setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
+            rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
+            jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
+            onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
+            onUitgebreid={() => { setBasisEenvoudigOpen(false); setWeergave("uitgebreid"); setActiveTab("instellingen"); }}
+            onClose={() => setBasisEenvoudigOpen(false)}
+          />
+        )}
         {eenvoudigActief && (
           <EenvoudigeApp
             klantNaam={eigenNamen?.ondernemer} jaar={activeYear} jaren={years} onJaar={setActiveYear}
             bestanden={parsedFiles.map((f) => ({ naam: f.fileName, type: accountTypeByFile[f.fileName] }))}
             classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
-            onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setManualWizardOpen(true)}
+            onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
             onOpslaan={startOpslaan} onUitgebreid={() => setWeergave("uitgebreid")}
             fiscaal={activeYear ? fiscaalVoorJaar(activeYear) : null} jaarSummary={activeYear ? yearlySummaries[activeYear] : null} isBV={rechtsvorm === "bv"}
           />
@@ -3866,32 +3907,7 @@ export default function App() {
               priCount={priGroupForYear.items.length}
               onJump={handleDetailsJump}
               herkenningsregelsCount={categoryRules.length}
-              keuzelijsten={<JaarKeuzelijsten
-                card={instellingenDashboardCards.find((c) => c.key === "aannames")}
-                year={activeYear} rechtsvorm={rechtsvorm}
-                zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
-                startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
-                autoStatus={autoStatus}
-                privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
-                privegebruikBron={{ leaseDetails, autoActivaDetails }}
-                kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
-                onSetPrivegebruik={(autos, gekozenId, jaar) => {
-                  const r = zetPrivegebruikKeuze(autos, gekozenId, jaar, { leaseDetails, autoActivaDetails });
-                  for (const [key, d] of Object.entries(r.leaseDetails)) setLeaseDetailField(key, d);
-                  if (r.autoActivaDetails) setAutoActivaDetailsField(r.autoActivaDetails);
-                }}
-                overigInkomen={overigInkomenBox1?.[activeYear] || null}
-                onSetOverigInkomen={(jaar, tekst) => {
-                  const next = { ...(overigInkomenBox1 || {}) };
-                  const t = String(tekst).trim();
-                  const v = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, "") : t);
-                  next[jaar] = Number.isFinite(v) && v > 0 ? v : 0; // 0 = beantwoord, geen ander inkomen
-                  setOverigInkomenBox1Met(next);
-                }}
-                gedeeldeHuur={gedeeldeHuurForActiveYear} huurPct={huurZakelijkPercentageStatus?.[activeYear]} onSetHuurPct={setHuurZakelijkPercentageStatus}
-                gedeeldeEnergie={gedeeldeEnergieForActiveYear} energiePct={energieZakelijkPercentageStatus?.[activeYear]} onSetEnergiePct={setEnergieZakelijkPercentageStatus}
-                gedeeldeGemeentelijkeKosten={gedeeldeGemeentelijkeKostenForActiveYear} gemeentePct={gemeentelijkeKostenZakelijkPercentageStatus?.[activeYear]} onSetGemeentePct={setGemeentelijkeKostenZakelijkPercentageStatus}
-              />}
+              keuzelijsten={jaarKeuzelijsten(instellingenDashboardCards.find((c) => c.key === "aannames"))}
             />}
           </div>
         </div>

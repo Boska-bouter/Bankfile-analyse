@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Check, Upload, Download, Save, ClipboardList, ChevronLeft } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
@@ -64,6 +64,8 @@ export default function EenvoudigeApp({
   // Uitkomst (een volledig nagekeken dossier hoeft niet opnieuw doorlopen te worden). Elke stap blijft aanklikbaar.
   const [gekozenStap, setStap] = useState(null);
   const [overgeslagen, setOvergeslagen] = useState([]);
+  const [gedaan, setGedaan] = useState({});
+  const maxTotaal = useRef({}); // vast totaal per jaar, zodat "Vraag x van y" niet verspringt // aantal beantwoorde vragen per jaar (voor de voortgangsbalk)
   const [anders, setAnders] = useState("");
   const bevestigd = useMemo(() => maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), [reviewedOverigKeys, reviewedPersonKeys]);
   const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
@@ -88,6 +90,7 @@ export default function EenvoudigeApp({
       onAntwoord(g.naam, g.txs[0].amount, patch);
     }
     setOvergeslagen((p) => p.filter((k) => k !== vraag.key));
+    setGedaan((p) => ({ ...p, [jaar]: (p[jaar] || 0) + 1 }));
     setAnders("");
   };
   const slaOver = () => { if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
@@ -175,7 +178,19 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             {vraag ? (
               <>
-                <p className="mb-1 text-xs text-slate-500">{isTerug ? "Eerder overgeslagen" : `Nog ${wachtrij.length} vra${wachtrij.length === 1 ? "ag" : "gen"}`} · grootste bedragen eerst</p>
+                {(() => {
+                  const klaar = gedaan[jaar] || 0;
+                  const totaal = (maxTotaal.current[jaar] = Math.max(maxTotaal.current[jaar] || 0, klaar + wachtrij.length));
+                  return (
+                    <div className="mb-4 rounded-xl bg-slate-50 px-3 py-2.5">
+                      <div className="mb-1.5 flex flex-wrap justify-between gap-2 text-xs text-slate-600">
+                        <span><b>Vraag {klaar + 1} van {totaal}</b>{isTerug ? " · eerder overgeslagen" : " · grootste bedragen eerst"}</span>
+                        <span>{b.oordeel === "betrouwbaar" ? <b className="text-emerald-700">Uitkomst is al betrouwbaar — de rest is optioneel</b> : nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen}</b> tot Betrouwbaar</> : null}</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200"><i className="block h-full bg-teal-600" style={{ width: `${totaal ? Math.round((klaar / totaal) * 100) : 0}%` }} /></div>
+                    </div>
+                  );
+                })()}
                 <h2 className="mb-1 text-xl font-bold">{vraag.soort === "kleinePin" ? "Waren dit privé-aankopen?" : vraag.teken > 0 ? "Waarvoor was dit geld?" : "Waarvoor was deze betaling?"}</h2>
                 <p className="mb-3 text-sm text-slate-600">
                   {vraag.soort === "kleinePin"
