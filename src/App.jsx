@@ -260,7 +260,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const magUitgebreid = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -624,7 +624,8 @@ export default function App() {
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
   // Zonder recht op Uitgebreid altijd de eenvoudige weergave (ook zonder bankbestanden); de opgeslagen keuze blijft staan.
-  const eenvoudigActief = !magUitgebreid || (weergave === "eenvoudig" && parsedFiles.length > 0);
+  // nieuw-V2R4 — ook zonder bankbestanden: wie Eenvoudig koos en de wizard afbreekt, blijft in Eenvoudig (stap Gegevens).
+  const eenvoudigActief = !magUitgebreid || weergave === "eenvoudig";
   const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey && !eenvoudigActief ? undefined : "none" });
   // Wordt gezet door jumpToSection zodra er eerst nog van tabblad gewisseld moet worden — de
   // daadwerkelijke scrollIntoView gebeurt pas ná die tabwissel (zie de useEffect hieronder), anders
@@ -936,13 +937,17 @@ export default function App() {
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false); // true, of { onderwerp, bericht } om voor te vullen
   const pendingProjectRef = useRef(null);
-  // Gebruiksvoorwaarden: één keer per apparaat/browser (en opnieuw bij een nieuwe versie van de tekst).
-  const [voorwaardenOk, setVoorwaardenOk] = useState(() => {
-    try { return localStorage.getItem(VOORWAARDEN_SLEUTEL) === VOORWAARDEN_VERSIE; } catch { return false; }
-  });
+  // Gebruiksvoorwaarden: één keer per gebruiker (e-mailadres van de Cloudflare-inlog) per apparaat/browser, en opnieuw
+  // bij een nieuwe versie van de tekst. nieuw-V2R3 — voorheen per browser: wie op hetzelfde apparaat met een ander
+  // account inlogde, kreeg de voorwaarden niet te zien. Is het adres (nog) onbekend, dan geldt de algemene sleutel.
+  const voorwaardenSleutel = ingelogdAls ? `${VOORWAARDEN_SLEUTEL}:${ingelogdAls}` : VOORWAARDEN_SLEUTEL;
+  const [voorwaardenTik, setVoorwaardenTik] = useState(0);
+  const voorwaardenOk = useMemo(() => {
+    try { return localStorage.getItem(voorwaardenSleutel) === VOORWAARDEN_VERSIE; } catch { return false; }
+  }, [voorwaardenSleutel, voorwaardenTik]); // eslint-disable-line react-hooks/exhaustive-deps
   const akkoordVoorwaarden = () => {
-    try { localStorage.setItem(VOORWAARDEN_SLEUTEL, VOORWAARDEN_VERSIE); } catch { /* geen opslag: scherm komt dan opnieuw */ }
-    setVoorwaardenOk(true);
+    try { localStorage.setItem(voorwaardenSleutel, VOORWAARDEN_VERSIE); } catch { /* geen opslag: scherm komt dan opnieuw */ }
+    setVoorwaardenTik((t) => t + 1);
   };
   // Startscherm (verder / nieuw / laden). release22V8 — niet meer één keer per tabblad (op de iPad blijft
   // dat tabblad open, dus kwam de vraag na het heropenen niet meer), maar zodra de app langer dan 60
