@@ -59,7 +59,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen,
 }) {
   const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
@@ -139,7 +139,15 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 font-extrabold text-slate-900">B</span>
         <div className="leading-tight"><p className="font-bold">Bankoverzicht</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
-        <div className="relative ml-auto">
+        <div className="flex min-w-0 flex-1 justify-center">
+          {!onUitgebreid && (
+            <div className="text-center leading-tight">
+              <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudige weergave</span>
+              <p className="mt-1 text-[11px] text-slate-300">U heeft geen toegang tot de uitgebreide versie{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">toegang aanvragen</button></>}</p>
+            </div>
+          )}
+        </div>
+        <div className="relative">
           <button type="button" onClick={() => setDossierMenu((v) => !v)} aria-expanded={dossierMenu} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><FolderOpen className="h-4 w-4" /> Dossier <ChevronDown className="h-3.5 w-3.5" /></button>
           {dossierMenu && (
             <>
@@ -153,7 +161,6 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           )}
         </div>
         <button type="button" onClick={onBasisvragen} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
-        {!onUitgebreid && <span className={`${KOPKNOP} border-amber-300/60 bg-amber-400/15 font-semibold text-amber-200`} title="De uitgebreide weergave is niet beschikbaar voor dit account">Eenvoudige weergave</span>}
         {onUitgebreid && <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>}
         {onUitgebreid && <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>}
       </div>

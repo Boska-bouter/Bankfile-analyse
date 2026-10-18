@@ -934,7 +934,7 @@ export default function App() {
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false); // true, of { onderwerp, bericht } om voor te vullen
   const pendingProjectRef = useRef(null);
   // Gebruiksvoorwaarden: één keer per apparaat/browser (en opnieuw bij een nieuwe versie van de tekst).
   const [voorwaardenOk, setVoorwaardenOk] = useState(() => {
@@ -3584,7 +3584,7 @@ export default function App() {
             <br />
             <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
           </p>
-          {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+          {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
         </div>
       </div>
     );
@@ -3725,7 +3725,7 @@ export default function App() {
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
-      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+      {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
       {showMultiYearModal && (
@@ -3810,6 +3810,7 @@ export default function App() {
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
             onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
+            onToegangAanvragen={() => setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " })}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
             gezien={activeYear ? eenvoudigGezien[activeYear] || null : null} onGezien={() => setEenvoudigGezien((p) => { const n = { ...p }; delete n[activeYear]; return n; })}
