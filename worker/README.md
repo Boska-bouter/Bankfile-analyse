@@ -24,3 +24,10 @@ Deze Worker ontvangt dat en mailt het naar jou. Het ontvangeradres staat alleen 
 - Werkt de Email-binding in jouw account anders (dat is nog een bètafunctie), kijk dan in de Cloudflare-documentatie
   bij "Send emails from Workers". Het verzenden zit in één blok in `index.js`.
 - In de app staat bij een fout een noodknop waarmee de gebruiker het bericht via zijn eigen mailapp kan sturen.
+
+## Toegang tot de uitgebreide weergave (nieuw-V2R0)
+
+`GET /api/rol` geeft `{ uitgebreid: true|false }` terug voor de ingelogde gebruiker (header `Cf-Access-Authenticated-User-Email`).
+De lijst staat in de Secret **`AccessAll`** (Workers & Pages → bankfile-analyse → Settings → Variables and Secrets), níet in
+`wrangler.jsonc`: adressen gescheiden door komma's, `*@domein.nl` voor een heel domein. Geen lijst of niet op de lijst = alleen
+de eenvoudige weergave. Dit schermt schermen af; het beveiligt geen gegevens (alles rekent in de browser).
