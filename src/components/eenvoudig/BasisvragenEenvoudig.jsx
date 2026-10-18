@@ -59,7 +59,7 @@ export default function BasisvragenEenvoudig({
           )}
           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
             <button type="button" onClick={() => { bewaarNaam(); onOpenVragen(); }} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold hover:bg-slate-50">Wizard: nog open vragen</button>
-            <button type="button" onClick={() => { bewaarNaam(); onUitgebreid(); }} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 underline">Alles (rekeningen, lease, leningen) in Uitgebreid</button>
+            {onUitgebreid && <button type="button" onClick={() => { bewaarNaam(); onUitgebreid(); }} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 underline">Alles (rekeningen, lease, leningen) in Uitgebreid</button>}
           </div>
         </div>
       </div>

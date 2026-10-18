@@ -59,7 +59,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien,
 }) {
   const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
@@ -73,7 +73,7 @@ export default function EenvoudigeApp({
   const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
-  const stap = gekozenStap ?? (alleVragen.length > 0 ? 2 : 3);
+  const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
   const vraag = wachtrij[0] || null;
   const isTerug = vraag && overgeslagen.includes(vraag.key);
   // Hoeveel vragen (grootste eerst) zijn ongeveer nodig om op 90% herkend te komen?
@@ -109,6 +109,11 @@ export default function EenvoudigeApp({
   const nogBelasting = ibZvw != null ? Math.max(0, ibZvw - (fis.betaald || 0)) : null;
   const btwJaar = fis?.btw ? fis.btw.reduce((a, v) => a + v, 0) : null;
   const bruikbaar = b.herkend >= DREMPEL_REDELIJK;
+  // nieuw-V1R09 — wat is er veranderd sinds je Eenvoudig verliet (door wijzigingen in Uitgebreid)?
+  const nu = { winst: Math.round(jaarSummary?.winst || 0), belasting: ibZvw != null ? Math.round(ibZvw) : null, btw: btwJaar != null ? Math.round(btwJaar) : null };
+  const verschillen = gezien ? [
+    ["winst", "Winst"], ["belasting", "Belasting (IB + Zvw)"], ["btw", "BTW over het jaar"],
+  ].filter(([k]) => gezien[k] != null && nu[k] != null && Math.abs(gezien[k] - nu[k]) >= 1).map(([k, t]) => ({ k, t, van: gezien[k], naar: nu[k] })) : [];
   const overigeWinst = (jaarSummary?.winst || 0) - ((jaarSummary?.zakelijkeInkomstenNetto || 0) - (jaarSummary?.zakelijkeKostenNetto || 0));
 
   const downloadUitkomst = () => {
@@ -133,11 +138,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#0f2a3a] px-5 py-3 text-white">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 font-extrabold text-slate-900">B</span>
         <div className="leading-tight"><p className="font-bold">Bankoverzicht</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
-        {jaren.length > 1 && (
-          <select value={jaar || ""} onChange={(e) => onJaar(+e.target.value)} className="ml-2 rounded-lg border border-slate-500 px-2 py-1 text-sm font-semibold text-white" style={{ backgroundColor: "#1e293b" }}>
-            {jaren.map((j) => <option key={j} value={j} className="text-slate-900">{j}</option>)}
-          </select>
-        )}
+        {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="relative ml-auto">
           <button type="button" onClick={() => setDossierMenu((v) => !v)} aria-expanded={dossierMenu} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><FolderOpen className="h-4 w-4" /> Dossier <ChevronDown className="h-3.5 w-3.5" /></button>
           {dossierMenu && (
@@ -152,14 +153,14 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           )}
         </div>
         <button type="button" onClick={onBasisvragen} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
-        <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>
-        <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>
+        {onUitgebreid && <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>}
+        {onUitgebreid && <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>}
       </div>
 
       {/* Stappen */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
         {STAPPEN.map((n, i) => {
-          const nr = i + 1, nu = nr === stap, klaar = !nu && ((nr === 1 && bestanden.length > 0) || (nr === 2 && alleVragen.length === 0));
+          const nr = i + 1, nu = nr === stap, klaar = !nu && ((nr === 1 && bestanden.length > 0) || (nr === 2 && bestanden.length > 0 && alleVragen.length === 0));
           return (
             <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? "font-bold text-slate-900" : klaar ? "text-emerald-700" : "text-slate-400"}`}>
               <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? "border-emerald-700 bg-emerald-700 text-white" : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
@@ -167,6 +168,16 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           );
         })}
       </div>
+
+      {verschillen.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">De uitkomst voor {jaar} is veranderd door wijzigingen in Uitgebreid</p>
+            <p className="mt-0.5">{verschillen.map((v, i) => <span key={v.k}>{i > 0 && " · "}{v.t}: {r0(v.van)} → <b>{r0(v.naar)}</b></span>)}</p>
+          </div>
+          <button type="button" onClick={onGezien} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700">Begrepen</button>
+        </div>
+      )}
 
       {stap === 1 && (
         <div className="grid gap-4 md:grid-cols-[1fr_20rem]">
@@ -238,7 +249,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           </div>
           <div className="space-y-3">
             <Zekerheid b={b} compact nogVragen={nogVragen} />
-            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Je kunt altijd stoppen: je antwoorden worden direct bewaard. Fijner werk (percentages, één boeking apart) doe je in <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</p>
+            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Je kunt altijd stoppen: je antwoorden worden direct bewaard. {onUitgebreid ? <>Fijner werk (percentages, één boeking apart) doe je in <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel je over een boeking? Sla hem over of vraag het je adviseur."}</p>
           </div>
         </div>
       )}
@@ -280,7 +291,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </div>
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
               <p className="mb-2 font-semibold text-slate-800">Meer details?</p>
-              <p>Lease, afschrijvingen, percentages zakelijk/privé en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. Twijfel je over iets? Vraag het je adviseur.</p>
+              <p>{onUitgebreid ? <>Lease, afschrijvingen, percentages zakelijk/privé en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : "Lease, afschrijvingen en percentages zakelijk/privé bekijkt je adviseur. "}Twijfel je over iets? Vraag het je adviseur.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
