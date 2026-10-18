@@ -44,6 +44,8 @@ const GEEN_UITGAVE = new Set([
 const GEEN_TERUGBETALING = new Set([
   "Overboeking van bekenden", "Overboekingen aan personen", "Leningen", "Leningen (privé)", "Privé opnames",
   "Overig", "Nog te beoordelen", "Inkomsten", "Toeslagen", "Partneralimentatie", "Kinderalimentatie", "DGA-salaris",
+  // release33V1 — ontvangen Tikkies/geld (Privé: overig) en teruggaven van de Belastingdienst zijn geen terugbetaling van een uitgave.
+  "Privé: overig", "Belastingen: overig",
 ]);
 const isTerugbetaling = (tx) => tx.amount > 0 && !GEEN_TERUGBETALING.has(tx.category) && !ZAKELIJKE_OMZET.has(tx.category) && !inkomenKolom(tx);
 
@@ -123,7 +125,7 @@ export function berekenInkomenPerMaand({
   percentages = {}, autoStatus = {}, heeftLeaseAuto = false, eigenPriveIbans = [],
 }) {
   const maanden = Array.from({ length: 12 }, (_, m) => ({
-    maand: m, omzetExcl: 0, omzetIncl: 0, loon: 0, toeslagen: 0, alimentatie: 0, viaPrive: 0, viaZak: 0, zakVanPrive: 0, zakKosten: 0, boekingen: {},
+    maand: m, omzetExcl: 0, omzetIncl: 0, loon: 0, toeslagen: 0, alimentatie: 0, viaPrive: 0, viaZak: 0, zakVanPrive: 0, zakKosten: 0, aflossing: 0, boekingen: {},
   }));
   const soorten = {};
   const opt = { jaar, percentages, autoStatus, heeftLeaseAuto, eigenPriveIbans };
@@ -148,7 +150,9 @@ export function berekenInkomenPerMaand({
       // release33V0 — zakelijke kosten (excl. BTW, zakelijk deel volgens de aangifte) en aflossingen lease/lening vanaf de
       // zakelijke rekening: geld dat niet beschikbaar is voor het huishouden. Bij een BV horen die bij de BV.
       const zk = isBV ? 0 : zakelijkDeelKosten(tx, opt, categoryBtwRates, btwVerlegd);
-      if (zk) { m.zakKosten += zk; (m.boekingen.zakKosten ||= []).push(tx); }
+      // release33V6 — aflossingen (financiële lease, zakelijke leningen) apart van de kosten: geen kosten, wel geld weg.
+      if (zk && ZAK_AFLOSSING.has(tx.category)) { m.aflossing += zk; (m.boekingen.aflossing ||= []).push(tx); }
+      else if (zk) { m.zakKosten += zk; (m.boekingen.zakKosten ||= []).push(tx); }
       const d = priveDeelZakelijk(tx, opt);
       if (d && d.deel > 0) {
         const bedrag = -tx.amount * d.deel;
@@ -173,28 +177,39 @@ export function berekenInkomenPerMaand({
     }
   }
   for (const m of maanden) {
-    for (const k of ["omzetExcl", "omzetIncl", "loon", "toeslagen", "alimentatie", "viaPrive", "viaZak", "zakVanPrive", "zakKosten"]) m[k] = r2(m[k]);
+    for (const k of ["omzetExcl", "omzetIncl", "loon", "toeslagen", "alimentatie", "viaPrive", "viaZak", "zakVanPrive", "zakKosten", "aflossing"]) m[k] = r2(m[k]);
     m.zakGeladen = heleMaand(periodeZak, jaar, m.maand);
     m.priGeladen = heleMaand(periodePri, jaar, m.maand);
     m.prive = r2(m.loon + m.toeslagen + m.alimentatie);
     // Huishoudinkomen: bij een eenmanszaak omzet (excl. BTW) + privé; bij een BV is de omzet van de BV.
     m.totaal = r2((isBV ? 0 : m.omzetExcl) + m.prive);
     m.uitgaven = r2(m.viaPrive + m.viaZak);
-    m.verschil = r2(m.totaal - m.zakKosten - m.uitgaven);
+    m.zakelijk = r2(m.zakKosten + m.aflossing); // compacte kolom "Zakelijk (kosten + aflossing)"
+    m.verschil = r2(m.totaal - m.zakelijk - m.uitgaven);
     // Volledig: de privérekening is de hele maand geladen, en (als het dossier een zakelijke rekening heeft) die ook.
     m.volledig = m.priGeladen && (!periodeZak || m.zakGeladen);
     m.boekingen.uitgaven = [...(m.boekingen.viaPrive || []), ...(m.boekingen.viaZak || [])];
+    m.boekingen.zakelijk = [...(m.boekingen.zakKosten || []), ...(m.boekingen.aflossing || [])];
+    m.boekingen.totaal = [...(m.boekingen.omzetExcl || []), ...(m.boekingen.loon || []), ...(m.boekingen.toeslagen || []), ...(m.boekingen.alimentatie || [])];
   }
   // Privé-inkomenskolommen alleen als er in dit jaar ook echt iets in staat.
   const kolommen = INKOMEN_KOLOMMEN.filter((c) => c.soort === "zakelijk" ? !!periodeZak || maanden.some((m) => m[c.key] !== 0) : maanden.some((m) => m[c.key] !== 0));
   const volledig = maanden.filter((m) => m.volledig);
   const som = (k, lijst) => r2(lijst.reduce((a, m) => a + m[k], 0));
-  const sleutels = [...kolommen.map((c) => c.key), "prive", "totaal", "zakKosten", "viaPrive", "viaZak", "uitgaven", "verschil"];
+  const sleutels = [...kolommen.map((c) => c.key), "prive", "totaal", "zakKosten", "aflossing", "zakelijk", "viaPrive", "viaZak", "uitgaven", "verschil"];
   // Totalen en gemiddelden ALLEEN over de volledige maanden (inkomen én uitgaven), zodat ze vergelijkbaar zijn.
   const totalen = Object.fromEntries(sleutels.map((k) => [k, som(k, volledig)]));
   const gemiddeld = Object.fromEntries(sleutels.map((k) => [k, volledig.length ? r2(som(k, volledig) / volledig.length) : null]));
+  // release33V2 — de details gaan over dezelfde (volledige) maanden als de tabel, zodat de totalen gelijk zijn.
+  const volSet = new Set(volledig.map((m) => m.maand));
+  let soortenBuiten = 0;
   const soortLijst = Object.entries(soorten)
-    .map(([soort, s]) => ({ soort, bedrag: r2(s.bedrag), boekingen: s.boekingen.sort((a, b) => a.tx.date - b.tx.date) }))
+    .map(([soort, s]) => {
+      const binnen = s.boekingen.filter((b) => volSet.has(b.tx.date.getMonth()));
+      soortenBuiten += s.boekingen.filter((b) => !volSet.has(b.tx.date.getMonth())).reduce((a, b) => a + b.bedrag, 0);
+      return { soort, bedrag: r2(binnen.reduce((a, b) => a + b.bedrag, 0)), boekingen: binnen.sort((a, b) => a.tx.date - b.tx.date) };
+    })
+    .filter((x) => x.boekingen.length > 0)
     .sort((a, b) => b.bedrag - a.bedrag);
   return {
     maanden, kolommen, totalen, gemiddeld, aantalVolledig: volledig.length, isBV,
@@ -203,6 +218,7 @@ export function berekenInkomenPerMaand({
     omzetJaar: { excl: som("omzetExcl", maanden), incl: som("omzetIncl", maanden) },
     zakelijkInDossier: !!periodeZak, priveInDossier: !!periodePri,
     zakVanPrive: som("zakVanPrive", volledig),
-    soorten: soortLijst, soortenTotaal: r2(soortLijst.reduce((a, s) => a + s.bedrag, 0)),
+    heeftAflossing: maanden.some((m) => m.aflossing !== 0),
+    soorten: soortLijst, soortenBuiten: r2(soortenBuiten), soortenTotaal: r2(soortLijst.reduce((a, s) => a + s.bedrag, 0)),
   };
 }

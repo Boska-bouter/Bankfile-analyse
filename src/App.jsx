@@ -50,7 +50,7 @@ import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByF
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
-import { percentagesMetWerkruimte, werkruimteSoorten } from "./tax/werkruimte.js";
+import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
@@ -59,7 +59,7 @@ import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
-import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen } from "./tax/controleSuggesties.js";
+import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen, vindInkomstenInKosten } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
 import OpslaanModal from "./components/shared/OpslaanModal.jsx";
 import HerstelcodeModal from "./components/shared/HerstelcodeModal.jsx";
@@ -107,6 +107,7 @@ import HoldingBoekingenPanel from "./components/overview/HoldingBoekingenPanel.j
 import { estimateVpb } from "./tax/vpb.js";
 import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
+import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -254,18 +255,27 @@ export default function App() {
   const [startersaftrekStatus, setStartersaftrekStatusState] = useState({});
   // release20V3 — soort ruimte per jaar voor huur/energie/gemeentelijke lasten: bedrijfsruimte | zelfstandig | niet_zelfstandig.
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
+  // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
+  const [weergave, setWeergave] = useState("uitgebreid");
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
   // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
+  // release33V4 — het wizard-antwoord (zakelijk pand? werkruimte in de woning?) wordt de standaard voor álle jaren,
+  // ook voor jaren die later bijkomen (bewaard als werkruimteStatus._standaard). "Nee" + "Nee" = privé.
   const seedWerkruimteStatus = (yearsList, { pand, woning }) => {
-    if (!yearsList || yearsList.length === 0) return;
     snapshotBeforeAction("Zakelijk pand/werkruimte ingesteld (wizard)");
+    const std = werkruimteUitWizard({ pand, woning });
+    setWerkruimteStatusState((prev) => vulWerkruimteJaren({ ...prev, [WERKRUIMTE_STANDAARD]: std }, yearsList || []));
+  };
+  // release33V4 — dezelfde keuze voor meerdere jaren tegelijk (vraag "geldt dit ook voor de andere jaren?").
+  const setWerkruimteVoorJaren = (jaren, rekening, waarde) => {
+    if (!jaren?.length) return;
+    snapshotBeforeAction("Soort ruimte voor meerdere jaren aangepast");
     setWerkruimteStatusState((prev) => {
       const next = { ...prev };
-      for (const y of yearsList) {
-        if (next[y]) continue;
-        const prive = woning === "zelfstandig" || woning === "niet_zelfstandig" ? woning : pand ? "bedrijfsruimte" : null;
-        const zakelijk = pand ? "bedrijfsruimte" : null;
-        next[y] = { ...(zakelijk ? { zakelijk } : {}), ...(prive ? { prive } : {}), ...(!zakelijk && !prive ? { gevraagd: true } : {}) };
+      for (const y of jaren) {
+        const nieuw = { ...werkruimteSoorten(prev, y), [rekening]: waarde || null };
+        if (!nieuw.zakelijk && !nieuw.prive) next[y] = { leeg: true }; // bewust "niet aangegeven": niet opnieuw vullen
+        else next[y] = { ...(nieuw.zakelijk ? { zakelijk: nieuw.zakelijk } : {}), ...(nieuw.prive ? { prive: nieuw.prive } : {}) };
       }
       return next;
     });
@@ -276,7 +286,7 @@ export default function App() {
       const next = { ...prev };
       const huidig = werkruimteSoorten(prev, year);
       const nieuw = { ...huidig, [rekening]: waarde || null };
-      if (!nieuw.zakelijk && !nieuw.prive) delete next[year];
+      if (!nieuw.zakelijk && !nieuw.prive) next[year] = { leeg: true }; // bewust "niet aangegeven": niet opnieuw vullen
       else next[year] = { ...(nieuw.zakelijk ? { zakelijk: nieuw.zakelijk } : {}), ...(nieuw.prive ? { prive: nieuw.prive } : {}) };
       return next;
     });
@@ -328,7 +338,21 @@ export default function App() {
   const geenAutoInklapRef = useRef(0); // tijdstip tot wanneer kaarten niet vanzelf inklappen (bijv. na het verwijderen van een nieuw contract)
   const toggleCardExpand = (key) => {
     if (key === "bedrijfsmiddelen" && !expandedLiveRef.current?.[key]) stilLeaseBevestigen(); // release21V5 — geen venster meer bij openklappen
-    startTransition(() => setExpandedCardKeys((prev) => ({ ...prev, [key]: !prev[key] })));
+    // release33V9 — één kaart tegelijk open: een andere kaart openen klapt de vorige dicht, en het geopende
+    // paneel komt in beeld (anders bleef bijv. "Herkomst & opschonen" open staan en viel "Import & kwaliteit" buiten beeld).
+    const wordtOpen = !expandedLiveRef.current?.[key];
+    startTransition(() => setExpandedCardKeys((prev) => (prev[key] ? { ...prev, [key]: false } : { [key]: true })));
+    if (wordtOpen) {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-paneel="${key}"]`);
+        if (!el) return;
+        const balk = document.querySelector("[data-stappenbalk]");
+        const ruimte = balk && balk.offsetParent !== null ? Math.ceil(balk.getBoundingClientRect().height) + 24 : 16;
+        el.style.scrollMarginTop = `${ruimte}px`;
+        const r = el.getBoundingClientRect();
+        if (r.top < ruimte || r.top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    }
   };
   const [showAangifteMeerdereJaren, setShowAangifteMeerdereJaren] = useState(false); // "Ander jaar/meerdere jaren kiezen" binnen het Aangiftevoorstel-blok
   const [selectedAangifteYears, setSelectedAangifteYears] = useState([]);
@@ -586,7 +610,8 @@ export default function App() {
   ];
   // Klein hulpje om een sectie te tonen/verbergen op basis van het actieve tabblad, zonder 'm te
   // unmounten (zie de kop van dit blok hierboven).
-  const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey ? undefined : "none" });
+  const eenvoudigActief = weergave === "eenvoudig" && parsedFiles.length > 0;
+  const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey && !eenvoudigActief ? undefined : "none" });
   // Wordt gezet door jumpToSection zodra er eerst nog van tabblad gewisseld moet worden — de
   // daadwerkelijke scrollIntoView gebeurt pas ná die tabwissel (zie de useEffect hieronder), anders
   // scrollt hij naar een sectie die nog display:none staat.
@@ -656,6 +681,7 @@ export default function App() {
     setZaLegacyJaDefault(settings.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(settings.startersaftrekStatus && typeof settings.startersaftrekStatus === "object" ? settings.startersaftrekStatus : {});
     setWerkruimteStatusState(settings.werkruimteStatus && typeof settings.werkruimteStatus === "object" ? settings.werkruimteStatus : {});
+    setWeergave(settings.weergave === "eenvoudig" ? "eenvoudig" : "uitgebreid");
     setTariefOverridesState(settings.tariefOverrides && typeof settings.tariefOverrides === "object" ? settings.tariefOverrides : {});
     setOverigInkomenBox1State(settings.overigInkomenBox1 && typeof settings.overigInkomenBox1 === "object" ? settings.overigInkomenBox1 : {});
     setAutoStatusState(normalizeAutoStatus(settings.autoStatus));
@@ -1002,7 +1028,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
@@ -1016,7 +1042,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     changesSinceExport, lastExportAt,
@@ -1041,7 +1067,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
@@ -1165,7 +1191,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, tariefOverrides, overigInkomenBox1, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
@@ -1732,7 +1758,7 @@ export default function App() {
     if (jaren.length === 0) return;
     setOnderbouwingKeuze(null);
     setOnderbouwingJaren(jaren);
-    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified }));
+    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified, categoryZakelijkPercentage: categoryZakelijkPercentageEff, werkruimteStatus }));
   };
   // BTW-aangifte per kwartaal als los document (één of meer jaren).
   const [btwOverzichtKeuze, setBtwOverzichtKeuze] = useState(null);
@@ -2188,6 +2214,12 @@ export default function App() {
     return Object.values(map).sort((a, b) => a.year - b.year || (a.type === "Zakelijk" ? -1 : 1));
   }, [classified]);
   const years = useMemo(() => [...new Set(groups.map((g) => g.year))].sort((a, b) => a - b), [groups]);
+  // release33V4 — jaren zonder soort ruimte krijgen de standaard uit de wizard (ook jaren die later bijkomen, en
+  // jaren die in een ouder dossier alleen als "gevraagd" stonden: dat was twee keer "Nee" = privé).
+  useEffect(() => {
+    if (years.length === 0) return;
+    setWerkruimteStatusState((prev) => vulWerkruimteJaren(prev, years));
+  }, [years, werkruimteStatus]);
   // v300 — gecorrigeerd op verzoek: de eerste versie telde jaren met minstens één transactie van
   // het TYPE "Prive" (tx.type, na classificatie) — maar een "prive opname"-boeking (en zijn
   // spiegelboeking) op de ZAKELIJKE rekening krijgt ook type "Prive", terwijl dat jaar geen eigen
@@ -2653,6 +2685,7 @@ export default function App() {
   const aansluitControleInfo = useAansluitControleInfo({
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht: bevestigdeControles,
     eigenRekeningenNietGeladen: (eigenRekeningenExtra || []).map((r) => r?.iban).filter(Boolean),
+    eigenIbansAlle: [...eigenRekeningenGeladen, ...(eigenRekeningenExtra || [])].map((r) => r?.iban).filter(Boolean),
     periodeZak: periodePerSoort.Zakelijk || null, periodePri: periodePerSoort.Prive || null,
   });
   const checklistData = useMemo(
@@ -2851,6 +2884,7 @@ export default function App() {
       dekking: berekenDekking({ allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, bevestigd: bevestigdeControles }),
       terugkerend: vindTerugkerendeInconsistenties({ classified, overridesByRow, bevestigd: bevestigdeControles }),
       sprongen: vindJaarSprongen({ classified, bevestigd: bevestigdeControles, gatenAlleen: rechtsvorm !== "bv" }),
+      kostenIn: vindInkomstenInKosten({ classified, bevestigd: bevestigdeControles }),
       gatenAlleen: rechtsvorm !== "bv",
       eenzijdig: gezamenlijkePeriode(periodePerSoort.Zakelijk, periodePerSoort.Prive)?.eenzijdig || [],
     };
@@ -2861,6 +2895,11 @@ export default function App() {
   const toepassenTerugkerend = (t) => {
     snapshotBeforeAction(`Terugkerende betalingen ${t.naam} → ${t.hoofdCategorie}`);
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.afwijkend) next[a.id] = { ...(prev[a.id] || {}), category: t.hoofdCategorie, type: t.hoofdType }; return next; });
+  };
+  // release33V7 — bijschrijvingen van één tegenpartij in een kostencategorie naar een andere categorie (bijv. omzet).
+  const verplaatsBijschrijvingen = (ids, categorie, naam) => {
+    snapshotBeforeAction(`Bijschrijvingen ${naam} → ${categorie}`);
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category: categorie, type: "Zakelijk" }; return next; });
   };
   // release22V9 — alle betalingen van deze terugkerende reeks op een zelf gekozen categorie zetten.
   const toepassenTerugkerendAlle = (t, categorie, type) => {
@@ -2981,7 +3020,7 @@ export default function App() {
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
@@ -2997,7 +3036,7 @@ export default function App() {
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
-    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
+    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setWerkruimteVoorJaren, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State: setOverigInkomenBox1Met, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
@@ -3365,7 +3404,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
     });
@@ -3408,7 +3447,7 @@ export default function App() {
     setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
     setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
     setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setTariefOverridesState, setOverigInkomenBox1State,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setTariefOverridesState, setOverigInkomenBox1State,
     setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
     setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
     setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
@@ -3552,7 +3591,8 @@ export default function App() {
       {/* Fase 1 van de dashboard-restyling: de donkere header-balk + StickyTopNav zijn vervangen
           door deze vaste linker zijbalk (AppSidebar.jsx) — zelfde handlers/refs als voorheen,
           alleen de plek van de knoppen is anders. Zie het bouwvoorstel-document. */}
-      <AppSidebar
+      {!eenvoudigActief && <AppSidebar
+        onEenvoudig={parsedFiles.length > 0 ? () => setWeergave("eenvoudig") : null}
         rekeninghouderNaam={eigenNamen?.ondernemer}
         onEditRekeninghouder={() => setShowRekeninghouderModal(true)}
         activeTab={activeTab}
@@ -3585,7 +3625,7 @@ export default function App() {
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
         onDismissLastAction={() => setLastActionSnapshot(null)}
-      />
+      />}
       <input
         ref={bankFileInputRef}
         type="file"
@@ -3670,14 +3710,25 @@ export default function App() {
 
       {/* Tabblad-pijlen in de marge naast de inhoud (alleen waar die marge breed genoeg is): één tik naar het
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
-      {tabsVisible && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
+      {tabsVisible && !eenvoudigActief && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <SessieBalk sessie={sessie} onOpslaan={saveProjectFile} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
+        {eenvoudigActief && (
+          <EenvoudigeApp
+            klantNaam={eigenNamen?.ondernemer} jaar={activeYear} jaren={years} onJaar={setActiveYear}
+            bestanden={parsedFiles.map((f) => ({ naam: f.fileName, type: accountTypeByFile[f.fileName] }))}
+            classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
+            onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
+            onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setManualWizardOpen(true)}
+            onOpslaan={startOpslaan} onUitgebreid={() => setWeergave("uitgebreid")}
+            fiscaal={activeYear ? fiscaalVoorJaar(activeYear) : null} jaarSummary={activeYear ? yearlySummaries[activeYear] : null} isBV={rechtsvorm === "bv"}
+          />
+        )}
         {/* V18 — de losse TabNavBar (Terug/Volgende) is vervallen: dubbel met de voortgangsbalk hieronder
             (Terug naar Overzicht) en de stap-kaart op Overzicht (Ga naar deze stap). */}
         {/* V90 — op Controleren/Instellingen blijft de eerstvolgende open stap zichtbaar, zodat je nooit vastloopt */}
-        {activeTab !== "overzicht" && (() => {
+        {activeTab !== "overzicht" && !eenvoudigActief && (() => {
           const volgende = volgendeStap;
           const totaal = (controlerenBadge || 0) + (instellingenBadge || 0);
           const pct = maxStappen > 0 ? Math.round((100 * stappenKlaar) / maxStappen) : 0;
@@ -4164,7 +4215,7 @@ export default function App() {
             hierboven — zelfde databron (yearlyProgress/dashboardCards "yearStatus"), alleen ook
             hier getoond i.p.v. alleen op Overzicht. */}
         {/* release31V1 — openstaande basisvragen tellen mee in de Instellingen-badge; dan moeten ze hier ook te zien zijn */}
-        {parsedFiles.length > 0 && activeTab === "instellingen" && !(showSetupWizard || manualWizardOpen || openVragenWizard) && openBasisvragen.length > 0 && (
+        {parsedFiles.length > 0 && !eenvoudigActief && activeTab === "instellingen" && !(showSetupWizard || manualWizardOpen || openVragenWizard) && openBasisvragen.length > 0 && (
           <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
         )}
         <div style={sectionTabStyle("instellingen")}>
@@ -4206,7 +4257,7 @@ export default function App() {
         {/* release30V9 — stond ook op "pendingIncomeReview.length === 0": zodra een wijziging een nieuwe
             inkomstenbron opleverde (Herkomst van inkomsten: 1 open), verdwenen de categoriekaarten én de
             detailtabellen van Controleren. Die blijven nu altijd staan. */}
-        {transactions.length > 0 && (
+        {transactions.length > 0 && !eenvoudigActief && (
           <>
 
             {/* Op verzoek (v281) staat "Opschonen" (OpschonenPanel.jsx) alleen nog binnen de

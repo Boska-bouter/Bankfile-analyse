@@ -8,7 +8,7 @@ import {
   resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
-import { werkruimteBlokHtml } from "./werkruimteBlok.js";
+import { werkruimteRegelHtml } from "./werkruimteBlok.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { classifyContinuityGap } from "../importers/transactions.js";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvesteringenForYear } from "../tax/activa.js";
@@ -491,11 +491,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       ${rij("Mét zelfstandigenaftrek", zaScenarios.metZelfstandigenaftrek)}
       ${rij("Zonder zelfstandigenaftrek", zaScenarios.zonderZelfstandigenaftrek)}
     </tbody></table>${btwRegelHtml}<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p></div>`;
-    JAAR_TOTALEN.push({ year, onbekend: true });
+    JAAR_TOTALEN.push({ year, onbekend: true, winst: summary.winst, btw: korRegeling ? null : btwJaarSaldo });
   } else {
     const i = ibNa(ibEstimate, heffingskortingen);
     const t = i + zvwEstimate.bijdrage;
-    JAAR_TOTALEN.push({ year, totaal: t });
+    JAAR_TOTALEN.push({ year, totaal: t, winst: summary.winst, ib: i, zvw: zvwEstimate.bijdrage, btw: korRegeling ? null : btwJaarSaldo });
     jaarTotaalHtml = `<div class="totaal-kaart">
       <div class="totaal-regel"><span>Indicatieve IB na heffingskorting</span><span>${eur(i)}</span></div>
       <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
@@ -647,7 +647,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
   // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
-  const gedeeldeHuisvestingHtml = werkruimteBlokHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus);
+  const gedeeldeHuisvestingHtml = werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus);
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0
@@ -796,8 +796,18 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const bepaald = JAAR_TOTALEN.filter((j) => !j.onbekend);
   const onbekendeJaren = JAAR_TOTALEN.filter((j) => j.onbekend).map((j) => j.year);
   const grandTotaal = bepaald.reduce((a, j) => a + j.totaal, 0);
-  const totaalAlleJarenHtml = yearsToInclude.length > 1 && bepaald.length > 0
-    ? `<div class="totaal-kaart"><div class="totaal-regel totaal-eind"><span>Totaal alle jaren, jaarlijks: IB + Zvw (${bepaald.map((j) => j.year).join(" + ")})</span><span>${eur(Math.abs(grandTotaal))} ${grandTotaal < 0 ? "te ontvangen" : "te betalen"}</span></div>${onbekendeJaren.length > 0 ? `<p class="kerncijfers-voetnoot">Exclusief ${onbekendeJaren.join(", ")} (urencriterium onbekend — zie de twee scenario's in dat jaar). Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten.</p>` : `<p class="kerncijfers-voetnoot">Indicatief, overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>`}</div>`
+  // release33V5 — bij meerdere jaren bovenaan een overzicht per jaar met totaal (vervangt het losse totaalblok onderaan).
+  const somVan = (k) => bepaald.reduce((a, j) => a + (j[k] || 0), 0);
+  const btwTekst = (v) => v == null ? "KOR" : `${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}`;
+  const heeftBtw = JAAR_TOTALEN.some((j) => j.btw != null);
+  const overzichtJarenHtml = yearsToInclude.length > 1 && JAAR_TOTALEN.length > 0
+    ? `<h2>Overzicht ${Math.min(...yearsToInclude)} – ${Math.max(...yearsToInclude)}</h2>
+  <div class="totaal-kaart"><table class="samenvatting-scenarios overzicht-jaren"><thead><tr><th>Jaar</th><th>Winst uit onderneming</th><th>IB ná heffingskorting</th><th>Zvw-bijdrage</th><th>IB + Zvw</th>${heeftBtw ? "<th>BTW-saldo jaar</th>" : ""}</tr></thead><tbody>
+    ${JAAR_TOTALEN.map((j) => j.onbekend
+      ? `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num" colspan="3">urencriterium onbekend — zie de twee scenario's in dat jaar</td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`
+      : `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num">${eur(j.ib)}</td><td class="num">${eur(j.zvw)}</td><td class="num"><strong>${eur(j.totaal)}</strong></td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`).join("")}
+    <tr class="totaal"><td>Totaal${onbekendeJaren.length ? ` (zonder ${onbekendeJaren.join(", ")})` : ""}</td><td class="num">${eur(somVan("winst"))}</td><td class="num">${eur(somVan("ib"))}</td><td class="num">${eur(somVan("zvw"))}</td><td class="num">${eur(grandTotaal)}</td>${heeftBtw ? `<td class="num btw">${btwTekst(bepaald.reduce((a, j) => a + (j.btw || 0), 0))}</td>` : ""}</tr>
+  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, op basis van de bankgegevens. Zonder verrekening van voorschotten, voorlopige aanslagen of wat al is betaald.${heeftBtw ? " De BTW wordt per kwartaal aangegeven en staat daarom apart, niet in het totaal IB + Zvw." : ""} Per jaar volgt hieronder de volledige berekening.</p></div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -868,6 +878,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .samenvatting-scenarios { width: 100%; margin: 8px 0; font-size: 10px; }
   .samenvatting-scenarios th, .samenvatting-scenarios td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; text-align: left; }
   .samenvatting-scenarios th:not(:first-child), .samenvatting-scenarios td.num { text-align: right; }
+  .overzicht-jaren { font-size: 11px; } .overzicht-jaren td.btw { color: #64748b; } .overzicht-jaren tr.totaal td { font-weight: bold; border-top: 2px solid #0f172a; border-bottom: none; }
   .controledoel { margin: 20px 0; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e3a5f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
   .onzekerheden ul { margin: 6px 0 6px 16px; padding: 0; }
@@ -880,8 +891,8 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
   ${reserveWaarschuwingHtml}
+  ${overzichtJarenHtml}
   ${sections}
-  ${totaalAlleJarenHtml}
   ${PAGE_BREAK_DIVIDER}
   <h2>Lees dit voordat je de cijfers gebruikt</h2>
   <div class="controledoel">

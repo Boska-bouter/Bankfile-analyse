@@ -15,7 +15,7 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
@@ -39,7 +39,7 @@ export function useControlerenCardGroups(p) {
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
     setReviewFileModal, setShowAutoActivaModal, setShowConfirmedSeparateDuplicates, setShowDuplicateDetails, setShowOnverklaard,
-    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
+    setShowOverigReview, setShowPersonReview, setStartersaftrekStatus, werkruimteStatus, setWerkruimteStatus, setWerkruimteVoorJaren, setCategoryZakelijkPercentage, setZelfstandigenaftrekStatus, showConfirmedSeparateDuplicates,
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
@@ -60,7 +60,7 @@ export function useControlerenCardGroups(p) {
       withExpand(
         (() => {
           let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
-          const nCtl = aanvullendeControles ? (aanvullendeControles.dekking.aantalVerdacht > 0 ? 1 : 0) + aanvullendeControles.terugkerend.length : 0;
+          const nCtl = aanvullendeControles ? (aanvullendeControles.dekking.aantalVerdacht > 0 ? 1 : 0) + aanvullendeControles.terugkerend.length + (aanvullendeControles.kostenIn?.length || 0) : 0;
           if (basis && nCtl > 0) basis = { ...basis, lines: [...basis.lines, { label: "Aanvullende controles", value: `🟠 ${nCtl} om te bekijken` }] };
           if (!basis || !aansluitControleInfo.heeftData) return basis;
           const toneRank = { risk: 3, attention: 2, neutral: 1, ok: 0 };
@@ -91,7 +91,7 @@ export function useControlerenCardGroups(p) {
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
-          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} />
+          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} />
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={classified}
@@ -292,6 +292,8 @@ export function useControlerenCardGroups(p) {
               onSetCategoryZakelijkPercentage={requestSetCategoryZakelijkPercentage}
               werkruimte={activeYear ? werkruimteSoorten(werkruimteStatus, activeYear) : { zakelijk: null, prive: null }}
               onSetWerkruimte={(rekening, waarde) => setWerkruimteStatus(activeYear, rekening, waarde)}
+              andereJarenWerkruimte={(years || []).filter((y) => y !== activeYear).map((y) => ({ jaar: y, ...werkruimteSoorten(werkruimteStatus, y) }))}
+              onSetWerkruimteJaren={setWerkruimteVoorJaren}
               onSetRekeningPercentage={(categorie, rekening, percentage) => setCategoryZakelijkPercentage(categorie, `${activeYear}:${rekening}`, percentage)}
               werkruimteBetaling={activeYear ? betaaldPerRekening(classified, activeYear) : {}}
               autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}

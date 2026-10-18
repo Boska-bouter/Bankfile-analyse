@@ -81,6 +81,7 @@ export async function laadDossierBestand(file, c) {
     setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
     c.setWerkruimteStatusState?.(project.werkruimteStatus && typeof project.werkruimteStatus === "object" ? project.werkruimteStatus : {});
+    c.setWeergave?.(project.weergave === "eenvoudig" ? "eenvoudig" : "uitgebreid");
     setTariefOverridesState(project.tariefOverrides && typeof project.tariefOverrides === "object" ? project.tariefOverrides : {});
     setOverigInkomenBox1State(project.overigInkomenBox1 && typeof project.overigInkomenBox1 === "object" ? project.overigInkomenBox1 : {});
     setAutoStatusState(normalizeAutoStatus(project.autoStatus));

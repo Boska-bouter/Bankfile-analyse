@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { eur } from "../utils/amounts.js";
 import { betaalSoort } from "../classification/classify.js";
+import { looksLikePerson } from "../utils/normalization.js";
 import { gezamenlijkePeriode } from "./periodeDekking.js";
 
 // Sleutel waaronder een toegelichte (bekende) niet-gekoppelde overboeking in bevestigdeControles staat.
@@ -14,7 +15,7 @@ export function onverklaardSleutel(tx, kant) {
 export function useAansluitControleInfo(p) {
   const {
     priGroupForYear, priveRekeningGeladen, zakGroupForYear, zakelijkRekeningGeladen, toegelicht = {}, eigenRekeningenNietGeladen = [],
-    periodeZak = null, periodePri = null,
+    periodeZak = null, periodePri = null, eigenIbansAlle = [],
   } = p;
 
   return useMemo(() => {
@@ -43,6 +44,7 @@ export function useAansluitControleInfo(p) {
     // staat, zijn vanzelf verklaard: daar is geen tegenboeking in de geladen bestanden te verwachten.
     const norm = (x) => String(x || "").replace(/\s/g, "").toUpperCase();
     const nietGeladen = new Set(eigenRekeningenNietGeladen.map(norm));
+    const eigen = new Set(eigenIbansAlle.map(norm));
     const autoUitleg = (x) => {
       const iban = norm(x.tx.counterpartyIban);
       if (iban && nietGeladen.has(iban)) return { reden: "eigen-rekening", redenTekst: `Eigen rekening ${iban.replace(/(.{4})(?=.)/g, "$1 ")}, niet geladen`, notitie: "", automatisch: true };
@@ -52,6 +54,17 @@ export function useAansluitControleInfo(p) {
         const soort = betaalSoort(x.tx);
         if (soort === "contant") return { reden: "contant", redenTekst: "Contant opgenomen — komt niet op een privérekening", notitie: "", automatisch: true };
         if (soort === "pin") return { reden: "pin", redenTekst: "Privé-uitgave met de zakelijke pas — komt niet op een privérekening", notitie: "", automatisch: true };
+        // release33V8 — privé rechtstreeks betaald aan een ander (iDEAL, Tikkie, Mollie, incassobureau, webshop) vanaf de
+        // zakelijke rekening: ook dat komt nooit op een privérekening. Alleen als de tegenrekening geen eigen rekening is,
+        // en het geen overboeking aan een persoon lijkt (dat kan een niet-opgegeven eigen rekening zijn) — behalve via een
+        // betaaldienst zoals Tikkie.
+        if (x.tx.category === "Privé opnames" && x.tx.amount < 0 && !eigen.has(iban)) {
+          const tekst = `${x.tx.counterparty || ""} ${x.tx.description || ""}`;
+          const viaDienst = /tikkie|mollie|ideal|adyen|buckaroo|pay\.nl|stripe|klarna|paypal|sisow|multisafepay|ccv|worldline/i.test(tekst);
+          if (viaDienst || !looksLikePerson(x.tx.counterparty || "")) {
+            return { reden: "derden", redenTekst: "Privé direct betaald aan een ander — komt niet op een privérekening", notitie: "", automatisch: true };
+          }
+        }
       }
       return null;
     };
@@ -60,7 +73,7 @@ export function useAansluitControleInfo(p) {
       const auto = autoUitleg(x);
       // Eerder met "Akkoord" de algemene tekst "bestand ontbreekt" gegeven bij een contante opname of pinbetaling:
       // dan is de automatische (juiste) reden beter. Een eigen notitie of andere reden blijft staan.
-      if (auto && (auto.reden === "contant" || auto.reden === "pin") && handmatig && handmatig.reden === "bestand" && !handmatig.notitie) return auto;
+      if (auto && (auto.reden === "contant" || auto.reden === "pin" || auto.reden === "derden") && handmatig && handmatig.reden === "bestand" && !handmatig.notitie) return auto;
       return handmatig || auto;
     };
     // release31V4 — buiten de periode die zakelijk én privé samen dekken kan een boeking nooit een tegenboeking
@@ -98,5 +111,5 @@ export function useAansluitControleInfo(p) {
         : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diffOpen)}).${toegelichtTekst}${buitenTekst}`;
     }
     return { zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag, buitenPeriode: buitenLijst, buitenBedrag, eenzijdigTekst };
-  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|"), periodeZak, periodePri]);
+  }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|"), eigenIbansAlle.join("|"), periodeZak, periodePri]);
 }

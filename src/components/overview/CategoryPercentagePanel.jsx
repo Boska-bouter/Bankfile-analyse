@@ -127,8 +127,11 @@ function WerkruimteCategorieRij({ categorie, betaling, rawPlain, rawZakelijk, ra
 // zo staat een categorie altijd op dezelfde plek, ook als de bedragen per jaar wisselen.
 export default function CategoryPercentagePanel({
   defaultOpen = false, activeYear, categorieTotalen, categoryZakelijkPercentage, huisvestingStandaardNul = [], onSetCategoryZakelijkPercentage, autoOpDeZaakDitJaar, onOpenHelp, gedeeldeRijen, werkruimte = { zakelijk: null, prive: null }, onSetWerkruimte, werkruimteBetaling = {}, onSetRekeningPercentage,
+  andereJarenWerkruimte = [], onSetWerkruimteJaren,
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  // release33V4 — na een keuze: "geldt dit ook voor de andere jaren?" { rek, waarde, jaar }
+  const [jarenVraag, setJarenVraag] = useState(null);
   const sectionRef = useOpenOnJump(setOpen);
   const categorieen = Object.keys(categorieTotalen || {}).sort((a, b) => a.localeCompare(b));
   // Blijft ook zichtbaar zonder splitsbare categorieën als er dit jaar "auto op de zaak" is
@@ -185,7 +188,7 @@ export default function CategoryPercentagePanel({
                       id={`werkruimte-${rek}`}
                       key={`werkruimte-${rek}-${activeYear}`}
                       value={soort}
-                      onChange={(e) => onSetWerkruimte(rek, e.target.value || null)}
+                      onChange={(e) => { const w = e.target.value || null; onSetWerkruimte(rek, w); setJarenVraag(w && onSetWerkruimteJaren ? { rek, waarde: w, jaar: activeYear } : null); }}
                       className="rounded-veld border border-slate-300 bg-white px-2.5 py-1.5 text-sm max-w-full"
                     >
                       <option value="">Niet aangegeven (rekent met de percentages hieronder)</option>
@@ -198,6 +201,25 @@ export default function CategoryPercentagePanel({
                       {soort === "prive" && "Privé: telt niet mee als zakelijke kosten (0%)."}
                       {!soort && "Kies wat van toepassing is: voor een thuiskantoor in de eigen woning gelden andere regels dan voor een zakelijk gehuurd pand."}
                     </p>
+                    {jarenVraag && jarenVraag.rek === rek && jarenVraag.jaar === activeYear && (() => {
+                      const leeg = andereJarenWerkruimte.filter((j) => !j[rek]).map((j) => j.jaar);
+                      const anders = andereJarenWerkruimte.filter((j) => j[rek] && j[rek] !== jarenVraag.waarde);
+                      if (leeg.length === 0 && anders.length === 0) return null;
+                      const label = WERKRUIMTE_LABELS[jarenVraag.waarde];
+                      const zet = (jaren) => { onSetWerkruimteJaren(jaren, rek, jarenVraag.waarde); };
+                      return (
+                        <div className="mt-2 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-2 text-xs text-teal-900 space-y-1.5">
+                          <p className="font-medium">Geldt "{label}" voor de {rek === "zakelijk" ? "zakelijke rekening" : "privérekening"} ook voor de andere jaren?</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {leeg.length > 0 && <button type="button" onClick={() => zet(leeg)} className="rounded-md bg-teal-700 px-2.5 py-1 font-semibold text-white hover:bg-teal-800">Ja, ook voor {leeg.join(", ")}</button>}
+                            {anders.map((j) => (
+                              <button key={j.jaar} type="button" onClick={() => zet([j.jaar])} className="rounded-md border border-teal-300 bg-white px-2.5 py-1 font-medium hover:bg-teal-100">{j.jaar} staat op "{WERKRUIMTE_LABELS[j[rek]]}" — ook aanpassen</button>
+                            ))}
+                            <button type="button" onClick={() => setJarenVraag(null)} className="rounded-md px-2.5 py-1 text-teal-800 underline">Alleen {activeYear}</button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

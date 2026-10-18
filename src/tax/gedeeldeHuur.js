@@ -37,8 +37,10 @@ export function computeGedeeldeHuisvestingVoorJaar(classified, year, category, p
     if (tx.isMirror || tx.year !== year) continue;
     if (tx.category !== category) continue;
     heeftTransacties = true;
-    totaalBruto += Math.abs(tx.amount);
-    totaalBtw += Math.abs(computeBtw(tx, categoryBtwRates, btwVerlegd));
+    // release33V6 — met teken: een terugbetaling (positief bedrag) verlaagt de kosten in plaats van ze te verhogen.
+    // (Deze "(deels zakelijk)"-categorieën bestaan sinds 14V9 niet meer in dossiers; dit blijft als vangnet.)
+    totaalBruto += -tx.amount;
+    totaalBtw += -computeBtw(tx, categoryBtwRates, btwVerlegd);
   }
   if (!heeftTransacties) return null;
 

@@ -65,6 +65,7 @@ export default function AppSidebar({
   orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
   onEditRekeninghouder,
+  onEenvoudig,
   activeTab,
   onSelectTab,
   tabsVisible,
@@ -176,6 +177,16 @@ export default function AppSidebar({
           </button>
         )}
       </div>
+
+      {/* nieuw-V1R01 — wisselen naar de eenvoudige weergave */}
+      {onEenvoudig && (
+        <div className="sb-label px-1.5 pb-4 mb-4 border-b border-white/10">
+          <div className="flex rounded-full bg-white/10 p-0.5 text-xs">
+            <button type="button" onClick={onEenvoudig} className="flex-1 rounded-full px-2 py-1 text-slate-300 hover:text-white">Eenvoudig</button>
+            <span className="flex-1 rounded-full bg-white px-2 py-1 text-center font-bold text-slate-900">Uitgebreid</span>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       {tabsVisible && (
