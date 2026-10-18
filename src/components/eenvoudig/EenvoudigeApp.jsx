@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen } from "lucide-react";
 import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
+import MijnAntwoorden from "./MijnAntwoorden.jsx";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
@@ -60,8 +61,13 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
+  // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
+  const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
+  const [terugIdx, setTerugIdx] = useState(null);
+  const [gekozenKeys, setGekozenKeys] = useState([]);
+  const [antwoordenOpen, setAntwoordenOpen] = useState(false);
   const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V3R0 — uitleg: de eerste keer (per gebruiker, per apparaat) vanzelf open, daarna via de knop "Uitleg".
   const uitlegSleutel = `bankoverzicht.uitlegEenvoudigGezien${toegangInfo?.email ? `:${toegangInfo.email}` : ""}`;
@@ -84,7 +90,8 @@ export default function EenvoudigeApp({
   const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
   const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
-  const vraag = wachtrij[0] || null;
+  const terug = terugIdx != null ? geschiedenis[terugIdx] : null;
+  const vraag = terug ? terug.vraag : wachtrij[0] || null;
   useEffect(() => setToonBoekingen(false), [vraag?.key]);
   const isTerug = vraag && overgeslagen.includes(vraag.key);
   // Hoeveel vragen (grootste eerst) zijn ongeveer nodig om op 90% herkend te komen?
@@ -100,13 +107,23 @@ export default function EenvoudigeApp({
     if (!vraag) return;
     for (const g of vraag.groepen) {
       const patch = keuze.category ? keuze : categorieVoorAntwoord(keuze, g.teken, g.rekening);
-      onAntwoord(g.naam, g.txs[0].amount, patch);
+      if (g.perBoeking && onRijAntwoord) onRijAntwoord(g.txs.map((t) => t.id), patch);
+      else onAntwoord(g.naam, g.txs[0].amount, patch);
     }
-    setOvergeslagen((p) => p.filter((k) => k !== vraag.key));
-    setGedaan((p) => ({ ...p, [jaar]: (p[jaar] || 0) + 1 }));
+    const k = typeof keuze === "string" ? keuze : `cat:${keuze.category}`;
+    setGekozenKeys((p) => [...vraag.groepen.map((g) => g.key), ...p.filter((x) => !vraag.groepen.some((g) => g.key === x))]);
+    if (terug) {
+      setGeschiedenis((p) => p.map((h, i) => (i === terugIdx ? { ...h, keuze: k } : h)));
+      setTerugIdx(null);
+    } else {
+      setGeschiedenis((p) => [...p, { vraag, keuze: k }]);
+      setOvergeslagen((p) => p.filter((x) => x !== vraag.key));
+      setGedaan((p) => ({ ...p, [jaar]: (p[jaar] || 0) + 1 }));
+    }
     setAnders("");
   };
-  const slaOver = () => { if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
+  const vorigeVraag = () => { const i = (terugIdx ?? geschiedenis.length) - 1; if (i >= 0) { setTerugIdx(i); setAnders(""); } };
+  const slaOver = () => { if (terug) { setTerugIdx(null); return; } if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
   const voorstel = vraag ? voorstelVoor(vraag) : null;
   const zak = vraag?.rekening === "Zakelijk";
   const KEUZES = vraag ? [
@@ -234,7 +251,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                   return (
                     <div className="mb-4 rounded-xl bg-slate-50 px-3 py-2.5">
                       <div className="mb-1.5 flex flex-wrap justify-between gap-2 text-xs text-slate-600">
-                        <span><b>Vraag {klaar + 1} van {totaal}</b>{isTerug ? " · eerder overgeslagen" : " · grootste bedragen eerst"}</span>
+                        <span>{terug ? <b className="text-amber-700">Eerder beantwoorde vraag aanpassen</b> : <><b>Vraag {klaar + 1} van {totaal}</b>{isTerug ? " · eerder overgeslagen" : " · grootste bedragen eerst"}</>}</span>
                         <span>{b.oordeel === "betrouwbaar" ? <b className="text-emerald-700">Uitkomst is al betrouwbaar — de rest is optioneel</b> : nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen}</b> tot Betrouwbaar</> : null}</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200"><i className="block h-full bg-teal-600" style={{ width: `${totaal ? Math.round((klaar / totaal) * 100) : 0}%` }} /></div>
@@ -245,12 +262,23 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                 <p className="mb-3 text-sm text-slate-600">
                   {vraag.soort === "kleinePin"
                     ? "Kleine pinbetalingen die de app niet kon herkennen, bijvoorbeeld bij winkels. Je antwoord geldt voor allemaal."
-                    : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; je antwoord geldt voor allemaal, ook in andere jaren.</>}
+                    : vraag.groepen[0]?.perBoeking
+                      ? <>Betaling via een betaaldienst. De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b> van deze partij; je antwoord geldt alleen daarvoor.</>
+                      : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; je antwoord geldt voor allemaal, ook in andere jaren.</>}
                 </p>
-                <div className="mb-4 flex justify-between gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm">
-                  <span className="min-w-0 truncate">{vraag.naam}{vraag.voorbeeld?.description && vraag.soort !== "kleinePin" ? <span className="block truncate text-xs text-slate-500">{String(vraag.voorbeeld.description).replace(/^Naam:.*?Omschrijving:\s*/, "").slice(0, 90)}</span> : null}</span>
-                  <b className="shrink-0 font-mono">{eur(vraag.bedrag)}</b>
-                </div>
+                {vraag.betaaldienst && !vraag.groepen[0]?.perBoeking && (
+                  <p className="-mt-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Dit is een betaaldienst: hierachter kunnen verschillende betalingen zitten, zakelijk en privé. Twijfel je? Kies <b>Weet ik niet</b>; dan kan het in Uitgebreid per boeking worden ingedeeld.</p>
+                )}
+                {(() => {
+                  // nieuw-V3R2 — geen voorbeeldomschrijving meer in dit vak: het bedrag is het totaal van alle boekingen in het jaar.
+                  const nJaar = vraag.groepen.flatMap((g) => g.txs).filter((t) => jaar == null || t.year === jaar).length;
+                  return (
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm">
+                      <span className="min-w-0 truncate font-semibold">{vraag.naam}</span>
+                      <span className="shrink-0 text-right"><b className="block font-mono">{eur(vraag.bedrag)}</b><span className="block text-xs text-slate-500">totaal van {nJaar} {nJaar === 1 ? "boeking" : "boekingen"}{jaar ? ` in ${jaar}` : ""}</span></span>
+                    </div>
+                  );
+                })()}
                 {(() => {
                   const alle = vraag.groepen.flatMap((g) => g.txs);
                   const txs = alle.filter((t) => jaar == null || t.year === jaar).sort((x, y) => (y.date?.getTime?.() || 0) - (x.date?.getTime?.() || 0));
@@ -281,8 +309,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                 })()}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {KEUZES.map((c) => (
-                    <button key={c.k} type="button" onClick={() => beantwoord(c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${voorstel === c.k ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}>
-                      {voorstel === c.k && <span className="mb-1 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">Voorstel</span>}
+                    <button key={c.k} type="button" onClick={() => beantwoord(c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${(terug ? terug.keuze === c.k : voorstel === c.k) ? (terug ? "border-amber-500 bg-amber-50" : "border-teal-600 bg-teal-50") : "border-slate-300 bg-white"}`}>
+                      {terug ? terug.keuze === c.k && <span className="mb-1 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">Je koos</span>
+                        : voorstel === c.k && <span className="mb-1 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">Voorstel</span>}
                       <span className="block">{c.t}</span><span className="block text-xs font-normal text-slate-500">{c.s}</span>
                     </button>
                   ))}
@@ -292,12 +321,21 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                     {anders && <button type="button" onClick={() => beantwoord({ category: anders, type: /^Privé/.test(mainCategoryOf(anders)) || /^Privé/.test(anders) ? "Prive" : "Zakelijk" })} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
                   </div>
                 </div>
-                <button type="button" onClick={slaOver} className="mt-3 text-sm text-slate-600 underline">Weet ik niet, sla over</button>
+                {terug && terug.keuze?.startsWith("cat:") && <p className="mt-2 text-xs text-amber-700">Je koos: {terug.keuze.slice(4)}</p>}
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                  <button type="button" onClick={slaOver} style={{ minHeight: 0 }} className="text-slate-600 underline">{terug ? "Laat zo, terug naar de huidige vraag" : "Weet ik niet, sla over"}</button>
+                  {(terugIdx ?? geschiedenis.length) > 0 && <button type="button" onClick={vorigeVraag} style={{ minHeight: 0 }} className="text-slate-600 underline">← Vorige vraag</button>}
+                  {onWijzigAntwoord && <button type="button" onClick={() => setAntwoordenOpen(true)} style={{ minHeight: 0 }} className="text-slate-600 underline">Mijn antwoorden</button>}
+                </div>
               </>
             ) : (
               <>
                 <h2 className="text-xl font-bold">Alles nagekeken</h2>
                 <p className="text-sm text-slate-600">Er zijn geen vragen meer voor {jaar}. Ga verder naar de uitkomst.</p>
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                  {geschiedenis.length > 0 && <button type="button" onClick={vorigeVraag} style={{ minHeight: 0 }} className="text-slate-600 underline">← Vorige vraag</button>}
+                  {onWijzigAntwoord && <button type="button" onClick={() => setAntwoordenOpen(true)} style={{ minHeight: 0 }} className="text-slate-600 underline">Mijn antwoorden</button>}
+                </div>
               </>
             )}
             <div className="mt-5"><button type="button" onClick={() => setStap(3)} className="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 3: Uitkomst →</button></div>
@@ -370,6 +408,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
         </div>
       )}
       {uitleg && <UitlegEenvoudig eersteKeer={uitleg === "eerste"} onClose={sluitUitleg} />}
+      {antwoordenOpen && <MijnAntwoorden lijst={antwoordenLijst} gekozenKeys={gekozenKeys} jaar={jaar} onWijzig={onWijzigAntwoord} onWis={onWisAntwoord} onClose={() => setAntwoordenOpen(false)} />}
     </div>
   );
 }

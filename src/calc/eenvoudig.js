@@ -51,6 +51,25 @@ export function berekenBetrouwbaarheid(classified, jaar, bevestigd) {
   };
 }
 
+// nieuw-V3R3 — betaaldiensten ("verzamelnamen"): achter één naam zitten veel verschillende partijen, deels zakelijk en
+// deels privé. Die worden opgesplitst naar de echte partij uit de omschrijving ("…, VAN K.E.A.P. VELDHUIS, NL95…") of,
+// als die er niet staat, naar het IBAN in de omschrijving. Het antwoord geldt dan per boeking van die partij.
+export const BETAALDIENST = /\b(tikkie|paypal|mollie|adyen|stripe|buckaroo|multisafepay|klarna|derdengelden|betaalverzoek)\b/i;
+// "Lukus via Tikkie" of "GG B.V. via Stichting Mollie": de echte partij staat al vóór "via" — dan geen verzamelnaam.
+export function isBetaaldienst(tx) {
+  const cp = String(tx.counterparty || "");
+  const voorVia = cp.split(/\s+via\s+/i)[0];
+  return BETAALDIENST.test(voorVia);
+}
+export function echtePartij(tx) {
+  const d = String(tx.description || "");
+  const m = d.match(/(?:^|,)\s*(?:van|aan)\s+([^,]{3,60}?)\s*(?:,|$)/i);
+  if (m) return { sleutel: m[1].trim().toLowerCase().replace(/\s+/g, " "), naam: m[1].trim() };
+  const iban = d.match(/\b[A-Z]{2}\d{2}[A-Z]{4}\d{7,}\b/);
+  if (iban) return { sleutel: iban[0], naam: `rekening ${iban[0]}` };
+  return null;
+}
+
 const KLEIN = 100; // kleine pinbetalingen (per tegenpartij in totaal) gaan samen in één groepsvraag
 
 // Vragen voor "Nakijken": per tegenpartij (alle jaren samen, want het antwoord geldt overal), op volgorde van het
@@ -60,9 +79,15 @@ export function bouwVragen(classified, jaar, bevestigd) {
   for (const tx of classified) {
     if (tx.isMirror || !tx.amount || NIET_MEETELLEN.has(tx.category) || tx.transferLocked) continue;
     if (zekerheidVan(tx, bevestigd) === "herkend") continue;
-    const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
-    if (!key) continue; // zonder naam: niet als vraag (blijft voor Uitgebreid)
-    const g = (groepen[key] ||= { key, naam: tx.counterparty || tx.description, txs: [], bedragJaar: 0, bedragAlle: 0, rekening: tx.accountType || tx.type, teken: tx.amount >= 0 ? 1 : -1 });
+    const basis = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    if (!basis) continue; // zonder naam: niet als vraag (blijft voor Uitgebreid)
+    const dienst = isBetaaldienst(tx);
+    const partij = dienst ? echtePartij(tx) : null;
+    const key = partij ? `${basis}|${partij.sleutel}` : basis;
+    const naam = partij ? `${tx.counterparty} · ${partij.naam}` : tx.counterparty || tx.description;
+    // perBoeking: antwoord als keuze per boeking (rij), niet voor de hele naam — anders zou één antwoord alle partijen
+    // achter de betaaldienst meenemen.
+    const g = (groepen[key] ||= { key, naam, txs: [], bedragJaar: 0, bedragAlle: 0, rekening: tx.accountType || tx.type, teken: tx.amount >= 0 ? 1 : -1, perBoeking: !!partij, betaaldienst: dienst });
     g.txs.push(tx);
     g.bedragAlle += tx.amount;
     if (jaar == null || tx.year === jaar) g.bedragJaar += tx.amount;
@@ -77,7 +102,7 @@ export function bouwVragen(classified, jaar, bevestigd) {
   losse.sort((a, b) => Math.abs(b.bedragJaar) - Math.abs(a.bedragJaar));
   const vragen = losse.map((g) => ({
     soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100,
-    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g],
+    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], betaaldienst: g.betaaldienst,
   }));
   if (kleinePin.length >= 3) {
     const bedrag = kleinePin.reduce((a, g) => a + g.bedragJaar, 0);
