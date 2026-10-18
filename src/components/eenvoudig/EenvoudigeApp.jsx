@@ -4,6 +4,7 @@ import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { metBegrippen } from "../shared/Begrip.jsx";
+import { APP_RELEASE } from "../../version.js";
 import {
   berekenBetrouwbaarheid, bouwVragen, categorieVoorAntwoord, voorstelVoor, maakBevestigd, DREMPEL_BETROUWBAAR, DREMPEL_REDELIJK,
 } from "../../calc/eenvoudig.js";
@@ -329,6 +330,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           </div>
         </div>
       )}
+      <p className="pt-2 text-center text-[11px] text-slate-400">Gegevens blijven lokaal · © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</p>
     </div>
   );
 }
