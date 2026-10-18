@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Check, Upload, Download, Save, ClipboardList, ChevronLeft } from "lucide-react";
+import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
@@ -18,6 +18,7 @@ const OORDEEL = {
   onzeker: { tekst: "Nog onzeker", cls: "bg-rose-100 text-rose-800" },
   geen: { tekst: "Geen gegevens", cls: "bg-slate-100 text-slate-600" },
 };
+const KOPKNOP = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm";
 const r0 = (v) => eur(Math.round(v || 0)).replace(/,00$/, "");
 
 function Balk({ b, groot = false }) {
@@ -53,12 +54,12 @@ function Zekerheid({ b, compact = false, nogVragen = null }) {
 }
 
 function Rij({ label, waarde, sterk = false }) {
-  return <div className={`flex justify-between border-b border-slate-100 py-1.5 text-sm ${sterk ? "font-semibold" : ""}`}><span>{label}</span><b className="font-mono">{waarde}</b></div>;
+  return <div className={`flex justify-between border-b border-slate-100 py-1.5 text-sm ${sterk ? "font-semibold" : ""}`}><span>{label}</span><b className="shrink-0 whitespace-nowrap font-mono">{waarde}</b></div>;
 }
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting,
 }) {
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
   // Uitkomst (een volledig nagekeken dossier hoeft niet opnieuw doorlopen te worden). Elke stap blijft aanklikbaar.
@@ -136,11 +137,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             {jaren.map((j) => <option key={j} value={j} className="text-slate-900">{j}</option>)}
           </select>
         )}
-        <button type="button" onClick={onBasisvragen} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/30 px-3 py-1 text-sm text-slate-100 hover:bg-white/10"><ClipboardList className="h-4 w-4" /> Basisvragen</button>
-        <div className="flex rounded-full bg-white/10 p-0.5 text-sm">
-          <span className="rounded-full bg-white px-3 py-1 font-bold text-slate-900">Eenvoudig</span>
-          <button type="button" onClick={onUitgebreid} className="rounded-full px-3 py-1 text-slate-200 hover:text-white">Uitgebreid</button>
-        </div>
+        <button type="button" onClick={onBasisvragen} className={`ml-auto ${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
+        <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>
+        <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>
       </div>
 
       {/* Stappen */}
@@ -165,7 +164,6 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </ul>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={onBestandToevoegen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50"><Upload className="h-4 w-4" /> Bankbestand toevoegen</button>
-              <button type="button" onClick={onBasisvragen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50"><ClipboardList className="h-4 w-4" /> Basisvragen bekijken</button>
             </div>
             <button type="button" onClick={() => setStap(2)} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 2: Nakijken →</button>
           </div>
@@ -273,7 +271,8 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
-            <button type="button" onClick={onBasisvragen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><ClipboardList className="h-4 w-4" /> Basisvragen bekijken</button>
+            {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
+            {onSamenvatting && <button type="button" onClick={onSamenvatting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileText className="h-4 w-4" /> Samenvatting</button>}
             {alleVragen.length > 0 && <button type="button" onClick={() => setStap(2)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Verder met nakijken</button>}
           </div>
         </div>

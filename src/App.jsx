@@ -3770,6 +3770,7 @@ export default function App() {
             classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
+            onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onOpslaan={startOpslaan} onUitgebreid={() => setWeergave("uitgebreid")}
             fiscaal={activeYear ? fiscaalVoorJaar(activeYear) : null} jaarSummary={activeYear ? yearlySummaries[activeYear] : null} isBV={rechtsvorm === "bv"}
           />
