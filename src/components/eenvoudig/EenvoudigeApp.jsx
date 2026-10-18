@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText } from "lucide-react";
+import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
@@ -59,8 +59,9 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier,
 }) {
+  const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
   // Uitkomst (een volledig nagekeken dossier hoeft niet opnieuw doorlopen te worden). Elke stap blijft aanklikbaar.
   const [gekozenStap, setStap] = useState(null);
@@ -137,7 +138,20 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             {jaren.map((j) => <option key={j} value={j} className="text-slate-900">{j}</option>)}
           </select>
         )}
-        <button type="button" onClick={onBasisvragen} className={`ml-auto ${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
+        <div className="relative ml-auto">
+          <button type="button" onClick={() => setDossierMenu((v) => !v)} aria-expanded={dossierMenu} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><FolderOpen className="h-4 w-4" /> Dossier <ChevronDown className="h-3.5 w-3.5" /></button>
+          {dossierMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setDossierMenu(false)} />
+              <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-800 shadow-xl">
+                {[["Dossier opslaan", onOpslaan, Save], ["Dossier laden", onDossierLaden, FolderOpen], ["Nieuw dossier", onNieuwDossier, FolderPlus]].map(([t, f, Icoon]) => f && (
+                  <button key={t} type="button" onClick={() => { setDossierMenu(false); f(); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-slate-50"><Icoon className="h-4 w-4 text-slate-500" /> {t}</button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <button type="button" onClick={onBasisvragen} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}><ClipboardList className="h-4 w-4" /> Basisvragen</button>
         <button type="button" aria-pressed="true" className={`${KOPKNOP} border-white bg-white font-bold text-slate-900`}>Eenvoudig</button>
         <button type="button" onClick={onUitgebreid} className={`${KOPKNOP} border-white/30 text-slate-100 hover:bg-white/10`}>Uitgebreid</button>
       </div>
