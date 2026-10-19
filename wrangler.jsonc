@@ -3,6 +3,8 @@
   "previews": {
     "send_email": [{ "name": "EMAIL" }],
     "vars": {
+"d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],
+  "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
       "FEEDBACK_FROM": "feedback@bankafschriftentool.app" , 
               "AccessAll": "paulgerits@icloud.com, paul@paulgerits.eu, pgerits@overrood.nl"
