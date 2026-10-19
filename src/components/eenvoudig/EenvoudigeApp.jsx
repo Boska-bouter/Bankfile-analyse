@@ -148,21 +148,6 @@ export default function EenvoudigeApp({
   ].filter(([k]) => gezien[k] != null && nu[k] != null && Math.abs(gezien[k] - nu[k]) >= 1).map(([k, t]) => ({ k, t, van: gezien[k], naar: nu[k] })) : [];
   const overigeWinst = (jaarSummary?.winst || 0) - ((jaarSummary?.zakelijkeInkomstenNetto || 0) - (jaarSummary?.zakelijkeKostenNetto || 0));
 
-  const downloadUitkomst = () => {
-    const btwRij = fis?.btw ? fis.btw.map((v, i) => `<tr><td>Q${i + 1}</td><td class="r">${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}</td></tr>`).join("") : "";
-    const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Uitkomst ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</title><style>body{font-family:-apple-system,Arial,sans-serif;color:#1e293b;max-width:760px;margin:24px auto;padding:0 16px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:20px}td{padding:4px 8px;border-bottom:1px solid #eee}.r{text-align:right}.noot{color:#64748b;font-size:11px}</style></head><body>
-<h1>Uitkomst ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h1>
-<p>Zekerheid: <b>${OORDEEL[b.oordeel].tekst}</b> — nog ${eur(b.onzeker)} onzeker (belasting kan ongeveer ${eur(b.belastingAfwijking)} afwijken); ${b.herkend}% herkend naar bedrag.</p>
-<h2>Wat heeft het bedrijf verdiend?</h2><table><tr><td>Ontvangen van klanten (excl. BTW)</td><td class="r">${eur(jaarSummary?.zakelijkeInkomstenNetto || 0)}</td></tr><tr><td>Kosten van het bedrijf (excl. BTW)</td><td class="r">− ${eur(jaarSummary?.zakelijkeKostenNetto || 0)}</td></tr>${Math.abs(overigeWinst) >= 1 ? `<tr><td>Overige posten (bijv. afschrijving, rente)</td><td class="r">${eur(overigeWinst)}</td></tr>` : ""}<tr><td><b>Winst</b></td><td class="r"><b>${eur(jaarSummary?.winst || 0)}</b></td></tr></table>
-<h2>Belasting (schatting)</h2>${isBV ? "<p>BV: vraag je adviseur naar de vennootschapsbelasting.</p>" : !bruikbaar ? "<p>Nog niet bruikbaar: er is te veel onbekend.</p>" : `<table><tr><td>Inkomstenbelasting</td><td class="r">${eur(fis?.ib || 0)}</td></tr><tr><td>Zvw-bijdrage</td><td class="r">${eur(fis?.zvw || 0)}</td></tr><tr><td>Al betaald via de bank</td><td class="r">${eur(fis?.betaald || 0)}</td></tr><tr><td><b>Nog te betalen</b></td><td class="r"><b>${eur(nogBelasting || 0)}</b></td></tr></table>`}
-${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
-<p class="noot">Indicatief, op basis van de bankgegevens. Geen officiële aangifte. Gemaakt met Bankoverzicht op ${new Date().toLocaleDateString("nl-NL")}.</p></body></html>`;
-    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = `Uitkomst_${jaar}${klantNaam ? `_${klantNaam.replace(/\s+/g, "_")}` : ""}.html`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  };
 
   return (
     <div className="space-y-5" data-eenvoudig>
@@ -394,10 +379,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
-            {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
             {onSamenvatting && <button type="button" onClick={onSamenvatting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileText className="h-4 w-4" /> Samenvatting</button>}
             {onMaandoverzicht && <button type="button" onClick={onMaandoverzicht} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><CalendarDays className="h-4 w-4" /> Maandoverzicht</button>}
+            {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
             {alleVragen.length > 0 && <button type="button" onClick={() => setStap(2)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Verder met nakijken</button>}
           </div>
         </div>
@@ -409,7 +393,6 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           <p className="mb-3 text-sm text-slate-600">Je werk staat al in deze browser. Wil je het op een andere plek bewaren of later verder op een ander apparaat? Sla dan het dossier op als bestand.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onOpslaan} className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"><Save className="h-4 w-4" /> Dossier opslaan</button>
-            <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
             <button type="button" onClick={() => setStap(3)} className="inline-flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:underline"><ChevronLeft className="h-4 w-4" /> Terug naar de uitkomst</button>
           </div>
         </div>

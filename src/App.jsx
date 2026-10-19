@@ -111,6 +111,7 @@ import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { useMagUitgebreid } from "./dossier/useRol.js";
+import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import CardIcon from "./components/shared/CardIcon.jsx";
@@ -1822,6 +1823,12 @@ export default function App() {
       jaren: jaren.map(klantJaarData),
       profiel: dossierProfiel,
       openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
+      // nieuw-V3R7 — vanuit Eenvoudig: één regel met de zekerheid per jaar (onzeker bedrag in euro's).
+      zekerheid: eenvoudigActief ? jaren.map((y) => {
+        const z = berekenBetrouwbaarheid(classified, y, maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), yearlySummaries?.[y]?.zakelijkeInkomstenNetto || 0);
+        const oordeel = { betrouwbaar: "Betrouwbaar", redelijk: "Redelijk", onzeker: "Nog onzeker", geen: "Geen gegevens" }[z.oordeel];
+        return { jaar: y, tekst: z.onzeker > 0 ? `${oordeel} – nog ${eur(Math.round(z.onzeker))} onzeker` : `${oordeel} – niets meer onzeker` };
+      }) : null,
       meegenomen: (() => {
         const m = [];
         const act = activaSummary.map((a) => activaDetails[a.key]?.naam || a.naam).filter(Boolean);
@@ -3845,8 +3852,8 @@ export default function App() {
             classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
-            onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
-            onMaandoverzicht={activeYear ? () => setShowInkomenPerMaand(true) : null}
+            onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
+            onMaandoverzicht={magUitgebreid && activeYear ? () => setShowInkomenPerMaand(true) : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
