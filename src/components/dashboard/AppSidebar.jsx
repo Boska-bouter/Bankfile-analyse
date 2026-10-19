@@ -65,8 +65,6 @@ export default function AppSidebar({
   orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
   onEditRekeninghouder,
-  onEenvoudig,
-  weergave,
   activeTab,
   onSelectTab,
   tabsVisible,
@@ -178,20 +176,6 @@ export default function AppSidebar({
           </button>
         )}
       </div>
-
-      {/* nieuw-V1R01 — wisselen naar de eenvoudige weergave */}
-      {onEenvoudig && (
-        <div className="px-1.5 pb-2.5 mb-2.5 border-b border-white/10">
-          {collapsed ? (
-            <button type="button" onClick={onEenvoudig} title="Naar de eenvoudige weergave" style={{ minHeight: 0 }} className="w-full rounded-lg border border-slate-600 px-1 py-0.5 text-[10px] font-semibold text-slate-200 hover:bg-white/5">Eenv.</button>
-          ) : (
-            <div className="flex rounded-full bg-white/10 p-0.5 text-[11px] leading-tight">
-              <button type="button" onClick={onEenvoudig} style={{ minHeight: 0 }} className="flex-1 rounded-full px-2 py-0.5 text-slate-300 hover:text-white">Eenvoudig</button>
-              <span className="flex-1 rounded-full bg-white px-2 py-0.5 text-center font-bold text-slate-900">Uitgebreid</span>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Tabs */}
       {tabsVisible && (

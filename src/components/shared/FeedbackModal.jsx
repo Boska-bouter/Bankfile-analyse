@@ -10,11 +10,11 @@ const NOODMAIL = "paul@paulgerits.eu";
 // Hulpvraag of feedback: de app stuurt de tekst naar een Cloudflare-Worker (zie /worker/feedback) die het naar de
 // maker mailt. Er gaan geen dossiergegevens mee: alleen wat de gebruiker zelf typt, het releasenummer, en (door
 // Cloudflare toegevoegd) het e-mailadres waarmee is ingelogd, zodat er geantwoord kan worden.
-export default function FeedbackModal({ onClose, voorinvullen = null }) {
+export default function FeedbackModal({ onClose }) {
   const [soort, setSoort] = useState("Hulpvraag");
   const [naam, setNaam] = useState("");
-  const [onderwerp, setOnderwerp] = useState(voorinvullen?.onderwerp || "");
-  const [bericht, setBericht] = useState(voorinvullen?.bericht || "");
+  const [onderwerp, setOnderwerp] = useState("");
+  const [bericht, setBericht] = useState("");
   const [sessieWeg, setSessieWeg] = useState(false);
   const [status, setStatus] = useState("invullen"); // invullen | bezig | verstuurd | mislukt
   const [gekopieerd, setGekopieerd] = useState(false);

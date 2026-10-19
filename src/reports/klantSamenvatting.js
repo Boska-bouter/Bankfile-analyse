@@ -5,7 +5,7 @@ import { jarenBereik } from "../dossier/dossierProfiel.js";
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, vandaag = new Date() }) {
+export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
   const meer = jaren.length > 1;
@@ -49,7 +49,6 @@ th{font-size:9px;text-transform:uppercase;color:#64748b;text-align:left;border-b
 </style></head><body>
 <h1>Samenvatting ${esc(jaar)}</h1>
 <div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}${esc(periode || "")}${periode ? " · " : ""}${isBV ? "BV" : "Eenmanszaak / zzp"} · opgesteld ${vandaag.toLocaleDateString("nl-NL")}</div>
-${zekerheid?.length ? `<p class="noot"><strong>Zekerheid:</strong> ${zekerheid.map((z) => `${zekerheid.length > 1 ? `${esc(z.jaar)}: ` : ""}${esc(z.tekst)}`).join(" · ")}</p>` : ""}
 
 <h2>Resultaat</h2>
 ${resultaatHtml}

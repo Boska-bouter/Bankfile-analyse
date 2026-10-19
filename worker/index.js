@@ -5,8 +5,6 @@
 //
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
-import { bankRoute } from "./bank.js";
-
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
 
@@ -57,34 +55,11 @@ ${blok("Inlogbewijs dat de app meekrijgt (header)", header)}${blok("Inlogcookie 
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
-// nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Lijst in de Secret "AccessAll"
-// (Cloudflare → Workers & Pages → bankfile-analyse → Settings → Variables and Secrets): adressen gescheiden door
-// komma's, "*@domein.nl" voor een heel domein. Geen lijst of niet ingelogd = alleen Eenvoudig.
-export function magUitgebreid(email, lijst) {
-  const e = String(email || "").trim().toLowerCase();
-  if (!e) return false;
-  return String(lijst || "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
-    .some((x) => x === e || (x.startsWith("*@") && e.endsWith(x.slice(1))));
-}
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     // release32V0 — test: wat zegt het Access-inlogbewijs over inlogtijd en verlooptijd? (zie sessieInfo)
     if (url.pathname === "/api/sessie") return sessieInfo(request, url);
-    if (url.pathname === "/api/rol") {
-      const email = request.headers.get("Cf-Access-Authenticated-User-Email");
-      // lijst = staat de Secret AccessAll er (de inhoud wordt niet teruggegeven), voor de foutzoekregel in de app.
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim(), uitgebreid: magUitgebreid(email, env.AccessAll) });
-    }
-    // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js)
-    // Alleen voor gebruikers met de uitgebreide weergave (Secret AccessAll), zolang dit een proef is.
-    if (url.pathname.startsWith("/api/bank/")) {
-      if (!env.EB_DEV_EMAIL && !magUitgebreid(request.headers.get("Cf-Access-Authenticated-User-Email"), env.AccessAll)) {
-        return json({ ok: false, fout: "Bankkoppeling is alleen beschikbaar in de uitgebreide weergave" }, 403);
-      }
-      return bankRoute(request, env, url);
-    }
     // Alles behalve /api/feedback is de app zelf (statische bestanden): doorgeven aan de assets-binding.
     if (url.pathname !== "/api/feedback") return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });
     if (request.method !== "POST") return json({ ok: false, fout: "Alleen POST" }, 405);
