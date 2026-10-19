@@ -3354,9 +3354,25 @@ export default function App() {
         { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
         { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
         { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
-        ...(magUitgebreid ? [{ label: "Rechtstreeks koppelen met de bank (proef)", onClick: () => setBankKoppeling({}) }] : []),
+        { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
       ],
     });
+  // nieuw-V3R12 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
+  // een melding: met recht op Uitgebreid kan de gebruiker overstappen, anders is een uitgebreid account nodig.
+  const startKoppelen = () => {
+    if (!eenvoudigActief) { setBankKoppeling({}); return; }
+    setDialog(magUitgebreid
+      ? {
+          title: "Bankkoppeling",
+          message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kun je wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+          actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => { naarUitgebreidVanuitEenvoudig(); setBankKoppeling({}); } }],
+        }
+      : {
+          title: "Bankkoppeling",
+          message: <p>Een bank rechtstreeks koppelen kan alleen met een uitgebreid account. Voeg in de eenvoudige weergave je bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
+          actions: [],
+        });
+  };
   // release21V0 — zijn de vragen per jaar al eens beantwoord? De wizard gold voorheen als "al ingericht"
   // zodra een bestand een rekeningtype had. Wie de wizard zonder bestand doorliep en daarna een bestand
   // laadde (zakelijk/privé al gekozen), kreeg de jaarvragen (urencriterium, startersaftrek, werkruimte,
@@ -4228,7 +4244,7 @@ export default function App() {
             importFout={error}
             importHerladen={importHerladen}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
-            onKoppelen={magUitgebreid ? () => setBankKoppeling({}) : null}
+            onKoppelen={startKoppelen}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}
