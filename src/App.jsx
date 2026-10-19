@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
+import BeheerRechtenModal from "./components/beheer/BeheerRechtenModal.jsx";
 import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKoppelingModal.jsx";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
@@ -272,7 +273,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -503,7 +504,8 @@ export default function App() {
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
-  const [dialog, setDialog] = useState(null); // v304 — keuzevenster, zie ConfirmDialog.jsx
+  const [dialog, setDialog] = useState(null);
+  const [showBeheer, setShowBeheer] = useState(false); // nieuw-V3R13 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
   const [auditLog, setAuditLog] = useState([]);
@@ -3359,7 +3361,16 @@ export default function App() {
     });
   // nieuw-V3R12 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
   // een melding: met recht op Uitgebreid kan de gebruiker overstappen, anders is een uitgebreid account nodig.
+  // nieuw-V3R13 — daarnaast moet het recht "koppelen" aan staan (Gebruikers en rechten, of AccessAll/BEHEERDERS).
   const startKoppelen = () => {
+    if (magUitgebreid && !magKoppelen) {
+      setDialog({
+        title: "Bankkoppeling",
+        message: <p>De rechtstreekse bankkoppeling staat (nog) niet aan voor jouw account. Je kunt wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+        actions: [],
+      });
+      return;
+    }
     if (!eenvoudigActief) { setBankKoppeling({}); return; }
     setDialog(magUitgebreid
       ? {
@@ -3770,6 +3781,7 @@ export default function App() {
         onOpenLog={() => setShowLog(true)}
         onZoek={() => setShowZoek(true)}
         onBegrippen={() => setShowBegrippen(true)}
+        onBeheer={isBeheerder ? () => setShowBeheer(true) : null}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
@@ -3828,6 +3840,7 @@ export default function App() {
           onClose={() => setBankKoppeling(null)}
         />
       )}
+      {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onClose={() => setShowBeheer(false)} />}
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 

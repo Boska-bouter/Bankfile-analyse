@@ -65,3 +65,27 @@ op de server: transacties gaan rechtstreeks door naar de browser.
   e-mailadres van de ingelogde gebruiker. Een andere gebruiker kan er niets mee (403).
 - *Ontkoppelen* in de app trekt de toestemming ook bij Enable Banking in.
 - Lokaal testen zonder Access: zet de variabele `EB_DEV_EMAIL` (alleen in `.dev.vars`, nooit in productie).
+
+## Gebruikers en rechten (nieuw-V3R13)
+
+Wie Uitgebreid en de bankkoppeling mag gebruiken, komt nu uit drie bronnen (zie `worker/rechten.js`):
+
+| Bron | Waar | Geeft |
+|---|---|---|
+| Secret `BEHEERDERS` | Worker → Settings → Variables and Secrets | Alles, plus het scherm *Gebruikers en rechten* (personen-icoon onderin de zijbalk) |
+| Secret `AccessAll` | idem | Uitgebreid + bankkoppeling (zoals voorheen) |
+| D1-tabel `rechten` (binding `DB`) | via het beheerscherm | Per e-mailadres Uitgebreid en/of bankkoppeling, eventueel met einddatum |
+
+De tabel maakt de Worker zelf aan bij het eerste gebruik; je hoeft geen SQL uit te voeren. Zonder binding `DB` werkt alles
+zoals voorheen met alleen de twee Secrets.
+
+Instellen:
+
+1. Cloudflare → **Storage & Databases → D1 SQL Database → Create**. Naam: `bankoverzicht-rechten`. Kopieer het **Database ID**.
+2. In `wrangler.jsonc`: haal op twee plekken (in `previews` en onderin) de `//` weg voor de regel `"d1_databases"` en vervang
+   `PLAK-HIER-HET-DATABASE-ID` door het ID. De binding moet in `wrangler.jsonc` staan: een binding die je alleen in het
+   dashboard toevoegt, verdwijnt bij de volgende deploy.
+3. Secret `BEHEERDERS` toevoegen met je eigen e-mailadres (hetzelfde als waarmee je via Access inlogt).
+4. Deployen zoals gewend.
+5. Nieuwe gebruikers moeten ook de app kunnen openen: zet ze in de policy van de Access-applicatie
+   (Zero Trust → Access → Applications → de app → Policies), of gebruik een Access-groep.

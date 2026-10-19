@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3 } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -78,7 +78,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -381,6 +381,7 @@ export default function AppSidebar({
           <IcoonKnop onClick={onZoek} label="Zoeken in transacties (Ctrl+K)" Icon={Search} />
           <IcoonKnop onClick={onBegrippen} label="Begrippen (uitleg vakwoorden)" Icon={BookOpen} />
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
+          {onBeheer && <IcoonKnop onClick={onBeheer} label="Gebruikers en rechten (beheer)" Icon={Users} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
