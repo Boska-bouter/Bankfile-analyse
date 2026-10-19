@@ -38,6 +38,16 @@ export const PLANNEN = {
 };
 const NIVEAU = { eenvoudig: 1, uitgebreid: 2, koppelen: 3 };
 
+// nieuw-V4R6 — prijzen per abonnement in euro per maand (inclusief btw). Voorlopig alles €0: aanmelden is gratis en
+// de beheerder keurt goed. Later via de variabele PRIJZEN, bijv. {"eenvoudig":0,"uitgebreid":4.95,"koppelen":7.5}.
+// Is de prijs hoger dan 0, dan gaat de aanmelding via de betaalstap (Mollie, nog te bouwen) in plaats van direct.
+export function prijzen(env) {
+  const p = { eenvoudig: 0, uitgebreid: 0, koppelen: 0 };
+  try { const x = JSON.parse(env.PRIJZEN || "{}"); for (const k of Object.keys(p)) if (Number.isFinite(+x[k]) && +x[k] >= 0) p[k] = +x[k]; } catch { /* standaard */ }
+  return p;
+}
+const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : "€ 0,00 · voorlopig gratis");
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -140,6 +150,12 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const plan = String(body?.plan || "");
   if (!PLANNEN[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
   const naam = schoon(body?.naam, 100);
+  // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
+  if (prijzen(env)[plan] > 0) {
+    // Hier komt de Mollie-betaling: /api/betaal/start maakt een betaling en stuurt de gebruiker naar Mollie; de webhook
+    // zet daarna de rechten. Zolang dat er niet is, kan een betaald abonnement niet worden aangevraagd.
+    return json({ ok: false, betalen: true, fout: "Betalen is nog niet beschikbaar. Neem contact op met de beheerder." }, 402);
+  }
   const nu = await rechtenVan(e, env);
   const huidig = nu.koppelen ? 3 : nu.uitgebreid ? 2 : nu.toegang && toegangVerplicht(env) ? 1 : 0;
   if (huidig >= NIVEAU[plan]) return json({ ok: true, alActief: true, melding: `Je hebt ${PLANNEN[plan]} al.` });
@@ -162,10 +178,11 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
 }
 
 // De pagina die iemand zonder toegang ziet als TOEGANG_VERPLICHT aan staat. Op zichzelf staand (geen app-bestanden nodig).
-export function aanmeldPagina(email, r) {
+export function aanmeldPagina(email, r, env = {}) {
+  const prijs = prijzen(env);
   const keuzes = Object.entries(PLANNEN).map(([k, v], i) => `
     <label class="keuze"><input type="radio" name="plan" value="${k}"${i === 0 ? " checked" : ""}>
-      <span><b>${v}</b><small>${{
+      <span><b>${v}</b> <span class="prijs">${prijsTekst(prijs[k])}</span><small>${{
         eenvoudig: "In vier stappen je bankbestanden indelen en een indicatie van je btw- en inkomstenbelasting.",
         uitgebreid: "Alle tabbladen, controles, aangifteberekening en maandoverzicht.",
         koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
@@ -184,7 +201,7 @@ h1{margin:0;font-size:1.4rem}.sub{margin:0;color:var(--muted)}
 form,.melding{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 form{display:flex;flex-direction:column;gap:10px}
 .keuze{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
-.keuze small{display:block;color:var(--muted)}
+.keuze small{display:block;color:var(--muted)}.prijs{color:var(--accent);font-weight:600;font-size:13px}
 input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
 button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#status.err{color:var(--err)}
@@ -199,7 +216,7 @@ ${keuzes}
 <button type="submit">Aanmelding versturen</button>
 <p id="status" role="status"></p>
 </form>
-<p class="sub">Ander e-mailadres? <a href="/cdn-cgi/access/logout">Uitloggen</a></p>
+<p class="sub">Ander e-mailadres? <a href="/uitloggen">Uitloggen</a></p>
 </main><script>
 const f=document.getElementById("f"),st=document.getElementById("status");
 f.addEventListener("submit",async(e)=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";

@@ -100,3 +100,19 @@ Instellen:
   beheerders, AccessAll en wie in de tabel Eenvoudig of Uitgebreid heeft. Daarvoor staat in `wrangler.jsonc`
   `"run_worker_first": true`, zodat ook de app-bestanden langs de Worker gaan.
 - De tabel krijgt de nieuwe kolommen (`eenvoudig`, `aanvraag`, `aangevraagd`, `naam`) automatisch.
+
+## Eigen inlog met passkeys (nieuw-V4R6)
+
+Vervangt Cloudflare Access (geen code per e-mail, geen kosten per gebruiker). Zie `worker/inloggen.js`.
+
+- Variabele `INLOG_MODUS`: `"access"` (standaard, zoals voorheen) of `"eigen"`.
+- Met `"eigen"`: wie niet is ingelogd, gaat naar `/inloggen`. Inloggen met een passkey (Face ID, Touch ID, pincode)
+  of met een inloglink per e-mail (15 minuten geldig, één keer). Na de eerste inlog kan de gebruiker een passkey
+  aanmaken op `/inloggen/passkey` (ook via het sleutel-icoon in de zijbalk). Sessie: 30 dagen, verlengt bij gebruik.
+- De inloglink gaat via de binding `EMAIL`, afzender `INLOG_FROM` (of anders `FEEDBACK_FROM`). Die binding moet naar
+  willekeurige adressen kunnen mailen.
+- `/uitloggen` beëindigt de eigen sessie, of stuurt bij Access door naar `/cdn-cgi/access/logout`.
+- Overstappen: eerst `"eigen"` testen terwijl Access nog aan staat, daarna de Access-applicatie voor de hostnaam
+  verwijderen. Rechten (BEHEERDERS, AccessAll, de tabel) blijven gewoon op e-mailadres werken.
+- Prijzen: variabele `PRIJZEN`, bijv. `{"eenvoudig":0,"uitgebreid":4.95,"koppelen":7.5}` (euro per maand). Standaard
+  alles 0 (gratis, beheerder keurt goed). Een prijs boven 0 vraagt de betaalstap, die nog niet is gebouwd.

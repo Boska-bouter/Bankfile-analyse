@@ -7,7 +7,8 @@
       "FEEDBACK_TO": "paul@paulgerits.eu",
       "FEEDBACK_FROM": "feedback@bankafschriftentool.app" , 
       "BEHEERDERS": "paul@paulgerits.eu",
-      "TOEGANG_VERPLICHT": "ja"                        
+      "TOEGANG_VERPLICHT": "ja",
+      "INLOG_MODUS": "access"                              
     }
   },
   "main": "worker/index.js",

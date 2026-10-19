@@ -6,6 +6,7 @@
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
 import { bankRoute } from "./bank.js";
+import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad } from "./inloggen.js";
 import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
@@ -65,6 +66,22 @@ export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // nieuw-V4R6 — wie is ingelogd? Met INLOG_MODUS = "eigen" uit de eigen sessiecookie (zie inloggen.js), anders
+    // van Cloudflare Access. De rest van de Worker leest het adres uit de header Cf-Access-Authenticated-User-Email;
+    // bij eigen inlog zetten we die header hier zelf, en gooien we een meegestuurde header weg (anders kan iedereen
+    // zich als een ander voordoen zodra Access er niet meer voor zit).
+    const ingelogd = await wieIsIngelogd(request, env);
+    if (eigenInlog(env)) {
+      const h = new Headers(request.headers);
+      h.delete("Cf-Access-Authenticated-User-Email");
+      if (ingelogd) h.set("Cf-Access-Authenticated-User-Email", ingelogd);
+      request = new Request(request, { headers: h });
+    }
+    if (isOpenPad(url.pathname)) return inlogRoute(request, env, url, ingelogd);
+    if (eigenInlog(env) && !ingelogd) {
+      if (url.pathname.startsWith("/api/")) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+      return Response.redirect(`${url.origin}/inloggen`, 302);
+    }
     // release32V0 — test: wat zegt het Access-inlogbewijs over inlogtijd en verlooptijd? (zie sessieInfo)
     if (url.pathname === "/api/sessie") return sessieInfo(request, url);
     if (url.pathname === "/api/rol") {
@@ -72,7 +89,7 @@ export default {
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, ...r });
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", ...r });
     }
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
     if (url.pathname === "/api/aanmelden") {
@@ -83,7 +100,7 @@ export default {
     if (toegangVerplicht(env) && !url.pathname.startsWith("/api/")) {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await heeftToegang(email, env);
-      if (!r.toegang) return aanmeldPagina(email, r);
+      if (!r.toegang) return aanmeldPagina(email, r, env);
     }
     // nieuw-V4R3 — beheerscherm "Gebruikers en rechten" (alleen Secret BEHEERDERS)
     if (url.pathname.startsWith("/api/beheer/")) {

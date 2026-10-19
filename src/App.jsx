@@ -273,7 +273,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -3807,6 +3807,7 @@ export default function App() {
         onBegrippen={() => setShowBegrippen(true)}
         onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
         ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
+        onPasskey={inlogModus === "eigen" ? () => { window.location.href = "/inloggen/passkey"; } : null}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
