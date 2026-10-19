@@ -61,6 +61,7 @@ export async function laadDossierBestand(file, c) {
     setHeeftVoorraad(project.heeftVoorraad ?? null);
     setEigenNamen(project.eigenNamen ?? null);
     setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
+    c.setBankKoppelingen?.(Array.isArray(project.bankKoppelingen) ? project.bankKoppelingen : []);
     setZakelijkeSpaarRekening(project.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
@@ -81,6 +82,8 @@ export async function laadDossierBestand(file, c) {
     setZaLegacyJaDefault(project.zaLegacyJaDefault === false ? false : true);
     setStartersaftrekStatusState(project.startersaftrekStatus && typeof project.startersaftrekStatus === "object" ? project.startersaftrekStatus : {});
     c.setWerkruimteStatusState?.(project.werkruimteStatus && typeof project.werkruimteStatus === "object" ? project.werkruimteStatus : {});
+    c.setWeergave?.(project.weergave === "eenvoudig" ? "eenvoudig" : "uitgebreid");
+    c.setEenvoudigGezien?.(project.eenvoudigGezien && typeof project.eenvoudigGezien === "object" ? project.eenvoudigGezien : {});
     setTariefOverridesState(project.tariefOverrides && typeof project.tariefOverrides === "object" ? project.tariefOverrides : {});
     setOverigInkomenBox1State(project.overigInkomenBox1 && typeof project.overigInkomenBox1 === "object" ? project.overigInkomenBox1 : {});
     setAutoStatusState(normalizeAutoStatus(project.autoStatus));
@@ -108,6 +111,7 @@ export async function laadDossierBestand(file, c) {
     setResumeHint(rp && typeof rp === "object" && (rp.tab === "controleren" || rp.tab === "instellingen") && rp.openPunten !== 0 ? rp : null);
     setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
     setMaxStappen(0);
+    c.naDossierLaden?.(project.weergave === "eenvoudig" ? "eenvoudig" : "uitgebreid"); // nieuw-V1R08 — vraag in welke weergave
   } catch (e) {
     if (e.code === "GEANNULEERD") return;
     setError(e.message || String(e));
@@ -167,6 +171,8 @@ export async function wisDossier(c, askWizard = false) {
   setZelfstandigenaftrekStatusState({});
   setStartersaftrekStatusState({});
   c.setWerkruimteStatusState?.({});
+  c.setWeergave?.("uitgebreid");
+  c.setEenvoudigGezien?.({});
   setTariefOverridesState({});
   setOverigInkomenBox1State({});
   setAutoStatusState({});
@@ -182,6 +188,7 @@ export async function wisDossier(c, askWizard = false) {
   setHeeftVoorraad(null);
   setEigenNamen(null);
   setEigenRekeningenExtra(null);
+  c.setBankKoppelingen?.([]);
   setZakelijkeSpaarRekening(null);
   setOpdrachtgeversGevraagd(null);
   setIncomeBtwTarieven(null);
@@ -204,7 +211,7 @@ export async function wisDossier(c, askWizard = false) {
     setDialog({
       title: "Wizard starten?",
       message: <p>Het nieuwe dossier is leeg. Begin met het laden van je bankbestanden en beantwoord daarna de basisvragen (rechtsvorm, BTW, KOR enz.).</p>,
-      actions: [{ label: "Wizard starten", variant: "primary", onClick: () => setManualWizardOpen(true) }],
+      actions: [{ label: "Wizard starten", variant: "primary", onClick: () => (c.startNieuwDossierWizard ? c.startNieuwDossierWizard() : setManualWizardOpen(true)) }],
     });
   }
 }
