@@ -14,6 +14,13 @@ const schrijfCache = (v) => { try { localStorage.setItem(SLEUTEL, v ? "1" : "0")
 const EXTRA_SLEUTEL = "bankoverzicht.rechtenExtra";
 const leesExtra = () => { try { const x = JSON.parse(localStorage.getItem(EXTRA_SLEUTEL) || "null"); return x && typeof x === "object" ? x : {}; } catch { return {}; } };
 
+// nieuw-V3R14 — uitloggen bij Cloudflare Access (de inlog blijft anders de ingestelde sessieduur geldig, bijv. 24 uur).
+// Eerst de bewaarde rechten wissen, zodat na inloggen met een ander adres niet even de oude rechten gelden.
+export function uitloggen() {
+  try { [SLEUTEL, EMAIL_SLEUTEL, EXTRA_SLEUTEL].forEach((k) => localStorage.removeItem(k)); } catch { /* geen opslag */ }
+  window.location.href = "/cdn-cgi/access/logout";
+}
+
 // Geeft { mag, email, status, koppelen, beheerder, geldigTot }: email = het adres waarmee via Cloudflare Access is ingelogd (null als onbekend).
 export function useMagUitgebreid() {
   // Lokaal ontwikkelen (vite dev) heeft geen Worker: dan alles open.
