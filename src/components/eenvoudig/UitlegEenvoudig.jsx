@@ -42,7 +42,13 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
             <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-500" /><b>Geschat</b> — de app denkt het te weten, maar niet zeker.</li>
             <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-600" /><b>Nog onbekend</b> — de app weet niet waar het voor was.</li>
           </ul>
-          <P>Vanaf <b>90% herkend</b> heet de uitkomst <b>Betrouwbaar</b>. Tussen 65% en 90% is hij <b>Redelijk</b>. Onder <b>65%</b> is er te veel onbekend en laat de app nog geen belasting zien. Boven de vraag zie je hoeveel vragen je ongeveer nog nodig hebt tot Betrouwbaar; de rest mag je overslaan.</P>
+          <P>De balk laat je voortgang zien. Of de uitkomst <b>betrouwbaar</b> is, hangt af van hoeveel geld er nog onzeker is, in euro's. Wat onzeker is op je <b>zakelijke</b> rekening telt volledig mee. Op je <b>privé</b>rekening telt het maar voor een kwart, want privé-uitgaven veranderen je winst zelden. Onder de balk staat bijvoorbeeld: "Nog € 4.800 onzeker; de belasting kan daardoor ongeveer € 1.900 afwijken."</P>
+          <ul className="mb-2 space-y-1 text-sm text-slate-700">
+            <li><b>Betrouwbaar</b> — hooguit € 2.500 onzeker (of 5% van je omzet, als dat meer is).</li>
+            <li><b>Redelijk</b> — hooguit € 7.500 onzeker (of 15% van je omzet).</li>
+            <li><b>Nog onzeker</b> — meer dan dat. De app laat dan nog geen belasting zien.</li>
+          </ul>
+          <P>Boven de vraag zie je hoeveel vragen je ongeveer nog nodig hebt tot Betrouwbaar; de vragen met de meeste invloed komen eerst. Daarna mag je de rest overslaan.</P>
 
           <H>Stap 3 · Uitkomst</H>
           <ul className="mb-2 space-y-1.5 text-sm">
@@ -50,7 +56,7 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
             <Keuze titel="Hoeveel belasting ongeveer?">Een schatting van de inkomstenbelasting en de Zvw-bijdrage over die winst, na de kortingen waar je recht op hebt. Wat je dit jaar al via de bank aan de Belastingdienst betaalde, gaat eraf. "Per maand opzij zetten" helpt je om te sparen voor de aanslag.</Keuze>
             <Keuze titel="BTW per kwartaal">Hoeveel BTW je per kwartaal moet betalen of terugkrijgt. Heb je een kwartaal nog niet aangegeven, dan moet die aangifte nog gedaan worden.</Keuze>
           </ul>
-          <P>Met <b>Uitkomst downloaden</b>, <b>Indicatieve aangifteberekening</b> en <b>Samenvatting</b> maak je een document dat je kunt bewaren, printen of aan je adviseur geven. Alles is een schatting op basis van je bankgegevens, geen officiële aangifte.</P>
+          <P>Met <b>Samenvatting</b> maak je een document van één pagina dat je kunt bewaren, printen of aan je adviseur geven; bovenaan staat hoe zeker de cijfers zijn. Heb je toegang tot de uitgebreide versie, dan zijn er ook <b>Maandoverzicht</b> en <b>Indicatieve aangifteberekening</b>. Alles is een schatting op basis van je bankgegevens, geen officiële aangifte.</P>
 
           <H>Stap 4 · Bewaren</H>
           <P>Je werk staat al op dit apparaat. Met <b>Dossier opslaan</b> maak je een bestand dat je ergens anders bewaart of op een ander apparaat weer opent (via Dossier → Dossier laden). Doe dat regelmatig, zeker voordat je een nieuw dossier begint.</P>

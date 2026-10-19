@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen } from "lucide-react";
+import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen, CalendarDays } from "lucide-react";
 import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
 import MijnAntwoorden from "./MijnAntwoorden.jsx";
 import { eur } from "../../utils/amounts.js";
@@ -7,7 +7,7 @@ import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { metBegrippen } from "../shared/Begrip.jsx";
 import {
-  berekenBetrouwbaarheid, bouwVragen, categorieVoorAntwoord, voorstelVoor, maakBevestigd, DREMPEL_BETROUWBAAR, DREMPEL_REDELIJK,
+  berekenBetrouwbaarheid, bouwVragen, categorieVoorAntwoord, voorstelVoor, maakBevestigd,
 } from "../../calc/eenvoudig.js";
 
 // nieuw-V1R01 — eenvoudige weergave voor niet-deskundigen: vier stappen (Gegevens · Nakijken · Uitkomst · Bewaren),
@@ -46,10 +46,13 @@ function Zekerheid({ b, compact = false, nogVragen = null }) {
         <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-600" /><b>{b.herkend}%</b> herkend</span>
         <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-amber-500" />{b.geschat}% geschat</span>
         <span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-rose-600" />{b.onbekend}% nog onbekend</span>
-        <span className="text-slate-400">(naar bedrag)</span>
+        <span className="text-slate-400">(voortgang, naar bedrag)</span>
       </div>
-      {nogVragen != null && b.oordeel !== "betrouwbaar" && (
-        <p className="mt-2 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar ({DREMPEL_BETROUWBAAR}%).</> : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
+      {b.oordeel !== "geen" && (
+        <p className="mt-2 text-xs text-slate-600">{b.onzeker > 0 ? <>Nog <b>{r0(b.onzeker)}</b> onzeker; de belasting kan daardoor ongeveer <b>{r0(b.belastingAfwijking)}</b> afwijken.</> : "Niets meer onzeker."}</p>
+      )}
+      {nogVragen != null && b.oordeel !== "betrouwbaar" && b.oordeel !== "geen" && (
+        <p className="mt-1 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar (hooguit {r0(b.grens.betrouwbaar)} onzeker).</> : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
       )}
     </div>
   );
@@ -61,7 +64,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -86,7 +89,8 @@ export default function EenvoudigeApp({
   const maxTotaal = useRef({}); // vast totaal per jaar, zodat "Vraag x van y" niet verspringt // aantal beantwoorde vragen per jaar (voor de voortgangsbalk)
   const [anders, setAnders] = useState("");
   const bevestigd = useMemo(() => maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), [reviewedOverigKeys, reviewedPersonKeys]);
-  const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
+  const omzet = jaarSummary?.zakelijkeInkomstenNetto || 0;
+  const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd, omzet), [classified, jaar, bevestigd, omzet]);
   const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
   const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
@@ -96,10 +100,10 @@ export default function EenvoudigeApp({
   const isTerug = vraag && overgeslagen.includes(vraag.key);
   // Hoeveel vragen (grootste eerst) zijn ongeveer nodig om op 90% herkend te komen?
   const nogVragen = useMemo(() => {
-    const nodig = (DREMPEL_BETROUWBAAR / 100) * b.totaal - b.som.herkend;
+    const nodig = b.onzeker - b.grens.betrouwbaar;
     if (nodig <= 0) return 0;
     let s = 0, n = 0;
-    for (const v of alleVragen) { s += Math.abs(v.bedrag); n += 1; if (s >= nodig) return n; }
+    for (const v of alleVragen) { s += v.gewicht || 0; n += 1; if (s >= nodig) return n; }
     return 0;
   }, [alleVragen, b]);
 
@@ -136,7 +140,7 @@ export default function EenvoudigeApp({
   const ibZvw = fis && fis.ib != null ? (fis.ib || 0) + (fis.zvw || 0) : null;
   const nogBelasting = ibZvw != null ? Math.max(0, ibZvw - (fis.betaald || 0)) : null;
   const btwJaar = fis?.btw ? fis.btw.reduce((a, v) => a + v, 0) : null;
-  const bruikbaar = b.herkend >= DREMPEL_REDELIJK;
+  const bruikbaar = b.oordeel !== "onzeker"; // nieuw-V3R4 — op het onzekere bedrag in euro's, zie calc/eenvoudig.js
   // nieuw-V1R09 — wat is er veranderd sinds je Eenvoudig verliet (door wijzigingen in Uitgebreid)?
   const nu = { winst: Math.round(jaarSummary?.winst || 0), belasting: ibZvw != null ? Math.round(ibZvw) : null, btw: btwJaar != null ? Math.round(btwJaar) : null };
   const verschillen = gezien ? [
@@ -144,21 +148,6 @@ export default function EenvoudigeApp({
   ].filter(([k]) => gezien[k] != null && nu[k] != null && Math.abs(gezien[k] - nu[k]) >= 1).map(([k, t]) => ({ k, t, van: gezien[k], naar: nu[k] })) : [];
   const overigeWinst = (jaarSummary?.winst || 0) - ((jaarSummary?.zakelijkeInkomstenNetto || 0) - (jaarSummary?.zakelijkeKostenNetto || 0));
 
-  const downloadUitkomst = () => {
-    const btwRij = fis?.btw ? fis.btw.map((v, i) => `<tr><td>Q${i + 1}</td><td class="r">${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}</td></tr>`).join("") : "";
-    const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Uitkomst ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</title><style>body{font-family:-apple-system,Arial,sans-serif;color:#1e293b;max-width:760px;margin:24px auto;padding:0 16px;font-size:13px}h1{font-size:20px}h2{font-size:15px;margin-top:20px}td{padding:4px 8px;border-bottom:1px solid #eee}.r{text-align:right}.noot{color:#64748b;font-size:11px}</style></head><body>
-<h1>Uitkomst ${jaar}${klantNaam ? ` — ${klantNaam}` : ""}</h1>
-<p>Zekerheid: <b>${OORDEEL[b.oordeel].tekst}</b> — ${b.herkend}% herkend, ${b.geschat}% geschat, ${b.onbekend}% nog onbekend (naar bedrag).</p>
-<h2>Wat heeft het bedrijf verdiend?</h2><table><tr><td>Ontvangen van klanten (excl. BTW)</td><td class="r">${eur(jaarSummary?.zakelijkeInkomstenNetto || 0)}</td></tr><tr><td>Kosten van het bedrijf (excl. BTW)</td><td class="r">− ${eur(jaarSummary?.zakelijkeKostenNetto || 0)}</td></tr>${Math.abs(overigeWinst) >= 1 ? `<tr><td>Overige posten (bijv. afschrijving, rente)</td><td class="r">${eur(overigeWinst)}</td></tr>` : ""}<tr><td><b>Winst</b></td><td class="r"><b>${eur(jaarSummary?.winst || 0)}</b></td></tr></table>
-<h2>Belasting (schatting)</h2>${isBV ? "<p>BV: vraag je adviseur naar de vennootschapsbelasting.</p>" : !bruikbaar ? "<p>Nog niet bruikbaar: er is te veel onbekend.</p>" : `<table><tr><td>Inkomstenbelasting</td><td class="r">${eur(fis?.ib || 0)}</td></tr><tr><td>Zvw-bijdrage</td><td class="r">${eur(fis?.zvw || 0)}</td></tr><tr><td>Al betaald via de bank</td><td class="r">${eur(fis?.betaald || 0)}</td></tr><tr><td><b>Nog te betalen</b></td><td class="r"><b>${eur(nogBelasting || 0)}</b></td></tr></table>`}
-${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
-<p class="noot">Indicatief, op basis van de bankgegevens. Geen officiële aangifte. Gemaakt met Bankoverzicht op ${new Date().toLocaleDateString("nl-NL")}.</p></body></html>`;
-    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = `Uitkomst_${jaar}${klantNaam ? `_${klantNaam.replace(/\s+/g, "_")}` : ""}.html`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  };
 
   return (
     <div className="space-y-5" data-eenvoudig>
@@ -204,10 +193,12 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
       {/* Stappen */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
         {STAPPEN.map((n, i) => {
-          const nr = i + 1, nu = nr === stap, klaar = !nu && ((nr === 1 && bestanden.length > 0) || (nr === 2 && bestanden.length > 0 && alleVragen.length === 0));
+          // nieuw-V3R6 — stap 3 klaar als de uitkomst Betrouwbaar is; stap 4 als het dossier is opgeslagen en sindsdien niet gewijzigd.
+          const nr = i + 1, nu = nr === stap;
+          const klaar = bestanden.length > 0 && (nr === 1 || (nr === 2 && alleVragen.length === 0) || (nr === 3 && b.oordeel === "betrouwbaar") || (nr === 4 && opgeslagen));
           return (
-            <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? "font-bold text-slate-900" : klaar ? "text-emerald-700" : "text-slate-400"}`}>
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? "border-emerald-700 bg-emerald-700 text-white" : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
+            <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? `font-bold ${klaar ? "text-emerald-800" : "text-slate-900"}` : klaar ? "text-emerald-700" : "text-slate-400"}`}>
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? `border-emerald-700 bg-emerald-700 text-white${nu ? " ring-2 ring-emerald-300 ring-offset-1" : ""}` : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
             </button>
           );
         })}
@@ -251,7 +242,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
                   return (
                     <div className="mb-4 rounded-xl bg-slate-50 px-3 py-2.5">
                       <div className="mb-1.5 flex flex-wrap justify-between gap-2 text-xs text-slate-600">
-                        <span>{terug ? <b className="text-amber-700">Eerder beantwoorde vraag aanpassen</b> : <><b>Vraag {klaar + 1} van {totaal}</b>{isTerug ? " · eerder overgeslagen" : " · grootste bedragen eerst"}</>}</span>
+                        <span>{terug ? <b className="text-amber-700">Eerder beantwoorde vraag aanpassen</b> : <><b>Vraag {klaar + 1} van {totaal}</b>{isTerug ? " · eerder overgeslagen" : " · meeste invloed eerst"}</>}</span>
                         <span>{b.oordeel === "betrouwbaar" ? <b className="text-emerald-700">Uitkomst is al betrouwbaar — de rest is optioneel</b> : nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen}</b> tot Betrouwbaar</> : null}</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200"><i className="block h-full bg-teal-600" style={{ width: `${totaal ? Math.round((klaar / totaal) * 100) : 0}%` }} /></div>
@@ -388,9 +379,9 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
-            {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
             {onSamenvatting && <button type="button" onClick={onSamenvatting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileText className="h-4 w-4" /> Samenvatting</button>}
+            {onMaandoverzicht && <button type="button" onClick={onMaandoverzicht} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><CalendarDays className="h-4 w-4" /> Maandoverzicht</button>}
+            {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
             {alleVragen.length > 0 && <button type="button" onClick={() => setStap(2)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Verder met nakijken</button>}
           </div>
         </div>
@@ -402,7 +393,6 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
           <p className="mb-3 text-sm text-slate-600">Je werk staat al in deze browser. Wil je het op een andere plek bewaren of later verder op een ander apparaat? Sla dan het dossier op als bestand.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onOpslaan} className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"><Save className="h-4 w-4" /> Dossier opslaan</button>
-            <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
             <button type="button" onClick={() => setStap(3)} className="inline-flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:underline"><ChevronLeft className="h-4 w-4" /> Terug naar de uitkomst</button>
           </div>
         </div>
