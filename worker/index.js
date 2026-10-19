@@ -6,7 +6,7 @@
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
 import { bankRoute } from "./bank.js";
-import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad } from "./inloggen.js";
+import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
@@ -101,6 +101,9 @@ export default {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await heeftToegang(email, env);
       if (!r.toegang) return aanmeldPagina(email, r, env);
+    }
+    if (url.pathname === "/" && (await passkeyAanbieden(request, env, request.headers.get("Cf-Access-Authenticated-User-Email")))) {
+      return new Response(null, { status: 302, headers: { Location: "/inloggen/passkey", "Set-Cookie": PASSKEY_GEVRAAGD, "cache-control": "no-store" } });
     }
     // nieuw-V4R3 — beheerscherm "Gebruikers en rechten" (alleen Secret BEHEERDERS)
     if (url.pathname.startsWith("/api/beheer/")) {

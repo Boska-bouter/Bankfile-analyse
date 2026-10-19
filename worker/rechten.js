@@ -171,7 +171,11 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
   const plan = String(body?.plan || "");
   if (!PLANNEN[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
-  const naam = schoon(body?.naam, 100);
+  // nieuw-V5R4 — voor- en achternaam verplicht (samen opgeslagen in de kolom naam).
+  const voornaam = schoon(body?.voornaam, 60);
+  const achternaam = schoon(body?.achternaam, 80);
+  if (!voornaam || !achternaam) return json({ ok: false, fout: "Vul je voornaam en achternaam in." }, 400);
+  const naam = `${voornaam} ${achternaam}`;
   const reden = schoonTekst(body?.reden, 1000);
   if (reden.length < MIN_REDEN) return json({ ok: false, fout: `Geef aan waarom je toegang vraagt en waarvoor je de app wilt gebruiken (minimaal ${MIN_REDEN} tekens).` }, 400);
   // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
@@ -189,7 +193,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
     await env.DB.prepare(
       `INSERT INTO rechten (email, gewijzigd, gewijzigd_door, bron, aanvraag, aangevraagd, naam, reden)
        VALUES (?1, ?2, ?1, 'aanmelding', ?3, ?2, ?4, ?5)
-       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aangevraagd = ?2, naam = CASE WHEN ?4 <> '' THEN ?4 ELSE naam END, reden = ?5`
+       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aangevraagd = ?2, naam = ?4, reden = ?5`
     ).bind(e, tijd, plan, naam, reden).run();
     slotCache.delete(e);
   } catch (err) {
@@ -235,6 +239,7 @@ form{display:flex;flex-direction:column;gap:10px}
 .keuze{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .keuze small{display:block;color:var(--muted)}.prijs{color:var(--accent);font-weight:600;font-size:13px}
 textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);resize:vertical}
+.namen{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:420px){.namen{grid-template-columns:1fr}}
 .hint{display:block;color:var(--muted);font-size:13px;margin-top:4px}
 input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
@@ -246,7 +251,8 @@ a{color:var(--accent)}
 ${loopt}
 <form id="f">
 ${keuzes}
-<label>Naam (optioneel)<br><input type="text" name="naam" maxlength="100" autocomplete="name" style="width:100%;box-sizing:border-box"></label>
+<div class="namen"><label>Voornaam<br><input type="text" name="voornaam" required maxlength="60" autocomplete="given-name" style="width:100%;box-sizing:border-box"></label>
+<label>Achternaam<br><input type="text" name="achternaam" required maxlength="80" autocomplete="family-name" style="width:100%;box-sizing:border-box"></label></div>
 <label>Waarom vraag je toegang aan? (verplicht)<br><textarea name="reden" required minlength="${MIN_REDEN}" maxlength="1000" rows="4" placeholder="Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte." style="width:100%;box-sizing:border-box"></textarea>
 <small class="hint">Vertel kort wie je bent en waarvoor je de app wilt gebruiken. Zonder duidelijke reden kan ik je aanvraag niet goedkeuren.</small></label>
 <button type="submit">Aanmelding versturen</button>
@@ -256,7 +262,7 @@ ${keuzes}
 </main><script>
 const f=document.getElementById("f"),st=document.getElementById("status");
 f.addEventListener("submit",async(e)=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
-try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,naam:f.naam.value,reden:f.reden.value})});
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,reden:f.reden.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
 if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
@@ -329,6 +335,11 @@ export async function beheerRoute(request, env, url, email) {
     }
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?").bind(doel).run();
+      // nieuw-V5R6 — ook uitloggen: sessies, openstaande inloglinks en passkeys van dit adres weg.
+      for (const t of ["sessies", "inloglinks", "passkeys"]) {
+        try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
+      }
+      slotCache.delete(doel);
       return json({ ok: true });
     }
     return json({ ok: false, fout: "Onbekende route" }, 404);

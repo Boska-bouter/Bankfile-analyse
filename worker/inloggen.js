@@ -214,6 +214,17 @@ async function isNieuw(env, email) {
 
 // nieuw-V5R2 — een passkey maak je pas aan als je toegang hebt (na goedkeuring). Dynamische import: rechten.js
 // importeert dit bestand al.
+// nieuw-V5R4 — passkey nog niet aangeboden? Dan gaat de eerste keer openen van de app (na goedkeuring) eerst langs de
+// passkeypagina. Eén keer per apparaat (cookie), en alleen zolang er geen passkey is.
+export async function passkeyAanbieden(request, env, email) {
+  if (!eigenInlog(env) || !email || request.method !== "GET") return false;
+  if (!(request.headers.get("Accept") || "").includes("text/html")) return false;
+  if (/(?:^|;\s*)bo_pk=1/.test(request.headers.get("Cookie") || "")) return false;
+  try { return !(await env.DB.prepare("SELECT 1 FROM passkeys WHERE email = ? LIMIT 1").bind(email).first()); }
+  catch { return false; }
+}
+export const PASSKEY_GEVRAAGD = `bo_pk=1; Path=/; Max-Age=${365 * 86400}; HttpOnly; Secure; SameSite=Lax`;
+
 async function magPasskey(env, email) {
   const { rechtenVan } = await import("./rechten.js");
   return !!(await rechtenVan(email, env)).toegang;
@@ -294,14 +305,40 @@ try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres b
 catch(x){meld(x.message,"err")}finally{k.disabled=false}});`);
 }
 
-function bevestigPagina(token) {
+// nieuw-V5R3 — de bevestigpagina zegt voor wie en waarvoor de link is: nieuwe aanvrager, lopende aanvraag of gewoon inloggen.
+// De link wordt hier alleen opgezocht, niet gebruikt; dat gebeurt pas bij de klik (mailscanners openen links ook).
+async function bevestigPagina(env, token, huidig = null) {
+  const t = String(token || "").slice(0, 100);
+  let soort = "gewoon";
+  let email = "";
+  try {
+    const r = t ? await env.DB.prepare("SELECT email, verloopt, gebruikt FROM inloglinks WHERE hash = ?").bind(await hashHex(t)).first() : null;
+    if (!r || r.gebruikt || r.verloopt < nu()) soort = "verlopen";
+    else {
+      email = r.email;
+      if (await isNieuw(env, email)) soort = "nieuw";
+      else if (!(await magPasskey(env, email))) soort = "wacht";
+    }
+  } catch { /* dan de gewone tekst */ }
+  const tekst = {
+    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
+    wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor Bankoverzicht is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
+    gewoon: ["Inloggen bij Bankoverzicht", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
+    verlopen: ["Link verlopen", "Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.", "", ""],
+  }[soort];
+  // nieuw-V5R6 — al ingelogd met een ander adres? Dat zeggen, anders lijkt de link naar het verkeerde account te gaan.
+  const ander = huidig && huidig !== email
+    ? `<p class="sub" style="margin:0">Op dit apparaat ben je nu ingelogd als <b>${esc(huidig)}</b>.${tekst[2] ? ` Met de knop log je uit en log je in als <b>${esc(email)}</b>.` : ""}</p>` : "";
+  const knop = tekst[2] ? `<button id="ok" type="button">${tekst[2]}</button>`
+    : huidig ? `<a class="knop" href="/">Verder als ${esc(huidig)}</a><a class="knop tweede" href="/uitloggen">Uitloggen</a>`
+    : `<a class="knop" href="/inloggen">Nieuwe link aanvragen</a>`;
   return pagina("Inloggen", `
-<h1>Inloggen bevestigen</h1>
-<div class="kaart"><p class="sub" style="margin:0">Klik op de knop om in te loggen op dit apparaat.</p>
-<button id="ok" type="button">Inloggen</button><p id="status" role="status"></p></div>`, `
-const t=${JSON.stringify(String(token || "").slice(0, 100))};const k=document.getElementById("ok");
-k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{await post("/api/inloggen/link/bevestig",{t});location.href="/inloggen/passkey"}
-catch(e){meld(e.message+" Vraag een nieuwe link aan.","err");setTimeout(()=>location.href="/inloggen",2500)}finally{k.disabled=false}});`);
+<h1>${tekst[0]}</h1>
+<div class="kaart"><p class="sub" style="margin:0">${tekst[1]}</p>${ander}
+${knop}<p id="status" role="status"></p></div>`, tekst[2] ? `
+const t=${JSON.stringify(t)};const k=document.getElementById("ok");
+k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{await post("/api/inloggen/link/bevestig",{t});location.href=${JSON.stringify(tekst[3])}}
+catch(e){meld(e.message,"err");setTimeout(()=>location.reload(),2000)}finally{k.disabled=false}});` : "");
 }
 
 function passkeyPagina(email, aantal) {
@@ -322,7 +359,7 @@ k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{
   excludeCredentials:(o.bestaand||[]).map(id=>({type:"public-key",id:vanB64u(id)})),attestation:"none",timeout:60000}});
  await post("/api/inloggen/passkey/registreer",{uitdagingId:o.id,id:c.id,clientDataJSON:b64u(c.response.clientDataJSON),attestationObject:b64u(c.response.attestationObject)});
  meld("Passkey aangemaakt. Je gaat naar de app…","ok");setTimeout(()=>location.href="/",1200);
-}catch(e){meld(e.name==="NotAllowedError"?"Geannuleerd.":e.name==="InvalidStateError"?"Op dit apparaat staat al een passkey voor jou.":"Aanmaken lukte niet: "+e.message,"err")}finally{k.disabled=false}});`);
+}catch(e){meld(e.name==="NotAllowedError"?"Geannuleerd.":e.name==="InvalidStateError"?"Op dit apparaat staat al een passkey voor jou.":"Aanmaken lukte niet: "+e.message,"err")}finally{k.disabled=false}});`, { "Set-Cookie": PASSKEY_GEVRAAGD });
 }
 
 // Paden die zonder inlog bereikbaar moeten zijn.
@@ -343,7 +380,7 @@ export async function inlogRoute(request, env, url, email) {
 
   if (request.method === "GET") {
     if (p === "/inloggen") return email ? Response.redirect(`${url.origin}/`, 302) : inlogPagina();
-    if (p === "/inloggen/link") return bevestigPagina(url.searchParams.get("t"));
+    if (p === "/inloggen/link") return bevestigPagina(env, url.searchParams.get("t"), email);
     if (p === "/inloggen/passkey") {
       if (!email) return Response.redirect(`${url.origin}/inloggen`, 302);
       if (!(await magPasskey(env, email))) return Response.redirect(`${url.origin}/`, 302);
