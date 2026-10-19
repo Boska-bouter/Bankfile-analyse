@@ -2,7 +2,6 @@
   "name": "bankfile-analyse",
   "previews": {
     "send_email": [{ "name": "EMAIL" }],
-    "vars": {
 "d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],
   "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
@@ -19,7 +18,6 @@
     "run_worker_first": ["/api/*"]
   },
   "send_email": [{ "name": "EMAIL" }],
-  "vars": {
   "d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],
   "vars": {
     "FEEDBACK_TO": "paul@paulgerits.eu",
