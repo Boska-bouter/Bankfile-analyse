@@ -5,6 +5,8 @@
 //
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
+import { bankRoute } from "./bank.js";
+
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
 
@@ -74,6 +76,14 @@ export default {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       // lijst = staat de Secret AccessAll er (de inhoud wordt niet teruggegeven), voor de foutzoekregel in de app.
       return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim(), uitgebreid: magUitgebreid(email, env.AccessAll) });
+    }
+    // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js)
+    // Alleen voor gebruikers met de uitgebreide weergave (Secret AccessAll), zolang dit een proef is.
+    if (url.pathname.startsWith("/api/bank/")) {
+      if (!env.EB_DEV_EMAIL && !magUitgebreid(request.headers.get("Cf-Access-Authenticated-User-Email"), env.AccessAll)) {
+        return json({ ok: false, fout: "Bankkoppeling is alleen beschikbaar in de uitgebreide weergave" }, 403);
+      }
+      return bankRoute(request, env, url);
     }
     // Alles behalve /api/feedback is de app zelf (statische bestanden): doorgeven aan de assets-binding.
     if (url.pathname !== "/api/feedback") return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });

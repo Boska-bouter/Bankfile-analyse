@@ -1,0 +1,209 @@
+import { useEffect, useMemo, useState } from "react";
+import ModalShell from "../modals/ModalShell.jsx";
+import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, KNOP_PRIMAIR_KLEIN, VELD, VELD_KLEIN } from "../ui/stijl.js";
+import { transactiesNaarRijen, voegRijenSamen, rijenNaarParsedFile } from "../../importers/enableBanking.js";
+
+// nieuw-V3R8 — rechtstreekse bankkoppeling (proef, via Enable Banking en de Worker-routes /api/bank/*).
+// Koppelingen (bank, rekeningen, versleuteld koppeltoken) staan per browser in window.storage. Het token is alleen
+// bruikbaar door de Worker, en alleen voor hetzelfde ingelogde e-mailadres.
+
+const OPSLAG = "bankoverzicht:bankkoppelingen";
+const STATE_KEY = "bankoverzicht:bankkoppeling-start";
+
+async function api(pad, body) {
+  const r = await fetch(`/api/bank${pad}`, {
+    method: body ? "POST" : "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await r.json(); } catch { /* geen JSON, bijv. inlogpagina van Access */ }
+  if (!r.ok || !data?.ok) throw new Error([data?.fout || `Fout ${r.status}`, data?.detail].filter(Boolean).join(" — "));
+  return data;
+}
+
+async function leesKoppelingen() {
+  try {
+    const res = await window.storage.get(OPSLAG);
+    const lijst = res?.value ? JSON.parse(res.value) : [];
+    return Array.isArray(lijst) ? lijst : [];
+  } catch { return []; }
+}
+async function bewaarKoppelingen(lijst) {
+  try { await window.storage.set(OPSLAG, JSON.stringify(lijst)); } catch { /* opslag vol of niet beschikbaar */ }
+}
+
+const vandaag = () => new Date().toISOString().slice(0, 10);
+const nlDatum = (iso) => (iso ? new Date(iso).toLocaleDateString("nl-NL") : "—");
+const standaardVan = () => `${new Date().getFullYear() - 1}-01-01`;
+
+// Terug van de bank (/bank/terug?code=…&state=…): de eenmalige code meteen inwisselen voor een koppeling en die
+// bewaren. Geeft een melding terug, of gooit een fout met een leesbare tekst.
+export async function rondKoppelingAf(terug) {
+  let start = null;
+  try { start = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null"); } catch { /* leeg */ }
+  try { sessionStorage.removeItem(STATE_KEY); } catch { /* leeg */ }
+  if (terug.error) throw new Error(`De bank gaf geen toestemming: ${terug.error}`);
+  if (!start || !terug.state || start.state !== terug.state) throw new Error("Deze terugkeer van de bank hoort niet bij een koppeling die in deze browser is gestart. Begin opnieuw.");
+  const s = await api("/sessie", { code: terug.code, bank: start.bank });
+  const nieuw = { id: crypto.randomUUID(), bank: s.bank || start.bank, psu: start.psu, token: s.token, rekeningen: s.rekeningen, geldigTot: s.geldigTot, gekoppeldOp: new Date().toISOString(), opgehaald: {} };
+  await bewaarKoppelingen([...(await leesKoppelingen()), nieuw]);
+  const n = s.rekeningen.length;
+  return `${nieuw.bank} is gekoppeld (${n} rekening${n === 1 ? "" : "en"}). Kies hieronder "Ophalen".`;
+}
+
+export default function BankKoppelingModal({ afronding, parsedFiles, onImport, onClose }) {
+  const [koppelingen, setKoppelingen] = useState([]);
+  const [psu, setPsu] = useState("personal");
+  const [banken, setBanken] = useState(null);
+  const [zoek, setZoek] = useState("");
+  const [gekozen, setGekozen] = useState("");
+  const [bezig, setBezig] = useState("");
+  const [fout, setFout] = useState("");
+  const [melding, setMelding] = useState("");
+  const [vanDatum, setVanDatum] = useState({});
+
+  useEffect(() => { leesKoppelingen().then(setKoppelingen); }, []);
+
+  // Afronden na terugkeer van de bank gebeurt in App (rondKoppelingAf), ook als eerst het startscherm verschijnt.
+  useEffect(() => {
+    if (!afronding) return;
+    if (afronding.fout) setFout(afronding.fout);
+    if (afronding.melding) { setMelding(afronding.melding); leesKoppelingen().then(setKoppelingen); }
+  }, [afronding]);
+
+  const laadBanken = async (soort) => {
+    setBanken(null); setGekozen(""); setFout("");
+    try { setBanken((await api(`/banken?psu=${soort}`)).banken); } catch (e) { setFout(e.message); setBanken([]); }
+  };
+  useEffect(() => { laadBanken(psu); }, [psu]);
+
+  const gefilterd = useMemo(() => (banken || []).filter((b) => b.naam.toLowerCase().includes(zoek.trim().toLowerCase())), [banken, zoek]);
+
+  const naarBank = async () => {
+    const bank = (banken || []).find((b) => b.naam === gekozen);
+    if (!bank) return;
+    setBezig("start"); setFout("");
+    try {
+      const state = crypto.randomUUID();
+      sessionStorage.setItem(STATE_KEY, JSON.stringify({ state, bank: bank.naam, psu }));
+      const s = await api("/start", { bank: bank.naam, psu, state, maxGeldigSec: bank.maxGeldigSec });
+      window.location.assign(s.url);
+    } catch (e) {
+      setFout(e.message);
+      setBezig("");
+    }
+  };
+
+  const ophalen = async (k, idx) => {
+    const rek = k.rekeningen[idx];
+    const van = vanDatum[`${k.id}|${idx}`] || k.opgehaald?.[idx] || standaardVan();
+    setBezig(`${k.id}|${idx}`); setFout(""); setMelding("");
+    try {
+      const d = await api("/transacties", { token: k.token, rekening: idx, van, tot: vandaag() });
+      const nieuweRijen = transactiesNaarRijen(d.transacties, rek.iban);
+      const label = rijenNaarParsedFile([], { bank: k.bank, iban: rek.iban }).fileName;
+      const bestaand = (parsedFiles || []).find((p) => p.fileName === label);
+      const { rijen, toegevoegd } = voegRijenSamen(bestaand?.rows || [], nieuweRijen);
+      if (rijen.length === 0) { setMelding(`Geen geboekte transacties gevonden voor ${rek.iban || "deze rekening"} vanaf ${nlDatum(van)}.`); return; }
+      onImport(rijenNaarParsedFile(rijen, { bank: k.bank, iban: rek.iban, naam: rek.naam }), k.psu === "business" ? "Zakelijk" : "Prive");
+      // Volgende keer vanaf een week vóór de laatste boeking: overlap vangt late boekingen op, dubbelingen vallen weg.
+      const laatste = rijen[rijen.length - 1]["Datum"];
+      const volgende = new Date(Date.UTC(+laatste.slice(0, 4), +laatste.slice(4, 6) - 1, +laatste.slice(6, 8) - 7)).toISOString().slice(0, 10);
+      const lijst = koppelingen.map((x) => (x.id === k.id ? { ...x, opgehaald: { ...(x.opgehaald || {}), [idx]: volgende } } : x));
+      await bewaarKoppelingen(lijst);
+      setKoppelingen(lijst);
+      setMelding(`${toegevoegd} nieuwe boeking${toegevoegd === 1 ? "" : "en"} toegevoegd voor ${rek.iban || rek.naam}.${d.onvolledig ? " Niet alles kon in één keer worden opgehaald: haal nog een keer op." : ""}`);
+    } catch (e) {
+      setFout(e.message);
+    } finally {
+      setBezig("");
+    }
+  };
+
+  const verwijder = async (k) => {
+    setBezig(`del|${k.id}`); setFout("");
+    try { await api("/verwijder", { token: k.token }); } catch (e) { setFout(`Intrekken bij de bank mislukt (${e.message}); de koppeling is hier wel verwijderd.`); }
+    const lijst = koppelingen.filter((x) => x.id !== k.id);
+    await bewaarKoppelingen(lijst);
+    setKoppelingen(lijst);
+    setBezig("");
+  };
+
+  return (
+    <ModalShell title="Rechtstreeks koppelen met de bank (proef)" onClose={onClose} maxWidth="max-w-2xl">
+      <div className="space-y-5 text-sm text-slate-700">
+        <p className="text-slate-500">
+          Je logt in bij je eigen bank en geeft toestemming om je transacties te lezen (alleen lezen, geen betalingen).
+          De gegevens gaan via Enable Banking rechtstreeks naar deze browser en worden niet op een server bewaard.
+          De toestemming verloopt na maximaal 180 dagen.
+        </p>
+
+        {fout && <p className="rounded-veld bg-red-50 px-3 py-2 text-red-700 whitespace-pre-wrap">{fout}</p>}
+        {melding && <p className="rounded-veld bg-teal-50 px-3 py-2 text-teal-800">{melding}</p>}
+        {afronding?.bezig && <p className="text-slate-500">Koppeling met de bank afronden…</p>}
+
+        {koppelingen.length > 0 && (
+          <section className="space-y-3">
+            <h3 className="font-semibold text-slate-800">Gekoppelde banken</h3>
+            {koppelingen.map((k) => {
+              const verlopen = k.geldigTot && new Date(k.geldigTot) < new Date();
+              return (
+                <div key={k.id} className="rounded-veld border border-slate-200 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-medium">{k.bank}</span>
+                      <span className="text-xs text-slate-500"> · {k.psu === "business" ? "zakelijk" : "privé"} · {verlopen ? <b className="text-red-700">verlopen, opnieuw koppelen</b> : `geldig tot ${nlDatum(k.geldigTot)}`}</span>
+                    </div>
+                    <button className={KNOP_SECUNDAIR_KLEIN} disabled={!!bezig} onClick={() => verwijder(k)}>Ontkoppelen</button>
+                  </div>
+                  {k.rekeningen.map((r, idx) => {
+                    const sleutel = `${k.id}|${idx}`;
+                    return (
+                      <div key={idx} className="flex flex-wrap items-center gap-2">
+                        <span className="min-w-[13rem] font-mono text-xs">{r.iban || r.naam || `Rekening ${idx + 1}`}</span>
+                        <label className="text-xs text-slate-500">vanaf</label>
+                        <input type="date" className={VELD_KLEIN} max={vandaag()}
+                          value={vanDatum[sleutel] || k.opgehaald?.[idx] || standaardVan()}
+                          onChange={(e) => setVanDatum((v) => ({ ...v, [sleutel]: e.target.value }))} />
+                        <button className={KNOP_PRIMAIR_KLEIN} disabled={!!bezig || verlopen} onClick={() => ophalen(k, idx)}>
+                          {bezig === sleutel ? "Ophalen…" : "Ophalen"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+        )}
+
+        <section className="space-y-2">
+          <h3 className="font-semibold text-slate-800">Nieuwe bank koppelen</h3>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-1.5"><input type="radio" checked={psu === "personal"} onChange={() => setPsu("personal")} /> Privé</label>
+            <label className="flex items-center gap-1.5"><input type="radio" checked={psu === "business"} onChange={() => setPsu("business")} /> Zakelijk</label>
+          </div>
+          <input className={`${VELD} w-full`} placeholder="Zoek je bank" value={zoek} onChange={(e) => setZoek(e.target.value)} />
+          <div className="max-h-56 overflow-y-auto rounded-veld border border-slate-200 divide-y divide-slate-100">
+            {banken === null && <p className="px-3 py-2 text-slate-500">Banken laden…</p>}
+            {banken && gefilterd.length === 0 && <p className="px-3 py-2 text-slate-500">Geen bank gevonden.</p>}
+            {gefilterd.map((b) => (
+              <label key={b.naam} className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 ${gekozen === b.naam ? "bg-teal-50" : "hover:bg-slate-50"}`}>
+                <input type="radio" name="bank" checked={gekozen === b.naam} onChange={() => setGekozen(b.naam)} />
+                {b.logo && <img src={b.logo} alt="" className="h-5 w-5 object-contain" />}
+                <span>{b.naam}</span>
+                {b.beta && <span className="text-xs text-amber-700">bèta</span>}
+              </label>
+            ))}
+          </div>
+          <button className={KNOP_PRIMAIR} disabled={!gekozen || !!bezig} onClick={naarBank}>
+            {bezig === "start" ? "Doorsturen…" : "Naar mijn bank"}
+          </button>
+        </section>
+      </div>
+    </ModalShell>
+  );
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
+import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKoppelingModal.jsx";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
@@ -165,6 +166,16 @@ import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
+
+// nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
+// laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
+const BANK_TERUG = (() => {
+  if (typeof window === "undefined" || window.location.pathname !== "/bank/terug") return null;
+  const q = new URLSearchParams(window.location.search);
+  window.history.replaceState(null, "", "/");
+  return { code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
+})();
+let bankTerugAfgehandeld = false;
 
 // ---------------------------------------------------------------------------
 // Dit is de functionele schil (upload, tabbladen, dashboard, alle panelen) rond de
@@ -511,6 +522,16 @@ export default function App() {
   const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
   const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
   const projectFileInputRef = useRef(null);
+  // nieuw-V3R8 — rechtstreekse bankkoppeling (proef). Na het inloggen bij de bank komt de gebruiker terug op
+  // /bank/terug?code=…&state=…; dan gaat het koppelvenster meteen open om de koppeling af te ronden.
+  const [bankKoppeling, setBankKoppeling] = useState(() => (BANK_TERUG ? { bezig: true, terug: BANK_TERUG } : null));
+  useEffect(() => {
+    if (!BANK_TERUG || bankTerugAfgehandeld) return;
+    bankTerugAfgehandeld = true; // React StrictMode draait effecten twee keer; de code is maar één keer geldig
+    rondKoppelingAf(BANK_TERUG)
+      .then((melding) => setBankKoppeling({ melding }))
+      .catch((e) => setBankKoppeling({ fout: e.message || String(e) }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
@@ -1144,6 +1165,15 @@ export default function App() {
       // eerder in de sessie nog openstond gewoon open te laten staan.
       setExpandedCardKeys({});
     }
+  };
+
+  // nieuw-V3R8 — opgehaalde transacties uit de bankkoppeling: als "bestand" toevoegen of het eerdere vervangen.
+  const handleBankImport = (pf, rekeningType) => {
+    setError(null);
+    setParsedFiles((prev) => [...prev.filter((p) => p.fileName !== pf.fileName), pf]);
+    setAccountTypeByFile((prev) => (prev[pf.fileName] ? prev : { ...prev, [pf.fileName]: rekeningType }));
+    setShowSetupWizard(true);
+    setExpandedCardKeys({});
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
@@ -3321,6 +3351,7 @@ export default function App() {
         { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
         { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
         { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
+        ...(magUitgebreid ? [{ label: "Rechtstreeks koppelen met de bank (proef)", onClick: () => setBankKoppeling({}) }] : []),
       ],
     });
   // release21V0 — zijn de vragen per jaar al eens beantwoord? De wizard gold voorheen als "al ingericht"
@@ -3768,6 +3799,14 @@ export default function App() {
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
+      {bankKoppeling && (
+        <BankKoppelingModal
+          afronding={bankKoppeling}
+          parsedFiles={parsedFiles}
+          onImport={handleBankImport}
+          onClose={() => setBankKoppeling(null)}
+        />
+      )}
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 
