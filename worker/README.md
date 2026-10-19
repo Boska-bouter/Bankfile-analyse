@@ -116,3 +116,17 @@ Vervangt Cloudflare Access (geen code per e-mail, geen kosten per gebruiker). Zi
   verwijderen. Rechten (BEHEERDERS, AccessAll, de tabel) blijven gewoon op e-mailadres werken.
 - Prijzen: variabele `PRIJZEN`, bijv. `{"eenvoudig":0,"uitgebreid":4.95,"koppelen":7.5}` (euro per maand). Standaard
   alles 0 (gratis, beheerder keurt goed). Een prijs boven 0 vraagt de betaalstap, die nog niet is gebouwd.
+
+### E-mail voor inloglinks (nieuw-V4R7)
+
+De binding `EMAIL` (Cloudflare Email Routing) mailt alleen naar adressen die in Email Routing als *destination address*
+zijn geverifieerd ("destination address is not a verified address"). Voor gebruikers in het algemeen:
+Secret `RESEND_API_KEY` (resend.com, gratis tot 3.000 mails per maand) en variabele `INLOG_FROM` met een afzender op
+een bij Resend geverifieerd domein, bijv. `"Bankoverzicht <inloggen@bankafschriftentool.app>"`.
+
+## E-mail naar gebruikers (nieuw-V4R8)
+
+Inloglinks en de berichten "aanmelding goedgekeurd" / "afgewezen" gaan via de binding `EMAIL` naar willekeurige
+adressen. Daarvoor moet **Cloudflare Email Sending** aan staan (Compute → Email Service → Email Sending → Onboard Domain,
+vereist Workers Paid). Afzender: `INLOG_FROM`, anders `FEEDBACK_FROM`; die moet op het onboarde domein staan.
+Alleen Email Routing is niet genoeg: dan kan de Worker alleen naar geverifieerde adressen mailen.

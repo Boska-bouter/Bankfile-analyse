@@ -69,8 +69,9 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
   const beslis = async (email, actie) => {
     setBezig(true); setFout(""); setMelding("");
     try {
-      await api(actie, { email });
-      setMelding(actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd.` : `De aanvraag van ${email} is afgewezen.`);
+      const d = await api(actie, { email });
+      // nieuw-V4R8 — de Worker mailt de aanvrager; meld het als die mail niet weg kon.
+      setMelding(`${actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd` : `De aanvraag van ${email} is afgewezen`}${d.mailFout ? `, maar de e-mail aan de aanvrager is niet verstuurd (${d.mailFout}).` : " en de aanvrager krijgt een e-mail."}`);
       await laad();
     } catch (e) { setFout(e.message); } finally { setBezig(false); }
   };

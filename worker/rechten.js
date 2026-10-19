@@ -13,6 +13,8 @@
 // Met de variabele TOEGANG_VERPLICHT = "ja" levert de Worker de app alleen aan wie toegang heeft; anderen zien de
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
+import { verstuur } from "./inloggen.js";
+
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
   email TEXT PRIMARY KEY,
   uitgebreid INTEGER NOT NULL DEFAULT 0,
@@ -130,6 +132,18 @@ function controleerPost(request, url) {
   return null;
 }
 
+// nieuw-V4R8 — de aanvrager krijgt een e-mail als de beheerder de aanvraag goedkeurt of afwijst.
+// Een mislukte mail maakt de beslissing niet ongedaan; het beheerscherm meldt het wel.
+async function meldAanvrager(env, doel, onderwerp, regels, knop) {
+  const from = env.INLOG_FROM || env.FEEDBACK_FROM;
+  if ((!env.EMAIL && !env.RESEND_API_KEY) || !from) return "geen afzender ingesteld";
+  const text = `${regels.join("\n\n")}${knop ? `\n\n${knop.link}` : ""}`;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">${regels.map((r) => `<p>${esc(r)}</p>`).join("")}
+${knop ? `<p><a href="${esc(knop.link)}" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">${esc(knop.tekst)}</a></p>` : ""}</div>`;
+  try { await verstuur(env, { to: doel, from, subject: `Bankoverzicht: ${onderwerp}`, text, html }); return null; }
+  catch (e) { console.error("aanvrager: e-mail mislukt", e?.message); return String(e?.message || e).slice(0, 200); }
+}
+
 async function meldBeheerder(env, onderwerp, tekst) {
   if (!env.EMAIL || !env.FEEDBACK_TO || !env.FEEDBACK_FROM) return;
   try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from: env.FEEDBACK_FROM, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
@@ -188,7 +202,7 @@ export function aanmeldPagina(email, r, env = {}) {
         koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
       }[k]}</small></span></label>`).join("");
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
-    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, kun je de app gebruiken. Je kunt hieronder ook een ander abonnement kiezen.</p>`
+    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail en kun je de app gebruiken. Je kunt hieronder ook een ander abonnement kiezen.</p>`
     : "";
   return new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aanmelden · Bankoverzicht</title>
@@ -208,7 +222,7 @@ button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#sta
 a{color:var(--accent)}
 </style></head><body><main>
 <h1>Aanmelden voor Bankoverzicht</h1>
-<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. Kies een abonnement; de beheerder keurt je aanmelding goed.</p>
+<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. Kies een abonnement; de beheerder keurt je aanmelding goed en je krijgt daarover een e-mail.</p>
 ${loopt}
 <form id="f">
 ${keuzes}
@@ -222,7 +236,7 @@ const f=document.getElementById("f"),st=document.getElementById("status");
 f.addEventListener("submit",async(e)=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
 try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,naam:f.naam.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
-if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd.";setTimeout(()=>location.reload(),1200)}
+if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
 </script></body></html>`, { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
@@ -273,13 +287,21 @@ export async function beheerRoute(request, env, url, email) {
         `UPDATE rechten SET eenvoudig = 1, uitgebreid = MAX(uitgebreid, ?2), koppelen = MAX(koppelen, ?3),
          aanvraag = NULL, gewijzigd = ?4, gewijzigd_door = ?5 WHERE email = ?1`
       ).bind(doel, n >= 2 ? 1 : 0, n >= 3 ? 1 : 0, tijd, door).run();
-      return json({ ok: true });
+      const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd",
+        [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
+          "Log in met je passkey of vraag op de inlogpagina een nieuwe inloglink aan."],
+        { link: `${url.origin}/`, tekst: "Open Bankoverzicht" });
+      return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/afwijzen" && request.method === "POST") {
+      const r = await env.DB.prepare("SELECT aanvraag FROM rechten WHERE email = ?").bind(doel).first();
       await env.DB.prepare("UPDATE rechten SET aanvraag = NULL, gewijzigd = ?2, gewijzigd_door = ?3 WHERE email = ?1").bind(doel, tijd, door).run();
       // Een rij die alleen uit een aanvraag bestond, heeft geen nut meer.
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?1 AND eenvoudig = 0 AND uitgebreid = 0 AND koppelen = 0 AND aanvraag IS NULL").bind(doel).run();
-      return json({ ok: true });
+      const mailFout = PLANNEN[r?.aanvraag] ? await meldAanvrager(env, doel, "je aanmelding",
+        [`Je aanmelding voor ${PLANNEN[r.aanvraag]} is helaas niet goedgekeurd.`,
+          "Heb je vragen? Beantwoord dan deze e-mail of neem contact op met de beheerder."]) : null;
+      return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?").bind(doel).run();

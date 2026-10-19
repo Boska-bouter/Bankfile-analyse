@@ -168,14 +168,30 @@ function controleerClientData(clientDataJSON, type, uitdaging, origin) {
 }
 
 // ---- e-mail met inloglink ----
-async function stuurLink(env, email, link) {
+// nieuw-V4R7 — de send_email-binding van Cloudflare Email Routing mailt alleen naar geverifieerde adressen. Voor
+// inloglinks naar willekeurige gebruikers kan daarom Resend (resend.com) worden gebruikt: Secret RESEND_API_KEY en een
+// afzender op een bij Resend geverifieerd domein (INLOG_FROM). Zonder die Secret gaat het via de binding EMAIL.
+export async function verstuur(env, bericht) {
+  if (env.RESEND_API_KEY) {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({ from: bericht.from, to: [bericht.to], subject: bericht.subject, text: bericht.text, html: bericht.html }),
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 150)}`);
+    return;
+  }
   if (!env.EMAIL) throw new Error("Binding EMAIL ontbreekt");
+  await env.EMAIL.send(bericht);
+}
+
+async function stuurLink(env, email, link) {
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
   const text = `Klik op de link om in te loggen bij Bankoverzicht:\n\n${link}\n\nDe link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`;
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5"><p>Klik op de knop om in te loggen bij Bankoverzicht.</p>
 <p><a href="${esc(link)}" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Inloggen</a></p>
 <p style="color:#555;font-size:13px">De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.</p></div>`;
-  await env.EMAIL.send({ to: email, from, subject: "Inloggen bij Bankoverzicht", text, html });
+  await verstuur(env, { to: email, from, subject: "Inloggen bij Bankoverzicht", text, html });
 }
 
 // ---- pagina's ----
