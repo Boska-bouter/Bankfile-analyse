@@ -22,14 +22,15 @@ const TAB_LABELS = {
 
 
 // Icoonknop met een duidelijke tekstballon (fixed, dus niet afgekapt door de scrollende zijbalk).
-function IcoonKnop({ onClick, label, Icon }) {
+function IcoonKnop({ onClick, label, Icon, teller = 0 }) {
   const [tip, setTip] = useState(null);
   const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left, y: r.top }); };
   return (
     <>
       <button type="button" onClick={onClick} aria-label={label} onMouseEnter={toon} onMouseLeave={() => setTip(null)} onFocus={toon} onBlur={() => setTip(null)}
-        className="rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+        className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
         <Icon className="h-[18px] w-[18px]" />
+        {teller > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-amber-400 px-1 text-center text-[10px] font-bold leading-4 text-slate-900">{teller}</span>}
       </button>
       {tip && (
         <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
@@ -78,7 +79,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen, onBeheer = null, ingelogdAls = null, onUitloggen = null,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -381,7 +382,7 @@ export default function AppSidebar({
           <IcoonKnop onClick={onZoek} label="Zoeken in transacties (Ctrl+K)" Icon={Search} />
           <IcoonKnop onClick={onBegrippen} label="Begrippen (uitleg vakwoorden)" Icon={BookOpen} />
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
-          {onBeheer && <IcoonKnop onClick={onBeheer} label="Gebruikers en rechten (beheer)" Icon={Users} />}
+          {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
           {onUitloggen && ingelogdAls && <IcoonKnop onClick={onUitloggen} label={`Uitloggen (${ingelogdAls})`} Icon={LogOut} />}
         </div>

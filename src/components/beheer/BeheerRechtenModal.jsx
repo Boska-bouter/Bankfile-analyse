@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 
-// nieuw-V3R13 — "Gebruikers en rechten": de beheerder (Secret BEHEERDERS in de Worker) geeft per e-mailadres
+// nieuw-V4R3 — "Gebruikers en rechten": de beheerder (Secret BEHEERDERS in de Worker) geeft per e-mailadres
 // Uitgebreid en/of de bankkoppeling, eventueel tot een einddatum. Opslag in de D1-tabel "rechten" (worker/rechten.js).
 // Let op: wie de app wil openen moet ook in Cloudflare Access binnen mogen; dit scherm regelt alleen wat iemand mag.
 
-const LEEG = { email: "", uitgebreid: true, koppelen: false, geldigTot: "", notitie: "" };
+const LEEG = { email: "", eenvoudig: true, uitgebreid: true, koppelen: false, geldigTot: "", notitie: "" };
+// nieuw-V4R5 — aanmeldingen: wat iemand heeft aangevraagd.
+const PLAN = { eenvoudig: "Eenvoudig", uitgebreid: "Uitgebreid", koppelen: "Uitgebreid met bankkoppeling" };
 
 async function api(pad, body) {
   const r = await fetch(`/api/beheer/${pad}`, body
@@ -20,9 +22,10 @@ async function api(pad, body) {
 
 const nlDatum = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString("nl-NL") : "");
 
-export default function BeheerRechtenModal({ eigenEmail, onClose }) {
+export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose }) {
   const [lijst, setLijst] = useState(null);
   const [vandaag, setVandaag] = useState("");
+  const [slot, setSlot] = useState(false);
   const [fout, setFout] = useState("");
   const [melding, setMelding] = useState("");
   const [bezig, setBezig] = useState(false);
@@ -34,6 +37,8 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
       const d = await api("rechten");
       setLijst(d.rechten);
       setVandaag(d.vandaag);
+      setSlot(!!d.slot);
+      onAanvragen?.(d.rechten.filter((r) => r.aanvraag).length);
       setFout("");
     } catch (e) { setFout(e.message); setLijst((l) => l || []); }
   };
@@ -44,7 +49,7 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
     setBezig(true); setFout(""); setMelding("");
     try {
       const email = form.email.trim().toLowerCase();
-      await api("rechten", { ...form, email, koppelen: form.uitgebreid && form.koppelen, geldigTot: form.geldigTot || null });
+      await api("rechten", { ...form, email, eenvoudig: form.uitgebreid || form.eenvoudig, koppelen: form.uitgebreid && form.koppelen, geldigTot: form.geldigTot || null });
       setMelding(`${email} is opgeslagen.`);
       setForm(LEEG); setBewerkt(null);
       await laad();
@@ -61,8 +66,17 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
     } catch (e) { setFout(e.message); } finally { setBezig(false); }
   };
 
+  const beslis = async (email, actie) => {
+    setBezig(true); setFout(""); setMelding("");
+    try {
+      await api(actie, { email });
+      setMelding(actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd.` : `De aanvraag van ${email} is afgewezen.`);
+      await laad();
+    } catch (e) { setFout(e.message); } finally { setBezig(false); }
+  };
+
   const bewerk = (r) => {
-    setForm({ email: r.email, uitgebreid: r.uitgebreid, koppelen: r.koppelen, geldigTot: r.geldigTot || "", notitie: r.notitie || "" });
+    setForm({ email: r.email, eenvoudig: r.eenvoudig, uitgebreid: r.uitgebreid, koppelen: r.koppelen, geldigTot: r.geldigTot || "", notitie: r.notitie || "" });
     setBewerkt(r.email); setMelding(""); setFout("");
   };
 
@@ -76,6 +90,28 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
           staan. De persoon moet de app ook kunnen openen via Cloudflare Access.
           {eigenEmail ? <> Jij bent ingelogd als <b>{eigenEmail}</b> en staat als beheerder in de Worker.</> : null}
         </p>
+        <p className="text-xs text-slate-500">
+          Toegangsslot: <b>{slot ? "aan" : "uit"}</b>. {slot
+            ? "Alleen wie hieronder Eenvoudig of Uitgebreid heeft, krijgt de app; anderen zien de aanmeldpagina."
+            : "Iedereen die via Cloudflare Access binnenkomt, kan Eenvoudig gebruiken. Zet TOEGANG_VERPLICHT op \"ja\" om alleen goedgekeurde gebruikers toe te laten."}
+        </p>
+        {(lijst || []).some((r) => r.aanvraag) && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
+            <p className="font-semibold text-amber-900">Aanmeldingen</p>
+            <ul className="divide-y divide-amber-200">
+              {lijst.filter((r) => r.aanvraag).map((r) => (
+                <li key={r.email} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-800 break-all">{r.naam ? `${r.naam} · ` : ""}{r.email}</p>
+                    <p className="text-xs text-slate-600">vraagt <b>{PLAN[r.aanvraag] || r.aanvraag}</b>{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}</p>
+                  </div>
+                  <button type="button" disabled={bezig} onClick={() => beslis(r.email, "goedkeuren")} className={`${KNOP_PRIMAIR} disabled:opacity-50`}>Goedkeuren</button>
+                  <button type="button" disabled={bezig} onClick={() => beslis(r.email, "afwijzen")} className={KNOP_SECUNDAIR_KLEIN}>Afwijzen</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <form onSubmit={opslaan} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
           <p className="font-semibold text-slate-800">{bewerkt ? `Wijzigen: ${bewerkt}` : "Gebruiker toevoegen"}</p>
@@ -91,6 +127,9 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
             </label>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <label className={`inline-flex items-center gap-2 ${form.uitgebreid ? "opacity-50" : ""}`}>
+              <input type="checkbox" checked={form.uitgebreid || form.eenvoudig} disabled={form.uitgebreid} onChange={veld("eenvoudig")} /> Eenvoudig
+            </label>
             <label className="inline-flex items-center gap-2">
               <input type="checkbox" checked={form.uitgebreid} onChange={veld("uitgebreid")} /> Uitgebreide weergave
             </label>
@@ -122,7 +161,8 @@ export default function BeheerRechtenModal({ eigenEmail, onClose }) {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-slate-800 break-all">{r.email}</p>
                     <p className="text-xs text-slate-500">
-                      {[r.uitgebreid ? "Uitgebreid" : "Eenvoudig", r.koppelen ? "bankkoppeling" : null].filter(Boolean).join(" + ")}
+                      {r.uitgebreid ? ["Uitgebreid", r.koppelen ? "bankkoppeling" : null].filter(Boolean).join(" + ") : r.eenvoudig ? "Eenvoudig" : "nog geen toegang"}
+                      {r.aanvraag ? ` · vraagt ${PLAN[r.aanvraag] || r.aanvraag}` : null}
                       {r.geldigTot ? <> · {verlopen ? <span className="text-red-700">verlopen op {nlDatum(r.geldigTot)}</span> : `tot en met ${nlDatum(r.geldigTot)}`}</> : null}
                       {r.bron && r.bron !== "handmatig" ? ` · via ${r.bron}` : null}
                       {r.notitie ? ` · ${r.notitie}` : null}

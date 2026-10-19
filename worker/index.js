@@ -6,7 +6,7 @@
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
 import { bankRoute } from "./bank.js";
-import { opLijst, rechtenVan, beheerRoute } from "./rechten.js";
+import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -58,26 +58,38 @@ ${blok("Inlogbewijs dat de app meekrijgt (header)", header)}${blok("Inlogcookie 
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
-// nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Sinds nieuw-V3R13: Secret "AccessAll",
+// nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Sinds nieuw-V4R3: Secret "AccessAll",
 // Secret "BEHEERDERS" en de D1-tabel "rechten" (zie rechten.js). Geen recht of niet ingelogd = alleen Eenvoudig.
-export const magUitgebreid = opLijst; // nieuw-V3R13 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
+export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // release32V0 — test: wat zegt het Access-inlogbewijs over inlogtijd en verlooptijd? (zie sessieInfo)
     if (url.pathname === "/api/sessie") return sessieInfo(request, url);
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await rechtenVan(email, env);
+      const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, ...r });
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, ...r });
     }
-    // nieuw-V3R13 — beheerscherm "Gebruikers en rechten" (alleen Secret BEHEERDERS)
+    // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
+    if (url.pathname === "/api/aanmelden") {
+      return aanmeldRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"), ctx);
+    }
+    // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
+    // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.
+    if (toegangVerplicht(env) && !url.pathname.startsWith("/api/")) {
+      const email = request.headers.get("Cf-Access-Authenticated-User-Email");
+      const r = await heeftToegang(email, env);
+      if (!r.toegang) return aanmeldPagina(email, r);
+    }
+    // nieuw-V4R3 — beheerscherm "Gebruikers en rechten" (alleen Secret BEHEERDERS)
     if (url.pathname.startsWith("/api/beheer/")) {
       return beheerRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     }
-    // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V3R13 alleen met het recht "koppelen".
+    // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V4R3 alleen met het recht "koppelen".
     if (url.pathname.startsWith("/api/bank/")) {
       if (!env.EB_DEV_EMAIL && !(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
         return json({ ok: false, fout: "Bankkoppeling staat niet aan voor jouw account" }, 403);

@@ -6,7 +6,8 @@
   "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
       "FEEDBACK_FROM": "feedback@bankafschriftentool.app" , 
-      "BEHEERDERS": "paul@paulgerits.eu"
+      "BEHEERDERS": "paul@paulgerits.eu",
+      "TOEGANG_VERPLICHT": "nee"                        
     }
   },
   "main": "worker/index.js",
@@ -15,7 +16,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
   "send_email": [{ "name": "EMAIL" }],
   "d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],

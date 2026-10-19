@@ -273,7 +273,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -429,7 +429,7 @@ export default function App() {
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [showRekeninghouderModal, setShowRekeninghouderModal] = useState(false);
-  const [bankKoppelingen, setBankKoppelingen] = useState([]); // nieuw-V3R10 — rechtstreekse bankkoppelingen van dit dossier
+  const [bankKoppelingen, setBankKoppelingen] = useState([]); // nieuw-V4R0 — rechtstreekse bankkoppelingen van dit dossier
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
   // null=nog niet gevraagd | {status: "ja"|"nee", naam: string|null} — of er een zakelijke
   // spaarrekening aan de zakelijke rekening hangt. Herkenning van overboekingen ernaartoe werkt
@@ -505,7 +505,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
   const [dialog, setDialog] = useState(null);
-  const [showBeheer, setShowBeheer] = useState(false); // nieuw-V3R13 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
+  const [showBeheer, setShowBeheer] = useState(false); // nieuw-V4R3 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
   const [auditLog, setAuditLog] = useState([]);
@@ -3359,9 +3359,33 @@ export default function App() {
         { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
       ],
     });
-  // nieuw-V3R12 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
+  // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
+  // Lukt dat niet (bijv. geen database), dan zoals voorheen via het feedbackformulier.
+  const vraagAan = async (plan) => {
+    try {
+      const r = await fetch("/api/aanmelden", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ plan }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) throw new Error(d.fout || `Fout ${r.status}`);
+      if (!d.alActief) zetAanvraag(plan);
+      setDialog({ title: "Aanvraag verstuurd", message: <p>{d.alActief ? d.melding : "Je aanvraag is verstuurd. Zodra de beheerder hem heeft goedgekeurd, krijg je de uitgebreide weergave (opnieuw inloggen of de pagina vernieuwen)."}</p>, actions: [] });
+    } catch {
+      setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " });
+    }
+  };
+  const startAanvraagUitgebreid = () => setDialog({
+    title: "Uitgebreid aanvragen",
+    message: <>
+      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht. Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op.</p>
+      {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
+    </>,
+    actions: [
+      { label: "Uitgebreid aanvragen", variant: "primary", onClick: () => vraagAan("uitgebreid") },
+      { label: "Uitgebreid met bankkoppeling aanvragen", onClick: () => vraagAan("koppelen") },
+    ],
+  });
+  // nieuw-V4R2 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
   // een melding: met recht op Uitgebreid kan de gebruiker overstappen, anders is een uitgebreid account nodig.
-  // nieuw-V3R13 — daarnaast moet het recht "koppelen" aan staan (Gebruikers en rechten, of AccessAll/BEHEERDERS).
+  // nieuw-V4R3 — daarnaast moet het recht "koppelen" aan staan (Gebruikers en rechten, of AccessAll/BEHEERDERS).
   const startKoppelen = () => {
     if (magUitgebreid && !magKoppelen) {
       setDialog({
@@ -3781,7 +3805,7 @@ export default function App() {
         onOpenLog={() => setShowLog(true)}
         onZoek={() => setShowZoek(true)}
         onBegrippen={() => setShowBegrippen(true)}
-        onBeheer={isBeheerder ? () => setShowBeheer(true) : null}
+        onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
         ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
@@ -3841,7 +3865,7 @@ export default function App() {
           onClose={() => setBankKoppeling(null)}
         />
       )}
-      {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onClose={() => setShowBeheer(false)} />}
+      {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onAanvragen={zetAanvragen} onClose={() => setShowBeheer(false)} />}
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 
@@ -3932,7 +3956,7 @@ export default function App() {
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen}
-            onToegangAanvragen={() => setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " })}
+            onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
             gezien={activeYear ? eenvoudigGezien[activeYear] || null : null} onGezien={() => setEenvoudigGezien((p) => { const n = { ...p }; delete n[activeYear]; return n; })}

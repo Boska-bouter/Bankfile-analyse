@@ -4,7 +4,7 @@ import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, KNOP_PRIMAIR_KLEIN, VELD, VELD_KLEI
 import { transactiesNaarRijen, voegRijenSamen, rijenNaarParsedFile } from "../../importers/enableBanking.js";
 
 // nieuw-V3R8 — rechtstreekse bankkoppeling (proef, via Enable Banking en de Worker-routes /api/bank/*).
-// nieuw-V3R10 — koppelingen (bank, rekeningen, versleuteld koppeltoken) horen bij het dossier en gaan mee met opslaan en
+// nieuw-V4R0 — koppelingen (bank, rekeningen, versleuteld koppeltoken) horen bij het dossier en gaan mee met opslaan en
 // laden. window.storage dient alleen als tussenstation: na terugkeer van de bank staat de nieuwe koppeling daar tot het
 // koppelvenster haar in het open dossier zet (ook koppelingen uit V3R8/V3R9 komen zo in het dossier). Het token is alleen
 // bruikbaar door de Worker, en alleen voor hetzelfde ingelogde e-mailadres.
@@ -135,7 +135,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     }
   };
 
-  // nieuw-V3R11 — eerst uit het dossier halen (direct zichtbaar), daarna de toestemming bij Enable Banking intrekken.
+  // nieuw-V4R1 — eerst uit het dossier halen (direct zichtbaar), daarna de toestemming bij Enable Banking intrekken.
   // Dat intrekken mag mislukken of lang duren (max. 15 s): de koppeling is dan toch al weg uit het dossier.
   const verwijder = async (k) => {
     setFout(""); setMelding("");

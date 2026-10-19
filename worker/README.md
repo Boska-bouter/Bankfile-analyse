@@ -66,7 +66,7 @@ op de server: transacties gaan rechtstreeks door naar de browser.
 - *Ontkoppelen* in de app trekt de toestemming ook bij Enable Banking in.
 - Lokaal testen zonder Access: zet de variabele `EB_DEV_EMAIL` (alleen in `.dev.vars`, nooit in productie).
 
-## Gebruikers en rechten (nieuw-V3R13)
+## Gebruikers en rechten (nieuw-V4R3)
 
 Wie Uitgebreid en de bankkoppeling mag gebruiken, komt nu uit drie bronnen (zie `worker/rechten.js`):
 
@@ -82,10 +82,21 @@ zoals voorheen met alleen de twee Secrets.
 Instellen:
 
 1. Cloudflare → **Storage & Databases → D1 SQL Database → Create**. Naam: `bankoverzicht-rechten`. Kopieer het **Database ID**.
-2. In `wrangler.jsonc`: haal op twee plekken (in `previews` en onderin) de `//` weg voor de regel `"d1_databases"` en vervang
-   `PLAK-HIER-HET-DATABASE-ID` door het ID. De binding moet in `wrangler.jsonc` staan: een binding die je alleen in het
+2. In `wrangler.jsonc` staat `"d1_databases"` op twee plekken (in `previews` en onderin) met het Database ID. Bij een nieuwe
+   database vervang je daar het ID. De binding moet in `wrangler.jsonc` staan: een binding die je alleen in het
    dashboard toevoegt, verdwijnt bij de volgende deploy.
 3. Secret `BEHEERDERS` toevoegen met je eigen e-mailadres (hetzelfde als waarmee je via Access inlogt).
 4. Deployen zoals gewend.
 5. Nieuwe gebruikers moeten ook de app kunnen openen: zet ze in de policy van de Access-applicatie
    (Zero Trust → Access → Applications → de app → Policies), of gebruik een Access-groep.
+
+## Aanmelden en toegangsslot (nieuw-V4R5)
+
+- Iedereen die inlogt zonder toegang ziet (met het slot aan) de aanmeldpagina en kiest Eenvoudig, Uitgebreid of
+  Uitgebreid met bankkoppeling. Vanuit Eenvoudig kan ook Uitgebreid worden aangevraagd ("toegang aanvragen").
+- De beheerder krijgt een e-mail (binding `EMAIL`, naar `FEEDBACK_TO`) en ziet de aanvraag met een teller bij het
+  personen-icoon. In *Gebruikers en rechten* staat een blok *Aanmeldingen* met Goedkeuren en Afwijzen.
+- Slot: variabele `TOEGANG_VERPLICHT` (`"ja"` of `"nee"`, standaard nee). Met `"ja"` levert de Worker de app alleen aan
+  beheerders, AccessAll en wie in de tabel Eenvoudig of Uitgebreid heeft. Daarvoor staat in `wrangler.jsonc`
+  `"run_worker_first": true`, zodat ook de app-bestanden langs de Worker gaan.
+- De tabel krijgt de nieuwe kolommen (`eenvoudig`, `aanvraag`, `aangevraagd`, `naam`) automatisch.
