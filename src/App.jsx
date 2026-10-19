@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
+import BeheerRechtenModal from "./components/beheer/BeheerRechtenModal.jsx";
+import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKoppelingModal.jsx";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
 import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
@@ -110,7 +112,7 @@ import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
-import { useMagUitgebreid } from "./dossier/useRol.js";
+import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -165,6 +167,16 @@ import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
+
+// nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
+// laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
+const BANK_TERUG = (() => {
+  if (typeof window === "undefined" || window.location.pathname !== "/bank/terug") return null;
+  const q = new URLSearchParams(window.location.search);
+  window.history.replaceState(null, "", "/");
+  return { code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
+})();
+let bankTerugAfgehandeld = false;
 
 // ---------------------------------------------------------------------------
 // Dit is de functionele schil (upload, tabbladen, dashboard, alle panelen) rond de
@@ -261,7 +273,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -417,6 +429,7 @@ export default function App() {
   const [heeftVoorraad, setHeeftVoorraad] = useState(null); // null | true | false
   const [eigenNamen, setEigenNamen] = useState(null); // null=nog niet gevraagd | {ondernemer, partner}
   const [showRekeninghouderModal, setShowRekeninghouderModal] = useState(false);
+  const [bankKoppelingen, setBankKoppelingen] = useState([]); // nieuw-V4R0 — rechtstreekse bankkoppelingen van dit dossier
   const [eigenRekeningenExtra, setEigenRekeningenExtra] = useState(null); // null=nog niet gevraagd | [{iban, accountType}, ...] (leeg = geen)
   // null=nog niet gevraagd | {status: "ja"|"nee", naam: string|null} — of er een zakelijke
   // spaarrekening aan de zakelijke rekening hangt. Herkenning van overboekingen ernaartoe werkt
@@ -491,7 +504,8 @@ export default function App() {
   const [loadedProjectFileName, setLoadedProjectFileName] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
-  const [dialog, setDialog] = useState(null); // v304 — keuzevenster, zie ConfirmDialog.jsx
+  const [dialog, setDialog] = useState(null);
+  const [showBeheer, setShowBeheer] = useState(false); // nieuw-V4R3 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
   const [auditLog, setAuditLog] = useState([]);
@@ -511,6 +525,16 @@ export default function App() {
   const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
   const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
   const projectFileInputRef = useRef(null);
+  // nieuw-V3R8 — rechtstreekse bankkoppeling (proef). Na het inloggen bij de bank komt de gebruiker terug op
+  // /bank/terug?code=…&state=…; dan gaat het koppelvenster meteen open om de koppeling af te ronden.
+  const [bankKoppeling, setBankKoppeling] = useState(() => (BANK_TERUG ? { bezig: true, terug: BANK_TERUG } : null));
+  useEffect(() => {
+    if (!BANK_TERUG || bankTerugAfgehandeld) return;
+    bankTerugAfgehandeld = true; // React StrictMode draait effecten twee keer; de code is maar één keer geldig
+    rondKoppelingAf(BANK_TERUG)
+      .then((melding) => setBankKoppeling({ melding }))
+      .catch((e) => setBankKoppeling({ fout: e.message || String(e) }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
@@ -680,6 +704,7 @@ export default function App() {
     setHeeftVoorraad(settings.heeftVoorraad ?? null);
     setEigenNamen(settings.eigenNamen ?? null);
     setEigenRekeningenExtra(settings.eigenRekeningenExtra ?? null);
+    setBankKoppelingen(Array.isArray(settings.bankKoppelingen) ? settings.bankKoppelingen : []);
     setZakelijkeSpaarRekening(settings.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(settings.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(settings.incomeBtwTarieven ?? null);
@@ -1050,7 +1075,7 @@ export default function App() {
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
         ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
       });
@@ -1064,7 +1089,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
     ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     changesSinceExport, lastExportAt,
     loaded,
@@ -1089,7 +1114,7 @@ export default function App() {
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
     ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
 
@@ -1144,6 +1169,15 @@ export default function App() {
       // eerder in de sessie nog openstond gewoon open te laten staan.
       setExpandedCardKeys({});
     }
+  };
+
+  // nieuw-V3R8 — opgehaalde transacties uit de bankkoppeling: als "bestand" toevoegen of het eerdere vervangen.
+  const handleBankImport = (pf, rekeningType) => {
+    setError(null);
+    setParsedFiles((prev) => [...prev.filter((p) => p.fileName !== pf.fileName), pf]);
+    setAccountTypeByFile((prev) => (prev[pf.fileName] ? prev : { ...prev, [pf.fileName]: rekeningType }));
+    setShowSetupWizard(true);
+    setExpandedCardKeys({});
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
@@ -1213,7 +1247,7 @@ export default function App() {
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
-        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
     });
@@ -1263,6 +1297,7 @@ export default function App() {
     setHeeftVoorraad(s.heeftVoorraad ?? null);
     setEigenNamen(s.eigenNamen ?? null);
     setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
+    setBankKoppelingen(Array.isArray(s.bankKoppelingen) ? s.bankKoppelingen : []);
     setZakelijkeSpaarRekening(s.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(s.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(s.incomeBtwTarieven ?? null);
@@ -3321,8 +3356,58 @@ export default function App() {
         { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
         { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
         { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
+        { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
       ],
     });
+  // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
+  // Lukt dat niet (bijv. geen database), dan zoals voorheen via het feedbackformulier.
+  const vraagAan = async (plan) => {
+    try {
+      const r = await fetch("/api/aanmelden", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ plan }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) throw new Error(d.fout || `Fout ${r.status}`);
+      if (!d.alActief) zetAanvraag(plan);
+      setDialog({ title: "Aanvraag verstuurd", message: <p>{d.alActief ? d.melding : "Je aanvraag is verstuurd. Zodra de beheerder hem heeft goedgekeurd, krijg je de uitgebreide weergave (opnieuw inloggen of de pagina vernieuwen)."}</p>, actions: [] });
+    } catch {
+      setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " });
+    }
+  };
+  const startAanvraagUitgebreid = () => setDialog({
+    title: "Uitgebreid aanvragen",
+    message: <>
+      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht. Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op.</p>
+      {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
+    </>,
+    actions: [
+      { label: "Uitgebreid aanvragen", variant: "primary", onClick: () => vraagAan("uitgebreid") },
+      { label: "Uitgebreid met bankkoppeling aanvragen", onClick: () => vraagAan("koppelen") },
+    ],
+  });
+  // nieuw-V4R2 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
+  // een melding: met recht op Uitgebreid kan de gebruiker overstappen, anders is een uitgebreid account nodig.
+  // nieuw-V4R3 — daarnaast moet het recht "koppelen" aan staan (Gebruikers en rechten, of AccessAll/BEHEERDERS).
+  const startKoppelen = () => {
+    if (magUitgebreid && !magKoppelen) {
+      setDialog({
+        title: "Bankkoppeling",
+        message: <p>De rechtstreekse bankkoppeling staat (nog) niet aan voor jouw account. Je kunt wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+        actions: [],
+      });
+      return;
+    }
+    if (!eenvoudigActief) { setBankKoppeling({}); return; }
+    setDialog(magUitgebreid
+      ? {
+          title: "Bankkoppeling",
+          message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kun je wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+          actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => { naarUitgebreidVanuitEenvoudig(); setBankKoppeling({}); } }],
+        }
+      : {
+          title: "Bankkoppeling",
+          message: <p>Een bank rechtstreeks koppelen kan alleen met een uitgebreid account. Voeg in de eenvoudige weergave je bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
+          actions: [],
+        });
+  };
   // release21V0 — zijn de vragen per jaar al eens beantwoord? De wizard gold voorheen als "al ingericht"
   // zodra een bestand een rekeningtype had. Wie de wizard zonder bestand doorliep en daarna een bestand
   // laadde (zakelijk/privé al gekozen), kreeg de jaarvragen (urencriterium, startersaftrek, werkruimte,
@@ -3462,7 +3547,7 @@ export default function App() {
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-      verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
+      verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
       ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
@@ -3495,7 +3580,7 @@ export default function App() {
     setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
     setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
     setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys,
-    setDialog, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra,
+    setDialog, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setBankKoppelingen,
     setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints,
     setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding,
     setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus,
@@ -3720,6 +3805,9 @@ export default function App() {
         onOpenLog={() => setShowLog(true)}
         onZoek={() => setShowZoek(true)}
         onBegrippen={() => setShowBegrippen(true)}
+        onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
+        ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
+        onPasskey={inlogModus === "eigen" ? () => { window.location.href = "/inloggen/passkey"; } : null}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
@@ -3768,6 +3856,17 @@ export default function App() {
       {/* v268 — "Laatste actie / Ongedaan maken" stond hier als zwevend paneel rechts; is verplaatst
           naar de linker zijbalk (AppSidebar.jsx) zodat het niet meer over de inhoud heen hangt. */}
 
+      {bankKoppeling && (
+        <BankKoppelingModal
+          afronding={bankKoppeling}
+          parsedFiles={parsedFiles}
+          koppelingen={bankKoppelingen}
+          onKoppelingen={setBankKoppelingen}
+          onImport={handleBankImport}
+          onClose={() => setBankKoppeling(null)}
+        />
+      )}
+      {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onAanvragen={zetAanvragen} onClose={() => setShowBeheer(false)} />}
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
       {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 
@@ -3857,8 +3956,8 @@ export default function App() {
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
-            toegangInfo={{ email: ingelogdAls, status: rolStatus }}
-            onToegangAanvragen={() => setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " })}
+            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen}
+            onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
             gezien={activeYear ? eenvoudigGezien[activeYear] || null : null} onGezien={() => setEenvoudigGezien((p) => { const n = { ...p }; delete n[activeYear]; return n; })}
@@ -4184,6 +4283,7 @@ export default function App() {
             importFout={error}
             importHerladen={importHerladen}
             onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
+            onKoppelen={startKoppelen}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}

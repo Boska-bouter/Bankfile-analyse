@@ -61,6 +61,7 @@ export async function laadDossierBestand(file, c) {
     setHeeftVoorraad(project.heeftVoorraad ?? null);
     setEigenNamen(project.eigenNamen ?? null);
     setEigenRekeningenExtra(project.eigenRekeningenExtra ?? null);
+    c.setBankKoppelingen?.(Array.isArray(project.bankKoppelingen) ? project.bankKoppelingen : []);
     setZakelijkeSpaarRekening(project.zakelijkeSpaarRekening ?? null);
     setOpdrachtgeversGevraagd(project.opdrachtgeversGevraagd ?? null);
     setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
@@ -187,6 +188,7 @@ export async function wisDossier(c, askWizard = false) {
   setHeeftVoorraad(null);
   setEigenNamen(null);
   setEigenRekeningenExtra(null);
+  c.setBankKoppelingen?.([]);
   setZakelijkeSpaarRekening(null);
   setOpdrachtgeversGevraagd(null);
   setIncomeBtwTarieven(null);

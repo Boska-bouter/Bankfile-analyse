@@ -15,8 +15,8 @@
     "FEEDBACK_TO": "paul@paulgerits.eu",
     "FEEDBACK_FROM": "feedback@bankafschriftentool.app",
     "BEHEERDERS": "paul@paulgerits.eu",
-    "TOEGANG_VERPLICHT": "ja",
-    "INLOG_MODUS": "eigen",
+    "TOEGANG_VERPLICHT": "nee",
+    "INLOG_MODUS": "access      ",
     "INLOG_FROM": "inloggen@bankafschriftentool.app"                              
   },
   "previews": {

@@ -31,3 +31,102 @@ Deze Worker ontvangt dat en mailt het naar jou. Het ontvangeradres staat alleen 
 De lijst staat in de Secret **`AccessAll`** (Workers & Pages → bankfile-analyse → Settings → Variables and Secrets), níet in
 `wrangler.jsonc`: adressen gescheiden door komma's, `*@domein.nl` voor een heel domein. Geen lijst of niet op de lijst = alleen
 de eenvoudige weergave. Dit schermt schermen af; het beveiligt geen gegevens (alles rekent in de browser).
+
+## Rechtstreekse bankkoppeling via Enable Banking (nieuw-V3R8, proef)
+
+Routes `/api/bank/*` (code in `worker/bank.js`). Alleen voor gebruikers op de lijst `AccessAll`. Er wordt niets opgeslagen
+op de server: transacties gaan rechtstreeks door naar de browser.
+
+### Eenmalig instellen
+1. **Enable Banking Control Panel** → je applicatie:
+   - Noteer de **Application ID**.
+   - Bewaar het **.pem-bestand** dat bij het registreren is gedownload (de private sleutel). Niet in de repo zetten.
+   - Zet bij *Redirect URLs* precies: `https://<hostnaam-van-de-app>/bank/terug` (de dev-hostnaam voor de dev-omgeving).
+2. **Secrets in Cloudflare** (Workers & Pages → de dev-worker → Settings → Variables and Secrets → *Add* → type *Secret*),
+   of in deze map met wrangler:
+   ```
+   npx wrangler secret put EB_APP_ID          # plak de Application ID
+   npx wrangler secret put EB_PRIVATE_KEY < pad/naar/<application-id>.pem
+   npx wrangler secret put EB_TOKEN_GEHEIM    # plak een lange willekeurige tekst (bijv. uit: openssl rand -base64 48)
+   ```
+   Gebruik bij een aparte dev-worker `--name <naam-van-de-dev-worker>` of `--env`.
+3. **Deploy** zoals gewoonlijk (`npm run build` en `npx wrangler deploy`).
+4. **Testen in de sandbox**: in de app → *Bankbestand toevoegen* → *Rechtstreeks koppelen met de bank (proef)* → kies een
+   bank → *Naar mijn bank*. Log in bij de testbank van Enable Banking (de inloggegevens staan in het Control Panel of in de
+   documentatie), en kies daarna *Ophalen*.
+5. **Eigen echte rekeningen**: een sandbox-app toont alleen testbanken en kan niet naar productie worden omgezet. Registreer
+   in het Control Panel een **tweede applicatie** met omgeving *Production* (zelfde redirect-URL), koppel daar je eigen
+   rekeningen via *Link accounts* (gratis, "restricted"), en vervang op de Worker de secrets `EB_APP_ID` en `EB_PRIVATE_KEY`
+   door die van de nieuwe app. Alleen de gekoppelde rekeningen zijn daarna via de app op te halen.
+
+### Hoe het is beveiligd
+- De private sleutel staat alleen als Secret in de Worker. De Worker ondertekent elk verzoek aan Enable Banking (RS256-JWT, 1 uur geldig).
+- De sessie-id en rekening-id's van Enable Banking gaan versleuteld (AES-GCM) als "koppeltoken" naar de browser, gebonden aan het
+  e-mailadres van de ingelogde gebruiker. Een andere gebruiker kan er niets mee (403).
+- *Ontkoppelen* in de app trekt de toestemming ook bij Enable Banking in.
+- Lokaal testen zonder Access: zet de variabele `EB_DEV_EMAIL` (alleen in `.dev.vars`, nooit in productie).
+
+## Gebruikers en rechten (nieuw-V4R3)
+
+Wie Uitgebreid en de bankkoppeling mag gebruiken, komt nu uit drie bronnen (zie `worker/rechten.js`):
+
+| Bron | Waar | Geeft |
+|---|---|---|
+| Secret `BEHEERDERS` | Worker → Settings → Variables and Secrets | Alles, plus het scherm *Gebruikers en rechten* (personen-icoon onderin de zijbalk) |
+| Secret `AccessAll` | idem | Uitgebreid + bankkoppeling (zoals voorheen) |
+| D1-tabel `rechten` (binding `DB`) | via het beheerscherm | Per e-mailadres Uitgebreid en/of bankkoppeling, eventueel met einddatum |
+
+De tabel maakt de Worker zelf aan bij het eerste gebruik; je hoeft geen SQL uit te voeren. Zonder binding `DB` werkt alles
+zoals voorheen met alleen de twee Secrets.
+
+Instellen:
+
+1. Cloudflare → **Storage & Databases → D1 SQL Database → Create**. Naam: `bankoverzicht-rechten`. Kopieer het **Database ID**.
+2. In `wrangler.jsonc` staat `"d1_databases"` op twee plekken (in `previews` en onderin) met het Database ID. Bij een nieuwe
+   database vervang je daar het ID. De binding moet in `wrangler.jsonc` staan: een binding die je alleen in het
+   dashboard toevoegt, verdwijnt bij de volgende deploy.
+3. Secret `BEHEERDERS` toevoegen met je eigen e-mailadres (hetzelfde als waarmee je via Access inlogt).
+4. Deployen zoals gewend.
+5. Nieuwe gebruikers moeten ook de app kunnen openen: zet ze in de policy van de Access-applicatie
+   (Zero Trust → Access → Applications → de app → Policies), of gebruik een Access-groep.
+
+## Aanmelden en toegangsslot (nieuw-V4R5)
+
+- Iedereen die inlogt zonder toegang ziet (met het slot aan) de aanmeldpagina en kiest Eenvoudig, Uitgebreid of
+  Uitgebreid met bankkoppeling. Vanuit Eenvoudig kan ook Uitgebreid worden aangevraagd ("toegang aanvragen").
+- De beheerder krijgt een e-mail (binding `EMAIL`, naar `FEEDBACK_TO`) en ziet de aanvraag met een teller bij het
+  personen-icoon. In *Gebruikers en rechten* staat een blok *Aanmeldingen* met Goedkeuren en Afwijzen.
+- Slot: variabele `TOEGANG_VERPLICHT` (`"ja"` of `"nee"`, standaard nee). Met `"ja"` levert de Worker de app alleen aan
+  beheerders, AccessAll en wie in de tabel Eenvoudig of Uitgebreid heeft. Daarvoor staat in `wrangler.jsonc`
+  `"run_worker_first": true`, zodat ook de app-bestanden langs de Worker gaan.
+- De tabel krijgt de nieuwe kolommen (`eenvoudig`, `aanvraag`, `aangevraagd`, `naam`) automatisch.
+
+## Eigen inlog met passkeys (nieuw-V4R6)
+
+Vervangt Cloudflare Access (geen code per e-mail, geen kosten per gebruiker). Zie `worker/inloggen.js`.
+
+- Variabele `INLOG_MODUS`: `"access"` (standaard, zoals voorheen) of `"eigen"`.
+- Met `"eigen"`: wie niet is ingelogd, gaat naar `/inloggen`. Inloggen met een passkey (Face ID, Touch ID, pincode)
+  of met een inloglink per e-mail (15 minuten geldig, één keer). Na de eerste inlog kan de gebruiker een passkey
+  aanmaken op `/inloggen/passkey` (ook via het sleutel-icoon in de zijbalk). Sessie: 30 dagen, verlengt bij gebruik.
+- De inloglink gaat via de binding `EMAIL`, afzender `INLOG_FROM` (of anders `FEEDBACK_FROM`). Die binding moet naar
+  willekeurige adressen kunnen mailen.
+- `/uitloggen` beëindigt de eigen sessie, of stuurt bij Access door naar `/cdn-cgi/access/logout`.
+- Overstappen: eerst `"eigen"` testen terwijl Access nog aan staat, daarna de Access-applicatie voor de hostnaam
+  verwijderen. Rechten (BEHEERDERS, AccessAll, de tabel) blijven gewoon op e-mailadres werken.
+- Prijzen: variabele `PRIJZEN`, bijv. `{"eenvoudig":0,"uitgebreid":4.95,"koppelen":7.5}` (euro per maand). Standaard
+  alles 0 (gratis, beheerder keurt goed). Een prijs boven 0 vraagt de betaalstap, die nog niet is gebouwd.
+
+### E-mail voor inloglinks (nieuw-V4R7)
+
+De binding `EMAIL` (Cloudflare Email Routing) mailt alleen naar adressen die in Email Routing als *destination address*
+zijn geverifieerd ("destination address is not a verified address"). Voor gebruikers in het algemeen:
+Secret `RESEND_API_KEY` (resend.com, gratis tot 3.000 mails per maand) en variabele `INLOG_FROM` met een afzender op
+een bij Resend geverifieerd domein, bijv. `"Bankoverzicht <inloggen@bankafschriftentool.app>"`.
+
+## E-mail naar gebruikers (nieuw-V4R8)
+
+Inloglinks en de berichten "aanmelding goedgekeurd" / "afgewezen" gaan via de binding `EMAIL` naar willekeurige
+adressen. Daarvoor moet **Cloudflare Email Sending** aan staan (Compute → Email Service → Email Sending → Onboard Domain,
+vereist Workers Paid). Afzender: `INLOG_FROM`, anders `FEEDBACK_FROM`; die moet op het onboarde domein staan.
+Alleen Email Routing is niet genoeg: dan kan de Worker alleen naar geverifieerde adressen mailen.

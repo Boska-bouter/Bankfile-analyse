@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3 } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -22,14 +22,15 @@ const TAB_LABELS = {
 
 
 // Icoonknop met een duidelijke tekstballon (fixed, dus niet afgekapt door de scrollende zijbalk).
-function IcoonKnop({ onClick, label, Icon }) {
+function IcoonKnop({ onClick, label, Icon, teller = 0 }) {
   const [tip, setTip] = useState(null);
   const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left, y: r.top }); };
   return (
     <>
       <button type="button" onClick={onClick} aria-label={label} onMouseEnter={toon} onMouseLeave={() => setTip(null)} onFocus={toon} onBlur={() => setTip(null)}
-        className="rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
+        className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
         <Icon className="h-[18px] w-[18px]" />
+        {teller > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-amber-400 px-1 text-center text-[10px] font-bold leading-4 text-slate-900">{teller}</span>}
       </button>
       {tip && (
         <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
@@ -78,7 +79,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -157,10 +158,14 @@ export default function AppSidebar({
           <span className="text-[11px] text-slate-400 leading-snug">Analyse van bankafschriften</span>
         </div>
       </div>
-      <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
-        className="sb-btn flex items-center gap-2 self-end rounded-lg px-2 py-1 mb-2 text-slate-500 hover:text-slate-200 hover:bg-white/5">
-        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[11px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
-      </button>
+      {/* nieuw-V4R8 — uitloggen bovenin naast inklappen; ingeklapt staat hij eronder, dus altijd zichtbaar. */}
+      <div className={`flex mb-2 ${collapsed ? "flex-col items-center gap-1" : "items-center justify-between"}`}>
+        {onUitloggen && ingelogdAls ? <IcoonKnop onClick={onUitloggen} label={`Uitloggen (${ingelogdAls})`} Icon={LogOut} /> : <span />}
+        <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
+          className="sb-btn flex items-center gap-2 rounded-lg px-2 py-1 text-slate-500 hover:text-slate-200 hover:bg-white/5">
+          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[11px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
+        </button>
+      </div>
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
@@ -381,12 +386,15 @@ export default function AppSidebar({
           <IcoonKnop onClick={onZoek} label="Zoeken in transacties (Ctrl+K)" Icon={Search} />
           <IcoonKnop onClick={onBegrippen} label="Begrippen (uitleg vakwoorden)" Icon={BookOpen} />
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
+          {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
+          {onPasskey && <IcoonKnop onClick={onPasskey} label="Passkey (Face ID / Touch ID) beheren" Icon={KeyRound} />}
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
+        {ingelogdAls && <p className="sb-label text-[11px] leading-snug text-slate-400 break-all">Ingelogd als {ingelogdAls}</p>}
         <p className="sb-label text-[11px] leading-snug text-slate-400" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
       </div>
       {sbTip && (

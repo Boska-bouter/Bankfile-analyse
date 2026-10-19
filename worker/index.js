@@ -5,6 +5,10 @@
 //
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
+import { bankRoute } from "./bank.js";
+import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad } from "./inloggen.js";
+import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen } from "./rechten.js";
+
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
 
@@ -55,25 +59,59 @@ ${blok("Inlogbewijs dat de app meekrijgt (header)", header)}${blok("Inlogcookie 
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
-// nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Lijst in de Secret "AccessAll"
-// (Cloudflare → Workers & Pages → bankfile-analyse → Settings → Variables and Secrets): adressen gescheiden door
-// komma's, "*@domein.nl" voor een heel domein. Geen lijst of niet ingelogd = alleen Eenvoudig.
-export function magUitgebreid(email, lijst) {
-  const e = String(email || "").trim().toLowerCase();
-  if (!e) return false;
-  return String(lijst || "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
-    .some((x) => x === e || (x.startsWith("*@") && e.endsWith(x.slice(1))));
-}
+// nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Sinds nieuw-V4R3: Secret "AccessAll",
+// Secret "BEHEERDERS" en de D1-tabel "rechten" (zie rechten.js). Geen recht of niet ingelogd = alleen Eenvoudig.
+export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // nieuw-V4R6 — wie is ingelogd? Met INLOG_MODUS = "eigen" uit de eigen sessiecookie (zie inloggen.js), anders
+    // van Cloudflare Access. De rest van de Worker leest het adres uit de header Cf-Access-Authenticated-User-Email;
+    // bij eigen inlog zetten we die header hier zelf, en gooien we een meegestuurde header weg (anders kan iedereen
+    // zich als een ander voordoen zodra Access er niet meer voor zit).
+    const ingelogd = await wieIsIngelogd(request, env);
+    if (eigenInlog(env)) {
+      const h = new Headers(request.headers);
+      h.delete("Cf-Access-Authenticated-User-Email");
+      if (ingelogd) h.set("Cf-Access-Authenticated-User-Email", ingelogd);
+      request = new Request(request, { headers: h });
+    }
+    if (isOpenPad(url.pathname)) return inlogRoute(request, env, url, ingelogd);
+    if (eigenInlog(env) && !ingelogd) {
+      if (url.pathname.startsWith("/api/")) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+      return Response.redirect(`${url.origin}/inloggen`, 302);
+    }
     // release32V0 — test: wat zegt het Access-inlogbewijs over inlogtijd en verlooptijd? (zie sessieInfo)
     if (url.pathname === "/api/sessie") return sessieInfo(request, url);
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
-      // lijst = staat de Secret AccessAll er (de inhoud wordt niet teruggegeven), voor de foutzoekregel in de app.
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim(), uitgebreid: magUitgebreid(email, env.AccessAll) });
+      const r = await rechtenVan(email, env);
+      const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
+      // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", ...r });
+    }
+    // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
+    if (url.pathname === "/api/aanmelden") {
+      return aanmeldRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"), ctx);
+    }
+    // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
+    // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.
+    if (toegangVerplicht(env) && !url.pathname.startsWith("/api/")) {
+      const email = request.headers.get("Cf-Access-Authenticated-User-Email");
+      const r = await heeftToegang(email, env);
+      if (!r.toegang) return aanmeldPagina(email, r, env);
+    }
+    // nieuw-V4R3 — beheerscherm "Gebruikers en rechten" (alleen Secret BEHEERDERS)
+    if (url.pathname.startsWith("/api/beheer/")) {
+      return beheerRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
+    }
+    // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V4R3 alleen met het recht "koppelen".
+    if (url.pathname.startsWith("/api/bank/")) {
+      if (!env.EB_DEV_EMAIL && !(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
+        return json({ ok: false, fout: "Bankkoppeling staat niet aan voor jouw account" }, 403);
+      }
+      return bankRoute(request, env, url);
     }
     // Alles behalve /api/feedback is de app zelf (statische bestanden): doorgeven aan de assets-binding.
     if (url.pathname !== "/api/feedback") return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });

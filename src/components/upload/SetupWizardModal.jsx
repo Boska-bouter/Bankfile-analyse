@@ -38,7 +38,7 @@ export default function SetupWizardModal({
   forceRechtsvormStep = false,
   alreadyEstablished = false,
   pendingFileNames, onAccountTypeChoose,
-  loadFilesFirst = false, loadedFileNames = [], onPickFiles,
+  loadFilesFirst = false, loadedFileNames = [], onPickFiles, onKoppelen = null,
   importBezig = false, importFout = null, importHerladen = false,
   korRegeling, setKorRegeling,
   rechtsvorm, setRechtsvorm,
@@ -200,7 +200,7 @@ export default function SetupWizardModal({
   const allTypedNow = sessionFiles.every((f) => typedNow[f]);
   const props = {
     typedNow, zet, needs, isBV, goNext, years: years || [],
-    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig, accountTypeByFile, onPickFiles,
+    sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, pendingFileNames, ownAccountByFile, bestandInfo, onRekeningWijzig, accountTypeByFile, onPickFiles, onKoppelen,
     rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, korRegeling, setKorRegeling, btwVerlegd, setBtwVerlegd,
     eigenNamen, setEigenNamen,
     eigenRekeningenExtra, setEigenRekeningenExtra, zakelijkeSpaarRekening, setZakelijkeSpaarRekening,
@@ -284,6 +284,16 @@ export default function SetupWizardModal({
               >
                 <FileSpreadsheet className="h-4 w-4" /> {loadedFileNames.length > 0 ? "Nog een bestand kiezen" : "Ja, bestanden kiezen"}
               </button>
+              {onKoppelen && (
+                <button
+                  type="button"
+                  disabled={importBezig}
+                  onClick={onKoppelen}
+                  className="w-full disabled:opacity-50 rounded-lg border border-teal-700 px-4 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50"
+                >
+                  Of rechtstreeks koppelen met de bank (proef)
+                </button>
+              )}
               {loadedFileNames.length === 0 && (
                 <button
                   type="button"
@@ -567,7 +577,7 @@ function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, 
 function Scherm31({
   typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig,
   rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
-  accountTypeByFile = {}, onPickFiles,
+  accountTypeByFile = {}, onPickFiles, onKoppelen,
 }) {
   // release31V4 — dekken de zakelijke en de privébestanden dezelfde periode? Zo niet: melden welke maanden
   // maar één kant hebben (daar kan de controle zakelijk ↔ privé niets koppelen).
@@ -601,6 +611,9 @@ function Scherm31({
               </p>
               {onPickFiles && (
                 <button type="button" onClick={onPickFiles} className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100">Bestand toevoegen</button>
+              )}
+              {onKoppelen && (
+                <button type="button" onClick={onKoppelen} className="ml-2 rounded-lg border border-amber-400 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100">Rechtstreeks koppelen</button>
               )}
             </div>
           )}
