@@ -105,6 +105,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-slate-800 break-all">{r.naam ? `${r.naam} · ` : ""}{r.email}</p>
                     <p className="text-xs text-slate-600">vraagt <b>{PLAN[r.aanvraag] || r.aanvraag}</b>{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{r.reden ? `Reden: ${r.reden}` : "Geen reden opgegeven"}</p>
                   </div>
                   <button type="button" disabled={bezig} onClick={() => beslis(r.email, "goedkeuren")} className={`${KNOP_PRIMAIR} disabled:opacity-50`}>Goedkeuren</button>
                   <button type="button" disabled={bezig} onClick={() => beslis(r.email, "afwijzen")} className={KNOP_SECUNDAIR_KLEIN}>Afwijzen</button>

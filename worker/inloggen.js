@@ -185,13 +185,56 @@ export async function verstuur(env, bericht) {
   await env.EMAIL.send(bericht);
 }
 
+// nieuw-V5R2 — aanhef en handtekening voor alle mails aan gebruikers. Handtekening aanpasbaar met de variabele
+// MAIL_HANDTEKENING (regels gescheiden door "\n"), anders de standaardtekst hieronder.
+const STANDAARD_HANDTEKENING = "Met vriendelijke groet,\nPaul Gerits\nEigenaar en ontwikkelaar van Bankoverzicht";
+export function opmaakMail(env, { naam = "", zonderNaam = "Hallo,", regels = [], lijst = [], naLijst = [], knop = null, voetnoot = "" }) {
+  const aanhef = naam ? `Beste ${naam},` : zonderNaam;
+  const handtekening = String(env.MAIL_HANDTEKENING || STANDAARD_HANDTEKENING).replace(/\\n/g, "\n").split("\n");
+  const text = [aanhef, ...regels, ...(lijst.length ? [lijst.map(([k, v]) => `- ${k}: ${v}`).join("\n")] : []), ...naLijst, ...(knop ? [knop.link] : []), ...(voetnoot ? [voetnoot] : []), handtekening.join("\n")].join("\n\n");
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5"><p>${esc(aanhef)}</p>${regels.map((r) => `<p>${esc(r)}</p>`).join("")}
+${lijst.length ? `<ul style="padding-left:20px">${lijst.map(([k, v]) => `<li style="margin-bottom:6px"><b>${esc(k)}</b>: ${esc(v)}</li>`).join("")}</ul>` : ""}${naLijst.map((r) => `<p>${esc(r)}</p>`).join("")}
+${knop ? `<p><a href="${esc(knop.link)}" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">${esc(knop.tekst)}</a></p>` : ""}
+${voetnoot ? `<p style="color:#555;font-size:13px">${esc(voetnoot)}</p>` : ""}<p>${handtekening.map(esc).join("<br>")}</p></div>`;
+  return { text, html };
+}
+
+// Nieuw is wie nog niet in de rechtentabel staat, geen passkey heeft en niet op BEHEERDERS/AccessAll staat.
+// (Hier zelf opgezocht in plaats van via rechten.js, dat dit bestand al importeert.)
+async function isNieuw(env, email) {
+  const opLijst = (l) => String(l || "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
+    .some((x) => x === email || (x.startsWith("*@") && email.endsWith(x.slice(1))));
+  if (opLijst(env.BEHEERDERS) || opLijst(env.AccessAll)) return false;
+  try {
+    if (await env.DB.prepare("SELECT 1 FROM passkeys WHERE email = ? LIMIT 1").bind(email).first()) return false;
+    if (await env.DB.prepare("SELECT 1 FROM rechten WHERE email = ? LIMIT 1").bind(email).first()) return false;
+  } catch { /* tabel bestaat nog niet: dan is iedereen nieuw */ }
+  return true;
+}
+
 async function stuurLink(env, email, link) {
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
-  const text = `Klik op de link om in te loggen bij Bankoverzicht:\n\n${link}\n\nDe link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5"><p>Klik op de knop om in te loggen bij Bankoverzicht.</p>
-<p><a href="${esc(link)}" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Inloggen</a></p>
-<p style="color:#555;font-size:13px">De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.</p></div>`;
-  await verstuur(env, { to: email, from, subject: "Inloggen bij Bankoverzicht", text, html });
+  const nieuw = await isNieuw(env, email);
+  const { text, html } = opmaakMail(env, nieuw ? {
+    zonderNaam: "Beste aanvrager,",
+    regels: [
+      "Bedankt voor je interesse in Bankoverzicht, de app die je bankafschriften omzet in overzichten van je inkomsten en uitgaven.",
+      "Dit is je eerste inloglink. Na het inloggen kies je welke versie je wilt gebruiken en dien je je aanvraag in:",
+    ],
+    lijst: [
+      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting."],
+      ["Uitgebreid", "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven."],
+      ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden."],
+    ],
+    naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
+    knop: { link, tekst: "Inloggen en aanvraag doen" },
+    voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
+  } : {
+    regels: ["Klik op de knop om in te loggen bij Bankoverzicht."],
+    knop: { link, tekst: "Inloggen" },
+    voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
+  });
+  await verstuur(env, { to: email, from, subject: nieuw ? "Je eerste inloglink voor Bankoverzicht" : "Inloggen bij Bankoverzicht", text, html });
 }
 
 // ---- pagina's ----

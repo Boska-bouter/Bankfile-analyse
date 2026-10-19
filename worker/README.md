@@ -130,3 +130,22 @@ Inloglinks en de berichten "aanmelding goedgekeurd" / "afgewezen" gaan via de bi
 adressen. Daarvoor moet **Cloudflare Email Sending** aan staan (Compute → Email Service → Email Sending → Onboard Domain,
 vereist Workers Paid). Afzender: `INLOG_FROM`, anders `FEEDBACK_FROM`; die moet op het onboarde domein staan.
 Alleen Email Routing is niet genoeg: dan kan de Worker alleen naar geverifieerde adressen mailen.
+
+## Bankkoppeling via Ponto (nieuw-V5R1)
+
+Met de variabele `BANK_AANBIEDER = "ponto"` lopen nieuwe koppelingen via Ponto (Isabel Group) in plaats van Enable
+Banking. Bestaande Enable Banking-koppelingen blijven werken zolang die secrets er staan. Code: `worker/ponto.js`.
+
+1. Ponto-dashboard → Integrations → integratie aanmaken (eerst sandbox). Redirect URI: `https://<hostnaam>/bank/terug`.
+   Scopes: `ai`, `name`, `offline_access` (geen `pi`).
+2. Secrets op de Worker: `PONTO_CLIENT_ID`, `PONTO_CLIENT_SECRET` (en `EB_TOKEN_GEHEIM` als die er nog niet staat).
+3. Certificaat en sleutel van Ponto uploaden (eenmalig). Zonder computer: GitHub Actions → "Ponto-certificaat uploaden"
+   (`.github/workflows/ponto-certificaat.yml`, uitleg bovenin dat bestand). Op een computer:
+   `openssl rsa -in private_key.pem -out key-zonder-wachtwoord.pem` (vraagt de passphrase van Ponto), dan
+   `npx wrangler mtls-certificate upload --cert certificate.pem --key key-zonder-wachtwoord.pem --name ponto-sandbox`
+   en het getoonde ID in wrangler.jsonc: `"mtls_certificates": [{ "binding": "PONTO_CERT", "certificate_id": "<ID>" }]`.
+   Verwijder daarna het bestand zonder wachtwoord.
+4. Variabelen: `"BANK_AANBIEDER": "ponto"` en `"PONTO_OMGEVING": "sandbox"` (later `"live"`, met de live-integratie,
+   een eigen certificaat en eigen client-ID/secret).
+Ponto vervangt het refresh token bij elk gebruik; de Worker geeft daarom na elke ophaalactie een nieuw koppeltoken terug
+dat de app in het dossier zet. Laad je een oudere dossierkopie, dan is de koppeling daarin niet meer bruikbaar: opnieuw koppelen.

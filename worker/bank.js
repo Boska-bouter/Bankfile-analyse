@@ -10,6 +10,8 @@
 //   EB_TOKEN_GEHEIM   willekeurige tekst van minstens 32 tekens (versleutelt de koppeltokens)
 // Optioneel (alleen lokaal testen met `wrangler dev`, zonder Access): variabele EB_DEV_EMAIL.
 
+import { pontoRoute } from "./ponto.js";
+
 const EB_API = "https://api.enablebanking.com";
 const MAX_PAGINAS = 40; // Free-plan: max. 50 subrequests per verzoek
 const MAX_GELDIG_SEC = 180 * 24 * 3600;
@@ -115,9 +117,31 @@ async function leesBody(request) {
 export async function bankRoute(request, env, url) {
   const email = (request.headers.get("Cf-Access-Authenticated-User-Email") || env.EB_DEV_EMAIL || "").trim().toLowerCase();
   if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+  const pad = url.pathname.replace(/^\/api\/bank/, "") || "/";
+
+  // nieuw-V5R1 — Ponto als aanbieder (BANK_AANBIEDER = "ponto"). Nieuwe koppelingen gaan dan via Ponto; bestaande
+  // koppelingen blijven werken via de aanbieder waarmee ze zijn gemaakt (te zien aan het koppeltoken).
+  const standaardPonto = String(env.BANK_AANBIEDER || "").trim().toLowerCase() === "ponto";
+  const viaPonto = await (async () => {
+    if ((pad === "/transacties" || pad === "/verwijder") && String(env.EB_TOKEN_GEHEIM || "").trim()) {
+      const b = await request.clone().json().catch(() => ({}));
+      const t = await ontsleutel(env, email, b.token);
+      if (t) return !!t.p; // een geldig token bepaalt de aanbieder; een ongeldig token weigert de standaardaanbieder
+    }
+    if (pad === "/sessie" && (await request.clone().json().catch(() => ({}))).pkce) return true;
+    return standaardPonto;
+  })();
+  if (viaPonto) {
+    try {
+      return await pontoRoute(request, env, url, pad, email, { json, leesBody, versleutel, ontsleutel, isDatum });
+    } catch (e) {
+      const detail = [e.status, e.message].filter(Boolean).join(" — ").slice(0, 400);
+      return json({ ok: false, fout: e.status === 429 ? "Ponto vraagt even te wachten (te veel verzoeken)" : "Bankkoppeling via Ponto mislukt", detail }, e.status === 429 ? 429 : 502);
+    }
+  }
+
   const ontbreekt = ["EB_APP_ID", "EB_PRIVATE_KEY", "EB_TOKEN_GEHEIM"].filter((k) => !String(env[k] || "").trim());
   if (ontbreekt.length) return json({ ok: false, fout: "Bankkoppeling is nog niet ingesteld", detail: `Ontbrekende secrets: ${ontbreekt.join(", ")}` }, 503);
-  const pad = url.pathname.replace(/^\/api\/bank/, "") || "/";
 
   try {
     // Lijst van banken in Nederland (privé of zakelijk).
@@ -129,7 +153,7 @@ export async function bankRoute(request, env, url) {
         maxGeldigSec: a.maximum_consent_validity || null,
         psuTypes: a.psu_types || [],
       }));
-      return json({ ok: true, banken });
+      return json({ ok: true, aanbieder: "enablebanking", banken });
     }
 
     // Start de toestemming: geeft de URL terug waar de gebruiker bij de eigen bank inlogt.
