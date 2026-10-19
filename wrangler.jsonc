@@ -6,7 +6,6 @@
   "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
       "FEEDBACK_FROM": "feedback@bankafschriftentool.app" , 
-      "AccessAll": "paulgerits@icloud.com, paul@paulgerits.eu, pgerits@overrood.nl",
       "BEHEERDERS": "paul@paulgerits.eu"
     }
   },
