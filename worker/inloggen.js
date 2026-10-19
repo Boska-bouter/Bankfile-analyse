@@ -212,6 +212,13 @@ async function isNieuw(env, email) {
   return true;
 }
 
+// nieuw-V5R2 — een passkey maak je pas aan als je toegang hebt (na goedkeuring). Dynamische import: rechten.js
+// importeert dit bestand al.
+async function magPasskey(env, email) {
+  const { rechtenVan } = await import("./rechten.js");
+  return !!(await rechtenVan(email, env)).toegang;
+}
+
 async function stuurLink(env, email, link) {
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
   const nieuw = await isNieuw(env, email);
@@ -274,7 +281,7 @@ function inlogPagina() {
   </form>
   <p id="status" role="status"></p>
 </div>
-<p class="sub">Nieuw? Log in met de link; daarna kun je je aanmelden en een passkey aanmaken.</p>`, `
+<p class="sub">Nieuw? Log in met de link en meld je aan. Zodra je aanmelding is goedgekeurd, kun je een passkey aanmaken.</p>`, `
 const pk=document.getElementById("pk");if(!kanPasskey)pk.style.display="none";
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties");
@@ -339,6 +346,7 @@ export async function inlogRoute(request, env, url, email) {
     if (p === "/inloggen/link") return bevestigPagina(url.searchParams.get("t"));
     if (p === "/inloggen/passkey") {
       if (!email) return Response.redirect(`${url.origin}/inloggen`, 302);
+      if (!(await magPasskey(env, email))) return Response.redirect(`${url.origin}/`, 302);
       const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE email = ?").bind(email).first();
       return passkeyPagina(email, Number(r?.n || 0));
     }
@@ -393,6 +401,8 @@ export async function inlogRoute(request, env, url, email) {
     }
     // Vanaf hier alleen voor wie is ingelogd.
     if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+    if (p.startsWith("/api/inloggen/passkey/") && !(await magPasskey(env, email)))
+      return json({ ok: false, fout: "Je kunt een passkey aanmaken zodra je aanmelding is goedgekeurd." }, 403);
     if (p === "/api/inloggen/passkey/opties-registratie") {
       const u = await nieuweUitdaging(env, email);
       const { results } = await env.DB.prepare("SELECT id FROM passkeys WHERE email = ?").bind(email).all();

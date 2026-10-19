@@ -3626,6 +3626,9 @@ export default function App() {
     heeftAntwoorden: !basisvragenNietGestart,
   });
 
+  // nieuw-V5R2 — eerst wachten tot bekend is wie er is ingelogd. Anders gold kort het adres van de vorige gebruiker op dit
+  // apparaat: het startscherm verscheen en de voorwaarden van de nieuwe gebruiker kwamen er pas daarna overheen.
+  if (rolStatus === "laden") return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-sm text-slate-500">Bezig met laden…</div>;
   if (!voorwaardenOk) return <VoorwaardenScherm onAkkoord={akkoordVoorwaarden} />;
 
   if (showStartupChoice) {

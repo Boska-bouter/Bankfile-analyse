@@ -152,8 +152,9 @@ async function meldAanvrager(env, doel, onderwerp, regels, knop, naam = "", lijs
 }
 
 async function meldBeheerder(env, onderwerp, tekst) {
-  if (!env.EMAIL || !env.FEEDBACK_TO || !env.FEEDBACK_FROM) return;
-  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from: env.FEEDBACK_FROM, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
+  const from = env.INLOG_FROM || env.FEEDBACK_FROM;
+  if (!env.EMAIL || !env.FEEDBACK_TO || !from) return;
+  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
   catch (e) { console.error("aanmelden: e-mail mislukt", e?.message); }
 }
 
