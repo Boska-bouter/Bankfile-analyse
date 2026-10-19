@@ -4,8 +4,13 @@ import { counterpartyKey } from "../utils/normalization.js";
 import { sleutelZonderNaam } from "../classification/reviewSummaries.js";
 import { betaalSoort } from "../classification/classify.js";
 
-export const DREMPEL_BETROUWBAAR = 90;
-export const DREMPEL_REDELIJK = 65;
+// nieuw-V3R4 — het oordeel hangt af van het onzekere bedrag in euro's, niet van een percentage: wat onzeker is op de
+// zakelijke rekening telt volledig, op de privérekening voor 25% (privé-uitgaven veranderen de winst zelden). De grens
+// groeit mee met de omzet. Het percentage in de balk blijft alleen als voortgang.
+export const WEGING_PRIVE = 0.25;
+export const grenzen = (omzet = 0) => ({ betrouwbaar: Math.max(2500, 0.05 * Math.abs(omzet || 0)), redelijk: Math.max(7500, 0.15 * Math.abs(omzet || 0)) });
+export const BELASTING_FACTOR = 0.4; // grove schatting: IB + Zvw op een extra euro winst
+const weging = (tx) => ((tx.accountType || tx.type) === "Zakelijk" ? 1 : WEGING_PRIVE);
 
 // Overboekingen tussen eigen rekeningen tellen niet mee: die zeggen niets over de uitkomst.
 const NIET_MEETELLEN = new Set([
@@ -32,14 +37,16 @@ export function maakBevestigd(reviewedOverigKeys = [], reviewedPersonKeys = []) 
 }
 
 // Betrouwbaarheid naar bedrag voor één jaar (of alle jaren als jaar null is).
-export function berekenBetrouwbaarheid(classified, jaar, bevestigd) {
+export function berekenBetrouwbaarheid(classified, jaar, bevestigd, omzet = 0) {
   const som = { herkend: 0, geschat: 0, onbekend: 0 };
+  let onzeker = 0;
   const aantal = { herkend: 0, geschat: 0, onbekend: 0 };
   for (const tx of classified) {
     if (tx.isMirror || !tx.amount || (jaar != null && tx.year !== jaar) || NIET_MEETELLEN.has(tx.category) || tx.transferLocked) continue;
     const z = zekerheidVan(tx, bevestigd);
     som[z] += Math.abs(tx.amount);
     aantal[z] += 1;
+    if (z !== "herkend") onzeker += Math.abs(tx.amount) * weging(tx);
   }
   const totaal = som.herkend + som.geschat + som.onbekend;
   const pct = (v) => (totaal ? Math.round((v / totaal) * 1000) / 10 : 0);
@@ -47,7 +54,8 @@ export function berekenBetrouwbaarheid(classified, jaar, bevestigd) {
   return {
     totaal, som, aantal,
     herkend, geschat: pct(som.geschat), onbekend: pct(som.onbekend),
-    oordeel: totaal === 0 ? "geen" : herkend >= DREMPEL_BETROUWBAAR ? "betrouwbaar" : herkend >= DREMPEL_REDELIJK ? "redelijk" : "onzeker",
+    onzeker: Math.round(onzeker), grens: grenzen(omzet), belastingAfwijking: Math.round(onzeker * BELASTING_FACTOR),
+    oordeel: totaal === 0 ? "geen" : onzeker <= grenzen(omzet).betrouwbaar ? "betrouwbaar" : onzeker <= grenzen(omzet).redelijk ? "redelijk" : "onzeker",
   };
 }
 
@@ -90,7 +98,7 @@ export function bouwVragen(classified, jaar, bevestigd) {
     const g = (groepen[key] ||= { key, naam, txs: [], bedragJaar: 0, bedragAlle: 0, rekening: tx.accountType || tx.type, teken: tx.amount >= 0 ? 1 : -1, perBoeking: !!partij, betaaldienst: dienst });
     g.txs.push(tx);
     g.bedragAlle += tx.amount;
-    if (jaar == null || tx.year === jaar) g.bedragJaar += tx.amount;
+    if (jaar == null || tx.year === jaar) { g.bedragJaar += tx.amount; g.gewicht = (g.gewicht || 0) + Math.abs(tx.amount) * weging(tx); }
   }
   const losse = [], kleinePin = [];
   for (const g of Object.values(groepen)) {
@@ -99,23 +107,24 @@ export function bouwVragen(classified, jaar, bevestigd) {
     if (allePin && g.teken < 0 && Math.abs(g.bedragAlle) < KLEIN) kleinePin.push(g);
     else losse.push(g);
   }
-  losse.sort((a, b) => Math.abs(b.bedragJaar) - Math.abs(a.bedragJaar));
+  losse.sort((a, b) => (b.gewicht || 0) - (a.gewicht || 0)); // zakelijke twijfels eerst (zie weging)
   const vragen = losse.map((g) => ({
     soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100,
-    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], betaaldienst: g.betaaldienst,
+    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], betaaldienst: g.betaaldienst, gewicht: g.gewicht || 0,
   }));
   if (kleinePin.length >= 3) {
     const bedrag = kleinePin.reduce((a, g) => a + g.bedragJaar, 0);
     const vraag = {
       soort: "kleinePin", key: "kleinePin", naam: `${kleinePin.length} kleine pinbetalingen bij winkels en dergelijke`,
       aantal: kleinePin.reduce((a, g) => a + g.txs.length, 0), bedrag: Math.round(bedrag * 100) / 100, teken: -1,
-      rekening: kleinePin[0].rekening, voorbeeld: kleinePin[0].txs[0], groepen: kleinePin,
+      rekening: kleinePin[0].rekening, voorbeeld: kleinePin[0].txs[0], groepen: kleinePin, gewicht: kleinePin.reduce((a, g) => a + (g.gewicht || 0), 0),
     };
     // op zijn plek in de volgorde van bedrag
-    const i = vragen.findIndex((v) => Math.abs(v.bedrag) < Math.abs(vraag.bedrag));
+    const i = vragen.findIndex((v) => v.gewicht < vraag.gewicht);
     vragen.splice(i < 0 ? vragen.length : i, 0, vraag);
   } else {
-    for (const g of kleinePin) vragen.push({ soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100, teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g] });
+    for (const g of kleinePin) vragen.push({ soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100, teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], gewicht: g.gewicht || 0 });
+    vragen.sort((a, b) => b.gewicht - a.gewicht);
   }
   return vragen;
 }
