@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen } from "lucide-react";
+import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen, CalendarDays } from "lucide-react";
 import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
 import MijnAntwoorden from "./MijnAntwoorden.jsx";
 import { eur } from "../../utils/amounts.js";
@@ -64,7 +64,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -208,10 +208,12 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
       {/* Stappen */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
         {STAPPEN.map((n, i) => {
-          const nr = i + 1, nu = nr === stap, klaar = !nu && ((nr === 1 && bestanden.length > 0) || (nr === 2 && bestanden.length > 0 && alleVragen.length === 0));
+          // nieuw-V3R6 — stap 3 klaar als de uitkomst Betrouwbaar is; stap 4 als het dossier is opgeslagen en sindsdien niet gewijzigd.
+          const nr = i + 1, nu = nr === stap;
+          const klaar = bestanden.length > 0 && (nr === 1 || (nr === 2 && alleVragen.length === 0) || (nr === 3 && b.oordeel === "betrouwbaar") || (nr === 4 && opgeslagen));
           return (
-            <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? "font-bold text-slate-900" : klaar ? "text-emerald-700" : "text-slate-400"}`}>
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? "border-emerald-700 bg-emerald-700 text-white" : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
+            <button key={n} type="button" onClick={() => setStap(nr)} className={`flex flex-1 min-w-[8rem] items-center gap-2 text-sm ${nu ? `font-bold ${klaar ? "text-emerald-800" : "text-slate-900"}` : klaar ? "text-emerald-700" : "text-slate-400"}`}>
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs ${klaar ? `border-emerald-700 bg-emerald-700 text-white${nu ? " ring-2 ring-emerald-300 ring-offset-1" : ""}` : nu ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300"}`}>{klaar ? <Check className="h-3.5 w-3.5" /> : nr}</span>{n}
             </button>
           );
         })}
@@ -395,6 +397,7 @@ ${fis?.btw ? `<h2>BTW per kwartaal</h2><table>${btwRij}</table>` : ""}
             <button type="button" onClick={downloadUitkomst} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><Download className="h-4 w-4" /> Uitkomst downloaden</button>
             {onAangifte && <button type="button" onClick={onAangifte} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4" /> Indicatieve aangifteberekening</button>}
             {onSamenvatting && <button type="button" onClick={onSamenvatting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileText className="h-4 w-4" /> Samenvatting</button>}
+            {onMaandoverzicht && <button type="button" onClick={onMaandoverzicht} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><CalendarDays className="h-4 w-4" /> Maandoverzicht</button>}
             {alleVragen.length > 0 && <button type="button" onClick={() => setStap(2)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Verder met nakijken</button>}
           </div>
         </div>

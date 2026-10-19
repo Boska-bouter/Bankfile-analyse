@@ -3846,6 +3846,8 @@ export default function App() {
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
             onAangifte={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }} onSamenvatting={activeYear ? startKlantSamenvatting : null}
+            onMaandoverzicht={activeYear ? () => setShowInkomenPerMaand(true) : null}
+            opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }}
