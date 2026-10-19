@@ -13,7 +13,7 @@
 // Met de variabele TOEGANG_VERPLICHT = "ja" levert de Worker de app alleen aan wie toegang heeft; anderen zien de
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
-import { verstuur, opmaakMail } from "./inloggen.js";
+import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
   email TEXT PRIMARY KEY,
@@ -315,10 +315,15 @@ export async function beheerRoute(request, env, url, email) {
         `UPDATE rechten SET eenvoudig = 1, uitgebreid = MAX(uitgebreid, ?2), koppelen = MAX(koppelen, ?3),
          aanvraag = NULL, gewijzigd = ?4, gewijzigd_door = ?5 WHERE email = ?1`
       ).bind(doel, n >= 2 ? 1 : 0, n >= 3 ? 1 : 0, tijd, door).run();
-      const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd",
-        [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
-          "Klik op de knop en vraag op de inlogpagina een nieuwe inloglink aan.", "Na het inloggen krijg je de mogelijkheid een passkey aan te maken. Dan log je voortaan in met Face ID, Touch ID of de pincode van je apparaat, zonder e-mail."],
-        { link: `${url.origin}/`, tekst: "Open Bankoverzicht" }, r?.naam || "");
+      // nieuw-V5R7 — met eigen inlog zit er een inloglink in de mail: de knop logt meteen in en biedt dan de passkey aan.
+      let link = null;
+      try { link = await maakInloglink(env, doel, url.origin); } catch { /* dan de gewone knop naar de app */ }
+      const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd", link
+        ? [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
+          "Klik op de knop om in te loggen. Daarna kun je een passkey aanmaken. Dan log je voortaan in met Face ID, Touch ID of de pincode van je apparaat, zonder e-mail."]
+        : [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`],
+        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en passkey aanmaken" : "Open Bankoverzicht" }, r?.naam || "", [],
+        link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
       return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/afwijzen" && request.method === "POST") {

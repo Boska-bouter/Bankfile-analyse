@@ -225,6 +225,17 @@ export async function passkeyAanbieden(request, env, email) {
 }
 export const PASSKEY_GEVRAAGD = `bo_pk=1; Path=/; Max-Age=${365 * 86400}; HttpOnly; Secure; SameSite=Lax`;
 
+// nieuw-V5R7 — inloglink voor in de goedkeuringsmail: langer geldig dan een gewone link (de mail wordt niet altijd meteen
+// gelezen), maar ook maar één keer te gebruiken. Geeft null bij Access-inlog (daar bestaan geen inloglinks).
+export const GOEDKEUR_LINK_UREN = 72;
+export async function maakInloglink(env, email, origin, minuten = GOEDKEUR_LINK_UREN * 60) {
+  if (!eigenInlog(env) || !env.DB) return null;
+  await zorgVoorTabellen(env.DB);
+  const token = willekeurig(32);
+  await env.DB.prepare("INSERT INTO inloglinks (hash, email, aangemaakt, verloopt) VALUES (?, ?, ?, ?)").bind(await hashHex(token), email, nu(), nu() + minuten * 60).run();
+  return `${origin}/inloggen/link?t=${token}`;
+}
+
 async function magPasskey(env, email) {
   const { rechtenVan } = await import("./rechten.js");
   return !!(await rechtenVan(email, env)).toegang;
