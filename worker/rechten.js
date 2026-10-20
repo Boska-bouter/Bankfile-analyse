@@ -320,9 +320,9 @@ export async function beheerRoute(request, env, url, email) {
       try { link = await maakInloglink(env, doel, url.origin); } catch { /* dan de gewone knop naar de app */ }
       const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd", link
         ? [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
-          "Klik op de knop om in te loggen. Daarna kun je een passkey aanmaken. Dan log je voortaan in met Face ID, Touch ID of de pincode van je apparaat, zonder e-mail."]
+          "Klik op de knop om in te loggen. Daarna stel je een wachtwoord in, of maak je een passkey aan zodat je inlogt met Face ID, Touch ID of de pincode van je apparaat."]
         : [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`],
-        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en passkey aanmaken" : "Open Bankoverzicht" }, r?.naam || "", [],
+        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open Bankoverzicht" }, r?.naam || "", [],
         link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
       return json({ ok: true, mailFout });
     }
@@ -341,7 +341,7 @@ export async function beheerRoute(request, env, url, email) {
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?").bind(doel).run();
       // nieuw-V5R6 — ook uitloggen: sessies, openstaande inloglinks en passkeys van dit adres weg.
-      for (const t of ["sessies", "inloglinks", "passkeys"]) {
+      for (const t of ["sessies", "inloglinks", "passkeys", "wachtwoorden"]) {
         try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
       }
       slotCache.delete(doel);

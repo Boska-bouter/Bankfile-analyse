@@ -388,7 +388,7 @@ export default function AppSidebar({
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
           {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
-          {onPasskey && <IcoonKnop onClick={onPasskey} label="Passkey (Face ID / Touch ID) beheren" Icon={KeyRound} />}
+          {onPasskey && <IcoonKnop onClick={onPasskey} label="Inloggen instellen (wachtwoord en passkey)" Icon={KeyRound} />}
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />

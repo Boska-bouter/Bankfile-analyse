@@ -1,6 +1,6 @@
 // Gebruiksvoorwaarden — getoond bij het eerste gebruik (per apparaat/browser) en terug te lezen in de Help.
 // Bij een inhoudelijke wijziging: VOORWAARDEN_VERSIE ophogen, dan moet iedereen opnieuw akkoord gaan.
-export const VOORWAARDEN_VERSIE = "6";
+export const VOORWAARDEN_VERSIE = "7";
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
 export const VOORWAARDEN_INHOUD = (
@@ -39,7 +39,7 @@ export const VOORWAARDEN_INHOUD = (
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.5</span><span><strong>Internetverbinding.</strong> Naast 4.4, 4.7 en 4.8 maakt de app alleen verbinding met internet om de app zelf te laden (de app-bestanden via Cloudflare, lettertypen via Google Fonts) en om te controleren of er een nieuwe versie is. Daarbij gaan geen dossiergegevens mee.</span></li>
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.6</span><span><strong>Exports en projectbestanden.</strong> Je projectbestanden en exports (Dossier opslaan, Excel, rapporten) kunnen financiële en persoonlijke gegevens bevatten: bewaar ze zorgvuldig.</span></li>
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.7</span><span><strong>Bankkoppeling (alleen als je die zelf gebruikt).</strong> Koppel je een rekening rechtstreeks, dan geef je bij je eigen bank toestemming om je saldo en transacties te laten lezen. Dat loopt via Enable Banking of Ponto van Isabel Group (vergunninghoudende diensten voor rekeninginformatie onder de Europese PSD2-regels) en de server van de app bij Cloudflare. De server geeft de transacties direct door aan je browser en slaat ze niet op. Om later opnieuw te kunnen ophalen, bewaart je dossier een versleutelde koppelcode; de app kan alleen lezen, nooit betalen. Gebruik je Ponto, dan gelden ook de voorwaarden van Ponto voor je Ponto-account. Je kunt een koppeling altijd intrekken met "Ontkoppelen" of bij je bank. De toestemming verloopt vanzelf na de termijn die je bank of Ponto hanteert (meestal 90 tot 180 dagen).</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.8</span><span><strong>Inloggen en account.</strong> Voor je account bewaart de app op de server bij Cloudflare je e-mailadres, je naam (als je die invult), je abonnement en aanvraag, je passkey (alleen het openbare deel, geen vingerafdruk of gezicht) en je inlogsessie. Inloglinks en berichten over je aanmelding worden per e-mail verstuurd via Cloudflare. Wil je je account laten verwijderen, neem dan contact op met de maker.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.8</span><span><strong>Inloggen en account.</strong> Voor je account bewaart de app op de server bij Cloudflare je e-mailadres, je voor- en achternaam, je abonnement, je aanvraag en de reden die je daarbij opgeeft, je wachtwoord (alleen als onomkeerbare hash, nooit leesbaar), je passkey (alleen het openbare deel, geen vingerafdruk of gezicht) en je inlogsessie. Inloglinks en berichten over je aanmelding worden per e-mail verstuurd via Cloudflare. Wil je je account laten verwijderen, neem dan contact op met de maker.</span></li>
       </ol>
     </section>
     <section>

@@ -3,15 +3,17 @@
 // Aan met de variabele INLOG_MODUS = "eigen". Zonder die variabele (of "access") werkt alles zoals voorheen: de Worker
 // vertrouwt dan op Cloudflare Access en de header Cf-Access-Authenticated-User-Email.
 //
-// Twee manieren om in te loggen:
+// Drie manieren om in te loggen:
 // 1. Inloglink per e-mail (eenmalig te gebruiken, 15 minuten geldig). De link opent een bevestigpagina met een knop,
 //    zodat virusscanners die links in e-mails vooraf openen de link niet "opgebruiken".
 // 2. Passkey (Face ID, Touch ID, pincode van het apparaat; WebAuthn). Na de eerste inlog via de link kan de gebruiker
 //    een passkey aanmaken; daarna is geen e-mail meer nodig.
+// 3. (nieuw-V5R8) E-mailadres en wachtwoord. Het wachtwoord stel je zelf in na de eerste inlog; vergeten gaat via de
+//    inloglink. Opgeslagen als PBKDF2-SHA256-hash met eigen zout, nooit leesbaar.
 // Na inloggen krijgt de browser een sessiecookie (HttpOnly, 30 dagen, verlengt zich bij gebruik). In D1 staat alleen
 // een hash van de sessiesleutel en van de inloglink, nooit de sleutel zelf.
 //
-// Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen.
+// Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
 const COOKIE = "bo_sessie";
 const SESSIE_DAGEN = 30;
@@ -23,7 +25,12 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS inloglinks (hash TEXT PRIMARY KEY, email TEXT NOT NULL, aangemaakt INTEGER NOT NULL, verloopt INTEGER NOT NULL, gebruikt INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS passkeys (id TEXT PRIMARY KEY, email TEXT NOT NULL, sleutel TEXT NOT NULL, alg INTEGER NOT NULL, teller INTEGER NOT NULL DEFAULT 0, naam TEXT, aangemaakt TEXT NOT NULL, laatst TEXT)`,
   `CREATE TABLE IF NOT EXISTS uitdagingen (id TEXT PRIMARY KEY, uitdaging TEXT NOT NULL, email TEXT, verloopt INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS wachtwoorden (email TEXT PRIMARY KEY, hash TEXT NOT NULL, zout TEXT NOT NULL, iteraties INTEGER NOT NULL, gewijzigd TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS inlogpogingen (email TEXT NOT NULL, tijd INTEGER NOT NULL)`,
 ];
+const MIN_WACHTWOORD = 10;
+const MAX_POGINGEN = 10; // mislukte wachtwoordpogingen per adres per kwartier
+const PBKDF2_ITERATIES = 100000; // het maximum dat Cloudflare Workers toestaat
 
 export const eigenInlog = (env) => String(env.INLOG_MODUS || "").trim().toLowerCase() === "eigen";
 
@@ -44,6 +51,11 @@ const willekeurig = (n = 32) => b64u(crypto.getRandomValues(new Uint8Array(n)));
 const sha256 = async (data) => new Uint8Array(await crypto.subtle.digest("SHA-256", typeof data === "string" ? new TextEncoder().encode(data) : data));
 const hashHex = async (s) => [...(await sha256(s))].map((b) => b.toString(16).padStart(2, "0")).join("");
 const gelijk = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+async function wachtwoordHash(wachtwoord, zout, iteraties) {
+  const sleutel = await crypto.subtle.importKey("raw", new TextEncoder().encode(wachtwoord), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: vanB64u(zout), iterations: iteraties }, sleutel, 256));
+}
 
 let tabellenKlaar = false;
 async function zorgVoorTabellen(db) {
@@ -220,7 +232,10 @@ export async function passkeyAanbieden(request, env, email) {
   if (!eigenInlog(env) || !email || request.method !== "GET") return false;
   if (!(request.headers.get("Accept") || "").includes("text/html")) return false;
   if (/(?:^|;\s*)bo_pk=1/.test(request.headers.get("Cookie") || "")) return false;
-  try { return !(await env.DB.prepare("SELECT 1 FROM passkeys WHERE email = ? LIMIT 1").bind(email).first()); }
+  try {
+    if (await env.DB.prepare("SELECT 1 FROM passkeys WHERE email = ? LIMIT 1").bind(email).first()) return false;
+    return !(await env.DB.prepare("SELECT 1 FROM wachtwoorden WHERE email = ? LIMIT 1").bind(email).first());
+  }
   catch { return false; }
 }
 export const PASSKEY_GEVRAAGD = `bo_pk=1; Path=/; Max-Age=${365 * 86400}; HttpOnly; Secure; SameSite=Lax`;
@@ -293,27 +308,34 @@ ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { head
 function inlogPagina() {
   return pagina("Inloggen", `
 <h1>Inloggen bij Bankoverzicht</h1>
-<p class="sub">Heb je al een passkey op dit apparaat? Log dan in met Face ID, Touch ID of de pincode van je apparaat.</p>
 <div class="kaart">
-  <button id="pk" type="button">Inloggen met passkey</button>
-  <p class="of">of ontvang een inloglink per e-mail</p>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
-    <input type="email" name="email" required autocomplete="email username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
-    <button type="submit" class="tweede">Stuur inloglink</button>
+    <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
+    <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
+    <button type="submit">Inloggen</button>
+    <button type="button" id="link" class="tweede">Wachtwoord vergeten of nog geen wachtwoord? Stuur inloglink</button>
   </form>
+  <p class="of" id="ofpk">of</p>
+  <button id="pk" type="button" class="tweede">Inloggen met passkey (Face ID, Touch ID of pincode)</button>
   <p id="status" role="status"></p>
 </div>
-<p class="sub">Nieuw? Log in met de link en meld je aan. Zodra je aanmelding is goedgekeurd, kun je een passkey aanmaken.</p>`, `
-const pk=document.getElementById("pk");if(!kanPasskey)pk.style.display="none";
+<p class="sub">Nieuw? Vul je e-mailadres in en kies <b>Stuur inloglink</b>. Na het inloggen meld je je aan. Zodra je aanmelding is goedgekeurd, stel je een wachtwoord of passkey in.</p>`, `
+const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties");
  const c=await navigator.credentials.get({publicKey:{challenge:vanB64u(o.uitdaging),rpId:o.rpId,userVerification:"preferred",timeout:60000}});
  await post("/api/inloggen/passkey/login",{uitdagingId:o.id,id:c.id,clientDataJSON:b64u(c.response.clientDataJSON),authenticatorData:b64u(c.response.authenticatorData),signature:b64u(c.response.signature)});
  location.href="/";
-}catch(e){meld(e.name==="NotAllowedError"?"Geannuleerd of geen passkey gevonden. Gebruik anders de inloglink.":"Inloggen lukte niet: "+e.message,"err")}finally{pk.disabled=false}});
-const f=document.getElementById("f");f.addEventListener("submit",async e=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;meld("Bezig…");
-try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam.","ok")}
-catch(x){meld(x.message,"err")}finally{k.disabled=false}});`);
+}catch(e){meld(e.name==="NotAllowedError"?"Geannuleerd of geen passkey gevonden. Gebruik anders je wachtwoord of de inloglink.":"Inloggen lukte niet: "+e.message,"err")}finally{pk.disabled=false}});
+const f=document.getElementById("f"),lk=document.getElementById("link");
+f.addEventListener("submit",async e=>{e.preventDefault();const k=f.querySelector("button[type=submit]");
+ if(!f.wachtwoord.value){meld("Vul je wachtwoord in, of kies Stuur inloglink.","err");f.wachtwoord.focus();return}
+ k.disabled=true;meld("Bezig…");
+ try{await post("/api/inloggen/wachtwoord",{email:f.email.value,wachtwoord:f.wachtwoord.value});location.href="/"}
+ catch(x){meld(x.message,"err")}finally{k.disabled=false}});
+lk.addEventListener("click",async()=>{if(!f.email.reportValidity())return;lk.disabled=true;meld("Bezig…");
+ try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam.","ok")}
+ catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`);
 }
 
 // nieuw-V5R3 — de bevestigpagina zegt voor wie en waarvoor de link is: nieuwe aanvrager, lopende aanvraag of gewoon inloggen.
@@ -352,17 +374,35 @@ k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{await 
 catch(e){meld(e.message,"err");setTimeout(()=>location.reload(),2000)}finally{k.disabled=false}});` : "");
 }
 
-function passkeyPagina(email, aantal) {
-  return pagina("Passkey", `
-<h1>Sneller inloggen</h1>
-<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>.${aantal ? ` Je hebt ${aantal} passkey${aantal === 1 ? "" : "s"}.` : ""}
-Maak een passkey aan, dan log je voortaan in met Face ID, Touch ID of de pincode van dit apparaat, zonder e-mail.</p>
+// nieuw-V5R8 — "Inloggen instellen": wachtwoord instellen of wijzigen, en een passkey aanmaken.
+function passkeyPagina(email, aantal, heeftWachtwoord) {
+  const klaar = aantal || heeftWachtwoord;
+  return pagina("Inloggen instellen", `
+<h1>Inloggen instellen</h1>
+<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. Kies hoe je voortaan inlogt. Je kunt ook allebei instellen.</p>
 <div class="kaart">
-  <button id="maak" type="button">Passkey aanmaken</button>
-  <a class="knop tweede" href="/">${aantal ? "Naar de app" : "Later, naar de app"}</a>
-  <p id="status" role="status"></p>
-</div>`, `
-const k=document.getElementById("maak");if(!kanPasskey){k.style.display="none";meld("Dit apparaat of deze browser ondersteunt geen passkeys.")}
+  <b>Wachtwoord</b>
+  <p class="sub" style="margin:0">${heeftWachtwoord ? "Je hebt een wachtwoord. Hier kun je het wijzigen." : `Log in met je e-mailadres en een wachtwoord van minimaal ${MIN_WACHTWOORD} tekens.`}</p>
+  <form id="ww" style="display:flex;flex-direction:column;gap:10px">
+    <input type="email" name="email" value="${esc(email)}" autocomplete="username" readonly hidden>
+    <input type="password" name="nieuw" required minlength="${MIN_WACHTWOORD}" autocomplete="new-password" placeholder="Nieuw wachtwoord" aria-label="Nieuw wachtwoord">
+    <input type="password" name="herhaal" required minlength="${MIN_WACHTWOORD}" autocomplete="new-password" placeholder="Herhaal wachtwoord" aria-label="Herhaal wachtwoord">
+    <button type="submit">${heeftWachtwoord ? "Wachtwoord wijzigen" : "Wachtwoord instellen"}</button>
+  </form>
+</div>
+<div class="kaart" id="pkkaart">
+  <b>Passkey</b>
+  <p class="sub" style="margin:0">${aantal ? `Je hebt ${aantal} passkey${aantal === 1 ? "" : "s"}. ` : ""}Met een passkey log je in met Face ID, Touch ID of de pincode van dit apparaat, zonder wachtwoord of e-mail.</p>
+  <button id="maak" type="button" class="tweede">Passkey aanmaken op dit apparaat</button>
+</div>
+<p id="status" role="status"></p>
+<a class="knop tweede" href="/">${klaar ? "Naar de app" : "Later, naar de app"}</a>`, `
+const k=document.getElementById("maak");if(!kanPasskey){document.getElementById("pkkaart").style.display="none"}
+const w=document.getElementById("ww");w.addEventListener("submit",async e=>{e.preventDefault();
+ if(w.nieuw.value!==w.herhaal.value){meld("De twee wachtwoorden zijn niet gelijk.","err");return}
+ const b=w.querySelector("button");b.disabled=true;meld("Bezig…");
+ try{await post("/api/inloggen/wachtwoord/instellen",{wachtwoord:w.nieuw.value});w.reset();meld("Wachtwoord opgeslagen. Je logt voortaan in met je e-mailadres en dit wachtwoord.","ok")}
+ catch(x){meld(x.message,"err")}finally{b.disabled=false}});
 k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties-registratie");
  const c=await navigator.credentials.create({publicKey:{challenge:vanB64u(o.uitdaging),rp:o.rp,user:{id:vanB64u(o.gebruiker.id),name:o.gebruiker.naam,displayName:o.gebruiker.naam},
@@ -396,7 +436,8 @@ export async function inlogRoute(request, env, url, email) {
       if (!email) return Response.redirect(`${url.origin}/inloggen`, 302);
       if (!(await magPasskey(env, email))) return Response.redirect(`${url.origin}/`, 302);
       const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE email = ?").bind(email).first();
-      return passkeyPagina(email, Number(r?.n || 0));
+      const w = await env.DB.prepare("SELECT 1 FROM wachtwoorden WHERE email = ?").bind(email).first();
+      return passkeyPagina(email, Number(r?.n || 0), !!w);
     }
     return json({ ok: false, fout: "Onbekende route" }, 404);
   }
@@ -427,6 +468,24 @@ export async function inlogRoute(request, env, url, email) {
       const sessie = await maakSessie(env, r.email);
       return json({ ok: true }, 200, { "Set-Cookie": sessieCookie(sessie, SESSIE_DAGEN * 86400) });
     }
+    if (p === "/api/inloggen/wachtwoord") {
+      const doel = String(body?.email || "").trim().toLowerCase();
+      const ww = String(body?.wachtwoord || "");
+      if (!EMAIL_RE.test(doel) || !ww || ww.length > 200) return json({ ok: false, fout: "Vul je e-mailadres en wachtwoord in." }, 400);
+      const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM inlogpogingen WHERE email = ? AND tijd > ?").bind(doel, nu() - 900).first();
+      if (Number(n?.n || 0) >= MAX_POGINGEN) return json({ ok: false, fout: "Te veel mislukte pogingen. Probeer het over een kwartier opnieuw, of gebruik de inloglink." }, 429);
+      const r = await env.DB.prepare("SELECT hash, zout, iteraties FROM wachtwoorden WHERE email = ?").bind(doel).first();
+      // Ook zonder wachtwoord even rekenen, zodat de responstijd niet verraadt of een adres een wachtwoord heeft.
+      const h = await wachtwoordHash(ww, r?.zout || "AAAAAAAAAAAAAAAAAAAAAA", r?.iteraties || PBKDF2_ITERATIES);
+      if (!r || !gelijk(h, vanB64u(r.hash))) {
+        await env.DB.prepare("INSERT INTO inlogpogingen (email, tijd) VALUES (?, ?)").bind(doel, nu()).run();
+        await env.DB.prepare("DELETE FROM inlogpogingen WHERE tijd < ?").bind(nu() - 86400).run();
+        return json({ ok: false, fout: "E-mailadres of wachtwoord klopt niet. Nog geen wachtwoord of vergeten? Gebruik dan de inloglink." }, 400);
+      }
+      await env.DB.prepare("DELETE FROM inlogpogingen WHERE email = ?").bind(doel).run();
+      const sessie = await maakSessie(env, doel);
+      return json({ ok: true }, 200, { "Set-Cookie": sessieCookie(sessie, SESSIE_DAGEN * 86400) });
+    }
     if (p === "/api/inloggen/passkey/opties") {
       const u = await nieuweUitdaging(env);
       return json({ ok: true, id: u.id, uitdaging: u.uitdaging, rpId });
@@ -449,8 +508,19 @@ export async function inlogRoute(request, env, url, email) {
     }
     // Vanaf hier alleen voor wie is ingelogd.
     if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
-    if (p.startsWith("/api/inloggen/passkey/") && !(await magPasskey(env, email)))
-      return json({ ok: false, fout: "Je kunt een passkey aanmaken zodra je aanmelding is goedgekeurd." }, 403);
+    if ((p.startsWith("/api/inloggen/passkey/") || p === "/api/inloggen/wachtwoord/instellen") && !(await magPasskey(env, email)))
+      return json({ ok: false, fout: "Je kunt een wachtwoord of passkey instellen zodra je aanmelding is goedgekeurd." }, 403);
+    if (p === "/api/inloggen/wachtwoord/instellen") {
+      const ww = String(body?.wachtwoord || "");
+      if (ww.length < MIN_WACHTWOORD) return json({ ok: false, fout: `Kies een wachtwoord van minimaal ${MIN_WACHTWOORD} tekens.` }, 400);
+      if (ww.length > 200) return json({ ok: false, fout: "Dat wachtwoord is te lang." }, 400);
+      if (ww.trim().toLowerCase() === email) return json({ ok: false, fout: "Gebruik niet je e-mailadres als wachtwoord." }, 400);
+      const zout = willekeurig(16);
+      const h = await wachtwoordHash(ww, zout, PBKDF2_ITERATIES);
+      await env.DB.prepare(`INSERT INTO wachtwoorden (email, hash, zout, iteraties, gewijzigd) VALUES (?1, ?2, ?3, ?4, ?5)
+        ON CONFLICT(email) DO UPDATE SET hash = ?2, zout = ?3, iteraties = ?4, gewijzigd = ?5`).bind(email, b64u(h), zout, PBKDF2_ITERATIES, new Date().toISOString()).run();
+      return json({ ok: true });
+    }
     if (p === "/api/inloggen/passkey/opties-registratie") {
       const u = await nieuweUitdaging(env, email);
       const { results } = await env.DB.prepare("SELECT id FROM passkeys WHERE email = ?").bind(email).all();
