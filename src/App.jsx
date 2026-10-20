@@ -273,7 +273,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -968,11 +968,25 @@ export default function App() {
   // account inlogde, kreeg de voorwaarden niet te zien. Is het adres (nog) onbekend, dan geldt de algemene sleutel.
   const voorwaardenSleutel = ingelogdAls ? `${VOORWAARDEN_SLEUTEL}:${ingelogdAls}` : VOORWAARDEN_SLEUTEL;
   const [voorwaardenTik, setVoorwaardenTik] = useState(0);
-  const voorwaardenOk = useMemo(() => {
+  // nieuw-V5R9 — het akkoord staat ook op de server (per e-mailadres), zodat het niet verloren gaat als de browseropslag
+  // leeg is, zoals bij de app vanaf het beginscherm-icoon op de iPad. Lokaal akkoord dat de server nog niet kent, wordt
+  // alsnog doorgegeven.
+  const lokaalAkkoord = useMemo(() => {
     try { return localStorage.getItem(voorwaardenSleutel) === VOORWAARDEN_VERSIE; } catch { return false; }
   }, [voorwaardenSleutel, voorwaardenTik]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [akkoordNu, setAkkoordNu] = useState(false);
+  const voorwaardenOk = lokaalAkkoord || akkoordNu || (!!ingelogdAls && voorwaardenServer === VOORWAARDEN_VERSIE);
+  const meldAkkoordAanServer = () => {
+    if (!ingelogdAls) return;
+    fetch("/api/voorwaarden", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ versie: VOORWAARDEN_VERSIE }) }).catch(() => {});
+  };
+  useEffect(() => {
+    if (rolStatus !== "laden" && lokaalAkkoord && ingelogdAls && voorwaardenServer !== VOORWAARDEN_VERSIE) meldAkkoordAanServer();
+  }, [rolStatus, lokaalAkkoord, ingelogdAls, voorwaardenServer]); // eslint-disable-line react-hooks/exhaustive-deps
   const akkoordVoorwaarden = () => {
-    try { localStorage.setItem(voorwaardenSleutel, VOORWAARDEN_VERSIE); } catch { /* geen opslag: scherm komt dan opnieuw */ }
+    try { localStorage.setItem(voorwaardenSleutel, VOORWAARDEN_VERSIE); } catch { /* geen opslag: de server onthoudt het */ }
+    meldAkkoordAanServer();
+    setAkkoordNu(true);
     setVoorwaardenTik((t) => t + 1);
   };
   // Startscherm (verder / nieuw / laden). release22V8 — niet meer één keer per tabblad (op de iPad blijft

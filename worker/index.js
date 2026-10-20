@@ -7,7 +7,7 @@
 
 import { bankRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
-import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen } from "./rechten.js";
+import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -89,8 +89,10 @@ export default {
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", ...r });
+      const voorwaarden = await voorwaardenVan(email, env);
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden, ...r });
     }
+    if (url.pathname === "/api/voorwaarden") return voorwaardenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
     if (url.pathname === "/api/aanmelden") {
       return aanmeldRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"), ctx);

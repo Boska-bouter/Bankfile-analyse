@@ -43,7 +43,7 @@ export function useMagUitgebreid() {
         const e = d?.email ? String(d.email).trim().toLowerCase() : null;
         try { if (e) localStorage.setItem(EMAIL_SLEUTEL, e); } catch { /* geen opslag */ }
         setEmail(e);
-        const x = { koppelen: d?.koppelen === true, beheerder: d?.beheerder === true, geldigTot: d?.geldigTot || null, aanvragen: Number(d?.aanvragen || 0), aanvraag: d?.aanvraag || null, inlog: d?.inlog || "access" };
+        const x = { koppelen: d?.koppelen === true, beheerder: d?.beheerder === true, geldigTot: d?.geldigTot || null, aanvragen: Number(d?.aanvragen || 0), aanvraag: d?.aanvraag || null, inlog: d?.inlog || "access", voorwaarden: d?.voorwaarden || null };
         try { localStorage.setItem(EXTRA_SLEUTEL, JSON.stringify(x)); } catch { /* geen opslag */ }
         setExtra(x);
         setStatus(v ? "ok" : !e ? "geenEmail" : d?.lijst === false ? "geenLijst" : "nietOpLijst");
@@ -51,8 +51,26 @@ export function useMagUitgebreid() {
       .catch(() => { if (!weg) setStatus("fout"); /* offline of geen Worker: laatst bekende waarde blijft staan */ });
     return () => { weg = true; };
   }, [dev]);
+  // nieuw-V6R1 — voor de beheerder de teller van nieuwe aanmeldingen bijhouden terwijl de app open staat: elk uur (V6R2, op verzoek; er komt ook een mail),
+  // en meteen als het tabblad of de app weer in beeld komt. Alleen het getal wordt bijgewerkt, verder niets.
+  const isBeheerder = !dev && !!extra.beheerder;
+  useEffect(() => {
+    if (!isBeheerder) return;
+    let weg = false;
+    const ververs = () => {
+      if (document.visibilityState === "hidden") return;
+      fetch("/api/rol", { credentials: "same-origin", cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!weg && d && d.beheerder) setExtra((x) => (x.aanvragen === Number(d.aanvragen || 0) ? x : { ...x, aanvragen: Number(d.aanvragen || 0) })); })
+        .catch(() => { /* offline: laatste stand blijft */ });
+    };
+    const t = setInterval(ververs, 60 * 60 * 1000);
+    document.addEventListener("visibilitychange", ververs);
+    window.addEventListener("focus", ververs);
+    return () => { weg = true; clearInterval(t); document.removeEventListener("visibilitychange", ververs); window.removeEventListener("focus", ververs); };
+  }, [isBeheerder]);
   // nieuw-V4R5 — aanvragen = openstaande aanmeldingen (alleen voor de beheerder); aanvraag = eigen lopende aanvraag.
   const zetAanvraag = (plan) => setExtra((x) => ({ ...x, aanvraag: plan }));
   const zetAanvragen = (n) => setExtra((x) => ({ ...x, aanvragen: n }));
-  return { mag, email, status, koppelen: mag && !!extra.koppelen, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", zetAanvraag, zetAanvragen };
+  return { mag, email, status, koppelen: mag && !!extra.koppelen, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", voorwaarden: extra.voorwaarden || null, zetAanvraag, zetAanvragen };
 }

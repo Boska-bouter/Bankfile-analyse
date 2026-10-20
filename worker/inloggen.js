@@ -401,7 +401,7 @@ const k=document.getElementById("maak");if(!kanPasskey){document.getElementById(
 const w=document.getElementById("ww");w.addEventListener("submit",async e=>{e.preventDefault();
  if(w.nieuw.value!==w.herhaal.value){meld("De twee wachtwoorden zijn niet gelijk.","err");return}
  const b=w.querySelector("button");b.disabled=true;meld("Bezig…");
- try{await post("/api/inloggen/wachtwoord/instellen",{wachtwoord:w.nieuw.value});w.reset();meld("Wachtwoord opgeslagen. Je logt voortaan in met je e-mailadres en dit wachtwoord.","ok")}
+ try{await post("/api/inloggen/wachtwoord/instellen",{wachtwoord:w.nieuw.value});w.reset();meld("Wachtwoord opgeslagen. Je bent ingelogd en gaat nu naar de app. Voortaan log je in met je e-mailadres en dit wachtwoord.","ok");setTimeout(()=>location.href="/",2000)}
  catch(x){meld(x.message,"err")}finally{b.disabled=false}});
 k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties-registratie");

@@ -224,7 +224,7 @@ export function aanmeldPagina(email, r, env = {}) {
         koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
       }[k]}</small></span></label>`).join("");
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
-    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail en kun je de app gebruiken. Je kunt hieronder ook een ander abonnement kiezen.</p>`
+    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail met een knop om in te loggen. Je kunt dit tabblad nu sluiten. Wil je toch een ander abonnement, kies het dan hieronder.</p>`
     : "";
   return new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aanmelden · Bankoverzicht</title>
@@ -264,7 +264,7 @@ const f=document.getElementById("f"),st=document.getElementById("status");
 f.addEventListener("submit",async(e)=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
 try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,reden:f.reden.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
-if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.";setTimeout(()=>location.reload(),2500)}
+if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld. Je kunt dit tabblad daarna sluiten.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
 </script></body></html>`, { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
@@ -341,7 +341,7 @@ export async function beheerRoute(request, env, url, email) {
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?").bind(doel).run();
       // nieuw-V5R6 — ook uitloggen: sessies, openstaande inloglinks en passkeys van dit adres weg.
-      for (const t of ["sessies", "inloglinks", "passkeys", "wachtwoorden"]) {
+      for (const t of ["sessies", "inloglinks", "passkeys", "wachtwoorden", "voorwaarden_akkoord"]) {
         try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
       }
       slotCache.delete(doel);
@@ -351,6 +351,32 @@ export async function beheerRoute(request, env, url, email) {
   } catch (err) {
     return json({ ok: false, fout: "Databasefout", detail: String(err?.message || err).slice(0, 300) }, 500);
   }
+}
+
+// nieuw-V5R9 — akkoord met de gebruiksvoorwaarden op de server, per e-mailadres en versie. Voorheen alleen in de browser
+// (localStorage); de app die je via het beginscherm-icoon opent heeft op de iPad eigen opslag, en die raakt soms leeg.
+const VOORWAARDEN_SCHEMA = "CREATE TABLE IF NOT EXISTS voorwaarden_akkoord (email TEXT PRIMARY KEY, versie TEXT NOT NULL, tijd TEXT NOT NULL)";
+export async function voorwaardenVan(email, env) {
+  if (!email || !env.DB) return null;
+  try {
+    await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
+    return (await env.DB.prepare("SELECT versie FROM voorwaarden_akkoord WHERE email = ?").bind(String(email).toLowerCase()).first())?.versie || null;
+  } catch { return null; }
+}
+export async function voorwaardenRoute(request, env, url, email) {
+  if (request.method !== "POST") return json({ ok: false, fout: "Alleen POST" }, 405);
+  const fout = controleerPost(request, url);
+  if (fout) return fout;
+  if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+  if (!env.DB) return json({ ok: false, fout: "Database niet gekoppeld" }, 503);
+  let body = {};
+  try { body = await request.json(); } catch { /* leeg */ }
+  const versie = schoon(body?.versie, 10);
+  if (!versie) return json({ ok: false, fout: "Versie ontbreekt" }, 400);
+  await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
+  await env.DB.prepare(`INSERT INTO voorwaarden_akkoord (email, versie, tijd) VALUES (?1, ?2, ?3)
+    ON CONFLICT(email) DO UPDATE SET versie = ?2, tijd = ?3`).bind(String(email).toLowerCase(), versie, new Date().toISOString()).run();
+  return json({ ok: true });
 }
 
 // nieuw-V4R5 — aantal openstaande aanvragen, voor de teller bij het personen-icoon van de beheerder.
