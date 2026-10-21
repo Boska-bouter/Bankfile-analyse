@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { X, Printer, Download, ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { berekenInkomenPerMaand } from "../../calc/inkomenPerMaand.js";
+import KlantJaarKeuzeModal from "./KlantJaarKeuzeModal.jsx";
 
 // release31V5 / 32V3 — "Inkomen per maand": omzet en privé-inkomen, privé-uitgaven via de privérekening én via de
 // zakelijke rekening, en het verschil. Maanden waarin niet alles geladen is, worden niet berekend (geen aannames);
@@ -34,17 +35,28 @@ function fiscaalBlok(f) {
   return { ...f, ibZvw, nog, perMaand: nog != null ? Math.round((nog / 12) * 100) / 100 : null, btwJaar, btwPerMaand: btwJaar != null ? Math.round((btwJaar / 12) * 100) / 100 : null };
 }
 
+const berekenVerschilNa = (data, fis) => (fis && data.gemiddeld.verschil != null
+  ? Math.round((data.gemiddeld.verschil - (fis.perMaand || 0) - (fis.btwPerMaand || 0)) * 100) / 100
+  : null);
+
+// V6R5 — jaren als tekst voor titel en bestandsnaam: "2025", "2023–2025" (aaneengesloten) of "2022, 2024".
+const jarenTekst = (jaren, streep = "–") => {
+  const j = [...jaren].sort((a, b) => a - b);
+  const aaneen = j.every((x, i) => i === 0 || x === j[i - 1] + 1);
+  return j.length > 1 && aaneen ? `${j[0]}${streep}${j[j.length - 1]}` : j.join(", ");
+};
+const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
 // release32V8 — het gedownloade/geprinte document is gelijk aan het scherm: grafiek, tabel, belasting en BTW, verschil
 // na belasting. A4 liggend. De details van privé-uitgaven via zakelijk staan er niet in (eigen download op die pagina).
-function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
+// V6R5 — één sectie per jaar; bouwHtml zet de gekozen jaren in één document, elk jaar op een nieuwe pagina.
+function bouwSectie({ data, jaar, klantNaam, fis, verschilNa }) {
   const isBV = data.isBV;
   const zk = !isBV && data.zakelijkInDossier; // release33V0 — kolom zakelijke kosten
   const af = zk && data.heeftAflossing; // release33V6 — kolom aflossing lease/leningen
   const kol = data.kolommen.filter((c) => !c.alleenInfo);
   const pv = data.heeftPriveInkomen;
-  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const td = (v, cls = "") => `<td class="r ${cls}">${v == null ? "—" : eur(v)}</td>`;
-  const nKol = 1 + kol.length + (pv ? 1 : 0) + 1 + 4;
 
   // Grafiek (SVG), dezelfde opbouw als op het scherm.
   const W = 1000, H = 150, stap = W / 12, bw = stap * 0.4;
@@ -87,7 +99,24 @@ function bouwHtml({ data, jaar, klantNaam, fis, verschilNa }) {
     : `<table class="klein">${f.btw.map((v, i) => `<tr><td>Q${i + 1}</td><td class="r">${btwTxt(v)}</td></tr>`).join("")}<tr class="streep b"><td>Jaar</td><td class="r">${btwTxt(f.btwJaar)}</td></tr><tr><td>Gemiddeld per maand</td><td class="r">${eur(Math.abs(f.btwPerMaand))} ${f.btwPerMaand < 0 ? "terug" : "te betalen"}</td></tr></table>`;
   const naRegel = verschilNa == null ? "" : `<div class="kader na"><b>Gemiddeld verschil per maand, na belasting en BTW (indicatief):</b> ${eur(data.gemiddeld.verschil)}${f.perMaand ? ` − ${eur(f.perMaand)} IB/Zvw` : ""}${f.btwPerMaand ? (f.btwPerMaand < 0 ? ` + ${eur(-f.btwPerMaand)} BTW terug` : ` − ${eur(f.btwPerMaand)} BTW`) : ""} = <b class="${verschilNa < 0 ? "rood" : "groen"}">${eur(verschilNa)}</b></div>`;
 
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inkomen per maand ${jaar}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
+  return `<section class="jaar">
+<h1>Inkomen per maand ${jaar}</h1>
+<div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}indicatief overzicht · gemaakt op ${new Date().toLocaleDateString("nl-NL")}</div>
+${svg}
+<div style="margin:4px 0 12px">${legenda}</div>
+<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th>${zk ? "<th>Zakelijke kosten<br>excl. BTW</th>" : ""}${af ? "<th>Aflossing<br>lease/leningen</th>" : ""}<th class="rood">Uitgaven via<br>privérekening</th><th class="rood">Uitgaven via<br>zakelijke rekening</th><th class="rood">Totaal<br>privé-uitgaven</th><th>Verschil</th></tr></thead>
+<tbody>${data.maanden.map(rij).join("")}</tbody>
+<tfoot>${voet(`Totaal ${nVol} volledige maand${nVol === 1 ? "" : "en"}${nVol > 0 && nVol < 12 ? ` (${bereik(data.volledigeMaanden)})` : ""}`, data.totalen, "tot")}${voet("Gemiddeld per maand", data.gemiddeld, "gem")}</tfoot></table>
+${onvolledig.length ? `<p class="info">Ter informatie: omzet excl. BTW over het hele jaar (ook ${bereik(onvolledig)}) ${eur(data.omzetJaar.excl)}. Die wordt niet met de uitgaven vergeleken, omdat de uitgaven van die maanden niet bekend zijn.</p>` : ""}
+${data.zakVanPrive ? `<p class="info">${zk ? "Waarvan" : "Zakelijke kosten"} betaald vanaf de privérekening (bijv. autokosten bij een lease- of zaakauto, het zakelijke deel van huur): ${eur(data.zakVanPrive)} in de volledige maanden. ${zk ? "Die staan bij de zakelijke kosten, niet bij de privé-uitgaven" : "Die tellen niet als privé-uitgave"}, net als in de aangifte.</p>` : ""}
+${f ? `<div class="blokken"><div class="kader"><h3>Inkomstenbelasting en Zvw ${jaar} <span>(indicatief)</span></h3>${ibBlok}</div><div class="kader"><h3>BTW per kwartaal ${jaar}</h3>${btwBlok}</div></div>` : ""}
+${naRegel}
+<p class="noot">${zk ? `<b>Zakelijke kosten</b> = kosten excl. BTW, voor het zakelijke deel zoals in de aangifte (ook als ze vanaf privé zijn betaald), investeringen tellen mee in de maand van betaling.${af ? ' <b>Aflossing lease/leningen</b> = termijnen financiële lease en aflossingen op zakelijke leningen: geen kosten, wel geld dat niet voor het huishouden beschikbaar is.' : ""} <b>Verschil</b> = totaal inkomen − zakelijke kosten${af ? ' − aflossingen' : ''} − privé-uitgaven. ` : ""}<b>Uitgaven via privérekening</b> = alle afschrijvingen op de privérekening(en), zonder overboekingen tussen eigen rekeningen en sparen. <b>Uitgaven via zakelijke rekening</b> = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) vanaf de zakelijke rekening, plus het privédeel van gemengde kosten volgens de percentages zakelijk/privé en soort ruimte, plus autokosten bij een privéauto (zoals in de aangifte). Overboekingen naar de eigen privérekening tellen niet mee: die staan al aan de privékant. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil worden niet berekend (geen aanname) en de hele maand, ook het inkomen, telt niet mee in totaal en gemiddelde. Belasting en BTW zijn een indicatie.</p>
+</section>`;
+}
+
+function bouwHtml(secties, jaren, klantNaam) {
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inkomen per maand ${jarenTekst(jaren)}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
 <style>
 @page{size:A4 landscape;margin:10mm}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -104,20 +133,10 @@ tr.tot td{border-top:2px solid #cbd5e1;font-weight:700}tr.gem td{font-weight:700
 table.klein td{border:0;padding:2px 0}table.klein tr.streep td{border-top:1px solid #e2e8f0;padding-top:4px}
 .na{margin-top:10px;background:#f8fafc}
 .noot{color:#64748b;font-size:9.5px;margin-top:12px}
-@media print{body{padding:0;max-width:none}}
+section.jaar+section.jaar{break-before:page;page-break-before:always;margin-top:32px}
+@media print{body{padding:0;max-width:none}section.jaar+section.jaar{margin-top:0}}
 </style></head><body>
-<h1>Inkomen per maand ${jaar}</h1>
-<div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}indicatief overzicht · gemaakt op ${new Date().toLocaleDateString("nl-NL")}</div>
-${svg}
-<div style="margin:4px 0 12px">${legenda}</div>
-<table><thead><tr><th>Maand</th>${kol.map((c) => `<th>${c.label}</th>`).join("")}${pv ? "<th>Privé totaal</th>" : ""}<th>${isBV ? "Inkomen huishouden" : "Totaal inkomen"}</th>${zk ? "<th>Zakelijke kosten<br>excl. BTW</th>" : ""}${af ? "<th>Aflossing<br>lease/leningen</th>" : ""}<th class="rood">Uitgaven via<br>privérekening</th><th class="rood">Uitgaven via<br>zakelijke rekening</th><th class="rood">Totaal<br>privé-uitgaven</th><th>Verschil</th></tr></thead>
-<tbody>${data.maanden.map(rij).join("")}</tbody>
-<tfoot>${voet(`Totaal ${nVol} volledige maand${nVol === 1 ? "" : "en"}${nVol > 0 && nVol < 12 ? ` (${bereik(data.volledigeMaanden)})` : ""}`, data.totalen, "tot")}${voet("Gemiddeld per maand", data.gemiddeld, "gem")}</tfoot></table>
-${onvolledig.length ? `<p class="info">Ter informatie: omzet excl. BTW over het hele jaar (ook ${bereik(onvolledig)}) ${eur(data.omzetJaar.excl)}. Die wordt niet met de uitgaven vergeleken, omdat de uitgaven van die maanden niet bekend zijn.</p>` : ""}
-${data.zakVanPrive ? `<p class="info">${zk ? "Waarvan" : "Zakelijke kosten"} betaald vanaf de privérekening (bijv. autokosten bij een lease- of zaakauto, het zakelijke deel van huur): ${eur(data.zakVanPrive)} in de volledige maanden. ${zk ? "Die staan bij de zakelijke kosten, niet bij de privé-uitgaven" : "Die tellen niet als privé-uitgave"}, net als in de aangifte.</p>` : ""}
-${f ? `<div class="blokken"><div class="kader"><h3>Inkomstenbelasting en Zvw ${jaar} <span>(indicatief)</span></h3>${ibBlok}</div><div class="kader"><h3>BTW per kwartaal ${jaar}</h3>${btwBlok}</div></div>` : ""}
-${naRegel}
-<p class="noot">${zk ? `<b>Zakelijke kosten</b> = kosten excl. BTW, voor het zakelijke deel zoals in de aangifte (ook als ze vanaf privé zijn betaald), investeringen tellen mee in de maand van betaling.${af ? ' <b>Aflossing lease/leningen</b> = termijnen financiële lease en aflossingen op zakelijke leningen: geen kosten, wel geld dat niet voor het huishouden beschikbaar is.' : ""} <b>Verschil</b> = totaal inkomen − zakelijke kosten${af ? ' − aflossingen' : ''} − privé-uitgaven. ` : ""}<b>Uitgaven via privérekening</b> = alle afschrijvingen op de privérekening(en), zonder overboekingen tussen eigen rekeningen en sparen. <b>Uitgaven via zakelijke rekening</b> = privé-categorieën en privé opnames (pin, geldautomaat, direct betaald) vanaf de zakelijke rekening, plus het privédeel van gemengde kosten volgens de percentages zakelijk/privé en soort ruimte, plus autokosten bij een privéauto (zoals in de aangifte). Overboekingen naar de eigen privérekening tellen niet mee: die staan al aan de privékant. * = niet alle rekeningen de hele maand geladen: uitgaven en verschil worden niet berekend (geen aanname) en de hele maand, ook het inkomen, telt niet mee in totaal en gemiddelde. Belasting en BTW zijn een indicatie.${nKol ? "" : ""}</p>
+${secties.join("\n")}
 </body></html>`;
 }
 
@@ -191,6 +210,9 @@ export default function InkomenPerMaandModal({
   const [details, setDetails] = useState(false);
   const [uitgeklapt, setUitgeklapt] = useState(() => new Set());
   const [alleOpen, setAlleOpen] = useState(false);
+  // V6R5 — jaarkeuze voor Downloaden, Excel en Printen: { soort: "html" | "excel" | "print" }; standaard het getoonde jaar.
+  const [exportKeuze, setExportKeuze] = useState(null);
+  const [exportJaren, setExportJaren] = useState([]);
   const wisselMaand = (mnd) => setUitgeklapt((v) => { const n = new Set(v); if (n.has(mnd)) n.delete(mnd); else n.add(mnd); return n; });
   const ibansKey = eigenPriveIbans.join("|");
   const data = useMemo(
@@ -198,6 +220,13 @@ export default function InkomenPerMaandModal({
     [classified, jaar, categoryBtwRates, btwVerlegd, periodeZak, periodePri, isBV, percentages, autoStatus, heeftLeaseAuto, ibansKey] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const fis = useMemo(() => fiscaalBlok(fiscaalVoorJaar ? fiscaalVoorJaar(jaar) : null), [fiscaalVoorJaar, jaar]); // eslint-disable-line react-hooks/exhaustive-deps
+  // V6R5 — gegevens per jaar voor de export van meerdere jaren (het getoonde jaar is al berekend).
+  const overzicht = (j) => {
+    if (j === jaar) return { data, jaar: j, fis, verschilNa: berekenVerschilNa(data, fis) };
+    const d = berekenInkomenPerMaand({ classified, jaar: j, categoryBtwRates, btwVerlegd, periodeZak, periodePri, isBV, percentages, autoStatus, heeftLeaseAuto, eigenPriveIbans });
+    const f = fiscaalBlok(fiscaalVoorJaar ? fiscaalVoorJaar(j) : null);
+    return { data: d, jaar: j, fis: f, verschilNa: berekenVerschilNa(d, f) };
+  };
   const kol = data.kolommen.filter((c) => !c.alleenInfo); // omzet incl. BTW alleen in de Excel-export
   const zk = !isBV && data.zakelijkInDossier; // release33V0 — kolom zakelijke kosten
   const pv = data.heeftPriveInkomen;
@@ -207,38 +236,56 @@ export default function InkomenPerMaandModal({
   const openLabel = open ? (LABELS[open.key] || kol.find((c) => c.key === open.key)?.label || "") : "";
   const nVol = data.aantalVolledig;
   const onvolledig = data.maanden.filter((m) => !m.volledig).map((m) => m.maand);
-  const verschilNa = fis && data.gemiddeld.verschil != null
-    ? Math.round((data.gemiddeld.verschil - (fis.perMaand || 0) - (fis.btwPerMaand || 0)) * 100) / 100
-    : null;
+  const verschilNa = berekenVerschilNa(data, fis);
 
-  const naarExcel = async () => {
+  const naarExcel = async (jaren) => {
     const XLSX = await import("xlsx");
-    const alle = data.kolommen; // in Excel ook omzet incl. BTW
-    const kop = ["Maand", ...alle.map((c) => c.label), ...(pv ? ["Privé totaal"] : []), isBV ? "Inkomen huishouden" : "Totaal inkomen", ...(zk ? ["Zakelijke kosten excl. BTW"] : []), ...(zk && data.heeftAflossing ? ["Aflossing lease/leningen"] : []), "Uitgaven via privérekening", "Uitgaven via zakelijke rekening", "Totaal privé-uitgaven", "Verschil", "Volledige gegevens"];
-    const regel = (label, o, vol, nb) => [label, ...alle.map((c) => o[c.key]), ...(pv ? [o.prive] : []), o.totaal, ...(nb ? ["niet te bepalen", "", "", "", ...(zk ? [""] : []), ...(zk && data.heeftAflossing ? [""] : [])] : [...(zk ? [-o.zakKosten] : []), ...(zk && data.heeftAflossing ? [-o.aflossing] : []), -o.viaPrive, -o.viaZak, -o.uitgaven, o.verschil]), vol];
-    const rijen = data.maanden.map((m) => regel(MAANDEN[m.maand], m, m.volledig ? "ja" : "nee", !m.volledig));
-    rijen.push(regel(`Totaal ${nVol} volledige maanden`, data.totalen, ""));
-    if (nVol) rijen.push(regel("Gemiddeld per maand", data.gemiddeld, ""));
-    rijen.push(["Omzet excl. BTW hele jaar (ter informatie)", data.omzetJaar.excl]);
-    // release32V5 — ook de belasting- en BTW-indicatie en het verschil na belasting in de download.
-    if (fis) {
-      rijen.push([], [`Inkomstenbelasting en Zvw ${jaar} (indicatief)`]);
-      if (fis.isBV) rijen.push(["BV: de BV betaalt vennootschapsbelasting; die staat niet in dit overzicht."]);
-      else if (fis.ibZvw == null) rijen.push(["Geen indicatie beschikbaar voor dit jaar."]);
-      else rijen.push(["IB ná heffingskorting", fis.ib], ["Zvw-bijdrage", fis.zvw], [`Al betaald in ${jaar} via de bank (IB/Zvw)`, fis.betaald], ["Nog te betalen", fis.nog], ["Per maand opzij te zetten", fis.perMaand]);
-      rijen.push([], [`BTW per kwartaal ${jaar} (positief = te betalen, negatief = terug)`]);
-      if (fis.kor || !fis.btw) rijen.push([fis.kor ? "KOR: er wordt geen BTW afgedragen." : "Geen BTW-gegevens voor dit jaar."]);
-      else rijen.push(...fis.btw.map((v, i) => [`Q${i + 1}`, v]), ["Jaar", fis.btwJaar], ["Gemiddeld per maand", fis.btwPerMaand]);
-      if (verschilNa != null) rijen.push([], ["Gemiddeld verschil per maand, na belasting en BTW (indicatief)", verschilNa]);
-    }
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([kop, ...rijen]), `Inkomen ${jaar}`);
-    if (data.soorten.length) {
-      const det = [[`Privé-uitgaven via zakelijke rekening (${data.aantalVolledig} volledige maanden)`, "Aantal", "Bedrag"], ...data.soorten.map((x) => [x.soort, x.boekingen.length, -x.bedrag]), ["Totaal", "", -data.soortenTotaal]];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), "Privé via zakelijk");
+    for (const { data, jaar, fis, verschilNa } of jaren.map(overzicht)) {
+      const zk = !isBV && data.zakelijkInDossier;
+      const pv = data.heeftPriveInkomen;
+      const nVol = data.aantalVolledig;
+      const alle = data.kolommen; // in Excel ook omzet incl. BTW
+      const kop = ["Maand", ...alle.map((c) => c.label), ...(pv ? ["Privé totaal"] : []), isBV ? "Inkomen huishouden" : "Totaal inkomen", ...(zk ? ["Zakelijke kosten excl. BTW"] : []), ...(zk && data.heeftAflossing ? ["Aflossing lease/leningen"] : []), "Uitgaven via privérekening", "Uitgaven via zakelijke rekening", "Totaal privé-uitgaven", "Verschil", "Volledige gegevens"];
+      const regel = (label, o, vol, nb) => [label, ...alle.map((c) => o[c.key]), ...(pv ? [o.prive] : []), o.totaal, ...(nb ? ["niet te bepalen", "", "", "", ...(zk ? [""] : []), ...(zk && data.heeftAflossing ? [""] : [])] : [...(zk ? [-o.zakKosten] : []), ...(zk && data.heeftAflossing ? [-o.aflossing] : []), -o.viaPrive, -o.viaZak, -o.uitgaven, o.verschil]), vol];
+      const rijen = data.maanden.map((m) => regel(MAANDEN[m.maand], m, m.volledig ? "ja" : "nee", !m.volledig));
+      rijen.push(regel(`Totaal ${nVol} volledige maanden`, data.totalen, ""));
+      if (nVol) rijen.push(regel("Gemiddeld per maand", data.gemiddeld, ""));
+      rijen.push(["Omzet excl. BTW hele jaar (ter informatie)", data.omzetJaar.excl]);
+      // release32V5 — ook de belasting- en BTW-indicatie en het verschil na belasting in de download.
+      if (fis) {
+        rijen.push([], [`Inkomstenbelasting en Zvw ${jaar} (indicatief)`]);
+        if (fis.isBV) rijen.push(["BV: de BV betaalt vennootschapsbelasting; die staat niet in dit overzicht."]);
+        else if (fis.ibZvw == null) rijen.push(["Geen indicatie beschikbaar voor dit jaar."]);
+        else rijen.push(["IB ná heffingskorting", fis.ib], ["Zvw-bijdrage", fis.zvw], [`Al betaald in ${jaar} via de bank (IB/Zvw)`, fis.betaald], ["Nog te betalen", fis.nog], ["Per maand opzij te zetten", fis.perMaand]);
+        rijen.push([], [`BTW per kwartaal ${jaar} (positief = te betalen, negatief = terug)`]);
+        if (fis.kor || !fis.btw) rijen.push([fis.kor ? "KOR: er wordt geen BTW afgedragen." : "Geen BTW-gegevens voor dit jaar."]);
+        else rijen.push(...fis.btw.map((v, i) => [`Q${i + 1}`, v]), ["Jaar", fis.btwJaar], ["Gemiddeld per maand", fis.btwPerMaand]);
+        if (verschilNa != null) rijen.push([], ["Gemiddeld verschil per maand, na belasting en BTW (indicatief)", verschilNa]);
+      }
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([kop, ...rijen]), `Inkomen ${jaar}`);
+      if (data.soorten.length) {
+        const det = [[`Privé-uitgaven via zakelijke rekening (${data.aantalVolledig} volledige maanden)`, "Aantal", "Bedrag"], ...data.soorten.map((x) => [x.soort, x.boekingen.length, -x.bedrag]), ["Totaal", "", -data.soortenTotaal]];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), jaren.length > 1 ? `Privé via zakelijk ${jaar}` : "Privé via zakelijk");
+      }
     }
-    XLSX.writeFile(wb, `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);
+    XLSX.writeFile(wb, `Inkomen per maand ${jarenTekst(jaren, "-")}${klantNaam ? ` ${klantNaam}` : ""}.xlsx`);
   };
+
+  const html = (jaren) => bouwHtml(jaren.map((j) => bouwSectie({ ...overzicht(j), klantNaam })), jaren, klantNaam);
+  const voerUit = (soort, jaren) => {
+    const j = [...jaren].sort((x, y) => x - y);
+    if (soort === "html") downloadHtml(html(j), `Inkomen per maand ${jarenTekst(j, "-")}${klantNaam ? ` ${klantNaam}` : ""}`);
+    else if (soort === "excel") naarExcel(j);
+    else if (soort === "print" && onPrint) onPrint(html(j));
+  };
+  // Eén jaar in het dossier: meteen uitvoeren. Meer jaren: eerst kiezen (het getoonde jaar staat aan).
+  const exporteer = (soort) => {
+    if (years.length <= 1) { voerUit(soort, [jaar]); return; }
+    setExportJaren([jaar]);
+    setExportKeuze({ soort });
+  };
+  const EXPORT_TEKST = { html: ["downloaden", "Downloaden"], excel: ["naar Excel exporteren", "Excel maken"], print: ["printen", "Printen"] };
 
   const Regel = ({ label, m, k, neg = false }) => {
     const v = m[k] || 0;
@@ -271,6 +318,17 @@ export default function InkomenPerMaandModal({
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[92dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        {exportKeuze && (
+          <KlantJaarKeuzeModal
+            years={years}
+            selected={exportJaren}
+            setSelected={setExportJaren}
+            vraag={`Welke jaren wil je ${EXPORT_TEKST[exportKeuze.soort][0]}? ${exportKeuze.soort === "excel" ? "Elk jaar krijgt een eigen tabblad." : "Elk jaar begint op een nieuwe pagina."}`}
+            knop={EXPORT_TEKST[exportKeuze.soort][1]}
+            onOpen={(jaren) => { const soort = exportKeuze.soort; setExportKeuze(null); voerUit(soort, jaren); }}
+            onClose={() => setExportKeuze(null)}
+          />
+        )}
         {details ? (
           <DetailPagina data={data} jaar={jaar} klantNaam={klantNaam} onPrint={onPrint} onTerug={() => setDetails(false)} />
         ) : (
@@ -285,9 +343,9 @@ export default function InkomenPerMaandModal({
             ) : <span className="text-sm text-slate-600">{jaar}</span>}
           </div>
           <div className="flex gap-2 items-center">
-            <button type="button" onClick={() => downloadHtml(bouwHtml({ data, jaar, klantNaam, fis, verschilNa }), `Inkomen per maand ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`)} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
-            <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
-            {onPrint && <button type="button" onClick={() => onPrint(bouwHtml({ data, jaar, klantNaam, fis, verschilNa }))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
+            <button type="button" onClick={() => exporteer("html")} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
+            <button type="button" onClick={() => exporteer("excel")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
+            {onPrint && <button type="button" onClick={() => exporteer("print")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200" title="Sluiten"><X className="h-5 w-5" /></button>
           </div>
         </div>
