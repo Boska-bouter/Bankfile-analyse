@@ -158,10 +158,14 @@ export default function AppSidebar({
           <span className="text-[11px] text-slate-400 leading-snug">Analyse van bankafschriften</span>
         </div>
       </div>
-      <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
-        className="sb-btn flex items-center gap-2 self-end rounded-lg px-2 py-1 mb-2 text-slate-500 hover:text-slate-200 hover:bg-white/5">
-        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[11px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
-      </button>
+      {/* nieuw-V4R8 — uitloggen bovenin naast inklappen; ingeklapt staat hij eronder, dus altijd zichtbaar. */}
+      <div className={`flex mb-2 ${collapsed ? "flex-col items-center gap-1" : "items-center justify-between"}`}>
+        {onUitloggen && ingelogdAls ? <IcoonKnop onClick={onUitloggen} label={`Uitloggen (${ingelogdAls})`} Icon={LogOut} /> : <span />}
+        <button type="button" onClick={toggle} title={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"} aria-label={collapsed ? "Zijbalk uitklappen" : "Zijbalk inklappen"}
+          className="sb-btn flex items-center gap-2 rounded-lg px-2 py-1 text-slate-500 hover:text-slate-200 hover:bg-white/5">
+          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><span className="sb-label text-[11px]">Inklappen</span><ChevronsLeft className="h-4 w-4" /></>}
+        </button>
+      </div>
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
@@ -384,10 +388,9 @@ export default function AppSidebar({
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
           {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
-          {onPasskey && <IcoonKnop onClick={onPasskey} label="Passkey (Face ID / Touch ID) beheren" Icon={KeyRound} />}
-          {onUitloggen && ingelogdAls && <IcoonKnop onClick={onUitloggen} label={`Uitloggen (${ingelogdAls})`} Icon={LogOut} />}
+          {onPasskey && <IcoonKnop onClick={onPasskey} label="Inloggen instellen (wachtwoord en passkey)" Icon={KeyRound} />}
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet naar een server gestuurd. Internet wordt alleen gebruikt om de app te laden, op een nieuwe versie te controleren en feedback te versturen.">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>

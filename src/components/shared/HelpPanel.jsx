@@ -23,7 +23,7 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Je bankgegevens worden lokaal in deze browser verwerkt en automatisch bewaard — ze gaan niet naar een server. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
+      Je bankgegevens worden lokaal in deze browser verwerkt en automatisch bewaard. Ze worden niet op een server opgeslagen, ook niet als je ze via de bankkoppeling ophaalt. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
     </li>
   </ol>
 );

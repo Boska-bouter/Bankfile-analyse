@@ -13,7 +13,7 @@
 // Met de variabele TOEGANG_VERPLICHT = "ja" levert de Worker de app alleen aan wie toegang heeft; anderen zien de
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
-import { verstuur } from "./inloggen.js";
+import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
   email TEXT PRIMARY KEY,
@@ -31,8 +31,15 @@ const EXTRA_KOLOMMEN = [
   ["aanvraag", "TEXT"],
   ["aangevraagd", "TEXT"],
   ["naam", "TEXT"],
+  ["reden", "TEXT"], // nieuw-V5R2 — waarom iemand toegang vraagt (verplicht bij aanmelden)
 ];
 
+// nieuw-V5R2 — korte uitleg per abonnement, voor de aanmeldpagina en de bevestigingsmail.
+export const PLAN_UITLEG = {
+  eenvoudig: "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting.",
+  uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven.",
+  koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
+};
 export const PLANNEN = {
   eenvoudig: "Eenvoudig",
   uitgebreid: "Uitgebreid",
@@ -67,6 +74,8 @@ const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const DATUM_RE = /^\d{4}-\d{2}-\d{2}$/;
 const vandaag = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" }); // JJJJ-MM-DD
 const schoon = (v, max) => String(v ?? "").replace(/[\u0000-\u001F]/g, " ").trim().slice(0, max);
+const schoonTekst = (v, max) => String(v ?? "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000B-\u001F]/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
+export const MIN_REDEN = 20;
 
 // Tabel één keer per isolate aanmaken en bijwerken: de beheerder hoeft geen SQL uit te voeren.
 let tabelKlaar = false;
@@ -84,7 +93,7 @@ async function zorgVoorTabel(db) {
 const rijNaarRecht = (r) => ({
   email: r.email, eenvoudig: !!r.eenvoudig || !!r.uitgebreid, uitgebreid: !!r.uitgebreid, koppelen: !!r.koppelen,
   geldigTot: r.geldig_tot || null, bron: r.bron, notitie: r.notitie || "", gewijzigd: r.gewijzigd, gewijzigdDoor: r.gewijzigd_door || null,
-  aanvraag: r.aanvraag || null, aangevraagd: r.aangevraagd || null, naam: r.naam || "",
+  aanvraag: r.aanvraag || null, aangevraagd: r.aangevraagd || null, naam: r.naam || "", reden: r.reden || "",
 });
 
 // Wat mag deze gebruiker? Uitgebreid geeft ook toegang; koppelen kan alleen samen met Uitgebreid.
@@ -134,19 +143,18 @@ function controleerPost(request, url) {
 
 // nieuw-V4R8 — de aanvrager krijgt een e-mail als de beheerder de aanvraag goedkeurt of afwijst.
 // Een mislukte mail maakt de beslissing niet ongedaan; het beheerscherm meldt het wel.
-async function meldAanvrager(env, doel, onderwerp, regels, knop) {
+async function meldAanvrager(env, doel, onderwerp, regels, knop, naam = "", lijst = [], naLijst = []) {
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
   if ((!env.EMAIL && !env.RESEND_API_KEY) || !from) return "geen afzender ingesteld";
-  const text = `${regels.join("\n\n")}${knop ? `\n\n${knop.link}` : ""}`;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">${regels.map((r) => `<p>${esc(r)}</p>`).join("")}
-${knop ? `<p><a href="${esc(knop.link)}" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">${esc(knop.tekst)}</a></p>` : ""}</div>`;
+  const { text, html } = opmaakMail(env, { naam, zonderNaam: "Beste aanvrager,", regels, knop, lijst, naLijst });
   try { await verstuur(env, { to: doel, from, subject: `Bankoverzicht: ${onderwerp}`, text, html }); return null; }
   catch (e) { console.error("aanvrager: e-mail mislukt", e?.message); return String(e?.message || e).slice(0, 200); }
 }
 
 async function meldBeheerder(env, onderwerp, tekst) {
-  if (!env.EMAIL || !env.FEEDBACK_TO || !env.FEEDBACK_FROM) return;
-  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from: env.FEEDBACK_FROM, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
+  const from = env.INLOG_FROM || env.FEEDBACK_FROM;
+  if (!env.EMAIL || !env.FEEDBACK_TO || !from) return;
+  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
   catch (e) { console.error("aanmelden: e-mail mislukt", e?.message); }
 }
 
@@ -163,7 +171,13 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
   const plan = String(body?.plan || "");
   if (!PLANNEN[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
-  const naam = schoon(body?.naam, 100);
+  // nieuw-V5R4 — voor- en achternaam verplicht (samen opgeslagen in de kolom naam).
+  const voornaam = schoon(body?.voornaam, 60);
+  const achternaam = schoon(body?.achternaam, 80);
+  if (!voornaam || !achternaam) return json({ ok: false, fout: "Vul je voornaam en achternaam in." }, 400);
+  const naam = `${voornaam} ${achternaam}`;
+  const reden = schoonTekst(body?.reden, 1000);
+  if (reden.length < MIN_REDEN) return json({ ok: false, fout: `Geef aan waarom je toegang vraagt en waarvoor je de app wilt gebruiken (minimaal ${MIN_REDEN} tekens).` }, 400);
   // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
   if (prijzen(env)[plan] > 0) {
     // Hier komt de Mollie-betaling: /api/betaal/start maakt een betaling en stuurt de gebruiker naar Mollie; de webhook
@@ -177,17 +191,25 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
     await zorgVoorTabel(env.DB);
     const tijd = new Date().toISOString();
     await env.DB.prepare(
-      `INSERT INTO rechten (email, gewijzigd, gewijzigd_door, bron, aanvraag, aangevraagd, naam)
-       VALUES (?1, ?2, ?1, 'aanmelding', ?3, ?2, ?4)
-       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aangevraagd = ?2, naam = CASE WHEN ?4 <> '' THEN ?4 ELSE naam END`
-    ).bind(e, tijd, plan, naam).run();
+      `INSERT INTO rechten (email, gewijzigd, gewijzigd_door, bron, aanvraag, aangevraagd, naam, reden)
+       VALUES (?1, ?2, ?1, 'aanmelding', ?3, ?2, ?4, ?5)
+       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aangevraagd = ?2, naam = ?4, reden = ?5`
+    ).bind(e, tijd, plan, naam, reden).run();
     slotCache.delete(e);
   } catch (err) {
     return json({ ok: false, fout: "Databasefout", detail: String(err?.message || err).slice(0, 300) }, 500);
   }
   const mail = meldBeheerder(env, `Nieuwe aanmelding: ${PLANNEN[plan]}`,
-    `${naam || "(geen naam)"} <${e}> vraagt ${PLANNEN[plan]} aan.\n\nKeur de aanvraag goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk).`);
-  if (ctx?.waitUntil) ctx.waitUntil(mail); else await mail;
+    `${naam || "(geen naam)"} <${e}> vraagt ${PLANNEN[plan]} aan.\n\nReden:\n${reden}\n\nKeur de aanvraag goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk).`);
+  // nieuw-V5R2 — bevestiging aan de aanvrager, met een korte uitleg van de drie abonnementen.
+  const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
+    `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij Bankoverzicht, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
+    "Ter herinnering, dit zijn de drie abonnementen:",
+  ], null, naam, Object.entries(PLANNEN).map(([k, v]) => [v, PLAN_UITLEG[k]]), [
+    "Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt een e-mail zodra hij is goedgekeurd; daarna kun je meteen aan de slag.",
+    "Heb je vragen? Beantwoord dan gerust deze e-mail.",
+  ]);
+  if (ctx?.waitUntil) { ctx.waitUntil(mail); ctx.waitUntil(bevestiging); } else { await mail; await bevestiging; }
   return json({ ok: true, aangevraagd: plan });
 }
 
@@ -202,7 +224,7 @@ export function aanmeldPagina(email, r, env = {}) {
         koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
       }[k]}</small></span></label>`).join("");
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
-    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail en kun je de app gebruiken. Je kunt hieronder ook een ander abonnement kiezen.</p>`
+    ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail met een knop om in te loggen. Je kunt dit tabblad nu sluiten. Wil je toch een ander abonnement, kies het dan hieronder.</p>`
     : "";
   return new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aanmelden · Bankoverzicht</title>
@@ -216,17 +238,23 @@ form,.melding{background:var(--card);border:1px solid var(--line);border-radius:
 form{display:flex;flex-direction:column;gap:10px}
 .keuze{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .keuze small{display:block;color:var(--muted)}.prijs{color:var(--accent);font-weight:600;font-size:13px}
+textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);resize:vertical}
+.namen{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:420px){.namen{grid-template-columns:1fr}}
+.hint{display:block;color:var(--muted);font-size:13px;margin-top:4px}
 input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
 button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#status.err{color:var(--err)}
 a{color:var(--accent)}
 </style></head><body><main>
 <h1>Aanmelden voor Bankoverzicht</h1>
-<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. Kies een abonnement; de beheerder keurt je aanmelding goed en je krijgt daarover een e-mail.</p>
+<p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. Kies een abonnement en vertel kort waarom je toegang vraagt; de beheerder keurt je aanmelding goed en je krijgt daarover een e-mail.</p>
 ${loopt}
 <form id="f">
 ${keuzes}
-<label>Naam (optioneel)<br><input type="text" name="naam" maxlength="100" autocomplete="name" style="width:100%;box-sizing:border-box"></label>
+<div class="namen"><label>Voornaam<br><input type="text" name="voornaam" required maxlength="60" autocomplete="given-name" style="width:100%;box-sizing:border-box"></label>
+<label>Achternaam<br><input type="text" name="achternaam" required maxlength="80" autocomplete="family-name" style="width:100%;box-sizing:border-box"></label></div>
+<label>Waarom vraag je toegang aan? (verplicht)<br><textarea name="reden" required minlength="${MIN_REDEN}" maxlength="1000" rows="4" placeholder="Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte." style="width:100%;box-sizing:border-box"></textarea>
+<small class="hint">Vertel kort wie je bent en waarvoor je de app wilt gebruiken. Zonder duidelijke reden kan ik je aanvraag niet goedkeuren.</small></label>
 <button type="submit">Aanmelding versturen</button>
 <p id="status" role="status"></p>
 </form>
@@ -234,9 +262,9 @@ ${keuzes}
 </main><script>
 const f=document.getElementById("f"),st=document.getElementById("status");
 f.addEventListener("submit",async(e)=>{e.preventDefault();const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
-try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,naam:f.naam.value})});
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,reden:f.reden.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
-if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.";setTimeout(()=>location.reload(),2500)}
+if(d.alActief){location.reload();return}st.textContent="Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld. Je kunt dit tabblad daarna sluiten.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
 </script></body></html>`, { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
@@ -279,7 +307,7 @@ export async function beheerRoute(request, env, url, email) {
     }
     // nieuw-V4R5 — aanvraag goedkeuren: rechten volgens het gevraagde abonnement, de aanvraag vervalt.
     if (url.pathname === "/api/beheer/goedkeuren" && request.method === "POST") {
-      const r = await env.DB.prepare("SELECT aanvraag FROM rechten WHERE email = ?").bind(doel).first();
+      const r = await env.DB.prepare("SELECT aanvraag, naam FROM rechten WHERE email = ?").bind(doel).first();
       const plan = r?.aanvraag;
       if (!PLANNEN[plan]) return json({ ok: false, fout: "Geen openstaande aanvraag" }, 404);
       const n = NIVEAU[plan];
@@ -287,30 +315,68 @@ export async function beheerRoute(request, env, url, email) {
         `UPDATE rechten SET eenvoudig = 1, uitgebreid = MAX(uitgebreid, ?2), koppelen = MAX(koppelen, ?3),
          aanvraag = NULL, gewijzigd = ?4, gewijzigd_door = ?5 WHERE email = ?1`
       ).bind(doel, n >= 2 ? 1 : 0, n >= 3 ? 1 : 0, tijd, door).run();
-      const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd",
-        [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
-          "Log in met je passkey of vraag op de inlogpagina een nieuwe inloglink aan."],
-        { link: `${url.origin}/`, tekst: "Open Bankoverzicht" });
+      // nieuw-V5R7 — met eigen inlog zit er een inloglink in de mail: de knop logt meteen in en biedt dan de passkey aan.
+      let link = null;
+      try { link = await maakInloglink(env, doel, url.origin); } catch { /* dan de gewone knop naar de app */ }
+      const mailFout = await meldAanvrager(env, doel, "je aanmelding is goedgekeurd", link
+        ? [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`,
+          "Klik op de knop om in te loggen. Daarna stel je een wachtwoord in, of maak je een passkey aan zodat je inlogt met Face ID, Touch ID of de pincode van je apparaat."]
+        : [`Goed nieuws: je aanmelding voor ${PLANNEN[plan]} is goedgekeurd. Je kunt Bankoverzicht nu gebruiken.`],
+        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open Bankoverzicht" }, r?.naam || "", [],
+        link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
       return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/afwijzen" && request.method === "POST") {
-      const r = await env.DB.prepare("SELECT aanvraag FROM rechten WHERE email = ?").bind(doel).first();
-      await env.DB.prepare("UPDATE rechten SET aanvraag = NULL, gewijzigd = ?2, gewijzigd_door = ?3 WHERE email = ?1").bind(doel, tijd, door).run();
+      const r = await env.DB.prepare("SELECT aanvraag, naam FROM rechten WHERE email = ?").bind(doel).first();
+      await env.DB.prepare("UPDATE rechten SET aanvraag = NULL, reden = NULL, gewijzigd = ?2, gewijzigd_door = ?3 WHERE email = ?1").bind(doel, tijd, door).run();
       // Een rij die alleen uit een aanvraag bestond, heeft geen nut meer.
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?1 AND eenvoudig = 0 AND uitgebreid = 0 AND koppelen = 0 AND aanvraag IS NULL").bind(doel).run();
-      const mailFout = PLANNEN[r?.aanvraag] ? await meldAanvrager(env, doel, "je aanmelding",
-        [`Je aanmelding voor ${PLANNEN[r.aanvraag]} is helaas niet goedgekeurd.`,
-          "Heb je vragen? Beantwoord dan deze e-mail of neem contact op met de beheerder."]) : null;
+      const mailFout = PLANNEN[r?.aanvraag] ? await meldAanvrager(env, doel, "over je aanvraag",
+        [`Bedankt voor je aanvraag voor ${PLANNEN[r.aanvraag]} bij Bankoverzicht.`,
+          "Helaas kan ik je aanvraag op dit moment niet goedkeuren, omdat er te weinig informatie is gegeven om je toegang tot de app te geven.",
+          "Je kunt op deze e-mail reageren met de vraag wat er ontbreekt. Je kunt ook meteen meer informatie sturen over waarom je toegang vraagt en waarvoor je de app wilt gebruiken. Daarna bekijk ik je aanvraag opnieuw."],
+        null, r?.naam || "") : null;
       return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
       await env.DB.prepare("DELETE FROM rechten WHERE email = ?").bind(doel).run();
+      // nieuw-V5R6 — ook uitloggen: sessies, openstaande inloglinks en passkeys van dit adres weg.
+      for (const t of ["sessies", "inloglinks", "passkeys", "wachtwoorden", "voorwaarden_akkoord"]) {
+        try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
+      }
+      slotCache.delete(doel);
       return json({ ok: true });
     }
     return json({ ok: false, fout: "Onbekende route" }, 404);
   } catch (err) {
     return json({ ok: false, fout: "Databasefout", detail: String(err?.message || err).slice(0, 300) }, 500);
   }
+}
+
+// nieuw-V5R9 — akkoord met de gebruiksvoorwaarden op de server, per e-mailadres en versie. Voorheen alleen in de browser
+// (localStorage); de app die je via het beginscherm-icoon opent heeft op de iPad eigen opslag, en die raakt soms leeg.
+const VOORWAARDEN_SCHEMA = "CREATE TABLE IF NOT EXISTS voorwaarden_akkoord (email TEXT PRIMARY KEY, versie TEXT NOT NULL, tijd TEXT NOT NULL)";
+export async function voorwaardenVan(email, env) {
+  if (!email || !env.DB) return null;
+  try {
+    await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
+    return (await env.DB.prepare("SELECT versie FROM voorwaarden_akkoord WHERE email = ?").bind(String(email).toLowerCase()).first())?.versie || null;
+  } catch { return null; }
+}
+export async function voorwaardenRoute(request, env, url, email) {
+  if (request.method !== "POST") return json({ ok: false, fout: "Alleen POST" }, 405);
+  const fout = controleerPost(request, url);
+  if (fout) return fout;
+  if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
+  if (!env.DB) return json({ ok: false, fout: "Database niet gekoppeld" }, 503);
+  let body = {};
+  try { body = await request.json(); } catch { /* leeg */ }
+  const versie = schoon(body?.versie, 10);
+  if (!versie) return json({ ok: false, fout: "Versie ontbreekt" }, 400);
+  await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
+  await env.DB.prepare(`INSERT INTO voorwaarden_akkoord (email, versie, tijd) VALUES (?1, ?2, ?3)
+    ON CONFLICT(email) DO UPDATE SET versie = ?2, tijd = ?3`).bind(String(email).toLowerCase(), versie, new Date().toISOString()).run();
+  return json({ ok: true });
 }
 
 // nieuw-V4R5 — aantal openstaande aanvragen, voor de teller bij het personen-icoon van de beheerder.

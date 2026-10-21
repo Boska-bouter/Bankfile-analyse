@@ -23,7 +23,7 @@ async function api(pad, body, signal) {
   });
   let data = null;
   try { data = await r.json(); } catch { /* geen JSON, bijv. inlogpagina van Access */ }
-  if (!r.ok || !data?.ok) throw new Error([data?.fout || `Fout ${r.status}`, data?.detail].filter(Boolean).join(" — "));
+  if (!r.ok || !data?.ok) throw Object.assign(new Error([data?.fout || `Fout ${r.status}`, data?.detail].filter(Boolean).join(" — ")), { data });
   return data;
 }
 
@@ -50,7 +50,7 @@ export async function rondKoppelingAf(terug) {
   try { sessionStorage.removeItem(STATE_KEY); } catch { /* leeg */ }
   if (terug.error) throw new Error(`De bank gaf geen toestemming: ${terug.error}`);
   if (!start || !terug.state || start.state !== terug.state) throw new Error("Deze terugkeer van de bank hoort niet bij een koppeling die in deze browser is gestart. Begin opnieuw.");
-  const s = await api("/sessie", { code: terug.code, bank: start.bank });
+  const s = await api("/sessie", { code: terug.code, bank: start.bank, ...(start.pkce ? { pkce: start.pkce } : {}) });
   const nieuw = { id: crypto.randomUUID(), bank: s.bank || start.bank, psu: start.psu, token: s.token, rekeningen: s.rekeningen, geldigTot: s.geldigTot, gekoppeldOp: new Date().toISOString(), opgehaald: {} };
   await bewaarKoppelingen([...(await leesKoppelingen()), nieuw]);
   const n = s.rekeningen.length;
@@ -66,6 +66,8 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   const [fout, setFout] = useState("");
   const [melding, setMelding] = useState("");
   const [vanDatum, setVanDatum] = useState({});
+  const [aanbieder, setAanbieder] = useState(null); // nieuw-V5R1 — "enablebanking" of "ponto" (instelling in de Worker)
+  const isPonto = aanbieder === "ponto";
 
   // Koppelingen uit het tussenstation in het dossier zetten (dubbele id's overslaan) en het tussenstation leegmaken.
   const pakTussenstationOp = async () => {
@@ -88,20 +90,22 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
 
   const laadBanken = async (soort) => {
     setBanken(null); setGekozen(""); setFout("");
-    try { setBanken((await api(`/banken?psu=${soort}`)).banken); } catch (e) { setFout(e.message); setBanken([]); }
+    try { const d = await api(`/banken?psu=${soort}`); setAanbieder(d.aanbieder || "enablebanking"); setBanken(d.banken); } catch (e) { setFout(e.message); setBanken([]); }
   };
   useEffect(() => { laadBanken(psu); }, [psu]);
 
   const gefilterd = useMemo(() => (banken || []).filter((b) => b.naam.toLowerCase().includes(zoek.trim().toLowerCase())), [banken, zoek]);
 
   const naarBank = async () => {
-    const bank = (banken || []).find((b) => b.naam === gekozen);
+    const bank = isPonto ? { naam: "Ponto" } : (banken || []).find((b) => b.naam === gekozen);
     if (!bank) return;
     setBezig("start"); setFout("");
     try {
       const state = crypto.randomUUID();
       sessionStorage.setItem(STATE_KEY, JSON.stringify({ state, bank: bank.naam, psu }));
       const s = await api("/start", { bank: bank.naam, psu, state, maxGeldigSec: bank.maxGeldigSec });
+      // nieuw-V5R1 — bij Ponto gaat de (versleutelde) PKCE-code mee, nodig om de koppeling na terugkeer af te ronden.
+      if (s.pkce) sessionStorage.setItem(STATE_KEY, JSON.stringify({ state, bank: bank.naam, psu, pkce: s.pkce }));
       window.location.assign(s.url);
     } catch (e) {
       setFout(e.message);
@@ -115,6 +119,8 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     setBezig(`${k.id}|${idx}`); setFout(""); setMelding("");
     try {
       const d = await api("/transacties", { token: k.token, rekening: idx, van, tot: vandaag() });
+      // nieuw-V5R1 — Ponto vervangt de sleutel bij elk gebruik: het nieuwe koppeltoken meteen in het dossier zetten.
+      if (d.token) onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, token: d.token } : x)));
       const nieuweRijen = transactiesNaarRijen(d.transacties, rek.iban);
       const label = rijenNaarParsedFile([], { bank: k.bank, iban: rek.iban }).fileName;
       const bestaand = (parsedFiles || []).find((p) => p.fileName === label);
@@ -129,6 +135,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
       // nieuw-V3R9 — na een geslaagde ophaalactie het venster sluiten, zodat de import (en zo nodig de wizard) zichtbaar is.
       if (toegevoegd > 0 && !d.onvolledig) onClose();
     } catch (e) {
+      if (e.data?.token) onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, token: e.data.token } : x)));
       setFout(e.message);
     } finally {
       setBezig("");
@@ -156,11 +163,20 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   return (
     <ModalShell title="Rechtstreeks koppelen met de bank (proef)" onClose={onClose} maxWidth="max-w-2xl">
       <div className="space-y-5 text-sm text-slate-700">
-        <p className="text-slate-500">
-          Je logt in bij je eigen bank en geeft toestemming om je transacties te lezen (alleen lezen, geen betalingen).
-          De gegevens gaan via Enable Banking rechtstreeks naar deze browser en worden niet op een server bewaard.
-          De koppeling wordt in dit dossier bewaard en gaat mee met opslaan en laden. De toestemming verloopt na maximaal 180 dagen.
-        </p>
+        {isPonto ? (
+          <p className="text-slate-500">
+            Je logt in bij Ponto (een dienst van Isabel Group met een PSD2-vergunning) en kiest daar je bank en de
+            rekeningen die je wilt delen. Heb je nog geen Ponto-account, dan maak je dat daar aan. De app kan alleen lezen,
+            geen betalingen doen. De transacties gaan rechtstreeks naar deze browser en worden niet op een server bewaard.
+            De koppeling wordt in dit dossier bewaard; Ponto vraagt ongeveer elk half jaar om opnieuw toestemming te geven.
+          </p>
+        ) : (
+          <p className="text-slate-500">
+            Je logt in bij je eigen bank en geeft toestemming om je transacties te lezen (alleen lezen, geen betalingen).
+            De gegevens gaan via Enable Banking rechtstreeks naar deze browser en worden niet op een server bewaard.
+            De koppeling wordt in dit dossier bewaard en gaat mee met opslaan en laden. De toestemming verloopt na maximaal 180 dagen.
+          </p>
+        )}
 
         {fout && <p className="rounded-veld bg-red-50 px-3 py-2 text-red-700 whitespace-pre-wrap">{fout}</p>}
         {melding && <p className="rounded-veld bg-teal-50 px-3 py-2 text-teal-800">{melding}</p>}
@@ -176,7 +192,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <span className="font-medium">{k.bank}</span>
-                      <span className="text-xs text-slate-500"> · {k.psu === "business" ? "zakelijk" : "privé"} · {verlopen ? <b className="text-red-700">verlopen, opnieuw koppelen</b> : `geldig tot ${nlDatum(k.geldigTot)}`}</span>
+                      <span className="text-xs text-slate-500"> · {k.psu === "business" ? "zakelijk" : "privé"} · {verlopen ? <b className="text-red-700">verlopen, opnieuw koppelen</b> : k.geldigTot ? `geldig tot ${nlDatum(k.geldigTot)}` : "gekoppeld"}</span>
                     </div>
                     <button type="button" className={KNOP_SECUNDAIR_KLEIN} onClick={() => verwijder(k)}>Ontkoppelen</button>
                   </div>
@@ -207,6 +223,9 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
             <label className="flex items-center gap-1.5"><input type="radio" checked={psu === "personal"} onChange={() => setPsu("personal")} /> Privé</label>
             <label className="flex items-center gap-1.5"><input type="radio" checked={psu === "business"} onChange={() => setPsu("business")} /> Zakelijk</label>
           </div>
+          {isPonto ? (
+            <p className="text-slate-500">Je kiest je bank bij Ponto. Na het koppelen kom je hier terug.</p>
+          ) : (<>
           <input className={`${VELD} w-full`} placeholder="Zoek je bank" value={zoek} onChange={(e) => setZoek(e.target.value)} />
           <div className="max-h-56 overflow-y-auto rounded-veld border border-slate-200 divide-y divide-slate-100">
             {banken === null && <p className="px-3 py-2 text-slate-500">Banken laden…</p>}
@@ -220,8 +239,9 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
               </label>
             ))}
           </div>
-          <button className={KNOP_PRIMAIR} disabled={!gekozen || !!bezig} onClick={naarBank}>
-            {bezig === "start" ? "Doorsturen…" : "Naar mijn bank"}
+          </>)}
+          <button className={KNOP_PRIMAIR} disabled={(!isPonto && !gekozen) || !aanbieder || !!bezig} onClick={naarBank}>
+            {bezig === "start" ? "Doorsturen…" : isPonto ? "Naar Ponto" : "Naar mijn bank"}
           </button>
         </section>
       </div>
