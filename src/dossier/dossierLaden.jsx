@@ -11,7 +11,10 @@ export async function laadDossierBestand(file, c) {
   try {
     const project = await readProjectFile(file, c.vraagWachtwoord);
     suppressChangeCount();
-    setLastExportAt(null);
+    // nieuw-V6R6 — een geladen dossierbestand ís bewaard: tijdstip van opslaan uit het bestand (anders de
+    // bestandsdatum), zodat stap 4 "Bewaren" en de sessiebalk het dossier direct als opgeslagen tonen.
+    const bewaardOp = new Date(project.savedAt || file.lastModified || Date.now());
+    setLastExportAt(isNaN(+bewaardOp) ? new Date() : bewaardOp);
     setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
     setAccountTypeByFile(project.accountTypeByFile || {});
     setOverridesByCounterparty(migrateOverridesCategories(project.overridesByCounterparty));

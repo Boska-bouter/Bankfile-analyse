@@ -1109,6 +1109,8 @@ export default function App() {
     loaded,
   ]);
 
+  // nieuw-V6R6 — `weergave` (Eenvoudig/Uitgebreid) telt niet als wijziging: alleen van weergave wisselen
+  // (ook de keuze direct na het laden) maakt een bewaard dossier niet ‘niet opgeslagen’.
   // v305 (V27) — telt wijzigingen sinds de laatste export. Zelfde afhankelijkheden als de autosave
   // hierboven, maar bewust zonder loadedProjectFileName (die verandert bij het exporteren zelf).
   useEffect(() => {
@@ -1127,7 +1129,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
