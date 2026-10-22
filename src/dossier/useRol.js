@@ -45,7 +45,7 @@ export function useMagUitgebreid() {
         const e = d?.email ? String(d.email).trim().toLowerCase() : null;
         try { if (e) localStorage.setItem(EMAIL_SLEUTEL, e); } catch { /* geen opslag */ }
         setEmail(e);
-        const x = { koppelen: d?.koppelen === true, beheerder: d?.beheerder === true, geldigTot: d?.geldigTot || null, aanvragen: Number(d?.aanvragen || 0), aanvraag: d?.aanvraag || null, inlog: d?.inlog || "access", voorwaarden: d?.voorwaarden || null,
+        const x = { koppelen: d?.koppelen === true, beheerder: d?.beheerder === true, geldigTot: d?.geldigTot || null, aanvragen: Number(d?.aanvragen || 0), aanvraag: d?.aanvraag || null, inlog: d?.inlog || "access", voorwaarden: d?.voorwaarden || null, voorwaardenPrive: d?.voorwaardenPrive || null,
           // beide-V1R0 — rechten per soort gebruik (zakelijk/prive); fase 2 gebruikt dit bij "Nieuw dossier".
           soorten: d?.soorten && typeof d.soorten === "object" ? d.soorten : null, gebruik: d?.gebruik || null, aanvraagGebruik: d?.aanvraagGebruik || null };
         try { localStorage.setItem(EXTRA_SLEUTEL, JSON.stringify(x)); } catch { /* geen opslag */ }
@@ -76,5 +76,5 @@ export function useMagUitgebreid() {
   // nieuw-V4R5 — aanvragen = openstaande aanmeldingen (alleen voor de beheerder); aanvraag = eigen lopende aanvraag.
   const zetAanvraag = (plan) => setExtra((x) => ({ ...x, aanvraag: plan }));
   const zetAanvragen = (n) => setExtra((x) => ({ ...x, aanvragen: n }));
-  return { mag, email, status, koppelen: mag && !!extra.koppelen, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", voorwaarden: extra.voorwaarden || null, soorten: extra.soorten || null, gebruik: extra.gebruik || null, zetAanvraag, zetAanvragen };
+  return { mag, email, status, koppelen: mag && !!extra.koppelen, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", voorwaarden: extra.voorwaarden || null, voorwaardenPrive: extra.voorwaardenPrive || null, soorten: extra.soorten || null, gebruik: extra.gebruik || null, zetAanvraag, zetAanvragen };
 }

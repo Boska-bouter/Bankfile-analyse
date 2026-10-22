@@ -162,3 +162,10 @@ zijbalk) vraagt iemand met toegang een tweede abonnement aan.
 - `/api/rol` geeft naast de bekende velden ook `soorten` ({zakelijk, prive}, elk eenvoudig/uitgebreid/koppelen) en `gebruik`.
 - Prijzen per soort in de variabele `PRIJZEN`, bijv. `{"zakelijk":{"uitgebreid":4.95},"prive":{"uitgebreid":2.95}}`.
   De oude vorm zonder soort (`{"uitgebreid":4.95}`) geldt voor zakelijk. Zonder variabele is alles €0.
+
+### Voorwaarden per soort (beide-V1R9)
+
+Privé heeft eigen gebruiksvoorwaarden (`src/content/voorwaardenPrive.jsx`, versie `VOORWAARDEN_PRIVE_VERSIE`). Wie een
+privéabonnement heeft, gaat daar één keer mee akkoord; wie beide heeft, ziet beide teksten en geeft één akkoord. Het akkoord
+staat in de D1-tabel `voorwaarden_akkoord`: `versie`/`tijd` voor zakelijk, `versie_prive`/`tijd_prive` voor privé. De
+Worker voegt die twee kolommen zelf toe; geen SQL nodig. `/api/rol` geeft `voorwaarden` (zakelijk) en `voorwaardenPrive`.

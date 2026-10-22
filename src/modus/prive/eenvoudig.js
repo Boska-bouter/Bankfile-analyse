@@ -1,6 +1,8 @@
 // beide-V1R8 — fase 6: de eenvoudige weergave in een privédossier. Nakijken vraagt niet "bedrijf of privé?" maar
 // "waarvoor was dit geld?", met een handvol veelvoorkomende budgetcategorieën als knoppen. Data, geen logica in de
 // component: EenvoudigeApp krijgt deze keuzes via props.
+import UitlegEenvoudigPrive from "../../content/uitlegEenvoudigPrive.jsx";
+
 const k = (category, t, s) => Object.freeze({ k: `cat:${category}`, t, s, keuze: Object.freeze({ category, type: "Prive" }) });
 
 export const PRIVE_KEUZES_IN = Object.freeze([
@@ -45,5 +47,6 @@ export const PRIVE_EENVOUDIG = Object.freeze({
   vraagKleinePin: "Waaraan gaf je dit uit?",
   bestandenLeeg: "Er zijn nog geen bankbestanden. Voeg de afschriften van je betaalrekening toe (en die van je partner, als je samen een overzicht wilt); de app leest ze daarna in.",
   onzeker: "je budgetoverzicht kan daardoor nog verschuiven",
+  uitleg: UitlegEenvoudigPrive,
   uitgebreidTip: "Fijner werk (één boeking apart, vaste lasten, vermogen) doe je in",
 });

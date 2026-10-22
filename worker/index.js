@@ -90,8 +90,8 @@ export default {
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
-      const voorwaarden = await voorwaardenVan(email, env);
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden, ...r });
+      const akkoord = await voorwaardenVan(email, env);
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, ...r });
     }
     if (url.pathname === "/api/voorwaarden") return voorwaardenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)

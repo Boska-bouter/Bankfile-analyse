@@ -3,32 +3,9 @@
 export const VOORWAARDEN_VERSIE = "7";
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
-export const VOORWAARDEN_INHOUD = (
-  <div className="space-y-3">
-    <section>
-      <h3 className="font-semibold text-slate-800">1. Waarvoor is deze app bedoeld</h3>
-      <p>
-        Bankoverzicht helpt om uit bankgegevens een administratie te reconstrueren en een <strong>indicatieve</strong>{" "}
-        berekening te maken van winst, BTW en belasting. Het is een hulpmiddel voor wie zelf of namens een ander de
-        administratie ordent, bijvoorbeeld voor een gesprek, een controle of de voorbereiding van een aangifte.
-      </p>
-    </section>
-    <section>
-      <h3 className="font-semibold text-slate-800">2. Wat de app niet is</h3>
-      <ol className="space-y-1.5 mt-1">
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.1</span><span>De app is geen boekhoudprogramma, doet geen aangifte en geeft geen fiscaal, juridisch of financieel advies.</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.2</span><span>Alle bedragen, aannames en uitkomsten zijn indicatief. Ze kunnen onvolledig of onjuist zijn, bijvoorbeeld door ontbrekende bankgegevens, een verkeerde indeling of een wijziging in de regels.</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.3</span><span>De daadwerkelijke aangiften (IB, Zvw, BTW, Vpb) worden buiten deze app gedaan.</span></li>
-      </ol>
-    </section>
-    <section>
-      <h3 className="font-semibold text-slate-800">3. Jouw verantwoordelijkheid</h3>
-      <ol className="space-y-1.5 mt-1">
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.1</span><span>Jij controleert de uitkomsten voordat je ze gebruikt.</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.2</span><span>Jij bent verantwoordelijk voor wat je ermee doet: de gegevens die je laadt, de keuzes die je maakt, en elke aangifte, beslissing of advies die je op basis van de app geeft of neemt.</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.3</span><span>Raadpleeg bij twijfel een belastingadviseur of accountant.</span></li>
-      </ol>
-    </section>
+// beide-V1R9 — artikel 4 t/m 8 gelden voor zakelijk en privé; de privévoorwaarden (voorwaardenPrive.jsx) gebruiken ze ook.
+export const VOORWAARDEN_ALGEMEEN = (
+  <>
     <section>
       <h3 className="font-semibold text-slate-800">4. Gegevens en privacy</h3>
       <ol className="space-y-1.5 mt-1">
@@ -70,5 +47,35 @@ export const VOORWAARDEN_INHOUD = (
         De app en deze voorwaarden kunnen wijzigen. Bij een inhoudelijke wijziging vraagt de app opnieuw om akkoord.
       </p>
     </section>
+  </>
+);
+
+export const VOORWAARDEN_INHOUD = (
+  <div className="space-y-3">
+    <section>
+      <h3 className="font-semibold text-slate-800">1. Waarvoor is deze app bedoeld</h3>
+      <p>
+        Bankoverzicht helpt om uit bankgegevens een administratie te reconstrueren en een <strong>indicatieve</strong>{" "}
+        berekening te maken van winst, BTW en belasting. Het is een hulpmiddel voor wie zelf of namens een ander de
+        administratie ordent, bijvoorbeeld voor een gesprek, een controle of de voorbereiding van een aangifte.
+      </p>
+    </section>
+    <section>
+      <h3 className="font-semibold text-slate-800">2. Wat de app niet is</h3>
+      <ol className="space-y-1.5 mt-1">
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.1</span><span>De app is geen boekhoudprogramma, doet geen aangifte en geeft geen fiscaal, juridisch of financieel advies.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.2</span><span>Alle bedragen, aannames en uitkomsten zijn indicatief. Ze kunnen onvolledig of onjuist zijn, bijvoorbeeld door ontbrekende bankgegevens, een verkeerde indeling of een wijziging in de regels.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">2.3</span><span>De daadwerkelijke aangiften (IB, Zvw, BTW, Vpb) worden buiten deze app gedaan.</span></li>
+      </ol>
+    </section>
+    <section>
+      <h3 className="font-semibold text-slate-800">3. Jouw verantwoordelijkheid</h3>
+      <ol className="space-y-1.5 mt-1">
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.1</span><span>Jij controleert de uitkomsten voordat je ze gebruikt.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.2</span><span>Jij bent verantwoordelijk voor wat je ermee doet: de gegevens die je laadt, de keuzes die je maakt, en elke aangifte, beslissing of advies die je op basis van de app geeft of neemt.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">3.3</span><span>Raadpleeg bij twijfel een belastingadviseur of accountant.</span></li>
+      </ol>
+    </section>
+    {VOORWAARDEN_ALGEMEEN}
   </div>
 );

@@ -69,6 +69,8 @@ export function resolveTariefGroep(groep, year) {
   }
   return { waarde: basis, status: bronJaar === year ? "standaard" : "benadering", bronJaar };
 }
+// beide-V1R9 — eigen waarden voor andere tabellen (privé: tax/prive/tarieven.js), in hetzelfde dossierveld.
+export const tariefOverride = (year, groep) => { const e = _overrides?.[year]?.[groep]; return e && typeof e === "object" ? e : null; };
 export function getIbParams(year) { return resolveTariefGroep("ib", year).waarde; }
 export function tariefStatusVoorJaar(year) {
   const groepen = ["ib", "zvw", "ahk", "ak", "kia"];

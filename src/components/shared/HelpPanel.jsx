@@ -40,7 +40,8 @@ const tekstVan = (node) => {
 // Alle uitgebreide toelichtingsteksten, gebundeld in inklapbare hoofdstukken — inclusief de
 // introductie als eerste hoofdstuk. Bij de losse plekken in de app staat een klein "?"-icoontje
 // (HelpHint) dat direct naar het juiste hoofdstuk hier springt.
-export default function HelpPanel({ onClose, openChapter }) {
+// beide-V1R9 — intro/chapters/groepen per soort dossier (content/helpPrive.jsx); zonder props de zakelijke Help.
+export default function HelpPanel({ onClose, openChapter, intro = INTRO_CONTENT, chapters = HELP_CHAPTERS, groepen = HELP_GROEPEN }) {
   const [openKeys, setOpenKeys] = useState(() => new Set(["intro", ...(openChapter ? [openChapter] : [])]));
   const toggle = (key) => {
     setOpenKeys((prev) => {
@@ -52,7 +53,7 @@ export default function HelpPanel({ onClose, openChapter }) {
   };
 
   const [zoek, setZoek] = useState("");
-  const allChapters = [{ key: "intro", groep: "beginnen", titel: "Welkom — zo werkt deze app", inhoud: INTRO_CONTENT }, ...HELP_CHAPTERS];
+  const allChapters = [{ key: "intro", groep: "beginnen", titel: "Welkom — zo werkt deze app", inhoud: intro }, ...chapters];
   const zoekTerm = zoek.trim().toLowerCase();
   const doorzoekbaar = useMemo(() => allChapters.map((c) => ({ c, tekst: `${c.titel} ${tekstVan(c.inhoud)}`.toLowerCase() })), []);
   const zichtbareHoofdstukken = zoekTerm ? doorzoekbaar.filter((d) => d.tekst.includes(zoekTerm)).map((d) => d.c) : allChapters;
@@ -86,7 +87,7 @@ export default function HelpPanel({ onClose, openChapter }) {
           {zoekTerm && zichtbareHoofdstukken.length === 0 && (
             <p className="px-5 py-6 text-xs text-slate-400 text-center">Geen hoofdstuk gevonden voor "{zoek}".</p>
           )}
-          {HELP_GROEPEN.map((groep) => {
+          {groepen.map((groep) => {
             const lijst = zichtbareHoofdstukken.filter((c) => c.groep === groep.key);
             if (lijst.length === 0) return null;
             return (

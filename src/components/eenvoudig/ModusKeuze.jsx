@@ -21,7 +21,7 @@ export default function ModusKeuze({ onKies, onClose, geladen = false, huidig = 
           <Kaart modus="eenvoudig" titel="Eenvoudig" tekst={soort === "prive" ? "Ik wil snel zien wat er binnenkomt en uitgaat, en waar mijn geld naartoe gaat." : "Ik wil snel zien wat ik verdiend heb en ongeveer aan belasting en BTW moet betalen."}
             punten={geladen ? ["Vier stappen", "Eén vraag tegelijk", "Uitkomst in gewone taal"] : ["Korte wizard met alleen de nodige vragen", "Daarna één vraag tegelijk", "Uitkomst in gewone taal"]} />
           <Kaart modus="uitgebreid" titel="Uitgebreid" tekst={soort === "prive" ? "Volledig overzicht met alle controles, ook voor de aangifte inkomstenbelasting." : "Volledige controle, voor de adviseur of een aangifte."}
-            punten={geladen ? ["Alle controles en instellingen", "Aangifteberekening en onderbouwing"] : ["Volledige wizard", "Alle controles en instellingen", "Aangifteberekening en onderbouwing"]} />
+            punten={[...(geladen ? [] : ["Volledige wizard"]), "Alle controles en instellingen", soort === "prive" ? "Vaste lasten, box 3 en meerdere jaren" : "Aangifteberekening en onderbouwing"]} />
         </div>
       </div>
     </div>

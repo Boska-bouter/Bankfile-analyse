@@ -66,7 +66,12 @@ function Veld({ label, value, onChange, stap = "any" }) {
   );
 }
 
-export default function TarievenJaarEditor({ activeYear, years = [], tariefOverrides, onSetTariefOverrides }) {
+// beide-V1R9 — ook voor privé: andere groepen (modus/prive/tarievenEditor.js), eigen resolve en status; een veld kan een
+// factor hebben (bijv. 100 om een fractie als percentage te tonen). Zonder die props precies het zakelijke gedrag.
+export default function TarievenJaarEditor({
+  activeYear, years = [], tariefOverrides, onSetTariefOverrides,
+  groepen = GROEPEN, resolve = resolveTariefGroep, statusVoorJaar = (j) => tariefStatusVoorJaar(j).status, toonWerkelijk = true,
+}) {
   const [open, setOpen] = useState(false);
   const [jaar, setJaar] = useState(activeYear);
   const [laatsteActief, setLaatsteActief] = useState(activeYear);
@@ -77,8 +82,8 @@ export default function TarievenJaarEditor({ activeYear, years = [], tariefOverr
   for (let y = 2020; y <= bekendMax + 3; y++) jarenLijst.push(y);
 
   const overrides = tariefOverrides || {};
-  const { status } = tariefStatusVoorJaar(jaar);
-  const statusActief = tariefStatusVoorJaar(activeYear).status;
+  const status = statusVoorJaar(jaar);
+  const statusActief = statusVoorJaar(activeYear);
 
   const zetGroep = (groep, waarde) => {
     onSetTariefOverrides({ ...overrides, [jaar]: { ...(overrides[jaar] || {}), [groep]: naarOpslag(waarde) } });
@@ -120,8 +125,8 @@ export default function TarievenJaarEditor({ activeYear, years = [], tariefOverr
             <span className={`rounded-full border px-2 py-0.5 text-[11px] ${STATUS_STIJL[status]}`}>{STATUS_TEKST[status]}</span>
           </div>
 
-          {GROEPEN.map((g) => {
-            const r = resolveTariefGroep(g.key, jaar);
+          {groepen.map((g) => {
+            const r = resolve(g.key, jaar);
             const w = r.waarde;
             return (
               <div key={g.key} className="rounded-lg border border-slate-200 p-2.5 space-y-1.5">
@@ -172,14 +177,14 @@ export default function TarievenJaarEditor({ activeYear, years = [], tariefOverr
                     ))}
                   </div>
                 )}
-                {g.velden.map(([k, label]) => (
-                  <Veld key={k} label={label} value={w[k]} onChange={(v) => zetGroep(g.key, { ...w, [k]: v })} />
+                {g.velden.map(([k, label, factor = 1]) => (
+                  <Veld key={k} label={label} value={w[k] == null ? w[k] : Math.round(w[k] * factor * 1e6) / 1e6} onChange={(v) => zetGroep(g.key, { ...w, [k]: v / factor })} />
                 ))}
               </div>
             );
           })}
 
-          <div className="rounded-lg border border-slate-200 p-2.5 space-y-1">
+          {toonWerkelijk && <div className="rounded-lg border border-slate-200 p-2.5 space-y-1">
             <p className="text-xs font-semibold text-slate-700">Werkelijke heffingskorting {jaar} (optioneel)</p>
             <label className="flex items-center justify-between gap-3 text-xs text-slate-600">
               <span>Totaal volgens aanslag (€)</span>
@@ -190,7 +195,7 @@ export default function TarievenJaarEditor({ activeYear, years = [], tariefOverr
               <button type="button" onClick={() => zetWerkelijk("")} className="text-[11px] text-slate-500 underline hover:text-slate-700">Leegmaken (weer schatten)</button>
             )}
             <p className="text-[11px] text-slate-400">Vervangt de geschatte algemene heffingskorting + arbeidskorting voor dit jaar. Leeg = geschat.</p>
-          </div>
+          </div>}
         </div>
       )}
     </div>

@@ -404,12 +404,21 @@ export async function beheerRoute(request, env, url, email) {
 // nieuw-V5R9 — akkoord met de gebruiksvoorwaarden op de server, per e-mailadres en versie. Voorheen alleen in de browser
 // (localStorage); de app die je via het beginscherm-icoon opent heeft op de iPad eigen opslag, en die raakt soms leeg.
 const VOORWAARDEN_SCHEMA = "CREATE TABLE IF NOT EXISTS voorwaarden_akkoord (email TEXT PRIMARY KEY, versie TEXT NOT NULL, tijd TEXT NOT NULL)";
+// beide-V1R9 — privé heeft eigen voorwaarden met een eigen versie; het akkoord staat per soort in dezelfde tabel
+// (kolommen versie/tijd = zakelijk, versie_prive/tijd_prive = privé). Bestaande tabellen krijgen ze via ALTER TABLE.
+async function zorgVoorVoorwaarden(db) {
+  await db.prepare(VOORWAARDEN_SCHEMA).run();
+  const bestaand = new Set(((await db.prepare("PRAGMA table_info(voorwaarden_akkoord)").all())?.results || []).map((k) => k.name));
+  for (const k of ["versie_prive", "tijd_prive"]) if (!bestaand.has(k)) await db.prepare(`ALTER TABLE voorwaarden_akkoord ADD COLUMN ${k} TEXT`).run();
+}
+// Geeft { zakelijk, prive }: de versie waarmee deze gebruiker per soort akkoord ging (of null).
 export async function voorwaardenVan(email, env) {
-  if (!email || !env.DB) return null;
+  if (!email || !env.DB) return { zakelijk: null, prive: null };
   try {
-    await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
-    return (await env.DB.prepare("SELECT versie FROM voorwaarden_akkoord WHERE email = ?").bind(String(email).toLowerCase()).first())?.versie || null;
-  } catch { return null; }
+    await zorgVoorVoorwaarden(env.DB);
+    const r = await env.DB.prepare("SELECT versie, versie_prive FROM voorwaarden_akkoord WHERE email = ?").bind(String(email).toLowerCase()).first();
+    return { zakelijk: r?.versie || null, prive: r?.versie_prive || null };
+  } catch { return { zakelijk: null, prive: null }; }
 }
 export async function voorwaardenRoute(request, env, url, email) {
   if (request.method !== "POST") return json({ ok: false, fout: "Alleen POST" }, 405);
@@ -421,9 +430,17 @@ export async function voorwaardenRoute(request, env, url, email) {
   try { body = await request.json(); } catch { /* leeg */ }
   const versie = schoon(body?.versie, 10);
   if (!versie) return json({ ok: false, fout: "Versie ontbreekt" }, 400);
-  await env.DB.prepare(VOORWAARDEN_SCHEMA).run();
-  await env.DB.prepare(`INSERT INTO voorwaarden_akkoord (email, versie, tijd) VALUES (?1, ?2, ?3)
-    ON CONFLICT(email) DO UPDATE SET versie = ?2, tijd = ?3`).bind(String(email).toLowerCase(), versie, new Date().toISOString()).run();
+  const prive = body?.soort === "prive";
+  await zorgVoorVoorwaarden(env.DB);
+  const nu = new Date().toISOString(), adres = String(email).toLowerCase();
+  // Een rij moet een zakelijke versie hebben (NOT NULL); wie alleen privé akkoord gaf, krijgt daar een lege waarde.
+  if (prive) {
+    await env.DB.prepare(`INSERT INTO voorwaarden_akkoord (email, versie, tijd, versie_prive, tijd_prive) VALUES (?1, '', ?3, ?2, ?3)
+      ON CONFLICT(email) DO UPDATE SET versie_prive = ?2, tijd_prive = ?3`).bind(adres, versie, nu).run();
+  } else {
+    await env.DB.prepare(`INSERT INTO voorwaarden_akkoord (email, versie, tijd) VALUES (?1, ?2, ?3)
+      ON CONFLICT(email) DO UPDATE SET versie = ?2, tijd = ?3`).bind(adres, versie, nu).run();
+  }
   return json({ ok: true });
 }
 

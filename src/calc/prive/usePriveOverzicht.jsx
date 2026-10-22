@@ -11,15 +11,17 @@ export function berekenPriveOverzicht({ transacties, jaren, vasteCategorieen, an
     const budget = budgetJaar(transacties, jaar, vasteCategorieen);
     const { invoer, aannames } = priveBelastingInvoer({ transacties, jaar, budget, antwoorden, eenvoudig });
     const belasting = berekenPriveJaar(invoer, jaar);
-    if (belasting.tariefStatus === "benadering") aannames.push(`Voor ${jaar} zijn nog niet alle tarieven bekend: gerekend met die van een eerder jaar.`);
+    if (belasting.tariefStatus === "benadering") aannames.push(`Voor ${jaar} zijn nog niet alle tarieven bekend: gerekend met die van een eerder jaar. Je kunt ze aanpassen bij Instellingen → Tarieven en bedragen.`);
     perJaar[jaar] = { budget, invoer, belasting, aannames };
   }
   return { perJaar };
 }
 
-export function usePriveOverzicht({ actief, transacties, jaren, vasteCategorieen, antwoorden, eenvoudig }) {
+// tarieven: alleen als afhankelijkheid (eigen tarieven staan in het register van incomeTax.js), zodat de uitkomst
+// opnieuw wordt berekend na een wijziging in Instellingen → Tarieven.
+export function usePriveOverzicht({ actief, transacties, jaren, vasteCategorieen, antwoorden, eenvoudig, tarieven }) {
   return useMemo(
     () => (actief ? berekenPriveOverzicht({ transacties, jaren, vasteCategorieen, antwoorden, eenvoudig }) : null),
-    [actief, transacties, jaren, vasteCategorieen, antwoorden, eenvoudig],
+    [actief, transacties, jaren, vasteCategorieen, antwoorden, eenvoudig, tarieven], // eslint-disable-line react-hooks/exhaustive-deps
   );
 }

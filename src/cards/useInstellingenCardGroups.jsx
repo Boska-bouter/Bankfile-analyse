@@ -27,6 +27,7 @@ export function useInstellingenCardGroups(p) {
     setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, setFixedCategoriesWithUndo, setHelpPopupChapter, setIncomeRate,
     setKorRegelingWithUndo, setMeerdereTarievenBevestigd, setOverridesByCounterpartyWithUndo, snapshotBeforeAction, startersaftrekStatus,
     transactions, withExpand, yearlySummary, zaLegacyJaDefault, zelfstandigenaftrekStatus,
+    tarievenEditor = null, // beide-V1R9 — privé: tarieven en bedragen als eigen kaart (in zakelijk staan ze bij Persoonlijke aannames)
   } = p;
 
   return useMemo(() => {
@@ -133,6 +134,11 @@ export function useInstellingenCardGroups(p) {
           <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
         </div>
       ),
+      tarievenEditor && withExpand(
+        { key: "tarieven", title: "Tarieven en bedragen", icon: <CardIcon name="settings" />, tone: "neutral", subtitle: "Belastingtarieven per jaar; eigen waarden invullen", hint: "Naar de tarieven" },
+        "tarieven",
+        <div className="space-y-3">{tarievenEditor}</div>
+      ),
     ].filter(Boolean);
   }, [
     dossierProfiel,
@@ -182,5 +188,6 @@ export function useInstellingenCardGroups(p) {
     businessExpenseKeywords,
     businessExpenseEntries,
     expandedBusinessExpenseList,
+    tarievenEditor,
   ]);
 }

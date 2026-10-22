@@ -402,7 +402,7 @@ export default function EenvoudigeApp({
           </div>
         </div>
       )}
-      {uitleg && <UitlegEenvoudig eersteKeer={uitleg === "eerste"} onClose={sluitUitleg} />}
+      {uitleg && <UitlegEenvoudig eersteKeer={uitleg === "eerste"} onClose={sluitUitleg} Inhoud={teksten?.uitleg} />}
       {antwoordenOpen && <MijnAntwoorden lijst={antwoordenLijst} gekozenKeys={gekozenKeys} jaar={jaar} onWijzig={onWijzigAntwoord} onWis={onWisAntwoord} onClose={() => setAntwoordenOpen(false)} />}
     </div>
   );

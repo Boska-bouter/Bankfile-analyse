@@ -74,7 +74,10 @@ import WijzigingslogModal from "./components/shared/WijzigingslogModal.jsx";
 import HelpPanel from "./components/shared/HelpPanel.jsx";
 import FeedbackModal from "./components/shared/FeedbackModal.jsx";
 import VoorwaardenScherm from "./components/shared/VoorwaardenScherm.jsx";
-import { VOORWAARDEN_VERSIE, VOORWAARDEN_SLEUTEL } from "./content/voorwaarden.jsx";
+import { useVoorwaarden } from "./dossier/useVoorwaarden.js";
+import { helpVoorSoort } from "./content/helpPrive.jsx";
+import TarievenJaarEditor from "./components/overview/TarievenJaarEditor.jsx";
+import { PRIVE_TARIEF_GROEPEN, resolvePriveTarief, priveTarievenStatus } from "./modus/prive/tarievenEditor.js";
 import { APP_RELEASE } from "./version.js";
 import { VEILIG_KORT } from "./content/veiligheid.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
@@ -290,7 +293,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, soorten: rechtenPerSoort, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
   const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
@@ -988,32 +991,8 @@ export default function App() {
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false); // true, of { onderwerp, bericht } om voor te vullen
   const pendingProjectRef = useRef(null);
-  // Gebruiksvoorwaarden: één keer per gebruiker (e-mailadres van de Cloudflare-inlog) per apparaat/browser, en opnieuw
-  // bij een nieuwe versie van de tekst. nieuw-V2R3 — voorheen per browser: wie op hetzelfde apparaat met een ander
-  // account inlogde, kreeg de voorwaarden niet te zien. Is het adres (nog) onbekend, dan geldt de algemene sleutel.
-  const voorwaardenSleutel = ingelogdAls ? `${VOORWAARDEN_SLEUTEL}:${ingelogdAls}` : VOORWAARDEN_SLEUTEL;
-  const [voorwaardenTik, setVoorwaardenTik] = useState(0);
-  // nieuw-V5R9 — het akkoord staat ook op de server (per e-mailadres), zodat het niet verloren gaat als de browseropslag
-  // leeg is, zoals bij de app vanaf het beginscherm-icoon op de iPad. Lokaal akkoord dat de server nog niet kent, wordt
-  // alsnog doorgegeven.
-  const lokaalAkkoord = useMemo(() => {
-    try { return localStorage.getItem(voorwaardenSleutel) === VOORWAARDEN_VERSIE; } catch { return false; }
-  }, [voorwaardenSleutel, voorwaardenTik]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [akkoordNu, setAkkoordNu] = useState(false);
-  const voorwaardenOk = lokaalAkkoord || akkoordNu || (!!ingelogdAls && voorwaardenServer === VOORWAARDEN_VERSIE);
-  const meldAkkoordAanServer = () => {
-    if (!ingelogdAls) return;
-    fetch("/api/voorwaarden", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ versie: VOORWAARDEN_VERSIE }) }).catch(() => {});
-  };
-  useEffect(() => {
-    if (rolStatus !== "laden" && lokaalAkkoord && ingelogdAls && voorwaardenServer !== VOORWAARDEN_VERSIE) meldAkkoordAanServer();
-  }, [rolStatus, lokaalAkkoord, ingelogdAls, voorwaardenServer]); // eslint-disable-line react-hooks/exhaustive-deps
-  const akkoordVoorwaarden = () => {
-    try { localStorage.setItem(voorwaardenSleutel, VOORWAARDEN_VERSIE); } catch { /* geen opslag: de server onthoudt het */ }
-    meldAkkoordAanServer();
-    setAkkoordNu(true);
-    setVoorwaardenTik((t) => t + 1);
-  };
+  // Gebruiksvoorwaarden per soort (zakelijk/privé), zie dossier/useVoorwaarden.js (beide-V1R9).
+  const voorwaarden = useVoorwaarden({ email: ingelogdAls, rolStatus, soorten: rechtenPerSoort, server: { zakelijk: voorwaardenServer, prive: voorwaardenPriveServer } });
   // Startscherm (verder / nieuw / laden). release22V8 — niet meer één keer per tabblad (op de iPad blijft
   // dat tabblad open, dus kwam de vraag na het heropenen niet meer), maar zodra de app langer dan 60
   // minuten niet gebruikt is. Een snelle herlading (bijv. na de nieuwe inlog bij Cloudflare of een update)
@@ -2683,7 +2662,7 @@ export default function App() {
     [yearlySummary, activeYear, tariefOverrides, overigInkomenBox1]
   );
   // beide-V1R8 (fase 5) — privédossier: budget en belastingindicatie per jaar (calc/prive, tax/prive).
-  const priveOverzicht = usePriveOverzicht({ actief: modus.berekening === "prive", transacties: classified, jaren: years, vasteCategorieen: fixedCategories, antwoorden: priveAntwoorden, eenvoudig: eenvoudigActief });
+  const priveOverzicht = usePriveOverzicht({ actief: modus.berekening === "prive", transacties: classified, jaren: years, vasteCategorieen: fixedCategories, antwoorden: priveAntwoorden, eenvoudig: eenvoudigActief, tarieven: tariefOverrides });
   const yearlySummaries = useYearlySummaries({
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, energieZakelijkPercentageStatus,
@@ -3208,6 +3187,7 @@ export default function App() {
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
+    tarievenEditor: modus.berekening === "prive" ? <TarievenJaarEditor activeYear={activeYear} years={years} tariefOverrides={tariefOverrides} onSetTariefOverrides={setTariefOverridesState} groepen={PRIVE_TARIEF_GROEPEN} resolve={resolvePriveTarief} statusVoorJaar={priveTarievenStatus} toonWerkelijk={false} /> : null,
     activaDetails, activaSummary, activeYear, addBusinessExpenseKeyword, addBusinessKeyword,
     autoStatus, autoWizardStatus, automatiseringSectionRef, btwSettingsSectionRef, btwVerlegd,
     businessExpenseEntries, businessExpenseKeywords, businessIncomeEntries, businessKeywords, categorieTotalenActiveYear,
@@ -3704,7 +3684,7 @@ export default function App() {
   // nieuw-V5R2 — eerst wachten tot bekend is wie er is ingelogd. Anders gold kort het adres van de vorige gebruiker op dit
   // apparaat: het startscherm verscheen en de voorwaarden van de nieuwe gebruiker kwamen er pas daarna overheen.
   if (rolStatus === "laden") return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-sm text-slate-500">Bezig met laden…</div>;
-  if (!voorwaardenOk) return <VoorwaardenScherm onAkkoord={akkoordVoorwaarden} />;
+  if (!voorwaarden.ok) return <VoorwaardenScherm soorten={voorwaarden.ontbrekend} onAkkoord={voorwaarden.akkoord} />;
 
   if (showStartupChoice) {
     const pending = pendingProjectRef.current;
@@ -4038,7 +4018,7 @@ export default function App() {
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => (modus.wizard ? setManualWizardOpen(true) : setBasisEenvoudigOpen(true))}
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onMaandoverzicht={magUitgebreid && activeYear && !priveOverzicht ? () => setShowInkomenPerMaand(true) : null}
-            teksten={priveOverzicht ? PRIVE_EENVOUDIG : null}
+            teksten={modus.berekening === "prive" ? PRIVE_EENVOUDIG : null}
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
@@ -4201,9 +4181,9 @@ export default function App() {
           </div>
         </div>
 
-        {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
+        {showHelp && <HelpPanel {...helpVoorSoort(modus.soort)} onClose={() => setShowHelp(false)} />}
 
-        {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} onClose={() => setHelpPopupChapter(null)} />}
+        {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} chapters={helpVoorSoort(modus.soort).chapters} onClose={() => setHelpPopupChapter(null)} />}
 
         {pendingCategoryChange && (
           <CategoryChangeScopeModal

@@ -9,7 +9,8 @@ const Keuze = ({ titel, children }) => (
   <li className="rounded-lg bg-slate-50 px-3 py-2"><b className="text-slate-900">{titel}</b><span className="block text-slate-600">{children}</span></li>
 );
 
-export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
+// beide-V1R9 — Inhoud: andere uitleg (privédossier: content/uitlegEenvoudigPrive.jsx); zonder Inhoud de zakelijke tekst.
+export default function UitlegEenvoudig({ onClose, eersteKeer = false, Inhoud = null }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl" style={{ maxHeight: "calc(100dvh - 2rem)" }}>
@@ -18,6 +19,7 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
           <button type="button" onClick={onClose} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" /> Sluiten</button>
         </div>
         <div className="overflow-y-auto px-5 pb-5 pt-2">
+          {Inhoud ? <Inhoud /> : <>
           <P>Met deze app zie je op basis van je bankafschriften <b>wat je bedrijf heeft verdiend</b>, <b>hoeveel belasting</b> je ongeveer moet betalen en <b>hoeveel BTW</b> per kwartaal. Je doorloopt vier stappen. Je kunt altijd stoppen; alles wat je doet wordt direct bewaard op dit apparaat.</P>
 
           <H>Stap 1 · Gegevens</H>
@@ -67,6 +69,7 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
 
           <H>Hulp nodig?</H>
           <P>Gebruik de knop <b>Hulpvraag of feedback</b> rechtsonder. Twijfel je over je belasting of over een boeking, vraag het dan ook je adviseur.</P>
+          </>}
         </div>
         <div className="border-t border-slate-200 px-5 py-3 text-right">
           <button type="button" onClick={onClose} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">{eersteKeer ? "Begrepen, aan de slag" : "Sluiten"}</button>

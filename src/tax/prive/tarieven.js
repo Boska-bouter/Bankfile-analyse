@@ -4,6 +4,8 @@
 // Alles is indicatief: check jaarlijks of de bedragen nog kloppen. Een jaar zonder eigen regel gebruikt het
 // dichtstbijzijnde eerdere jaar (status "benadering"), net als bij de zakelijke tarieven.
 
+import { tariefOverride } from "../incomeTax.js";
+
 // Box 1 voor wie de AOW-leeftijd heeft: geen AOW-premie (17,90%) in de eerste schijf, met een eigen grens.
 export const AOW_SCHIJF_BY_YEAR = {
   2020: { tot: 34712, tarief: 0.1945 },
@@ -64,17 +66,23 @@ export const AFTREK_BY_YEAR = {
 
 const TABELLEN = { aow: AOW_SCHIJF_BY_YEAR, ouderen: OUDERENKORTING_BY_YEAR, woning: EIGEN_WONING_BY_YEAR, box3: BOX3_BY_YEAR, aftrek: AFTREK_BY_YEAR };
 
-// → { waarde, status: "standaard" | "benadering", bronJaar }
+// → { waarde, status: "standaard" | "benadering" | "aangepast", bronJaar }. Eigen waarden (Instellingen → Tarieven)
+// staan in tariefOverrides[jaar]["prive_" + groep] en winnen altijd (beide-V1R9).
 export function priveTarief(groep, jaar) {
   const tabel = TABELLEN[groep];
-  if (tabel[jaar]) return { waarde: tabel[jaar], status: "standaard", bronJaar: jaar };
   const jaren = Object.keys(tabel).map(Number).sort((a, b) => a - b);
-  const lager = jaren.filter((j) => j < jaar);
-  const bronJaar = lager.length ? lager[lager.length - 1] : jaren[0];
-  return { waarde: tabel[bronJaar], status: "benadering", bronJaar };
+  const lager = jaren.filter((j) => j <= jaar);
+  const bronJaar = tabel[jaar] ? jaar : lager.length ? lager[lager.length - 1] : jaren[0];
+  const eigen = tariefOverride(jaar, `prive_${groep}`);
+  if (eigen) return { waarde: { ...tabel[bronJaar], ...eigen }, status: "aangepast", bronJaar };
+  return { waarde: tabel[bronJaar], status: bronJaar === jaar ? "standaard" : "benadering", bronJaar };
 }
 
+export const PRIVE_TARIEF_GROEPEN_KEYS = Object.keys(TABELLEN);
+
 export function priveTariefStatus(jaar) {
-  const benaderd = Object.keys(TABELLEN).filter((g) => priveTarief(g, jaar).status === "benadering");
-  return { status: benaderd.length ? "benadering" : "standaard", benaderd };
+  const per = PRIVE_TARIEF_GROEPEN_KEYS.map((g) => [g, priveTarief(g, jaar).status]);
+  const benaderd = per.filter(([, st]) => st === "benadering").map(([g]) => g);
+  const status = per.some(([, st]) => st === "aangepast") ? "aangepast" : benaderd.length ? "benadering" : "standaard";
+  return { status, benaderd };
 }
