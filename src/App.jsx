@@ -76,6 +76,7 @@ import FeedbackModal from "./components/shared/FeedbackModal.jsx";
 import VoorwaardenScherm from "./components/shared/VoorwaardenScherm.jsx";
 import { VOORWAARDEN_VERSIE, VOORWAARDEN_SLEUTEL } from "./content/voorwaarden.jsx";
 import { APP_RELEASE } from "./version.js";
+import { VEILIG_KORT } from "./content/veiligheid.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
@@ -114,6 +115,7 @@ import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
+import { useDossierSoort, rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -277,7 +279,10 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreid, email: ingelogdAls, status: rolStatus, koppelen: magKoppelen, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, zetAanvraag, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, soorten: rechtenPerSoort, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
+  const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
+  const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -285,7 +290,9 @@ export default function App() {
   const [eenvoudigGezien, setEenvoudigGezien] = useState({});
   const [overgeslagenMelding, setOvergeslagenMelding] = useState(false);
   const [modusNaLaden, setModusNaLaden] = useState(null); // na "Dossier laden": weergave zoals opgeslagen, ter keuze
-  const startNieuwDossierWizard = () => (magUitgebreid ? setModusKeuzeOpen(true) : kiesModus("eenvoudig"));
+  // beide-V1R2 — eerst zakelijk of privé (zie modus/useDossierSoort.jsx), daarna Eenvoudig of Uitgebreid.
+  const startNieuwDossierWizard = () => dossierSoortKeuze.startMetSoort((s) =>
+    (rechtVoorSoort(rechtenPerSoort, s, "uitgebreid", magUitgebreidAccount) ? setModusKeuzeOpen(true) : kiesModus("eenvoudig")));
   const kiesModus = (m) => { setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht"); setManualWizardOpen(true); };
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
   // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
@@ -3165,12 +3172,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus]
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
@@ -3372,14 +3379,20 @@ export default function App() {
   })();
   // release20V10 — dialoog voor het (extra) bankbestand als losse functie, zodat ook de knop in de
   // zijbalk bij een leeg dossier (wizard doorlopen zonder bestand) en stap 1 "Import" hem gebruiken.
+  // beide-V1R2 — in een privédossier zijn alle rekeningen privé: dan niet naar het type vragen (profiel: modus.rekeningen).
+  const kiesBestand = (type) => { pendingAccountTypeRef.current = type; bankFileInputRef.current?.click(); };
   const startBankbestandToevoegen = () =>
     setDialog({
       title: parsedFiles.length > 0 ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen",
-      message: <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>,
+      message: modus.rekeningen.vraagSoort
+        ? <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>
+        : <p>Kies een of meer bankbestanden (CSV, MT940 of CAMT), of haal je transacties rechtstreeks bij je bank op.</p>,
       actions: [
-        { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
-        { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
-        { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
+        ...(modus.rekeningen.vraagSoort ? [
+          { label: "Zakelijke rekening", variant: "primary", onClick: () => kiesBestand("Zakelijk") },
+          { label: "Privérekening", variant: "primary", onClick: () => kiesBestand("Prive") },
+          { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => kiesBestand(null) },
+        ] : [{ label: "Bankbestand kiezen", variant: "primary", onClick: () => kiesBestand(modus.rekeningen.standaard) }]),
         { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
       ],
     });
@@ -3620,6 +3633,10 @@ export default function App() {
   };
   const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
   const doClearAllData = (askWizard = false) => wisDossier(dossierCtx, askWizard);
+  const dossierSoortKeuze = useDossierSoort({
+    soorten: rechtenPerSoort, soortDossier, setSoortDossier, heeftDossier: parsedFiles.length > 0 || !!loadedProjectFileName,
+    setDialog, onNieuwDossier: () => { setDialog(null); doClearAllData(true); },
+  });
 
   // ---- Dossier laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
   // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
@@ -3732,6 +3749,7 @@ export default function App() {
               oude dossier in deze browser overschreven.
             </p>
           )}
+          <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950"><strong>Pas op voor oplichting.</strong> {VEILIG_KORT}</p>
           <p className="text-xs text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
             <br />
@@ -3815,6 +3833,7 @@ export default function App() {
         onEenvoudig={() => setWeergave("eenvoudig")} // nieuw-V2R6 — ook zonder bankbestanden (Eenvoudig werkt nu ook leeg)
         weergave={weergave}
         rekeninghouderNaam={eigenNamen?.ondernemer}
+        dossierSoortNaam={dossierSoortKeuze.meerdereSoorten || modus.soort !== "zakelijk" ? `${modus.naam} dossier` : null}
         onEditRekeninghouder={() => setShowRekeninghouderModal(true)}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -3957,8 +3976,9 @@ export default function App() {
             <button type="button" onClick={() => setOvergeslagenMelding(false)} className="rounded-lg px-2 py-1.5 text-xs text-sky-800 underline">Later</button>
           </div>
         )}
-        {modusKeuzeOpen && <ModusKeuze onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
-        {modusNaLaden && <ModusKeuze geladen huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); setWeergave(m); }} onClose={() => setModusNaLaden(null)} />}
+        {dossierSoortKeuze.keuze}
+        {modusKeuzeOpen && <ModusKeuze soort={soortDossier} onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
+        {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); setWeergave(m); }} onClose={() => setModusNaLaden(null)} />}
         {basisEenvoudigOpen && eenvoudigActief && (
           <BasisvragenEenvoudig
             jaar={activeYear} eigenNamen={eigenNamen} setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
@@ -4247,6 +4267,7 @@ export default function App() {
                 autoWizardStatus={autoWizardStatus} verwachteLease={verwachteLease} verwachteLeaseOverig={verwachteLeaseOverig} verwachteLening={verwachteLening} verwachteAOV={verwachteAOV} heeftVoorraad={heeftVoorraad}
                 eigenRekeningenExtra={eigenRekeningenExtra} zakelijkeSpaarRekening={zakelijkeSpaarRekening} opdrachtgeversGevraagd={opdrachtgeversGevraagd}
                 onBewerken={() => setManualWizardOpen(true)} onBankbestand={startBankbestandToevoegen}
+                onderdelen={modus.onderdelen}
             />
           </div>
         )}
@@ -4307,7 +4328,7 @@ export default function App() {
             importBezig={importBezig}
             importFout={error}
             importHerladen={importHerladen}
-            onPickFiles={() => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); }}
+            onPickFiles={() => { pendingAccountTypeRef.current = modus.rekeningen.standaard; bankFileInputRef.current?.click(); }}
             onKoppelen={startKoppelen}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
@@ -4447,6 +4468,7 @@ export default function App() {
                 autoWizardStatus={autoWizardStatus} verwachteLease={verwachteLease} verwachteLeaseOverig={verwachteLeaseOverig} verwachteLening={verwachteLening} verwachteAOV={verwachteAOV} heeftVoorraad={heeftVoorraad}
                 eigenRekeningenExtra={eigenRekeningenExtra} zakelijkeSpaarRekening={zakelijkeSpaarRekening} opdrachtgeversGevraagd={opdrachtgeversGevraagd}
                 onBewerken={() => setManualWizardOpen(true)} onBankbestand={startBankbestandToevoegen}
+                onderdelen={modus.onderdelen}
             />
           </div>
         )}

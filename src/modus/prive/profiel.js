@@ -12,6 +12,8 @@ export const PRIVE_PROFIEL = Object.freeze({
     controleren: ["importControle", "confidence", "personReview", "overigReview", "duplicates"],
     instellingen: ["aannames"],
   }),
+  // Rekeningen: in privé is elke rekening privé; niet vragen.
+  rekeningen: Object.freeze({ vraagSoort: false, standaard: "Prive" }),
   berekening: "prive", // fase 5: tax/prive/
   rapport: "prive", // fase 7: reports/aangiftevoorstel-prive.js
   onderdelen: Object.freeze({

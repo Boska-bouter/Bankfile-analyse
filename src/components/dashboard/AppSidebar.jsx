@@ -65,6 +65,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
 export default function AppSidebar({
   orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
+  dossierSoortNaam = null, // beide-V1R2 — "Zakelijk dossier" / "Privé dossier" (alleen getoond als dat iets zegt)
   onEditRekeninghouder,
   onEenvoudig,
   weergave,
@@ -169,6 +170,7 @@ export default function AppSidebar({
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
+        {dossierSoortNaam && <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">{dossierSoortNaam}</span>}
         {rekeninghouderNaam ? (
           <div className="flex flex-col gap-0.5">
             <span className="text-slate-400 text-xs">Rekeninghouder</span>

@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { VEILIG_INHOUD } from "../../content/veiligheid.jsx";
 
 // nieuw-V3R0 — handleiding van de eenvoudige weergave, in gewone taal. Opent de eerste keer vanzelf (per gebruiker),
 // daarna via de knop "Uitleg" in de bovenbalk.
@@ -60,6 +61,9 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false }) {
 
           <H>Stap 4 · Bewaren</H>
           <P>Je werk staat al op dit apparaat. Met <b>Dossier opslaan</b> maak je een bestand dat je ergens anders bewaart of op een ander apparaat weer opent (via Dossier → Dossier laden). Doe dat regelmatig, zeker voordat je een nieuw dossier begint.</P>
+
+          <H>Pas op voor oplichting</H>
+          <div className="mb-2 space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">{VEILIG_INHOUD}</div>
 
           <H>Hulp nodig?</H>
           <P>Gebruik de knop <b>Hulpvraag of feedback</b> rechtsonder. Twijfel je over je belasting of over een boeking, vraag het dan ook je adviseur.</P>

@@ -13,7 +13,10 @@ export default function VastgelegdeBasisgegevens({
   autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
   eigenRekeningenExtra, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
   onBewerken, onBankbestand,
+  onderdelen = null, // beide-V1R2: onderdelen uit het dossierprofiel; null = zakelijk (alles aan)
 }) {
+  const aan = (k) => !onderdelen || onderdelen[k] !== false;
+  const prive = !aan("omzet");
   const isBV = rechtsvorm === "bv";
   const autoTekst = (() => {
     const s = autoWizardStatus?.status;
@@ -36,13 +39,27 @@ export default function VastgelegdeBasisgegevens({
     ? null
     : eigenRekeningenExtra.length === 0
       ? "Geen"
-      : eigenRekeningenExtra.map((r) => `${r.iban || "zonder nummer"} (${r.accountType === "Zakelijk" ? "zakelijk" : "privé"}${r.soort === "spaar" ? ", spaar" : ""})`).join(", ");
+      : eigenRekeningenExtra.map((r) => {
+          const kenmerken = [!prive && (r.accountType === "Zakelijk" ? "zakelijk" : "privé"), r.soort === "spaar" && "spaar"].filter(Boolean);
+          return `${r.iban || "zonder nummer"}${kenmerken.length ? ` (${kenmerken.join(", ")})` : ""}`;
+        }).join(", ");
+  const rekeninghouder = eigenNamen === null ? null : [eigenNamen?.ondernemer, eigenNamen?.partner && `partner: ${eigenNamen.partner}`].filter(Boolean).join(" · ") || "Niet ingevuld";
 
-  const groepen = [
+  // Privé: geen onderneming/auto-vragen, wel huishouden en rekeningen (privéspaarrekening).
+  const groepen = prive ? [
+    { titel: "Huishouden", rijen: [["Rekeninghouder", rekeninghouder]] },
+    {
+      titel: "Rekeningen",
+      rijen: [
+        ["Andere eigen rekeningen", rekeningenTekst],
+        ["Spaarrekening", zakelijkeSpaarRekening?.priveStatus ? (zakelijkeSpaarRekening.priveStatus === "ja" ? `Ja${zakelijkeSpaarRekening.priveNaam ? ` (${zakelijkeSpaarRekening.priveNaam})` : ""}` : "Nee") : null],
+      ],
+    },
+  ] : [
     {
       titel: "Onderneming",
       rijen: [
-        ["Rekeninghouder", eigenNamen === null ? null : [eigenNamen?.ondernemer, eigenNamen?.partner && `partner: ${eigenNamen.partner}`].filter(Boolean).join(" · ") || "Niet ingevuld"],
+        ["Rekeninghouder", rekeninghouder],
         ["Rechtsvorm", rechtsvorm == null ? null : isBV ? "BV" : "Eenmanszaak/zzp"],
         ...(isBV ? [["Holding", jaNee(heeftHolding, "Ja, holding + werkmaatschappij", "Nee")]] : []),
         ...(!isBV ? [["KOR", jaNee(korRegeling)], ["BTW verlegd", jaNee(btwVerlegd)]] : []),
@@ -76,8 +93,12 @@ export default function VastgelegdeBasisgegevens({
         <h2 className="text-base font-semibold text-slate-900">Wat al vastligt</h2>
         <p className="text-sm text-slate-500 mt-0.5">
           {modus === "controleren"
-            ? "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn je antwoorden uit de wizard; na de import controleert de app de transacties hiertegen (bijv. of de opgegeven lease en leningen ook echt in de bank staan)."
-            : "Er is nog geen bankbestand. Dit zijn je antwoorden uit de wizard. Instellingen per jaar (urencriterium, startersaftrek, werkruimte, BTW-kwartalen) komen na de import."}
+            ? (prive
+              ? "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn je antwoorden uit de wizard; na de import controleert de app de transacties hiertegen."
+              : "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn je antwoorden uit de wizard; na de import controleert de app de transacties hiertegen (bijv. of de opgegeven lease en leningen ook echt in de bank staan).")
+            : prive
+              ? "Er is nog geen bankbestand. Dit zijn je antwoorden uit de wizard. Instellingen per jaar komen na de import."
+              : "Er is nog geen bankbestand. Dit zijn je antwoorden uit de wizard. Instellingen per jaar (urencriterium, startersaftrek, werkruimte, BTW-kwartalen) komen na de import."}
         </p>
       </div>
 

@@ -12,6 +12,8 @@ export const ZAKELIJK_PROFIEL = Object.freeze({
   // null = alle bestaande kaarten in de bestaande volgorde. Een lijst met sleutels = alleen die, in die volgorde.
   kaarten: Object.freeze({ overzicht: null, controleren: null, instellingen: null }),
   // Rekenmodule voor jaar- en maandcijfers: de bestaande (tax/yearlySummary.js, tax/incomeTax.js, calc/inkomenPerMaand.js).
+  // Rekeningen: bij een bankbestand vragen of het zakelijk of privé is.
+  rekeningen: Object.freeze({ vraagSoort: true, standaard: null }),
   berekening: "zakelijk",
   // Secties in aangiftevoorstel, print en Excel: de bestaande rapporten (reports/aangiftevoorstel*.js).
   rapport: "zakelijk",
