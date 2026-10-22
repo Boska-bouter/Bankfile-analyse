@@ -3214,7 +3214,8 @@ export default function App() {
     const voeg = (key, label, open) => { if (open) lijst.push({ key, label }); };
     voeg("naam", "Naam rekeninghouder", eigenNamen === null);
     voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
-    voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null);
+    // nieuw-V6R9 — ook beantwoord als de auto per jaar is ingevuld (Persoonlijke aannames), zoals in oudere dossiers.
+    voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null && leeg(autoStatus));
     voeg("lease", "Leaseauto", verwachteLease === null);
     voeg("leaseOverig", "Overige lease", verwachteLeaseOverig === null);
     voeg("lening", "Leningen", verwachteLening === null);
@@ -3765,14 +3766,15 @@ export default function App() {
     setWeergave("uitgebreid");
   };
   // Vragen die de verkorte wizard (Eenvoudig) overslaat en die nog open staan.
+  // nieuw-V6R9 — overige lease, voorraad, AOV en overig inkomen staan al op de kaart "Nog niet beantwoord";
+  // hier alleen wat daar niet staat, zodat dezelfde vraag niet twee keer als open wordt gemeld.
   const overgeslagenInEenvoudig = [
     (eigenRekeningenExtra === null || zakelijkeSpaarRekening === null) && "andere eigen rekeningen",
     opdrachtgeversGevraagd === null && "klanten en leveranciers",
-    !bevestigdeControles?.activaWizard && "machines en apparatuur",
-    verwachteLeaseOverig === null && "overige lease",
-    heeftVoorraad === null && "voorraad",
-    verwachteAOV === null && "AOV",
-    rechtsvorm !== "bv" && years.length > 0 && Object.keys(overigInkomenBox1 || {}).length === 0 && "overig inkomen",
+    // nieuw-V6R9 — de machinevraag geldt alleen als overgeslagen als de volledige wizard nooit is doorlopen
+    // (dan is ook de klantenvraag nog open) en er geen bedrijfsmiddelen zijn. Oudere, in Uitgebreid gemaakte
+    // dossiers hebben de vlag activaWizard niet; daar kwam de vraag na elke wissel ten onrechte terug.
+    !bevestigdeControles?.activaWizard && opdrachtgeversGevraagd === null && activaSummary.length === 0 && Object.keys(autoActivaDetails || {}).length === 0 && "machines en apparatuur",
   ].filter(Boolean);
   // nieuw-V1R04 — zelfde keuzelijsten per jaar ook in het Basisvragen-venster van de eenvoudige weergave.
   const jaarKeuzelijsten = (card) => (
