@@ -38,7 +38,7 @@ const EXTRA_KOLOMMEN = [
 export const PLAN_UITLEG = {
   eenvoudig: "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting.",
   uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven.",
-  koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
+  koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
 };
 export const PLANNEN = {
   eenvoudig: "Eenvoudig",
@@ -221,7 +221,7 @@ export function aanmeldPagina(email, r, env = {}) {
       <span><b>${v}</b> <span class="prijs">${prijsTekst(prijs[k])}</span><small>${{
         eenvoudig: "In vier stappen je bankbestanden indelen en een indicatie van je btw- en inkomstenbelasting.",
         uitgebreid: "Alle tabbladen, controles, aangifteberekening en maandoverzicht.",
-        koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
+        koppelen: "Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
       }[k]}</small></span></label>`).join("");
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
     ? `<p class="melding">Je aanvraag voor <b>${esc(PLANNEN[r.aanvraag])}</b> is ontvangen${r.aangevraagd ? ` op ${esc(new Date(r.aangevraagd).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" }))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail met een knop om in te loggen. Je kunt dit tabblad nu sluiten. Wil je toch een ander abonnement, kies het dan hieronder.</p>`

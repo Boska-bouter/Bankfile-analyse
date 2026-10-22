@@ -168,6 +168,7 @@ import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
+import { BANKKOPPELING_STATUS } from "./content/bankkoppelingStatus.jsx";
 
 // nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
 // laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
@@ -3377,7 +3378,7 @@ export default function App() {
         { label: "Zakelijke rekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Zakelijk"; bankFileInputRef.current?.click(); } },
         { label: "Privérekening", variant: "primary", onClick: () => { pendingAccountTypeRef.current = "Prive"; bankFileInputRef.current?.click(); } },
         { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => { pendingAccountTypeRef.current = null; bankFileInputRef.current?.click(); } },
-        { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
+        { label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen },
       ],
     });
   // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
@@ -3397,6 +3398,7 @@ export default function App() {
     title: "Uitgebreid aanvragen",
     message: <>
       <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht. Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op.</p>
+      <p className="text-amber-800">{BANKKOPPELING_STATUS}</p>
       {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
     </>,
     actions: [
@@ -3411,7 +3413,7 @@ export default function App() {
     if (magUitgebreid && !magKoppelen) {
       setDialog({
         title: "Bankkoppeling",
-        message: <p>De rechtstreekse bankkoppeling staat (nog) niet aan voor jouw account. Je kunt wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+        message: <p>{BANKKOPPELING_STATUS}</p>,
         actions: [],
       });
       return;

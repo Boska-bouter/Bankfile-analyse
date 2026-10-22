@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, KNOP_PRIMAIR_KLEIN, VELD, VELD_KLEIN } from "../ui/stijl.js";
 import { transactiesNaarRijen, voegRijenSamen, rijenNaarParsedFile } from "../../importers/enableBanking.js";
+import { BankkoppelingStatus } from "../../content/bankkoppelingStatus.jsx";
 
 // nieuw-V3R8 — rechtstreekse bankkoppeling (proef, via Enable Banking en de Worker-routes /api/bank/*).
 // nieuw-V4R0 — koppelingen (bank, rekeningen, versleuteld koppeltoken) horen bij het dossier en gaan mee met opslaan en
@@ -161,8 +162,9 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   };
 
   return (
-    <ModalShell title="Rechtstreeks koppelen met de bank (proef)" onClose={onClose} maxWidth="max-w-2xl">
+    <ModalShell title="Rechtstreeks koppelen met de bank (in ontwikkeling)" onClose={onClose} maxWidth="max-w-2xl">
       <div className="space-y-5 text-sm text-slate-700">
+        <BankkoppelingStatus />
         {isPonto ? (
           <p className="text-slate-500">
             Je logt in bij Ponto (een dienst van Isabel Group met een PSD2-vergunning) en kiest daar je bank en de
