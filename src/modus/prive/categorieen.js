@@ -105,6 +105,7 @@ export const PRIVE_REGELS = Object.freeze([
   { naam: "Pensioen & AOW", alleenInkomen: true, woorden: [
     " aow", "aow-uitkering", "aow uitkering", "ouderdomspensioen", "pensioenuitkering", "pensioenfonds", " abp", "pfzw",
     "pensioenfonds zorg", " pmt ", " pme ", "bpfbouw", "bpf bouw", "pensioenfonds metaal", " anw ", "nabestaandenpensioen",
+    "pensioen", " pensio ", "pensioenen", "pensioen uitvoering", "svb ",
   ] },
   { naam: "Loon", alleenInkomen: true, woorden: [
     "salaris", "nettoloon", "netto loon", " loon ", "loonbetaling", "loonstrook", "vakantiegeld", "eindejaarsuitkering",
@@ -128,7 +129,8 @@ export const PRIVE_REGELS = Object.freeze([
   ], leen: ["Reiskosten (OV)"] },
   { naam: "Wonen: onderhoud & inrichting", woorden: [
     "ikea", "kwantum", "leen bakker", "jysk", "loods 5", "beter bed", "swiss sense", "eijerkamp", "keukenkampioen",
-    "woonboulevard", "gordijnen", "vloerenland", "carpetright",
+    "woonboulevard", "gordijnen", "vloerenland", "carpetright", "leenbakker", "gamma", "karwei", "praxis", "hornbach",
+    "hubo", "bouwmaterialen", "bouwmarkt",
   ] },
   { naam: "Kinderen: school & sport", woorden: [
     "ouderbijdrage", "schoolgeld", "schoolreis", "zwemles", "zwemdiploma", "scouting", "kinderfeest",
@@ -145,7 +147,8 @@ export const PRIVE_REGELS = Object.freeze([
   ] },
   { naam: "Beleggen", woorden: [
     "degiro", "flatexdegiro", "saxo bank", "meesman", "trade republic", "etoro", "bitvavo", "beleggingsrekening",
-    "beleggen", "brand new day beleggen", "peaks", "lynx b.v.", "bux zero",
+    "beleggen", "brand new day beleggen", "peaks", "lynx b.v.", "bux zero", "scalable capital", "scalable",
+    "interactive brokers", "binck", "freedom24", "bux b.v.", "coinbase", "kraken", "bitpanda",
   ] },
   { naam: "Lijfrente", woorden: ["lijfrente", "banksparen", "pensioensparen", "pensioenbeleggen", "oudedagsvoorziening"] },
   { naam: "Contant geld", woorden: [], leen: ["Privé opnames"] },
@@ -160,7 +163,7 @@ export const PRIVE_REGELS = Object.freeze([
 // ziet ze nooit). Bekende Nederlandse leveranciers die de standaardlijst nog miste.
 export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   "Energie-water": [
-    "frank energie", "tibber", "zonneplan", "mega energie", "budget thuis", "nederlandse energie maatschappij", " nle ",
+    "frank energie", "tibber", "nextenergy", "next energy", "energyzero", "vrijopnaam", "het energiebedrijf", "zonneplan", "mega energie", "budget thuis", "nederlandse energie maatschappij", " nle ",
     "innova energie", "coolblue energie", "energiek", "hezelaer", "ennatuurlijk", "warmtelevering", "stadsverwarming",
     "brabant water", " pwn", "oasen", " wmd", "waterleiding", "drinkwater",
   ],
@@ -174,7 +177,26 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   ],
   "Privé overige abonnementen": [
     "disney", "nlziet", "max.com", "apple.com/bill", "google play", "playstation", "xbox", "nintendo", "audible",
-    "kobo", "bookbeat", "patreon", "ad abonnement",
+    "kobo", "bookbeat", "patreon", "ad abonnement", "dpg media", "mediahuis", "persgroep", "volkskrant", "trouw abonnement",
+    "nrc media", "het parool", "telegraaf", "eindhovens dagblad", "brabants dagblad", "de limburger", "tijdschrift",
+  ],
+  "Medische uitgaven": [
+    "infomedics", "fysio", "fysiotherapie", "fysiotherapeut", "tandarts", "mondzorg", "orthodontist", "huisarts", "apotheek",
+    "ziekenhuis", "opticien", "optiek", "pearle", "hans anders", "specsavers", "audicien", "schoonenberg", "beter horen",
+    "podotherapeut", "psycholoog", "logopedie", "dermatoloog", "ggz",
+  ],
+  Verzekeringen: [
+    "enra", "enra verzekeringen", "centraal beheer", "interpolis", "nationale-nederlanden", "nationale nederlanden",
+    " asr ", "a.s.r.", "ohra", "fbto", "univé", "unive", "allianz", "aegon", "inshared", "promovendum", "ditzo", "klaverblad",
+    "london verzekeringen", "nh1816", "de goudse", "reaal", "anwb verzekering", "ing verzekeren", "rabobank verzekeringen",
+  ],
+  "Webshops & online aankopen": ["marktplaats", "vinted", "etsy", "aliexpress", "temu", "shein", "lidl shop", "action.com"],
+  "Privé - vrijetijd-uitgaan-vakantie & uit eten": [
+    "hostellerie", "hotel", "herberg", "restaurant", "brasserie", "bistro", "eetcafe", "eetcafé", "pizzeria", "lunchroom",
+    "paviljoen", "airbnb", "natuurhuisje", "booking.com", "landal", "center parcs", "roompot", "camping", "vakantiepark",
+    "bungalowpark", "museum", "theater", "schouwburg", "bioscoop", "kinepolis", "vue cinema", "efteling", "dierentuin",
+    "pretpark", "horeca", "wijnbar", "taverne", "trattoria", "steakhouse", "sushi", "grand cafe", "grandcafe", "strandpaviljoen",
+    "transavia", "klm", "ryanair", "easyjet", "corendon", "tui ", "sunweb",
   ],
   Huur: ["vestia", "de key", "woonpunt", "woonservice", "woonfriesland", "accolade", "dudok wonen", "woongoed", "wonen limburg"],
   Boodschappen: [

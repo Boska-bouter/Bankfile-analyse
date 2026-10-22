@@ -40,8 +40,12 @@ export function metPriveRegels(regels) {
   return gelijk ? regels : nieuw;
 }
 
+// beide-V2R3 — alleen de woorden die de standaardregel nog niet had (anders haalt zonderExtraWoorden ze weg).
+const EXTRA = Object.fromEntries(Object.entries(PRIVE_EXTRA_WOORDEN)
+  .map(([naam, woorden]) => [naam, woorden.filter((w) => !standaardWoorden(naam).includes(w))]));
+
 function metExtraWoorden(r) {
-  const extra = PRIVE_EXTRA_WOORDEN[r.name];
+  const extra = EXTRA[r.name];
   if (!extra) return r;
   const woorden = r.keywords || [];
   return extra.every((w) => woorden.includes(w)) ? r : { ...r, keywords: [...new Set([...woorden, ...extra])] };
@@ -50,7 +54,7 @@ const voorrang = (r) => (PRIVE_VOORRANG.includes(r.name) ? 0 : 1);
 
 // beide-V2R2 — ook de privé-extra zoekwoorden gaan er weer af, zodat een zakelijk dossier ze nooit gebruikt.
 function zonderExtraWoorden(r) {
-  const extra = PRIVE_EXTRA_WOORDEN[r.name];
+  const extra = EXTRA[r.name];
   if (!extra || !(r.keywords || []).some((w) => extra.includes(w))) return r;
   return { ...r, keywords: r.keywords.filter((w) => !extra.includes(w)) };
 }

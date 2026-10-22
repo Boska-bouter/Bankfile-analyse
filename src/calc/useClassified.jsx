@@ -19,7 +19,7 @@ export function useClassified(p) {
     const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
-    const herkenCtx = herkenning?.context ? herkenning.context(transactions) : null; // beide-V2R2 — o.a. terugbetalingen
+    const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
     const base0 = transactions.map((tx) => {
       let resolved = resolveClassification(
         tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
