@@ -90,6 +90,7 @@ export async function laadDossierBestand(file, c) {
     c.setEenvoudigGezien?.(project.eenvoudigGezien && typeof project.eenvoudigGezien === "object" ? project.eenvoudigGezien : {});
     setTariefOverridesState(project.tariefOverrides && typeof project.tariefOverrides === "object" ? project.tariefOverrides : {});
     setOverigInkomenBox1State(project.overigInkomenBox1 && typeof project.overigInkomenBox1 === "object" ? project.overigInkomenBox1 : {});
+    c.setPriveAntwoorden?.(project.priveAntwoorden && typeof project.priveAntwoorden === "object" ? project.priveAntwoorden : {});
     setAutoStatusState(normalizeAutoStatus(project.autoStatus));
     // 14V9 — de aparte "(deels zakelijk)"-percentages gaan naar het generieke percentage per categorie.
     const gedeeldeMig = migreerGedeeldeHuisvesting(project.categoryZakelijkPercentage, {
@@ -141,6 +142,7 @@ export async function wisDossier(c, askWizard = false) {
   setBtwVerlegd(null);
   setKorRegeling(null);
   setRechtsvorm(null);
+  c.setPriveAntwoorden?.({});
   c.setSoortDossier?.("zakelijk"); // beide-V1R0 — fase 2 vraagt bij een nieuw dossier zakelijk of privé
   setHeeftHolding(null);
   setHoldingBoekingen({});

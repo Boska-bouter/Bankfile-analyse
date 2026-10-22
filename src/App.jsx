@@ -81,6 +81,7 @@ import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
+import PriveWizardModal from "./components/prive/PriveWizardModal.jsx";
 import { voorladenExcel } from "./importers/excel.js";
 import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
@@ -216,6 +217,8 @@ export default function App() {
   // beide-V1R0 — soort van het dossier: "zakelijk" of "prive" (ligt vast bij het aanmaken). Zie src/modus/.
   const [soortDossier, setSoortDossier] = useState("zakelijk");
   const modus = useModus(soortDossier);
+  // beide-V1R7 (fase 4) — antwoorden uit de privéwizard (modus/prive/wizard.js), één object per dossier.
+  const [priveAntwoorden, setPriveAntwoorden] = useState({});
   setActieveRechtsvorm(rechtsvorm); // release30V6 — BV-categorieën alleen in keuzelijsten bij een BV
   // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
   const [heeftHolding, setHeeftHolding] = useState(null);
@@ -688,6 +691,7 @@ export default function App() {
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
     setRechtsvorm(resolveRechtsvorm(settings));
     setSoortDossier(resolveDossierSoort(settings));
+    setPriveAntwoorden(settings.priveAntwoorden && typeof settings.priveAntwoorden === "object" ? settings.priveAntwoorden : {});
     setHeeftHolding(resolveHeeftHolding(settings));
     setHoldingBoekingen(settings.holdingBoekingen && typeof settings.holdingBoekingen === "object" ? settings.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
@@ -1104,7 +1108,7 @@ export default function App() {
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
         leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
@@ -1118,7 +1122,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
     changesSinceExport, lastExportAt,
@@ -1145,7 +1149,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
@@ -1278,7 +1282,7 @@ export default function App() {
         categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
         businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
+        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
         verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
         incomeBtwTarieven, meerdereTarievenBevestigd,
       },
@@ -1348,6 +1352,7 @@ export default function App() {
     setWerkruimteStatusState(s.werkruimteStatus || {});
     setTariefOverridesState(s.tariefOverrides || {});
     setOverigInkomenBox1State(s.overigInkomenBox1 || {});
+    setPriveAntwoorden(s.priveAntwoorden || {});
     setAutoStatusState(normalizeAutoStatus(s.autoStatus));
     setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
     setEnergieZakelijkPercentageStatusState(s.energieZakelijkPercentageStatus || {});
@@ -3235,7 +3240,7 @@ export default function App() {
     // kwamen de zakelijke vragen (rechtsvorm, auto, KOR, uren …) anders altijd als open terug.
     const aan = (k) => modus.onderdelen[k] !== false;
     const voeg = (key, label, open, onderdeel = "omzet") => { if (open && (onderdeel === null || aan(onderdeel))) lijst.push({ key, label }); };
-    voeg("naam", "Naam rekeninghouder", eigenNamen === null, null);
+    voeg("naam", "Naam rekeninghouder", eigenNamen === null && !modus.wizard, null);
     voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
     // nieuw-V6R9 — ook beantwoord als de auto per jaar is ingevuld (Persoonlijke aannames), zoals in oudere dossiers.
     voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null && leeg(autoStatus), "auto");
@@ -3249,13 +3254,16 @@ export default function App() {
     voeg("starters", "Startersaftrek", heeftJaren && !isBV && leeg(startersaftrekStatus), "ondernemersaftrek");
     voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
+    // beide-V1R7 — de vragen van de privéwizard (alleen in een privédossier).
+    if (modus.wizard) lijst.push(...modus.wizard.openVragen(priveAntwoorden, { eigenNamen, jaren: years, bestanden: parsedFiles.map((f) => f.fileName) }, { eenvoudig: eenvoudigActief }));
     return lijst;
   })();
   // release21V7 — leeg dossier waarin nog geen enkele basisvraag beantwoord is (bijv. wizard direct
   // afgebroken na "Nieuw dossier"): geen gele lijst van 9 open punten en geen badge, maar één rustige
   // regel "Basisvragen nog niet doorlopen". De gele kaart komt pas zodra er een bestand is of iets is ingevuld.
   const basisvragenNietGestart = parsedFiles.length === 0 &&
-    [eigenNamen, rechtsvorm, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, heeftVoorraad, verwachteAOV, korRegeling].every((v) => v === null);
+    [eigenNamen, rechtsvorm, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, heeftVoorraad, verwachteAOV, korRegeling].every((v) => v === null) &&
+    Object.keys(priveAntwoorden || {}).length === 0;
   const openBasisvragenTelling = basisvragenNietGestart ? 0 : openBasisvragen.length;
   const instellingenBadge = useMemo(
     () => instellingenDashboardCards.filter((c) => !VERPLAATST_NAAR_CONTROLEREN.includes(c.key)).reduce((a, c) => a + openPointsOf(c), 0) + openBasisvragenTelling,
@@ -3593,7 +3601,7 @@ export default function App() {
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
       leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
       verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
     });
@@ -3636,7 +3644,7 @@ export default function App() {
     setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
     setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
     setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setEenvoudigGezien, startNieuwDossierWizard, naDossierLaden: (w) => { setModusKeuzeOpen(false); if (magUitgebreid) setModusNaLaden(w); }, setTariefOverridesState, setOverigInkomenBox1State,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setEenvoudigGezien, startNieuwDossierWizard, naDossierLaden: (w) => { setModusKeuzeOpen(false); if (magUitgebreid) setModusNaLaden(w); }, setTariefOverridesState, setOverigInkomenBox1State, setPriveAntwoorden,
     setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
     setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
     setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
@@ -4009,7 +4017,7 @@ export default function App() {
             bestanden={parsedFiles.map((f) => ({ naam: f.fileName, type: accountTypeByFile[f.fileName] }))}
             classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
-            onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => setBasisEenvoudigOpen(true)}
+            onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => (modus.wizard ? setManualWizardOpen(true) : setBasisEenvoudigOpen(true))}
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onMaandoverzicht={magUitgebreid && activeYear ? () => setShowInkomenPerMaand(true) : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
@@ -4092,6 +4100,7 @@ export default function App() {
               onBasisvragen={() => setOpenVragenWizard(true)}
               onBankbestand={startBankbestandToevoegen}
               onDossierLaden={startLoadProject}
+              teksten={modus.wizard?.teksten}
             />
           )}
           {parsedFiles.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
@@ -4334,7 +4343,28 @@ export default function App() {
         )}
 
         {/* nieuw-V7R0 — in Eenvoudig eerst de uitleg lezen en sluiten; de wizard wacht zolang en komt daarna vanzelf. */}
-        {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && (
+        {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && modus.wizard && (
+          <PriveWizardModal
+            wizard={modus.wizard}
+            antwoorden={priveAntwoorden}
+            setAntwoorden={(v) => { snapshotBeforeAction("Basisvraag beantwoord"); setPriveAntwoorden(v); }}
+            eigenNamen={eigenNamen}
+            setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
+            years={years}
+            loadedFileNames={parsedFiles.map((f) => f.fileName)}
+            eenvoudig={!magUitgebreid || weergave === "eenvoudig"}
+            volledig={manualWizardOpen}
+            alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
+            loadFilesFirst={parsedFiles.length === 0}
+            onPickFiles={() => { pendingAccountTypeRef.current = modus.rekeningen.standaard; bankFileInputRef.current?.click(); }}
+            onKoppelen={startKoppelen}
+            importBezig={importBezig}
+            importFout={error}
+            onSaveProject={saveProjectFile}
+            onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
+          />
+        )}
+        {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && !modus.wizard && (
           <SetupWizardModal
             eenvoudig={!magUitgebreid || weergave === "eenvoudig"}
             forceRechtsvormStep={manualWizardOpen}

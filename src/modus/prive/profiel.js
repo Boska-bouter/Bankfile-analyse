@@ -4,6 +4,7 @@
 import { PRIVE_CATEGORIEEN } from "./categorieen.js";
 import { PRIVE_WEERGAVE } from "./weergave.js";
 import { PRIVE_HERKENNING } from "./herkenning.js";
+import { PRIVE_WIZARD } from "./wizard.js";
 import { PRIVE_STANDAARD_REGELS, PRIVE_VASTE_LASTEN, metPriveRegels, metPriveVasteLasten } from "./regels.js";
 
 export const PRIVE_PROFIEL = Object.freeze({
@@ -19,7 +20,7 @@ export const PRIVE_PROFIEL = Object.freeze({
     regelsBijwerken: metPriveRegels,
     vasteLastenBijwerken: metPriveVasteLasten,
   }),
-  wizard: null, // fase 4: modus/prive/wizard.js
+  wizard: PRIVE_WIZARD, // fase 4 (beide-V1R7): modus/prive/wizard.js
   // fase 6 vult deze lijsten met de privékaarten; tot die tijd alleen de algemene controlekaarten.
   kaarten: Object.freeze({
     overzicht: ["confidence", "personReview", "overigReview", "duplicates", "bestandenOverzicht"],
