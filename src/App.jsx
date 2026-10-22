@@ -281,6 +281,7 @@ export default function App() {
   // nieuw-V1R09 — uitkomst per jaar op het moment dat je Eenvoudig verliet; terug in Eenvoudig zie je wat er sindsdien veranderde.
   const [eenvoudigGezien, setEenvoudigGezien] = useState({});
   const [overgeslagenMelding, setOvergeslagenMelding] = useState(false);
+  const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const [modusNaLaden, setModusNaLaden] = useState(null); // na "Dossier laden": weergave zoals opgeslagen, ter keuze
   const startNieuwDossierWizard = () => (magUitgebreid ? setModusKeuzeOpen(true) : kiesModus("eenvoudig"));
   const kiesModus = (m) => { setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht"); setManualWizardOpen(true); };
@@ -1030,7 +1031,9 @@ export default function App() {
         skipNextPersistRef.current = true;
         suppressChangeCount();
         if (pendingSettings) applySettingsToState(pendingSettings);
-        if (startGezien()) setLoaded(true); else setShowStartupChoice(true);
+        // nieuw-V7R1 — zonder bewaard dossier altijd het beginscherm (Nieuw dossier / Dossier laden), ook binnen
+        // 60 minuten na eerder gebruik op dit apparaat. Voorheen kwam een nieuwe gebruiker dan meteen in een leeg dossier.
+        setShowStartupChoice(true);
       }
     })();
   }, []);
@@ -3979,7 +3982,7 @@ export default function App() {
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
-            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen}
+            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} onUitlegZichtbaar={setEenvoudigUitlegOpen}
             onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
@@ -4296,7 +4299,8 @@ export default function App() {
           />
         )}
 
-        {(showSetupWizard || manualWizardOpen || openVragenWizard) && (
+        {/* nieuw-V7R0 — in Eenvoudig eerst de uitleg lezen en sluiten; de wizard wacht zolang en komt daarna vanzelf. */}
+        {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && (
           <SetupWizardModal
             eenvoudig={!magUitgebreid || weergave === "eenvoudig"}
             forceRechtsvormStep={manualWizardOpen}
