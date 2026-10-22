@@ -182,6 +182,7 @@ import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
+import { BANKKOPPELING_STATUS } from "./content/bankkoppelingStatus.jsx";
 
 // nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
 // laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
@@ -3407,7 +3408,7 @@ export default function App() {
           { label: "Privérekening", variant: "primary", onClick: () => kiesBestand("Prive") },
           { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => kiesBestand(null) },
         ] : [{ label: "Bankbestand kiezen", variant: "primary", onClick: () => kiesBestand(modus.rekeningen.standaard) }]),
-        { label: "Rechtstreeks koppelen met de bank (proef)", onClick: startKoppelen },
+        { label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen },
       ],
     });
   // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
@@ -3424,6 +3425,7 @@ export default function App() {
     title: "Uitgebreid aanvragen",
     message: <>
       <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht. Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op.</p>
+      <p className="text-amber-800">{BANKKOPPELING_STATUS}</p>
       {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
     </>,
     actions: [
@@ -3438,7 +3440,7 @@ export default function App() {
     if (magUitgebreid && !magKoppelen) {
       setDialog({
         title: "Bankkoppeling",
-        message: <p>De rechtstreekse bankkoppeling staat (nog) niet aan voor jouw account. Je kunt wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+        message: <p>{BANKKOPPELING_STATUS}</p>,
         actions: [],
       });
       return;
@@ -4019,6 +4021,7 @@ export default function App() {
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onMaandoverzicht={magUitgebreid && activeYear && !priveOverzicht ? () => setShowInkomenPerMaand(true) : null}
             teksten={modus.berekening === "prive" ? PRIVE_EENVOUDIG : null}
+            extraGegevens={modus.berekening === "prive" ? <EigenRekeningenPanel vasteSoort="Prive" uitleg={PRIVE_EENVOUDIG.eigenRekeningen} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra} onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} /> : null}
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}

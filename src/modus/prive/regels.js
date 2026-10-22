@@ -2,7 +2,7 @@
 // vooraan in categoryRules, gemarkeerd met prive: true, zodat ze bij uitgaven vóór de standaardregels winnen
 // (bijv. "Zorgverzekering" vóór het algemene "Verzekeringen"). In een zakelijk dossier worden ze weer weggehaald.
 import { DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, CATEGORY_COLOR } from "../../classification/categories.js";
-import { PRIVE_REGELS, PRIVE_CATEGORIEEN } from "./categorieen.js";
+import { PRIVE_REGELS, PRIVE_CATEGORIEEN, PRIVE_EXTRA_WOORDEN, PRIVE_VOORRANG } from "./categorieen.js";
 import { registreerPriveCategorie } from "./weergave.js";
 
 const standaardWoorden = (naam) => DEFAULT_RULES.find((r) => r.name === naam)?.keywords || [];
@@ -24,7 +24,9 @@ export const PRIVE_VASTE_LASTEN = Object.freeze(PRIVE_CATEGORIEEN.filter((c) => 
 // verandert, zodat een effect hierop niet blijft herhalen.
 export function metPriveRegels(regels) {
   const opgeslagen = regels.filter((r) => r.prive);
-  const overig = regels.filter((r) => !r.prive);
+  // beide-V2R2 — standaardregels met de privé-extra zoekwoorden, en de voorrangsregels vooraan.
+  const overig = regels.filter((r) => !r.prive).map(metExtraWoorden);
+  overig.sort((a, b) => voorrang(a) - voorrang(b));
   const standaard = PRIVE_STANDAARD_REGELS.map((d) => {
     const eerder = opgeslagen.find((r) => r.name === d.name);
     if (!eerder) return d;
@@ -38,8 +40,34 @@ export function metPriveRegels(regels) {
   return gelijk ? regels : nieuw;
 }
 
+function metExtraWoorden(r) {
+  const extra = PRIVE_EXTRA_WOORDEN[r.name];
+  if (!extra) return r;
+  const woorden = r.keywords || [];
+  return extra.every((w) => woorden.includes(w)) ? r : { ...r, keywords: [...new Set([...woorden, ...extra])] };
+}
+const voorrang = (r) => (PRIVE_VOORRANG.includes(r.name) ? 0 : 1);
+
+// beide-V2R2 — ook de privé-extra zoekwoorden gaan er weer af, zodat een zakelijk dossier ze nooit gebruikt.
+function zonderExtraWoorden(r) {
+  const extra = PRIVE_EXTRA_WOORDEN[r.name];
+  if (!extra || !(r.keywords || []).some((w) => extra.includes(w))) return r;
+  return { ...r, keywords: r.keywords.filter((w) => !extra.includes(w)) };
+}
 export function zonderPriveRegels(regels) {
-  return regels.some((r) => r.prive) ? regels.filter((r) => !r.prive) : regels;
+  let nieuw = regels.filter((r) => !r.prive).map(zonderExtraWoorden);
+  // De voorrangsregels terug op hun standaardplek (direct na hun voorganger in DEFAULT_RULES).
+  for (const naam of PRIVE_VOORRANG) {
+    const i = nieuw.findIndex((r) => r.name === naam), d = DEFAULT_RULES.findIndex((r) => r.name === naam);
+    if (i < 0 || d < 1) continue;
+    const voor = DEFAULT_RULES[d - 1].name;
+    if (nieuw[i - 1]?.name === voor) continue;
+    const r = nieuw[i];
+    nieuw = nieuw.filter((_, j) => j !== i);
+    const v = nieuw.findIndex((x) => x.name === voor);
+    nieuw.splice(v < 0 ? i : v + 1, 0, r);
+  }
+  return nieuw.length === regels.length && nieuw.every((r, i) => r === regels[i]) ? regels : nieuw;
 }
 
 // Standaard vaste lasten van een privédossier: alleen als de lijst nog de zakelijke standaard is (dus nog

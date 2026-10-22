@@ -268,7 +268,7 @@ async function stuurLink(env, email, link) {
     lijst: [
       ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
       ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé je budget, vaste lasten en een indicatie van je inkomstenbelasting."],
-      ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden."],
+      ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."],
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
@@ -334,7 +334,7 @@ f.addEventListener("submit",async e=>{e.preventDefault();const k=f.querySelector
  try{await post("/api/inloggen/wachtwoord",{email:f.email.value,wachtwoord:f.wachtwoord.value});location.href="/"}
  catch(x){meld(x.message,"err")}finally{k.disabled=false}});
 lk.addEventListener("click",async()=>{if(!f.email.reportValidity())return;lk.disabled=true;meld("Bezig…");
- try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam.","ok")}
+ try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam. Je kunt dit venster nu sluiten: de link in de mail opent de app.","ok")}
  catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`);
 }
 
@@ -396,12 +396,23 @@ function passkeyPagina(email, aantal, heeftWachtwoord) {
   <button id="maak" type="button" class="tweede">Passkey aanmaken op dit apparaat</button>
 </div>
 <p id="status" role="status"></p>
-<a class="knop tweede" href="/">${klaar ? "Naar de app" : "Later, naar de app"}</a>`, `
+<div class="kaart" id="beginscherm" hidden>
+  <b>Tip: zet Bankoverzicht op je beginscherm</b>
+  <p class="sub" style="margin:0">Dan open je de app met één tik, schermvullend en zonder adresbalk.</p>
+  <p class="sub" style="margin:0"><b>iPad of iPhone (Safari):</b> tik op het deelicoon (vierkantje met pijl omhoog) en kies <b>Zet op beginscherm</b>. Log daarna één keer in via het nieuwe icoon; dat gaat het snelst met je passkey. Een dossier dat je in Safari hebt, laad je daar via <b>Dossier laden</b>.</p>
+  <p class="sub" style="margin:0"><b>Android (Chrome):</b> menu ⋮ en dan <b>Toevoegen aan startscherm</b>. <b>Computer (Chrome of Edge):</b> het installeer-icoon rechts in de adresbalk.</p>
+</div>
+<a class="knop tweede" id="naarapp" href="/">${klaar ? "Naar de app" : "Later, naar de app"}</a>`, `
+// beide-V2R1 — na het instellen de tip om de app op het beginscherm te zetten (niet als hij daar al vandaan komt).
+const losseApp=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const klaarMet=t=>{meld(t,"ok");if(losseApp){setTimeout(()=>location.href="/",1500);return}
+ document.getElementById("beginscherm").hidden=false;const a=document.getElementById("naarapp");a.textContent="Naar de app";a.className="knop";a.scrollIntoView({behavior:"smooth",block:"end"})};
+
 const k=document.getElementById("maak");if(!kanPasskey){document.getElementById("pkkaart").style.display="none"}
 const w=document.getElementById("ww");w.addEventListener("submit",async e=>{e.preventDefault();
  if(w.nieuw.value!==w.herhaal.value){meld("De twee wachtwoorden zijn niet gelijk.","err");return}
  const b=w.querySelector("button");b.disabled=true;meld("Bezig…");
- try{await post("/api/inloggen/wachtwoord/instellen",{wachtwoord:w.nieuw.value});w.reset();meld("Wachtwoord opgeslagen. Je bent ingelogd en gaat nu naar de app. Voortaan log je in met je e-mailadres en dit wachtwoord.","ok");setTimeout(()=>location.href="/",2000)}
+ try{await post("/api/inloggen/wachtwoord/instellen",{wachtwoord:w.nieuw.value});w.reset();klaarMet("Wachtwoord opgeslagen. Voortaan log je in met je e-mailadres en dit wachtwoord.")}
  catch(x){meld(x.message,"err")}finally{b.disabled=false}});
 k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties-registratie");
@@ -409,7 +420,7 @@ k.addEventListener("click",async()=>{k.disabled=true;meld("Bezig…");try{
   pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{residentKey:"required",userVerification:"preferred"},
   excludeCredentials:(o.bestaand||[]).map(id=>({type:"public-key",id:vanB64u(id)})),attestation:"none",timeout:60000}});
  await post("/api/inloggen/passkey/registreer",{uitdagingId:o.id,id:c.id,clientDataJSON:b64u(c.response.clientDataJSON),attestationObject:b64u(c.response.attestationObject)});
- meld("Passkey aangemaakt. Je gaat naar de app…","ok");setTimeout(()=>location.href="/",1200);
+ klaarMet("Passkey aangemaakt. Voortaan log je in met Face ID, Touch ID of de pincode van dit apparaat.");
 }catch(e){meld(e.name==="NotAllowedError"?"Geannuleerd.":e.name==="InvalidStateError"?"Op dit apparaat staat al een passkey voor jou.":"Aanmaken lukte niet: "+e.message,"err")}finally{k.disabled=false}});`, { "Set-Cookie": PASSKEY_GEVRAAGD });
 }
 

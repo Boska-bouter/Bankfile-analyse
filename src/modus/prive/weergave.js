@@ -31,6 +31,11 @@ export function priveSoort(naam) {
   return PER_NAAM.get(naam)?.soort || "uitgave";
 }
 
+// beide-V2R2 — geld dat terugkomt (Tikkie, retour, eindafrekening): geen inkomen, het verlaagt de uitgaven.
+export function isTerugbetaling(naam) {
+  return !!PER_NAAM.get(naam)?.terugbetaling;
+}
+
 export function fiscaleVlag(naam) {
   return PER_NAAM.get(naam)?.fiscaal || null;
 }

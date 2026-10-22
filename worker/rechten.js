@@ -62,12 +62,12 @@ export const PLAN_UITLEG = {
   zakelijk: {
     eenvoudig: "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting.",
     uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven.",
-    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
+    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
   },
   prive: {
     eenvoudig: "in vier stappen je bankbestanden indelen en een overzicht krijgen van je inkomsten en uitgaven per maand.",
     uitgebreid: "alle tabbladen: budget per maand en categorie, vaste lasten, sparen en een indicatie van je inkomstenbelasting (ook eigen woning en box 3).",
-    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden.",
+    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
   },
 };
 export const PLANNEN = {

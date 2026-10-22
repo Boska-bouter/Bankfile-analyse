@@ -10,10 +10,12 @@ const normIban = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
 const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
 const eur = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekeningenExtra, onChange, classified = [] }) {
+// beide-V2R2 — vasteSoort ("Prive"): privédossier, alle rekeningen zijn privé (geen keuze) en een eigen uitleg.
+export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekeningenExtra, onChange, classified = [], vasteSoort = null, uitleg = null }) {
   const lijst = eigenRekeningenExtra || [];
   const [iban, setIban] = useState("");
-  const [type, setType] = useState("Prive");
+  const [gekozen, setType] = useState("Prive");
+  const type = vasteSoort || gekozen;
   const [fout, setFout] = useState("");
 
   const tellers = useMemo(() => {
@@ -45,10 +47,10 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
   return (
     <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm space-y-3">
       <h3 className="text-sm font-semibold">Eigen rekeningen</h3>
-      <p className="text-xs text-slate-500">
+      {uitleg ? <p className="text-xs text-slate-500">{uitleg}</p> : <p className="text-xs text-slate-500">
         Heb je nog een rekening (zakelijk of privé) die niet is geladen? Geef het rekeningnummer hier op. Boekingen van en naar die
         rekening worden dan automatisch herkend als overboeking tussen je eigen rekeningen — geen inkomen of kosten.
-      </p>
+      </p>}
 
       {loadedAccounts.length > 0 && (
         <div>
@@ -57,7 +59,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
             {loadedAccounts.map((a) => (
               <li key={a.iban} className="flex items-center gap-2 text-xs rounded-lg bg-slate-50 px-3 py-1.5">
                 <span className="font-mono">{a.iban}</span>
-                <span className="text-slate-400">{a.accountType === "Zakelijk" ? "Zakelijk" : "Privé"} · geladen</span>
+                <span className="text-slate-400">{vasteSoort ? "geladen" : `${a.accountType === "Zakelijk" ? "Zakelijk" : "Privé"} · geladen`}</span>
               </li>
             ))}
           </ul>
@@ -75,10 +77,10 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
               return (
                 <li key={`${r.iban}-${idx}`} className="flex items-center gap-2 flex-wrap text-xs rounded-lg border border-slate-100 px-3 py-1.5">
                   <span className="font-mono">{r.iban || "(zonder rekeningnummer)"}</span>
-                  <select value={r.accountType || ""} onChange={(e) => wijzigType(idx, e.target.value)} className="rounded border border-slate-300 px-1.5 py-0.5">
+                  {!vasteSoort && <select value={r.accountType || ""} onChange={(e) => wijzigType(idx, e.target.value)} className="rounded border border-slate-300 px-1.5 py-0.5">
                     <option value="Prive">Privé</option>
                     <option value="Zakelijk">Zakelijk</option>
-                  </select>
+                  </select>}
                   {t && <span className="text-slate-400">{t.n} boeking{t.n === 1 ? "" : "en"} gevonden ({eur(t.som)})</span>}
                   <button onClick={() => verwijder(idx)} className="ml-auto text-slate-400 hover:text-red-600">Verwijderen</button>
                 </li>
@@ -96,10 +98,10 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
           placeholder="Rekeningnummer (IBAN)"
           className="w-64 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-mono"
         />
-        <select value={type} onChange={(e) => setType(e.target.value)} className={VELD_KLEIN}>
+        {!vasteSoort && <select value={type} onChange={(e) => setType(e.target.value)} className={VELD_KLEIN}>
           <option value="Prive">Privérekening</option>
           <option value="Zakelijk">Zakelijke rekening</option>
-        </select>
+        </select>}
         <button onClick={voegToe} className={`${KNOP_PRIMAIR} !text-xs`}>Toevoegen</button>
       </div>
       {fout && <p className="text-xs text-red-600">{fout}</p>}

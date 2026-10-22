@@ -10,7 +10,10 @@ export const PRIVE_KEUZES_IN = Object.freeze([
   k("Uitkering", "Uitkering", "bijv. WW, bijstand of WIA"),
   k("Pensioen & AOW", "Pensioen of AOW", "van SVB of pensioenfonds"),
   k("Toeslagen", "Toeslag of kinderbijslag", "van Belastingdienst of SVB"),
-  k("Overboeking van bekenden", "Van familie of vrienden", "bijv. terugbetaling of cadeau"),
+  // beide-V2R2 — terugbetalingen zijn geen inkomen: ze verlagen de uitgaven.
+  k("Overboeking van bekenden", "Terugbetaling door bekenden", "bijv. Tikkie of gedeelde kosten"),
+  k("Terugbetalingen & restituties", "Terugbetaling van een bedrijf of winkel", "retour, te veel betaald of eindafrekening"),
+  k("Inkomsten", "Ander inkomen", "bijv. verkoop, huur of een prijs"),
   k("Interne overboeking", "Van mijn eigen rekening", "geld tussen je eigen rekeningen"),
 ]);
 
@@ -22,6 +25,7 @@ export const PRIVE_KEUZES_UIT = Object.freeze([
   k("Overboekingen aan personen", "Aan familie of vrienden", "betaald aan een persoon"),
   k("Interne overboeking: privé sparen", "Sparen", "naar je eigen spaarrekening"),
   k("Interne overboeking", "Naar mijn eigen rekening", "geld tussen je eigen rekeningen"),
+  k("Privé: overig", "Overige privé-uitgaven", "past nergens anders bij"),
 ]);
 
 // Kleine pinbetalingen: de gangbare antwoorden staan bovenaan.
@@ -48,5 +52,6 @@ export const PRIVE_EENVOUDIG = Object.freeze({
   bestandenLeeg: "Er zijn nog geen bankbestanden. Voeg de afschriften van je betaalrekening toe (en die van je partner, als je samen een overzicht wilt); de app leest ze daarna in.",
   onzeker: "je budgetoverzicht kan daardoor nog verschuiven",
   uitleg: UitlegEenvoudigPrive,
+  eigenRekeningen: "Heb je nog een spaarrekening, een rekening van je partner of een gezamenlijke rekening? Voeg het bankbestand toe met de knop hierboven. Wil je dat niet, geef dan alleen het rekeningnummer op: geld van en naar die rekening telt dan als overboeking tussen je eigen rekeningen, niet als inkomen of uitgave.",
   uitgebreidTip: "Fijner werk (één boeking apart, vaste lasten, vermogen) doe je in",
 });

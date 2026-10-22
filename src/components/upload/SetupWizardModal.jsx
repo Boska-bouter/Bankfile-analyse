@@ -291,7 +291,7 @@ export default function SetupWizardModal({
                   onClick={onKoppelen}
                   className="w-full disabled:opacity-50 rounded-lg border border-teal-700 px-4 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50"
                 >
-                  Of rechtstreeks koppelen met de bank (proef)
+                  Of rechtstreeks koppelen met de bank (in ontwikkeling)
                 </button>
               )}
               {loadedFileNames.length === 0 && (

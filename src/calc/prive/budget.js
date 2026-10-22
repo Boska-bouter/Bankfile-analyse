@@ -1,7 +1,7 @@
 // beide-V1R8 (fase 5) — budgetoverzicht van een privédossier: inkomsten, uitgaven per hoofdcategorie en
 // categorie, vaste lasten, sparen en wat er overblijft; per jaar en per maand. Geen omzet, geen BTW.
 // Werkt op de ingedeelde transacties (useClassified). Overboekingen tussen eigen rekeningen tellen niet mee.
-import { PRIVE_WEERGAVE, priveSoort } from "../../modus/prive/weergave.js";
+import { PRIVE_WEERGAVE, priveSoort, isTerugbetaling } from "../../modus/prive/weergave.js";
 
 const OVERIG = "Overig";
 const SPAREN = new Set(["Interne overboeking: privé sparen", "Beleggen"]);
@@ -37,7 +37,8 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
     const bedrag = Number(t.amount) || 0;
     // Geld dat binnenkomt in een algemene categorie (hoofd "Overig", bijv. "Nog te beoordelen") is inkomen,
     // geen negatieve uitgave; een terugbetaling in een gewone uitgavencategorie verlaagt die uitgave wel.
-    if (soort === "uitgave" && bedrag > 0 && PRIVE_WEERGAVE.hoofdVan(t.category) === OVERIG) soort = "inkomen";
+    // beide-V2R2 — behalve een terugbetaling (Tikkie, retour, eindafrekening): die verlaagt de uitgaven.
+    if (soort === "uitgave" && bedrag > 0 && PRIVE_WEERGAVE.hoofdVan(t.category) === OVERIG && !isTerugbetaling(t.category)) soort = "inkomen";
     if (soort === "inkomen") {
       totaal.inkomsten += bedrag; m.inkomsten += bedrag;
       inkomsten.set(t.category, (inkomsten.get(t.category) || 0) + bedrag);

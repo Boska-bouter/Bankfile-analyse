@@ -19,11 +19,12 @@ export function useClassified(p) {
     const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
+    const herkenCtx = herkenning?.context ? herkenning.context(transactions) : null; // beide-V2R2 — o.a. terugbetalingen
     const base0 = transactions.map((tx) => {
       let resolved = resolveClassification(
         tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
-        herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules) : null
+        herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules, herkenCtx) : null
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);

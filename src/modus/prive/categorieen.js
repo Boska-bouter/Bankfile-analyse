@@ -5,6 +5,8 @@
 //   fiscaal: vlag voor de privéberekening (fase 5): hypotheekrente, zorgkosten, giften, lijfrente,
 //            partneralimentatie. Alleen een aanwijzing: de berekening bepaalt zelf wat aftrekbaar is.
 //   vast:    standaard een vaste last (Instellingen → Vaste/variabele kosten)
+//   terugbetaling: geld dat terugkomt (Tikkie, retour, eindafrekening). Geen inkomen: het verlaagt de uitgaven
+//            (beide-V2R2, budget.js), ook in de hoofdcategorie Overig.
 
 export const PRIVE_HOOFDEN = Object.freeze([
   { naam: "Inkomen", kleur: "bg-emerald-100 text-emerald-800" },
@@ -36,7 +38,6 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Toeslagen", "Inkomen", { soort: "inkomen" }),
   c("Kinderbijslag", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
-  c("Overboeking van bekenden", "Inkomen", { soort: "inkomen", label: "Ontvangen van bekenden" }),
 
   c("Privé - huur", "Wonen", { label: "Huur", vast: true }),
   c("Hypotheek", "Wonen", { fiscaal: "hypotheekrente", vast: true }),
@@ -79,11 +80,14 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Belastingen: ZVW", "Belastingen", { label: "Bijdrage Zvw" }),
   c("Belastingen: overig", "Belastingen", { label: "Belastingdienst overig" }),
 
-  c("Privé: overig", "Overig", { label: "Overige uitgaven" }),
+  c("Privé: overig", "Overig", { label: "Overige privé-uitgaven" }),
   c("Winkels divers", "Overig", { label: "Winkels" }),
   c("Webshops & online aankopen", "Overig", { label: "Webshops" }),
   c("Contant geld", "Overig", { label: "Contant opgenomen", nieuw: true, kleur: "bg-amber-100 text-amber-800" }),
   c("Overboekingen aan personen", "Overig", { label: "Betaald aan personen" }),
+  // beide-V2R2 — terugbetalingen zijn geen inkomen (wens Boska): gedeelde kosten, retour, te veel betaald.
+  c("Overboeking van bekenden", "Overig", { label: "Terugbetaald door bekenden", terugbetaling: true }),
+  c("Terugbetalingen & restituties", "Overig", { label: "Terugbetaald door bedrijven en winkels", terugbetaling: true, nieuw: true, kleur: "bg-slate-100 text-slate-700" }),
   c("Privé - bankkosten", "Overig", { label: "Bankkosten", vast: true }),
   c("Partneralimentatie", "Overig", { fiscaal: "partneralimentatie", vast: true }),
   c("Privé - overige kosten", "Overig", { label: "Overige kosten (controleren)" }),
@@ -114,9 +118,14 @@ export const PRIVE_REGELS = Object.freeze([
     "zorgverzekering", "zorgverzekeraar", "zilveren kruis", "cz groep", "menzis", "zorg en zekerheid", "anderzorg", "ditzo",
     "dsw zorg", "ohra zorg", "fbto zorg", "interpolis zorg", "univé zorg", "unive zorg", "vgz", "de friesland zorg",
     "salland zorg", "stad holland zorg", "zekur", "ik kies zelf", "eigen risico",
+    " cz ", "cz zorg", " dsw", "onvz", "ikz zorg", "asr zorg", "a.s.r. zorg", "asr ziektekosten", " izz", "aevitae", "eno zorg",
+    "zorgpremie", "ziektekostenverzekering", "hema zorg", "jaaah", "pnoozorg", "caresq", "zorgdirect", "vvaa zorg", "nationale-nederlanden zorg",
   ] },
   { naam: "Auto & brandstof", woorden: [], leen: ["Brandstof", "Autokosten", "Parkeren", "Lease (operationeel)"] },
-  { naam: "Openbaar vervoer", woorden: [], leen: ["Reiskosten (OV)"] },
+  { naam: "Openbaar vervoer", woorden: [
+    " ns ", " ns-", "ns reizigers", "ns international", "nsinternational", "ns flex", "ov-chipkaart", "ov chipkaart",
+    "ovchipkaart", "ov-chip", "ov-fiets", "ovfiets", "db bahn",
+  ], leen: ["Reiskosten (OV)"] },
   { naam: "Wonen: onderhoud & inrichting", woorden: [
     "ikea", "kwantum", "leen bakker", "jysk", "loods 5", "beter bed", "swiss sense", "eijerkamp", "keukenkampioen",
     "woonboulevard", "gordijnen", "vloerenland", "carpetright",
@@ -140,7 +149,43 @@ export const PRIVE_REGELS = Object.freeze([
   ] },
   { naam: "Lijfrente", woorden: ["lijfrente", "banksparen", "pensioensparen", "pensioenbeleggen", "oudedagsvoorziening"] },
   { naam: "Contant geld", woorden: [], leen: ["Privé opnames"] },
+  // beide-V2R2 — geld dat terugkomt van een bedrijf of winkel (alleen bijschrijvingen): geen inkomen.
+  { naam: "Terugbetalingen & restituties", alleenInkomen: true, woorden: [
+    "terugbetaling", "restitutie", "retour", "refund", "storno", "terugstorting", "creditnota", "credit nota", "eindafrekening",
+    "jaarafrekening", "teveel betaald", "te veel betaald", "terugboeking", "retourbetaling", "teruggave", "vergoeding schade",
+  ] },
 ]);
+
+// beide-V2R2 — extra zoekwoorden voor bestaande standaardregels, alleen in een privédossier (een zakelijk dossier
+// ziet ze nooit). Bekende Nederlandse leveranciers die de standaardlijst nog miste.
+export const PRIVE_EXTRA_WOORDEN = Object.freeze({
+  "Energie-water": [
+    "frank energie", "tibber", "zonneplan", "mega energie", "budget thuis", "nederlandse energie maatschappij", " nle ",
+    "innova energie", "coolblue energie", "energiek", "hezelaer", "ennatuurlijk", "warmtelevering", "stadsverwarming",
+    "brabant water", " pwn", "oasen", " wmd", "waterleiding", "drinkwater",
+  ],
+  "Gemeentelijke kosten": [
+    "bsgw", "gemeentebelasting", "gemeentelijke belasting", "waterschapsbelasting", "afvalstoffenheffing", "rioolheffing",
+    " ozb", "hoogheemraadschap", "cocensus", "gbt ", "gbhu", "abg ", "noordenveld belasting",
+  ],
+  "Zakelijk mobiel/internet": [
+    "ben nederland", "lyca", "freedom internet", "kpn mobiel", "jonaz", "tweak", "canaldigitaal", "canal digitaal",
+    "m7 group", "glasvezel", "fiber nederland", "tele2 mobiel", "odido mobiel",
+  ],
+  "Privé overige abonnementen": [
+    "disney", "nlziet", "max.com", "apple.com/bill", "google play", "playstation", "xbox", "nintendo", "audible",
+    "kobo", "bookbeat", "patreon", "ad abonnement",
+  ],
+  Huur: ["vestia", "de key", "woonpunt", "woonservice", "woonfriesland", "accolade", "dudok wonen", "woongoed", "wonen limburg"],
+  Boodschappen: [
+    "plus supermarkt", "hellofresh", "marley spoon", "bakkerij", "warme bakker", "slagerij", "keurslager", "groenteboer",
+    "kaashandel", "visspecialist", "natuurwinkel", "toko ",
+  ],
+});
+
+// beide-V2R2 — in een privédossier gaan deze standaardregels vóór de rest: "Disney Plus" is een abonnement, ook al
+// staat "plus" (de supermarkt) bij Boodschappen.
+export const PRIVE_VOORRANG = Object.freeze(["Privé overige abonnementen"]);
 
 // Extra woorden voor bestaande categorieën, alleen bij het herkennen van bijschrijvingen in een privédossier.
 export const PRIVE_INKOMEN_EXTRA = Object.freeze({
