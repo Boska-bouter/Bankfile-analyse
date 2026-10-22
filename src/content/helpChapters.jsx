@@ -1,5 +1,6 @@
 import { metBolletjes } from "../components/shared/StatusDot.jsx";
 import { VOORWAARDEN_INHOUD } from "./voorwaarden.jsx";
+import { VEILIG_INHOUD } from "./veiligheid.jsx";
 // Alle uitgebreide toelichtingsteksten, gebundeld — hergebruikt door zowel het volledige
 // "Help en uitleg"-overzicht als de gerichte pop-up die bij losse "?"-knopjes opent.
 export const HELP_GROEPEN = [
@@ -41,6 +42,12 @@ export const HELP_CHAPTERS = [
         </p>
       </div>
     ),
+  },
+  {
+    key: "veiligheid",
+    groep: "beginnen",
+    titel: "Pas op voor oplichting",
+    inhoud: <div className="space-y-2.5">{VEILIG_INHOUD}</div>,
   },
   {
     key: "hulpvraag-feedback",

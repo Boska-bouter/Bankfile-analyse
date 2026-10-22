@@ -76,6 +76,7 @@ import FeedbackModal from "./components/shared/FeedbackModal.jsx";
 import VoorwaardenScherm from "./components/shared/VoorwaardenScherm.jsx";
 import { VOORWAARDEN_VERSIE, VOORWAARDEN_SLEUTEL } from "./content/voorwaarden.jsx";
 import { APP_RELEASE } from "./version.js";
+import { VEILIG_KORT } from "./content/veiligheid.jsx";
 import HelpPopupModal from "./components/shared/HelpPopupModal.jsx";
 import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeModal.jsx";
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
@@ -3727,6 +3728,7 @@ export default function App() {
               oude dossier in deze browser overschreven.
             </p>
           )}
+          <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950"><strong>Pas op voor oplichting.</strong> {VEILIG_KORT}</p>
           <p className="text-xs text-slate-400 mt-5 pt-3 border-t border-slate-100 text-center">
             © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}
             <br />
