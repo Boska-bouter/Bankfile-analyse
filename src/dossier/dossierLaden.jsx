@@ -4,14 +4,17 @@ import { readProjectFile } from "../storage/projectFile.js";
 import { clearPersistedData, clearPersistedSettings } from "../storage/projectStorage.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES } from "../classification/categories.js";
 import { DEFAULT_BTW_RATES, mergeBtwRates, DEFAULT_VOORBELASTING_EXCLUDED } from "../tax/btw.js";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossierMigraties.js";
 
 export async function laadDossierBestand(file, c) {
   const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTariefOverridesState, setOverigInkomenBox1State, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
   try {
     const project = await readProjectFile(file, c.vraagWachtwoord);
     suppressChangeCount();
-    setLastExportAt(null);
+    // nieuw-V6R6 — een geladen dossierbestand ís bewaard: tijdstip van opslaan uit het bestand (anders de
+    // bestandsdatum), zodat stap 4 "Bewaren" en de sessiebalk het dossier direct als opgeslagen tonen.
+    const bewaardOp = new Date(project.savedAt || file.lastModified || Date.now());
+    setLastExportAt(isNaN(+bewaardOp) ? new Date() : bewaardOp);
     setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
     setAccountTypeByFile(project.accountTypeByFile || {});
     setOverridesByCounterparty(migrateOverridesCategories(project.overridesByCounterparty));
@@ -21,6 +24,7 @@ export async function laadDossierBestand(file, c) {
     setBtwVerlegd(typeof project.btwVerlegd === "boolean" ? project.btwVerlegd : null);
     setKorRegeling(typeof project.korRegeling === "boolean" ? project.korRegeling : null);
     setRechtsvorm(resolveRechtsvorm(project));
+    c.setSoortDossier?.(resolveDossierSoort(project));
     setHeeftHolding(resolveHeeftHolding(project));
     setHoldingBoekingen(project.holdingBoekingen && typeof project.holdingBoekingen === "object" ? project.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(project.excludedDuplicateFingerprints) ? project.excludedDuplicateFingerprints : []);
@@ -137,6 +141,7 @@ export async function wisDossier(c, askWizard = false) {
   setBtwVerlegd(null);
   setKorRegeling(null);
   setRechtsvorm(null);
+  c.setSoortDossier?.("zakelijk"); // beide-V1R0 — fase 2 vraagt bij een nieuw dossier zakelijk of privé
   setHeeftHolding(null);
   setHoldingBoekingen({});
   setExcludedDuplicateFingerprints([]);

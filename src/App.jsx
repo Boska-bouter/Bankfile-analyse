@@ -53,7 +53,7 @@ import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
@@ -113,6 +113,7 @@ import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
+import { useModus } from "./modus/index.js";
 import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -209,6 +210,9 @@ export default function App() {
   // altijd direct op "zzp" gezet — nooit null — zodat bestaande zzp-gebruikers deze vraag nooit te
   // zien krijgen en al hun bestaande gedrag exact hetzelfde blijft. Zie resolveRechtsvorm hieronder.
   const [rechtsvorm, setRechtsvorm] = useState(null);
+  // beide-V1R0 — soort van het dossier: "zakelijk" of "prive" (ligt vast bij het aanmaken). Zie src/modus/.
+  const [soortDossier, setSoortDossier] = useState("zakelijk");
+  const modus = useModus(soortDossier);
   setActieveRechtsvorm(rechtsvorm); // release30V6 — BV-categorieën alleen in keuzelijsten bij een BV
   // null = nog niet gevraagd, alleen relevant zolang rechtsvorm === "bv". Zie resolveHeeftHolding.
   const [heeftHolding, setHeeftHolding] = useState(null);
@@ -674,6 +678,7 @@ export default function App() {
     setBtwVerlegd(typeof settings.btwVerlegd === "boolean" ? settings.btwVerlegd : null);
     setKorRegeling(typeof settings.korRegeling === "boolean" ? settings.korRegeling : null);
     setRechtsvorm(resolveRechtsvorm(settings));
+    setSoortDossier(resolveDossierSoort(settings));
     setHeeftHolding(resolveHeeftHolding(settings));
     setHoldingBoekingen(settings.holdingBoekingen && typeof settings.holdingBoekingen === "object" ? settings.holdingBoekingen : {});
     setExcludedDuplicateFingerprints(Array.isArray(settings.excludedDuplicateFingerprints) ? settings.excludedDuplicateFingerprints : []);
@@ -1083,7 +1088,7 @@ export default function App() {
       const ok1 = await persistParsedFiles(parsedFiles);
       const ok2 = await persistSettings({
         accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
+        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, dossierSoort: soortDossier, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
         excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
         reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
         kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -1098,7 +1103,7 @@ export default function App() {
     })();
   }, [
     parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
+    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, soortDossier, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
@@ -1109,6 +1114,8 @@ export default function App() {
     loaded,
   ]);
 
+  // nieuw-V6R6 — `weergave` (Eenvoudig/Uitgebreid) telt niet als wijziging: alleen van weergave wisselen
+  // (ook de keuze direct na het laden) maakt een bewaard dossier niet ‘niet opgeslagen’.
   // v305 (V27) — telt wijzigingen sinds de laatste export. Zelfde afhankelijkheden als de autosave
   // hierboven, maar bewust zonder loadedProjectFileName (die verandert bij het exporteren zelf).
   useEffect(() => {
@@ -1127,7 +1134,7 @@ export default function App() {
     businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
     kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
     leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
+    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, eenvoudigGezien, tariefOverrides, overigInkomenBox1, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
     verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
     incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
   ]);
@@ -2950,6 +2957,7 @@ export default function App() {
     return () => { gestopt = true; cancelAnimationFrame(raf); };
   }, [activeTab, expandedCardKeys, pendingScrollRef]);
   const dashboardCards = useDashboardCards({
+    modus,
     aansluitControleInfo, accountTypeByFile, activeYear, btwSettingsSectionRef, btwVerlegd,
     businessAdvies, bvSignalering, bvSignaleringSectionRef, checklistData, checklistSectionRef,
     confidenceSectionRef, confidenceSummary, confirmedLeaseTypeKeys, dashboardAangifteIndicatie, detailsSectionRef,
@@ -3015,6 +3023,7 @@ export default function App() {
     setOverridesByRow((prev) => { const next = { ...prev }; for (const a of t.alle || []) next[a.id] = { ...(prev[a.id] || {}), category: categorie, type }; return next; });
   };
   const controlerenDashboardCards = useControlerenDashboardCards({
+    modus,
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
@@ -3048,6 +3057,7 @@ export default function App() {
   // andere pure configuratielijsten (geen vaste lijst met wel/niet-compleet) staan er bewust niet
   // bij, net zoals "Geladen files" ook geen eigen kaart kreeg op het Controleren-dashboard.
   const instellingenDashboardCards = useInstellingenDashboardCards({
+    modus,
     aannamesSectionRef, activaSectionRef, activaSummary, activeYear, autoStatus,
     btwRateCounts, btwSettingsSectionRef, btwVerlegd, businessExpenseEntries, businessIncomeEntries,
     categorieTotalenActiveYear, categoryPercentageSectionRef, categoryZakelijkPercentage, energieZakelijkPercentageStatus, gedeeldeEnergieForActiveYear,
@@ -3374,17 +3384,14 @@ export default function App() {
       ],
     });
   // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
-  // Lukt dat niet (bijv. geen database), dan zoals voorheen via het feedbackformulier.
-  const vraagAan = async (plan) => {
-    try {
-      const r = await fetch("/api/aanmelden", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ plan }) });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) throw new Error(d.fout || `Fout ${r.status}`);
-      if (!d.alActief) zetAanvraag(plan);
-      setDialog({ title: "Aanvraag verstuurd", message: <p>{d.alActief ? d.melding : "Je aanvraag is verstuurd. Zodra de beheerder hem heeft goedgekeurd, krijg je de uitgebreide weergave (opnieuw inloggen of de pagina vernieuwen)."}</p>, actions: [] });
-    } catch {
+  // beide-V1R0 — via de abonnementenpagina van de Worker: daar staan de verplichte naam, reden en de soort (zakelijk/privé)
+  // van dit dossier al klaar. Lokaal (vite dev, geen Worker) zoals voorheen via het feedbackformulier.
+  const vraagAan = (plan) => {
+    if (import.meta.env?.DEV) {
       setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " });
+      return;
     }
+    window.location.href = `/aanmelden?soort=${encodeURIComponent(soortDossier)}&plan=${encodeURIComponent(plan)}`;
   };
   const startAanvraagUitgebreid = () => setDialog({
     title: "Uitgebreid aanvragen",
@@ -3556,7 +3563,7 @@ export default function App() {
     const project = buildProjectFile({
       auditLog,
       parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
+      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, dossierSoort: soortDossier, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
       excludedDuplicateFingerprints, dismissedDuplicateNotice, bevestigdeControles, businessKeywords, businessExpenseKeywords,
       reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
       kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
@@ -3589,7 +3596,7 @@ export default function App() {
 
   // ---- Dossier laden vanaf een bestand ----
   const dossierCtx = {
-    suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setDossierHerstelcode, setAuditLog, setBevestigdeControles,
+    setSoortDossier, suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setDossierHerstelcode, setAuditLog, setBevestigdeControles,
     setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
     setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
     setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
@@ -3825,6 +3832,7 @@ export default function App() {
         onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
         ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
         onPasskey={inlogModus === "eigen" ? () => { window.location.href = "/inloggen/passkey"; } : null}
+        onAbonnementen={ingelogdAls ? () => { window.location.href = "/aanmelden"; } : null}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}

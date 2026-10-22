@@ -263,11 +263,11 @@ async function stuurLink(env, email, link) {
     zonderNaam: "Beste aanvrager,",
     regels: [
       "Bedankt voor je interesse in Bankoverzicht, de app die je bankafschriften omzet in overzichten van je inkomsten en uitgaven.",
-      "Dit is je eerste inloglink. Na het inloggen kies je welke versie je wilt gebruiken en dien je je aanvraag in:",
+      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (alleen je eigen huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
-      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting."],
-      ["Uitgebreid", "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven."],
+      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
+      ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé je budget, vaste lasten en een indicatie van je inkomstenbelasting."],
       ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden."],
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],

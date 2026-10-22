@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { kaartenVolgensProfiel } from "../modus/index.js";
 import { AlertTriangle, Copy, FileSpreadsheet, HelpCircle, Users } from "lucide-react";
 
 export function useControlerenDashboardCards(p) {
@@ -10,7 +11,7 @@ export function useControlerenDashboardCards(p) {
     setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions,
   } = p;
 
-  return useMemo(() => {
+  const kaarten = useMemo(() => {
     if (transactions.length === 0) return [];
     return [
       {
@@ -121,4 +122,7 @@ export function useControlerenDashboardCards(p) {
     pendingDuplicateCount,
     duplicatePendingBreakdown,
   ]);
+  // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
+  const keuze = p.modus?.kaarten?.controleren ?? null;
+  return useMemo(() => kaartenVolgensProfiel(kaarten, keuze), [kaarten, keuze]);
 }

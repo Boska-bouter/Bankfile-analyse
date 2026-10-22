@@ -7,7 +7,8 @@
 
 import { bankRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
-import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
+import { aanmeldPagina } from "./aanmeldpagina.js";
+import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -96,6 +97,12 @@ export default {
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
     if (url.pathname === "/api/aanmelden") {
       return aanmeldRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"), ctx);
+    }
+    // beide-V1R0 — abonnementenpagina: ook wie al toegang heeft kan hier een (tweede) abonnement aanvragen.
+    if (url.pathname === "/aanmelden") {
+      const email = request.headers.get("Cf-Access-Authenticated-User-Email");
+      return aanmeldPagina(email, await rechtenVan(email, env), env,
+        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), slot: toegangVerplicht(env) });
     }
     // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
     // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.

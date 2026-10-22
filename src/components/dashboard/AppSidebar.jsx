@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -79,7 +79,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null, onAbonnementen = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -389,6 +389,8 @@ export default function AppSidebar({
           {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
           {onPasskey && <IcoonKnop onClick={onPasskey} label="Inloggen instellen (wachtwoord en passkey)" Icon={KeyRound} />}
+          {/* beide-V1R0 — abonnementen bekijken en er een aanvragen (bijv. privé naast zakelijk) */}
+          {onAbonnementen && <IcoonKnop onClick={onAbonnementen} label="Abonnementen (zakelijk en privé)" Icon={CreditCard} />}
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />

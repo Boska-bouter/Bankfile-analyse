@@ -10,6 +10,12 @@ export function resolveRechtsvorm(obj) {
   return typeof obj.rechtsvorm === "string" ? obj.rechtsvorm : null;
 }
 
+// beide-V1R0 — soort van het dossier. Een bestand of instellingen van vóór de privémodus heeft geen veld
+// dossierSoort en is altijd zakelijk. Alleen de exacte waarde "prive" maakt een dossier privé.
+export function resolveDossierSoort(obj) {
+  return obj && obj.dossierSoort === "prive" ? "prive" : "zakelijk";
+}
+
 // Zelfde migratie-redenering als resolveRechtsvorm hierboven: ontbreekt het veld helemaal (een
 // bestand van vóór deze vraag bestond), dan is er nooit een holding-vraag gesteld — behandel dat
 // als "nee" (nooit meer vragen). Staat het veld er al wel (ook al is de waarde nog null, dus nog
