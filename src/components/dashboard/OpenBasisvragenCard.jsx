@@ -4,7 +4,7 @@ import { ClipboardList } from "lucide-react";
 // omdat de wizard zonder bankbestand is doorlopen (dan worden de vragen per jaar overgeslagen) of
 // tussentijds is gesloten. "Nu beantwoorden" opent de wizard op precies deze vragen; wat al
 // beantwoord is komt niet terug.
-export default function OpenBasisvragenCard({ vragen, nietGestart = false, onBeantwoorden }) {
+export default function OpenBasisvragenCard({ vragen, nietGestart = false, onBeantwoorden, onderwerpen = "aftrekposten, auto, lease, BTW" }) {
   if (!vragen || vragen.length === 0) return null;
   // release21V7 — nog niets beantwoord en geen bankbestand: rustige regel i.p.v. de gele lijst.
   if (nietGestart) {
@@ -27,7 +27,7 @@ export default function OpenBasisvragenCard({ vragen, nietGestart = false, onBea
             Nog niet beantwoord ({vragen.length})
           </p>
           <p className="text-xs text-amber-800 mt-0.5">
-            Deze basisvragen bepalen mee hoe de app rekent (aftrekposten, auto, lease, BTW). Zolang ze openstaan kan de uitkomst afwijken.
+            Deze basisvragen bepalen mee hoe de app rekent ({onderwerpen}). Zolang ze openstaan kan de uitkomst afwijken.
           </p>
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {vragen.map((v) => (

@@ -13,7 +13,8 @@ import { soortPriveOpname } from "../../calc/inkomenPerMaand.js";
 // de categorie-kaarten van Zakelijk en Prive in hun eigen rij staan, en de detailtabellen
 // daaronder in een eigen rij precies naast elkaar boven aan de lijn kunnen beginnen. Gegroepeerd
 // op hoofdcategorie (~17 rijen) — klik op een rij om de onderliggende subtypes te zien.
-export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp, rekeningen = null, eigenPriveIbans = null }) {
+// beide-V1R8 — `zonderBtw` (privédossier): alleen het bedrag, zonder BTW- en nettokolom; `titel` vervangt de kop.
+export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpenHelp, rekeningen = null, eigenPriveIbans = null, zonderBtw = false, titel = null }) {
   const toonFijn = useToonFijn();
   // release32V3 — "Privé opnames" uitgesplitst naar waar het geld heen ging (alleen zakelijke kant).
   const ibansKey = (eigenPriveIbans || []).join("|");
@@ -57,7 +58,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
   return (
     <div className="rounded-paneel border border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-        Categorieën — {group.label}
+        {titel || <>Categorieën — {group.label}</>}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
         <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
           <input type="checkbox" checked={toonFijn} onChange={(e) => setToonFijn(e.target.checked)} className="h-3 w-3" />
@@ -78,9 +79,9 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
         <thead>
           <tr className="text-xs text-slate-400 uppercase">
             <th className="text-left font-medium pb-1.5">Categorie</th>
-            <th className="text-right font-medium pb-1.5 px-2">Bruto</th>
-            <th className="text-right font-medium pb-1.5 px-2">BTW</th>
-            <th className="text-right font-medium pb-1.5">Netto</th>
+            <th className="text-right font-medium pb-1.5 px-2">{zonderBtw ? "Bedrag" : "Bruto"}</th>
+            {!zonderBtw && <th className="text-right font-medium pb-1.5 px-2">BTW</th>}
+            {!zonderBtw && <th className="text-right font-medium pb-1.5">Netto</th>}
           </tr>
         </thead>
         <tbody>
@@ -108,8 +109,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
-                  <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(mainBtwTotals[c] || 0)}</td>
-                  <td className="py-1 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c] - (mainBtwTotals[c] || 0))}</td>
+                  {!zonderBtw && <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(mainBtwTotals[c] || 0)}</td>}
+                  {!zonderBtw && <td className="py-1 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c] - (mainBtwTotals[c] || 0))}</td>}
                 </tr>
                 {isOpen &&
                   subtypesPresent.map((s) => (
@@ -118,8 +119,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                         <span className={`inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[16rem] ${CATEGORY_COLOR[s] || "bg-slate-200 text-slate-700"}`}>{s}</span>
                       </td>
                       <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount)}</td>
-                      <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>
-                      <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount - subRows[s].btw)}</td>
+                      {!zonderBtw && <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap text-slate-400">{eur(subRows[s].btw)}</td>}
+                      {!zonderBtw && <td className="py-1 text-right font-mono text-xs whitespace-nowrap text-slate-500">{eur(subRows[s].amount - subRows[s].btw)}</td>}
                     </tr>
                   ))}
               </Fragment>
@@ -130,8 +131,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
           <tr className="border-t border-slate-200 font-semibold">
             <td className="pt-2">Totaal</td>
             <td className="pt-2 px-2 text-right font-mono">{eur(grandTotal)}</td>
-            <td className="pt-2 px-2 text-right font-mono">{eur(grandBtw)}</td>
-            <td className="pt-2 text-right font-mono">{eur(grandTotal - grandBtw)}</td>
+            {!zonderBtw && <td className="pt-2 px-2 text-right font-mono">{eur(grandBtw)}</td>}
+            {!zonderBtw && <td className="pt-2 text-right font-mono">{eur(grandTotal - grandBtw)}</td>}
           </tr>
         </tfoot>
       </table>

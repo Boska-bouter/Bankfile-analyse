@@ -11,7 +11,7 @@ import { resolveClassification, detectOwnAccountTransfer } from "./classificatio
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
 import { scoreClassification } from "./classification/confidence.js";
-import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf, setActieveRechtsvorm } from "./classification/categories.js";
+import { categorieLabel, DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf, setActieveRechtsvorm } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
@@ -82,6 +82,13 @@ import CategoryChangeScopeModal from "./components/shared/CategoryChangeScopeMod
 import CategoryPercentageScopeModal from "./components/shared/CategoryPercentageScopeModal.jsx";
 import SetupWizardModal from "./components/upload/SetupWizardModal.jsx";
 import PriveWizardModal from "./components/prive/PriveWizardModal.jsx";
+import PriveOverzicht from "./components/prive/PriveOverzicht.jsx";
+import PriveUitkomstEenvoudig from "./components/prive/PriveUitkomstEenvoudig.jsx";
+import { PRIVE_EENVOUDIG } from "./modus/prive/eenvoudig.js";
+import { PriveGegevensKaart } from "./components/prive/PriveKaarten.jsx";
+import { usePriveOverzicht } from "./calc/prive/usePriveOverzicht.jsx";
+import { buildAangiftevoorstelPriveHtml } from "./reports/aangiftevoorstel-prive.js";
+import { buildBudgetRapportHtml, buildPriveSamenvattingHtml, exportPriveExcel } from "./reports/prive/budgetRapport.js";
 import { voorladenExcel } from "./importers/excel.js";
 import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
@@ -1811,7 +1818,9 @@ export default function App() {
       years: targetYears, yearPeriod, classified, incompleteLeases: incompleteLeasesCount, incompleteLoans: incompleteLoansCount,
       zelfstandigenaftrekStatus, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
     }));
-    const html = rechtsvorm === "bv"
+    const html = priveOverzicht
+      ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen })
+      : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
       : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
     setAangiftevoorstelPreview(html);
@@ -1892,6 +1901,10 @@ export default function App() {
     if (jaren.length === 0) return;
     setKlantJaarKeuze(null);
     setKlantSamenvattingJaren(jaren);
+    if (priveOverzicht) {
+      setKlantSamenvattingHtml(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }));
+      return;
+    }
     setKlantSamenvattingHtml(buildKlantSamenvattingHtml({
       klantNaam: eigenNamen?.ondernemer, rechtsvorm,
       jaren: jaren.map(klantJaarData),
@@ -2669,6 +2682,8 @@ export default function App() {
     () => (yearlySummary ? estimateZvw(yearlySummary.winst, activeYear) : { bijdrage: 0, geëxtrapoleerd: false, grondslag: 0, gemaximeerd: false }),
     [yearlySummary, activeYear, tariefOverrides, overigInkomenBox1]
   );
+  // beide-V1R8 (fase 5) — privédossier: budget en belastingindicatie per jaar (calc/prive, tax/prive).
+  const priveOverzicht = usePriveOverzicht({ actief: modus.berekening === "prive", transacties: classified, jaren: years, vasteCategorieen: fixedCategories, antwoorden: priveAntwoorden, eenvoudig: eenvoudigActief });
   const yearlySummaries = useYearlySummaries({
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, energieZakelijkPercentageStatus,
@@ -2798,6 +2813,7 @@ export default function App() {
   // `priveRekeningGeladen` in tax/checklist.js — bepaalt of de spiegelboeking-check daar nog
   // betekenis heeft, of dat de echte privétransacties zelf al hun eigen tegenboeking zijn.
   const rekeningTypeTekst = (() => {
+    if (modus.rekeningen.vraagSoort === false) return ""; // beide-V1R8 — privé: alle rekeningen zijn privé
     const t = parsedFiles.map((f) => accountTypeByFile[f.fileName]).filter(Boolean);
     const z = t.filter((x) => x === "Zakelijk").length, p = t.filter((x) => x === "Prive").length;
     if (z + p === 0) return "";
@@ -2883,7 +2899,7 @@ export default function App() {
     heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibStatus, incompleteActivaCount, incompleteLeasesCount,
     incompleteLoansCount, korRegeling, kwartaalStatus, periodeQuarterOverrides, priveRekeningGeladen,
     rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus,
-    years, zelfstandigenaftrekStatus, zvwStatus,
+    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht,
   });
 
   // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
@@ -3183,12 +3199,12 @@ export default function App() {
       parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus,
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus, priveAntwoorden: modus.wizard ? priveAntwoorden : null,
     }),
     [parsedFiles, accountTypeByFile, years, rechtsvorm, heeftHolding, korRegeling, btwVerlegd, kwartaalStatus,
       autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
       zelfstandigenaftrekStatus, startersaftrekStatus, eigenNamen, eigenRekeningenExtra, zakelijkeSpaarRekening,
-      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus]
+      leaseSummary, leaseMerges, confirmedLeaseTypeKeys, leaseDetails, autoStatus, modus, priveAntwoorden]
   );
   const instellingenCardGroups = useInstellingenCardGroups({
     dossierProfiel,
@@ -3381,7 +3397,7 @@ export default function App() {
     const lijst = [
       maak("import", "Import", ["importControle"], parsedFiles.length === 1 ? "1 bestand, klopt" : `${parsedFiles.length} bestanden, klopt`, "controleren"),
       maak("controleren", "Controleren", ["confidence", "incomeReview", "personReview", "overigReview", "duplicates"], "afgehandeld", "controleren"),
-      maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren"),
+      ...(modus.onderdelen.activa === false ? [] : [maak("bedrijfsmiddelen", "Bedrijfsmiddelen", ["loans", "leases", "activa"], "afgehandeld", "controleren")]),
       maak("aannames", "Instellingen", ["aannames"], "afgehandeld", "instellingen"),
     ];
     // release21V1 — openstaande basisvragen horen bij stap "Instellingen"; een klik opent de wizard
@@ -3537,10 +3553,12 @@ export default function App() {
         exportCsv(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
       case "excel":
-        exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
+        if (priveOverzicht) exportPriveExcel({ jaren: years, overzicht: priveOverzicht, transacties: classified, label: categorieLabel });
+        else exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
       case "print":
-        printReport(groups);
+        if (priveOverzicht) printHtmlDocument(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }));
+        else printReport(groups);
         break;
       case "aangifte":
         setShowAangifteMeerdereJaren(false);
@@ -3556,7 +3574,7 @@ export default function App() {
   // ontbrekende spiegelboeking) — dat stond dubbel. Hier staat alleen wat de checklist niet laat zien.
   const aangifteOpenPunten = useAangifteOpenPunten({
     activeYear, ibStatus, rechtsvorm, vpbStatus, yearlyProgress,
-    zvwStatus,
+    zvwStatus, prive: modus.berekening === "prive",
   });
 
   // Simpele 5-stappen workflow-indicator boven het actieve jaar — puur afgeleid uit bestaande
@@ -4019,7 +4037,9 @@ export default function App() {
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => (modus.wizard ? setManualWizardOpen(true) : setBasisEenvoudigOpen(true))}
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
-            onMaandoverzicht={magUitgebreid && activeYear ? () => setShowInkomenPerMaand(true) : null}
+            onMaandoverzicht={magUitgebreid && activeYear && !priveOverzicht ? () => setShowInkomenPerMaand(true) : null}
+            teksten={priveOverzicht ? PRIVE_EENVOUDIG : null}
+            uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
@@ -4081,7 +4101,8 @@ export default function App() {
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
-            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
+            aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4107,7 +4128,7 @@ export default function App() {
 
           {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
           {parsedFiles.length > 0 && !(showSetupWizard || manualWizardOpen || openVragenWizard) && (
-            <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
+            <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} onderwerpen={modus.wizard?.teksten?.onderwerpen} />
           )}
           {/* V89 — vier rollupkaarten vervangen door één "Eerstvolgende stap"-kaart */}
           {parsedFiles.length > 0 && (
@@ -4141,7 +4162,17 @@ export default function App() {
           {/* v273 — ook dit paneel toont nu altijd, met DetailsPanel zelf een lege-staat renderend
               wanneer er nog geen activeYear is. */}
           <div ref={checklistSectionRef}>
-            {activeYear && <DetailsPanel
+            {activeYear && priveOverzicht && (
+              <PriveOverzicht
+                overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear}
+                onVasteLasten={() => setActiveTab("instellingen")}
+                onBerekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
+                onVragen={() => setManualWizardOpen(true)}
+                onActie={handleDetailsJump} onSamenvatting={startKlantSamenvatting}
+                ibGedaan={!!ibStatus[activeYear]?.gedaan} onIbGedaan={(v) => setIbGedaan(activeYear, v)}
+              />
+            )}
+            {activeYear && !priveOverzicht && <DetailsPanel
               year={activeYear}
               years={years}
               onSelectYear={setActiveYear}
@@ -4313,7 +4344,8 @@ export default function App() {
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
-            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
+            aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4524,7 +4556,7 @@ export default function App() {
             hier getoond i.p.v. alleen op Overzicht. */}
         {/* release31V1 — openstaande basisvragen tellen mee in de Instellingen-badge; dan moeten ze hier ook te zien zijn */}
         {parsedFiles.length > 0 && !eenvoudigActief && activeTab === "instellingen" && !(showSetupWizard || manualWizardOpen || openVragenWizard) && openBasisvragen.length > 0 && (
-          <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} />
+          <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} onderwerpen={modus.wizard?.teksten?.onderwerpen} />
         )}
         <div style={sectionTabStyle("instellingen")}>
           <DashboardHeader
@@ -4539,7 +4571,8 @@ export default function App() {
             werkelijkAangifteDone={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteDone : null}
             werkelijkAangifteTotal={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteTotal : null}
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
-            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : setShowMultiYearModal(true))}
+            onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
+            aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4608,10 +4641,20 @@ export default function App() {
                     vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
                     via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd.
                     Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
+                {priveOverzicht && activeYear && priveOverzicht.perJaar[activeYear] && (
+                  <div style={sectionTabStyle("controleren")}>
+                    <PriveGegevensKaart jaar={activeYear} aannames={priveOverzicht.perJaar[activeYear].aannames} onAanvullen={() => setManualWizardOpen(true)} />
+                  </div>
+                )}
                 {!expandedCardKeys.categorieen && (
                 <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
+                  {modus.onderdelen.btw === false ? (
+                    // beide-V1R8 — privédossier: één tabel met alle boekingen van het jaar, zonder BTW
+                    <div className="md:col-span-2"><CategorySummaryCard group={{ ...priGroupShown, items: [...(zakGroupForYear?.items || []), ...(priGroupShown?.items || [])] }} titel={`Categorieën ${activeYear}`} zonderBtw categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} /></div>
+                  ) : (<>
                   <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} eigenPriveIbans={eigenPriveIbans} />
                   <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} rekeningen={rekeningenVoorGroep(priGroupShown, "Prive")} />
+                  </>)}
                 </div>
                 )}
 

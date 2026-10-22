@@ -1,4 +1,5 @@
 import { getLeaseSegments } from "../tax/financialLease.js";
+import { huishoudenRegels } from "../modus/prive/huishouden.js";
 // Dossierprofiel: een compacte, leesbare samenvatting van wat het dossier "weet" uit de wizard en
 // de instellingen — zodat de gebruiker in één oogopslag kan nagaan of het klopt. Puur lezen: er
 // wordt niets gewijzigd of berekend dat de cijfers raakt.
@@ -25,7 +26,7 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {}, modus,
+    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {}, modus, priveAntwoorden = null,
   } = p;
   // beide-V1R2 — welke blokken er zijn, volgt uit het profiel van het dossier (zonder profiel: zakelijk, zoals altijd).
   const aan = (k) => (modus?.onderdelen ? !!modus.onderdelen[k] : !['budget', 'eigenWoning', 'box3', 'partner'].includes(k));
@@ -38,6 +39,7 @@ export function bouwDossierProfiel(p) {
     if (years.length > 0) huishouden.push(`Jaren in dossier: ${jarenBereik(years)}`);
     if (eigenNamen?.ondernemer) huishouden.push(`Rekeninghouder: ${eigenNamen.ondernemer}`);
     if (eigenNamen?.partner) huishouden.push(`Partner: ${eigenNamen.partner}`);
+    if (priveAntwoorden) huishouden.push(...huishoudenRegels(priveAntwoorden)); // beide-V1R8
     blokken.push({ titel: "Huishouden", regels: huishouden });
   }
 

@@ -25,12 +25,12 @@ export const PRIVE_PROFIEL = Object.freeze({
   kaarten: Object.freeze({
     overzicht: ["confidence", "personReview", "overigReview", "duplicates", "bestandenOverzicht"],
     controleren: ["importControle", "confidence", "personReview", "overigReview", "duplicates"],
-    instellingen: ["aannames"],
+    instellingen: [], // beide-V1R8 — geen zakelijke aannames (urencriterium, auto); huishouden staat in het dossierprofiel
   }),
   // Rekeningen: in privé is elke rekening privé; niet vragen.
   rekeningen: Object.freeze({ vraagSoort: false, standaard: "Prive" }),
-  berekening: "prive", // fase 5: tax/prive/
-  rapport: "prive", // fase 7: reports/aangiftevoorstel-prive.js
+  berekening: "prive", // fase 5 (beide-V1R8): tax/prive/ via calc/prive/usePriveOverzicht
+  rapport: "prive", // fase 7 (beide-V1R8): reports/aangiftevoorstel-prive.js, reports/prive/
   onderdelen: Object.freeze({
     btw: false, omzet: false, activa: false, auto: false, lease: false, holding: false, ondernemersaftrek: false, vpb: false,
     budget: true, eigenWoning: true, box3: true, partner: true,

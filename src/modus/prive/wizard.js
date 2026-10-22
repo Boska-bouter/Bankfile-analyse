@@ -52,6 +52,7 @@ export const PRIVE_WIZARD_STAPPEN = Object.freeze([
         { waarde: "aflossingsvrij", label: "Aflossingsvrij" }, { waarde: "combinatie", label: "Combinatie of weet ik niet" },
       ] },
       { key: "hypotheekStart", type: "jaartal", uitgebreid: true, vraag: "In welk jaar is de hypotheek begonnen?", uitleg: "Na 2013 is de renteaftrek alleen mogelijk bij annuïtair of lineair aflossen.", toon: (a) => a.wonen === "koop" },
+      { key: "hypotheekRente", type: "bedragPerJaar", uitgebreid: true, optioneel: true, vraag: "Betaalde hypotheekrente per jaar", uitleg: "Staat op de jaaropgave van je hypotheek. Zonder dit bedrag rekent de app met alles wat naar de hypotheek ging (dus ook aflossing).", toon: (a) => a.wonen === "koop" },
       { key: "woz", type: "bedragPerJaar", uitgebreid: true, vraag: "WOZ-waarde per jaar", uitleg: "Staat op de aanslag gemeentelijke belastingen. Nodig voor het eigenwoningforfait.", toon: (a) => a.wonen === "koop" || a.wonen === "koopZonder" },
     ],
   },
@@ -130,3 +131,4 @@ const TEKSTEN = Object.freeze({
 });
 
 export const PRIVE_WIZARD = Object.freeze({ stappen: PRIVE_WIZARD_STAPPEN, openVragen: openPriveVragen, isBeantwoord, vraagRelevant, teksten: TEKSTEN });
+

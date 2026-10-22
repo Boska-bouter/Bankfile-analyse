@@ -33,7 +33,7 @@ function Balk({ b, groot = false }) {
   );
 }
 
-function Zekerheid({ b, compact = false, nogVragen = null }) {
+function Zekerheid({ b, compact = false, nogVragen = null, onzekerTekst = null }) {
   const o = OORDEEL[b.oordeel];
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -49,7 +49,7 @@ function Zekerheid({ b, compact = false, nogVragen = null }) {
         <span className="text-slate-400">(voortgang, naar bedrag)</span>
       </div>
       {b.oordeel !== "geen" && (
-        <p className="mt-2 text-xs text-slate-600">{b.onzeker > 0 ? <>Nog <b>{r0(b.onzeker)}</b> onzeker; de belasting kan daardoor ongeveer <b>{r0(b.belastingAfwijking)}</b> afwijken.</> : "Niets meer onzeker."}</p>
+        <p className="mt-2 text-xs text-slate-600">{b.onzeker > 0 ? <>Nog <b>{r0(b.onzeker)}</b> onzeker; {onzekerTekst ? `${onzekerTekst}.` : <>de belasting kan daardoor ongeveer <b>{r0(b.belastingAfwijking)}</b> afwijken.</>}</> : "Niets meer onzeker."}</p>
       )}
       {nogVragen != null && b.oordeel !== "betrouwbaar" && b.oordeel !== "geen" && (
         <p className="mt-1 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar (hooguit {r0(b.grens.betrouwbaar)} onzeker).</> : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
@@ -65,6 +65,7 @@ function Rij({ label, waarde, sterk = false }) {
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
   onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, onUitlegZichtbaar = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  teksten = null, uitkomst = null, // beide-V1R8 — privédossier: andere keuzes/teksten (modus/prive/eenvoudig.js) en eigen uitkomst
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -131,9 +132,9 @@ export default function EenvoudigeApp({
   };
   const vorigeVraag = () => { const i = (terugIdx ?? geschiedenis.length) - 1; if (i >= 0) { setTerugIdx(i); setAnders(""); } };
   const slaOver = () => { if (terug) { setTerugIdx(null); return; } if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
-  const voorstel = vraag ? voorstelVoor(vraag) : null;
+  const voorstel = vraag ? (teksten ? teksten.voorstel(vraag) : voorstelVoor(vraag)) : null;
   const zak = vraag?.rekening === "Zakelijk";
-  const KEUZES = vraag ? [
+  const KEUZES = vraag && teksten ? teksten.keuzes(vraag) : vraag ? [
     { k: "bedrijf", t: "Voor mijn bedrijf", s: vraag.teken > 0 ? "betaling van een klant" : "bijv. inkoop, software, administratie" },
     { k: "prive", t: "Privé", s: vraag.teken > 0 ? "geld voor mezelf of het huishouden" : "voor mezelf of het huishouden" },
     { k: "eigen", t: zak ? "Naar / van mijn eigen privérekening" : "Van / naar mijn zakelijke rekening", s: "geld tussen je eigen rekeningen" },
@@ -146,7 +147,7 @@ export default function EenvoudigeApp({
   const bruikbaar = b.oordeel !== "onzeker"; // nieuw-V3R4 — op het onzekere bedrag in euro's, zie calc/eenvoudig.js
   // nieuw-V1R09 — wat is er veranderd sinds je Eenvoudig verliet (door wijzigingen in Uitgebreid)?
   const nu = { winst: Math.round(jaarSummary?.winst || 0), belasting: ibZvw != null ? Math.round(ibZvw) : null, btw: btwJaar != null ? Math.round(btwJaar) : null };
-  const verschillen = gezien ? [
+  const verschillen = gezien && !uitkomst ? [
     ["winst", "Winst"], ["belasting", "Belasting (IB + Zvw)"], ["btw", "BTW over het jaar"],
   ].filter(([k]) => gezien[k] != null && nu[k] != null && Math.abs(gezien[k] - nu[k]) >= 1).map(([k, t]) => ({ k, t, van: gezien[k], naar: nu[k] })) : [];
   const overigeWinst = (jaarSummary?.winst || 0) - ((jaarSummary?.zakelijkeInkomstenNetto || 0) - (jaarSummary?.zakelijkeKostenNetto || 0));
@@ -222,7 +223,7 @@ export default function EenvoudigeApp({
         <div className="grid gap-4 md:grid-cols-[1fr_20rem]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="text-lg font-bold">Je gegevens</h2>
-            <p className="mb-3 text-sm text-slate-600">{bestanden.length === 0 ? "Er zijn nog geen bankbestanden. Voeg de afschriften van je zakelijke (en eventueel privé) rekening toe; de app leest ze daarna in." : "Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe."}</p>
+            <p className="mb-3 text-sm text-slate-600">{bestanden.length === 0 ? (teksten?.bestandenLeeg || "Er zijn nog geen bankbestanden. Voeg de afschriften van je zakelijke (en eventueel privé) rekening toe; de app leest ze daarna in.") : "Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe."}</p>
             <ul className="mb-3 space-y-1 text-sm">
               {bestanden.map((f) => <li key={f.naam} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="truncate">{f.naam}</span><span className="shrink-0 text-slate-500">{f.type === "Zakelijk" ? "zakelijk" : f.type === "Prive" ? "privé" : "?"}</span></li>)}
             </ul>
@@ -231,7 +232,7 @@ export default function EenvoudigeApp({
             </div>
             {bestanden.length > 0 && <button type="button" onClick={() => setStap(2)} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 2: Nakijken →</button>}
           </div>
-          <Zekerheid b={b} compact />
+          <Zekerheid b={b} compact onzekerTekst={teksten?.onzeker} />
         </div>
       )}
 
@@ -253,7 +254,7 @@ export default function EenvoudigeApp({
                     </div>
                   );
                 })()}
-                <h2 className="mb-1 text-xl font-bold">{vraag.soort === "kleinePin" ? "Waren dit privé-aankopen?" : vraag.teken > 0 ? "Waarvoor was dit geld?" : "Waarvoor was deze betaling?"}</h2>
+                <h2 className="mb-1 text-xl font-bold">{vraag.soort === "kleinePin" ? (teksten?.vraagKleinePin || "Waren dit privé-aankopen?") : vraag.teken > 0 ? "Waarvoor was dit geld?" : "Waarvoor was deze betaling?"}</h2>
                 <p className="mb-3 text-sm text-slate-600">
                   {vraag.soort === "kleinePin"
                     ? "Kleine pinbetalingen die de app niet kon herkennen, bijvoorbeeld bij winkels. Je antwoord geldt voor allemaal."
@@ -304,7 +305,7 @@ export default function EenvoudigeApp({
                 })()}
                 <div className="grid gap-2 sm:grid-cols-2">
                   {KEUZES.map((c) => (
-                    <button key={c.k} type="button" onClick={() => beantwoord(c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${(terug ? terug.keuze === c.k : voorstel === c.k) ? (terug ? "border-amber-500 bg-amber-50" : "border-teal-600 bg-teal-50") : "border-slate-300 bg-white"}`}>
+                    <button key={c.k} type="button" onClick={() => beantwoord(c.keuze || c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${(terug ? terug.keuze === c.k : voorstel === c.k) ? (terug ? "border-amber-500 bg-amber-50" : "border-teal-600 bg-teal-50") : "border-slate-300 bg-white"}`}>
                       {terug ? terug.keuze === c.k && <span className="mb-1 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">Je koos</span>
                         : voorstel === c.k && <span className="mb-1 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">Voorstel</span>}
                       <span className="block">{c.t}</span><span className="block text-xs font-normal text-slate-500">{c.s}</span>
@@ -313,7 +314,7 @@ export default function EenvoudigeApp({
                   <div className="rounded-xl border-2 border-slate-300 bg-white p-3 text-[15px] font-semibold">
                     <span className="block">Iets anders…</span>
                     <CategorieSelect value={anders || null} onChange={(v) => setAnders(v)} placeholder="kies uit de lijst…" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs font-normal" />
-                    {anders && <button type="button" onClick={() => beantwoord({ category: anders, type: /^Privé/.test(mainCategoryOf(anders)) || /^Privé/.test(anders) ? "Prive" : "Zakelijk" })} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
+                    {anders && <button type="button" onClick={() => beantwoord({ category: anders, type: teksten?.soort || (/^Privé/.test(mainCategoryOf(anders)) || /^Privé/.test(anders) ? "Prive" : "Zakelijk") })} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
                   </div>
                 </div>
                 {terug && terug.keuze?.startsWith("cat:") && <p className="mt-2 text-xs text-amber-700">Je koos: {terug.keuze.slice(4)}</p>}
@@ -336,16 +337,16 @@ export default function EenvoudigeApp({
             <div className="mt-5"><button type="button" onClick={() => setStap(3)} className="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 3: Uitkomst →</button></div>
           </div>
           <div className="space-y-3">
-            <Zekerheid b={b} compact nogVragen={nogVragen} />
-            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Je kunt altijd stoppen: je antwoorden worden direct bewaard. {onUitgebreid ? <>Fijner werk (percentages, één boeking apart) doe je in <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel je over een boeking? Sla hem over of vraag het je adviseur."}</p>
+            <Zekerheid b={b} compact nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
+            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Je kunt altijd stoppen: je antwoorden worden direct bewaard. {onUitgebreid ? <>{teksten?.uitgebreidTip || "Fijner werk (percentages, één boeking apart) doe je in"} <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel je over een boeking? Sla hem over of vraag het je adviseur."}</p>
           </div>
         </div>
       )}
 
       {stap === 3 && (
         <div className="space-y-4">
-          <Zekerheid b={b} nogVragen={nogVragen} />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Zekerheid b={b} nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
+          {uitkomst ? uitkomst({ bruikbaar, naarNakijken: () => setStap(2) }) : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs text-slate-500">Wat heeft je bedrijf verdiend?</p>
               <p className="my-1 text-3xl font-extrabold">{r0(jaarSummary?.winst)}</p>
@@ -381,7 +382,7 @@ export default function EenvoudigeApp({
               <p className="mb-2 font-semibold text-slate-800">Meer details?</p>
               <p>{onUitgebreid ? <>Lease, afschrijvingen, percentages zakelijk/privé en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : "Lease, afschrijvingen en percentages zakelijk/privé bekijkt je adviseur. "}Twijfel je over iets? Vraag het je adviseur.</p>
             </div>
-          </div>
+          </div>}
           <div className="flex flex-wrap gap-2">
             {onSamenvatting && <button type="button" onClick={onSamenvatting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><FileText className="h-4 w-4" /> Samenvatting</button>}
             {onMaandoverzicht && <button type="button" onClick={onMaandoverzicht} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50"><CalendarDays className="h-4 w-4" /> Maandoverzicht</button>}

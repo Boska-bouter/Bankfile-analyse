@@ -45,7 +45,7 @@ export function useInstellingenCardGroups(p) {
           icon: <CardIcon name="user" />,
           tone: nogOpen > 0 ? "attention" : "neutral",
           lines: [
-            { label: "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
+            { label: dossierProfiel?.[0]?.titel || "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
             { label: "Rekeningen", value: `${eigenRekeningenGeladen.length} geladen · ${(eigenRekeningenExtra || []).length} extra` },
             { label: "Nog niet opgegeven", value: String(nogOpen) },
           ],
