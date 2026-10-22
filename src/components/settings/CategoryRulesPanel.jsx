@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, X, Plus } from "lucide-react";
-import { registerCategory, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_COLOR, mainCategoryOf, groepeerPerWeergave } from "../../classification/categories.js";
+import { registerCategory, mainCategoryOf, groepeerPerWeergave, hoofdcategorieen, hoofdKleur, getCategorieProfiel, categorieLabel } from "../../classification/categories.js";
 import SearchInput from "../shared/SearchInput.jsx";
 
 // Zoekwoorden per subtype — gegroepeerd onder de hoofdcategorie waar dat subtype bij hoort (net
@@ -16,13 +16,16 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   const [newCategoryMain, setNewCategoryMain] = useState("Zakelijk");
   const [newCategoryError, setNewCategoryError] = useState("");
 
+  // beide-V1R6 — in een privédossier alleen de privécategorieën, met hun privélabel en privéhoofdcategorieën.
+  const cp = getCategorieProfiel();
   const isSearching = search.trim() !== "";
   const filteredRules = useMemo(() => {
-    const sorted = [...categoryRules].sort((a, b) => a.name.localeCompare(b.name));
+    const eigen = cp ? categoryRules.filter((r) => cp.bevat(r.name)) : categoryRules;
+    const sorted = [...eigen].sort((a, b) => categorieLabel(a.name).localeCompare(categorieLabel(b.name)));
     if (!isSearching) return sorted;
     const q = search.toLowerCase();
-    return sorted.filter((r) => r.name.toLowerCase().includes(q) || r.keywords.some((kw) => kw.toLowerCase().includes(q)));
-  }, [categoryRules, search, isSearching]);
+    return sorted.filter((r) => r.name.toLowerCase().includes(q) || categorieLabel(r.name).toLowerCase().includes(q) || r.keywords.some((kw) => kw.toLowerCase().includes(q)));
+  }, [categoryRules, search, isSearching, cp]);
 
   const groupedByMain = useMemo(() => {
     const groups = {};
@@ -56,6 +59,15 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
       setNewCategoryError("Deze categorie bestaat al.");
       return;
     }
+    if (cp) {
+      // Privédossier: een privéregel onder de gekozen privéhoofdcategorie (telt nooit als zakelijk).
+      const hoofd = cp.hoofden.includes(newCategoryMain) ? newCategoryMain : "Overig";
+      cp.registreer(name, hoofd);
+      setCategoryRules((prev) => [...prev, { name, color: "bg-slate-200 text-slate-700", keywords: [], mainCategory: hoofd, prive: true }]);
+      setNewCategoryName("");
+      setNewCategoryError("");
+      return;
+    }
     const mainCategory = newCategoryMain === "Privé" ? "Privé" : "Inkoop & zakelijke uitgaven";
     registerCategory(name, undefined, mainCategory);
     setCategoryRules((prev) => [...prev, { name, color: "bg-slate-200 text-slate-700", keywords: [], mainCategory }]);
@@ -75,13 +87,13 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
           <SearchInput value={search} onChange={setSearch} placeholder="Zoeken op categorie of zoekwoord…" className="w-72 mb-3" />
           {filteredRules.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Geen categorieën gevonden voor "{search}".</p>}
           <div className="space-y-1.5">
-            {MAIN_CATEGORY_ORDER.filter((main) => groupedByMain[main]?.length > 0).map((main) => {
+            {hoofdcategorieen().filter((main) => groupedByMain[main]?.length > 0).map((main) => {
               const rules = groupedByMain[main];
               const isGroupOpen = !!openGroups[main] || isSearching;
               return (
                 <div key={main} className="rounded-lg border border-slate-100">
                   <button onClick={() => toggleGroup(main)} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs">
-                    <span className={`rounded-md px-2 py-0.5 font-medium truncate ${MAIN_CATEGORY_COLOR[main] || "bg-slate-200 text-slate-700"}`}>
+                    <span className={`rounded-md px-2 py-0.5 font-medium truncate ${hoofdKleur(main)}`}>
                       {main} <span className="opacity-60">({rules.length})</span>
                     </span>
                     {isGroupOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
@@ -95,7 +107,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                           <div key={r.name} className="rounded-lg border border-slate-100">
                             <button onClick={() => toggleCard(r.name)} className="w-full flex items-center justify-between gap-2 p-3 text-left">
                               <span className="flex items-center gap-2 min-w-0">
-                                <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate ${r.color}`}>{r.name}</span>
+                                <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate ${r.color}`}>{categorieLabel(r.name)}</span>
                                 <span className="text-[11px] text-slate-400 shrink-0 whitespace-nowrap">{r.keywords.length} zoekwoord{r.keywords.length === 1 ? "" : "en"}</span>
                               </span>
                               {isOpenCard ? <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
@@ -159,6 +171,15 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                 placeholder="Naam van de nieuwe categorie…"
                 className="flex-1 min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+              {cp ? (
+                <select
+                  value={cp.hoofden.includes(newCategoryMain) ? newCategoryMain : "Overig"}
+                  onChange={(e) => setNewCategoryMain(e.target.value)}
+                  className="shrink-0 rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+                >
+                  {cp.hoofden.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              ) : (<>
               <button
                 onClick={() => setNewCategoryMain("Zakelijk")}
                 className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${newCategoryMain === "Zakelijk" ? "bg-teal-700 text-white border-teal-700" : "border-slate-300 text-slate-600"}`}
@@ -171,13 +192,15 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
               >
                 Privé
               </button>
+              </>)}
               <button onClick={addCustomCategory} className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-emerald-700">
                 <Plus className="h-3.5 w-3.5" /> Toevoegen
               </button>
             </div>
             {newCategoryError && <p className="mt-1.5 text-xs text-rose-600">{newCategoryError}</p>}
             <p className="mt-1.5 text-xs text-slate-400">
-              {newCategoryMain === "Zakelijk"
+              {cp ? "Komt onder de gekozen hoofdcategorie te staan. Voeg daarna zoekwoorden toe, dan herkent de app de boekingen zelf."
+                : newCategoryMain === "Zakelijk"
                 ? "Komt onder \"Inkoop & zakelijke uitgaven\" te staan en telt mee als aftrekbare zakelijke kostenpost."
                 : "Komt onder \"Privé\" te staan en telt nooit mee in de zakelijke BTW/winst-berekening, ongeacht op welke rekening de transactie stond."}
             </p>

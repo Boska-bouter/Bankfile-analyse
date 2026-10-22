@@ -1,0 +1,179 @@
+// beide-V1R6 (fase 3) — de privécategorieën als gegevens. Geen logica: herkenning.js en weergave.js lezen
+// deze lijsten. Bestaande namen (Boodschappen, Hypotheek, Privé - huur, …) blijven de opgeslagen waarde,
+// zodat bestaande regels, kleuren en dossiers gewoon blijven werken; alleen het label is privévriendelijk.
+//   soort:   "inkomen" | "uitgave" | "overboeking" (inkomen en overboeking zijn geen vaste/variabele last)
+//   fiscaal: vlag voor de privéberekening (fase 5): hypotheekrente, zorgkosten, giften, lijfrente,
+//            partneralimentatie. Alleen een aanwijzing: de berekening bepaalt zelf wat aftrekbaar is.
+//   vast:    standaard een vaste last (Instellingen → Vaste/variabele kosten)
+
+export const PRIVE_HOOFDEN = Object.freeze([
+  { naam: "Inkomen", kleur: "bg-emerald-100 text-emerald-800" },
+  { naam: "Wonen", kleur: "bg-amber-100 text-amber-800" },
+  { naam: "Verzekeringen", kleur: "bg-teal-100 text-teal-800" },
+  { naam: "Zorg", kleur: "bg-red-100 text-red-800" },
+  { naam: "Boodschappen", kleur: "bg-lime-100 text-lime-800" },
+  { naam: "Vervoer", kleur: "bg-orange-100 text-orange-800" },
+  { naam: "Kinderen", kleur: "bg-rose-100 text-rose-800" },
+  { naam: "Abonnementen", kleur: "bg-violet-100 text-violet-800" },
+  { naam: "Vrije tijd", kleur: "bg-sky-100 text-sky-800" },
+  { naam: "Giften", kleur: "bg-pink-100 text-pink-800" },
+  { naam: "Sparen en beleggen", kleur: "bg-cyan-100 text-cyan-800" },
+  { naam: "Aflossingen", kleur: "bg-orange-200 text-orange-900" },
+  { naam: "Belastingen", kleur: "bg-fuchsia-100 text-fuchsia-800" },
+  { naam: "Overig", kleur: "bg-slate-100 text-slate-700" },
+]);
+
+// Hoofdcategorie voor een zelf toegevoegde of onbekende categorie.
+export const PRIVE_STANDAARD_HOOFD = "Overig";
+
+const c = (naam, hoofd, extra = {}) => Object.freeze({ naam, hoofd, label: naam, soort: "uitgave", ...extra });
+
+// Volgorde binnen een hoofdcategorie = volgorde hier; de eerste is de standaardsoort van die hoofdcategorie.
+export const PRIVE_CATEGORIEEN = Object.freeze([
+  c("Loon", "Inkomen", { soort: "inkomen", label: "Loon of salaris", nieuw: true, kleur: "bg-emerald-100 text-emerald-800" }),
+  c("Uitkering", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Pensioen & AOW", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Toeslagen", "Inkomen", { soort: "inkomen" }),
+  c("Kinderbijslag", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
+  c("Overboeking van bekenden", "Inkomen", { soort: "inkomen", label: "Ontvangen van bekenden" }),
+
+  c("Privé - huur", "Wonen", { label: "Huur", vast: true }),
+  c("Hypotheek", "Wonen", { fiscaal: "hypotheekrente", vast: true }),
+  c("Privé - energie-water", "Wonen", { label: "Energie & water", vast: true }),
+  c("Privé - gemeentelijke kosten", "Wonen", { label: "Gemeentelijke belastingen", vast: true }),
+  c("Wonen: onderhoud & inrichting", "Wonen", { label: "Onderhoud & inrichting", nieuw: true, kleur: "bg-amber-50 text-amber-700" }),
+
+  c("Verzekeringen", "Verzekeringen", { vast: true }),
+
+  c("Zorgverzekering", "Zorg", { nieuw: true, vast: true, kleur: "bg-red-50 text-red-700" }),
+  c("Medische uitgaven", "Zorg", { label: "Zorgkosten (eigen betalingen)", fiscaal: "zorgkosten" }),
+
+  c("Boodschappen", "Boodschappen"),
+
+  c("Auto & brandstof", "Vervoer", { nieuw: true, kleur: "bg-orange-100 text-orange-800" }),
+  c("Openbaar vervoer", "Vervoer", { nieuw: true, kleur: "bg-cyan-100 text-cyan-800" }),
+
+  c("Kinderopvang", "Kinderen", { vast: true }),
+  c("Kinderen: school & sport", "Kinderen", { label: "School, clubs & sport kinderen", nieuw: true, kleur: "bg-rose-50 text-rose-700" }),
+  c("Kinderalimentatie", "Kinderen", { vast: true }),
+
+  c("Privé - mobiel/internet", "Abonnementen", { label: "Telefoon & internet", vast: true }),
+  c("Privé overige abonnementen", "Abonnementen", { label: "Streaming & overige abonnementen", vast: true }),
+
+  c("Privé - vrijetijd-uitgaan-vakantie & uit eten", "Vrije tijd", { label: "Uitgaan, vakantie & uit eten" }),
+  c("Sport & hobby", "Vrije tijd", { nieuw: true, kleur: "bg-sky-50 text-sky-700" }),
+
+  c("Giften", "Giften", { label: "Giften & donaties", fiscaal: "giften", nieuw: true, kleur: "bg-pink-100 text-pink-800" }),
+
+  c("Interne overboeking: privé sparen", "Sparen en beleggen", { soort: "overboeking", label: "Sparen" }),
+  c("Beleggen", "Sparen en beleggen", { soort: "overboeking", nieuw: true, kleur: "bg-cyan-50 text-cyan-700" }),
+  c("Lijfrente", "Sparen en beleggen", { label: "Lijfrente & pensioensparen", fiscaal: "lijfrente", vast: true, nieuw: true, kleur: "bg-cyan-100 text-cyan-800" }),
+  c("Interne overboeking", "Sparen en beleggen", { soort: "overboeking", label: "Overboeking eigen rekening" }),
+
+  c("Leningen (privé)", "Aflossingen", { label: "Leningen & studieschuld", vast: true }),
+  c("Incasso, juridisch & schulden", "Aflossingen", { label: "Schulden, incasso & juridisch" }),
+
+  c("Belastingen: IB", "Belastingen", { label: "Inkomstenbelasting" }),
+  c("Belastingen: Naheffingen IB voorgaande jaren", "Belastingen", { label: "Inkomstenbelasting eerdere jaren" }),
+  c("Belastingen: ZVW", "Belastingen", { label: "Bijdrage Zvw" }),
+  c("Belastingen: overig", "Belastingen", { label: "Belastingdienst overig" }),
+
+  c("Privé: overig", "Overig", { label: "Overige uitgaven" }),
+  c("Winkels divers", "Overig", { label: "Winkels" }),
+  c("Webshops & online aankopen", "Overig", { label: "Webshops" }),
+  c("Contant geld", "Overig", { label: "Contant opgenomen", nieuw: true, kleur: "bg-amber-100 text-amber-800" }),
+  c("Overboekingen aan personen", "Overig", { label: "Betaald aan personen" }),
+  c("Privé - bankkosten", "Overig", { label: "Bankkosten", vast: true }),
+  c("Partneralimentatie", "Overig", { fiscaal: "partneralimentatie", vast: true }),
+  c("Privé - overige kosten", "Overig", { label: "Overige kosten (controleren)" }),
+  c("Persoonlijk & vertrouwelijk", "Overig"),
+  c("Inkomsten/betalingen niet dit jaar", "Overig", { soort: "overboeking", label: "Buiten de gekozen jaren" }),
+  c("Overig", "Overig", { label: "Nog te beoordelen" }),
+]);
+
+// Zoekwoorden voor de NIEUWE privécategorieën. Ze komen vóór de standaardregels in de categorieregels van
+// een privédossier, en zijn daar net als de andere te bewerken. `leen` neemt de zoekwoorden van een bestaande
+// standaardregel over (bijv. de OV-bedrijven), zodat die lijst op één plek bijgehouden blijft.
+// `alleenInkomen`: alleen voor bijschrijvingen ("salaris" op een afschrijving is géén loon).
+export const PRIVE_REGELS = Object.freeze([
+  { naam: "Kinderbijslag", alleenInkomen: true, woorden: ["kinderbijslag"] },
+  { naam: "Pensioen & AOW", alleenInkomen: true, woorden: [
+    " aow", "aow-uitkering", "aow uitkering", "ouderdomspensioen", "pensioenuitkering", "pensioenfonds", " abp", "pfzw",
+    "pensioenfonds zorg", " pmt ", " pme ", "bpfbouw", "bpf bouw", "pensioenfonds metaal", " anw ", "nabestaandenpensioen",
+  ] },
+  { naam: "Loon", alleenInkomen: true, woorden: [
+    "salaris", "nettoloon", "netto loon", " loon ", "loonbetaling", "loonstrook", "vakantiegeld", "eindejaarsuitkering",
+    "dertiende maand", "13e maand",
+  ] },
+  { naam: "Uitkering", alleenInkomen: true, woorden: [
+    " uwv", "ww-uitkering", "ww uitkering", "wia-uitkering", "wia uitkering", " wga ", "wajong", "ziektewet",
+    " bijstand", "participatiewet", "ioaw", "uitkering",
+  ] },
+  { naam: "Zorgverzekering", woorden: [
+    "zorgverzekering", "zorgverzekeraar", "zilveren kruis", "cz groep", "menzis", "zorg en zekerheid", "anderzorg", "ditzo",
+    "dsw zorg", "ohra zorg", "fbto zorg", "interpolis zorg", "univé zorg", "unive zorg", "vgz", "de friesland zorg",
+    "salland zorg", "stad holland zorg", "zekur", "ik kies zelf", "eigen risico",
+  ] },
+  { naam: "Auto & brandstof", woorden: [], leen: ["Brandstof", "Autokosten", "Parkeren", "Lease (operationeel)"] },
+  { naam: "Openbaar vervoer", woorden: [], leen: ["Reiskosten (OV)"] },
+  { naam: "Wonen: onderhoud & inrichting", woorden: [
+    "ikea", "kwantum", "leen bakker", "jysk", "loods 5", "beter bed", "swiss sense", "eijerkamp", "keukenkampioen",
+    "woonboulevard", "gordijnen", "vloerenland", "carpetright",
+  ] },
+  { naam: "Kinderen: school & sport", woorden: [
+    "ouderbijdrage", "schoolgeld", "schoolreis", "zwemles", "zwemdiploma", "scouting", "kinderfeest",
+  ] },
+  { naam: "Sport & hobby", woorden: [
+    "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "decathlon",
+    "intersport", "contributie", "knvb", "knltb", "golfclub", "tennisclub", "voetbalvereniging", "muziekschool",
+  ] },
+  { naam: "Giften", woorden: [
+    " gift ", "periodieke gift", "donatie", " anbi", "kwf", "rode kruis", "unicef", "artsen zonder grenzen", "greenpeace",
+    "natuurmonumenten", "wereld natuur fonds", "wnf", "amnesty", "hartstichting", "nierstichting", "longfonds",
+    "diabetes fonds", "alzheimer nederland", "leger des heils", "kerkbalans", "kerkelijke bijdrage", "parochie",
+    "protestantse gemeente", "oxfam", "cordaid", "war child", "dierenbescherming", "kika", "voedselbank",
+  ] },
+  { naam: "Beleggen", woorden: [
+    "degiro", "flatexdegiro", "saxo bank", "meesman", "trade republic", "etoro", "bitvavo", "beleggingsrekening",
+    "beleggen", "brand new day beleggen", "peaks", "lynx b.v.", "bux zero",
+  ] },
+  { naam: "Lijfrente", woorden: ["lijfrente", "banksparen", "pensioensparen", "pensioenbeleggen", "oudedagsvoorziening"] },
+  { naam: "Contant geld", woorden: [], leen: ["Privé opnames"] },
+]);
+
+// Extra woorden voor bestaande categorieën, alleen bij het herkennen van bijschrijvingen in een privédossier.
+export const PRIVE_INKOMEN_EXTRA = Object.freeze({
+  Toeslagen: ["kindgebonden budget", "kinderopvangtoeslag", "zorgtoeslag", "huurtoeslag", "dienst toeslagen"],
+  "Belastingen: IB": ["voorlopige aanslag", "voorlopige teruggaaf", "teruggaaf", "aanslag ib", "inkomstenbelasting"],
+});
+
+// Volgorde waarin een bijschrijving wordt herkend (eerste treffer wint). Toeslagen vóór de rest: een
+// toeslag komt van de Belastingdienst; kinderbijslag vóór pensioen (allebei vaak via de SVB); loon vóór
+// uitkering ("eindejaarsuitkering" is loon).
+export const PRIVE_INKOMEN_VOLGORDE = Object.freeze([
+  "Toeslagen", "Kinderbijslag", "Pensioen & AOW", "Loon", "Uitkering", "Belastingen: IB",
+]);
+
+// Een automatische uitkomst die alleen in een zakelijk dossier hoort, wordt in een privédossier deze
+// privécategorie. Wat hier niet staat en ook geen privécategorie is: zie herkenning.js (vangnet).
+export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
+  "Zakelijke inkomsten": "Inkomsten", "Zakelijke inkomsten 0%": "Inkomsten", "Zakelijke inkomsten 9%": "Inkomsten",
+  "Zakelijke inkomsten 21%": "Inkomsten", "Verkoop activa": "Inkomsten",
+  "Ontvangen van zakelijk": "Interne overboeking", "Terugboeking naar zakelijk": "Interne overboeking",
+  "Terugboeking van privé": "Interne overboeking", "Interne overboeking: zakelijk sparen": "Interne overboeking: privé sparen",
+  "Privé opnames": "Contant geld",
+  "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",
+  "Lease (operationeel)": "Auto & brandstof", "Lease (financieel)": "Auto & brandstof", "Belastingen: MRB": "Auto & brandstof",
+  "Reiskosten (OV)": "Openbaar vervoer",
+  "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
+  "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",
+  "Huur (deels zakelijk)": "Privé - huur", "Energie-water (deels zakelijk)": "Privé - energie-water",
+  "Gemeentelijke kosten (deels zakelijk)": "Privé - gemeentelijke kosten",
+  "Zakelijk mobiel/internet": "Privé - mobiel/internet", "Bankkosten": "Privé - bankkosten", "Leningen": "Leningen (privé)",
+  "Zakelijk overige abonnementen": "Privé overige abonnementen", "Streaming diensten": "Privé overige abonnementen",
+  "Privé - streaming diensten": "Privé overige abonnementen", "Software & Online diensten": "Privé overige abonnementen",
+  "Zakelijke inkoop/uitgaven": "Privé: overig",
+  "Belastingen: OB": "Belastingen: overig", "Belastingen: LH": "Belastingen: overig", "Belastingen: IH": "Belastingen: overig",
+  "Belastingen: Naheffingen OB voorgaande jaren": "Belastingen: overig", "Belastingen: Naheffingen LH voorgaande jaren": "Belastingen: overig",
+});

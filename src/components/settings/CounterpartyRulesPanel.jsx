@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import { MAIN_CATEGORY_COLOR, mainCategoryOf, displayCategory } from "../../classification/categories.js";
+import { mainCategoryOf, displayCategory, hoofdKleur } from "../../classification/categories.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import HelpHint from "../shared/HelpHint.jsx";
 
@@ -73,7 +73,7 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
                     </p>
                     <p className="text-[11px] text-slate-400">
                       {r.sign} ·{" "}
-                      <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${MAIN_CATEGORY_COLOR[mainCategoryOf(r.category)] || "bg-slate-200 text-slate-700"}`}>
+                      <span className={`inline-block rounded-md px-1.5 py-0.5 font-medium ${hoofdKleur(mainCategoryOf(r.category))}`}>
                         {mainCategoryOf(r.category)}
                       </span>{" "}
                       · {displayCategory(r.category)} · {r.type === "Prive" ? "Privé" : r.type}

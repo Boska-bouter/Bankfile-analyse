@@ -1,12 +1,17 @@
 // beide-V1R0 — het zakelijke profiel beschrijft precies het gedrag van de app tot nu toe. Het verwijst naar de
 // bestaande zakelijke onderdelen en verandert er niets aan (zie het stappenplan privémodus, fase 0).
 import { DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, CATEGORY_ORDER } from "../../classification/categories.js";
+import { zonderPriveRegels } from "../prive/regels.js";
 
 export const ZAKELIJK_PROFIEL = Object.freeze({
   soort: "zakelijk",
   naam: "Zakelijk",
   // Bestaande categorieën en herkenningsregels (classification/categories.js).
-  categorieen: Object.freeze({ volgorde: CATEGORY_ORDER, regels: DEFAULT_RULES, vasteLasten: DEFAULT_FIXED_CATEGORIES }),
+  // weergave/herkenning null = de bestaande indeling; regelsOpruimen haalt privéregels weg na een privédossier.
+  categorieen: Object.freeze({
+    volgorde: CATEGORY_ORDER, regels: DEFAULT_RULES, vasteLasten: DEFAULT_FIXED_CATEGORIES,
+    weergave: null, herkenning: null, regelsOpruimen: zonderPriveRegels,
+  }),
   // De wizards zijn in zakelijk nog componenten (SetupWizardModal, BasisvragenEenvoudig); de privéwizard wordt data.
   wizard: null,
   // null = alle bestaande kaarten in de bestaande volgorde. Een lijst met sleutels = alleen die, in die volgorde.

@@ -116,6 +116,7 @@ import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.js
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
 import { useDossierSoort, rechtVoorSoort } from "./modus/useDossierSoort.jsx";
+import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
 import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -281,6 +282,7 @@ export default function App() {
   const [weergave, setWeergave] = useState("uitgebreid");
   const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, soorten: rechtenPerSoort, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
+  const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
@@ -1041,7 +1043,9 @@ export default function App() {
         skipNextPersistRef.current = true;
         suppressChangeCount();
         if (pendingSettings) applySettingsToState(pendingSettings);
-        if (startGezien()) setLoaded(true); else setShowStartupChoice(true);
+        // nieuw-V7R1 — zonder bewaard dossier altijd het beginscherm (Nieuw dossier / Dossier laden), ook binnen
+        // 60 minuten na eerder gebruik op dit apparaat. Voorheen kwam een nieuwe gebruiker dan meteen in een leeg dossier.
+        setShowStartupChoice(true);
       }
     })();
   }, []);
@@ -1472,10 +1476,12 @@ export default function App() {
     return [naam ? naam.toLowerCase() : null, priveNaam ? `prive:${priveNaam.toLowerCase()}` : null].filter(Boolean);
   }, [zakelijkeSpaarRekening]);
 
+  // beide-V1R6 — categorie-indeling en herkenning volgens het dossierprofiel (modus/useCategorieProfiel.jsx).
+  const herkenning = useCategorieProfiel(modus, setCategoryRules, setFixedCategories, categoryRules);
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -3225,18 +3231,22 @@ export default function App() {
     const heeftJaren = years.length > 0;
     const leeg = (m) => Object.keys(m || {}).length === 0;
     const lijst = [];
-    const voeg = (key, label, open) => { if (open) lijst.push({ key, label }); };
-    voeg("naam", "Naam rekeninghouder", eigenNamen === null);
+    // beide-V1R3 — alleen vragen van onderdelen die in dit dossier aan staan; in een privédossier
+    // kwamen de zakelijke vragen (rechtsvorm, auto, KOR, uren …) anders altijd als open terug.
+    const aan = (k) => modus.onderdelen[k] !== false;
+    const voeg = (key, label, open, onderdeel = "omzet") => { if (open && (onderdeel === null || aan(onderdeel))) lijst.push({ key, label }); };
+    voeg("naam", "Naam rekeninghouder", eigenNamen === null, null);
     voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
-    voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null);
-    voeg("lease", "Leaseauto", verwachteLease === null);
-    voeg("leaseOverig", "Overige lease", verwachteLeaseOverig === null);
+    // nieuw-V6R9 — ook beantwoord als de auto per jaar is ingevuld (Persoonlijke aannames), zoals in oudere dossiers.
+    voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null && leeg(autoStatus), "auto");
+    voeg("lease", "Leaseauto", verwachteLease === null, "lease");
+    voeg("leaseOverig", "Overige lease", verwachteLeaseOverig === null, "lease");
     voeg("lening", "Leningen", verwachteLening === null);
     voeg("voorraad", "Voorraad", heeftVoorraad === null);
-    voeg("aov", "AOV", verwachteAOV === null);
-    voeg("kor", "KOR", !isBV && korRegeling === null);
-    voeg("uren", "Urencriterium", heeftJaren && !isBV && leeg(zelfstandigenaftrekStatus));
-    voeg("starters", "Startersaftrek", heeftJaren && !isBV && leeg(startersaftrekStatus));
+    voeg("aov", "AOV", verwachteAOV === null, "ondernemersaftrek");
+    voeg("kor", "KOR", !isBV && korRegeling === null, "btw");
+    voeg("uren", "Urencriterium", heeftJaren && !isBV && leeg(zelfstandigenaftrekStatus), "ondernemersaftrek");
+    voeg("starters", "Startersaftrek", heeftJaren && !isBV && leeg(startersaftrekStatus), "ondernemersaftrek");
     voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
     return lijst;
@@ -3557,6 +3567,7 @@ export default function App() {
     verwachteLening, setVerwachteLening, verwachteAOV, setVerwachteAOV, transactions, korRegeling, btwSettingsSectionRef,
     btwVerlegd, incomeBtwTarieven, meerdereTarievenBevestigd, incomeRatesSectionRef, confidenceSummary, confidenceSectionRef,
     activeYear, quarterlyBtwData, kwartaalStatus,
+    btwAan: modus.onderdelen.btw !== false,
   });
 
   const [resumeHint, setResumeHint] = useState(null);
@@ -3786,14 +3797,17 @@ export default function App() {
     setWeergave("uitgebreid");
   };
   // Vragen die de verkorte wizard (Eenvoudig) overslaat en die nog open staan.
+  // nieuw-V6R9 — overige lease, voorraad, AOV en overig inkomen staan al op de kaart "Nog niet beantwoord";
+  // hier alleen wat daar niet staat, zodat dezelfde vraag niet twee keer als open wordt gemeld.
+  // beide-V1R3 — in een privédossier bestaan de zakelijke vragen niet; die tellen dan nooit als overgeslagen.
+  const zakelijkeVragen = modus.onderdelen.omzet !== false;
   const overgeslagenInEenvoudig = [
-    (eigenRekeningenExtra === null || zakelijkeSpaarRekening === null) && "andere eigen rekeningen",
-    opdrachtgeversGevraagd === null && "klanten en leveranciers",
-    !bevestigdeControles?.activaWizard && "machines en apparatuur",
-    verwachteLeaseOverig === null && "overige lease",
-    heeftVoorraad === null && "voorraad",
-    verwachteAOV === null && "AOV",
-    rechtsvorm !== "bv" && years.length > 0 && Object.keys(overigInkomenBox1 || {}).length === 0 && "overig inkomen",
+    (eigenRekeningenExtra === null || (zakelijkeVragen && zakelijkeSpaarRekening === null)) && "andere eigen rekeningen",
+    zakelijkeVragen && opdrachtgeversGevraagd === null && "klanten en leveranciers",
+    // nieuw-V6R9 — de machinevraag geldt alleen als overgeslagen als de volledige wizard nooit is doorlopen
+    // (dan is ook de klantenvraag nog open) en er geen bedrijfsmiddelen zijn. Oudere, in Uitgebreid gemaakte
+    // dossiers hebben de vlag activaWizard niet; daar kwam de vraag na elke wissel ten onrechte terug.
+    zakelijkeVragen && !bevestigdeControles?.activaWizard && opdrachtgeversGevraagd === null && activaSummary.length === 0 && Object.keys(autoActivaDetails || {}).length === 0 && "machines en apparatuur",
   ].filter(Boolean);
   // nieuw-V1R04 — zelfde keuzelijsten per jaar ook in het Basisvragen-venster van de eenvoudige weergave.
   const jaarKeuzelijsten = (card) => (
@@ -4001,7 +4015,7 @@ export default function App() {
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
-            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen}
+            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} onUitlegZichtbaar={setEenvoudigUitlegOpen}
             onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
@@ -4319,7 +4333,8 @@ export default function App() {
           />
         )}
 
-        {(showSetupWizard || manualWizardOpen || openVragenWizard) && (
+        {/* nieuw-V7R0 — in Eenvoudig eerst de uitleg lezen en sluiten; de wizard wacht zolang en komt daarna vanzelf. */}
+        {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && (
           <SetupWizardModal
             eenvoudig={!magUitgebreid || weergave === "eenvoudig"}
             forceRechtsvormStep={manualWizardOpen}

@@ -64,7 +64,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, onUitlegZichtbaar = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -79,6 +79,9 @@ export default function EenvoudigeApp({
     if (toegangInfo?.status === "laden") return;
     try { if (!localStorage.getItem(uitlegSleutel)) setUitleg("eerste"); } catch { /* geen opslag: niet automatisch tonen */ }
   }, [uitlegSleutel, toegangInfo?.status]);
+  // nieuw-V7R0 — App laat de wizard pas zien als deze uitleg dicht is (anders stond de wizard eroverheen).
+  useEffect(() => { onUitlegZichtbaar?.(!!uitleg); }, [uitleg]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => onUitlegZichtbaar?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps
   const sluitUitleg = () => { try { localStorage.setItem(uitlegSleutel, "1"); } catch { /* geen opslag */ } setUitleg(null); };
   const [toonBoekingen, setToonBoekingen] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de

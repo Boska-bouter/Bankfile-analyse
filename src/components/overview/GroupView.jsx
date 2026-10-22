@@ -1,7 +1,7 @@
 import { useToonFijn } from "../../utils/useToonFijn.js";
 import { useEffect, useMemo, useRef, useState, Fragment, memo } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_ALFA, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_COLOR, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieen, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -84,7 +84,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
           </tr>
         </thead>
         <tbody>
-          {MAIN_CATEGORY_ORDER.filter((c) => c in mainTotals).map((c) => {
+          {hoofdcategorieen().filter((c) => c in mainTotals).map((c) => {
             // V76 — privé-subtypes worden samengevoegd tot hun weergavenaam (9 i.p.v. 29 rijen).
             const subRows = {};
             for (const s of subtypesForMainCategory(c).filter((x) => x in totals)) {
@@ -104,7 +104,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
                   <td className="py-1">
                     <span className="inline-flex items-center gap-1">
                       {canExpand && (isOpen ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" /> : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />)}
-                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[16rem] ${MAIN_CATEGORY_COLOR[c] || "bg-slate-200 text-slate-700"}`}>{c}</span>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium truncate max-w-[16rem] ${hoofdKleur(c)}`}>{c}</span>
                     </span>
                   </td>
                   <td className="py-1 px-2 text-right font-mono text-xs whitespace-nowrap">{eur(mainTotals[c])}</td>
@@ -193,7 +193,7 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
       <td className="px-4 py-2">
         {t.transferLocked ? (
           <span
-            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${hoofdKleur(mainCategoryOf(t.category))}`}
             title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
           >
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
@@ -202,9 +202,9 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
         <select
           value={mainCategoryOf(t.category)}
           onChange={(e) => acties.call("applyChange", t, { category: categoryForMainChange(e.target.value, t.category), type: t.type })}
-          className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+          className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(t.category))}`}
         >
-          {MAIN_CATEGORY_ALFA.map((c) => (
+          {hoofdcategorieenAlfa().map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>

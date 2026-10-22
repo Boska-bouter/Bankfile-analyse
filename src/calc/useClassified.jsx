@@ -11,16 +11,19 @@ export function useClassified(p) {
   const {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
   } = p;
 
   return useMemo(() => {
     // release32V4 — zelfde percentages als de aangifte, dus ook "soort ruimte = privé / niet zelfstandig" telt als 0%.
     const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
+    // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
+    const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
     const base0 = transactions.map((tx) => {
       let resolved = resolveClassification(
-        tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
-        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
+        tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
+        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
+        herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules) : null
       );
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
@@ -110,5 +113,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning]);
 }

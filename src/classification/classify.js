@@ -562,7 +562,9 @@ function hoortBijAndereRekening(override, accountType) {
   return ALLEEN_ZAKELIJK.has(c) && override.type === "Zakelijk";
 }
 
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
+// beide-V1R6 — `verfijn` (optioneel, alleen in een privédossier) past alleen de automatische uitkomst aan, nooit
+// een eigen keuze van de gebruiker. Zonder verfijn is alles zoals het was.
+export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = [], verfijn = null) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
   if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
@@ -596,5 +598,6 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
       return { ...mirror, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
     }
   }
-  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
+  const auto = autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
+  return verfijn ? verfijn(auto) : auto;
 }
