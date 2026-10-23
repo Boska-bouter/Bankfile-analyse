@@ -45,7 +45,31 @@ const standaardVan = () => `${new Date().getFullYear() - 1}-01-01`;
 
 // Terug van de bank (/bank/terug?code=…&state=…): de eenmalige code meteen inwisselen voor een koppeling en die
 // bewaren. Geeft een melding terug, of gooit een fout met een leesbare tekst.
+// beide-V3R4 — koppelingen die de Worker na terugkeer van de bank zelf heeft afgerond (ook als die terugkeer in een
+// andere browser binnenkwam, zoals Safari bij de app als icoon op het beginscherm) ophalen en in het tussenstation zetten.
+export async function haalWachtendeOp() {
+  const d = await api("/wachtend");
+  const nieuw = d.koppelingen || [];
+  if (nieuw.length > 0) {
+    const bestaand = await leesKoppelingen();
+    const ids = new Set(bestaand.map((k) => k.id));
+    await bewaarKoppelingen([...bestaand, ...nieuw.filter((k) => !ids.has(k.id))]);
+    try { sessionStorage.removeItem(STATE_KEY); } catch { /* leeg */ }
+  }
+  const melding = nieuw.map((k) => {
+    const n = k.rekeningen?.length || 0;
+    return `${k.bank} is gekoppeld (${n} rekening${n === 1 ? "" : "en"}). Kies hieronder "Ophalen".`;
+  }).join(" ");
+  return { melding, fout: (d.fouten || []).join("\n") };
+}
+
 export async function rondKoppelingAf(terug) {
+  // beide-V3R4 — de Worker heeft de koppeling al afgerond (zie bankTerugRoute in worker/bank.js).
+  if (terug.klaar) {
+    const r = await haalWachtendeOp();
+    if (r.fout && !r.melding) throw new Error(r.fout);
+    return r.melding || "";
+  }
   let start = null;
   try { start = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null"); } catch { /* leeg */ }
   try { sessionStorage.removeItem(STATE_KEY); } catch { /* leeg */ }
@@ -82,6 +106,39 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   };
   useEffect(() => { pakTussenstationOp(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // beide-V3R4 — terug in de app na koppelen in een ander venster (bijv. Safari bij de app als icoon op het
+  // beginscherm): de koppeling staat dan klaar op de server. Ophalen bij openen, zodra de app weer in beeld komt, en
+  // na "Naar Ponto"/"Naar mijn bank" elke paar seconden zolang het venster openstaat.
+  const [wachtOpBank, setWachtOpBank] = useState(false);
+  const pakServerOp = async () => {
+    try {
+      const r = await haalWachtendeOp();
+      if (!r.melding && !r.fout) return;
+      if (r.fout) setFout(r.fout);
+      if (r.melding) setMelding(r.melding);
+      setBezig("");
+      setWachtOpBank(false);
+      await pakTussenstationOp();
+    } catch { /* geen verbinding of geen recht: later opnieuw */ }
+  };
+  useEffect(() => {
+    if (!afronding?.bezig) pakServerOp();
+    const zichtbaar = () => { if (document.visibilityState === "visible") pakServerOp(); };
+    document.addEventListener("visibilitychange", zichtbaar);
+    window.addEventListener("focus", zichtbaar);
+    return () => { document.removeEventListener("visibilitychange", zichtbaar); window.removeEventListener("focus", zichtbaar); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!wachtOpBank) return undefined;
+    let n = 0;
+    const iv = setInterval(() => {
+      n += 1;
+      if (n > 200) { setWachtOpBank(false); setBezig(""); return; } // na ongeveer 10 minuten stoppen
+      if (document.visibilityState === "visible") pakServerOp();
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [wachtOpBank]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Afronden na terugkeer van de bank gebeurt in App (rondKoppelingAf), ook als eerst het startscherm verschijnt.
   useEffect(() => {
     if (!afronding) return;
@@ -107,6 +164,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
       const s = await api("/start", { bank: bank.naam, psu, state, maxGeldigSec: bank.maxGeldigSec });
       // nieuw-V5R1 — bij Ponto gaat de (versleutelde) PKCE-code mee, nodig om de koppeling na terugkeer af te ronden.
       if (s.pkce) sessionStorage.setItem(STATE_KEY, JSON.stringify({ state, bank: bank.naam, psu, pkce: s.pkce }));
+      setWachtOpBank(true);
       window.location.assign(s.url);
     } catch (e) {
       setFout(e.message);
@@ -245,6 +303,12 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
           <button className={KNOP_PRIMAIR} disabled={(!isPonto && !gekozen) || !aanbieder || !!bezig} onClick={naarBank}>
             {bezig === "start" ? "Doorsturen…" : isPonto ? "Naar Ponto" : "Naar mijn bank"}
           </button>
+          {wachtOpBank && (
+            <p className="text-slate-500">
+              Wachten op de koppeling… Ben je klaar bij {isPonto ? "Ponto" : "je bank"} en kom je hier terug, dan verschijnen de
+              rekeningen vanzelf. <button type="button" className="underline" onClick={() => { setWachtOpBank(false); setBezig(""); }}>Stoppen met wachten</button>
+            </p>
+          )}
         </section>
       </div>
     </ModalShell>

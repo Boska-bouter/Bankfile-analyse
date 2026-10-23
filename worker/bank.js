@@ -114,17 +114,108 @@ async function leesBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
+// beide-V3R4 — afronden van de koppeling op de server. Op een iPad/iPhone met de app als icoon op het beginscherm opent
+// de bank (of Ponto) in Safari, en daar komt ook de terugkeer (/bank/terug) binnen: zonder het open dossier, zonder de
+// gegevens uit het koppelvenster en vaak zonder inlog. Daarom bewaart /start de "state" met het e-mailadres in D1
+// (30 minuten), wisselt de Worker bij /bank/terug zelf de code in, en zet het resultaat (het versleutelde koppeltoken en
+// de rekeningen, 24 uur) klaar voor dat e-mailadres. De app haalt het op met /api/bank/wachtend zodra hij weer in beeld is.
+const BANK_SCHEMA = [
+  "CREATE TABLE IF NOT EXISTS bank_start (state TEXT PRIMARY KEY, email TEXT NOT NULL, bank TEXT, psu TEXT, pkce TEXT, verloopt INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS bank_wachtend (id TEXT PRIMARY KEY, email TEXT NOT NULL, data TEXT NOT NULL, verloopt INTEGER NOT NULL)",
+];
+const START_MS = 30 * 60 * 1000;
+const WACHT_MS = 24 * 3600 * 1000;
+const bankTabellenKlaar = new WeakSet();
+async function zorgVoorBankTabellen(db) {
+  if (bankTabellenKlaar.has(db)) return;
+  for (const s of BANK_SCHEMA) await db.prepare(s).run();
+  bankTabellenKlaar.add(db);
+}
+
+const escHtml = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function terugPagina(gelukt, tekst) {
+  const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bankkoppeling</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f8fafc;color:#0f172a}main{max-width:32rem;margin:12vh auto;padding:28px 24px;background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 12px;color:${gelukt ? "#0f766e" : "#b91c1c"}}p{line-height:1.5;color:#334155}a{display:inline-block;margin-top:12px;color:#0f766e}</style></head><body><main>
+<h1>${gelukt ? "Koppeling gelukt" : "Koppeling niet gelukt"}</h1><p>${escHtml(tekst)}</p>
+<p>Ga terug naar de app Bankoverzicht (bijvoorbeeld via het icoon op je beginscherm). ${gelukt ? "De rekeningen verschijnen daar vanzelf in het venster van de bankkoppeling." : "Begin daar zo nodig opnieuw met koppelen."} Dit venster mag je sluiten.</p>
+<a href="/">Of open de app in deze browser</a></main></body></html>`;
+  return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
+}
+
+// Terugkeer van de bank (/bank/terug?code=…&state=…), vóór de inlogcontrole. Geeft null als de state hier niet bekend
+// is (geen D1, verlopen of van vóór beide-V3R4): dan rondt de app de koppeling zelf af zoals voorheen.
+export async function bankTerugRoute(request, env, url) {
+  const state = String(url.searchParams.get("state") || "").slice(0, 100);
+  if (!env.DB || !state) return null;
+  await zorgVoorBankTabellen(env.DB);
+  const nu = Date.now();
+  await env.DB.prepare("DELETE FROM bank_start WHERE verloopt < ?").bind(nu).run();
+  const start = await env.DB.prepare("DELETE FROM bank_start WHERE state = ? RETURNING email, bank, psu, pkce").bind(state).first();
+  if (!start) return null;
+  const weigering = url.searchParams.get("error_description") || url.searchParams.get("error");
+  let d;
+  if (weigering) d = { ok: false, fout: `De bank gaf geen toestemming: ${String(weigering).slice(0, 200)}` };
+  else {
+    const req = new Request(`${url.origin}/api/bank/sessie`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "Cf-Access-Authenticated-User-Email": start.email },
+      body: JSON.stringify({ code: url.searchParams.get("code") || "", bank: start.bank || "", ...(start.pkce ? { pkce: start.pkce } : {}) }),
+    });
+    d = await (await bankRoute(req, env, new URL(req.url))).json().catch(() => ({ ok: false, fout: "Onverwacht antwoord" }));
+  }
+  const item = d.ok
+    ? { id: crypto.randomUUID(), bank: d.bank || start.bank || "", psu: start.psu || "personal", token: d.token, rekeningen: d.rekeningen || [], geldigTot: d.geldigTot || null, gekoppeldOp: new Date().toISOString(), opgehaald: {} }
+    : { fout: [d.fout, d.detail].filter(Boolean).join(" — ") || "Koppeling mislukt" };
+  await env.DB.prepare("DELETE FROM bank_wachtend WHERE verloopt < ?").bind(nu).run();
+  await env.DB.prepare("INSERT INTO bank_wachtend (id, email, data, verloopt) VALUES (?, ?, ?, ?)").bind(crypto.randomUUID(), start.email, JSON.stringify(item), nu + WACHT_MS).run();
+  // Zelfde browser en ingelogd als dezelfde gebruiker: meteen terug naar de app, die het resultaat ophaalt.
+  const ingelogd = String(request.headers.get("Cf-Access-Authenticated-User-Email") || "").trim().toLowerCase();
+  if (ingelogd && ingelogd === start.email) return new Response(null, { status: 302, headers: { Location: "/bank/terug?klaar=1", "cache-control": "no-store" } });
+  const n = item.rekeningen?.length || 0;
+  return terugPagina(d.ok, d.ok ? `${item.bank} is gekoppeld (${n} rekening${n === 1 ? "" : "en"}).` : item.fout);
+}
+
 export async function bankRoute(request, env, url) {
   const email = (request.headers.get("Cf-Access-Authenticated-User-Email") || env.EB_DEV_EMAIL || "").trim().toLowerCase();
   if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
   const pad = url.pathname.replace(/^\/api\/bank/, "") || "/";
+
+  // beide-V3R4 — koppelingen die de Worker na terugkeer van de bank heeft afgerond (zie bankTerugRoute) ophalen; ze
+  // worden daarbij van de server verwijderd.
+  if (pad === "/wachtend" && request.method === "GET") {
+    if (!env.DB) return json({ ok: true, koppelingen: [], fouten: [] });
+    await zorgVoorBankTabellen(env.DB);
+    const { results } = await env.DB.prepare("DELETE FROM bank_wachtend WHERE email = ? RETURNING data, verloopt").bind(email).all();
+    const items = (results || []).filter((r) => r.verloopt >= Date.now()).map((r) => { try { return JSON.parse(r.data); } catch { return null; } }).filter(Boolean);
+    return json({ ok: true, koppelingen: items.filter((x) => !x.fout), fouten: items.filter((x) => x.fout).map((x) => x.fout) });
+  }
+
+  const startBody = pad === "/start" && request.method === "POST" ? request.clone().json().catch(() => ({})) : null;
+  const antwoord = await bankRouteAanbieder(request, env, url, email, pad);
+  // beide-V3R4 — bij /start de state bewaren, zodat de Worker de terugkeer zelf kan afronden.
+  if (startBody && antwoord.ok && env.DB) {
+    try {
+      const s = await antwoord.clone().json();
+      const b = (await startBody) || {};
+      if (s?.ok && s.state) {
+        await zorgVoorBankTabellen(env.DB);
+        await env.DB.prepare("DELETE FROM bank_start WHERE verloopt < ?").bind(Date.now()).run();
+        await env.DB.prepare("INSERT OR REPLACE INTO bank_start (state, email, bank, psu, pkce, verloopt) VALUES (?, ?, ?, ?, ?, ?)")
+          .bind(String(s.state).slice(0, 100), email, String(b.bank || "").slice(0, 120), b.psu === "business" ? "business" : "personal", s.pkce || null, Date.now() + START_MS).run();
+      }
+    } catch { /* dan rondt de app de koppeling zelf af zoals voorheen */ }
+  }
+  return antwoord;
+}
+
+async function bankRouteAanbieder(request, env, url, email, pad) {
 
   // nieuw-V5R1 — Ponto als aanbieder (BANK_AANBIEDER = "ponto"). Nieuwe koppelingen gaan dan via Ponto; bestaande
   // koppelingen blijven werken via de aanbieder waarmee ze zijn gemaakt (te zien aan het koppeltoken).
   const standaardPonto = String(env.BANK_AANBIEDER || "").trim().toLowerCase() === "ponto";
   const viaPonto = await (async () => {
     if ((pad === "/transacties" || pad === "/verwijder") && String(env.EB_TOKEN_GEHEIM || "").trim()) {
-      const b = await request.clone().json().catch(() => ({}));
+      const b = (await startBody) || {};
       const t = await ontsleutel(env, email, b.token);
       if (t) return !!t.p; // een geldig token bepaalt de aanbieder; een ongeldig token weigert de standaardaanbieder
     }

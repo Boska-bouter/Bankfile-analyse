@@ -192,9 +192,15 @@ const BANK_TERUG = (() => {
   if (typeof window === "undefined" || window.location.pathname !== "/bank/terug") return null;
   const q = new URLSearchParams(window.location.search);
   window.history.replaceState(null, "", "/");
-  return { code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
+  // beide-V3R4 — ?klaar=1: de Worker heeft de koppeling al afgerond en klaargezet (zie worker/bank.js, bankTerugRoute).
+  return { klaar: q.get("klaar") === "1", code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
 })();
 let bankTerugAfgehandeld = false;
+// beide-V3R4 — welk soort dossier (zakelijk/privé) open stond toen het koppelvenster openging. Na de terugkeer van de
+// bank herlaadt de pagina; zonder bewaard dossier (nieuw, nog niets geladen) gaat de app daarmee verder in plaats
+// van het beginscherm te tonen, waar het koppelvenster niet kan verschijnen.
+const BANK_DOSSIER_KEY = "bankoverzicht:bankkoppeling-dossier";
+const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(BANK_DOSSIER_KEY) || "null"); } catch { return null; } };
 
 // ---------------------------------------------------------------------------
 // Dit is de functionele schil (upload, tabbladen, dashboard, alle panelen) rond de
@@ -566,9 +572,13 @@ export default function App() {
     if (!BANK_TERUG || bankTerugAfgehandeld) return;
     bankTerugAfgehandeld = true; // React StrictMode draait effecten twee keer; de code is maar één keer geldig
     rondKoppelingAf(BANK_TERUG)
-      .then((melding) => setBankKoppeling({ melding }))
+      .then((melding) => setBankKoppeling(melding ? { melding } : {}))
       .catch((e) => setBankKoppeling({ fout: e.message || String(e) }));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!bankKoppeling) return;
+    try { sessionStorage.setItem(BANK_DOSSIER_KEY, JSON.stringify({ soort: soortDossier, weergave, bestanden: parsedFiles.length })); } catch { /* geen opslag */ }
+  }, [bankKoppeling, soortDossier, weergave, parsedFiles.length]);
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
@@ -1025,25 +1035,36 @@ export default function App() {
     (async () => {
       const pendingData = await loadPersistedParsedFiles();
       const pendingSettings = await loadPersistedSettings();
-      if (pendingData && pendingData.length > 0) {
+      // beide-V3R4 — terug van de bank vanuit een nieuw dossier zonder bestanden terwijl er nog een ouder dossier in de
+      // browser staat: niet dat oude dossier openen, maar verder in het nieuwe (lege) dossier.
+      const bankDossierNieuw = !!BANK_TERUG && leesBankDossier()?.bestanden === 0 && (pendingData?.length || 0) > 0;
+      if (pendingData && pendingData.length > 0 && !bankDossierNieuw) {
         // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen (of ga direct
         // verder als het startscherm in dit tabblad al is geweest).
         pendingProjectRef.current = { parsedFiles: pendingData, settings: pendingSettings };
-        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
-      } else if (heeftBewaardeAntwoorden(pendingSettings)) {
+        // beide-V3R4 — terug van de bank: altijd direct verder, anders blijft de koppeling achter het beginscherm hangen.
+        if (startGezien() || BANK_TERUG) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
+      } else if (heeftBewaardeAntwoorden(pendingSettings) && !bankDossierNieuw) {
         // release22V8 — dossier met alleen antwoorden (wizard ingevuld, nog geen bankbestanden): ook dan
         // "Vorig dossier gevonden" met "Verder met dit dossier". Instellingen pas inladen bij "Verder",
         // zodat "Nieuw dossier" echt leeg begint.
         pendingProjectRef.current = { parsedFiles: [], settings: pendingSettings };
-        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
+        if (startGezien() || BANK_TERUG) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
       } else {
         // Geen bewaard dossier — eventuele losse instellingen (zonder bestanden) alsnog inladen.
         skipNextPersistRef.current = true;
         suppressChangeCount();
-        if (pendingSettings) applySettingsToState(pendingSettings);
+        if (pendingSettings && !bankDossierNieuw) applySettingsToState(pendingSettings);
         // nieuw-V7R1 — zonder bewaard dossier altijd het beginscherm (Nieuw dossier / Dossier laden), ook binnen
         // 60 minuten na eerder gebruik op dit apparaat. Voorheen kwam een nieuwe gebruiker dan meteen in een leeg dossier.
-        setShowStartupChoice(true);
+        // beide-V3R4 — behalve bij terugkeer van de bank vanuit een nieuw (nog leeg) dossier: dan verder in dat dossier.
+        const bankDossier = BANK_TERUG ? leesBankDossier() : null;
+        if (bankDossier) {
+          if (bankDossier.soort) setSoortDossier(bankDossier.soort);
+          if (bankDossier.weergave) setWeergave(bankDossier.weergave);
+          markeerStartGezien();
+          setLoaded(true);
+        } else setShowStartupChoice(true);
       }
     })();
   }, []);
