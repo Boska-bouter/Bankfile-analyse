@@ -8,13 +8,20 @@ import { KNOP_PRIMAIR_GROOT } from "../ui/stijl.js";
 
 const BESTANDEN = "bestanden";
 const OPSLAAN = "opslaan";
+const REKENINGEN = "rekeningen";
 
 export default function PriveWizardModal({
   wizard, antwoorden, setAntwoorden, eigenNamen, setEigenNamen,
   years = [], loadedFileNames = [], eenvoudig = false, volledig = false, alleenVragen = null,
   loadFilesFirst = false, onPickFiles, onKoppelen = null, importBezig = false, importFout = null,
-  onSaveProject, onClose,
+  onSaveProject, onClose, extraRekeningen = null, eigenRekeningenExtra, setEigenRekeningenExtra,
 }) {
+  // beide-V2R4 — bij het openen vastgelegd: na het eerste bestand verdween de stap anders meteen, zodat je geen
+  // tweede rekening (spaar-, beleggings-, kinderrekening) meer kon toevoegen.
+  const [metBestanden] = useState(loadFilesFirst);
+  // beide-V2R5 — eigen rekeningen (spaar-, beleggings-, kinderrekening) als eigen stap, ook in Eenvoudig: bij de
+  // volledige wizard altijd, anders zolang er nog nooit naar gevraagd is (zoals de zakelijke wizard).
+  const [metRekeningen] = useState(() => !!extraRekeningen && !Array.isArray(alleenVragen) && (volledig || eigenRekeningenExtra == null));
   const a = antwoorden || {};
   const ctx = { eigenNamen, jaren: years, bestanden: loadedFileNames };
   // Bij het openen vastgelegd: welke vragen deze keer gesteld worden. Volledig (nieuw dossier of "Basisvragen")
@@ -35,7 +42,8 @@ export default function PriveWizardModal({
 
   const vragenVan = (s) => s.vragen.filter((v) => teStellen.has(v.key) && wizard.vraagRelevant(v, huidigeAntwoorden, ctx, { eenvoudig }));
   const stappen = [
-    ...(loadFilesFirst && !Array.isArray(alleenVragen) ? [{ id: BESTANDEN, titel: "Bankbestanden laden" }] : []),
+    ...(metBestanden && !Array.isArray(alleenVragen) ? [{ id: BESTANDEN, titel: "Bankbestanden laden" }] : []),
+    ...(metRekeningen ? [{ id: REKENINGEN, titel: "Eigen rekeningen" }] : []),
     ...wizard.stappen.filter((s) => vragenVan(s).length > 0 || klaar.includes(s.id)),
     { id: OPSLAAN, titel: "Dossier opslaan" },
   ];
@@ -104,7 +112,7 @@ export default function PriveWizardModal({
               {onKoppelen && (
                 <button type="button" disabled={importBezig} onClick={onKoppelen}
                   className="w-full disabled:opacity-50 rounded-lg border border-teal-700 px-4 py-3 text-sm font-semibold text-teal-800 hover:bg-teal-50">
-                  Of rechtstreeks koppelen met de bank (proef)
+                  Of rechtstreeks koppelen met de bank (in ontwikkeling)
                 </button>
               )}
               {loadedFileNames.length === 0 ? (
@@ -112,11 +120,25 @@ export default function PriveWizardModal({
                   Nee, ik laad ze later — eerst de vragen
                 </button>
               ) : (
-                <ul className="rounded-lg border border-slate-200 divide-y divide-slate-100">
-                  {loadedFileNames.map((n) => <li key={n} className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700"><Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /><span className="truncate">{n}</span></li>)}
-                </ul>
+                <>
+                  <ul className="rounded-lg border border-slate-200 divide-y divide-slate-100">
+                    {loadedFileNames.map((n) => <li key={n} className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700"><Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /><span className="truncate">{n}</span></li>)}
+                  </ul>
+                  <p className="text-xs text-slate-600">Heb je meer rekeningen, zoals een spaarrekening, beleggingsrekening, kinderrekening of een rekening van je partner? Voeg die bestanden ook toe met de knop hierboven.</p>
+                  <button type="button" onClick={volgende} className={KNOP_PRIMAIR_GROOT}>Klaar met bestanden — verder</button>
+                </>
               )}
               <p className="text-xs text-slate-500"><strong>Privacy:</strong> bankgegevens worden lokaal in je browser verwerkt en niet naar een externe server gestuurd voor analyse.</p>
+            </>
+          )}
+          {huidig.id === REKENINGEN && (
+            <>
+              <p className="text-sm font-medium text-slate-800">Heb je nog andere eigen rekeningen?</p>
+              <p className="text-sm text-slate-600">Bijvoorbeeld een spaarrekening, beleggingsrekening, kinderrekening, een gezamenlijke rekening of een rekening van je partner. Geef het rekeningnummer op, dan telt geld van en naar die rekening als overboeking tussen je eigen rekeningen en niet als inkomen of uitgave.</p>
+              {extraRekeningen}
+              <button type="button" onClick={() => { if (eigenRekeningenExtra == null) setEigenRekeningenExtra?.([]); volgende(); }} className={KNOP_PRIMAIR_GROOT}>
+                {(eigenRekeningenExtra || []).length > 0 ? "Doorgaan" : "Geen andere rekeningen — doorgaan"}
+              </button>
             </>
           )}
           {vragen.map((v) => (

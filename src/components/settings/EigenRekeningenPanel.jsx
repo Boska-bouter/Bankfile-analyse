@@ -47,7 +47,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
   return (
     <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm space-y-3">
       <h3 className="text-sm font-semibold">Eigen rekeningen</h3>
-      {uitleg ? <p className="text-xs text-slate-500">{uitleg}</p> : <p className="text-xs text-slate-500">
+      {uitleg === false ? null : uitleg ? <p className="text-xs text-slate-500">{uitleg}</p> : <p className="text-xs text-slate-500">
         Heb je nog een rekening (zakelijk of privé) die niet is geladen? Geef het rekeningnummer hier op. Boekingen van en naar die
         rekening worden dan automatisch herkend als overboeking tussen je eigen rekeningen — geen inkomen of kosten.
       </p>}

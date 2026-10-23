@@ -9,6 +9,7 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
   const [lokaalFout, setLokaalFout] = useState(null);
   const [toonCode, setToonCode] = useState(/herstelcode/i.test(fout || ""));
   const [code, setCode] = useState("");
+  const [zeker, setZeker] = useState(false); // V7R4 — "Wachtwoord verwijderen" vraagt eerst "weet je het zeker?"
   const instellen = modus === "instellen";
   const verstuur = (e) => {
     e?.preventDefault();
@@ -44,8 +45,17 @@ export default function WachtwoordModal({ modus, fout, heeftWachtwoord, onOK, on
             <button type="button" disabled={code.replace(/[^A-Za-z0-9]/g, "").length < 20} onClick={() => onOK({ herstelcode: code })} className="rounded-lg border border-teal-700 px-3 py-1.5 text-xs font-semibold text-teal-800 disabled:opacity-40">Openen met herstelcode</button>
           </div>
         )}
+        {zeker && (
+          <div className="space-y-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+            <p><strong>Weet je het zeker?</strong> Het wachtwoord gaat van het dossier af. Wat je hierna opslaat, is door iedereen te openen die het bestand in handen krijgt.</p>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button type="button" onClick={() => setZeker(false)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm">Nee, houden</button>
+              <button type="button" onClick={onVerwijder} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white">Ja, verwijderen</button>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 justify-end">
-          {instellen && heeftWachtwoord && <button type="button" onClick={onVerwijder} className="mr-auto text-xs text-rose-600 underline decoration-dotted">Wachtwoord verwijderen</button>}
+          {instellen && heeftWachtwoord && !zeker && <button type="button" onClick={() => setZeker(true)} className="mr-auto text-xs text-rose-600 underline decoration-dotted">Wachtwoord verwijderen</button>}
           <button type="button" onClick={onAnnuleer} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Annuleren</button>
           <button type="submit" className={KNOP_PRIMAIR_VET}>{instellen ? "Instellen" : "Openen"}</button>
         </div>

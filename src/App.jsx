@@ -63,7 +63,7 @@ import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen, vindInkomstenInKosten } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
-import OpslaanModal from "./components/shared/OpslaanModal.jsx";
+import OpslaanModal, { BEHOUD } from "./components/shared/OpslaanModal.jsx";
 import HerstelcodeModal from "./components/shared/HerstelcodeModal.jsx";
 import { maakHerstelcode } from "./storage/herstelcode.js";
 import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
@@ -161,6 +161,7 @@ import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModa
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
 import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAannamesPanel.jsx";
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
+import { abonnementRegels } from "./content/abonnement.js";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
@@ -294,10 +295,14 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, geldigTot: abonnementTot, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
   const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
+  // beide-V2R6 — het abonnement, zichtbaar in de zijbalk en in Eenvoudig.
+  const abonnement = useMemo(() => abonnementRegels({ soorten: rechtenPerSoort, mag: magUitgebreidAccount, koppelen: magKoppelenAccount, geldigTot: abonnementTot, beheerder: isBeheerder }),
+    [rechtenPerSoort, magUitgebreidAccount, magKoppelenAccount, abonnementTot, isBeheerder]);
+  const naarAbonnementen = () => { window.location.href = "/aanmelden"; };
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
@@ -3411,6 +3416,11 @@ export default function App() {
         { label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen },
       ],
     });
+  // beide-V2R2/V2R4 — privé: andere eigen rekeningen (alleen het rekeningnummer); in Eenvoudig stap 1, de wizard en Instellingen.
+  const priveEigenRekeningen = modus.berekening === "prive" ? (
+    <EigenRekeningenPanel vasteSoort="Prive" uitleg={PRIVE_EENVOUDIG.eigenRekeningen} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra}
+      onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} />
+  ) : null;
   // nieuw-V4R5 — vanuit Eenvoudig Uitgebreid aanvragen (komt bij de beheerder in Gebruikers en rechten).
   // beide-V1R0 — via de abonnementenpagina van de Worker: daar staan de verplichte naam, reden en de soort (zakelijk/privé)
   // van dit dossier al klaar. Lokaal (vite dev, geen Worker) zoals voorheen via het feedbackformulier.
@@ -3621,14 +3631,17 @@ export default function App() {
   // Sidebar-knop: bij een nieuw (onbeveiligd) dossier eerst kiezen met/zonder wachtwoord; daarna direct opslaan.
   const [opslaanModal, setOpslaanModal] = useState(false);
   const [opslaanKeuzeGemaakt, setOpslaanKeuzeGemaakt] = useState(false);
+  // V7R4 — met wachtwoord: één keer per (geladen of nieuw) wachtwoord vragen of het erop blijft.
+  const [wachtwoordBevestigd, setWachtwoordBevestigd] = useState(null);
   const startOpslaan = () => {
-    if (dossierWachtwoord || opslaanKeuzeGemaakt) saveProjectFile();
+    if (dossierWachtwoord ? wachtwoordBevestigd === dossierWachtwoord : opslaanKeuzeGemaakt) saveProjectFile();
     else setOpslaanModal(true);
   };
 
   // ---- Dossier laden vanaf een bestand ----
   const dossierCtx = {
-    setSoortDossier, suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierWachtwoord, setDossierHerstelcode, setAuditLog, setBevestigdeControles,
+    setSoortDossier, suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierHerstelcode,
+    setDossierWachtwoord: (pw) => { setWachtwoordBevestigd(null); setDossierWachtwoord(pw); }, // V7R4 — na laden opnieuw vragen setAuditLog, setBevestigdeControles,
     setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
     setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
     setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
@@ -3873,7 +3886,8 @@ export default function App() {
         onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
         ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
         onPasskey={inlogModus === "eigen" ? () => { window.location.href = "/inloggen/passkey"; } : null}
-        onAbonnementen={ingelogdAls ? () => { window.location.href = "/aanmelden"; } : null}
+        onAbonnementen={ingelogdAls ? naarAbonnementen : null}
+        abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null}
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
@@ -3989,8 +4003,8 @@ export default function App() {
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && !eenvoudigActief && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
-        <SessieBalk sessie={sessie} onOpslaan={saveProjectFile} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
-        <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={saveProjectFile} />
+        <SessieBalk sessie={sessie} onOpslaan={startOpslaan} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
+        <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={startOpslaan} />
         {!eenvoudigActief && overgeslagenMelding && parsedFiles.length > 0 && overgeslagenInEenvoudig.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
             <span className="min-w-0 flex-1">In Eenvoudig zijn {overgeslagenInEenvoudig.length} vra{overgeslagenInEenvoudig.length === 1 ? "ag" : "gen"} overgeslagen: <b>{overgeslagenInEenvoudig.join(", ")}</b>. Wat je hier invult, kan de uitkomst in Eenvoudig veranderen.</span>
@@ -4021,12 +4035,12 @@ export default function App() {
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onMaandoverzicht={magUitgebreid && activeYear && !priveOverzicht ? () => setShowInkomenPerMaand(true) : null}
             teksten={modus.berekening === "prive" ? PRIVE_EENVOUDIG : null}
-            extraGegevens={modus.berekening === "prive" ? <EigenRekeningenPanel vasteSoort="Prive" uitleg={PRIVE_EENVOUDIG.eigenRekeningen} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra} onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} /> : null}
+            extraGegevens={modus.berekening === "prive" ? priveEigenRekeningen : null}
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
-            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} onUitlegZichtbaar={setEenvoudigUitlegOpen}
+            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen}
             onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
@@ -4375,8 +4389,13 @@ export default function App() {
             onKoppelen={startKoppelen}
             importBezig={importBezig}
             importFout={error}
-            onSaveProject={saveProjectFile}
+            onSaveProject={startOpslaan}
             onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
+            extraRekeningen={modus.berekening === "prive" ? (
+              <EigenRekeningenPanel vasteSoort="Prive" uitleg={false} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra}
+                onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} />
+            ) : null}
+            eigenRekeningenExtra={eigenRekeningenExtra} setEigenRekeningenExtra={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
           />
         )}
         {(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && !modus.wizard && (
@@ -4411,7 +4430,7 @@ export default function App() {
             accountTypeByFile={accountTypeByFile}
             onRekeningWijzig={setEigenRekeningVoorBestanden}
             alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
-            onSaveProject={saveProjectFile}
+            onSaveProject={startOpslaan}
             verwachteLease={verwachteLease}
             setVerwachteLease={(v) => { snapshotBeforeAction("Leaseauto-vraag beantwoord"); setVerwachteLease(v); }}
             verwachteLeaseOverig={verwachteLeaseOverig}
@@ -4567,6 +4586,13 @@ export default function App() {
         {/* Fase 2 (bouwvoorstel) — Instellingen in kaartstijl: dezelfde onderliggende kaarten als
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
+        {/* beide-V2R4 — privé: extra rekeningen toevoegen (bankbestand of alleen het rekeningnummer), ook in Uitgebreid. */}
+        {modus.berekening === "prive" && parsedFiles.length > 0 && (
+          <div style={sectionTabStyle("instellingen")} className="space-y-2">
+            <button type="button" onClick={startBankbestandToevoegen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Extra bankbestand toevoegen</button>
+            {priveEigenRekeningen}
+          </div>
+        )}
         <div style={sectionTabStyle("instellingen")}>
           <SectionCardGrid cards={instellingenCardGroups} onOpenHelp={setHelpPopupChapter} swipe={{ years, year: activeYear, onSelectYear: setActiveYear }} />
         </div>
@@ -4841,11 +4867,14 @@ export default function App() {
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
       {opslaanModal && (
         <OpslaanModal
+          heeftWachtwoord={!!dossierWachtwoord}
           onAnnuleer={() => setOpslaanModal(false)}
           onOpslaan={(pw) => {
             setOpslaanModal(false);
             setOpslaanKeuzeGemaakt(true);
-            if (pw) setDossierWachtwoord(pw);
+            if (pw === BEHOUD) { setWachtwoordBevestigd(dossierWachtwoord); saveProjectFile(); return; }
+            if (!pw && dossierWachtwoord) { setDossierWachtwoord(null); setDossierHerstelcode(null); }
+            if (pw) { setDossierWachtwoord(pw); setWachtwoordBevestigd(pw); }
             saveProjectFile(pw || "");
           }}
         />
@@ -4858,11 +4887,11 @@ export default function App() {
           heeftWachtwoord={!!dossierWachtwoord}
           onOK={(pw) => {
             if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(pw);
-            else { setDossierWachtwoord(pw); setChangesSinceExport((n) => Math.max(n, 1)); }
+            else { setDossierWachtwoord(pw); setWachtwoordBevestigd(pw); setChangesSinceExport((n) => Math.max(n, 1)); }
             setWachtwoordModal(null);
           }}
           onAnnuleer={() => { if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(null); setWachtwoordModal(null); }}
-          onVerwijder={() => { setDossierWachtwoord(null); setDossierHerstelcode(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
+          onVerwijder={() => { setOpslaanKeuzeGemaakt(true); setDossierWachtwoord(null); setDossierHerstelcode(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
         />
       )}
       {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
