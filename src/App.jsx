@@ -123,6 +123,7 @@ import SectionCardGrid from "./components/dashboard/SectionCard.jsx";
 import AppSidebar from "./components/dashboard/AppSidebar.jsx";
 import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
+import OmzettenUitgebreid from "./components/eenvoudig/OmzettenUitgebreid.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
@@ -310,6 +311,7 @@ export default function App() {
   // nieuw-V1R09 — uitkomst per jaar op het moment dat je Eenvoudig verliet; terug in Eenvoudig zie je wat er sindsdien veranderde.
   const [eenvoudigGezien, setEenvoudigGezien] = useState({});
   const [overgeslagenMelding, setOvergeslagenMelding] = useState(false);
+  const [omzetVraag, setOmzetVraag] = useState(null); // beide-V3R2 — bevestiging Eenvoudig → Uitgebreid (eenrichting)
   const [modusNaLaden, setModusNaLaden] = useState(null); // na "Dossier laden": weergave zoals opgeslagen, ter keuze
   // beide-V1R2 — eerst zakelijk of privé (zie modus/useDossierSoort.jsx), daarna Eenvoudig of Uitgebreid.
   const startNieuwDossierWizard = () => dossierSoortKeuze.startMetSoort((s) =>
@@ -3476,7 +3478,7 @@ export default function App() {
       ? {
           title: "Bankkoppeling",
           message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kun je wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
-          actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => { naarUitgebreidVanuitEenvoudig(); setBankKoppeling({}); } }],
+          actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => naarUitgebreidVanuitEenvoudig(() => setBankKoppeling({})) }],
         }
       : {
           title: "Bankkoppeling",
@@ -3673,7 +3675,7 @@ export default function App() {
     setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
     setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
     setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setEenvoudigGezien, startNieuwDossierWizard, naDossierLaden: (w) => { setModusKeuzeOpen(false); if (magUitgebreid) setModusNaLaden(w); }, setTariefOverridesState, setOverigInkomenBox1State, setPriveAntwoorden,
+    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setEenvoudigGezien, startNieuwDossierWizard, naDossierLaden: (w) => { setModusKeuzeOpen(false); if (magUitgebreid && w === "eenvoudig") setModusNaLaden(w); }, setTariefOverridesState, setOverigInkomenBox1State, setPriveAntwoorden,
     setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
     setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
     setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
@@ -3826,7 +3828,12 @@ export default function App() {
     const f = fiscaalVoorJaar(y);
     return { winst: Math.round(ys.winst || 0), belasting: f.ib != null ? Math.round((f.ib || 0) + (f.zvw || 0)) : null, btw: f.btw ? Math.round(f.btw.reduce((a, v) => a + v, 0)) : null };
   };
-  const naarUitgebreidVanuitEenvoudig = () => {
+  // beide-V3R2 — eenrichting: eerst bevestigen, daarna eventueel `vervolg` (bijv. naar Instellingen of koppelen).
+  const naarUitgebreidVanuitEenvoudig = (vervolg) => setOmzetVraag(() => () => {
+    zetOmNaarUitgebreid();
+    if (typeof vervolg === "function") vervolg();
+  });
+  const zetOmNaarUitgebreid = () => {
     const snap = {};
     for (const y of years) { const u = uitkomstVoorJaar(y); if (u) snap[y] = u; }
     setEenvoudigGezien(snap);
@@ -3881,7 +3888,6 @@ export default function App() {
           door deze vaste linker zijbalk (AppSidebar.jsx) — zelfde handlers/refs als voorheen,
           alleen de plek van de knoppen is anders. Zie het bouwvoorstel-document. */}
       {!eenvoudigActief && <AppSidebar
-        onEenvoudig={() => setWeergave("eenvoudig")} // nieuw-V2R6 — ook zonder bankbestanden (Eenvoudig werkt nu ook leeg)
         weergave={weergave}
         rekeninghouderNaam={eigenNamen?.ondernemer}
         dossierSoortNaam={dossierSoortKeuze.meerdereSoorten || modus.soort !== "zakelijk" ? `${modus.naam} dossier` : null}
@@ -4030,14 +4036,15 @@ export default function App() {
         )}
         {dossierSoortKeuze.keuze}
         {modusKeuzeOpen && <ModusKeuze soort={soortDossier} onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
-        {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); setWeergave(m); }} onClose={() => setModusNaLaden(null)} />}
+        {omzetVraag && <OmzettenUitgebreid onJa={() => { const f = omzetVraag; setOmzetVraag(null); f(); }} onNee={() => setOmzetVraag(null)} />}
+        {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); if (m === "uitgebreid") naarUitgebreidVanuitEenvoudig(); }} onClose={() => setModusNaLaden(null)} />}
         {basisEenvoudigOpen && eenvoudigActief && (
           <BasisvragenEenvoudig
             jaar={activeYear} eigenNamen={eigenNamen} setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
-            onUitgebreid={magUitgebreid ? () => { setBasisEenvoudigOpen(false); naarUitgebreidVanuitEenvoudig(); setActiveTab("instellingen"); } : null}
+            onUitgebreid={magUitgebreid ? () => naarUitgebreidVanuitEenvoudig(() => { setBasisEenvoudigOpen(false); setActiveTab("instellingen"); }) : null}
             onClose={() => setBasisEenvoudigOpen(false)}
           />
         )}

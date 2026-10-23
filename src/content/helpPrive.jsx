@@ -30,7 +30,7 @@ export const PRIVE_HELP_CHAPTERS = [
       <div className="space-y-2.5">
         <p><strong>De route.</strong> De balk onder de kop laat de stappen zien: Import → Controleren → Instellingen → Advies. De kaart "Eerstvolgende stap" zegt wat je nu het best kunt doen.</p>
         <p><strong>Drie tabbladen.</strong> <em>Overzicht</em> toont je budget en de belastingindicatie. <em>Controleren</em> is waar je de indeling nakijkt en ziet welke gegevens de belastingberekening nog mist. <em>Instellingen</em> bevat het huishouden, je rekeningen, de categorieregels en de vaste lasten.</p>
-        <p><strong>Eenvoudig of Uitgebreid.</strong> In Eenvoudig loop je vier stappen door (Gegevens, Nakijken, Uitkomst, Bewaren). Uitgebreid toont alles, met vaste lasten, box 3 en meerdere jaren naast elkaar.</p>
+        <p><strong>Eenvoudig of Uitgebreid.</strong> In Eenvoudig loop je vier stappen door (Gegevens, Nakijken, Uitkomst, Bewaren). Uitgebreid toont alles, met vaste lasten, box 3 en meerdere jaren naast elkaar. Een dossier in Eenvoudig kun je één keer omzetten naar Uitgebreid; terug kan daarna niet meer.</p>
       </div>
     ),
   },
