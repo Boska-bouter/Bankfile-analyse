@@ -117,6 +117,8 @@ export function SparenKaart({ jaar, budget, belasting }) {
   );
 }
 
+const som = (lijst, veld) => lijst.reduce((t, p) => t + (p[veld] || 0), 0);
+
 export function BelastingKaart({ jaar, belasting, aannames = [], onBerekening, onVragen, gedaan, onGedaan }) {
   const [details, setDetails] = useState(false);
   const v = belasting.verschil;
@@ -130,15 +132,26 @@ export function BelastingKaart({ jaar, belasting, aannames = [], onBerekening, o
       <p className={`text-lg font-bold ${Math.abs(v) < 1 ? "text-slate-800" : terug ? "text-emerald-700" : "text-rose-700"}`}>
         {Math.abs(v) < 1 ? "Ongeveer niets terug of bij te betalen" : `${eur(Math.abs(v))} ${terug ? "terug te krijgen" : "bij te betalen"}`}
       </p>
-      <Regel label="Inkomstenbelasting (na heffingskortingen)" bedrag={belasting.ib} />
-      <Regel label={`Al ingehouden loonheffing${belasting.loonheffingGeschat ? " (geschat)" : ""}`} bedrag={belasting.loonheffing} teken="− " />
+      {/* beide-V2R8 — privé: inkomen op de bank is netto, de belasting is al ingehouden. Zonder jaaropgave tonen we
+          dus geen (geschatte) inkomstenbelasting, alleen wat er nog terug of bij komt door aftrekposten, woning,
+          box 3 of inkomen zonder inhouding. Met de loonheffing van de jaaropgave: de volledige vergelijking. */}
+      <Regel label="Netto inkomen (belasting al ingehouden)" bedrag={som(belasting.personen, "netto")} />
+      {som(belasting.personen, "zonderInhouding") > 0 && <Regel label="Inkomen zonder ingehouden belasting" bedrag={som(belasting.personen, "zonderInhouding")} />}
+      {!belasting.loonheffingGeschat && <>
+        {som(belasting.personen, "brutoOpgegeven") > 0 && <Regel label="Bruto inkomen (jaaropgave)" bedrag={som(belasting.personen, "brutoOpgegeven")} />}
+        <Regel label="Inkomstenbelasting (na heffingskortingen)" bedrag={belasting.ib} />
+        <Regel label={`Al ingehouden loonheffing (${som(belasting.personen, "brutoOpgegeven") > 0 ? "bruto min netto" : "jaaropgave"})`} bedrag={belasting.loonheffing} teken="− " />
+      </>}
+      {belasting.loonheffingGeschat && (
+        <p className="text-xs text-slate-500">Over je netto inkomen is de belasting al betaald. Wat hierboven staat, komt alleen nog uit je aftrekposten, je woning{som(belasting.personen, "zonderInhouding") > 0 ? ", box 3 en het inkomen zonder ingehouden belasting" : " en box 3"}.</p>
+      )}
       <button type="button" onClick={() => setDetails((d) => !d)} className={LINK}>{details ? "Minder details" : "Hoe is dit berekend?"}</button>
       {details && (
         <div className="space-y-2 text-xs text-slate-600">
           {belasting.personen.map((p) => (
             <div key={p.rol} className="rounded-lg bg-slate-50 p-2 space-y-0.5">
               <p className="font-semibold text-slate-700">{p.rol === "partner" ? "Partner" : belasting.metPartner ? "Jij" : "Box 1"}{p.aow ? " (AOW-leeftijd)" : ""}</p>
-              <Regel label="Bruto inkomen (loon, uitkering, pensioen)" bedrag={p.bruto} />
+              <Regel label={`Bruto inkomen (loon, uitkering, pensioen)${p.loonheffingGeschat ? ", teruggerekend uit netto" : ""}`} bedrag={p.bruto} />
               {p.eigenWoning !== 0 && <Regel label="Eigen woning (forfait min rente)" bedrag={p.eigenWoning} />}
               {p.persoonsgebondenAftrek > 0 && <Regel label="Aftrekposten" bedrag={p.persoonsgebondenAftrek} teken="− " />}
               <Regel label="Belastbaar inkomen box 1" bedrag={p.belastbaarBox1} />
@@ -146,6 +159,7 @@ export function BelastingKaart({ jaar, belasting, aannames = [], onBerekening, o
               {p.box3 > 0 && <Regel label="Belasting box 3" bedrag={p.box3} />}
               <Regel label="Heffingskortingen" bedrag={p.kortingen.totaal} teken="− " />
               <Regel label="Inkomstenbelasting" bedrag={p.ib} sterk />
+              <Regel label={`Al ingehouden loonheffing${p.loonheffingGeschat ? " (geschat)" : ""}`} bedrag={p.loonheffing} teken="− " />
             </div>
           ))}
         </div>

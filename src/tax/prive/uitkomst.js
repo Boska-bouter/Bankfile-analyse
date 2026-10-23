@@ -40,14 +40,17 @@ export function brutoUitNetto(netto, aandeelLoon, jaar, aow) {
   return (lo + hi) / 2;
 }
 
+// beide-V2R8 — `zonderInhouding`: bruto inkomen waarop nog geen belasting is ingehouden (telt mee in het bruto,
+// niet in de loonheffing).
 function persoonBruto(p, jaar) {
   const netto = som(p);
+  const zonder = Math.max(0, p.zonderInhouding || 0);
   const aandeelLoon = netto > 0 ? (p.loon || 0) / netto : 0;
   if (p.loonheffing != null && Number.isFinite(p.loonheffing)) {
-    return { netto, bruto: netto + Math.max(0, p.loonheffing), loonheffing: Math.max(0, p.loonheffing), geschat: false, aandeelLoon };
+    return { netto, zonderInhouding: zonder, bruto: netto + Math.max(0, p.loonheffing) + zonder, loonheffing: Math.max(0, p.loonheffing), geschat: false, aandeelLoon };
   }
   const bruto = brutoUitNetto(netto, aandeelLoon, jaar, !!p.aow);
-  return { netto, bruto, loonheffing: bruto - netto, geschat: true, aandeelLoon };
+  return { netto, zonderInhouding: zonder, bruto: bruto + zonder, loonheffing: bruto - netto, geschat: true, aandeelLoon };
 }
 
 export function berekenPriveJaar(invoer, jaar) {
@@ -73,7 +76,7 @@ export function berekenPriveJaar(invoer, jaar) {
       const kortingen = heffingskortingen({ inkomen: belastbaar + box3Voordeel, arbeid: p.bruto * p.aandeelLoon, aow: !!p.aow }, jaar);
       const ib = Math.max(0, b1.belasting + box3Deel - kortingen.totaal);
       return {
-        rol: p.rol, aow: !!p.aow, netto: p.netto, bruto: p.bruto, loonheffing: p.loonheffing, loonheffingGeschat: p.geschat,
+        rol: p.rol, aow: !!p.aow, netto: p.netto, bruto: p.bruto, zonderInhouding: p.zonderInhouding, brutoOpgegeven: p.brutoOpgegeven ?? null, loonheffing: p.loonheffing, loonheffingGeschat: p.geschat,
         eigenWoning: ewDeel, persoonsgebondenAftrek: pgaDeel, belastbaarBox1: belastbaar, belastingBox1: b1.belasting,
         beperkingAftrek: b1.beperking, box3: box3Deel, kortingen, ib, verschil: ib - p.loonheffing,
       };

@@ -7,10 +7,11 @@ const naamVan = (rol, namen) => (rol === "partner" ? namen?.partner || "Partner"
 
 function persoonTabel(p, namen, metPartner) {
   const regels = [
-    rij("Bruto inkomen uit werk, uitkering en pensioen", [bedrag(p.bruto)]),
+    rij(`Bruto inkomen uit werk, uitkering en pensioen${p.loonheffingGeschat ? " (teruggerekend uit netto, geen jaaropgave)" : ""}`, [bedrag(p.bruto)]),
     rij("  waarvan op de bank ontvangen (netto)", [bedrag(p.netto)], "sub"),
     rij(`  waarvan ingehouden loonheffing${p.loonheffingGeschat ? " (geschat)" : ""}`, [bedrag(p.loonheffing)], "sub"),
   ];
+  if (p.zonderInhouding) regels.push(rij("  waarvan zonder ingehouden belasting", [bedrag(p.zonderInhouding)], "sub"));
   if (p.eigenWoning) regels.push(rij("Inkomen eigen woning (deel)", [bedrag(p.eigenWoning)]));
   if (p.persoonsgebondenAftrek) regels.push(rij("Persoonsgebonden aftrek (deel)", [`− ${bedrag(p.persoonsgebondenAftrek)}`]));
   regels.push(rij("Belastbaar inkomen box 1", [bedrag(p.belastbaarBox1)], "sterk"));

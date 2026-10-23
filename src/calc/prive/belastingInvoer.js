@@ -24,13 +24,25 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
   const { zelf, partner } = inkomenPerPersoon(transacties, jaar, a.rekeningVan, metPartner);
   const lh = (veld) => getal(a[veld]?.[jaar]);
   const isAow = (bron) => Array.isArray(bron) && bron.includes("aow");
-  const personen = [{ rol: "zelf", ...zelf, aow: isAow(a.inkomen), loonheffing: lh("loonheffing") }];
+  // beide-V2R8 — loonheffing van de jaaropgave, of anders bruto min netto als het bruto inkomen is opgegeven.
+  const ingehouden = (lhVeld, brutoVeld, p) => {
+    const l = lh(lhVeld);
+    if (l != null) return l;
+    const bruto = lh(brutoVeld);
+    return bruto != null && bruto > 0 ? Math.max(0, bruto - (p.loon + p.uitkering + p.pensioen)) : null;
+  };
+  const personen = [{ rol: "zelf", ...zelf, aow: isAow(a.inkomen), loonheffing: ingehouden("loonheffing", "brutoInkomen", zelf), brutoOpgegeven: lh("brutoInkomen") }];
   if (metPartner) {
-    personen.push({ rol: "partner", ...partner, aow: isAow(a.inkomenPartner), loonheffing: lh("loonheffingPartner") });
+    personen.push({ rol: "partner", ...partner, aow: isAow(a.inkomenPartner), loonheffing: ingehouden("loonheffingPartner", "brutoInkomenPartner", partner), brutoOpgegeven: lh("brutoInkomenPartner") });
     if (!a.rekeningVan || Object.keys(a.rekeningVan).length === 0) aannames.push("Alle inkomsten zijn aan jou toegerekend: nog niet opgegeven welke rekening van je partner is.");
   }
+  // beide-V2R8 — inkomen op de bank is netto: de belasting is al ingehouden. Alleen wat zonder inhouding binnenkwam
+  // (wizardvraag), telt als bruto inkomen waarover nog belasting betaald moet worden (bij jezelf).
+  const zonder = a.nettoIngehouden === "nee" ? Math.max(0, getal(a.zonderInhouding?.[jaar]) || 0) : 0;
+  personen[0].zonderInhouding = zonder;
+  if (a.nettoIngehouden === "nee" && !zonder) aannames.push("Inkomen zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
   if (personen.some((p) => p.loonheffing == null && p.loon + p.uitkering + p.pensioen > 0)) {
-    aannames.push("Ingehouden loonheffing is geschat uit wat er netto binnenkwam. Vul het bedrag van je jaaropgave in voor een betere uitkomst.");
+    aannames.push("Je inkomen op de bank is netto: de belasting is al ingehouden. Wil je het controleren, vul dan bij Basisvragen het bruto inkomen van je jaaropgave in.");
   }
 
   const overig = Math.round(Math.max(0, -(budget?.som?.("Inkomsten") || 0)));

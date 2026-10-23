@@ -43,8 +43,8 @@ ${r("waarvan vaste lasten", (j) => bedrag(d(j).budget.totaal.vasteLasten), "sub"
 ${r("Gespaard en belegd", (j) => bedrag(d(j).budget.totaal.sparen))}
 ${r("Over", (j) => bedrag(d(j).budget.totaal.over), "sterk")}</table>
 <h2>Indicatie inkomstenbelasting</h2><table>${kopRij(js)}
-${r("Inkomstenbelasting", (j) => bedrag(d(j).belasting.ib))}
-${r("Al ingehouden loonheffing", (j) => bedrag(d(j).belasting.loonheffing))}
+${r("Inkomstenbelasting", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.ib)))}
+${r("Al ingehouden loonheffing", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.loonheffing)))}
 ${r("Terug (−) of bij (+)", (j) => bedrag(d(j).belasting.verschil), "sterk")}</table>
 ${js.some((j) => d(j).aannames.length) ? `<div class="aannames"><strong>Aannames</strong><ul>${[...new Set(js.flatMap((j) => d(j).aannames))].map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div>` : ""}
 <h2>Nog open</h2>${openPunten.length ? `<ul>${openPunten.map((o) => `<li>${esc(o.label)}${o.count != null ? ` (${o.count})` : ""}</li>`).join("")}</ul>` : "<p>Er staan geen open punten meer.</p>"}`;
@@ -71,8 +71,11 @@ export async function exportPriveExcel({ jaren, overzicht, transacties, label })
       { Post: "Gespaard en belegd", Bedrag: -b.totaal.sparen },
       { Post: "Over", Bedrag: b.totaal.over },
       { Post: "" },
-      { Post: "Inkomstenbelasting (indicatie)", Bedrag: d.belasting.ib },
-      { Post: "Ingehouden loonheffing", Bedrag: -d.belasting.loonheffing },
+      // beide-V2R8 — zonder jaaropgave is de belasting al ingehouden (netto inkomen): geen geschatte bedragen tonen.
+      ...(d.belasting.loonheffingGeschat ? [{ Post: "Inkomstenbelasting", Bedrag: "al ingehouden (netto inkomen)" }] : [
+        { Post: "Inkomstenbelasting (indicatie)", Bedrag: d.belasting.ib },
+        { Post: "Ingehouden loonheffing", Bedrag: -d.belasting.loonheffing },
+      ]),
       { Post: "Terug (−) of bij (+)", Bedrag: d.belasting.verschil },
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(regels), `Budget ${j}`);

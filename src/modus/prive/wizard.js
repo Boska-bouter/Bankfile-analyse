@@ -38,6 +38,11 @@ export const PRIVE_WIZARD_STAPPEN = Object.freeze([
     vragen: [
       { key: "inkomen", type: "meerkeuze", opties: BRONNEN, vraag: "Waar komt je inkomen vandaan?", uitleg: "Meer dan één kan. De app herkent deze bijschrijvingen dan ook beter." },
       { key: "inkomenPartner", type: "meerkeuze", opties: BRONNEN, vraag: "En het inkomen van je partner?", toon: metPartner },
+      // beide-V2R8 — in privé is inkomen netto (belasting al ingehouden), tenzij hier anders opgegeven.
+      { key: "nettoIngehouden", type: "keuze", optioneel: true, vraag: "Is op al je inkomen de belasting al ingehouden?", uitleg: "Bij loon, een uitkering en pensioen houdt de werkgever of instantie de belasting meestal al in: wat op de bank komt, is netto.", opties: [
+        { waarde: "ja", label: "Ja, alles is netto" }, { waarde: "nee", label: "Nee, op een deel is nog geen belasting ingehouden" },
+      ] },
+      { key: "zonderInhouding", type: "bedragPerJaar", vraag: "Hoeveel inkomen kwam er per jaar binnen zonder ingehouden belasting?", uitleg: "Bruto, bijvoorbeeld een bijbaan zonder loonheffing of inkomen uit het buitenland. Samen met je partner.", toon: (a) => a.nettoIngehouden === "nee" },
     ],
   },
   {
@@ -87,6 +92,10 @@ export const PRIVE_WIZARD_STAPPEN = Object.freeze([
     vragen: [
       { key: "loonheffing", type: "bedragPerJaar", uitgebreid: true, vraag: "Ingehouden loonheffing per jaar", uitleg: "Staat op je jaaropgave. Dan laat de app zien of je ongeveer geld terugkrijgt of moet bijbetalen.", toon: (a) => heeftLoonheffing(a.inkomen) },
       { key: "loonheffingPartner", type: "bedragPerJaar", uitgebreid: true, vraag: "Ingehouden loonheffing van je partner", toon: (a) => metPartner(a) && heeftLoonheffing(a.inkomenPartner) },
+      // beide-V2R8 — of het bruto inkomen van de jaaropgave (ook in Eenvoudig, ook achteraf): de app vergelijkt het met
+      // het netto bedrag op de bank; het verschil is de ingehouden belasting.
+      { key: "brutoInkomen", type: "bedragPerJaar", optioneel: true, vraag: "Bruto inkomen per jaar (jaaropgave)", uitleg: "Loon, uitkering en pensioen samen, vóór belasting. Hoeft niet: zonder dit bedrag gaat de app ervan uit dat de belasting al is ingehouden.", toon: (a) => heeftLoonheffing(a.inkomen) },
+      { key: "brutoInkomenPartner", type: "bedragPerJaar", optioneel: true, vraag: "Bruto inkomen van je partner per jaar (jaaropgave)", toon: (a) => metPartner(a) && heeftLoonheffing(a.inkomenPartner) },
     ],
   },
 ]);
