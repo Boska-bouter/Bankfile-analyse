@@ -1676,7 +1676,7 @@ export default function App() {
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
   const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true }), [classified]);
-  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !i.handmatig && !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
   const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
   const markPersonSource = (item, category, type) => {
@@ -1689,7 +1689,7 @@ export default function App() {
   };
 
   const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true }), [classified]);
-  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
+  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !i.handmatig && !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
     zetVoorItem(item, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));

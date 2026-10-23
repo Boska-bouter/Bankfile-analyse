@@ -596,5 +596,13 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
       return { ...mirror, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
     }
   }
-  return autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords);
+  return nietAannemelijk(tx, autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords), accountType);
+}
+
+// V7R6, per boeking € 300 sinds V7R7 — een herkende naam met een bedrag dat er niet bij past, gaat naar "Overig"
+// om na te kijken: meer dan € 300 in één keer past niet in een tank.
+const MAX_BEDRAG = { Brandstof: 300 };
+function nietAannemelijk(tx, uitkomst, accountType) {
+  const max = MAX_BEDRAG[uitkomst?.category];
+  return max && Math.abs(Number(tx.amount) || 0) > max ? { ...uitkomst, category: "Overig" } : uitkomst;
 }
