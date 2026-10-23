@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen, CalendarDays } from "lucide-react";
 import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
 import MijnAntwoorden from "./MijnAntwoorden.jsx";
+import OpenPostenLijst from "./OpenPostenLijst.jsx";
 import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
@@ -71,6 +72,7 @@ export default function EenvoudigeApp({
   const [terugIdx, setTerugIdx] = useState(null);
   const [gekozenKeys, setGekozenKeys] = useState([]);
   const [antwoordenOpen, setAntwoordenOpen] = useState(false);
+  const [lijstOpen, setLijstOpen] = useState(false); // V7R9 — alle open posten in één lijst
   const [dossierMenu, setDossierMenu] = useState(false);
   // nieuw-V3R0 — uitleg: de eerste keer (per gebruiker, per apparaat) vanzelf open, daarna via de knop "Uitleg".
   const uitlegSleutel = `bankoverzicht.uitlegEenvoudigGezien${toegangInfo?.email ? `:${toegangInfo.email}` : ""}`;
@@ -110,13 +112,25 @@ export default function EenvoudigeApp({
     return 0;
   }, [alleVragen, b]);
 
-  const beantwoord = (keuze) => {
-    if (!vraag) return;
-    for (const g of vraag.groepen) {
+  const pasToe = (v, keuze) => {
+    for (const g of v.groepen) {
       const patch = keuze.category ? keuze : categorieVoorAntwoord(keuze, g.teken, g.rekening);
       if (g.perBoeking && onRijAntwoord) onRijAntwoord(g.txs.map((t) => t.id), patch);
       else onAntwoord(g.naam, g.txs[0].amount, patch);
     }
+  };
+  // V7R9 — vanuit de lijst met alle open posten: dezelfde antwoorden, voor meerdere vragen tegelijk.
+  const beantwoordAlle = (lijst, keuze) => {
+    for (const v of lijst) pasToe(v, keuze);
+    const keys = lijst.flatMap((v) => v.groepen.map((g) => g.key)), vks = new Set(lijst.map((v) => v.key));
+    setGekozenKeys((p) => [...keys, ...p.filter((x) => !keys.includes(x))]);
+    setOvergeslagen((p) => p.filter((x) => !vks.has(x)));
+    setGedaan((p) => ({ ...p, [jaar]: (p[jaar] || 0) + lijst.length }));
+    setTerugIdx(null);
+  };
+  const beantwoord = (keuze) => {
+    if (!vraag) return;
+    pasToe(vraag, keuze);
     const k = typeof keuze === "string" ? keuze : `cat:${keuze.category}`;
     setGekozenKeys((p) => [...vraag.groepen.map((g) => g.key), ...p.filter((x) => !vraag.groepen.some((g) => g.key === x))]);
     if (terug) {
@@ -132,12 +146,13 @@ export default function EenvoudigeApp({
   const vorigeVraag = () => { const i = (terugIdx ?? geschiedenis.length) - 1; if (i >= 0) { setTerugIdx(i); setAnders(""); } };
   const slaOver = () => { if (terug) { setTerugIdx(null); return; } if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
   const voorstel = vraag ? voorstelVoor(vraag) : null;
-  const zak = vraag?.rekening === "Zakelijk";
-  const KEUZES = vraag ? [
-    { k: "bedrijf", t: "Voor mijn bedrijf", s: vraag.teken > 0 ? "betaling van een klant" : "bijv. inkoop, software, administratie" },
-    { k: "prive", t: "Privé", s: vraag.teken > 0 ? "geld voor mezelf of het huishouden" : "voor mezelf of het huishouden" },
-    { k: "eigen", t: zak ? "Naar / van mijn eigen privérekening" : "Van / naar mijn zakelijke rekening", s: "geld tussen je eigen rekeningen" },
-  ] : [];
+  const keuzesVoor = (v) => [
+    { k: "bedrijf", t: "Voor mijn bedrijf", s: v.teken > 0 ? "betaling van een klant" : "bijv. inkoop, software, administratie" },
+    { k: "prive", t: "Privé", s: v.teken > 0 ? "geld voor mezelf of het huishouden" : "voor mezelf of het huishouden" },
+    { k: "eigen", t: v.rekening === "Zakelijk" ? "Naar / van mijn eigen privérekening" : "Van / naar mijn zakelijke rekening", s: "geld tussen je eigen rekeningen" },
+  ];
+  const KEUZES = vraag ? keuzesVoor(vraag) : [];
+  const andersKeuze = (cat) => ({ category: cat, type: /^Privé/.test(mainCategoryOf(cat)) || /^Privé/.test(cat) ? "Prive" : "Zakelijk" });
 
   const fis = fiscaal || null;
   const ibZvw = fis && fis.ib != null ? (fis.ib || 0) + (fis.zvw || 0) : null;
@@ -314,13 +329,14 @@ export default function EenvoudigeApp({
                   <div className="rounded-xl border-2 border-slate-300 bg-white p-3 text-[15px] font-semibold">
                     <span className="block">Iets anders…</span>
                     <CategorieSelect value={anders || null} onChange={(v) => setAnders(v)} placeholder="kies uit de lijst…" className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs font-normal" />
-                    {anders && <button type="button" onClick={() => beantwoord({ category: anders, type: /^Privé/.test(mainCategoryOf(anders)) || /^Privé/.test(anders) ? "Prive" : "Zakelijk" })} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
+                    {anders && <button type="button" onClick={() => beantwoord(andersKeuze(anders))} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
                   </div>
                 </div>
                 {terug && terug.keuze?.startsWith("cat:") && <p className="mt-2 text-xs text-amber-700">Je koos: {terug.keuze.slice(4)}</p>}
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                   <button type="button" onClick={slaOver} style={{ minHeight: 0 }} className="text-slate-600 underline">{terug ? "Laat zo, terug naar de huidige vraag" : "Weet ik niet, sla over"}</button>
                   {(terugIdx ?? geschiedenis.length) > 0 && <button type="button" onClick={vorigeVraag} style={{ minHeight: 0 }} className="text-slate-600 underline">← Vorige vraag</button>}
+                  {wachtrij.length > 1 && <button type="button" onClick={() => setLijstOpen(true)} style={{ minHeight: 0 }} className="font-semibold text-teal-700 underline">Alle open posten ({wachtrij.length})</button>}
                   {onWijzigAntwoord && <button type="button" onClick={() => setAntwoordenOpen(true)} style={{ minHeight: 0 }} className="text-slate-600 underline">Mijn antwoorden</button>}
                 </div>
               </>
@@ -403,6 +419,7 @@ export default function EenvoudigeApp({
         </div>
       )}
       {uitleg && <UitlegEenvoudig eersteKeer={uitleg === "eerste"} onClose={sluitUitleg} />}
+      {lijstOpen && <OpenPostenLijst vragen={wachtrij} jaar={jaar} keuzesVoor={keuzesVoor} andersKeuze={andersKeuze} onToepassen={beantwoordAlle} onClose={() => setLijstOpen(false)} />}
       {antwoordenOpen && <MijnAntwoorden lijst={antwoordenLijst} gekozenKeys={gekozenKeys} jaar={jaar} onWijzig={onWijzigAntwoord} onWis={onWisAntwoord} onClose={() => setAntwoordenOpen(false)} />}
     </div>
   );
