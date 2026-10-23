@@ -125,7 +125,20 @@ async function leesBody(request) {
 const BANK_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS bank_start (state TEXT PRIMARY KEY, email TEXT NOT NULL, bank TEXT, psu TEXT, pkce TEXT, verloopt INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bank_wachtend (id TEXT PRIMARY KEY, email TEXT NOT NULL, data TEXT NOT NULL, verloopt INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS bank_log (tijd INTEGER NOT NULL, email TEXT, tekst TEXT NOT NULL)",
 ];
+// beide-V3R7 — verloop van een koppeling (zonder sleutels of codes), zodat het koppelvenster kan laten zien waar het
+// stopt. Wordt na een dag weggegooid.
+async function bankLog(env, email, tekst, request) {
+  try {
+    await zorgVoorBankTabellen(env.DB);
+    const ua = String(request?.headers.get("user-agent") || "");
+    // Op iPad/iPhone mist "Safari/" in de user-agent van een app op het beginscherm; Safari en het Ponto-venster hebben het wel.
+    const waar = !request ? "" : /Mobile\//.test(ua) && !/Safari\//.test(ua) ? " (app op beginscherm)" : " (browser)";
+    await env.DB.prepare("INSERT INTO bank_log (tijd, email, tekst) VALUES (?, ?, ?)").bind(Date.now(), email || null, `${tekst}${waar}`.slice(0, 300)).run();
+    await env.DB.prepare("DELETE FROM bank_log WHERE tijd < ?").bind(Date.now() - 24 * 3600 * 1000).run();
+  } catch { /* log is niet belangrijk */ }
+}
 const START_MS = 30 * 60 * 1000;
 const WACHT_MS = 2 * 3600 * 1000;
 const bankTabellenKlaar = new WeakSet();
@@ -157,13 +170,16 @@ export async function bankTerugRoute(request, env, url) {
   // de app). De eerste rondt af; de state blijft gemarkeerd ("klaar:") zodat de tweede gewoon naar de app gaat.
   const start = await env.DB.prepare("UPDATE bank_start SET psu = 'klaar:' || psu WHERE state = ? AND psu NOT LIKE 'klaar:%' RETURNING email, bank, psu, pkce").bind(state).first();
   const ingelogd = String(request.headers.get("Cf-Access-Authenticated-User-Email") || "").trim().toLowerCase();
+  const wie = (email) => (!ingelogd ? "niet ingelogd" : ingelogd === email ? "ingelogd" : "ander adres ingelogd");
   if (!start) {
     const al = await env.DB.prepare("SELECT email FROM bank_start WHERE state = ?").bind(state).first();
     if (!al) return null;
+    await bankLog(env, al.email, `Terugkeer nogmaals ontvangen, ${wie(al.email)}`, request);
     if (ingelogd && ingelogd === al.email) return new Response(null, { status: 302, headers: { Location: "/bank/terug?klaar=1", "cache-control": "no-store" } });
     return terugPagina(true, "De koppeling is al afgerond.");
   }
   start.psu = String(start.psu || "").replace(/^klaar:/, "");
+  await bankLog(env, start.email, `Terugkeer van ${start.bank || "de bank"} ontvangen, ${wie(start.email)}`, request);
   const weigering = url.searchParams.get("error_description") || url.searchParams.get("error");
   let d;
   if (weigering) d = { ok: false, fout: `De bank gaf geen toestemming: ${String(weigering).slice(0, 200)}` };
@@ -178,6 +194,7 @@ export async function bankTerugRoute(request, env, url) {
   const item = d.ok
     ? { id: crypto.randomUUID(), state, bank: d.bank || start.bank || "", psu: start.psu || "personal", token: d.token, rekeningen: d.rekeningen || [], geldigTot: d.geldigTot || null, gekoppeldOp: new Date().toISOString(), opgehaald: {} }
     : { state, fout: [d.fout, d.detail].filter(Boolean).join(" — ") || "Koppeling mislukt" };
+  await bankLog(env, start.email, d.ok ? `Koppeling gemaakt (${(d.rekeningen || []).length} rekening(en))` : `Koppeling mislukt: ${item.fout}`);
   await env.DB.prepare("DELETE FROM bank_wachtend WHERE verloopt < ?").bind(nu).run();
   await env.DB.prepare("INSERT INTO bank_wachtend (id, email, data, verloopt) VALUES (?, ?, ?, ?)").bind(crypto.randomUUID(), start.email, JSON.stringify(item), nu + WACHT_MS).run();
   // Zelfde browser en ingelogd als dezelfde gebruiker: meteen terug naar de app, die het resultaat ophaalt.
@@ -205,7 +222,12 @@ export async function bankRoute(request, env, url) {
       .filter((x) => x && states.has(x.state));
     // Een foutmelding hoeft maar één keer getoond te worden.
     for (const x of items.filter((i) => i.fout)) await env.DB.prepare("DELETE FROM bank_wachtend WHERE id = ?").bind(x.wachtId).run();
-    return json({ ok: true, koppelingen: items.filter((x) => !x.fout).map(({ wachtId, state: _s, ...k }) => k), fouten: items.filter((x) => x.fout).map((x) => x.fout) });
+    const vanAnder = (results || []).length - items.length;
+    if (items.length || url.searchParams.get("melden") === "1") {
+      await bankLog(env, email, `App vroeg om de koppeling: ${items.length} gevonden${vanAnder ? `, ${vanAnder} van een ander venster/apparaat` : ""}${states.size ? "" : ", deze app heeft geen koppeling gestart"}`, request);
+    }
+    const { results: log } = await env.DB.prepare("SELECT tijd, tekst FROM bank_log WHERE email = ? AND tijd > ? ORDER BY tijd DESC LIMIT 12").bind(email, Date.now() - 2 * 3600 * 1000).all();
+    return json({ ok: true, koppelingen: items.filter((x) => !x.fout).map(({ wachtId, state: _s, ...k }) => k), fouten: items.filter((x) => x.fout).map((x) => x.fout), log: (log || []).reverse() });
   }
   // beide-V3R6 — eerste gebruik van een klaargezette koppeling: het klaargezette exemplaar weghalen.
   if ((pad === "/transacties" || pad === "/verwijder") && request.method === "POST" && env.DB) {
@@ -228,6 +250,7 @@ export async function bankRoute(request, env, url) {
       if (s?.ok && s.state) {
         await zorgVoorBankTabellen(env.DB);
         await env.DB.prepare("DELETE FROM bank_start WHERE verloopt < ?").bind(Date.now()).run();
+        await bankLog(env, email, `Koppelen gestart (${b.bank || "bank"})`, request);
         await env.DB.prepare("INSERT OR REPLACE INTO bank_start (state, email, bank, psu, pkce, verloopt) VALUES (?, ?, ?, ?, ?, ?)")
           .bind(String(s.state).slice(0, 100), email, String(b.bank || "").slice(0, 120), b.psu === "business" ? "business" : "personal", s.pkce || null, Date.now() + START_MS).run();
       }
