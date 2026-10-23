@@ -18,7 +18,7 @@
       "BEHEERDERS": "paul@paulgerits.eu",
       "TOEGANG_VERPLICHT": "ja",
       "INLOG_MODUS": "eigen",
-      "INLOG_FROM": "inloggen@bankafschriftentool.app"
+      "INLOG_FROM": "inloggen@bankafschriftentool.app",
       "BANK_AANBIEDER": "ponto",
       "PONTO_OMGEVING": "sandbox",
     }
