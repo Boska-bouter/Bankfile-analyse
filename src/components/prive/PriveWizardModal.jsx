@@ -125,7 +125,6 @@ export default function PriveWizardModal({
                     {loadedFileNames.map((n) => <li key={n} className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700"><Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /><span className="truncate">{n}</span></li>)}
                   </ul>
                   <p className="text-xs text-slate-600">Heb je meer rekeningen, zoals een spaarrekening, beleggingsrekening, kinderrekening of een rekening van je partner? Voeg die bestanden ook toe met de knop hierboven.</p>
-                  <button type="button" onClick={volgende} className={KNOP_PRIMAIR_GROOT}>Klaar met bestanden — verder</button>
                 </>
               )}
               <p className="text-xs text-slate-500"><strong>Privacy:</strong> bankgegevens worden lokaal in je browser verwerkt en niet naar een externe server gestuurd voor analyse.</p>

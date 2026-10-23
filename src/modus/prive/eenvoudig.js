@@ -13,6 +13,8 @@ export const PRIVE_KEUZES_IN = Object.freeze([
   // beide-V2R2 — terugbetalingen zijn geen inkomen: ze verlagen de uitgaven.
   k("Overboeking van bekenden", "Terugbetaling door bekenden", "bijv. Tikkie of gedeelde kosten"),
   k("Terugbetalingen & restituties", "Terugbetaling van een bedrijf of winkel", "retour, te veel betaald of eindafrekening"),
+  k("Dividend & rente", "Dividend of rente", "van een bank of belegging"), // beide-V3R3
+  k("Ontvangen schenkingen", "Schenking ontvangen", "bijv. van ouders of familie"), // beide-V3R3
   k("Inkomsten", "Ander inkomen", "bijv. verkoop, huur of een prijs"),
   k("Interne overboeking", "Van mijn eigen rekening", "geld tussen je eigen rekeningen"),
 ]);

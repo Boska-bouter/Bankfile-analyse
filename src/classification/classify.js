@@ -505,6 +505,9 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     // bestanden van dezelfde rekening (jaar-bestanden) of bankkosten met het eigen IBAN als tegenrekening
     // zijn géén overboeking tussen twee rekeningen.
     if (!tx.ownAccount || ibansMatch(tx.counterpartyIban, tx.ownAccount)) return null;
+    // beide-V3R3 — privé: bij een opgegeven (niet geladen) rekening staat de soort erbij (wens Boska 23-10).
+    if (matchedOwn.soort === "spaar") return { category: "Interne overboeking: privé sparen", type };
+    if (matchedOwn.soort === "beleggen") return { category: "Beleggen", type };
     return { category: "Interne overboeking", type };
   }
   const isIncome = tx.amount > 0;

@@ -37,6 +37,9 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Pensioen & AOW", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   c("Toeslagen", "Inkomen", { soort: "inkomen" }),
   c("Kinderbijslag", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  // beide-V3R3 — wens Boska 23-10. Geen box 1-inkomen: telt mee in het budget, niet in de IB-indicatie.
+  c("Dividend & rente", "Inkomen", { soort: "inkomen", label: "Ontvangen dividend & rente", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Ontvangen schenkingen", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
 
   c("Privé - huur", "Wonen", { label: "Huur", vast: true }),
@@ -219,6 +222,9 @@ export const PRIVE_VOORRANG = Object.freeze(["Privé overige abonnementen"]);
 // Extra woorden voor bestaande categorieën, alleen bij het herkennen van bijschrijvingen in een privédossier.
 export const PRIVE_INKOMEN_EXTRA = Object.freeze({
   Toeslagen: ["kindgebonden budget", "kinderopvangtoeslag", "zorgtoeslag", "huurtoeslag", "dienst toeslagen"],
+  "Dividend & rente": ["dividend", "creditrente", "rentebijschrijving", "rente bijschrijving", "renteuitkering", "rente-uitkering",
+    "rentevergoeding", "renteopbrengst", "uitbetaling rente", "interest", "couponrente"],
+  "Ontvangen schenkingen": ["schenking", "geschonken", "jaarlijkse gift"],
   "Belastingen: IB": ["voorlopige aanslag", "voorlopige teruggaaf", "teruggaaf", "aanslag ib", "inkomstenbelasting"],
 });
 
@@ -226,7 +232,7 @@ export const PRIVE_INKOMEN_EXTRA = Object.freeze({
 // toeslag komt van de Belastingdienst; kinderbijslag vóór pensioen (allebei vaak via de SVB); loon vóór
 // uitkering ("eindejaarsuitkering" is loon).
 export const PRIVE_INKOMEN_VOLGORDE = Object.freeze([
-  "Toeslagen", "Kinderbijslag", "Pensioen & AOW", "Loon", "Uitkering", "Belastingen: IB",
+  "Toeslagen", "Kinderbijslag", "Pensioen & AOW", "Loon", "Uitkering", "Belastingen: IB", "Dividend & rente", "Ontvangen schenkingen",
 ]);
 
 // Een automatische uitkomst die alleen in een zakelijk dossier hoort, wordt in een privédossier deze

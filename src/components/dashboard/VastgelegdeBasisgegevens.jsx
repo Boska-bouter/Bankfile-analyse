@@ -40,7 +40,7 @@ export default function VastgelegdeBasisgegevens({
     : eigenRekeningenExtra.length === 0
       ? "Geen"
       : eigenRekeningenExtra.map((r) => {
-          const kenmerken = [!prive && (r.accountType === "Zakelijk" ? "zakelijk" : "privé"), r.soort === "spaar" && "spaar"].filter(Boolean);
+          const kenmerken = [!prive && (r.accountType === "Zakelijk" ? "zakelijk" : "privé"), r.soort === "spaar" && "spaar", r.soort === "beleggen" && "beleggen"].filter(Boolean);
           return `${r.iban || "zonder nummer"}${kenmerken.length ? ` (${kenmerken.join(", ")})` : ""}`;
         }).join(", ");
   const rekeninghouder = eigenNamen === null ? null : [eigenNamen?.ondernemer, eigenNamen?.partner && `partner: ${eigenNamen.partner}`].filter(Boolean).join(" · ") || "Niet ingevuld";

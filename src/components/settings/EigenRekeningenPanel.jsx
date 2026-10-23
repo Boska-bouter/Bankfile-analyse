@@ -8,6 +8,14 @@ import { KNOP_PRIMAIR, VELD_KLEIN } from "../ui/stijl.js";
 // plaats van inkomen of een kostenpost. Werkt direct op alle al geladen transacties.
 const normIban = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
 const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
+// beide-V3R3 — privé: soort van een opgegeven rekening (wens Boska 23-10). Spaar → "Sparen", beleggen → "Beleggen",
+// betaal → "Interne overboeking" (zie detectOwnAccountTransfer).
+const SOORTEN = [["betaal", "Betaalrekening"], ["spaar", "Spaarrekening"], ["beleggen", "Beleggingsrekening"]];
+const SoortKeuze = ({ value, onChange, className }) => (
+  <select value={value || "betaal"} onChange={(e) => onChange(e.target.value)} aria-label="Soort rekening" className={className}>
+    {SOORTEN.map(([w, l]) => <option key={w} value={w}>{l}</option>)}
+  </select>
+);
 const eur = (n) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
 // beide-V2R2 — vasteSoort ("Prive"): privédossier, alle rekeningen zijn privé (geen keuze) en een eigen uitleg.
@@ -17,6 +25,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
   const [gekozen, setType] = useState("Prive");
   const type = vasteSoort || gekozen;
   const [fout, setFout] = useState("");
+  const [soort, setSoort] = useState("betaal");
 
   const tellers = useMemo(() => {
     const res = {};
@@ -38,11 +47,12 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
     if (loadedAccounts.some((a) => ibansMatch(a.iban, v))) return setFout("Deze rekening is al als bankbestand geladen.");
     if (lijst.some((r) => r.iban && ibansMatch(r.iban, v))) return setFout("Deze rekening staat er al bij.");
     setFout("");
-    onChange([...lijst, { iban: v, accountType: type }]);
+    onChange([...lijst, { iban: v, accountType: type, ...(vasteSoort ? { soort } : {}) }]);
     setIban("");
   };
   const verwijder = (idx) => onChange(lijst.filter((_, i) => i !== idx));
   const wijzigType = (idx, t) => onChange(lijst.map((r, i) => (i === idx ? { ...r, accountType: t } : r)));
+  const wijzigSoort = (idx, s) => onChange(lijst.map((r, i) => (i === idx ? { ...r, soort: s } : r)));
 
   return (
     <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm space-y-3">
@@ -81,6 +91,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
                     <option value="Prive">Privé</option>
                     <option value="Zakelijk">Zakelijk</option>
                   </select>}
+                  {vasteSoort && <SoortKeuze value={r.soort} onChange={(s) => wijzigSoort(idx, s)} className="rounded border border-slate-300 px-1.5 py-0.5" />}
                   {t && <span className="text-slate-400">{t.n} boeking{t.n === 1 ? "" : "en"} gevonden ({eur(t.som)})</span>}
                   <button onClick={() => verwijder(idx)} className="ml-auto text-slate-400 hover:text-red-600">Verwijderen</button>
                 </li>
@@ -102,6 +113,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
           <option value="Prive">Privérekening</option>
           <option value="Zakelijk">Zakelijke rekening</option>
         </select>}
+        {vasteSoort && <SoortKeuze value={soort} onChange={setSoort} className={VELD_KLEIN} />}
         <button onClick={voegToe} className={`${KNOP_PRIMAIR} !text-xs`}>Toevoegen</button>
       </div>
       {fout && <p className="text-xs text-red-600">{fout}</p>}

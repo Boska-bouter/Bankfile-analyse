@@ -6,6 +6,7 @@ import CategoryRulesPanel from "../components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "../components/settings/CounterpartyRulesPanel.jsx";
 import DossierProfielLijst from "../components/shared/DossierProfielLijst.jsx";
 import EigenRekeningenPanel from "../components/settings/EigenRekeningenPanel.jsx";
+import { getCategorieProfiel } from "../classification/categories.js";
 import FixedCategoriesPanel from "../components/settings/FixedCategoriesPanel.jsx";
 import RecurringPaymentsPanel from "../components/overview/RecurringPaymentsPanel.jsx";
 import { Settings } from "lucide-react";
@@ -59,6 +60,7 @@ export function useInstellingenCardGroups(p) {
           <DossierProfielLijst blokken={dossierProfiel} />
           <div className="mt-5">
             <EigenRekeningenPanel
+              vasteSoort={getCategorieProfiel() ? "Prive" : null} // beide-V3R3 — privé: geen zakelijk/privé, wel soort rekening
               loadedAccounts={eigenRekeningenGeladen}
               eigenRekeningenExtra={eigenRekeningenExtra}
               onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
