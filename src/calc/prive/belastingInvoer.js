@@ -38,9 +38,14 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
   }
   // beide-V2R8 — inkomen op de bank is netto: de belasting is al ingehouden. Alleen wat zonder inhouding binnenkwam
   // (wizardvraag), telt als bruto inkomen waarover nog belasting betaald moet worden (bij jezelf).
-  const zonder = a.nettoIngehouden === "nee" ? Math.max(0, getal(a.zonderInhouding?.[jaar]) || 0) : 0;
-  personen[0].zonderInhouding = zonder;
-  if (a.nettoIngehouden === "nee" && !zonder) aannames.push("Inkomen zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
+  const zonderVan = (keuze, veld) => (a[keuze] === "nee" ? Math.max(0, getal(a[veld]?.[jaar]) || 0) : 0);
+  personen[0].zonderInhouding = zonderVan("nettoIngehouden", "zonderInhouding");
+  if (a.nettoIngehouden === "nee" && !personen[0].zonderInhouding) aannames.push("Inkomen zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
+  // beide-V2R9 — ook voor de partner.
+  if (personen[1]) {
+    personen[1].zonderInhouding = zonderVan("nettoIngehoudenPartner", "zonderInhoudingPartner");
+    if (a.nettoIngehoudenPartner === "nee" && !personen[1].zonderInhouding) aannames.push("Inkomen van je partner zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
+  }
   if (personen.some((p) => p.loonheffing == null && p.loon + p.uitkering + p.pensioen > 0)) {
     aannames.push("Je inkomen op de bank is netto: de belasting is al ingehouden. Wil je het controleren, vul dan bij Basisvragen het bruto inkomen van je jaaropgave in.");
   }

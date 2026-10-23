@@ -22,6 +22,7 @@ const BRONNEN = [
   { waarde: "anders", label: "Anders of geen" },
 ];
 const metPartner = (a) => a.partner === "ja";
+const partnerHeeftInkomen = (a) => metPartner(a) && Array.isArray(a.inkomenPartner) && a.inkomenPartner.length > 0;
 const heeftLoonheffing = (bron) => (bron || []).some((b) => ["loon", "uitkering", "aow", "pensioen"].includes(b));
 
 export const PRIVE_WIZARD_STAPPEN = Object.freeze([
@@ -42,7 +43,12 @@ export const PRIVE_WIZARD_STAPPEN = Object.freeze([
       { key: "nettoIngehouden", type: "keuze", optioneel: true, vraag: "Is op al je inkomen de belasting al ingehouden?", uitleg: "Bij loon, een uitkering en pensioen houdt de werkgever of instantie de belasting meestal al in: wat op de bank komt, is netto.", opties: [
         { waarde: "ja", label: "Ja, alles is netto" }, { waarde: "nee", label: "Nee, op een deel is nog geen belasting ingehouden" },
       ] },
-      { key: "zonderInhouding", type: "bedragPerJaar", vraag: "Hoeveel inkomen kwam er per jaar binnen zonder ingehouden belasting?", uitleg: "Bruto, bijvoorbeeld een bijbaan zonder loonheffing of inkomen uit het buitenland. Samen met je partner.", toon: (a) => a.nettoIngehouden === "nee" },
+      { key: "zonderInhouding", type: "bedragPerJaar", vraag: "Hoeveel inkomen kwam er per jaar binnen zonder ingehouden belasting?", uitleg: "Bruto, bijvoorbeeld een bijbaan zonder loonheffing of inkomen uit het buitenland.", toon: (a) => a.nettoIngehouden === "nee" },
+      // beide-V2R9 — dezelfde vragen voor de fiscale partner, als die ook inkomen heeft.
+      { key: "nettoIngehoudenPartner", type: "keuze", optioneel: true, vraag: "Is op al het inkomen van je partner de belasting al ingehouden?", opties: [
+        { waarde: "ja", label: "Ja, alles is netto" }, { waarde: "nee", label: "Nee, op een deel is nog geen belasting ingehouden" },
+      ], toon: (a) => partnerHeeftInkomen(a) },
+      { key: "zonderInhoudingPartner", type: "bedragPerJaar", vraag: "Hoeveel inkomen kwam er per jaar bij je partner binnen zonder ingehouden belasting?", uitleg: "Bruto.", toon: (a) => partnerHeeftInkomen(a) && a.nettoIngehoudenPartner === "nee" },
     ],
   },
   {
