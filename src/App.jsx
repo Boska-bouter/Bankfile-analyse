@@ -1659,8 +1659,24 @@ export default function App() {
   };
 
   // ---- Inkomstenbronnen-review ----
-  const incomeSummary = useMemo(() => computeIncomeSummary(classified, accountTypeByFile, businessKeywords), [classified, accountTypeByFile, businessKeywords]);
+  // beide-V3R0 — "Wie zijn je zakelijke klanten?" bestaat niet in een privédossier (daar geen omzet).
+  const incomeSummary = useMemo(() => (modus.onderdelen.omzet === false ? [] : computeIncomeSummary(classified, accountTypeByFile, businessKeywords)), [classified, accountTypeByFile, businessKeywords, modus.onderdelen.omzet]);
   const pendingIncomeReview = useMemo(() => incomeSummary.filter((i) => !reviewedIncomeKeys.includes(i.key)), [incomeSummary, reviewedIncomeKeys]);
+  // beide-V3R0 — opruimen in een privédossier: antwoorden op de (daar ten onrechte getoonde) vraag "Wie zijn je
+  // zakelijke klanten?" zetten bijschrijvingen op "Overig" of "Zakelijke inkomsten". Die keuzes gaan weg, zodat de
+  // automatische herkenning (pensioen, loon, terugbetaling) weer geldt. Een later gekozen andere categorie blijft.
+  useEffect(() => {
+    if (modus.onderdelen.omzet !== false || reviewedIncomeKeys.length === 0) return;
+    const sleutels = new Set(reviewedIncomeKeys.map((k) => `${k}::pos`));
+    setOverridesByCounterparty((prev) => {
+      const weg = Object.keys(prev).filter((k) => sleutels.has(k) && ["Overig", "Zakelijke inkomsten"].includes(prev[k]?.category));
+      if (weg.length === 0) return prev;
+      const next = { ...prev };
+      for (const k of weg) delete next[k];
+      return next;
+    });
+    setReviewedIncomeKeys([]);
+  }, [modus.onderdelen.omzet, reviewedIncomeKeys]); // eslint-disable-line react-hooks/exhaustive-deps
   const markIncomeSource = (item, choice) => {
     if (choice === "zakelijk") {
       setBusinessKeywords((prev) => (prev.includes(item.name) ? prev : [...prev, item.name]));
@@ -1683,7 +1699,7 @@ export default function App() {
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
   const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true }), [classified]);
-  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !i.handmatig && !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
   const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
   const markPersonSource = (item, category, type) => {
@@ -1696,7 +1712,7 @@ export default function App() {
   };
 
   const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true }), [classified]);
-  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
+  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !i.handmatig && !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
     zetVoorItem(item, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));

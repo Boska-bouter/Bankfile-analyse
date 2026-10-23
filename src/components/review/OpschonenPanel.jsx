@@ -1,5 +1,6 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import ReviewStep from "./ReviewStep.jsx";
+import { getCategorieProfiel } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 
 // Fase 3 — was drie los-inline accordeons in App.jsx ("Overig" opruimen, Duplicaten controleren,
@@ -72,7 +73,7 @@ export default function OpschonenPanel({
               onConfirm={onConfirmOverigAsIs}
               defaultCategory="Overig"
               confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-              explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'
+              explanation={getCategorieProfiel() ? 'Kies per tegenpartij de juiste categorie, of klik "Klopt zo" als het hier bewust moet blijven staan.' : 'Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'}
               bulkAction={[
                 overigZakelijkCount > 0 && {
                   label: `Alle zakelijke (${overigZakelijkCount}) naar "Privé opnames"`,
@@ -80,7 +81,7 @@ export default function OpschonenPanel({
                   onApply: onBulkMarkOverigAsPriveOpname,
                 },
                 overigPriveCount > 0 && {
-                  label: `Alle privé (${overigPriveCount}) naar "Winkels divers"`,
+                  label: getCategorieProfiel() ? `Alle (${overigPriveCount}) naar "Winkels divers"` : `Alle privé (${overigPriveCount}) naar "Winkels divers"`,
                   confirmText: `${overigPriveCount} tegenpartij(en) in "Overig" die nu als Privé staan, allemaal naar "Winkels divers" zetten?`,
                   onApply: onBulkMarkOverigAsWinkelsDivers,
                 },

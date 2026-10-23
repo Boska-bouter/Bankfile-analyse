@@ -77,6 +77,8 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     map[key].count += 1;
     map[key].years.add(tx.year);
     map[key].description = tx.fullDescription || tx.description || map[key].description;
+    // V7R6 / beide-V3R0 — zelf gekozen (bijv. in Eenvoudig "Aan familie of vrienden"): dan is het al beoordeeld.
+    if (tx.confidence?.level === "override") map[key].handmatig = true;
   }
   return Object.values(map).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 }

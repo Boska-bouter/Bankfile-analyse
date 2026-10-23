@@ -53,6 +53,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Boodschappen", "Boodschappen"),
 
   c("Auto & brandstof", "Vervoer", { nieuw: true, kleur: "bg-orange-100 text-orange-800" }),
+  // beide-V3R0 — ook privé kun je een auto, motor of fiets leasen (private lease): een vaste last.
+  c("Private lease", "Vervoer", { label: "Lease (auto, motor, fiets)", nieuw: true, vast: true, kleur: "bg-orange-50 text-orange-700" }),
   c("Openbaar vervoer", "Vervoer", { nieuw: true, kleur: "bg-cyan-100 text-cyan-800" }),
 
   c("Kinderopvang", "Kinderen", { vast: true }),
@@ -122,7 +124,12 @@ export const PRIVE_REGELS = Object.freeze([
     " cz ", "cz zorg", " dsw", "onvz", "ikz zorg", "asr zorg", "a.s.r. zorg", "asr ziektekosten", " izz", "aevitae", "eno zorg",
     "zorgpremie", "ziektekostenverzekering", "hema zorg", "jaaah", "pnoozorg", "caresq", "zorgdirect", "vvaa zorg", "nationale-nederlanden zorg",
   ] },
-  { naam: "Auto & brandstof", woorden: [], leen: ["Brandstof", "Autokosten", "Parkeren", "Lease (operationeel)"] },
+  { naam: "Private lease", woorden: [
+    "private lease", "privatelease", "private-lease", "autolease", "auto lease", "fietslease", "fiets lease", "e-bike lease",
+    "lease a bike", "leaseabike", "swapfiets", "motorlease", "motor lease", "scooterlease", "scooter lease", "lease fiets",
+    "justlease", "directlease", "anwb private lease", "mobilease", "terberg", "athlon private", "ayvens", "leaseplan",
+  ], leen: ["Lease (operationeel)"] },
+  { naam: "Auto & brandstof", woorden: [], leen: ["Brandstof", "Autokosten", "Parkeren"] },
   { naam: "Openbaar vervoer", woorden: [
     " ns ", " ns-", "ns reizigers", "ns international", "nsinternational", "ns flex", "ov-chipkaart", "ov chipkaart",
     "ovchipkaart", "ov-chip", "ov-fiets", "ovfiets", "db bahn",
@@ -231,7 +238,7 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Terugboeking van privé": "Interne overboeking", "Interne overboeking: zakelijk sparen": "Interne overboeking: privé sparen",
   "Privé opnames": "Contant geld",
   "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",
-  "Lease (operationeel)": "Auto & brandstof", "Lease (financieel)": "Auto & brandstof", "Belastingen: MRB": "Auto & brandstof",
+  "Lease (operationeel)": "Private lease", "Lease (financieel)": "Private lease", "Belastingen: MRB": "Auto & brandstof",
   "Reiskosten (OV)": "Openbaar vervoer",
   "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
   "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",

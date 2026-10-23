@@ -152,6 +152,11 @@ export function verfijnPrive(tx, uitkomst, regels, ctx = null) {
     }
     if (SPAREN.test(tekst)) return { ...uitkomst, category: "Interne overboeking: privé sparen" };
   }
+  // beide-V3R0/V3R1 — een tankstation of laadpaal met meer dan € 300 in één keer is geen tankbeurt: nakijken.
+  if (cat === "Auto & brandstof" && Math.abs(tx.amount) > 300) {
+    const brandstof = regels.find((r) => r.name === "Brandstof");
+    if (brandstof && ruleMatchesText(brandstof, tekst)) return { ...uitkomst, category: "Overig" };
+  }
   // beide-V2R3 — een pinbetaling zonder herkend zoekwoord: de branchecode (MCC) van de winkel zegt wat het is.
   if (tx.amount < 0 && ALGEMENE_UITGAVE.has(cat)) {
     const branche = MCC_CATEGORIE[(tekst.match(/\bmcc:?\s?(\d{4})\b/) || [])[1]];

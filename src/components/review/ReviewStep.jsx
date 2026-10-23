@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soortenVoor } from "../../classification/categories.js";
+import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soortenVoor, getCategorieProfiel } from "../../classification/categories.js";
 
 // V76 — privé-categorieën samengevoegd in de keuzelijst (zie displayCategory in categories.js).
 import { eur } from "../../utils/amounts.js";
@@ -32,10 +32,11 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
       </div>
       {/* release30V6 — één gegroepeerde keuzelijst (groep → soort) i.p.v. eerst groep, dan soort */}
       <CategorieSelect value={category} onChange={(c) => apply(c, type)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs max-w-[16rem]" />
-      <select value={type} onChange={(e) => apply(category, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
+      {/* beide-V3R0 — in een privédossier is alles privé: geen keuze zakelijk/privé */}
+      {!getCategorieProfiel() && <select value={type} onChange={(e) => apply(category, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs">
         <option value="Prive">Privé</option>
         <option value="Zakelijk">Zakelijk</option>
-      </select>
+      </select>}
       <button
         onClick={() => onConfirm(item)}
         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${isDefault ? confirmButtonClass : "border-slate-200 text-slate-400 hover:bg-slate-50"}`}
