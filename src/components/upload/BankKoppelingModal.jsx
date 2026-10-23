@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, KNOP_PRIMAIR_KLEIN, VELD, VELD_KLEIN } from "../ui/stijl.js";
 import { transactiesNaarRijen, voegRijenSamen, rijenNaarParsedFile } from "../../importers/enableBanking.js";
@@ -47,9 +47,23 @@ const standaardVan = () => `${new Date().getFullYear() - 1}-01-01`;
 // bewaren. Geeft een melding terug, of gooit een fout met een leesbare tekst.
 // beide-V3R4 — koppelingen die de Worker na terugkeer van de bank zelf heeft afgerond (ook als die terugkeer in een
 // andere browser binnenkwam, zoals Safari bij de app als icoon op het beginscherm) ophalen en in het tussenstation zetten.
-export async function haalWachtendeOp() {
-  const d = await api("/wachtend");
-  const nieuw = d.koppelingen || [];
+// beide-V3R6 — de server bewaart het resultaat tot het eerste gebruik (max. 2 uur); "bekend" zijn de id's die al in het
+// dossier staan, die worden overgeslagen.
+// De states van koppelingen die in deze app zijn gestart (localStorage: blijft bewaard als de app herlaadt na de bank).
+const STATES_KEY = "bankoverzicht:bankkoppeling-states";
+const leesStates = () => {
+  try {
+    const l = JSON.parse(localStorage.getItem(STATES_KEY) || "[]");
+    return Array.isArray(l) ? l.filter((x) => x && Date.now() - x.t < 3 * 3600 * 1000) : [];
+  } catch { return []; }
+};
+const bewaarState = (state) => { try { localStorage.setItem(STATES_KEY, JSON.stringify([...leesStates(), { s: state, t: Date.now() }].slice(-5))); } catch { /* geen opslag */ } };
+
+export async function haalWachtendeOp(bekend = new Set()) {
+  const states = leesStates().map((x) => x.s);
+  if (states.length === 0) return { melding: "", fout: "" };
+  const d = await api(`/wachtend?states=${encodeURIComponent(states.join(","))}`);
+  const nieuw = (d.koppelingen || []).filter((k) => !bekend.has(k.id));
   if (nieuw.length > 0) {
     const bestaand = await leesKoppelingen();
     const ids = new Set(bestaand.map((k) => k.id));
@@ -68,6 +82,7 @@ export async function rondKoppelingAf(terug) {
   if (terug.klaar) {
     const r = await haalWachtendeOp();
     if (r.fout && !r.melding) throw new Error(r.fout);
+    // Staat de koppeling al in het dossier, dan meldt het koppelvenster dat zelf (pakServerOp slaat bekende id's over).
     return r.melding || "";
   }
   let start = null;
@@ -110,9 +125,11 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   // beginscherm): de koppeling staat dan klaar op de server. Ophalen bij openen, zodra de app weer in beeld komt, en
   // na "Naar Ponto"/"Naar mijn bank" elke paar seconden zolang het venster openstaat.
   const [wachtOpBank, setWachtOpBank] = useState(false);
+  const bekendRef = useRef(new Set());
+  bekendRef.current = new Set((koppelingen || []).map((k) => k.id));
   const pakServerOp = async () => {
     try {
-      const r = await haalWachtendeOp();
+      const r = await haalWachtendeOp(bekendRef.current);
       if (!r.melding && !r.fout) return;
       if (r.fout) setFout(r.fout);
       if (r.melding) setMelding(r.melding);
@@ -122,7 +139,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     } catch { /* geen verbinding of geen recht: later opnieuw */ }
   };
   useEffect(() => {
-    if (!afronding?.bezig) pakServerOp();
+    pakServerOp();
     const zichtbaar = () => { if (document.visibilityState === "visible") pakServerOp(); };
     document.addEventListener("visibilitychange", zichtbaar);
     window.addEventListener("focus", zichtbaar);
@@ -160,6 +177,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     setBezig("start"); setFout("");
     try {
       const state = crypto.randomUUID();
+      bewaarState(state);
       sessionStorage.setItem(STATE_KEY, JSON.stringify({ state, bank: bank.naam, psu }));
       const s = await api("/start", { bank: bank.naam, psu, state, maxGeldigSec: bank.maxGeldigSec });
       // nieuw-V5R1 — bij Ponto gaat de (versleutelde) PKCE-code mee, nodig om de koppeling na terugkeer af te ronden.

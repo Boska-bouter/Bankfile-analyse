@@ -118,13 +118,16 @@ async function leesBody(request) {
 // de bank (of Ponto) in Safari, en daar komt ook de terugkeer (/bank/terug) binnen: zonder het open dossier, zonder de
 // gegevens uit het koppelvenster en vaak zonder inlog. Daarom bewaart /start de "state" met het e-mailadres in D1
 // (30 minuten), wisselt de Worker bij /bank/terug zelf de code in, en zet het resultaat (het versleutelde koppeltoken en
-// de rekeningen, 24 uur) klaar voor dat e-mailadres. De app haalt het op met /api/bank/wachtend zodra hij weer in beeld is.
+// de rekeningen, 2 uur) klaar voor dat e-mailadres. De app haalt het op met /api/bank/wachtend zodra hij weer in beeld is.
+// beide-V3R6 — ophalen wist het resultaat niet meer: op iPad kan een ander venster (het browservenster van Ponto) het
+// eerder ophalen dan de app zelf. De app slaat dubbele koppelingen over (zelfde id). Het resultaat verdwijnt bij het
+// eerste gebruik van de koppeling (/transacties of /verwijder; Ponto vervangt de sleutel dan) of na 2 uur.
 const BANK_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS bank_start (state TEXT PRIMARY KEY, email TEXT NOT NULL, bank TEXT, psu TEXT, pkce TEXT, verloopt INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bank_wachtend (id TEXT PRIMARY KEY, email TEXT NOT NULL, data TEXT NOT NULL, verloopt INTEGER NOT NULL)",
 ];
 const START_MS = 30 * 60 * 1000;
-const WACHT_MS = 24 * 3600 * 1000;
+const WACHT_MS = 2 * 3600 * 1000;
 const bankTabellenKlaar = new WeakSet();
 async function zorgVoorBankTabellen(db) {
   if (bankTabellenKlaar.has(db)) return;
@@ -137,7 +140,7 @@ function terugPagina(gelukt, tekst) {
   const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bankkoppeling</title>
 <style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f8fafc;color:#0f172a}main{max-width:32rem;margin:12vh auto;padding:28px 24px;background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 12px;color:${gelukt ? "#0f766e" : "#b91c1c"}}p{line-height:1.5;color:#334155}a{display:inline-block;margin-top:12px;color:#0f766e}</style></head><body><main>
 <h1>${gelukt ? "Koppeling gelukt" : "Koppeling niet gelukt"}</h1><p>${escHtml(tekst)}</p>
-<p>Ga terug naar de app Bankoverzicht (bijvoorbeeld via het icoon op je beginscherm). ${gelukt ? "De rekeningen verschijnen daar vanzelf in het venster van de bankkoppeling." : "Begin daar zo nodig opnieuw met koppelen."} Dit venster mag je sluiten.</p>
+<p>Ga terug naar de app Bankoverzicht (bijvoorbeeld via het icoon op je beginscherm). ${gelukt ? "De rekeningen verschijnen daar vanzelf in het venster van de bankkoppeling (open het zo nodig opnieuw)." : "Begin daar zo nodig opnieuw met koppelen."} Dit venster mag je sluiten.</p>
 <a href="/">Of open de app in deze browser</a></main></body></html>`;
   return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
 }
@@ -150,8 +153,17 @@ export async function bankTerugRoute(request, env, url) {
   await zorgVoorBankTabellen(env.DB);
   const nu = Date.now();
   await env.DB.prepare("DELETE FROM bank_start WHERE verloopt < ?").bind(nu).run();
-  const start = await env.DB.prepare("DELETE FROM bank_start WHERE state = ? RETURNING email, bank, psu, pkce").bind(state).first();
-  if (!start) return null;
+  // beide-V3R6 — op iPad komt dezelfde terugkeer soms twee keer binnen (eerst in het browservenster van Ponto, daarna in
+  // de app). De eerste rondt af; de state blijft gemarkeerd ("klaar:") zodat de tweede gewoon naar de app gaat.
+  const start = await env.DB.prepare("UPDATE bank_start SET psu = 'klaar:' || psu WHERE state = ? AND psu NOT LIKE 'klaar:%' RETURNING email, bank, psu, pkce").bind(state).first();
+  const ingelogd = String(request.headers.get("Cf-Access-Authenticated-User-Email") || "").trim().toLowerCase();
+  if (!start) {
+    const al = await env.DB.prepare("SELECT email FROM bank_start WHERE state = ?").bind(state).first();
+    if (!al) return null;
+    if (ingelogd && ingelogd === al.email) return new Response(null, { status: 302, headers: { Location: "/bank/terug?klaar=1", "cache-control": "no-store" } });
+    return terugPagina(true, "De koppeling is al afgerond.");
+  }
+  start.psu = String(start.psu || "").replace(/^klaar:/, "");
   const weigering = url.searchParams.get("error_description") || url.searchParams.get("error");
   let d;
   if (weigering) d = { ok: false, fout: `De bank gaf geen toestemming: ${String(weigering).slice(0, 200)}` };
@@ -164,12 +176,11 @@ export async function bankTerugRoute(request, env, url) {
     d = await (await bankRoute(req, env, new URL(req.url))).json().catch(() => ({ ok: false, fout: "Onverwacht antwoord" }));
   }
   const item = d.ok
-    ? { id: crypto.randomUUID(), bank: d.bank || start.bank || "", psu: start.psu || "personal", token: d.token, rekeningen: d.rekeningen || [], geldigTot: d.geldigTot || null, gekoppeldOp: new Date().toISOString(), opgehaald: {} }
-    : { fout: [d.fout, d.detail].filter(Boolean).join(" — ") || "Koppeling mislukt" };
+    ? { id: crypto.randomUUID(), state, bank: d.bank || start.bank || "", psu: start.psu || "personal", token: d.token, rekeningen: d.rekeningen || [], geldigTot: d.geldigTot || null, gekoppeldOp: new Date().toISOString(), opgehaald: {} }
+    : { state, fout: [d.fout, d.detail].filter(Boolean).join(" — ") || "Koppeling mislukt" };
   await env.DB.prepare("DELETE FROM bank_wachtend WHERE verloopt < ?").bind(nu).run();
   await env.DB.prepare("INSERT INTO bank_wachtend (id, email, data, verloopt) VALUES (?, ?, ?, ?)").bind(crypto.randomUUID(), start.email, JSON.stringify(item), nu + WACHT_MS).run();
   // Zelfde browser en ingelogd als dezelfde gebruiker: meteen terug naar de app, die het resultaat ophaalt.
-  const ingelogd = String(request.headers.get("Cf-Access-Authenticated-User-Email") || "").trim().toLowerCase();
   if (ingelogd && ingelogd === start.email) return new Response(null, { status: 302, headers: { Location: "/bank/terug?klaar=1", "cache-control": "no-store" } });
   const n = item.rekeningen?.length || 0;
   return terugPagina(d.ok, d.ok ? `${item.bank} is gekoppeld (${n} rekening${n === 1 ? "" : "en"}).` : item.fout);
@@ -185,9 +196,26 @@ export async function bankRoute(request, env, url) {
   if (pad === "/wachtend" && request.method === "GET") {
     if (!env.DB) return json({ ok: true, koppelingen: [], fouten: [] });
     await zorgVoorBankTabellen(env.DB);
-    const { results } = await env.DB.prepare("DELETE FROM bank_wachtend WHERE email = ? RETURNING data, verloopt").bind(email).all();
-    const items = (results || []).filter((r) => r.verloopt >= Date.now()).map((r) => { try { return JSON.parse(r.data); } catch { return null; } }).filter(Boolean);
-    return json({ ok: true, koppelingen: items.filter((x) => !x.fout), fouten: items.filter((x) => x.fout).map((x) => x.fout) });
+    await env.DB.prepare("DELETE FROM bank_wachtend WHERE verloopt < ?").bind(Date.now()).run();
+    const { results } = await env.DB.prepare("SELECT id, data FROM bank_wachtend WHERE email = ?").bind(email).all();
+    // Alleen koppelingen die in deze app zijn gestart (de app stuurt zijn eigen states mee), zodat een ander venster
+    // of een later geopend dossier niet per ongeluk een koppeling van iemand anders' sessie overneemt.
+    const states = new Set(String(url.searchParams.get("states") || "").split(",").map((x) => x.trim()).filter(Boolean).slice(0, 10));
+    const items = (results || []).map((r) => { try { return { ...JSON.parse(r.data), wachtId: r.id }; } catch { return null; } })
+      .filter((x) => x && states.has(x.state));
+    // Een foutmelding hoeft maar één keer getoond te worden.
+    for (const x of items.filter((i) => i.fout)) await env.DB.prepare("DELETE FROM bank_wachtend WHERE id = ?").bind(x.wachtId).run();
+    return json({ ok: true, koppelingen: items.filter((x) => !x.fout).map(({ wachtId, state: _s, ...k }) => k), fouten: items.filter((x) => x.fout).map((x) => x.fout) });
+  }
+  // beide-V3R6 — eerste gebruik van een klaargezette koppeling: het klaargezette exemplaar weghalen.
+  if ((pad === "/transacties" || pad === "/verwijder") && request.method === "POST" && env.DB) {
+    try {
+      const t = String((await request.clone().json().catch(() => ({}))).token || "");
+      if (t.length > 20) {
+        await zorgVoorBankTabellen(env.DB);
+        await env.DB.prepare("DELETE FROM bank_wachtend WHERE email = ? AND instr(data, ?) > 0").bind(email, t).run();
+      }
+    } catch { /* niet erg: vervalt na 2 uur */ }
   }
 
   const startBody = pad === "/start" && request.method === "POST" ? request.clone().json().catch(() => ({})) : null;
@@ -215,7 +243,7 @@ async function bankRouteAanbieder(request, env, url, email, pad) {
   const standaardPonto = String(env.BANK_AANBIEDER || "").trim().toLowerCase() === "ponto";
   const viaPonto = await (async () => {
     if ((pad === "/transacties" || pad === "/verwijder") && String(env.EB_TOKEN_GEHEIM || "").trim()) {
-      const b = (await startBody) || {};
+      const b = await request.clone().json().catch(() => ({}));
       const t = await ontsleutel(env, email, b.token);
       if (t) return !!t.p; // een geldig token bepaalt de aanbieder; een ongeldig token weigert de standaardaanbieder
     }
