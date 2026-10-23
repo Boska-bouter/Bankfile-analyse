@@ -20,7 +20,7 @@
       "INLOG_MODUS": "eigen",
       "INLOG_FROM": "inloggen@bankafschriftentool.app"
       "BANK_AANBIEDER": "ponto",
-      "PONTO_OMGEVING": "sandbox"
+      "PONTO_OMGEVING": "sandbox",
     }
   }
 }
