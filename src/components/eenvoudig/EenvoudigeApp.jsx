@@ -64,7 +64,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, onUitlegZichtbaar = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onUitlegZichtbaar = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -172,6 +172,7 @@ export default function EenvoudigeApp({
                 fout: "toegang kon niet worden gecontroleerd (/api/rol niet bereikbaar)",
               }[toegangInfo.status] || ""}</p>}
               </>}
+              {abonnement?.length > 0 && <p className="mt-0.5 text-[10px] text-slate-300">Abonnement: {abonnement.join(" · ")}</p>}
               {onUitloggen && toegangInfo?.email && <p className="mt-0.5 text-[10px] text-slate-400">{onUitgebreid ? `ingelogd als ${toegangInfo.email} · ` : ""}<button type="button" onClick={onUitloggen} style={{ minHeight: 0 }} className="underline hover:text-white">uitloggen</button></p>}
             </div>
         </div>

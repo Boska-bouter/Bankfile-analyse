@@ -79,7 +79,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null, abonnement = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -395,6 +395,8 @@ export default function AppSidebar({
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
         {ingelogdAls && <p className="sb-label text-[11px] leading-snug text-slate-400 break-all">Ingelogd als {ingelogdAls}</p>}
+        {/* V7R5 — welk abonnement je hebt */}
+        {abonnement?.length > 0 && <p className="sb-label text-[11px] leading-snug text-slate-400">Abonnement: {abonnement.join(" · ")}</p>}
         <p className="sb-label text-[11px] leading-snug text-slate-400" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
       </div>
       {sbTip && (
