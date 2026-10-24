@@ -1,5 +1,6 @@
 import { eur } from "../utils/amounts.js";
 import { jarenBereik } from "../dossier/dossierProfiel.js";
+import { downloadRapport } from "./download.js";
 
 // E2 — één pagina voor de klant: wat is het resultaat, wat is de indicatieve belasting, waar is
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
@@ -69,10 +70,7 @@ ${openHtml}
 </body></html>`;
 }
 
-export function downloadKlantSamenvatting(html, jaar) {
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = `Samenvatting_${jaar}.html`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
+export function downloadKlantSamenvatting(html, jaar, soort = "html") {
+  return downloadRapport({ soort, html, naam: `Samenvatting_${jaar}` });
 }

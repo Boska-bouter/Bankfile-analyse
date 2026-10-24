@@ -177,7 +177,8 @@ import { buildOnderbouwingHtml, downloadOnderbouwing } from "./reports/onderbouw
 import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./reports/btwOverzicht.js";
 import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
-import { printReport, printHtmlDocument } from "./reports/printReport.js";
+import { printReport, printHtmlDocument, buildReportHtml } from "./reports/printReport.js";
+import { downloadRapport } from "./reports/download.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear, suggestLeaseMerges, leaseKeyVanTx } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
@@ -1974,7 +1975,7 @@ export default function App() {
   const [uitlegMeenemen, setUitlegMeenemen] = useState(false);
   const voorstelHtmlWeergave = uitlegMeenemen ? aangiftevoorstelPreview : zonderUitlegHtml(aangiftevoorstelPreview);
   const printAangiftevoorstelPreview = () => printHtmlDocument(stripBronHtml(voorstelHtmlWeergave));
-  const downloadAangiftevoorstelPreview = () => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(stripBronHtml(voorstelHtmlWeergave), selectedAangifteYears);
+  const downloadAangiftevoorstelPreview = (soort) => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(stripBronHtml(voorstelHtmlWeergave), selectedAangifteYears, soort);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -3595,6 +3596,12 @@ export default function App() {
         if (priveOverzicht) exportPriveExcel({ jaren: years, overzicht: priveOverzicht, transacties: classified, label: categorieLabel });
         else exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
+      // beide-V4R1 — Downloaden als PDF of HTML: hetzelfde rapport als Printen.
+      case "pdf":
+      case "html":
+        if (priveOverzicht) downloadRapport({ soort: target, html: buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), naam: `Budgetoverzicht_${years.join("-")}` });
+        else if (groups.length) downloadRapport({ soort: target, html: buildReportHtml(groups), naam: "Bankoverzicht_Zakelijk_Prive" });
+        break;
       case "print":
         if (priveOverzicht) printHtmlDocument(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }));
         else printReport(groups);
@@ -4798,7 +4805,7 @@ export default function App() {
         )}
         {onderbouwingHtml && (
           <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
-            onDownload={() => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
+            onDownload={(soort) => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren, soort)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
         )}
         {btwOverzichtKeuze && (
           <KlantJaarKeuzeModal years={years} selected={btwOverzichtKeuze} setSelected={setBtwOverzichtKeuze} onOpen={openBtwOverzicht} onClose={() => setBtwOverzichtKeuze(null)}
@@ -4806,7 +4813,7 @@ export default function App() {
         )}
         {btwOverzichtHtml && (
           <AangifteVoorstelPreviewModal html={btwOverzichtHtml} years={btwOverzichtJaren} titel={`BTW per kwartaal ${jarenBereik(btwOverzichtJaren)}`}
-            onDownload={() => downloadBtwOverzicht(btwOverzichtHtml, btwOverzichtJaren)} onPrint={() => printHtmlDocument(btwOverzichtHtml)} onClose={() => setBtwOverzichtHtml(null)} />
+            onDownload={(soort) => downloadBtwOverzicht(btwOverzichtHtml, btwOverzichtJaren, soort)} onPrint={() => printHtmlDocument(btwOverzichtHtml)} onClose={() => setBtwOverzichtHtml(null)} />
         )}
         {klantJaarKeuze && (
           <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
@@ -4816,7 +4823,7 @@ export default function App() {
             html={klantSamenvattingHtml}
             years={klantSamenvattingJaren}
             titel={`Samenvatting voor klant ${jarenBereik(klantSamenvattingJaren)}`}
-            onDownload={() => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren))}
+            onDownload={(soort) => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren), soort)}
             onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
             onClose={() => setKlantSamenvattingHtml(null)}
           />

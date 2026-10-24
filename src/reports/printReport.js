@@ -47,7 +47,8 @@ const PRINT_STYLES = `
   @page { size: A4 portrait; margin: 16mm; }
 `;
 
-function buildReportHtml(groups) {
+// beide-V4R1 — ook gebruikt voor Downloaden (PDF/HTML); downloadRapport haalt de onload-print eraf.
+export function buildReportHtml(groups) {
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Bankoverzicht Zakelijk & Privé</title>
 <style>${PRINT_STYLES}</style></head><body onload="window.print()">${buildReportBodyContent(groups)}</body></html>`;
 }

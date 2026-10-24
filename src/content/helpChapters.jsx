@@ -33,7 +33,7 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           <strong>Details en overzichten.</strong> Onderaan het Overzicht staan de tabbladen Jaaroverzicht, Transacties,
-          Categorieën, Activa, Leningen en Lease. Rechtsboven staan Meerjarenoverzicht, Herkenningsregels, Excel exporteren
+          Categorieën, Activa, Leningen en Lease. Rechtsboven staan Meerjarenoverzicht, Onderbouwing, Downloaden
           en Print.
         </p>
         <p>
@@ -187,13 +187,16 @@ export const HELP_CHAPTERS = [
   {
     key: "meerjaren-export",
     groep: "overzicht",
-    titel: "Meerjarenoverzicht, Excel en Print",
+    titel: "Meerjarenoverzicht, Downloaden en Print",
     inhoud: (
       <p>
         Rechtsboven in "Details en overzichten" staan vier snelkoppelingen. <strong>Meerjarenoverzicht</strong> zet de
-        jaren naast elkaar. <strong>Herkenningsregels</strong> toont de regels die de app voor je heeft onthouden.{" "}
-        <strong>Excel exporteren</strong> levert alle transacties plus de overzichten in één bestand. <strong>Print</strong>{" "}
-        drukt het overzicht af.
+        jaren naast elkaar. <strong>Onderbouwing</strong> toont de transacties achter de bedragen.{" "}
+        <strong>Downloaden</strong> vraagt welk formaat je wilt: <em>PDF</em> (om te bewaren, mailen of printen),{" "}
+        <em>Excel</em> (alle transacties plus de overzichten) of <em>HTML</em> (opent in elke browser).{" "}
+        <strong>Print</strong> drukt het overzicht af. Elk rapport in de app (aangifteberekening, onderbouwing, BTW per
+        kwartaal, samenvatting, inkomen per maand) heeft dezelfde knop Downloaden met deze drie keuzes. Op de iPad, waar
+        printen vanuit de app op het beginscherm niet lukt, is PDF de handigste keuze.
       </p>
     ),
   },

@@ -20,6 +20,7 @@ import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
+import { downloadRapport } from "./download.js";
 
 // De statustekst is een functie van het aantal openstaande punten (niet een vaste tekst per kleur)
 // — "groen" betekent hier altijd alléén dat de gegevenscontrole voldoende compleet is, NIET dat de
@@ -1094,16 +1095,9 @@ function buildBijlageToelichtingenHtml() {
   </p>`;
 }
 
-export function downloadAangiftevoorstel(html, years) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Indicatieve_aangifteberekening_${years.join("-")}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
+export function downloadAangiftevoorstel(html, years, soort = "html") {
+  return downloadRapport({ soort, html, naam: `Indicatieve_aangifteberekening_${years.join("-")}` });
 }
 
 // Voor download en print: het voorstel zonder de interactieve "ⓘ bron"-uitklappers (die zijn alleen

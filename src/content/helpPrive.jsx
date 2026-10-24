@@ -16,7 +16,7 @@ export const PRIVE_INTRO = (
     <Li>Dit is een <strong>privédossier</strong>: alleen je eigen huishouden, zonder onderneming. Je ziet je inkomsten, uitgaven, vaste lasten en sparen, en een indicatie van je inkomstenbelasting. BTW, winst en bedrijfsmiddelen komen hier niet voor.</Li>
     <Li>De wizard (Basisvragen) vraagt naar je naam, een fiscale partner, waar jullie inkomen vandaan komt, wonen (huur of koop) en spaargeld. In de uitgebreide weergave komen daar onder meer WOZ-waarde, hypotheekrente, vermogen op 1 januari en de loonheffing van je jaaropgave bij.</Li>
     <Li>Laad je bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt de boekingen in categorieën in, zoals Wonen, Boodschappen, Vervoer en Zorg. Klopt een indeling niet? Pas hem aan bij Controleren; dat onthoudt de app voor dezelfde tegenpartij, in alle jaren.</Li>
-    <Li>Het Overzicht toont per jaar je budget en de belastingindicatie. Links bij Acties maak je de berekening inkomstenbelasting, de samenvatting, een Excel-bestand of een printbaar budgetoverzicht.</Li>
+    <Li>Het Overzicht toont per jaar je budget en de belastingindicatie. Links bij Acties maak je de berekening inkomstenbelasting, de samenvatting, of download het budgetoverzicht als PDF, Excel of HTML.</Li>
     <Li>Je bankgegevens worden lokaal in deze browser verwerkt en bewaard, niet op een server. Gebruik "Dossier opslaan" voor een back-upbestand.</Li>
   </ol>
 );
@@ -52,7 +52,7 @@ export const PRIVE_HELP_CHAPTERS = [
     titel: "Inkomsten, uitgaven, vaste lasten en sparen",
     inhoud: (
       <div className="space-y-2.5">
-        <p><strong>Inkomsten en uitgaven.</strong> Alles wat er in het jaar binnenkwam en eruit ging, plus wat je spaarde of belegde. "Over" is wat er overbleef, "Tekort" wat er meer uitging dan binnenkwam. Overboekingen tussen je eigen rekeningen tellen niet mee. Met <em>Per maand</em> zie je elke maand apart, ook als download voor Excel.</p>
+        <p><strong>Inkomsten en uitgaven.</strong> Alles wat er in het jaar binnenkwam en eruit ging, plus wat je spaarde of belegde. "Over" is wat er overbleef, "Tekort" wat er meer uitging dan binnenkwam. Overboekingen tussen je eigen rekeningen tellen niet mee. Met <em>Per maand</em> zie je elke maand apart, ook te downloaden als PDF, Excel of HTML, of om te printen.</p>
         <p><strong>Uitgaven per categorie.</strong> Je uitgaven per hoofdcategorie (Wonen, Boodschappen, Vervoer …), van groot naar klein. Klik op een categorie voor de onderverdeling.</p>
         <p><strong>Vaste lasten.</strong> Huur of hypotheek, energie, verzekeringen, abonnementen en dergelijke: wat elke maand terugkomt, met het bedrag per maand. Welke categorieën vast zijn, stel je in bij Instellingen → Vaste/variabele kosten.</p>
         <p><strong>Sparen.</strong> Wat er netto naar je spaarrekening of beleggingen ging. In Uitgebreid staat hier ook je vermogen voor box 3.</p>
@@ -129,9 +129,9 @@ export const PRIVE_HELP_CHAPTERS = [
   {
     key: "meerjaren-export",
     groep: "overzicht",
-    titel: "Excel en Print",
+    titel: "Downloaden en Print",
     inhoud: (
-      <p><strong>Excel exporteren</strong> maakt per jaar een tabblad Budget en een tabblad Per maand, plus een tabblad met alle transacties. <strong>Print budgetoverzicht</strong> opent een printbare pagina met je budget, uitgaven per categorie, vaste lasten en de maanden. Bewaar deze bestanden zorgvuldig: ze bevatten je financiële gegevens.</p>
+      <p><strong>Budgetoverzicht downloaden</strong> vraagt welk formaat je wilt. <em>PDF</em> en <em>HTML</em> bevatten je budget, uitgaven per categorie, vaste lasten en de maanden. <em>Excel</em> maakt per jaar een tabblad Budget en een tabblad Per maand, plus een tabblad met alle transacties. Elk rapport in de app heeft dezelfde knop Downloaden met de keuze PDF, Excel of HTML. <strong>Print budgetoverzicht</strong> opent een printbare pagina met je budget, uitgaven per categorie, vaste lasten en de maanden. Bewaar deze bestanden zorgvuldig: ze bevatten je financiële gegevens.</p>
     ),
   },
   {

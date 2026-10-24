@@ -1,4 +1,5 @@
-import { Download, Printer } from "lucide-react";
+import { Printer } from "lucide-react";
+import DownloadKnop from "../shared/DownloadKnop.jsx";
 
 import { KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
 // Voorbeeldvenster van het gegenereerde aangiftevoorstel (iframe) met Downloaden/Printen/Sluiten.
@@ -19,13 +20,12 @@ export default function AangifteVoorstelPreviewModal({ html, years, onDownload, 
               {extraKnop.label}
             </button>
           )}
-          <button onClick={onDownload} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
-            <Download className="h-4 w-4" /> Downloaden
-          </button>
+          {/* beide-V4R1 — keuze PDF, Excel of HTML; onDownload(soort) */}
+          <DownloadKnop onKies={onDownload} />
           <button
             onClick={onPrint}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"
-            title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden."
+            title="Opent het printvenster; werkt niet vanuit de app-op-beginscherm-modus — gebruik dan Downloaden (PDF)."
           >
             <Printer className="h-4 w-4" /> Printen
           </button>

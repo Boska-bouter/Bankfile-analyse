@@ -1,8 +1,10 @@
 import { Fragment, useMemo, useState } from "react";
-import { X, Printer, Download, ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
+import { X, Printer, ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { berekenInkomenPerMaand } from "../../calc/inkomenPerMaand.js";
 import KlantJaarKeuzeModal from "./KlantJaarKeuzeModal.jsx";
+import DownloadKnop from "../shared/DownloadKnop.jsx";
+import { downloadRapport } from "../../reports/download.js";
 
 // release31V5 / 32V3 — "Inkomen per maand": omzet en privé-inkomen, privé-uitgaven via de privérekening én via de
 // zakelijke rekening, en het verschil. Maanden waarin niet alles geladen is, worden niet berekend (geen aannames);
@@ -17,15 +19,6 @@ const bereik = (lijst) => {
   return aaneen && lijst.length > 1 ? `${KORT[lijst[0]]} t/m ${KORT[lijst[lijst.length - 1]]}` : lijst.map((m) => KORT[m]).join(", ");
 };
 
-// release32V7 — downloaden als HTML-bestand (zoals de indicatieve aangifteberekening): werkt ook op de iPad,
-// waar printen vanuit de app niet lukt. Het bestand opent in de browser en kan daar als PDF bewaard worden.
-function downloadHtml(html, naam) {
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = naam.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_") + ".html";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
 
 function fiscaalBlok(f) {
   if (!f) return null;
@@ -161,8 +154,8 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
           <ArrowLeft className="h-4 w-4" /> Inkomen per maand · Privé-uitgaven via zakelijke rekening {jaar}
         </button>
         <div className="flex gap-2">
-          <button type="button" onClick={() => downloadHtml(html(), `Privé-uitgaven via zakelijk ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`)} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
-          <button type="button" onClick={naarExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
+          {/* beide-V4R1 — één knop: PDF, Excel (eigen export met de boekingen) of HTML */}
+          <DownloadKnop onKies={(soort) => downloadRapport({ soort, html, naam: `Privé-uitgaven via zakelijk ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`, excel: naarExcel })} />
           {onPrint && <button type="button" onClick={() => onPrint(html())} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
         </div>
       </div>
@@ -210,7 +203,7 @@ export default function InkomenPerMaandModal({
   const [details, setDetails] = useState(false);
   const [uitgeklapt, setUitgeklapt] = useState(() => new Set());
   const [alleOpen, setAlleOpen] = useState(false);
-  // V6R5 — jaarkeuze voor Downloaden, Excel en Printen: { soort: "html" | "excel" | "print" }; standaard het getoonde jaar.
+  // V6R5 — jaarkeuze voor Downloaden en Printen: { soort: "pdf" | "html" | "excel" | "print" }; standaard het getoonde jaar.
   const [exportKeuze, setExportKeuze] = useState(null);
   const [exportJaren, setExportJaren] = useState([]);
   const wisselMaand = (mnd) => setUitgeklapt((v) => { const n = new Set(v); if (n.has(mnd)) n.delete(mnd); else n.add(mnd); return n; });
@@ -275,17 +268,18 @@ export default function InkomenPerMaandModal({
   const html = (jaren) => bouwHtml(jaren.map((j) => bouwSectie({ ...overzicht(j), klantNaam })), jaren, klantNaam);
   const voerUit = (soort, jaren) => {
     const j = [...jaren].sort((x, y) => x - y);
-    if (soort === "html") downloadHtml(html(j), `Inkomen per maand ${jarenTekst(j, "-")}${klantNaam ? ` ${klantNaam}` : ""}`);
-    else if (soort === "excel") naarExcel(j);
-    else if (soort === "print" && onPrint) onPrint(html(j));
+    const naam = `Inkomen per maand ${jarenTekst(j, "-")}${klantNaam ? ` ${klantNaam}` : ""}`;
+    if (soort === "pdf" || soort === "html") return downloadRapport({ soort, html: html(j), naam });
+    if (soort === "excel") return naarExcel(j);
+    if (soort === "print" && onPrint) onPrint(html(j));
   };
   // Eén jaar in het dossier: meteen uitvoeren. Meer jaren: eerst kiezen (het getoonde jaar staat aan).
   const exporteer = (soort) => {
-    if (years.length <= 1) { voerUit(soort, [jaar]); return; }
+    if (years.length <= 1) return voerUit(soort, [jaar]);
     setExportJaren([jaar]);
     setExportKeuze({ soort });
   };
-  const EXPORT_TEKST = { html: ["downloaden", "Downloaden"], excel: ["naar Excel exporteren", "Excel maken"], print: ["printen", "Printen"] };
+  const EXPORT_TEKST = { pdf: ["als PDF downloaden", "PDF maken"], html: ["als HTML downloaden", "HTML maken"], excel: ["naar Excel exporteren", "Excel maken"], print: ["printen", "Printen"] };
 
   const Regel = ({ label, m, k, neg = false }) => {
     const v = m[k] || 0;
@@ -343,8 +337,8 @@ export default function InkomenPerMaandModal({
             ) : <span className="text-sm text-slate-600">{jaar}</span>}
           </div>
           <div className="flex gap-2 items-center">
-            <button type="button" onClick={() => exporteer("html")} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"><Download className="h-4 w-4" /> Downloaden</button>
-            <button type="button" onClick={() => exporteer("excel")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Download className="h-4 w-4" /> Excel</button>
+            {/* beide-V4R1 — één knop: PDF, Excel of HTML; bij meer jaren eerst de jaarkeuze */}
+            <DownloadKnop onKies={exporteer} />
             {onPrint && <button type="button" onClick={() => exporteer("print")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200" title="Sluiten"><X className="h-5 w-5" /></button>
           </div>

@@ -6,6 +6,7 @@ import IndicatieveVpbCard from "./IndicatieveVpbCard.jsx";
 import { eur } from "../../utils/amounts.js";
 
 import { KNOP_PIL } from "../ui/stijl.js";
+import DownloadKnop from "../shared/DownloadKnop.jsx";
 // Fase 1, dashboard-restyling (Stijl F) — "Details en overzichten"-paneel onderaan het Overzicht-
 // tabblad, met sub-tabs (Jaaroverzicht/Transacties/Categorieën/Activa/Leningen/Lease/BTW/
 // Rapportages) zoals in het mockup-canvas. Dit paneel bouwt GEEN nieuwe interactieve tabellen na —
@@ -163,7 +164,8 @@ export default function DetailsPanel({
             {/* release31V6 — "Inkomen per maand" staat al in het linker menu; "Herkenningsregels" is een instelling
                 (Instellingen → Automatisering), geen overzicht van het jaar. */}
             <LinkOut label="Onderbouwing" onClick={() => onJump("onderbouwing")} />
-            <LinkOut label="Excel exporteren" onClick={() => onJump("excel")} />
+            {/* beide-V4R1 — was "Excel exporteren": nu één Downloaden met keuze PDF, Excel of HTML */}
+            <DownloadKnop onKies={(soort) => onJump(soort)} knopClassName={`${KNOP_PIL} inline-flex items-center gap-1.5`} />
             <LinkOut label="Print" onClick={() => onJump("print")} />
           </div>
         </div>

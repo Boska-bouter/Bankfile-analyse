@@ -3,6 +3,7 @@ import { rubriekVanCategorie } from "../tax/boxMapping.js";
 import { eur } from "../utils/amounts.js";
 import { jarenBereik } from "../dossier/dossierProfiel.js";
 import { werkruimteBlokHtml } from "./werkruimteBlok.js";
+import { downloadRapport } from "./download.js";
 
 // A2 — onderbouwingsoverzicht: per jaar, per rubriek en categorie de transacties (zoals op het afschrift)
 // waaruit de bedragen in het voorstel zijn opgebouwd. Los document, optioneel.
@@ -52,10 +53,7 @@ ${jaarHtml}
 </body></html>`;
 }
 
-export function downloadOnderbouwing(html, jaren) {
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = `Onderbouwing_${jarenBereik(jaren)}.html`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
+export function downloadOnderbouwing(html, jaren, soort = "html") {
+  return downloadRapport({ soort, html, naam: `Onderbouwing_${jarenBereik(jaren)}` });
 }

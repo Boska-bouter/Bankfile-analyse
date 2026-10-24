@@ -21,6 +21,7 @@ import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIM
 import { werkruimteRegelHtml } from "./werkruimteBlok.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
+import { downloadRapport } from "./download.js";
 
 // V23 — ÉÉN plek waar de winst van een BV per jaar wordt bepaald, gebruikt door (a) de jaarsectie hieronder,
 // (b) de voorberekening voor het eigen-vermogen-verloop en (c) de kaart op Overzicht (App.jsx). Voorheen
@@ -782,14 +783,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
 </body></html>`;
 }
 
-export function downloadAangiftevoorstelBv(html, years) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Indicatieve_aangifteberekening_BV_${years.join("-")}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
+export function downloadAangiftevoorstelBv(html, years, soort = "html") {
+  return downloadRapport({ soort, html, naam: `Indicatieve_aangifteberekening_BV_${years.join("-")}` });
 }
