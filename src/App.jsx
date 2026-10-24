@@ -1006,6 +1006,7 @@ export default function App() {
 
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
+  const [startMetNieuw, setStartMetNieuw] = useState(false); // beide-V3R8 — zonder bewaard dossier meteen een nieuw dossier
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false); // true, of { onderwerp, bericht } om voor te vullen
   const pendingProjectRef = useRef(null);
@@ -1064,7 +1065,14 @@ export default function App() {
           if (bankDossier.weergave) setWeergave(bankDossier.weergave);
           markeerStartGezien();
           setLoaded(true);
-        } else setShowStartupChoice(true);
+        } else {
+          // beide-V3R8 / V8R2 — besluit Boska 24-10: zonder bewaard dossier geen beginscherm meer, maar meteen een nieuw
+          // dossier (Zakelijk/Privé, Eenvoudig/Uitgebreid, wizard); zie het effect bij startMetNieuw. Dossier laden kan
+          // via de knop Dossier.
+          markeerStartGezien();
+          setLoaded(true);
+          setStartMetNieuw(true);
+        }
       }
     })();
   }, []);
@@ -3737,6 +3745,14 @@ export default function App() {
 
   // nieuw-V5R2 — eerst wachten tot bekend is wie er is ingelogd. Anders gold kort het adres van de vorige gebruiker op dit
   // apparaat: het startscherm verscheen en de voorwaarden van de nieuwe gebruiker kwamen er pas daarna overheen.
+  // beide-V3R8 — de nieuwe-dossier-wizard pas starten als rechten en voorwaarden bekend zijn.
+  useEffect(() => {
+    if (!startMetNieuw || rolStatus === "laden" || !voorwaarden.ok) return;
+    setStartMetNieuw(false);
+    setActiveTab("overzicht");
+    setWeergave("uitgebreid");
+    startNieuwDossierWizard();
+  }, [startMetNieuw, rolStatus, voorwaarden.ok]); // eslint-disable-line react-hooks/exhaustive-deps
   if (rolStatus === "laden") return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-sm text-slate-500">Bezig met laden…</div>;
   if (!voorwaarden.ok) return <VoorwaardenScherm soorten={voorwaarden.ontbrekend} onAkkoord={voorwaarden.akkoord} />;
 

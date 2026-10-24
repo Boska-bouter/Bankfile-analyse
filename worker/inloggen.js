@@ -15,6 +15,9 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
+import { welkomInhoud, WELKOM_STIJL } from "./welkom.js";
+import { GEBRUIK, PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
+
 const COOKIE = "bo_sessie";
 const SESSIE_DAGEN = 30;
 const LINK_MINUTEN = 15;
@@ -305,10 +308,25 @@ const pagina = (titel, inhoud, script = "", extraHeaders = {}) =>
 <title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
-function inlogPagina() {
-  return pagina("Inloggen", `
-<h1>Inloggen bij Bankoverzicht</h1>
+// beide-V3R8 — de inlogpagina is ook de welkomstpagina (zie welkom.js): inloggen bovenaan, uitleg eronder.
+const SOORT_UITLEG = {
+  prive: { voor: "Voor je eigen huishouden, eventueel met je partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw"] },
+};
+function welkomSoorten(env) {
+  const pr = prijzen(env);
+  return ["prive", "zakelijk"].map((s) => ({
+    naam: GEBRUIK[s], ...SOORT_UITLEG[s],
+    plannen: Object.keys(PLANNEN).map((k) => ({ naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]) })),
+  }));
+}
+
+function inlogPagina(env) {
+  return pagina("Inloggen", `<style>${WELKOM_STIJL}</style>
+<h1>Bankoverzicht</h1>
+<p class="sub">Je bankafschriften ingedeeld en overzichtelijk: wat er binnenkomt, wat er uitgaat, en een indicatie van je belasting. <a href="#wat" style="color:var(--accent)">Wat kan Bankoverzicht?</a></p>
 <div class="kaart">
+  <b>Inloggen</b>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
@@ -319,7 +337,8 @@ function inlogPagina() {
   <button id="pk" type="button" class="tweede">Inloggen met passkey (Face ID, Touch ID of pincode)</button>
   <p id="status" role="status"></p>
 </div>
-<p class="sub">Nieuw? Vul je e-mailadres in en kies <b>Stuur inloglink</b>. Na het inloggen meld je je aan. Zodra je aanmelding is goedgekeurd, stel je een wachtwoord of passkey in.</p>`, `
+<p class="sub">Nieuw? Vul je e-mailadres in en kies <b>Stuur inloglink</b>. Na het inloggen meld je je aan. Zodra je aanmelding is goedgekeurd, stel je een wachtwoord of passkey in.</p>
+${welkomInhoud({ soorten: welkomSoorten(env) })}`, `
 const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties");
@@ -441,7 +460,7 @@ export async function inlogRoute(request, env, url, email) {
   await zorgVoorTabellen(env.DB);
 
   if (request.method === "GET") {
-    if (p === "/inloggen") return email ? Response.redirect(`${url.origin}/`, 302) : inlogPagina();
+    if (p === "/inloggen") return email ? Response.redirect(`${url.origin}/`, 302) : inlogPagina(env);
     if (p === "/inloggen/link") return bevestigPagina(env, url.searchParams.get("t"), email);
     if (p === "/inloggen/passkey") {
       if (!email) return Response.redirect(`${url.origin}/inloggen`, 302);
