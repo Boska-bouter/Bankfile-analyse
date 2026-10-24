@@ -15,7 +15,7 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
-import { welkomInhoud, WELKOM_STIJL } from "./welkom.js";
+import { welkomInhoud, welkomKop, WELKOM_NIEUW, WELKOM_STIJL } from "./welkom.js";
 import { PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -308,33 +308,38 @@ const pagina = (titel, inhoud, script = "", extraHeaders = {}) =>
 <title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
-// V8R2 — de inlogpagina is ook de welkomstpagina (zie welkom.js): inloggen bovenaan, uitleg eronder.
+// V8R3 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
 function welkomSoorten(env) {
   const pr = prijzen(env);
   return [{
     naam: "Zakelijk", voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw"],
-    plannen: Object.keys(PLANNEN).map((k) => ({ naam: PLANNEN[k], uitleg: PLAN_UITLEG[k], prijs: prijsTekst(pr[k]) })),
+    plannen: Object.keys(PLANNEN).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[k], prijs: prijsTekst(pr[k]), gratis: !Number(pr[k]) })),
   }];
 }
 
 function inlogPagina(env) {
+  const soorten = welkomSoorten(env);
   return pagina("Inloggen", `<style>${WELKOM_STIJL}</style>
-<h1>Bankoverzicht</h1>
-<p class="sub">Je bankafschriften ingedeeld en overzichtelijk: wat er binnenkomt, wat er uitgaat, en een indicatie van je belasting. <a href="#wat" style="color:var(--accent)">Wat kan Bankoverzicht?</a></p>
-<div class="kaart">
-  <b>Inloggen</b>
+<div class="welkom-grid">
+${welkomKop(soorten)}
+<aside class="inlogkolom">
+<div class="kaart inlogkaart">
+  <h2>Inloggen</h2>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
     <button type="submit">Inloggen</button>
-    <button type="button" id="link" class="tweede">Wachtwoord vergeten of nog geen wachtwoord? Stuur inloglink</button>
+    <button type="button" id="link" class="tweede">Stuur inloglink</button>
+    <p class="klein">Nog geen wachtwoord, of vergeten? Met de inloglink kom je binnen via je mail.</p>
   </form>
-  <p class="of" id="ofpk">of</p>
-  <button id="pk" type="button" class="tweede">Inloggen met passkey (Face ID, Touch ID of pincode)</button>
+  <div class="scheiding" id="ofpk"></div>
+  <button id="pk" type="button" class="linkknop">Inloggen met passkey (Face ID of pincode)</button>
   <p id="status" role="status"></p>
 </div>
-<p class="sub">Nieuw? Vul je e-mailadres in en kies <b>Stuur inloglink</b>. Na het inloggen meld je je aan. Zodra je aanmelding is goedgekeurd, stel je een wachtwoord of passkey in.</p>
-${welkomInhoud({ soorten: welkomSoorten(env) })}`, `
+${WELKOM_NIEUW}
+</aside>
+<div class="uitlegkolom">${welkomInhoud({ soorten })}</div>
+</div>`, `
 const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties");
