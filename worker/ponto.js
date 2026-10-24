@@ -28,7 +28,9 @@ export const pontoOntbreekt = (env) => [
 ];
 
 // Alle verzoeken naar Ponto gaan via de mTLS-binding: Ponto weigert verzoeken zonder het certificaat.
-async function ponto(env, pad, { method = "GET", token, form, body } = {}) {
+// beide-V4R5 — "stap" komt voor de foutmelding (welke aanvraag mislukte); een GET die een 5xx van Ponto krijgt (zoals
+// 520), wordt na een seconde één keer herhaald.
+async function ponto(env, pad, { method = "GET", token, form, body, stap } = {}, poging = 0) {
   const headers = { accept: "application/vnd.api+json" };
   if (form) {
     headers["content-type"] = "application/x-www-form-urlencoded";
@@ -42,6 +44,10 @@ async function ponto(env, pad, { method = "GET", token, form, body } = {}) {
     headers,
     body: form ? new URLSearchParams(form).toString() : body ? JSON.stringify(body) : undefined,
   });
+  if (method === "GET" && r.status >= 500 && poging === 0) {
+    await new Promise((ok) => setTimeout(ok, 1000));
+    return ponto(env, pad, { method, token, form, body, stap }, 1);
+  }
   const tekst = await r.text();
   let data = null;
   try { data = tekst ? JSON.parse(tekst) : null; } catch { data = { message: tekst.slice(0, 300) }; }
@@ -51,7 +57,7 @@ async function ponto(env, pad, { method = "GET", token, form, body } = {}) {
     const wie = ["server", "cf-ray"].map((h) => r.headers.get(h) && `${h}: ${r.headers.get(h)}`).filter(Boolean).join(", ");
     const melding = data?.error_description || data?.error || e0?.detail || e0?.code
       || `Ponto gaf status ${r.status}${wie ? ` (${wie})` : ""}${data?.message ? `: ${data.message.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160)}` : ""}`;
-    throw Object.assign(new Error(melding), { status: r.status, ponto: data });
+    throw Object.assign(new Error(stap ? `${stap}: ${melding}` : melding), { status: r.status, ponto: data });
   }
   return data;
 }
@@ -166,8 +172,9 @@ export async function pontoRoute(request, env, url, pad, email, { json, leesBody
     const t = await ponto(env, "/ponto-connect/oauth2/token", {
       method: "POST",
       form: { grant_type: "authorization_code", code, client_id: env.PONTO_CLIENT_ID, redirect_uri: redirect, code_verifier: p.v },
+      stap: "Code inwisselen bij Ponto",
     });
-    const acc = await ponto(env, "/ponto-connect/accounts?page[limit]=100", { token: t.access_token });
+    const acc = await ponto(env, "/ponto-connect/accounts?page[limit]=100", { token: t.access_token, stap: "Rekeningen ophalen bij Ponto" });
     const lijst = acc?.data || [];
     const rekeningen = lijst.map((a) => ({
       iban: String(a.attributes?.reference || "").replace(/\s+/g, ""),
