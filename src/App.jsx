@@ -178,9 +178,15 @@ const BANK_TERUG = (() => {
   if (typeof window === "undefined" || window.location.pathname !== "/bank/terug") return null;
   const q = new URLSearchParams(window.location.search);
   window.history.replaceState(null, "", "/");
-  return { code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
+  // nieuw-V8R0 — ?klaar=1: de Worker heeft de koppeling al afgerond en klaargezet (zie worker/bank.js, bankTerugRoute).
+  return { klaar: q.get("klaar") === "1", code: q.get("code"), state: q.get("state"), error: q.get("error_description") || q.get("error") };
 })();
 let bankTerugAfgehandeld = false;
+// nieuw-V8R0 — welke weergave open stond toen het koppelvenster openging. Na de terugkeer van de
+// bank herlaadt de pagina; zonder bewaard dossier (nieuw, nog niets geladen) gaat de app daarmee verder in plaats
+// van het beginscherm te tonen, waar het koppelvenster niet kan verschijnen.
+const BANK_DOSSIER_KEY = "bankoverzicht:bankkoppeling-dossier";
+const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(BANK_DOSSIER_KEY) || "null"); } catch { return null; } };
 
 // ---------------------------------------------------------------------------
 // Dit is de functionele schil (upload, tabbladen, dashboard, alle panelen) rond de
@@ -540,9 +546,13 @@ export default function App() {
     if (!BANK_TERUG || bankTerugAfgehandeld) return;
     bankTerugAfgehandeld = true; // React StrictMode draait effecten twee keer; de code is maar één keer geldig
     rondKoppelingAf(BANK_TERUG)
-      .then((melding) => setBankKoppeling({ melding }))
+      .then((melding) => setBankKoppeling(melding ? { melding } : {}))
       .catch((e) => setBankKoppeling({ fout: e.message || String(e) }));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!bankKoppeling) return;
+    try { sessionStorage.setItem(BANK_DOSSIER_KEY, JSON.stringify({ weergave, bestanden: parsedFiles.length })); } catch { /* geen opslag */ }
+  }, [bankKoppeling, weergave, parsedFiles.length]);
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
@@ -968,6 +978,7 @@ export default function App() {
 
   // ---- Eerder opgeslagen dossier laden bij openen — met keuze i.p.v. automatisch ----
   const [showStartupChoice, setShowStartupChoice] = useState(false);
+  const [startMetNieuw, setStartMetNieuw] = useState(false); // V8R2 — zonder bewaard dossier meteen een nieuw dossier
   const [bevestigNieuwStart, setBevestigNieuwStart] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false); // true, of { onderwerp, bericht } om voor te vullen
   const pendingProjectRef = useRef(null);
@@ -1021,25 +1032,41 @@ export default function App() {
     (async () => {
       const pendingData = await loadPersistedParsedFiles();
       const pendingSettings = await loadPersistedSettings();
-      if (pendingData && pendingData.length > 0) {
+      // nieuw-V8R0 — terug van de bank vanuit een nieuw dossier zonder bestanden terwijl er nog een ouder dossier in de
+      // browser staat: niet dat oude dossier openen, maar verder in het nieuwe (lege) dossier.
+      const bankDossierNieuw = !!BANK_TERUG && leesBankDossier()?.bestanden === 0 && (pendingData?.length || 0) > 0;
+      if (pendingData && pendingData.length > 0 && !bankDossierNieuw) {
         // Er is een eerder project met geüploade bestanden — laat de gebruiker kiezen (of ga direct
         // verder als het startscherm in dit tabblad al is geweest).
         pendingProjectRef.current = { parsedFiles: pendingData, settings: pendingSettings };
-        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
-      } else if (heeftBewaardeAntwoorden(pendingSettings)) {
+        // nieuw-V8R0 — terug van de bank: altijd direct verder, anders blijft de koppeling achter het beginscherm hangen.
+        if (startGezien() || BANK_TERUG) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
+      } else if (heeftBewaardeAntwoorden(pendingSettings) && !bankDossierNieuw) {
         // release22V8 — dossier met alleen antwoorden (wizard ingevuld, nog geen bankbestanden): ook dan
         // "Vorig dossier gevonden" met "Verder met dit dossier". Instellingen pas inladen bij "Verder",
         // zodat "Nieuw dossier" echt leeg begint.
         pendingProjectRef.current = { parsedFiles: [], settings: pendingSettings };
-        if (startGezien()) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
+        if (startGezien() || BANK_TERUG) resumeLastProjectRef.current?.(); else setShowStartupChoice(true);
       } else {
         // Geen bewaard dossier — eventuele losse instellingen (zonder bestanden) alsnog inladen.
         skipNextPersistRef.current = true;
         suppressChangeCount();
-        if (pendingSettings) applySettingsToState(pendingSettings);
+        if (pendingSettings && !bankDossierNieuw) applySettingsToState(pendingSettings);
         // nieuw-V7R1 — zonder bewaard dossier altijd het beginscherm (Nieuw dossier / Dossier laden), ook binnen
         // 60 minuten na eerder gebruik op dit apparaat. Voorheen kwam een nieuwe gebruiker dan meteen in een leeg dossier.
-        setShowStartupChoice(true);
+        // nieuw-V8R0 — behalve bij terugkeer van de bank vanuit een nieuw (nog leeg) dossier: dan verder in dat dossier.
+        const bankDossier = BANK_TERUG ? leesBankDossier() : null;
+        if (bankDossier) {
+          if (bankDossier.weergave) setWeergave(bankDossier.weergave);
+          markeerStartGezien();
+          setLoaded(true);
+        } else {
+          // V8R2 — besluit Boska 24-10: zonder bewaard dossier geen beginscherm meer, maar meteen een nieuw dossier
+          // (Eenvoudig/Uitgebreid en de wizard); zie het effect bij startMetNieuw. Dossier laden kan via de knop Dossier.
+          markeerStartGezien();
+          setLoaded(true);
+          setStartMetNieuw(true);
+        }
       }
     })();
   }, []);
@@ -3660,6 +3687,14 @@ export default function App() {
 
   // nieuw-V5R2 — eerst wachten tot bekend is wie er is ingelogd. Anders gold kort het adres van de vorige gebruiker op dit
   // apparaat: het startscherm verscheen en de voorwaarden van de nieuwe gebruiker kwamen er pas daarna overheen.
+  // V8R2 — de nieuwe-dossier-wizard pas starten als rechten en voorwaarden bekend zijn.
+  useEffect(() => {
+    if (!startMetNieuw || rolStatus === "laden" || !voorwaardenOk) return;
+    setStartMetNieuw(false);
+    setActiveTab("overzicht");
+    setWeergave("uitgebreid");
+    startNieuwDossierWizard();
+  }, [startMetNieuw, rolStatus, voorwaardenOk]); // eslint-disable-line react-hooks/exhaustive-deps
   if (rolStatus === "laden") return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-sm text-slate-500">Bezig met laden…</div>;
   if (!voorwaardenOk) return <VoorwaardenScherm onAkkoord={akkoordVoorwaarden} />;
 

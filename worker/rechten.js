@@ -55,7 +55,7 @@ export function prijzen(env) {
   try { const x = JSON.parse(env.PRIJZEN || "{}"); for (const k of Object.keys(p)) if (Number.isFinite(+x[k]) && +x[k] >= 0) p[k] = +x[k]; } catch { /* standaard */ }
   return p;
 }
-const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : "€ 0,00 · voorlopig gratis");
+export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : "€ 0,00 · voorlopig gratis");
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });

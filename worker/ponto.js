@@ -126,7 +126,8 @@ export async function pontoRoute(request, env, url, pad, email, { json, leesBody
       client_id: env.PONTO_CLIENT_ID, redirect_uri: redirect, response_type: "code", scope: SCOPE,
       state, code_challenge: challenge, code_challenge_method: "S256",
     });
-    // De verifier gaat versleuteld mee naar de browser en komt bij /sessie terug (geen opslag op de server).
+    // De verifier gaat versleuteld mee naar de browser en komt bij /sessie terug. Sinds nieuw-V8R0 bewaart bank.js dit
+    // versleutelde stuk ook kort in D1, zodat de Worker de terugkeer zelf kan afronden (bankTerugRoute).
     return json({ ok: true, url: `${authHost(env)}/oauth2/auth?${q}`, state, pkce: await versleutel(env, email, { v: verifier, st: state }) });
   }
 

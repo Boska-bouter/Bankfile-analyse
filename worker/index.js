@@ -5,7 +5,7 @@
 //
 // Instellingen (zie wrangler.jsonc): binding EMAIL (send_email), variabelen FEEDBACK_TO en FEEDBACK_FROM.
 
-import { bankRoute } from "./bank.js";
+import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
@@ -78,6 +78,12 @@ export default {
       request = new Request(request, { headers: h });
     }
     if (isOpenPad(url.pathname)) return inlogRoute(request, env, url, ingelogd);
+    // nieuw-V8R0 — terugkeer van de bank: de Worker rondt de koppeling zelf af, ook als deze browser niet is ingelogd
+    // (app als icoon op het beginscherm: de bank opent dan in Safari). Zie bankTerugRoute in bank.js.
+    if (url.pathname === "/bank/terug" && url.searchParams.has("state")) {
+      const r = await bankTerugRoute(request, env, url);
+      if (r) return r;
+    }
     if (eigenInlog(env) && !ingelogd) {
       if (url.pathname.startsWith("/api/")) return json({ ok: false, fout: "Niet ingelogd" }, 401);
       return Response.redirect(`${url.origin}/inloggen`, 302);
