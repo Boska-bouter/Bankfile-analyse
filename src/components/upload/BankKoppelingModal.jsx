@@ -59,9 +59,9 @@ const leesStates = () => {
 };
 const bewaarState = (state) => { try { localStorage.setItem(STATES_KEY, JSON.stringify([...leesStates(), { s: state, t: Date.now() }].slice(-5))); } catch { /* geen opslag */ } };
 
-export async function haalWachtendeOp(bekend = new Set(), melden = false) {
+export async function haalWachtendeOp(bekend = new Set()) {
   const states = leesStates().map((x) => x.s);
-  const d = await api(`/wachtend?states=${encodeURIComponent(states.join(","))}${melden ? "&melden=1" : ""}`);
+  const d = await api(`/wachtend?states=${encodeURIComponent(states.join(","))}`);
   const nieuw = (d.koppelingen || []).filter((k) => !bekend.has(k.id));
   if (nieuw.length > 0) {
     const bestaand = await leesKoppelingen();
@@ -73,15 +73,15 @@ export async function haalWachtendeOp(bekend = new Set(), melden = false) {
     const n = k.rekeningen?.length || 0;
     return `${k.bank} is gekoppeld (${n} rekening${n === 1 ? "" : "en"}). Kies hieronder "Ophalen".`;
   }).join(" ");
-  return { melding, fout: (d.fouten || []).join("\n"), log: d.log || [] };
+  return { melding, fout: (d.fouten || []).join("\n") };
 }
 
 export async function rondKoppelingAf(terug) {
   // nieuw-V8R0 — de Worker heeft de koppeling al afgerond (zie bankTerugRoute in worker/bank.js).
   if (terug.klaar) {
-    const r = await haalWachtendeOp(new Set(), true);
+    const r = await haalWachtendeOp(new Set());
     if (r.fout && !r.melding) throw new Error(r.fout);
-    if (!r.melding) throw new Error("Terug van de bank, maar deze app vond geen klaarstaande koppeling. Zie het verloop hieronder.");
+    if (!r.melding) throw new Error("Terug van de bank, maar deze app vond geen klaarstaande koppeling. Begin opnieuw met koppelen.");
     // Staat de koppeling al in het dossier, dan meldt het koppelvenster dat zelf (pakServerOp slaat bekende id's over).
     return r.melding || "";
   }
@@ -127,11 +127,9 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   const [wachtOpBank, setWachtOpBank] = useState(false);
   const bekendRef = useRef(new Set());
   bekendRef.current = new Set((koppelingen || []).map((k) => k.id));
-  const [verloop, setVerloop] = useState([]);
-  const pakServerOp = async (melden = false) => {
+  const pakServerOp = async () => {
     try {
-      const r = await haalWachtendeOp(bekendRef.current, melden);
-      setVerloop(r.log || []);
+      const r = await haalWachtendeOp(bekendRef.current);
       if (!r.melding && !r.fout) return;
       if (r.fout) setFout(r.fout);
       if (r.melding) setMelding(r.melding);
@@ -141,7 +139,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     } catch { /* geen verbinding of geen recht: later opnieuw */ }
   };
   useEffect(() => {
-    pakServerOp(true);
+    pakServerOp();
     const zichtbaar = () => { if (document.visibilityState === "visible") pakServerOp(); };
     document.addEventListener("visibilitychange", zichtbaar);
     window.addEventListener("focus", zichtbaar);
@@ -261,14 +259,6 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
         {fout && <p className="rounded-veld bg-red-50 px-3 py-2 text-red-700 whitespace-pre-wrap">{fout}</p>}
         {melding && <p className="rounded-veld bg-teal-50 px-3 py-2 text-teal-800">{melding}</p>}
         {afronding?.bezig && <p className="text-slate-500">Koppeling met de bank afronden…</p>}
-        {verloop.length > 0 && (
-          <div className="rounded-veld border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            <p className="font-medium text-slate-700">Verloop (technisch, laatste 2 uur)</p>
-            <ul className="mt-1 space-y-0.5">
-              {verloop.map((l, i) => <li key={i}>{new Date(l.tijd).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · {l.tekst}</li>)}
-            </ul>
-          </div>
-        )}
 
         {koppelingen.length > 0 && (
           <section className="space-y-3">

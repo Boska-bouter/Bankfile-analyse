@@ -70,8 +70,9 @@ export function rijenNaarParsedFile(rijen, { bank, iban, naam }) {
     headers,
     rows: rijen,
     mapping: buildColumnMapping(headers),
-    sourceLabel: naam ? `${label} — ${naam}` : label,
+    sourceLabel: label, // nieuw-V8R8 — gelijk aan fileName (zie bronVan in transactions.js)
     fileName: label,
+    ...(naam ? { rekeningNaam: naam } : {}),
     bankKoppeling: { bank, iban },
     ...(iban ? { eigenRekening: iban } : {}),
   };

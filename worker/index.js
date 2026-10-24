@@ -119,7 +119,7 @@ export default {
     }
     // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V4R3 alleen met het recht "koppelen".
     if (url.pathname.startsWith("/api/bank/")) {
-      if (!env.EB_DEV_EMAIL && !(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
+      if (!(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
         return json({ ok: false, fout: "Bankkoppeling staat niet aan voor jouw account" }, 403);
       }
       return bankRoute(request, env, url);

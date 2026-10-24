@@ -551,9 +551,12 @@ export default function App() {
       .catch((e) => setBankKoppeling({ fout: e.message || String(e) }));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!bankKoppeling) return;
+    // nieuw-V8R9 — pas schrijven als het dossier geladen is. Bij de terugkeer van de bank staat het koppelvenster meteen
+    // open, nog vóór het laden: dan overschreef dit de bewaarde soort met de standaard (zakelijk) en werd een nieuw
+    // privédossier na Ponto een zakelijk dossier.
+    if (!bankKoppeling || !loaded) return;
     try { sessionStorage.setItem(BANK_DOSSIER_KEY, JSON.stringify({ weergave, bestanden: parsedFiles.length })); } catch { /* geen opslag */ }
-  }, [bankKoppeling, weergave, parsedFiles.length]);
+  }, [bankKoppeling, loaded, weergave, parsedFiles.length]);
   const bankFileInputRef = useRef(null); // v227 — "Bestand laden"-knop in de header, naast "Dossier opslaan"
   const skipNextPersistRef = useRef(false);
   const duplicatesSectionRef = useRef(null);
