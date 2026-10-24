@@ -15,6 +15,7 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
+import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, WELKOM_STIJL } from "./welkom.js";
 import { PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
 
@@ -303,9 +304,9 @@ const st=document.getElementById("status");const meld=(t,k)=>{st.className=k||""
 const post=async(p,b)=>{const r=await fetch(p,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));return d};
 const kanPasskey=!!(window.PublicKeyCredential&&navigator.credentials);`;
 
-const pagina = (titel, inhoud, script = "", extraHeaders = {}) =>
+const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "") =>
   new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>
+<title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
 // V8R4 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
@@ -367,7 +368,7 @@ fa.addEventListener("submit",async e=>{e.preventDefault();const k=fa.querySelect
  catch(x){st2.className="err";st2.textContent=x.message}finally{k.disabled=false}});
 lk.addEventListener("click",async()=>{if(!f.email.reportValidity())return;lk.disabled=true;meld("Bezig…");
  try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam. Je kunt dit venster nu sluiten: de link in de mail opent de app.","ok")}
- catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`);
+ catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`, {}, WELKOM_ACHTERGROND);
 }
 
 // nieuw-V5R3 — de bevestigpagina zegt voor wie en waarvoor de link is: nieuwe aanvrager, lopende aanvraag of gewoon inloggen.

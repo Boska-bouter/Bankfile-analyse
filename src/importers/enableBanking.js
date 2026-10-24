@@ -63,8 +63,9 @@ export function voegRijenSamen(oud, nieuw) {
 }
 
 // Zelfde vorm als parseFile() in detector.js levert.
-export function rijenNaarParsedFile(rijen, { bank, iban, naam }) {
-  const label = `${bank}${iban ? ` ${iban}` : ""} (koppeling)`;
+export function rijenNaarParsedFile(rijen, { bank, iban, naam, volgnr = 1 }) {
+  // nieuw-V9R0 — volgnr > 1: tweede rekening met hetzelfde rekeningnummer binnen één koppeling.
+  const label = `${bank}${iban ? ` ${iban}` : ""}${volgnr > 1 ? ` (${volgnr})` : ""} (koppeling)`;
   const headers = rijen.length ? Object.keys(rijen[0]) : [];
   return {
     headers,

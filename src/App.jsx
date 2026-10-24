@@ -1229,12 +1229,19 @@ export default function App() {
   };
 
   // nieuw-V3R8 — opgehaalde transacties uit de bankkoppeling: als "bestand" toevoegen of het eerdere vervangen.
+  // nieuw-V9R0 — de wizard pas openen als het koppelvenster dicht gaat; anders kwam hij na de eerste rekening al voor
+  // het venster en kon je de andere rekeningen niet meer ophalen.
+  const bankImportGedaanRef = useRef(false);
   const handleBankImport = (pf, rekeningType) => {
     setError(null);
     setParsedFiles((prev) => [...prev.filter((p) => p.fileName !== pf.fileName), pf]);
     setAccountTypeByFile((prev) => (prev[pf.fileName] ? prev : { ...prev, [pf.fileName]: rekeningType }));
-    setShowSetupWizard(true);
+    bankImportGedaanRef.current = true;
     setExpandedCardKeys({});
+  };
+  const sluitBankKoppeling = () => {
+    setBankKoppeling(null);
+    if (bankImportGedaanRef.current) { bankImportGedaanRef.current = false; setShowSetupWizard(true); }
   };
 
   const allTransactions = useMemo(() => buildTransactions(parsedFiles), [parsedFiles]);
@@ -3949,7 +3956,7 @@ export default function App() {
           koppelingen={bankKoppelingen}
           onKoppelingen={setBankKoppelingen}
           onImport={handleBankImport}
-          onClose={() => setBankKoppeling(null)}
+          onClose={sluitBankKoppeling}
         />
       )}
       {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onAanvragen={zetAanvragen} onClose={() => setShowBeheer(false)} />}
