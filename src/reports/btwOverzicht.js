@@ -1,5 +1,6 @@
 import { eur } from "../utils/amounts.js";
 import { jarenBereik } from "../dossier/dossierProfiel.js";
+import { downloadRapport } from "./download.js";
 
 // Los document: BTW-aangifte per kwartaal (OB) voor één of meer jaren. Dezelfde cijfers als in het venster
 // "BTW-aangifte per kwartaal" (tax/btw.js, inclusief de btw-correctie privégebruik auto in Q4); alleen de
@@ -66,10 +67,7 @@ ${jaren.map((j) => jaarBlok(j, kwartaalStatus)).join("")}
 </body></html>`;
 }
 
-export function downloadBtwOverzicht(html, jaren) {
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = `BTW_per_kwartaal_${jarenBereik(jaren)}.html`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// V8R5 — soort: "pdf" | "excel" | "html" (zie download.js).
+export function downloadBtwOverzicht(html, jaren, soort = "html") {
+  return downloadRapport({ soort, html, naam: `BTW_per_kwartaal_${jarenBereik(jaren)}` });
 }
