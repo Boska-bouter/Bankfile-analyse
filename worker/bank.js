@@ -10,7 +10,7 @@
 //   EB_TOKEN_GEHEIM   willekeurige tekst van minstens 32 tekens (versleutelt de koppeltokens)
 // Optioneel (alleen lokaal testen met `wrangler dev`, zonder Access): variabele EB_DEV_EMAIL.
 
-import { pontoRoute } from "./ponto.js";
+import { pontoRoute, pontoTest } from "./ponto.js";
 
 const EB_API = "https://api.enablebanking.com";
 const MAX_PAGINAS = 40; // Free-plan: max. 50 subrequests per verzoek
@@ -207,6 +207,9 @@ export async function bankRoute(request, env, url) {
   const email = (request.headers.get("Cf-Access-Authenticated-User-Email") || env.EB_DEV_EMAIL || "").trim().toLowerCase();
   if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
   const pad = url.pathname.replace(/^\/api\/bank/, "") || "/";
+
+  // beide-V4R4 — diagnose van de Ponto-verbinding vanuit Cloudflare: open /api/bank/ponto-test in de browser.
+  if (pad === "/ponto-test" && request.method === "GET") return json(await pontoTest(env));
 
   // beide-V3R4 — koppelingen die de Worker na terugkeer van de bank heeft afgerond (zie bankTerugRoute) ophalen; ze
   // worden daarbij van de server verwijderd.
