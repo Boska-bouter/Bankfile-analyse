@@ -62,30 +62,6 @@ async function ponto(env, pad, { method = "GET", token, form, body, stap } = {},
   return data;
 }
 
-// beide-V4R4 — diagnose: kan de Worker via de mTLS-binding een token bij Ponto halen (client_credentials)? Geeft
-// alleen status, een paar headers en het begin van het antwoord terug, nooit een token.
-export async function pontoTest(env) {
-  const ontbreekt = pontoOntbreekt(env);
-  if (ontbreekt.length) return { ok: false, ontbreekt };
-  const uit = { omgeving: env.PONTO_OMGEVING || "sandbox", clientId: `${String(env.PONTO_CLIENT_ID).slice(0, 8)}…` };
-  try {
-    const r = await env.PONTO_CERT.fetch(`${API}/ponto-connect/oauth2/token`, {
-      method: "POST",
-      headers: {
-        accept: "application/vnd.api+json",
-        "content-type": "application/x-www-form-urlencoded",
-        authorization: `Basic ${btoa(`${env.PONTO_CLIENT_ID}:${env.PONTO_CLIENT_SECRET}`)}`,
-      },
-      body: new URLSearchParams({ grant_type: "client_credentials", client_id: env.PONTO_CLIENT_ID }).toString(),
-    });
-    const tekst = (await r.text()).replace(/"(access_token|refresh_token)":"[^"]*"/g, '"$1":"(verborgen)"');
-    const headers = Object.fromEntries(["server", "cf-ray", "content-type", "date"].map((h) => [h, r.headers.get(h)]).filter(([, v]) => v));
-    return { ...uit, ok: r.ok, status: r.status, headers, antwoord: tekst.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400) };
-  } catch (e) {
-    return { ...uit, ok: false, uitzondering: String(e?.message || e).slice(0, 300) };
-  }
-}
-
 async function vernieuw(env, refresh) {
   const t = await ponto(env, "/ponto-connect/oauth2/token", {
     method: "POST",

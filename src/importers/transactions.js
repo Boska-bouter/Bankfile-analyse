@@ -20,11 +20,17 @@ const BETAALWIJZE_KOLOMMEN = ["Betaalwijze", "Mutatiesoort", "Code", "Transactie
 // "BEA,BETAALPAS    BP EXPRESS EINDHOVENNR:41120687,2025-11-04/08:32   EINDHOVEN,NLD".
 const ABN_PAS_RE = /^(BEA|GEA)\s*,\s*(?:[A-Z]+(?: [A-Z]+)?)\s{2,}(.+?)(?:,\s*PAS\s*\d{2,3}\s*NR:|NR:)/i;
 
+// beide-V4R6 — de bron van een transactie moet gelijk zijn aan de bestandsnaam: soort rekening (accountTypeByFile),
+// eigen rekeningen en controles zoeken op die naam. Bij een bankkoppeling stond de rekeningnaam er eerder achter
+// ("… (koppeling) — naam"), waardoor de soort rekening niet werd gevonden; ook in eerder bewaarde dossiers.
+const bronVan = (pf) => (pf.bankKoppeling ? pf.fileName : pf.sourceLabel);
+
 export function buildTransactions(parsedFiles) {
   const out = [];
   let id = 0;
   for (const pf of parsedFiles) {
-    const { rows, sourceLabel } = pf;
+    const { rows } = pf;
+    const sourceLabel = bronVan(pf);
     const mapping = herstelMapping(pf);
     const fileTx = [];
     for (const r of rows) {
@@ -114,7 +120,8 @@ export function buildTransactions(parsedFiles) {
 // hier maken we dat zichtbaar, samen met periode, ontbrekende tegenpartij en de saldo-check.
 export function computeImportDiagnostics(parsedFiles, allTransactions, openingBalanceCorrections = {}) {
   return parsedFiles.map((pf) => {
-    const { rows, sourceLabel } = pf;
+    const { rows } = pf;
+    const sourceLabel = bronVan(pf);
     const mapping = herstelMapping(pf);
     let skippedNoDate = 0, skippedBadAmount = 0;
     for (const r of rows) {

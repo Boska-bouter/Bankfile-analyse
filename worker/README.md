@@ -64,7 +64,6 @@ op de server: transacties gaan rechtstreeks door naar de browser.
 - De sessie-id en rekening-id's van Enable Banking gaan versleuteld (AES-GCM) als "koppeltoken" naar de browser, gebonden aan het
   e-mailadres van de ingelogde gebruiker. Een andere gebruiker kan er niets mee (403).
 - *Ontkoppelen* in de app trekt de toestemming ook bij Enable Banking in.
-- Lokaal testen zonder Access: zet de variabele `EB_DEV_EMAIL` (alleen in `.dev.vars`, nooit in productie).
 
 ## Gebruikers en rechten (nieuw-V4R3)
 
