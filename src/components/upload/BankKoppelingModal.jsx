@@ -190,33 +190,80 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     }
   };
 
-  const ophalen = async (k, idx) => {
+  // beide-V4R8 — twee rekeningen met hetzelfde rekeningnummer (kan bij Ponto) krijgen elk een eigen bestand.
+  const volgnrVan = (k, idx) => {
+    const iban = k.rekeningen[idx]?.iban;
+    if (!iban) return 1;
+    return k.rekeningen.slice(0, idx).filter((r) => r.iban === iban).length + 1;
+  };
+  const dubbelIban = (k, idx) => !!k.rekeningen[idx]?.iban && k.rekeningen.filter((r) => r.iban === k.rekeningen[idx].iban).length > 1;
+
+  // Eén rekening ophalen. Ponto vervangt de sleutel bij elk gebruik: geeft het nieuwe koppeltoken terug, zodat "Alles
+  // ophalen" de volgende rekening met de juiste sleutel ophaalt.
+  const haalRekeningOp = async (k, idx, token) => {
     const rek = k.rekeningen[idx];
     const van = vanDatum[`${k.id}|${idx}`] || k.opgehaald?.[idx] || standaardVan();
-    setBezig(`${k.id}|${idx}`); setFout(""); setMelding("");
+    let d;
     try {
-      const d = await api("/transacties", { token: k.token, rekening: idx, van, tot: vandaag() });
-      // nieuw-V5R1 — Ponto vervangt de sleutel bij elk gebruik: het nieuwe koppeltoken meteen in het dossier zetten.
-      if (d.token) onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, token: d.token } : x)));
-      const nieuweRijen = transactiesNaarRijen(d.transacties, rek.iban);
-      const label = rijenNaarParsedFile([], { bank: k.bank, iban: rek.iban }).fileName;
-      const bestaand = (parsedFiles || []).find((p) => p.fileName === label);
-      const { rijen, toegevoegd } = voegRijenSamen(bestaand?.rows || [], nieuweRijen);
-      if (rijen.length === 0) { setMelding(`Geen geboekte transacties gevonden voor ${rek.iban || "deze rekening"} vanaf ${nlDatum(van)}.`); return; }
-      onImport(rijenNaarParsedFile(rijen, { bank: k.bank, iban: rek.iban, naam: rek.naam }), k.psu === "business" ? "Zakelijk" : "Prive");
-      // Volgende keer vanaf een week vóór de laatste boeking: overlap vangt late boekingen op, dubbelingen vallen weg.
-      const laatste = rijen[rijen.length - 1]["Datum"];
-      const volgende = new Date(Date.UTC(+laatste.slice(0, 4), +laatste.slice(4, 6) - 1, +laatste.slice(6, 8) - 7)).toISOString().slice(0, 10);
-      onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, opgehaald: { ...(x.opgehaald || {}), [idx]: volgende } } : x)));
-      setMelding(`${toegevoegd} nieuwe boeking${toegevoegd === 1 ? "" : "en"} toegevoegd voor ${rek.iban || rek.naam}.${d.onvolledig ? " Niet alles kon in één keer worden opgehaald: haal nog een keer op." : ""}`);
-      // nieuw-V3R9 — na een geslaagde ophaalactie het venster sluiten, zodat de import (en zo nodig de wizard) zichtbaar is.
-      if (toegevoegd > 0 && !d.onvolledig) onClose();
+      d = await api("/transacties", { token, rekening: idx, van, tot: vandaag() });
     } catch (e) {
       if (e.data?.token) onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, token: e.data.token } : x)));
+      throw Object.assign(e, { nieuwToken: e.data?.token || null });
+    }
+    const nieuwToken = d.token || token;
+    if (d.token) onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, token: d.token } : x)));
+    const opties = { bank: k.bank, iban: rek.iban, naam: rek.naam, volgnr: volgnrVan(k, idx) };
+    const nieuweRijen = transactiesNaarRijen(d.transacties, rek.iban);
+    const label = rijenNaarParsedFile([], opties).fileName;
+    const bestaand = (parsedFiles || []).find((p) => p.fileName === label);
+    const { rijen, toegevoegd } = voegRijenSamen(bestaand?.rows || [], nieuweRijen);
+    const naam = rek.iban || rek.naam || `rekening ${idx + 1}`;
+    if (rijen.length === 0) return { token: nieuwToken, tekst: `Geen geboekte transacties gevonden voor ${naam} vanaf ${nlDatum(van)}.`, toegevoegd: 0 };
+    onImport(rijenNaarParsedFile(rijen, opties), k.psu === "business" ? "Zakelijk" : "Prive");
+    // Volgende keer vanaf een week vóór de laatste boeking: overlap vangt late boekingen op, dubbelingen vallen weg.
+    const laatste = rijen[rijen.length - 1]["Datum"];
+    const volgende = new Date(Date.UTC(+laatste.slice(0, 4), +laatste.slice(4, 6) - 1, +laatste.slice(6, 8) - 7)).toISOString().slice(0, 10);
+    onKoppelingen((prev) => (prev || []).map((x) => (x.id === k.id ? { ...x, opgehaald: { ...(x.opgehaald || {}), [idx]: volgende } } : x)));
+    return { token: nieuwToken, toegevoegd, onvolledig: !!d.onvolledig, tekst: `${toegevoegd} nieuwe boeking${toegevoegd === 1 ? "" : "en"} voor ${naam}.${d.onvolledig ? " Niet alles kon in één keer worden opgehaald: haal nog een keer op." : ""}` };
+  };
+
+  // beide-V4R8 — het venster blijft na één rekening open, zodat je ook de andere rekeningen kunt ophalen. Sluit je het
+  // venster, dan opent de app de wizard (zie handleBankImport in App.jsx).
+  const ophalen = async (k, idx) => {
+    setBezig(`${k.id}|${idx}`); setFout(""); setMelding("");
+    try {
+      const r = await haalRekeningOp(k, idx, k.token);
+      const rest = k.rekeningen.length > 1 ? " Haal zo nodig ook de andere rekeningen op en sluit daarna dit venster." : "";
+      setMelding(`${r.tekst}${rest}`);
+      if (k.rekeningen.length === 1 && r.toegevoegd > 0 && !r.onvolledig) onClose();
+    } catch (e) {
       setFout(e.message);
     } finally {
       setBezig("");
     }
+  };
+
+  // beide-V4R8 — alle rekeningen van een koppeling na elkaar ophalen; daarna het venster sluiten als alles lukte.
+  const allesOphalen = async (k) => {
+    setBezig(`${k.id}|alles`); setFout(""); setMelding("");
+    let token = k.token;
+    const teksten = [];
+    let fouten = 0, onvolledig = false;
+    for (let idx = 0; idx < k.rekeningen.length; idx += 1) {
+      try {
+        const r = await haalRekeningOp(k, idx, token);
+        token = r.token;
+        onvolledig = onvolledig || r.onvolledig;
+        teksten.push(r.tekst);
+      } catch (e) {
+        if (e.nieuwToken) token = e.nieuwToken;
+        fouten += 1;
+        teksten.push(`${k.rekeningen[idx].iban || `Rekening ${idx + 1}`}: ${e.message}`);
+      }
+    }
+    setBezig("");
+    if (fouten === 0 && !onvolledig) { onClose(); return; }
+    (fouten ? setFout : setMelding)(teksten.join("\n"));
   };
 
   // nieuw-V4R1 — eerst uit het dossier halen (direct zichtbaar), daarna de toestemming bij Enable Banking intrekken.
@@ -257,7 +304,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
         )}
 
         {fout && <p className="rounded-veld bg-red-50 px-3 py-2 text-red-700 whitespace-pre-wrap">{fout}</p>}
-        {melding && <p className="rounded-veld bg-teal-50 px-3 py-2 text-teal-800">{melding}</p>}
+        {melding && <p className="rounded-veld bg-teal-50 px-3 py-2 text-teal-800 whitespace-pre-wrap">{melding}</p>}
         {afronding?.bezig && <p className="text-slate-500">Koppeling met de bank afronden…</p>}
 
         {koppelingen.length > 0 && (
@@ -272,13 +319,20 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
                       <span className="font-medium">{k.bank}</span>
                       <span className="text-xs text-slate-500"> · {k.psu === "business" ? "zakelijk" : "privé"} · {verlopen ? <b className="text-red-700">verlopen, opnieuw koppelen</b> : k.geldigTot ? `geldig tot ${nlDatum(k.geldigTot)}` : "gekoppeld"}</span>
                     </div>
-                    <button type="button" className={KNOP_SECUNDAIR_KLEIN} onClick={() => verwijder(k)}>Ontkoppelen</button>
+                    <div className="flex gap-2">
+                      {k.rekeningen.length > 1 && (
+                        <button type="button" className={KNOP_PRIMAIR_KLEIN} disabled={!!bezig || verlopen} onClick={() => allesOphalen(k)}>
+                          {bezig === `${k.id}|alles` ? "Ophalen…" : "Alles ophalen"}
+                        </button>
+                      )}
+                      <button type="button" className={KNOP_SECUNDAIR_KLEIN} onClick={() => verwijder(k)}>Ontkoppelen</button>
+                    </div>
                   </div>
                   {k.rekeningen.map((r, idx) => {
                     const sleutel = `${k.id}|${idx}`;
                     return (
                       <div key={idx} className="flex flex-wrap items-center gap-2">
-                        <span className="min-w-[13rem] font-mono text-xs">{r.iban || r.naam || `Rekening ${idx + 1}`}</span>
+                        <span className="min-w-[13rem] text-xs"><span className="font-mono">{r.iban || r.naam || `Rekening ${idx + 1}`}</span>{r.iban && r.naam ? <span className="text-slate-500"> · {r.naam}</span> : null}{dubbelIban(k, idx) ? <span className="text-slate-500"> ({volgnrVan(k, idx)})</span> : null}</span>
                         <label className="text-xs text-slate-500">vanaf</label>
                         <input type="date" className={VELD_KLEIN} max={vandaag()}
                           value={vanDatum[sleutel] || k.opgehaald?.[idx] || standaardVan()}
