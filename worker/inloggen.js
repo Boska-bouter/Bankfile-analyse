@@ -15,7 +15,7 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
-import { welkomInhoud, welkomKop, WELKOM_NIEUW, WELKOM_STIJL } from "./welkom.js";
+import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, WELKOM_STIJL } from "./welkom.js";
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -308,7 +308,7 @@ const pagina = (titel, inhoud, script = "", extraHeaders = {}) =>
 <title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
-// beide-V3R9 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
+// beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
 const SOORT_UITLEG = {
   prive: { voor: "Voor je eigen huishouden, eventueel met je partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
   zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw"] },
@@ -316,7 +316,7 @@ const SOORT_UITLEG = {
 function welkomSoorten(env) {
   const pr = prijzen(env);
   return ["prive", "zakelijk"].map((s) => ({
-    naam: GEBRUIK[s], ...SOORT_UITLEG[s],
+    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
     plannen: Object.keys(PLANNEN).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
   }));
 }
@@ -328,19 +328,26 @@ function inlogPagina(env) {
 ${welkomKop(soorten)}
 <aside class="inlogkolom">
 <div class="kaart inlogkaart">
-  <h2>Inloggen</h2>
+  <h2>Log hier in als je al een account hebt</h2>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
     <button type="submit">Inloggen</button>
-    <button type="button" id="link" class="tweede">Stuur inloglink</button>
-    <p class="klein">Nog geen wachtwoord, of vergeten? Met de inloglink kom je binnen via je mail.</p>
+    <button type="button" id="link" class="linkknop">Wachtwoord vergeten of nog geen wachtwoord? Stuur inloglink</button>
   </form>
   <div class="scheiding" id="ofpk"></div>
   <button id="pk" type="button" class="linkknop">Inloggen met passkey (Face ID of pincode)</button>
   <p id="status" role="status"></p>
 </div>
-${WELKOM_NIEUW}
+<div class="kaart inlogkaart">
+  <h2>Start hier je aanvraag voor toegang tot Bankoverzicht</h2>
+  <form id="a" style="display:flex;flex-direction:column;gap:10px">
+    <input type="email" name="email" required autocomplete="email" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres voor je aanvraag">
+    <button type="submit" class="tweede">Stuur inloglink</button>
+  </form>
+  <p id="status2" role="status"></p>
+  ${welkomNieuw(alleGratis(soorten))}
+</div>
 </aside>
 <div class="uitlegkolom">${welkomInhoud({ soorten })}</div>
 </div>`, `
@@ -357,6 +364,11 @@ f.addEventListener("submit",async e=>{e.preventDefault();const k=f.querySelector
  k.disabled=true;meld("Bezig…");
  try{await post("/api/inloggen/wachtwoord",{email:f.email.value,wachtwoord:f.wachtwoord.value});location.href="/"}
  catch(x){meld(x.message,"err")}finally{k.disabled=false}});
+// Aanvraagvak: zelfde inloglink, eigen e-mailveld en eigen melding.
+const fa=document.getElementById("a"),st2=document.getElementById("status2");
+fa.addEventListener("submit",async e=>{e.preventDefault();const k=fa.querySelector("button");k.disabled=true;st2.className="";st2.textContent="Bezig…";
+ try{await post("/api/inloggen/link",{email:fa.email.value});st2.className="ok";st2.textContent="Er staat binnen een minuut een inloglink in je mailbox. Kijk ook in je spam. Je kunt dit venster nu sluiten: de link in de mail opent de app."}
+ catch(x){st2.className="err";st2.textContent=x.message}finally{k.disabled=false}});
 lk.addEventListener("click",async()=>{if(!f.email.reportValidity())return;lk.disabled=true;meld("Bezig…");
  try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam. Je kunt dit venster nu sluiten: de link in de mail opent de app.","ok")}
  catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`);
