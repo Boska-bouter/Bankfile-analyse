@@ -312,7 +312,7 @@ ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { head
 function welkomSoorten(env) {
   const pr = prijzen(env);
   return [{
-    soort: "zakelijk", naam: "Zakelijk", voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw"],
+    soort: "zakelijk", naam: "Zakelijk", voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"],
     plannen: Object.keys(PLANNEN).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[k], prijs: prijsTekst(pr[k]), gratis: !Number(pr[k]) })),
   }];
 }
