@@ -11,7 +11,7 @@
   "previews": {
     "send_email": [{ "name": "EMAIL" }],
     "d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],
-  "mtls_certificates": [{ "binding": "PONTO_CERT", "certificate_id": "7f1f5e31-5649-4e38-9e12-27ab298a3fee" }],
+  "mtls_certificates": [{ "binding": "PONTO_CERT", "certificate_id": "6f3106bd-cc5a-4f62-a89e-259188482c97" }],
     "vars": {
       "FEEDBACK_TO": "paul@paulgerits.eu",
       "FEEDBACK_FROM": "feedback@bankafschriftentool.app",
