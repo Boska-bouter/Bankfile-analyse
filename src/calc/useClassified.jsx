@@ -20,7 +20,7 @@ export function useClassified(p) {
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
     const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
-    const base0 = transactions.map((tx) => {
+    const base00 = transactions.map((tx) => {
       let resolved = resolveClassification(
         tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
@@ -44,6 +44,9 @@ export function useClassified(p) {
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
+    // beide-V5R1 — privé: dezelfde eigen rekening in beide richtingen dezelfde soort (sparen/beleggen), zie herkenning.js.
+    const vasteSoortIbans = new Set(Object.values(ownAccountsElsewhereByFile).flat().filter((o) => o?.soort).map((o) => String(o.iban).replace(/\s+/g, "").toUpperCase()));
+    const base0 = herkenning?.samenhang ? herkenning.samenhang(base00, { vasteSoortIbans }) : base00;
     // Een geladen privérekening die geld krijgt van/stuurt naar een opgegeven maar niet geladen ándere
     // eigen privérekening wordt herkend als "Interne overboeking" (twee privérekeningen onderling). Staat er
     // aan de zakelijke kant een opname/terugboeking met hetzelfde bedrag, dezelfde tegenrekening en een

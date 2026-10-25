@@ -52,7 +52,7 @@ export const PRIVE_HELP_CHAPTERS = [
     titel: "Inkomsten, uitgaven, vaste lasten en sparen",
     inhoud: (
       <div className="space-y-2.5">
-        <p><strong>Inkomsten en uitgaven.</strong> Alles wat er in het jaar binnenkwam en eruit ging, plus wat je spaarde of belegde. "Over" is wat er overbleef, "Tekort" wat er meer uitging dan binnenkwam. Overboekingen tussen je eigen rekeningen tellen niet mee. Met <em>Per maand</em> zie je elke maand apart, ook te downloaden als PDF, Excel of HTML, of om te printen.</p>
+        <p><strong>Inkomsten en uitgaven.</strong> Alles wat er in het jaar binnenkwam en eruit ging, plus wat je spaarde of belegde. "Over" is inkomsten min uitgaven. Daaronder zie je hoeveel daarvan naar sparen en beleggen ging (of eraf kwam) en hoe het saldo van je rekening veranderde. Zet je meer opzij dan er over is, dan daalt dat saldo; dat is geen tekort. Overboekingen met je andere betaalrekeningen tellen niet mee. Met <em>Per maand</em> zie je elke maand apart, ook te downloaden als PDF, Excel of HTML, of om te printen.</p>
         <p><strong>Uitgaven per categorie.</strong> Je uitgaven per hoofdcategorie (Wonen, Boodschappen, Vervoer …), van groot naar klein. Klik op een categorie voor de onderverdeling.</p>
         <p><strong>Vaste lasten.</strong> Huur of hypotheek, energie, verzekeringen, abonnementen en dergelijke: wat elke maand terugkomt, met het bedrag per maand. Welke categorieën vast zijn, stel je in bij Instellingen → Vaste/variabele kosten.</p>
         <p><strong>Sparen.</strong> Wat er netto naar je spaarrekening of beleggingen ging. In Uitgebreid staat hier ook je vermogen voor box 3.</p>

@@ -141,6 +141,7 @@ export const PRIVE_REGELS = Object.freeze([
     "ikea", "kwantum", "leen bakker", "jysk", "loods 5", "beter bed", "swiss sense", "eijerkamp", "keukenkampioen",
     "woonboulevard", "gordijnen", "vloerenland", "carpetright", "leenbakker", "gamma", "karwei", "praxis", "hornbach",
     "hubo", "bouwmaterialen", "bouwmarkt",
+    "kachel", "haard", "schoorsteenveger", "tuinmachines", "tuincentrum", "intratuin", "hovenier", // beide-V5R1
   ] },
   { naam: "Kinderen: school & sport", woorden: [
     "ouderbijdrage", "schoolgeld", "schoolreis", "zwemles", "zwemdiploma", "scouting", "kinderfeest",
@@ -148,6 +149,9 @@ export const PRIVE_REGELS = Object.freeze([
   { naam: "Sport & hobby", woorden: [
     "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "decathlon",
     "intersport", "contributie", "knvb", "knltb", "golfclub", "tennisclub", "voetbalvereniging", "muziekschool",
+    // beide-V5R1 — uit de controle van het dossier van Boska (25-10)
+    "yoga", "pilates", "bridge bond", "bridgeclub", "bridgevereniging", "ivn", "volksuniversiteit", "cursus", "schilderlokaal",
+    "atelier", "museumkaart", "natuurmonumenten lid",
   ] },
   { naam: "Giften", woorden: [
     " gift ", "periodieke gift", "donatie", " anbi", "kwf", "rode kruis", "unicef", "artsen zonder grenzen", "greenpeace",

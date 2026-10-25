@@ -106,6 +106,8 @@ const MCC_GROEPEN = {
 };
 const MCC_CATEGORIE = Object.fromEntries(Object.entries(MCC_GROEPEN).flatMap(([c, codes]) => codes.map((m) => [m, c])));
 
+const GEEN_PERSOON = /\b(kapsalon|kapper|praktijk|partij|bond|service|vzw|v\.?o\.?f|fashion|schoenen|landesamt|vereniging|penningmeester|stichting|winkel|shop|restaurant|electro|gall)\b|praktijk|salon/;
+const GROOT_NAKIJKEN = new Set(["Privé - vrijetijd-uitgaan-vakantie & uit eten", "Winkels divers", "Webshops & online aankopen"]);
 const SPAREN = /(sparen|spaarrekening|spaardeposito|spaarpot|spaarrek)\b/;
 const GEEN_SPAREN = new Set(["Beleggen", "Lijfrente", "Interne overboeking: privé sparen"]);
 
@@ -157,6 +159,18 @@ export function verfijnPrive(tx, uitkomst, regels, ctx = null) {
     const brandstof = regels.find((r) => r.name === "Brandstof");
     if (brandstof && ruleMatchesText(brandstof, tekst)) return { ...uitkomst, category: "Overig" };
   }
+  // beide-V5R1 — uit de controle van het dossier van Boska (25-10):
+  // geld op je eigen bunq/Revolut zetten ("top-up via bunq") is een overboeking tussen eigen rekeningen;
+  if (/\btop-?up\b|opwaarderen/.test(tekst) && (ALGEMENE_UITGAVE.has(cat) || cat === "Privé - bankkosten")) return { ...uitkomst, category: "Interne overboeking" };
+  // een betaalverzoek dat je betaalt (Tikkie) is geld aan een bekende;
+  if (tx.amount < 0 && BEKENDEN.test(tekst) && ALGEMENE_UITGAVE.has(cat)) return { ...uitkomst, category: "Overboekingen aan personen" };
+  // een "persoon" die een bedrijf, vereniging of praktijk blijkt (kapsalon, yogapraktijk, V.O.F.) is een gewone uitgave;
+  if (cat === "Overboekingen aan personen" && GEEN_PERSOON.test(String(tx.counterparty || "").toLowerCase())) return { ...uitkomst, category: "Privé: overig" };
+  // de eigen bijdrage of het eigen risico dat de zorgverzekeraar incasseert, zijn zorgkosten, geen premie;
+  if (cat === "Zorgverzekering" && tx.amount < 0 && /eigen (bijdrage|risico)|declaratie/.test(tekst)) return { ...uitkomst, category: "Medische uitgaven" };
+  // een groot bedrag via een betaaldienst bij uitgaan of een winkel (bijv. € 10.150 via Buckaroo) is meestal iets
+  // anders (een investering, een verbouwing): nakijken.
+  if (tx.amount < -2500 && GROOT_NAKIJKEN.has(cat)) return { ...uitkomst, category: "Overig" };
   // beide-V2R3 — een pinbetaling zonder herkend zoekwoord: de branchecode (MCC) van de winkel zegt wat het is.
   if (tx.amount < 0 && ALGEMENE_UITGAVE.has(cat)) {
     const branche = MCC_CATEGORIE[(tekst.match(/\bmcc:?\s?(\d{4})\b/) || [])[1]];
@@ -214,5 +228,36 @@ export function soortOnbekendeEigenRekening(tx, uitkomst, eigenRekeningen = []) 
   return uitkomst;
 }
 
+// beide-V5R1 — dezelfde eigen rekening krijgt in beide richtingen dezelfde soort (controle dossier Boska 25-10): ging het
+// geld erheen als sparen of beleggen ("ASN Themabeleggen"), dan is geld dat ervan terugkomt een opname van sparen of
+// beleggen, geen neutrale overboeking (anders telt sparen te hoog en lijkt er een tekort). Alleen als sparen/beleggen bij
+// die rekening de overhand heeft (een betaalrekening met af en toe "sparen" in de omschrijving blijft zoals hij is), en
+// nooit bij een eigen keuze of een rekening waarvan je de soort zelf hebt opgegeven.
+const SPAAR_SOORTEN = ["Interne overboeking: privé sparen", "Beleggen"];
+const ibanSleutel = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
+export function samenhangEigenRekeningen(txs, { vasteSoortIbans = new Set() } = {}) {
+  const per = new Map(); // iban → { [categorie]: bedrag }
+  for (const t of txs) {
+    if (!t.counterpartyIban || (!SPAAR_SOORTEN.includes(t.category) && t.category !== "Interne overboeking")) continue;
+    const k = ibanSleutel(t.counterpartyIban);
+    const m = per.get(k) || {};
+    m[t.category] = (m[t.category] || 0) + Math.abs(t.amount);
+    per.set(k, m);
+  }
+  const soortVan = new Map();
+  for (const [k, m] of per) {
+    if (vasteSoortIbans.has(k)) continue;
+    const [beste] = SPAAR_SOORTEN.slice().sort((a, b) => (m[b] || 0) - (m[a] || 0));
+    const spaar = (m[SPAAR_SOORTEN[0]] || 0) + (m[SPAAR_SOORTEN[1]] || 0);
+    if (spaar > 0 && spaar >= (m["Interne overboeking"] || 0)) soortVan.set(k, beste);
+  }
+  if (soortVan.size === 0) return txs;
+  return txs.map((t) => {
+    if (t.category !== "Interne overboeking" || t.confidence?.level === "override" || !t.counterpartyIban) return t;
+    const nieuw = soortVan.get(ibanSleutel(t.counterpartyIban));
+    return nieuw ? { ...t, category: nieuw } : t;
+  });
+}
+
 // Wat useClassified nodig heeft (null in een zakelijk dossier).
-export const PRIVE_HERKENNING = Object.freeze({ uitgaveRegels, verfijn: verfijnPrive, context: herkenningContext, naKeuze: naKeuzePrive });
+export const PRIVE_HERKENNING = Object.freeze({ uitgaveRegels, verfijn: verfijnPrive, context: herkenningContext, naKeuze: naKeuzePrive, samenhang: samenhangEigenRekeningen });

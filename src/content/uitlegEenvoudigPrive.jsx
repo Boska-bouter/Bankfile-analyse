@@ -41,7 +41,7 @@ export default function UitlegEenvoudigPrive() {
 
       <H>Stap 3 · Uitkomst</H>
       <ul className="mb-2 space-y-1.5 text-sm">
-        <Keuze titel="Inkomsten en uitgaven">Wat er binnenkwam, wat eruit ging, wat je spaarde en wat er overbleef (of tekortkwam). Met <b>Per maand</b> zie je dat voor elke maand apart.</Keuze>
+        <Keuze titel="Inkomsten en uitgaven">Wat er binnenkwam, wat eruit ging, wat er over is en hoeveel je daarvan spaarde. Met <b>Per maand</b> zie je dat voor elke maand apart.</Keuze>
         <Keuze titel="Indicatie inkomstenbelasting">Een schatting van je inkomstenbelasting na de heffingskortingen, min de loonheffing die je werkgever of uitkeringsinstantie al inhield. Weet de app die loonheffing niet, dan schat hij die. Onder "Aannames" staat wat de app heeft aangenomen.</Keuze>
         <Keuze titel="Uitgaven per categorie">Waar je geld naartoe ging, van groot naar klein.</Keuze>
       </ul>

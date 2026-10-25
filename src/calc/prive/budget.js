@@ -12,10 +12,16 @@ const NIET_MEETELLEN = new Set(["Interne overboeking", "Inkomsten/betalingen nie
 const allemaal = (b, f) => (Array.isArray(b) ? b.length > 0 && b.every(f) : f(b));
 export const sparenLabel = (b) => (allemaal(b, (x) => x < 0) ? "Opgenomen van sparen en beleggen" : allemaal(b, (x) => x >= 0) ? "Naar sparen en beleggen" : "Sparen en beleggen (− erbij, + opgenomen)");
 export const hoofdLabel = (hoofd, b) => (allemaal(b, (x) => x < 0) ? `${hoofd} (per saldo terugontvangen)` : hoofd);
-export const overLabel = (b) => (allemaal(b, (x) => x >= 0) ? "Over" : allemaal(b, (x) => x < 0) ? "Tekort" : "Over (+) of tekort (−)");
+// beide-V5R4 — "Over" is inkomsten min uitgaven (wens Boska 25-10: "we houden altijd over"). Wat je daarvan spaart of
+// belegt en wat er met het saldo van je rekening gebeurt, staat eronder (zie SALDO_LABEL).
+export const overLabel = (b) => (allemaal(b, (x) => x >= 0) ? "Over (inkomsten min uitgaven)" : allemaal(b, (x) => x < 0) ? "Meer uitgegeven dan binnengekomen" : "Over (+) of meer uitgegeven (−)");
+export const SALDO_LABEL = "Verandering saldo van je rekening";
 export const VASTE_LASTEN_LABEL = "Vaste lasten (zit al in de uitgaven)";
 
-const leeg = () => ({ inkomsten: 0, uitgaven: 0, vasteLasten: 0, sparen: 0, over: 0 });
+// beide-V5R2 — eigenBetaal: saldo van overboekingen met je andere (betaal)rekeningen; telt niet mee in het budget, maar
+// over − sparen + eigenBetaal = saldo: de verandering van het saldo van je geladen rekening(en).
+const leeg = () => ({ inkomsten: 0, uitgaven: 0, vasteLasten: 0, sparen: 0, over: 0, eigenBetaal: 0, saldo: 0 });
+export const EIGEN_BETAAL_LABEL = "Overboekingen met je andere betaalrekeningen (telt niet mee)";
 
 // soort van een boeking in het budget: "inkomen" | "uitgave" | "sparen" | null (telt niet mee)
 export function budgetSoort(categorie) {
@@ -39,6 +45,10 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
   for (const t of transacties) {
     if (t.year !== jaar) continue;
     let soort = budgetSoort(t.category);
+    if (t.category === "Interne overboeking") {
+      const m0 = perMaand[(t.date instanceof Date ? t.date : new Date(t.date)).getMonth()] || perMaand[0];
+      totaal.eigenBetaal += Number(t.amount) || 0; m0.eigenBetaal += Number(t.amount) || 0;
+    }
     if (!soort) continue;
     aantal++;
     const m = perMaand[(t.date instanceof Date ? t.date : new Date(t.date)).getMonth()] || perMaand[0];
@@ -64,7 +74,7 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
       }
     }
   }
-  for (const x of [totaal, ...perMaand]) x.over = x.inkomsten - x.uitgaven - x.sparen;
+  for (const x of [totaal, ...perMaand]) { x.over = x.inkomsten - x.uitgaven; x.saldo = x.over - x.sparen + x.eigenBetaal; }
   const metLabel = (map) => [...map.entries()].map(([naam, bedrag]) => ({ naam, label: PRIVE_WEERGAVE.label(naam), bedrag })).sort((a, b) => b.bedrag - a.bedrag);
   const volgorde = PRIVE_WEERGAVE.hoofden;
   const uitgavenPerHoofd = [...uitgaven.entries()]

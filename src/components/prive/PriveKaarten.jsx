@@ -34,8 +34,14 @@ export function InkomstenUitgavenKaart({ jaar, budget, onPerMaand }) {
       </div>
       <Regel label="Inkomsten" bedrag={t.inkomsten} teken="+ " />
       <Regel label="Uitgaven" bedrag={t.uitgaven} teken="− " />
-      <Regel label={sparenLabel(t.sparen)} bedrag={t.sparen} teken="− " />
-      <Regel label={t.over >= 0 ? "Over" : "Tekort"} bedrag={Math.abs(t.over)} sterk kleur={t.over >= 0 ? "text-emerald-700" : "text-rose-700"} />
+      <Regel label={t.over >= 0 ? "Over" : "Meer uitgegeven dan binnengekomen"} bedrag={Math.abs(t.over)} sterk kleur={t.over >= 0 ? "text-emerald-700" : "text-rose-700"} />
+      {/* beide-V5R4 — waar het overschot bleef: sparen/beleggen en het saldo van je rekening (wens Boska 25-10). */}
+      <div className="rounded-lg bg-slate-50 px-2.5 py-2 space-y-1">
+        <Regel label={sparenLabel(t.sparen)} bedrag={t.sparen} teken="− " />
+        {Math.abs(t.eigenBetaal || 0) >= 0.5 && <Regel label="Van (+) of naar (−) je andere betaalrekeningen" bedrag={t.eigenBetaal} teken="+ " />}
+        <Regel label="Verandering saldo van je rekening" bedrag={t.saldo} teken="+ " />
+        <p className="text-xs text-slate-500">Wat over is, gaat naar sparen en beleggen of blijft op je rekening. Zet je in een jaar meer opzij dan er over is, dan daalt het saldo van je rekening; dat is geen tekort.</p>
+      </div>
       <p className="text-xs text-slate-500">Gemiddeld per maand ({maanden} {maanden === 1 ? "maand" : "maanden"} met gegevens): {eur(t.inkomsten / maanden)} in, {eur(t.uitgaven / maanden)} uit.</p>
       {budget.inkomstenPerCategorie.length > 0 && (
         <ul className="text-xs text-slate-600 space-y-0.5">
