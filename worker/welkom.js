@@ -42,11 +42,11 @@ const VEILIG = "Bankoverzicht vraagt je nooit om je rekeningnummer, inlogcodes, 
 // komt de soort tussen haakjes erachter. De lange teksten per soort staan op de aanmeldpagina.
 const PLAN_INFO = {
   eenvoudig: {
-    tekst: "Vier stappen, één vraag tegelijk, de uitkomst in gewone taal.",
+    tekst: "Snel een helder beeld als vertrekpunt; eerste inzicht in ongeveer een half uur. Vier stappen, één vraag tegelijk, de uitkomst in gewone taal.",
     rapporten: [{ t: "samenvatting" }, { t: "maandoverzicht" }, { t: "indicatieve belastingoverzichten" }],
   },
   uitgebreid: {
-    tekst: "Alle overzichten, controles en instellingen, ook meerdere jaren naast elkaar.",
+    tekst: "Gedetailleerd inzicht als basis voor een plan van aanpak; eerste inzichten in ongeveer een uur. Alle overzichten, controles en instellingen, ook meerdere jaren naast elkaar.",
     rapporten: [{ t: "alles van Eenvoudig" }, { t: "overzichten per categorie, maand en jaar" }, { t: "downloaden in PDF, HTML of Excel en printen" },
       { t: "btw per kwartaal en aangifteberekening", alleen: "zakelijk" }, { t: "budget, vaste lasten en sparen", alleen: "prive" }],
   },
@@ -114,6 +114,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
       <tbody>${sleutels.map((k) => `
         <tr><td><b>${e(plan(soorten[0], k).naam)}</b><p class="klein">${e(PLAN_INFO[k]?.tekst || "")}</p><p class="klein">${e(rapportTekst(k, soortSleutels))}</p>${PLAN_INFO[k]?.let ? `<p class="klein let">${e(PLAN_INFO[k].let)}</p>` : ""}</td>${soorten.map((s) => `<td class="prijs">${e(plan(s, k).gratis ? "Gratis" : plan(s, k).prijs)}</td>`).join("")}</tr>`).join("")}
       </tbody></table></div>
+    <p class="klein">De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
     <p class="klein">Eenvoudig of Uitgebreid kies je per dossier. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
   </section>
 
