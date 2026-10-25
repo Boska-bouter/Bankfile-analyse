@@ -222,7 +222,7 @@ export const DEFAULT_RULES = [
     "taverna", "pizzeria", " grill", "grillhouse", " tavern", "steakhouse", "kebab", "shoarma",
     "shawarma", "döner", "doner", " diner", "foodcourt", "food court", " buffet", " bbq ",
   ] },
-  { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente"] },
+  { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente", "inzake rente", "inzake aflossing", "leningdeel"] },
   { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
     "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb", "voogd",

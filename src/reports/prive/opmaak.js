@@ -4,6 +4,13 @@ import { eur } from "../../utils/amounts.js";
 export const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 export const bedrag = (n) => eur(Number(n) || 0);
 export const rij = (label, waarden, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><td>${esc(label)}</td>${waarden.map((v) => `<td class="num">${v}</td>`).join("")}</tr>`;
+// beide-V5R1 — bedrag met een duidelijk teken (wens Boska 25-10). `uit`: een positief bedrag gaat eraf (uitgaven,
+// sparen) en krijgt "−"; is het per saldo binnengekomen, dan "+". Zonder `uit` andersom (inkomsten, over).
+export const metTeken = (n, uit = false) => {
+  const v = Number(n) || 0;
+  if (Math.abs(v) < 0.005) return bedrag(0);
+  return `${(v > 0) === uit ? "−" : "+"} ${bedrag(Math.abs(v))}`;
+};
 export const kopRij = (jaren) => `<tr><th></th>${jaren.map((j) => `<th class="num">${esc(j)}</th>`).join("")}</tr>`;
 
 export function document({ titel, sub, inhoud }) {

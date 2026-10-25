@@ -5,16 +5,20 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { hoofdKleur } from "../../classification/categories.js";
+import { sparenLabel, hoofdLabel } from "../../calc/prive/budget.js";
 
 export const KAART = "rounded-paneel border border-slate-200 bg-white p-4 shadow-sm space-y-3";
 const KOP = "text-sm font-semibold text-slate-900";
 const LINK = "text-xs font-medium text-teal-800 underline decoration-dotted hover:text-teal-950";
 
+// beide-V5R1 — teken "− " = bedrag gaat eraf (uitgaven, sparen), "+ " = komt erbij; per saldo andersom → ander teken.
+const tekenVan = (bedrag, teken) => (!teken || Math.abs(bedrag) < 0.005 ? "" : (bedrag > 0) === (teken.trim() === "−") ? "− " : "+ ");
+
 export function Regel({ label, bedrag, sterk = false, teken = "", kleur = "" }) {
   return (
     <div className={`flex items-baseline justify-between gap-3 text-sm ${sterk ? "font-semibold text-slate-900 border-t border-slate-100 pt-1.5" : "text-slate-700"}`}>
       <span>{label}</span>
-      <span className={`tabular-nums whitespace-nowrap ${kleur}`}>{teken && bedrag < 0 ? "+ " : teken}{eur(teken && bedrag < 0 ? -bedrag : bedrag)}</span>
+      <span className={`tabular-nums whitespace-nowrap ${kleur}`}>{tekenVan(bedrag, teken)}{eur(teken ? Math.abs(bedrag) : bedrag)}</span>
     </div>
   );
 }
@@ -28,9 +32,9 @@ export function InkomstenUitgavenKaart({ jaar, budget, onPerMaand }) {
         <h3 className={KOP}>Inkomsten en uitgaven {jaar}</h3>
         {onPerMaand && <button type="button" onClick={onPerMaand} className={LINK}>Per maand →</button>}
       </div>
-      <Regel label="Inkomsten" bedrag={t.inkomsten} />
+      <Regel label="Inkomsten" bedrag={t.inkomsten} teken="+ " />
       <Regel label="Uitgaven" bedrag={t.uitgaven} teken="− " />
-      <Regel label="Gespaard en belegd" bedrag={t.sparen} teken="− " />
+      <Regel label={sparenLabel(t.sparen)} bedrag={t.sparen} teken="− " />
       <Regel label={t.over >= 0 ? "Over" : "Tekort"} bedrag={Math.abs(t.over)} sterk kleur={t.over >= 0 ? "text-emerald-700" : "text-rose-700"} />
       <p className="text-xs text-slate-500">Gemiddeld per maand ({maanden} {maanden === 1 ? "maand" : "maanden"} met gegevens): {eur(t.inkomsten / maanden)} in, {eur(t.uitgaven / maanden)} uit.</p>
       {budget.inkomstenPerCategorie.length > 0 && (
@@ -56,9 +60,9 @@ export function UitgavenPerCategorieKaart({ jaar, budget }) {
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex items-center gap-1 text-slate-800">
                   {open === h.hoofd ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                  <span className={`rounded px-1.5 py-0.5 text-xs ${hoofdKleur(h.hoofd)}`}>{h.hoofd}</span>
+                  <span className={`rounded px-1.5 py-0.5 text-xs ${hoofdKleur(h.hoofd)}`}>{hoofdLabel(h.hoofd, h.bedrag)}</span>
                 </span>
-                <span className="tabular-nums text-slate-700">{eur(h.bedrag)}</span>
+                <span className={`tabular-nums ${h.bedrag < 0 ? "text-emerald-700" : "text-slate-700"}`}>{h.bedrag < 0 ? `+ ${eur(-h.bedrag)}` : eur(h.bedrag)}</span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-600" style={{ width: `${Math.max(0, (100 * h.bedrag) / max)}%` }} /></div>
             </button>
@@ -92,7 +96,7 @@ export function VasteLastenKaart({ jaar, budget, onInstellen }) {
             ))}
           </ul>
           <Regel label="Totaal per maand" bedrag={budget.totaal.vasteLasten / maanden} sterk />
-          <p className="text-xs text-slate-500">{budget.totaal.inkomsten > 0 ? `${Math.round((100 * budget.totaal.vasteLasten) / budget.totaal.inkomsten)}% van je inkomsten gaat naar vaste lasten.` : ""}</p>
+          <p className="text-xs text-slate-500">{budget.totaal.inkomsten > 0 ? `${Math.round((100 * budget.totaal.vasteLasten) / budget.totaal.inkomsten)}% van je inkomsten gaat naar vaste lasten. ` : ""}Deze bedragen zitten al in de uitgaven.</p>
         </>
       )}
     </section>
@@ -104,8 +108,8 @@ export function SparenKaart({ jaar, budget, belasting }) {
   return (
     <section className={KAART}>
       <h3 className={KOP}>Sparen {jaar}</h3>
-      <Regel label="Netto naar sparen en beleggen" bedrag={budget.totaal.sparen} />
-      {budget.totaal.inkomsten > 0 && <p className="text-xs text-slate-500">Dat is {Math.round((100 * budget.totaal.sparen) / budget.totaal.inkomsten)}% van je inkomsten.</p>}
+      <Regel label={sparenLabel(budget.totaal.sparen)} bedrag={Math.abs(budget.totaal.sparen)} />
+      {budget.totaal.inkomsten > 0 && budget.totaal.sparen > 0 && <p className="text-xs text-slate-500">Dat is {Math.round((100 * budget.totaal.sparen) / budget.totaal.inkomsten)}% van je inkomsten.</p>}
       {b3 && (
         <div className="border-t border-slate-100 pt-2 space-y-1">
           <Regel label="Vermogen box 3 (1 januari)" bedrag={b3.grondslag} />

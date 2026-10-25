@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { eur } from "../../utils/amounts.js";
 import { KAART } from "./PriveKaarten.jsx";
+import { metTeken as teken } from "../../reports/prive/opmaak.js";
+import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL } from "../../calc/prive/budget.js";
 
 export default function PriveMeerjarenKaart({ jaren, perJaar }) {
   const [perHoofd, setPerHoofd] = useState(false);
   if (jaren.length < 1) return null;
   const hoofden = [...new Set(jaren.flatMap((j) => perJaar[j]?.budget.uitgavenPerHoofd.map((h) => h.hoofd) || []))];
+  const tot = (j) => perJaar[j].budget.totaal;
   const hoofdBedrag = (j, h) => perJaar[j]?.budget.uitgavenPerHoofd.find((x) => x.hoofd === h)?.bedrag || 0;
   const rij = (label, f, cls = "") => (
     <tr className={`border-b border-slate-100 ${cls}`}>
@@ -25,11 +28,12 @@ export default function PriveMeerjarenKaart({ jaren, perJaar }) {
         <table className="w-full text-sm">
           <thead><tr className="text-xs text-slate-500 border-b border-slate-200"><th className="text-left py-1 pr-2" />{jaren.map((j) => <th key={j} className="py-1 px-2 text-right">{j}</th>)}</tr></thead>
           <tbody>
-            {rij("Inkomsten", (j) => eur(perJaar[j].budget.totaal.inkomsten))}
-            {rij("Uitgaven", (j) => eur(perJaar[j].budget.totaal.uitgaven))}
-            {perHoofd && hoofden.map((h) => <tr key={h} className="text-xs text-slate-500"><td className="py-0.5 pl-3 pr-2">{h}</td>{jaren.map((j) => <td key={j} className="py-0.5 px-2 text-right tabular-nums">{eur(hoofdBedrag(j, h))}</td>)}</tr>)}
-            {rij("Sparen", (j) => eur(perJaar[j].budget.totaal.sparen))}
-            {rij("Over", (j) => eur(perJaar[j].budget.totaal.over), "font-semibold")}
+            {rij("Inkomsten", (j) => teken(tot(j).inkomsten))}
+            {rij("Uitgaven", (j) => teken(tot(j).uitgaven, true))}
+            {perHoofd && hoofden.map((h) => <tr key={h} className="text-xs text-slate-500"><td className="py-0.5 pl-3 pr-2">{hoofdLabel(h, jaren.map((j) => hoofdBedrag(j, h)))}</td>{jaren.map((j) => <td key={j} className="py-0.5 px-2 text-right tabular-nums">{teken(hoofdBedrag(j, h), true)}</td>)}</tr>)}
+            {rij(sparenLabel(jaren.map((j) => tot(j).sparen)), (j) => teken(tot(j).sparen, true))}
+            {rij(overLabel(jaren.map((j) => tot(j).over)), (j) => teken(tot(j).over), "font-semibold")}
+            {perHoofd && rij(VASTE_LASTEN_LABEL, (j) => teken(tot(j).vasteLasten, true), "text-xs text-slate-500")}
             {rij("Inkomstenbelasting: terug (−) of bij (+)", (j) => eur(perJaar[j].belasting.verschil))}
           </tbody>
         </table>

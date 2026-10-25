@@ -7,6 +7,14 @@ const OVERIG = "Overig";
 const SPAREN = new Set(["Interne overboeking: privé sparen", "Beleggen"]);
 const NIET_MEETELLEN = new Set(["Interne overboeking", "Inkomsten/betalingen niet dit jaar"]);
 
+// beide-V5R1 — labels die meebewegen met het teken (wens Boska 25-10): geld dat per saldo terugkwam van sparen of
+// uit een uitgavengroep (bijv. een belastingteruggaaf) heet ook zo. Werkt op één bedrag of een lijst (meerdere jaren).
+const allemaal = (b, f) => (Array.isArray(b) ? b.length > 0 && b.every(f) : f(b));
+export const sparenLabel = (b) => (allemaal(b, (x) => x < 0) ? "Opgenomen van sparen en beleggen" : allemaal(b, (x) => x >= 0) ? "Naar sparen en beleggen" : "Sparen en beleggen (− erbij, + opgenomen)");
+export const hoofdLabel = (hoofd, b) => (allemaal(b, (x) => x < 0) ? `${hoofd} (per saldo terugontvangen)` : hoofd);
+export const overLabel = (b) => (allemaal(b, (x) => x >= 0) ? "Over" : allemaal(b, (x) => x < 0) ? "Tekort" : "Over (+) of tekort (−)");
+export const VASTE_LASTEN_LABEL = "Vaste lasten (zit al in de uitgaven)";
+
 const leeg = () => ({ inkomsten: 0, uitgaven: 0, vasteLasten: 0, sparen: 0, over: 0 });
 
 // soort van een boeking in het budget: "inkomen" | "uitgave" | "sparen" | null (telt niet mee)

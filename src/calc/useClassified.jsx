@@ -26,8 +26,9 @@ export function useClassified(p) {
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
         herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules, herkenCtx) : null
       );
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
+      if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id], vastgezet: transferLocked, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
+      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
       // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.

@@ -11,8 +11,10 @@ const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
 // beide-V3R3 — privé: soort van een opgegeven rekening (wens Boska 23-10). Spaar → "Sparen", beleggen → "Beleggen",
 // betaal → "Interne overboeking" (zie detectOwnAccountTransfer).
 const SOORTEN = [["betaal", "Betaalrekening"], ["spaar", "Spaarrekening"], ["beleggen", "Beleggingsrekening"]];
-const SoortKeuze = ({ value, onChange, className }) => (
-  <select value={value || "betaal"} onChange={(e) => onChange(e.target.value)} aria-label="Soort rekening" className={className}>
+// beide-V5R1 — staat er (nog) geen soort, dan zeggen we dat (oranje) in plaats van stil "Betaalrekening" te tonen.
+const SoortKeuze = ({ value, onChange, className, open = false }) => (
+  <select value={value || ""} onChange={(e) => onChange(e.target.value)} aria-label="Soort rekening" className={`${className} ${open && !value ? "border-amber-400 bg-amber-50 text-amber-900" : ""}`}>
+    {open && !value && <option value="" disabled>Soort nog niet gekozen</option>}
     {SOORTEN.map(([w, l]) => <option key={w} value={w}>{l}</option>)}
   </select>
 );
@@ -91,13 +93,16 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
                     <option value="Prive">Privé</option>
                     <option value="Zakelijk">Zakelijk</option>
                   </select>}
-                  {vasteSoort && <SoortKeuze value={r.soort} onChange={(s) => wijzigSoort(idx, s)} className="rounded border border-slate-300 px-1.5 py-0.5" />}
+                  {vasteSoort && <SoortKeuze open value={r.soort} onChange={(s) => wijzigSoort(idx, s)} className="rounded border border-slate-300 px-1.5 py-0.5" />}
                   {t && <span className="text-slate-400">{t.n} boeking{t.n === 1 ? "" : "en"} gevonden ({eur(t.som)})</span>}
                   <button onClick={() => verwijder(idx)} className="ml-auto text-slate-400 hover:text-red-600">Verwijderen</button>
                 </li>
               );
             })}
           </ul>
+        )}
+        {vasteSoort && lijst.some((r) => r.iban && !r.soort) && (
+          <p className="mt-1.5 text-xs text-amber-800">Kies bij elke rekening de soort. Overboekingen naar een spaar- of beleggingsrekening tellen dan als sparen of beleggen, naar een betaalrekening als overboeking eigen rekening. Zolang de soort ontbreekt, kijkt de app naar de omschrijving (bijv. "sparen" of "deposito").</p>
         )}
       </div>
 

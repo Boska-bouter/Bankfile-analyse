@@ -187,5 +187,32 @@ export function verfijnPrive(tx, uitkomst, regels, ctx = null) {
   return { ...uitkomst, category: fiscalTreatmentOf(cat) === "kosten" ? "Privé - overige kosten" : "Privé: overig" };
 }
 
+// beide-V5R1 — besluit Boska 25-10: geld dat binnenkomt met "schenking" in de omschrijving is altijd een ontvangen
+// schenking, ook als de tegenpartij als geheel bij iets anders is ingedeeld (bijv. Giften). Een keuze voor die ene
+// boeking en een overboeking tussen eigen rekeningen blijven staan.
+const SCHENKING = /\bschenking|\bgeschonken\b/;
+const GEEN_SCHENKING = /^(Interne overboeking|Beleggen|Ontvangen schenkingen$)/;
+export function naKeuzePrive(tx, uitkomst, { eigenKeuzeVoorBoeking = false, vastgezet = false, eigenRekeningen = [] } = {}) {
+  if (vastgezet && !eigenKeuzeVoorBoeking) return soortOnbekendeEigenRekening(tx, uitkomst, eigenRekeningen);
+  if (eigenKeuzeVoorBoeking || vastgezet || !(tx.amount > 0) || GEEN_SCHENKING.test(uitkomst?.category || "")) return uitkomst;
+  return SCHENKING.test(` ${tx.description || ""} ${tx.fullDescription || ""}`.toLowerCase()) ? { ...uitkomst, category: "Ontvangen schenkingen" } : uitkomst;
+}
+
+// beide-V5R1 — een opgegeven eigen rekening waarvan je de soort (spaar/beleggen/betaal) nog niet hebt gekozen: zegt de
+// omschrijving "sparen" of "deposito", dan telt de overboeking als sparen; "beleggen" als beleggen (wens Boska 25-10).
+// Een gekozen soort gaat altijd voor (detectOwnAccountTransfer), net als twee geladen bestanden (die tellen tegen elkaar weg).
+const SPAAR_TEKST = /\bspa(a)?r|deposito/;
+const BELEG_TEKST = /\bbeleg|\baandelen\b|\betf\b/;
+export function soortOnbekendeEigenRekening(tx, uitkomst, eigenRekeningen = []) {
+  if (uitkomst?.category !== "Interne overboeking" || !tx.counterpartyIban) return uitkomst;
+  const iban = String(tx.counterpartyIban).replace(/\s+/g, "").toUpperCase();
+  const r = eigenRekeningen.find((o) => !o.isLoadedFile && String(o.iban || "").replace(/\s+/g, "").toUpperCase() === iban);
+  if (!r || r.soort) return uitkomst;
+  const tekst = ` ${tx.description || ""} ${tx.fullDescription || ""}`.toLowerCase();
+  if (BELEG_TEKST.test(tekst)) return { ...uitkomst, category: "Beleggen" };
+  if (SPAAR_TEKST.test(tekst)) return { ...uitkomst, category: "Interne overboeking: privé sparen" };
+  return uitkomst;
+}
+
 // Wat useClassified nodig heeft (null in een zakelijk dossier).
-export const PRIVE_HERKENNING = Object.freeze({ uitgaveRegels, verfijn: verfijnPrive, context: herkenningContext });
+export const PRIVE_HERKENNING = Object.freeze({ uitgaveRegels, verfijn: verfijnPrive, context: herkenningContext, naKeuze: naKeuzePrive });

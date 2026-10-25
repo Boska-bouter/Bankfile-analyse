@@ -1,21 +1,22 @@
 // beide-V1R8 (fase 7) — budgetrapport (print) en Excel-export voor een privédossier: per jaar inkomsten,
 // uitgaven per categorie, vaste lasten, sparen, per maand, en de belastingindicatie. Plus de samenvatting.
-import { esc, bedrag, rij, kopRij, document } from "./opmaak.js";
+import { esc, bedrag, metTeken, rij, kopRij, document } from "./opmaak.js";
+import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL } from "../../calc/prive/budget.js";
 import { maandRegels, MAANDEN } from "./maandoverzicht.js";
 
 function jaarBudget(jaar, d) {
   const b = d.budget;
   const t = b.totaal;
   const uitgaven = b.uitgavenPerHoofd.map((h) => [
-    rij(h.hoofd, [bedrag(h.bedrag)], "sterkLicht"),
-    ...h.categorieen.map((c) => rij(c.label, [bedrag(c.bedrag)], "sub")),
+    rij(hoofdLabel(h.hoofd, h.bedrag), [metTeken(h.bedrag, true)], "sterkLicht"),
+    ...h.categorieen.map((c) => rij(c.label, [metTeken(c.bedrag, true)], "sub")),
   ].join("")).join("");
   const maand = maandRegels(b).map((r) => rij(r.maand, [bedrag(r.inkomsten), bedrag(r.uitgaven), bedrag(r.vasteLasten), bedrag(r.sparen), bedrag(r.over)], r.totaal ? "sterk" : "")).join("");
   const v = d.belasting.verschil;
   return `<section class="jaar"><h2>${esc(jaar)}</h2>
-<table>${rij("Inkomsten", [bedrag(t.inkomsten)])}${b.inkomstenPerCategorie.map((c) => rij(c.label, [bedrag(c.bedrag)], "sub")).join("")}${rij("Uitgaven", [`− ${bedrag(t.uitgaven)}`])}${rij("Gespaard en belegd", [`− ${bedrag(t.sparen)}`])}${rij(t.over >= 0 ? "Over" : "Tekort", [bedrag(t.over)], "sterk")}</table>
+<table>${rij("Inkomsten", [metTeken(t.inkomsten)])}${b.inkomstenPerCategorie.map((c) => rij(c.label, [metTeken(c.bedrag)], "sub")).join("")}${rij("Uitgaven", [metTeken(t.uitgaven, true)])}${rij(sparenLabel(t.sparen), [metTeken(t.sparen, true)])}${rij(overLabel(t.over), [metTeken(t.over)], "sterk")}</table>
 <h3>Uitgaven per categorie</h3><table>${uitgaven || rij("Geen uitgaven", [""])}</table>
-<h3>Vaste lasten</h3><table>${b.vasteLastenPerCategorie.map((c) => rij(c.label, [bedrag(c.bedrag)])).join("")}${rij("Totaal vaste lasten", [bedrag(t.vasteLasten)], "sterk")}</table>
+<h3>Vaste lasten</h3><p class="sub">Deze bedragen zitten al in de uitgaven hierboven.</p><table>${b.vasteLastenPerCategorie.map((c) => rij(c.label, [metTeken(c.bedrag, true)])).join("")}${rij("Totaal vaste lasten", [metTeken(t.vasteLasten, true)], "sterk")}</table>
 <h3>Per maand</h3><table><tr><th></th><th class="num">Inkomsten</th><th class="num">Uitgaven</th><th class="num">Vast</th><th class="num">Sparen</th><th class="num">Over</th></tr>${maand}</table>
 <h3>Indicatie inkomstenbelasting</h3><p class="uitkomst ${v < 0 ? "terug" : "bij"}">${Math.abs(v) < 1 ? "Ongeveer niets terug of bij te betalen" : `${bedrag(Math.abs(v))} ${v < 0 ? "terug te krijgen" : "bij te betalen"}`}</p>
 </section>`;
@@ -34,14 +35,16 @@ export function buildPriveSamenvattingHtml({ jaren, overzicht, namen = null, ope
   const js = jaren.filter((j) => overzicht?.perJaar?.[j]);
   const d = (j) => overzicht.perJaar[j];
   const r = (l, f, cls) => rij(l, js.map(f), cls);
+  const tot = (j) => d(j).budget.totaal;
+  const perHoofd = (j, h) => d(j).budget.uitgavenPerHoofd.find((x) => x.hoofd === h)?.bedrag || 0;
   const hoofden = [...new Set(js.flatMap((j) => d(j).budget.uitgavenPerHoofd.map((h) => h.hoofd)))];
   const inhoud = `<h2>Budget</h2><table>${kopRij(js)}
-${r("Inkomsten", (j) => bedrag(d(j).budget.totaal.inkomsten))}
-${r("Uitgaven", (j) => bedrag(d(j).budget.totaal.uitgaven))}
-${hoofden.map((h) => r(h, (j) => bedrag(d(j).budget.uitgavenPerHoofd.find((x) => x.hoofd === h)?.bedrag || 0), "sub")).join("")}
-${r("waarvan vaste lasten", (j) => bedrag(d(j).budget.totaal.vasteLasten), "sub")}
-${r("Gespaard en belegd", (j) => bedrag(d(j).budget.totaal.sparen))}
-${r("Over", (j) => bedrag(d(j).budget.totaal.over), "sterk")}</table>
+${r("Inkomsten", (j) => metTeken(tot(j).inkomsten))}
+${r("Uitgaven", (j) => metTeken(tot(j).uitgaven, true))}
+${hoofden.map((h) => r(hoofdLabel(h, js.map((j) => perHoofd(j, h))), (j) => metTeken(perHoofd(j, h), true), "sub")).join("")}
+${r(sparenLabel(js.map((j) => tot(j).sparen)), (j) => metTeken(tot(j).sparen, true))}
+${r(overLabel(js.map((j) => tot(j).over)), (j) => metTeken(tot(j).over), "sterk")}
+${r(VASTE_LASTEN_LABEL, (j) => metTeken(tot(j).vasteLasten, true), "sub")}</table>
 <h2>Indicatie inkomstenbelasting</h2><table>${kopRij(js)}
 ${r("Inkomstenbelasting", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.ib)))}
 ${r("Al ingehouden loonheffing", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.loonheffing)))}
@@ -67,9 +70,10 @@ export async function exportPriveExcel({ jaren, overzicht, transacties, label })
       { Post: "Inkomsten", Bedrag: b.totaal.inkomsten },
       ...b.inkomstenPerCategorie.map((c) => ({ Post: `  ${c.label}`, Bedrag: c.bedrag })),
       { Post: "Uitgaven", Bedrag: -b.totaal.uitgaven },
-      ...b.uitgavenPerHoofd.flatMap((h) => [{ Post: `  ${h.hoofd}`, Bedrag: -h.bedrag }, ...h.categorieen.map((c) => ({ Post: `    ${c.label}`, Bedrag: -c.bedrag }))]),
-      { Post: "Gespaard en belegd", Bedrag: -b.totaal.sparen },
-      { Post: "Over", Bedrag: b.totaal.over },
+      ...b.uitgavenPerHoofd.flatMap((h) => [{ Post: `  ${hoofdLabel(h.hoofd, h.bedrag)}`, Bedrag: -h.bedrag }, ...h.categorieen.map((c) => ({ Post: `    ${c.label}`, Bedrag: -c.bedrag }))]),
+      { Post: sparenLabel(b.totaal.sparen), Bedrag: -b.totaal.sparen },
+      { Post: overLabel(b.totaal.over), Bedrag: b.totaal.over },
+      { Post: VASTE_LASTEN_LABEL, Bedrag: -b.totaal.vasteLasten },
       { Post: "" },
       // beide-V2R8 — zonder jaaropgave is de belasting al ingehouden (netto inkomen): geen geschatte bedragen tonen.
       ...(d.belasting.loonheffingGeschat ? [{ Post: "Inkomstenbelasting", Bedrag: "al ingehouden (netto inkomen)" }] : [
