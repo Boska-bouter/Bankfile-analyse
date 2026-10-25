@@ -6,6 +6,7 @@ import CategoryRulesPanel from "../components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "../components/settings/CounterpartyRulesPanel.jsx";
 import DossierProfielLijst from "../components/shared/DossierProfielLijst.jsx";
 import EigenRekeningenPanel from "../components/settings/EigenRekeningenPanel.jsx";
+import { getCategorieProfiel } from "../classification/categories.js";
 import FixedCategoriesPanel from "../components/settings/FixedCategoriesPanel.jsx";
 import RecurringPaymentsPanel from "../components/overview/RecurringPaymentsPanel.jsx";
 import { Settings } from "lucide-react";
@@ -27,6 +28,7 @@ export function useInstellingenCardGroups(p) {
     setExpandedBusinessExpenseList, setExpandedBusinessIncomeList, setFixedCategoriesWithUndo, setHelpPopupChapter, setIncomeRate,
     setKorRegelingWithUndo, setMeerdereTarievenBevestigd, setOverridesByCounterpartyWithUndo, snapshotBeforeAction, startersaftrekStatus,
     transactions, withExpand, yearlySummary, zaLegacyJaDefault, zelfstandigenaftrekStatus,
+    tarievenEditor = null, // beide-V1R9 — privé: tarieven en bedragen als eigen kaart (in zakelijk staan ze bij Persoonlijke aannames)
   } = p;
 
   return useMemo(() => {
@@ -45,7 +47,7 @@ export function useInstellingenCardGroups(p) {
           icon: <CardIcon name="user" />,
           tone: nogOpen > 0 ? "attention" : "neutral",
           lines: [
-            { label: "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
+            { label: dossierProfiel?.[0]?.titel || "Onderneming", value: dossierProfiel?.[0]?.regels?.[0] || "—" },
             { label: "Rekeningen", value: `${eigenRekeningenGeladen.length} geladen · ${(eigenRekeningenExtra || []).length} extra` },
             { label: "Nog niet opgegeven", value: String(nogOpen) },
           ],
@@ -58,6 +60,7 @@ export function useInstellingenCardGroups(p) {
           <DossierProfielLijst blokken={dossierProfiel} />
           <div className="mt-5">
             <EigenRekeningenPanel
+              vasteSoort={getCategorieProfiel() ? "Prive" : null} // beide-V3R3 — privé: geen zakelijk/privé, wel soort rekening
               loadedAccounts={eigenRekeningenGeladen}
               eigenRekeningenExtra={eigenRekeningenExtra}
               onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }}
@@ -133,6 +136,11 @@ export function useInstellingenCardGroups(p) {
           <RecurringPaymentsPanel classified={classified} activeYear={activeYear} onOpenHelp={setHelpPopupChapter} />
         </div>
       ),
+      tarievenEditor && withExpand(
+        { key: "tarieven", title: "Tarieven en bedragen", icon: <CardIcon name="settings" />, tone: "neutral", subtitle: "Belastingtarieven per jaar; eigen waarden invullen", hint: "Naar de tarieven" },
+        "tarieven",
+        <div className="space-y-3">{tarievenEditor}</div>
+      ),
     ].filter(Boolean);
   }, [
     dossierProfiel,
@@ -182,5 +190,6 @@ export function useInstellingenCardGroups(p) {
     businessExpenseKeywords,
     businessExpenseEntries,
     expandedBusinessExpenseList,
+    tarievenEditor,
   ]);
 }

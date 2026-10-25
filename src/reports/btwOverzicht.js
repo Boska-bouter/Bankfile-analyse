@@ -67,7 +67,7 @@ ${jaren.map((j) => jaarBlok(j, kwartaalStatus)).join("")}
 </body></html>`;
 }
 
-// V8R5 — soort: "pdf" | "excel" | "html" (zie download.js).
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
 export function downloadBtwOverzicht(html, jaren, soort = "html") {
   return downloadRapport({ soort, html, naam: `BTW_per_kwartaal_${jarenBereik(jaren)}` });
 }

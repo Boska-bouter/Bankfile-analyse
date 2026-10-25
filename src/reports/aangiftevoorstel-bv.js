@@ -783,7 +783,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
 </body></html>`;
 }
 
-// V8R5 — soort: "pdf" | "excel" | "html" (zie download.js).
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
 export function downloadAangiftevoorstelBv(html, years, soort = "html") {
   return downloadRapport({ soort, html, naam: `Indicatieve_aangifteberekening_BV_${years.join("-")}` });
 }

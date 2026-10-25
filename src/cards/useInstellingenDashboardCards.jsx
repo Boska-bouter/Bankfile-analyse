@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { kaartenVolgensProfiel } from "../modus/index.js";
 import CardIcon from "../components/shared/CardIcon.jsx";
 import { Settings } from "lucide-react";
 import { resolveZelfstandigenaftrekStatusForYear } from "../tax/incomeTax.js";
@@ -16,7 +17,7 @@ export function useInstellingenDashboardCards(p) {
     zaLegacyJaDefault, zelfstandigenaftrekStatus,
   } = p;
 
-  return useMemo(() => {
+  const kaarten = useMemo(() => {
     if (transactions.length === 0) return [];
     const zelfstandigenaftrekStatusDitJaar = activeYear
       ? resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, activeYear, zaLegacyJaDefault)
@@ -282,4 +283,7 @@ export function useInstellingenDashboardCards(p) {
     categoryZakelijkPercentage,
     btwRateCounts,
   ]);
+  // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
+  const keuze = p.modus?.kaarten?.instellingen ?? null;
+  return useMemo(() => kaartenVolgensProfiel(kaarten, keuze), [kaarten, keuze]);
 }

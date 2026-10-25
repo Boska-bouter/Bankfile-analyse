@@ -1,6 +1,7 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import IncomeReviewStep from "./IncomeReviewStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
+import { getCategorieProfiel } from "../../classification/categories.js";
 
 // Fase 3 — was twee los-inline stukken in App.jsx (de IncomeReviewStep-stap en de "Overboekingen
 // aan personen"-accordeon), nu een zelfstandig onderdeel zodat het geheel (dezelfde bouwvoorstel-
@@ -72,7 +73,7 @@ export default function HerkomstVanGeldPanel({
           defaultCategory="Overboekingen aan personen"
           bulkAction={personBulkAction}
           confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
-          explanation='Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren.'
+          explanation={getCategorieProfiel() ? "Kies per tegenpartij de juiste categorie. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren." : "Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren."}
         />
       )}
     </section>

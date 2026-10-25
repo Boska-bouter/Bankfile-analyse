@@ -1,4 +1,4 @@
-// V7R5 — het abonnement van de ingelogde gebruiker als korte tekst, voor de zijbalk (Uitgebreid) en de
+// beide-V2R6 / V7R5 — het abonnement van de ingelogde gebruiker als korte tekst, voor de zijbalk (Uitgebreid) en de
 // kopregel van Eenvoudig. Komt uit /api/rol (useRol.js): per soort (zakelijk, privé) of, zonder soorten, uit de
 // algemene rechten.
 const NIVEAU = ["", "Eenvoudig", "Uitgebreid", "Uitgebreid met bankkoppeling"];

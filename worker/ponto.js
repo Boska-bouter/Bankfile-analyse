@@ -28,7 +28,7 @@ export const pontoOntbreekt = (env) => [
 ];
 
 // Alle verzoeken naar Ponto gaan via de mTLS-binding: Ponto weigert verzoeken zonder het certificaat.
-// nieuw-V8R8 — "stap" komt voor de foutmelding (welke aanvraag mislukte); een GET die een 5xx van Ponto krijgt (zoals
+// beide-V4R5 — "stap" komt voor de foutmelding (welke aanvraag mislukte); een GET die een 5xx van Ponto krijgt (zoals
 // 520), wordt na een seconde één keer herhaald.
 async function ponto(env, pad, { method = "GET", token, form, body, stap } = {}, poging = 0) {
   const headers = { accept: "application/vnd.api+json" };
@@ -53,7 +53,7 @@ async function ponto(env, pad, { method = "GET", token, form, body, stap } = {},
   try { data = tekst ? JSON.parse(tekst) : null; } catch { data = { message: tekst.slice(0, 300) }; }
   if (!r.ok) {
     const e0 = data?.errors?.[0];
-    // nieuw-V8R8 — bij een antwoord zonder JSON (zoals 520) ook laten zien wie antwoordde, voor de diagnose.
+    // beide-V4R4 — bij een antwoord zonder JSON (zoals 520) ook laten zien wie antwoordde, voor de diagnose.
     const wie = ["server", "cf-ray"].map((h) => r.headers.get(h) && `${h}: ${r.headers.get(h)}`).filter(Boolean).join(", ");
     const melding = data?.error_description || data?.error || e0?.detail || e0?.code
       || `Ponto gaf status ${r.status}${wie ? ` (${wie})` : ""}${data?.message ? `: ${data.message.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160)}` : ""}`;
@@ -135,7 +135,7 @@ export async function pontoRoute(request, env, url, pad, email, { json, leesBody
       client_id: env.PONTO_CLIENT_ID, redirect_uri: redirect, response_type: "code", scope: SCOPE,
       state, code_challenge: challenge, code_challenge_method: "S256",
     });
-    // De verifier gaat versleuteld mee naar de browser en komt bij /sessie terug. Sinds nieuw-V8R0 bewaart bank.js dit
+    // De verifier gaat versleuteld mee naar de browser en komt bij /sessie terug. Sinds beide-V3R4 bewaart bank.js dit
     // versleutelde stuk ook kort in D1, zodat de Worker de terugkeer zelf kan afronden (bankTerugRoute).
     return json({ ok: true, url: `${authHost(env)}/oauth2/auth?${q}`, state, pkce: await versleutel(env, email, { v: verifier, st: state }) });
   }

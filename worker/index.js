@@ -7,7 +7,8 @@
 
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
-import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, aanmeldPagina, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
+import { aanmeldPagina } from "./aanmeldpagina.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -78,9 +79,10 @@ export default {
       request = new Request(request, { headers: h });
     }
     if (isOpenPad(url.pathname)) return inlogRoute(request, env, url, ingelogd);
-    // nieuw-V8R0 — terugkeer van de bank: de Worker rondt de koppeling zelf af, ook als deze browser niet is ingelogd
+    // beide-V3R4 — terugkeer van de bank: de Worker rondt de koppeling zelf af, ook als deze browser niet is ingelogd
     // (app als icoon op het beginscherm: de bank opent dan in Safari). Zie bankTerugRoute in bank.js.
     if (url.pathname === "/bank/terug" && url.searchParams.has("state")) {
+      if (bankkoppelingHelemaalUit(env)) return Response.redirect(`${url.origin}/`, 302); // beide-V5R8 — bankkoppeling staat uit
       const r = await bankTerugRoute(request, env, url);
       if (r) return r;
     }
@@ -95,13 +97,19 @@ export default {
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
-      const voorwaarden = await voorwaardenVan(email, env);
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden, ...r });
+      const akkoord = await voorwaardenVan(email, env);
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, bankkoppeling: bankkoppelingVoor(env, r.beheerder), ...r });
     }
     if (url.pathname === "/api/voorwaarden") return voorwaardenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
     if (url.pathname === "/api/aanmelden") {
       return aanmeldRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"), ctx);
+    }
+    // beide-V1R0 — abonnementenpagina: ook wie al toegang heeft kan hier een (tweede) abonnement aanvragen.
+    if (url.pathname === "/aanmelden") {
+      const email = request.headers.get("Cf-Access-Authenticated-User-Email");
+      return aanmeldPagina(email, await rechtenVan(email, env), env,
+        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), slot: toegangVerplicht(env) });
     }
     // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
     // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.
@@ -119,6 +127,7 @@ export default {
     }
     // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V4R3 alleen met het recht "koppelen".
     if (url.pathname.startsWith("/api/bank/")) {
+      if (bankkoppelingHelemaalUit(env)) return json({ ok: false, fout: "De bankkoppeling staat op dit moment uit" }, 403);
       if (!(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
         return json({ ok: false, fout: "Bankkoppeling staat niet aan voor jouw account" }, 403);
       }

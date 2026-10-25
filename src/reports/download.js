@@ -1,4 +1,4 @@
-// V8R5 (ook beide-V4R1) — één manier van downloaden voor alle rapporten (wens Boska 24-10): de gebruiker kiest PDF,
+// beide-V4R1 / V8R5 — één manier van downloaden voor alle rapporten (wens Boska 24-10): de gebruiker kiest PDF,
 // Excel of HTML. Het rapport is overal al een HTML-document; PDF en Excel worden daaruit gemaakt, in de browser.
 // - PDF: het rapport wordt in een onzichtbaar iframe opgemaakt en per pagina gefotografeerd (html2canvas) en in een
 //   A4-PDF gezet (jsPDF). Per pagina, omdat iPad-Safari geen heel groot canvas toestaat. Pagina's breken bij voorkeur

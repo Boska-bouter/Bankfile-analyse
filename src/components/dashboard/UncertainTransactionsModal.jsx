@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import { X, Check, Lock } from "lucide-react";
-import {
-  MAIN_CATEGORY_ORDER, MAIN_CATEGORY_ALFA, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor,
-} from "../../classification/categories.js";
+import { mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
@@ -87,11 +85,11 @@ export default function UncertainTransactionsModal({
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(tx.category)}
           </span>
         ) : (<>
-          {/* V9R3 (= beide-V5R1) — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
+          {/* beide-V5R1 / V9R3 — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
         <CategorieSelect
           value={tx.category}
           onChange={(v) => onRequestChange(tx, { category: v, type: tx.type })}
-          className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
+          className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
         />
         </>)}
         <span

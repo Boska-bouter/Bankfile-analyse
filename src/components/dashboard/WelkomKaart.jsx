@@ -28,12 +28,21 @@ function Stap({ nr, titel, tekst, status, knop, Icon }) {
   );
 }
 
-export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onBankbestand, onDossierLaden }) {
+// beide-V1R7 — teksten per soort dossier (privé: uit modus/prive/wizard.js); zonder = de zakelijke.
+const ZAKELIJK = {
+  onderwerpen: "rechtsvorm, auto, lease en dergelijke",
+  basis: "Rechtsvorm, auto, lease, BTW — zo rekent de app met de juiste regels.",
+  bestanden: "Zakelijk en privé · CSV, Excel, MT940 of CAMT.053 · per jaar of meerdere jaren.",
+  controleren: "Indeling, bedrijfsmiddelen en instellingen nalopen. Beschikbaar na de import.",
+};
+
+export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onBankbestand, onDossierLaden, teksten = null }) {
   // basisStatus: "nog-niet" | "deels" | "klaar"
+  const t = { ...ZAKELIJK, ...(teksten || {}) };
   const basisTekst =
     basisStatus === "klaar" ? "Beantwoord — aanpassen kan altijd via Basisvragen bewerken."
-      : basisStatus === "deels" ? `${basisOpen} vra${basisOpen === 1 ? "ag" : "gen"} nog open: rechtsvorm, auto, lease en dergelijke.`
-        : "Rechtsvorm, auto, lease, BTW — zo rekent de app met de juiste regels.";
+      : basisStatus === "deels" ? `${basisOpen} vra${basisOpen === 1 ? "ag" : "gen"} nog open: ${t.onderwerpen}.`
+        : t.basis;
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div>
@@ -43,9 +52,9 @@ export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onB
       <ol className="space-y-2">
         <Stap nr={1} titel="Basisvragen" tekst={basisTekst} status={basisStatus === "klaar" ? "klaar" : "nu"} Icon={ClipboardList}
           knop={basisStatus === "klaar" ? null : { label: basisStatus === "deels" ? "Verder" : "Start", onClick: onBasisvragen }} />
-        <Stap nr={2} titel="Bankbestanden toevoegen" tekst="Zakelijk en privé · CSV, Excel, MT940 of CAMT.053 · per jaar of meerdere jaren." status={basisStatus === "klaar" ? "nu" : "later"} Icon={Upload}
+        <Stap nr={2} titel="Bankbestanden toevoegen" tekst={t.bestanden} status={basisStatus === "klaar" ? "nu" : "later"} Icon={Upload}
           knop={{ label: "Toevoegen", onClick: onBankbestand }} />
-        <Stap nr={3} titel="Controleren" tekst="Indeling, bedrijfsmiddelen en instellingen nalopen. Beschikbaar na de import." status="wacht" Icon={ListChecks} />
+        <Stap nr={3} titel="Controleren" tekst={t.controleren} status="wacht" Icon={ListChecks} />
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
         <p className="flex items-center gap-1.5 text-xs text-slate-500">

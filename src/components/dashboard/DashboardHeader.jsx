@@ -9,7 +9,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
+  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
   const aangiftesRef = useRef(null);
@@ -183,7 +183,7 @@ export default function DashboardHeader({
               className={`flex flex-col items-start gap-1 text-left ${werkelijkItems?.length ? "cursor-pointer" : "cursor-default"}`}
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
-              <span className="text-xs font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· IB · Zvw · BTW</span></span>
+              <span className="text-xs font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· {aangifteSoorten}</span></span>
               <span className="flex items-center gap-2">
                 {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
                 <span className="text-xs text-slate-500 whitespace-nowrap">{werkelijkTekst}</span>

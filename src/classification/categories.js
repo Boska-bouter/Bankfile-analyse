@@ -535,7 +535,10 @@ export function registerCategory(name, color, mainCategory) {
 // DEFAULT_RULES op naam, met behoud van custom categorieën die niet in DEFAULT_RULES zitten.
 export function mergeCategoryRules(savedRules) {
   const rawSaved = Array.isArray(savedRules) ? savedRules : [];
-  const saved = rawSaved.map((r) => ({ ...r, name: migrateLegacyCategoryName(r.name) }));
+  // beide-V1R6 — regels van een privédossier (prive: true) blijven zoals ze zijn en vooraan; die beheert
+  // modus/prive/regels.js. Ze worden hier niet als zakelijke eigen categorie geregistreerd.
+  const prive = rawSaved.filter((r) => r && r.prive);
+  const saved = rawSaved.filter((r) => !(r && r.prive)).map((r) => ({ ...r, name: migrateLegacyCategoryName(r.name) }));
   const merged = DEFAULT_RULES.map((defRule) => {
     // Meerdere oudere namen kunnen na hernoemen op dezelfde nieuwe naam uitkomen (bijv. een
     // eerder losse "Loonadministratie" en "Boekhouder & advies" zijn nu allebei "Boekhouder,
@@ -554,7 +557,7 @@ export function mergeCategoryRules(savedRules) {
   });
   const custom = saved.filter((r) => !DEFAULT_RULES.some((d) => d.name === r.name) && !(r.name in LEGACY_CATEGORY_RENAMES));
   for (const c of custom) registerCategory(c.name, c.color, c.mainCategory);
-  return [...merged, ...custom];
+  return [...prive, ...merged, ...custom];
 }
 
 // ---- Hoofdcategorieën — een overzichtelijke laag bovenop de fijnmazige subtypes hierboven ----
@@ -711,6 +714,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
 // Hoofdcategorie voor een subtype — onbekende/custom subtypes (bijv. een zelf toegevoegde
 // categorie) vallen terug op "Inkoop & zakelijke uitgaven" zodat ze nooit onzichtbaar worden.
 export function mainCategoryOf(subtype) {
+  if (_cp) return _cp.hoofdVan(subtype);
   return SUBTYPE_TO_MAIN[subtype] || "Inkoop & zakelijke uitgaven";
 }
 
@@ -719,12 +723,14 @@ export function mainCategoryOf(subtype) {
 // op "kosten", exact het gedrag dat hij al had (mainCategoryOf valt ook terug op een zakelijke
 // hoofdcategorie).
 export function fiscalTreatmentOf(subtype) {
+  if (_cp) { const f = _cp.fiscaal(subtype); if (f) return f; }
   return CATEGORY_FISCAL_TREATMENT[subtype] || "kosten";
 }
 
 // Alle subtypes die onder één hoofdcategorie vallen — voor de subtype-dropdown naast de
 // hoofdcategorie-dropdown, en voor het groeperen van BTW-percentages/vaste-kosten-instellingen.
 export function subtypesForMainCategory(mainCategory) {
+  if (_cp) return _cp.soorten(mainCategory);
   return CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === mainCategory);
 }
 
@@ -810,6 +816,7 @@ export function subscribeToonFijn(f) { _fijnAbonnees.add(f); return () => _fijnA
 
 // Naam zoals die in keuzelijsten/overzichten getoond wordt (alle niet-gegroepeerde categorieën ongewijzigd).
 export function displayCategory(category) {
+  if (_cp) return _cp.label(category);
   if (_toonFijn) return category;
   return FIJN_NAAR_WEERGAVE[category] || category;
 }
@@ -819,12 +826,25 @@ export function displayCategory(category) {
 export const BV_CATEGORIEEN = new Set(["DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding"]);
 let _rechtsvorm = null;
 export function setActieveRechtsvorm(r) { _rechtsvorm = r || null; }
+
+// beide-V1R6 — categorieprofiel van het geopende dossier. null = zakelijk: alles hieronder werkt precies zoals
+// het altijd deed. In een privédossier zet modus/prive/useCategorieProfiel hier modus/prive/weergave.js neer, en
+// volgen hoofdcategorie, labels en keuzelijsten de privéindeling.
+let _cp = null;
+export function setCategorieProfiel(p) { _cp = p || null; }
+export function getCategorieProfiel() { return _cp; }
+export function hoofdcategorieen() { return _cp ? _cp.hoofden : MAIN_CATEGORY_ORDER; }
+export function hoofdcategorieenAlfa() { return _cp ? _cp.hoofdenAlfa : MAIN_CATEGORY_ALFA; }
+export function hoofdKleur(main) { return (_cp ? _cp.kleur[main] : MAIN_CATEGORY_COLOR[main]) || "bg-slate-200 text-slate-700"; }
+export function standaardSoortVoorHoofd(main) { return _cp ? _cp.standaard[main] : MAIN_CATEGORY_DEFAULT_SUBTYPE[main]; }
+export function categorieLabel(c) { return _cp ? _cp.label(c) : c; }
 export function categorieZichtbaar(c, huidige = null) { return _rechtsvorm === "bv" || !BV_CATEGORIEEN.has(c) || c === huidige; }
 
 // release30V6 — één keuzelijst met groepen: per hoofdcategorie direct alle soorten (bijv. onder "Inkoop &
 // zakelijke uitgaven" meteen "Verzekering: Zakelijk"), zodat je niet eerst een groep en dan een soort hoeft
 // te kiezen. Privé kosten algemeen blijft één keuze (geen fiscaal verschil tussen de 17 leden).
 export function keuzeGroepen(huidige = null) {
+  if (_cp) return _cp.keuzeGroepen(huidige);
   return MAIN_CATEGORY_ORDER.map((main) => {
     const fijn = CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === main && categorieZichtbaar(c, huidige));
     const opties = [];
@@ -847,12 +867,14 @@ export function keuzeGroepen(huidige = null) {
 }
 // Welke optie hoort bij de huidige categorie (voor privé-algemeen: de standaardsoort van die groep).
 export function keuzeWaarde(category) {
+  if (_cp) return category;
   const w = _toonFijn ? null : FIJN_NAAR_WEERGAVE[category];
   return w && GEEN_SOORT.has(w) ? STANDAARD_FIJN[w] : category;
 }
 
 // Keuzes voor het subtype-keuzeveld.
 export function subtypeChoicesFor(mainCategory) {
+  if (_cp) return _cp.keuzes(mainCategory);
   const fijn = subtypesForMainCategory(mainCategory).filter((c) => categorieZichtbaar(c));
   if (mainCategory === "Privé") {
     return sortNl(_toonFijn ? CATEGORY_ORDER.filter((c) => mainCategoryOf(c) === "Privé") : PRIVE_KEUZE);
@@ -864,6 +886,7 @@ export function subtypeChoicesFor(mainCategory) {
 // Welke opgeslagen (fijne) categorie hoort bij een gekozen weergavenaam? Behoort de huidige categorie
 // al tot die groep, dan blijft die staan; anders de tegenhanger (zakelijk ↔ privé) of de standaardsoort.
 export function storedCategoryForChoice(choice, currentCategory) {
+  if (_cp) return _cp.opgeslagenVoorKeuze(choice);
   if (_toonFijn) return choice;
   if (displayCategory(currentCategory) === choice) return currentCategory;
   // V77 — zakelijke tegenhanger (bijv. "Energie-water" of "Huur (deels zakelijk)") → de privé-soort die erbij hoort.
@@ -876,6 +899,7 @@ export function storedCategoryForChoice(choice, currentCategory) {
 // V77 — categorie na wisselen van hoofdcategorie: naar "Privé" houdt de privé-tegenhanger van de huidige
 // zakelijke categorie (Energie-water → Prive - energie-water, Huur → Prive - huur, ...), anders de standaardsoort.
 export function categoryForMainChange(mainName, currentCategory) {
+  if (_cp) return _cp.standaard[mainName] || currentCategory;
   if (mainName === "Privé") {
     const basis = String(currentCategory || "").replace(/ \(deels zakelijk\)$/, "");
     if (SPLIT_CATEGORY_NAMES[basis]) return SPLIT_CATEGORY_NAMES[basis];
@@ -885,6 +909,7 @@ export function categoryForMainChange(mainName, currentCategory) {
 
 // Fijne soorten voor het kleine extra keuzeveld naast een samengevoegde keuze (huur / energie-water / …).
 export function soortenVoor(category) {
+  if (_cp) return null;
   if (_toonFijn) return null;
   const w = FIJN_NAAR_WEERGAVE[category];
   if (!w || GEEN_SOORT.has(w)) return null;
@@ -904,6 +929,7 @@ CATEGORY_COLOR[PRIVE_ALGEMEEN] = CATEGORY_COLOR["Privé: overig"] || "bg-stone-1
 // categorieën om in blokken per weergavenaam. Blokken met één lid blijven gewoon een rij; blokken met meer
 // leden kunnen onder één kopregel worden ingeklapt. De instelling blijft per fijne soort.
 export function groepeerPerWeergave(fijneNamen) {
+  if (_cp) return fijneNamen.map((c) => ({ naam: c, leden: [c], groep: false }));
   const blokken = [];
   const index = {};
   for (const c of fijneNamen) {

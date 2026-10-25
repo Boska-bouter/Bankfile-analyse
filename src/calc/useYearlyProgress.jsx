@@ -13,7 +13,7 @@ export function useYearlyProgress(p) {
     heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibStatus, incompleteActivaCount, incompleteLeasesCount,
     incompleteLoansCount, korRegeling, kwartaalStatus, periodeQuarterOverrides, priveRekeningGeladen,
     rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus,
-    years, zelfstandigenaftrekStatus, zvwStatus,
+    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht = null,
   } = p;
 
   return useMemo(() => {
@@ -80,8 +80,10 @@ export function useYearlyProgress(p) {
       // jaarlijkse Vpb-aangifte — vpbStatus vervangt ibStatus/zvwStatus hier zodra rechtsvorm "bv" is,
       // i.p.v. dat IB/Zvw daar (nooit ingevuld, want niet van toepassing) de teller eeuwig op "deels"
       // hielden.
-      const overigeAangifteChecks =
-        rechtsvorm === "bv"
+      // beide-V1R8 — privédossier: alleen de aangifte inkomstenbelasting (geen Zvw, BTW of Vpb).
+      const overigeAangifteChecks = priveOverzicht
+        ? [{ frac: ibStatus[year]?.gedaan ? 1 : 0, label: "Inkomstenbelasting (IB)", doel: "ib", detail: ibStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" }]
+        : rechtsvorm === "bv"
           ? [{ frac: vpbStatus[year]?.gedaan ? 1 : 0, label: "Vpb", doel: "meerjaren", detail: vpbStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" }]
           : [
               { frac: ibStatus[year]?.gedaan ? 1 : 0, label: "Inkomstenbelasting (IB)", doel: "meerjaren", detail: ibStatus[year]?.gedaan ? "gedaan" : "nog niet gedaan" },
@@ -114,7 +116,8 @@ export function useYearlyProgress(p) {
       if (gedeeldeEnergieDitJaar && energieZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk energie/water");
       const gedeeldeGemeentelijkeKostenDitJaar = computeGedeeldeGemeentelijkeKostenVoorJaar(classified, year, gemeentelijkeKostenZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       if (gedeeldeGemeentelijkeKostenDitJaar && gemeentelijkeKostenZakelijkPercentageStatus?.[year] == null) aannamesLabels.push("% zakelijk gemeentelijke kosten");
-      const aannamesCount = (incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount) + aannamesLabels.filter((l) => !/onvolledig$/.test(l)).length;
+      if (priveOverzicht) aannamesLabels.splice(0, aannamesLabels.length);
+      const aannamesCount = priveOverzicht ? (priveOverzicht.perJaar[year]?.aannames.length || 0) : (incompleteLoansCount + incompleteLeasesCount + incompleteActivaCount) + aannamesLabels.filter((l) => !/onvolledig$/.test(l)).length;
 
       // Samenvattende status — afgeleid uit bestaande controles, geen nieuw controlesysteem: het
       // voortgangspercentage hierboven, plus hoeveel transacties dit jaar nog onzeker zijn
@@ -138,5 +141,5 @@ export function useYearlyProgress(p) {
       };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus, priveOverzicht]);
 }

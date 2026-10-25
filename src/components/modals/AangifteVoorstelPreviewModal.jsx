@@ -20,7 +20,7 @@ export default function AangifteVoorstelPreviewModal({ html, years, onDownload, 
               {extraKnop.label}
             </button>
           )}
-          {/* V8R5 — keuze PDF, Excel of HTML; onDownload(soort) */}
+          {/* beide-V4R1 — keuze PDF, Excel of HTML; onDownload(soort) */}
           <DownloadKnop onKies={onDownload} />
           <button
             onClick={onPrint}

@@ -1,7 +1,7 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
-// V9R2 (ook beide-V5R0) — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
+// beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
 export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|leningdeel|rente\s+lening|aflossing\s+lening/;
 
 
@@ -34,7 +34,7 @@ export function keywordInText(text, keyword) {
   return false;
 }
 export function ruleMatchesText(rule, text, accountType = null) {
-  // V9R2 (ook beide-V5R0) — "inzake   rente" staat met wisselende spaties in de omschrijving.
+  // beide-V5R0 / V9R2 — "inzake   rente" staat met wisselende spaties in de omschrijving.
   if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   return rule.keywords.some((kw) => {
     if (!keywordInText(text, kw)) return false;
@@ -475,7 +475,7 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —
   // de banknaam staat er toevallig ook in (bijv. "ING Betaalverzoek via ING Bank").
   if (rule.name === "Bankkosten" && /betaalverzoek|tikkie/.test(text)) return true;
-  // V9R2 (ook beide-V5R0) — de bank die rente of aflossing incasseert ("Aut. incasso inzake Rente" van Rabobank) is de
+  // beide-V5R0 / V9R2 — de bank die rente of aflossing incasseert ("Aut. incasso inzake Rente" van Rabobank) is de
   // hypotheek of een lening, geen bankkosten (wens Boska 25-10). "Afschrijving rente" (rood staan) blijft bankkosten.
   if (rule.name === "Bankkosten" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   // Geld op een eigen rekening bij een andere bank zetten ("top-up via bunq") is ook geen bankkosten.
@@ -517,6 +517,9 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     // bestanden van dezelfde rekening (jaar-bestanden) of bankkosten met het eigen IBAN als tegenrekening
     // zijn géén overboeking tussen twee rekeningen.
     if (!tx.ownAccount || ibansMatch(tx.counterpartyIban, tx.ownAccount)) return null;
+    // beide-V3R3 — privé: bij een opgegeven (niet geladen) rekening staat de soort erbij (wens Boska 23-10).
+    if (matchedOwn.soort === "spaar") return { category: "Interne overboeking: privé sparen", type };
+    if (matchedOwn.soort === "beleggen") return { category: "Beleggen", type };
     return { category: "Interne overboeking", type };
   }
   const isIncome = tx.amount > 0;
@@ -574,7 +577,9 @@ function hoortBijAndereRekening(override, accountType) {
   return ALLEEN_ZAKELIJK.has(c) && override.type === "Zakelijk";
 }
 
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
+// beide-V1R6 — `verfijn` (optioneel, alleen in een privédossier) past alleen de automatische uitkomst aan, nooit
+// een eigen keuze van de gebruiker. Zonder verfijn is alles zoals het was.
+export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = [], verfijn = null) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
   if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
@@ -608,11 +613,12 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
       return { ...mirror, type: accountType === "Zakelijk" ? "Zakelijk" : "Prive" };
     }
   }
-  return nietAannemelijk(tx, autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords), accountType);
+  const auto = nietAannemelijk(tx, autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords), accountType);
+  return verfijn ? verfijn(auto) : auto;
 }
 
-// V7R6, per boeking € 300 sinds V7R7 — een herkende naam met een bedrag dat er niet bij past, gaat naar "Overig"
-// om na te kijken: meer dan € 300 in één keer past niet in een tank.
+// V7R6 / beide-V3R0, per boeking € 300 sinds V7R7 / beide-V3R1 — een herkende naam met een bedrag dat er niet bij past,
+// gaat naar "Overig" om na te kijken: meer dan € 300 in één keer past niet in een tank.
 const MAX_BEDRAG = { Brandstof: 300 };
 function nietAannemelijk(tx, uitkomst, accountType) {
   const max = MAX_BEDRAG[uitkomst?.category];

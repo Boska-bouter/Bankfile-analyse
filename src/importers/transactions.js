@@ -20,7 +20,7 @@ const BETAALWIJZE_KOLOMMEN = ["Betaalwijze", "Mutatiesoort", "Code", "Transactie
 // "BEA,BETAALPAS    BP EXPRESS EINDHOVENNR:41120687,2025-11-04/08:32   EINDHOVEN,NLD".
 const ABN_PAS_RE = /^(BEA|GEA)\s*,\s*(?:[A-Z]+(?: [A-Z]+)?)\s{2,}(.+?)(?:,\s*PAS\s*\d{2,3}\s*NR:|NR:)/i;
 
-// nieuw-V8R8 — de bron van een transactie moet gelijk zijn aan de bestandsnaam: soort rekening (accountTypeByFile),
+// beide-V4R6 — de bron van een transactie moet gelijk zijn aan de bestandsnaam: soort rekening (accountTypeByFile),
 // eigen rekeningen en controles zoeken op die naam. Bij een bankkoppeling stond de rekeningnaam er eerder achter
 // ("… (koppeling) — naam"), waardoor de soort rekening niet werd gevonden; ook in eerder bewaarde dossiers.
 const bronVan = (pf) => (pf.bankKoppeling ? pf.fileName : pf.sourceLabel);

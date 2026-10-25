@@ -17,7 +17,7 @@
 
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, WELKOM_STIJL } from "./welkom.js";
-import { PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
+import { GEBRUIK, PLANNEN, plannenVoor, bankkoppelingAan, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
 const SESSIE_DAGEN = 30;
@@ -267,12 +267,12 @@ async function stuurLink(env, email, link) {
     zonderNaam: "Beste aanvrager,",
     regels: [
       "Bedankt voor je interesse in Bankoverzicht, de app die je bankafschriften omzet in overzichten van je inkomsten en uitgaven.",
-      "Dit is je eerste inloglink. Na het inloggen kies je welke versie je wilt gebruiken en dien je je aanvraag in:",
+      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (alleen je eigen huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
-      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting."],
-      ["Uitgebreid", "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven."],
-      ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."],
+      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
+      ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé je budget, vaste lasten en een indicatie van je inkomstenbelasting."],
+      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."]] : []),
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
@@ -309,13 +309,17 @@ const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "") =>
 <title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
-// V8R4 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
+// beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
+const SOORT_UITLEG = {
+  prive: { voor: "Voor je eigen huishouden, eventueel met je partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"] },
+};
 function welkomSoorten(env) {
   const pr = prijzen(env);
-  return [{
-    soort: "zakelijk", naam: "Zakelijk", voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"],
-    plannen: Object.keys(PLANNEN).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[k], prijs: prijsTekst(pr[k]), gratis: !Number(pr[k]) })),
-  }];
+  return ["prive", "zakelijk"].map((s) => ({
+    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
+    plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
+  }));
 }
 
 function inlogPagina(env) {
@@ -387,7 +391,7 @@ async function bevestigPagina(env, token, huidig = null) {
     }
   } catch { /* dan de gewone tekst */ }
   const tekst = {
-    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
+    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
     wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor Bankoverzicht is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
     gewoon: ["Inloggen bij Bankoverzicht", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
     verlopen: ["Link verlopen", "Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.", "", ""],
@@ -436,7 +440,7 @@ function passkeyPagina(email, aantal, heeftWachtwoord) {
   <p class="sub" style="margin:0"><b>Android (Chrome):</b> menu ⋮ en dan <b>Toevoegen aan startscherm</b>. <b>Computer (Chrome of Edge):</b> het installeer-icoon rechts in de adresbalk.</p>
 </div>
 <a class="knop tweede" id="naarapp" href="/">${klaar ? "Naar de app" : "Later, naar de app"}</a>`, `
-// zakelijk-V7R3 — na het instellen de tip om de app op het beginscherm te zetten (niet als hij daar al vandaan komt).
+// beide-V2R1 — na het instellen de tip om de app op het beginscherm te zetten (niet als hij daar al vandaan komt).
 const losseApp=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 const klaarMet=t=>{meld(t,"ok");if(losseApp){setTimeout(()=>location.href="/",1500);return}
  document.getElementById("beginscherm").hidden=false;const a=document.getElementById("naarapp");a.textContent="Naar de app";a.className="knop";a.scrollIntoView({behavior:"smooth",block:"end"})};

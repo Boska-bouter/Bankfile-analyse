@@ -64,14 +64,14 @@ export function voegRijenSamen(oud, nieuw) {
 
 // Zelfde vorm als parseFile() in detector.js levert.
 export function rijenNaarParsedFile(rijen, { bank, iban, naam, volgnr = 1 }) {
-  // nieuw-V9R0 — volgnr > 1: tweede rekening met hetzelfde rekeningnummer binnen één koppeling.
+  // beide-V4R8 — volgnr > 1: tweede rekening met hetzelfde rekeningnummer binnen één koppeling.
   const label = `${bank}${iban ? ` ${iban}` : ""}${volgnr > 1 ? ` (${volgnr})` : ""} (koppeling)`;
   const headers = rijen.length ? Object.keys(rijen[0]) : [];
   return {
     headers,
     rows: rijen,
     mapping: buildColumnMapping(headers),
-    sourceLabel: label, // nieuw-V8R8 — gelijk aan fileName (zie bronVan in transactions.js)
+    sourceLabel: label, // beide-V4R6 — gelijk aan fileName (zie bronVan in transactions.js)
     fileName: label,
     ...(naam ? { rekeningNaam: naam } : {}),
     bankKoppeling: { bank, iban },

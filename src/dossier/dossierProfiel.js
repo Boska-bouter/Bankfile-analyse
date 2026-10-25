@@ -1,4 +1,5 @@
 import { getLeaseSegments } from "../tax/financialLease.js";
+import { huishoudenRegels } from "../modus/prive/huishouden.js";
 // Dossierprofiel: een compacte, leesbare samenvatting van wat het dossier "weet" uit de wizard en
 // de instellingen — zodat de gebruiker in één oogopslag kan nagaan of het klopt. Puur lezen: er
 // wordt niets gewijzigd of berekend dat de cijfers raakt.
@@ -25,10 +26,22 @@ export function bouwDossierProfiel(p) {
     parsedFiles = [], accountTypeByFile = {}, years = [], rechtsvorm, heeftHolding, korRegeling, btwVerlegd,
     kwartaalStatus = {}, autoWizardStatus, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
     heeftVoorraad, zelfstandigenaftrekStatus = {}, startersaftrekStatus = {}, eigenNamen, eigenRekeningenExtra,
-    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {},
+    zakelijkeSpaarRekening, autoStatus, leaseSummary = [], leaseMerges = [], confirmedLeaseTypeKeys = [], leaseDetails = {}, modus, priveAntwoorden = null,
   } = p;
+  // beide-V1R2 — welke blokken er zijn, volgt uit het profiel van het dossier (zonder profiel: zakelijk, zoals altijd).
+  const aan = (k) => (modus?.onderdelen ? !!modus.onderdelen[k] : !['budget', 'eigenWoning', 'box3', 'partner'].includes(k));
   const isBV = rechtsvorm === "bv";
   const blokken = [];
+
+  // Huishouden (privé): in fase 4 komen partner, woning en inkomstenbronnen uit de wizard erbij.
+  if (aan("partner")) {
+    const huishouden = ["Privédossier (eigen huishouden)"];
+    if (years.length > 0) huishouden.push(`Jaren in dossier: ${jarenBereik(years)}`);
+    if (eigenNamen?.ondernemer) huishouden.push(`Rekeninghouder: ${eigenNamen.ondernemer}`);
+    if (eigenNamen?.partner) huishouden.push(`Partner: ${eigenNamen.partner}`);
+    if (priveAntwoorden) huishouden.push(...huishoudenRegels(priveAntwoorden)); // beide-V1R8
+    blokken.push({ titel: "Huishouden", regels: huishouden });
+  }
 
   // Onderneming
   const onderneming = [];
@@ -37,17 +50,17 @@ export function bouwDossierProfiel(p) {
   if (years.length > 0) onderneming.push(`Jaren in dossier: ${jarenBereik(years)}`);
   const naam = eigenNamen?.ondernemer;
   if (naam) onderneming.push(`Rekeninghouder: ${naam}${eigenNamen?.partner ? ` (partner: ${eigenNamen.partner})` : ""}`);
-  blokken.push({ titel: "Onderneming", regels: onderneming });
+  if (aan("omzet")) blokken.push({ titel: "Onderneming", regels: onderneming });
 
   // Rekeningen
   const types = Object.values(accountTypeByFile);
   const nZak = types.filter((t) => t === "Zakelijk").length;
   const nPriv = types.filter((t) => t === "Prive").length;
   const rekeningen = [];
-  if (parsedFiles.length > 0) rekeningen.push(`${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"} geladen (${nZak} zakelijk, ${nPriv} privé)`);
+  if (parsedFiles.length > 0) rekeningen.push(`${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"} geladen${aan("omzet") ? ` (${nZak} zakelijk, ${nPriv} privé)` : ""}`);
   const extra = Array.isArray(eigenRekeningenExtra) ? eigenRekeningenExtra : null;
   if (extra) rekeningen.push(extra.length > 0 ? `${extra.length} andere eigen rekening${extra.length === 1 ? "" : "en"} niet geladen` : "Geen andere eigen rekeningen");
-  if (zakelijkeSpaarRekening?.status === "ja") rekeningen.push(`Zakelijke spaarrekening${zakelijkeSpaarRekening.naam ? `: ${zakelijkeSpaarRekening.naam}` : ""}`);
+  if (aan("omzet") && zakelijkeSpaarRekening?.status === "ja") rekeningen.push(`Zakelijke spaarrekening${zakelijkeSpaarRekening.naam ? `: ${zakelijkeSpaarRekening.naam}` : ""}`);
   if (zakelijkeSpaarRekening?.priveStatus === "ja") rekeningen.push(`Privé-spaarrekening${zakelijkeSpaarRekening.priveNaam ? `: ${zakelijkeSpaarRekening.priveNaam}` : ""}`);
   if (rekeningen.length === 0) rekeningen.push("Nog geen bankbestanden geladen");
   blokken.push({ titel: "Rekeningen", regels: rekeningen });
@@ -68,7 +81,7 @@ export function bouwDossierProfiel(p) {
       btw.push(`${kw.length} van ${Math.max(totaal, kw.length)} kwartalen aangegeven`);
     }
   }
-  blokken.push({ titel: "BTW", regels: btw });
+  if (aan("btw")) blokken.push({ titel: "BTW", regels: btw });
 
   // Auto, lease en lening
   const auto = [];
@@ -98,10 +111,10 @@ export function bouwDossierProfiel(p) {
   if (leaseHerkend && !leaseBevestigd) auto.push("Leasegegevens nog te controleren");
   if (lening.length) auto.push(`Lening: ${lening.join(", ")}`);
   if (heeftVoorraad === true) auto.push("Voorraad aanwezig");
-  blokken.push({ titel: "Auto, lease en lening", regels: auto });
+  if (aan("auto")) blokken.push({ titel: "Auto, lease en lening", regels: auto });
 
   // Persoonlijk (niet bij BV)
-  if (!isBV) {
+  if (!isBV && aan("ondernemersaftrek")) {
     const pers = [];
     const uren = Object.entries(zelfstandigenaftrekStatus);
     if (uren.length === 0) pers.push("Urencriterium: nog niet opgegeven");

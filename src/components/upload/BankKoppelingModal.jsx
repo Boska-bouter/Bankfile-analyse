@@ -45,9 +45,9 @@ const standaardVan = () => `${new Date().getFullYear() - 1}-01-01`;
 
 // Terug van de bank (/bank/terug?code=…&state=…): de eenmalige code meteen inwisselen voor een koppeling en die
 // bewaren. Geeft een melding terug, of gooit een fout met een leesbare tekst.
-// nieuw-V8R0 — koppelingen die de Worker na terugkeer van de bank zelf heeft afgerond (ook als die terugkeer in een
+// beide-V3R4 — koppelingen die de Worker na terugkeer van de bank zelf heeft afgerond (ook als die terugkeer in een
 // andere browser binnenkwam, zoals Safari bij de app als icoon op het beginscherm) ophalen en in het tussenstation zetten.
-// nieuw-V8R1 — de server bewaart het resultaat tot het eerste gebruik (max. 2 uur); "bekend" zijn de id's die al in het
+// beide-V3R6 — de server bewaart het resultaat tot het eerste gebruik (max. 2 uur); "bekend" zijn de id's die al in het
 // dossier staan, die worden overgeslagen.
 // De states van koppelingen die in deze app zijn gestart (localStorage: blijft bewaard als de app herlaadt na de bank).
 const STATES_KEY = "bankoverzicht:bankkoppeling-states";
@@ -77,7 +77,7 @@ export async function haalWachtendeOp(bekend = new Set()) {
 }
 
 export async function rondKoppelingAf(terug) {
-  // nieuw-V8R0 — de Worker heeft de koppeling al afgerond (zie bankTerugRoute in worker/bank.js).
+  // beide-V3R4 — de Worker heeft de koppeling al afgerond (zie bankTerugRoute in worker/bank.js).
   if (terug.klaar) {
     const r = await haalWachtendeOp(new Set());
     if (r.fout && !r.melding) throw new Error(r.fout);
@@ -121,7 +121,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   };
   useEffect(() => { pakTussenstationOp(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // nieuw-V8R0 — terug in de app na koppelen in een ander venster (bijv. Safari bij de app als icoon op het
+  // beide-V3R4 — terug in de app na koppelen in een ander venster (bijv. Safari bij de app als icoon op het
   // beginscherm): de koppeling staat dan klaar op de server. Ophalen bij openen, zodra de app weer in beeld komt, en
   // na "Naar Ponto"/"Naar mijn bank" elke paar seconden zolang het venster openstaat.
   const [wachtOpBank, setWachtOpBank] = useState(false);
@@ -190,7 +190,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     }
   };
 
-  // nieuw-V9R0 — twee rekeningen met hetzelfde rekeningnummer (kan bij Ponto) krijgen elk een eigen bestand.
+  // beide-V4R8 — twee rekeningen met hetzelfde rekeningnummer (kan bij Ponto) krijgen elk een eigen bestand.
   const volgnrVan = (k, idx) => {
     const iban = k.rekeningen[idx]?.iban;
     if (!iban) return 1;
@@ -227,7 +227,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     return { token: nieuwToken, toegevoegd, onvolledig: !!d.onvolledig, tekst: `${toegevoegd} nieuwe boeking${toegevoegd === 1 ? "" : "en"} voor ${naam}.${d.onvolledig ? " Niet alles kon in één keer worden opgehaald: haal nog een keer op." : ""}` };
   };
 
-  // nieuw-V9R0 — het venster blijft na één rekening open, zodat je ook de andere rekeningen kunt ophalen. Sluit je het
+  // beide-V4R8 — het venster blijft na één rekening open, zodat je ook de andere rekeningen kunt ophalen. Sluit je het
   // venster, dan opent de app de wizard (zie handleBankImport in App.jsx).
   const ophalen = async (k, idx) => {
     setBezig(`${k.id}|${idx}`); setFout(""); setMelding("");
@@ -243,7 +243,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
     }
   };
 
-  // nieuw-V9R0 — alle rekeningen van een koppeling na elkaar ophalen; daarna het venster sluiten als alles lukte.
+  // beide-V4R8 — alle rekeningen van een koppeling na elkaar ophalen; daarna het venster sluiten als alles lukte.
   const allesOphalen = async (k) => {
     setBezig(`${k.id}|alles`); setFout(""); setMelding("");
     let token = k.token;

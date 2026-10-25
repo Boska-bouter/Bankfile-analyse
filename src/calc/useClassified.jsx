@@ -11,19 +11,24 @@ export function useClassified(p) {
   const {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
-    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus,
+    transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
   } = p;
 
   return useMemo(() => {
     // release32V4 — zelfde percentages als de aangifte, dus ook "soort ruimte = privé / niet zelfstandig" telt als 0%.
     const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
-    const base0 = transactions.map((tx) => {
+    // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
+    const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
+    const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
+    const base00 = transactions.map((tx) => {
       let resolved = resolveClassification(
-        tx, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
-        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords
+        tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
+        overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
+        herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules, herkenCtx) : null
       );
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
+      if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id], vastgezet: transferLocked, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
+      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
       // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
@@ -39,6 +44,9 @@ export function useClassified(p) {
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
+    // beide-V5R1 — privé: dezelfde eigen rekening in beide richtingen dezelfde soort (sparen/beleggen), zie herkenning.js.
+    const vasteSoortIbans = new Set(Object.values(ownAccountsElsewhereByFile).flat().filter((o) => o?.soort).map((o) => String(o.iban).replace(/\s+/g, "").toUpperCase()));
+    const base0 = herkenning?.samenhang ? herkenning.samenhang(base00, { vasteSoortIbans }) : base00;
     // Een geladen privérekening die geld krijgt van/stuurt naar een opgegeven maar niet geladen ándere
     // eigen privérekening wordt herkend als "Interne overboeking" (twee privérekeningen onderling). Staat er
     // aan de zakelijke kant een opname/terugboeking met hetzelfde bedrag, dezelfde tegenrekening en een
@@ -110,5 +118,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning]);
 }

@@ -164,7 +164,7 @@ export default function DetailsPanel({
             {/* release31V6 — "Inkomen per maand" staat al in het linker menu; "Herkenningsregels" is een instelling
                 (Instellingen → Automatisering), geen overzicht van het jaar. */}
             <LinkOut label="Onderbouwing" onClick={() => onJump("onderbouwing")} />
-            {/* V8R5 — was "Excel exporteren": nu één Downloaden met keuze PDF, Excel of HTML */}
+            {/* beide-V4R1 — was "Excel exporteren": nu één Downloaden met keuze PDF, Excel of HTML */}
             <DownloadKnop onKies={(soort) => onJump(soort)} knopClassName={`${KNOP_PIL} inline-flex items-center gap-1.5`} />
             <LinkOut label="Print" onClick={() => onJump("print")} />
           </div>

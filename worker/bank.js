@@ -113,18 +113,18 @@ async function leesBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
-// nieuw-V8R0 — afronden van de koppeling op de server. Op een iPad/iPhone met de app als icoon op het beginscherm opent
+// beide-V3R4 — afronden van de koppeling op de server. Op een iPad/iPhone met de app als icoon op het beginscherm opent
 // de bank (of Ponto) in Safari, en daar komt ook de terugkeer (/bank/terug) binnen: zonder het open dossier, zonder de
 // gegevens uit het koppelvenster en vaak zonder inlog. Daarom bewaart /start de "state" met het e-mailadres in D1
 // (30 minuten), wisselt de Worker bij /bank/terug zelf de code in, en zet het resultaat (het versleutelde koppeltoken en
 // de rekeningen, 2 uur) klaar voor dat e-mailadres. De app haalt het op met /api/bank/wachtend zodra hij weer in beeld is.
-// nieuw-V8R1 — ophalen wist het resultaat niet meer: op iPad kan een ander venster (het browservenster van Ponto) het
+// beide-V3R6 — ophalen wist het resultaat niet meer: op iPad kan een ander venster (het browservenster van Ponto) het
 // eerder ophalen dan de app zelf. De app slaat dubbele koppelingen over (zelfde id). Het resultaat verdwijnt bij het
 // eerste gebruik van de koppeling (/transacties of /verwijder; Ponto vervangt de sleutel dan) of na 2 uur.
 const BANK_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS bank_start (state TEXT PRIMARY KEY, email TEXT NOT NULL, bank TEXT, psu TEXT, pkce TEXT, verloopt INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bank_wachtend (id TEXT PRIMARY KEY, email TEXT NOT NULL, data TEXT NOT NULL, verloopt INTEGER NOT NULL)",
-  "DROP TABLE IF EXISTS bank_log", // nieuw-V8R8 — testlog van nieuw-V8R2 opgeruimd
+  "DROP TABLE IF EXISTS bank_log", // beide-V4R6 — testlog van beide-V3R7 opgeruimd
 ];
 const START_MS = 30 * 60 * 1000;
 const WACHT_MS = 2 * 3600 * 1000;
@@ -146,14 +146,14 @@ function terugPagina(gelukt, tekst) {
 }
 
 // Terugkeer van de bank (/bank/terug?code=…&state=…), vóór de inlogcontrole. Geeft null als de state hier niet bekend
-// is (geen D1, verlopen of van vóór nieuw-V8R0): dan rondt de app de koppeling zelf af zoals voorheen.
+// is (geen D1, verlopen of van vóór beide-V3R4): dan rondt de app de koppeling zelf af zoals voorheen.
 export async function bankTerugRoute(request, env, url) {
   const state = String(url.searchParams.get("state") || "").slice(0, 100);
   if (!env.DB || !state) return null;
   await zorgVoorBankTabellen(env.DB);
   const nu = Date.now();
   await env.DB.prepare("DELETE FROM bank_start WHERE verloopt < ?").bind(nu).run();
-  // nieuw-V8R1 — op iPad komt dezelfde terugkeer soms twee keer binnen (eerst in het browservenster van Ponto, daarna in
+  // beide-V3R6 — op iPad komt dezelfde terugkeer soms twee keer binnen (eerst in het browservenster van Ponto, daarna in
   // de app). De eerste rondt af; de state blijft gemarkeerd ("klaar:") zodat de tweede gewoon naar de app gaat.
   const start = await env.DB.prepare("UPDATE bank_start SET psu = 'klaar:' || psu WHERE state = ? AND psu NOT LIKE 'klaar:%' RETURNING email, bank, psu, pkce").bind(state).first();
   const ingelogd = String(request.headers.get("Cf-Access-Authenticated-User-Email") || "").trim().toLowerCase();
@@ -191,7 +191,7 @@ export async function bankRoute(request, env, url) {
   if (!email) return json({ ok: false, fout: "Niet ingelogd" }, 401);
   const pad = url.pathname.replace(/^\/api\/bank/, "") || "/";
 
-  // nieuw-V8R0 — koppelingen die de Worker na terugkeer van de bank heeft afgerond (zie bankTerugRoute) ophalen; ze
+  // beide-V3R4 — koppelingen die de Worker na terugkeer van de bank heeft afgerond (zie bankTerugRoute) ophalen; ze
   // worden daarbij van de server verwijderd.
   if (pad === "/wachtend" && request.method === "GET") {
     if (!env.DB) return json({ ok: true, koppelingen: [], fouten: [] });
@@ -207,7 +207,7 @@ export async function bankRoute(request, env, url) {
     for (const x of items.filter((i) => i.fout)) await env.DB.prepare("DELETE FROM bank_wachtend WHERE id = ?").bind(x.wachtId).run();
     return json({ ok: true, koppelingen: items.filter((x) => !x.fout).map(({ wachtId, state: _s, ...k }) => k), fouten: items.filter((x) => x.fout).map((x) => x.fout) });
   }
-  // nieuw-V8R1 — eerste gebruik van een klaargezette koppeling: het klaargezette exemplaar weghalen.
+  // beide-V3R6 — eerste gebruik van een klaargezette koppeling: het klaargezette exemplaar weghalen.
   if ((pad === "/transacties" || pad === "/verwijder") && request.method === "POST" && env.DB) {
     try {
       const t = String((await request.clone().json().catch(() => ({}))).token || "");
@@ -220,7 +220,7 @@ export async function bankRoute(request, env, url) {
 
   const startBody = pad === "/start" && request.method === "POST" ? request.clone().json().catch(() => ({})) : null;
   const antwoord = await bankRouteAanbieder(request, env, url, email, pad);
-  // nieuw-V8R0 — bij /start de state bewaren, zodat de Worker de terugkeer zelf kan afronden.
+  // beide-V3R4 — bij /start de state bewaren, zodat de Worker de terugkeer zelf kan afronden.
   if (startBody && antwoord.ok && env.DB) {
     try {
       const s = await antwoord.clone().json();

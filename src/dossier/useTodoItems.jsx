@@ -9,6 +9,7 @@ export function useTodoItems({
     verwachteLening, setVerwachteLening, verwachteAOV, setVerwachteAOV, transactions, korRegeling, btwSettingsSectionRef,
     btwVerlegd, incomeBtwTarieven, meerdereTarievenBevestigd, incomeRatesSectionRef, confidenceSummary, confidenceSectionRef,
     activeYear, quarterlyBtwData, kwartaalStatus,
+    btwAan = true, // beide-V1R3 — false in een privédossier: geen KOR/BTW-punten
 }) {
   return useMemo(() => {
     const items = [];
@@ -87,13 +88,13 @@ export function useTodoItems({
         onRemove: () => setVerwachteAOV(null),
       });
     }
-    if (transactions.length > 0 && korRegeling === null) {
+    if (btwAan && transactions.length > 0 && korRegeling === null) {
       items.push({ key: "kor", text: "KOR-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
-    if (transactions.length > 0 && korRegeling === false && btwVerlegd === null) {
+    if (btwAan && transactions.length > 0 && korRegeling === false && btwVerlegd === null) {
       items.push({ key: "btwVerlegd", text: "BTW-verlegd-vraag nog niet beantwoord", ref: btwSettingsSectionRef });
     }
-    if ((incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd) {
+    if (btwAan && (incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd) {
       items.push({
         key: "meerdereTarieven",
         text: `Je gaf aan dat je omzet onder ${incomeBtwTarieven.length} verschillende BTW-tarieven valt — controleer welke klanten bij welk tarief horen`,
@@ -115,6 +116,6 @@ export function useTodoItems({
     activeYear, korRegeling, quarterlyBtwData, kwartaalStatus, transactions, btwVerlegd,
     loanSummary, loanDetails, leaseSummary, leaseDetails, confirmedLeaseTypeKeys,
     confidenceSummary, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV,
-    incomeBtwTarieven, meerdereTarievenBevestigd,
+    incomeBtwTarieven, meerdereTarievenBevestigd, btwAan,
   ]);
 }

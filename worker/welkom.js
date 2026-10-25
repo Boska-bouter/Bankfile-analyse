@@ -1,4 +1,4 @@
-// V8R4 (ook beide-V4R0) — welkomstpagina (wens Boska 24-10): wie niet is ingelogd, ziet wat de app doet, de soorten dossier,
+// beide-V4R0 (ook zakelijk-V8R4) — welkomstpagina (wens Boska 24-10): wie niet is ingelogd, ziet wat de app doet, de soorten dossier,
 // de abonnementen met prijs en hoe het met je gegevens zit, met het inlogvak ernaast (breed) of erboven (smal).
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
@@ -93,7 +93,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
   <section aria-labelledby="wat">
     <h2 id="wat">Wat doet Bankoverzicht?</h2>
     <div class="stappen">
-      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van je bank (CSV/XLS, MT940 of CAMT.053) of via de automatische bankkoppeling (in ontwikkeling). Ook van meerdere rekeningen en jaren.</p></div>
+      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van je bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
       <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>
       <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar je geld vandaan komt en heen gaat, per maand en categorie, en indicatieve belastingoverzichten. Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
     </div>

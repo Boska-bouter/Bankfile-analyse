@@ -1095,7 +1095,7 @@ function buildBijlageToelichtingenHtml() {
   </p>`;
 }
 
-// V8R5 — soort: "pdf" | "excel" | "html" (zie download.js).
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
 export function downloadAangiftevoorstel(html, years, soort = "html") {
   return downloadRapport({ soort, html, naam: `Indicatieve_aangifteberekening_${years.join("-")}` });
 }

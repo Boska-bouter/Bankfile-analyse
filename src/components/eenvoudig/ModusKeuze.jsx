@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 
 // nieuw-V1R02 — eerste vraag bij een nieuw dossier: eenvoudig of uitgebreid. Bepaalt welke wizard volgt
-// (verkort of volledig) en in welke weergave het dossier opent. V7R8 — alleen Eenvoudig → Uitgebreid, één keer en
-// na bevestiging (OmzettenUitgebreid.jsx); terug kan niet. Na laden alleen getoond voor een Eenvoudig-dossier.
-export default function ModusKeuze({ onKies, onClose, geladen = false, huidig = null }) {
+// (verkort of volledig) en in welke weergave het dossier opent. beide-V3R2 / V7R8 — alleen Eenvoudig → Uitgebreid,
+// één keer en na bevestiging (OmzettenUitgebreid.jsx); terug kan niet. Na laden alleen getoond voor een Eenvoudig-dossier.
+export default function ModusKeuze({ onKies, onClose, geladen = false, huidig = null, soort = "zakelijk" }) {
   const Kaart = ({ modus, titel, tekst, punten }) => (
     <button type="button" onClick={() => onKies(modus)} className={`flex-1 rounded-2xl border-2 p-5 text-left hover:border-teal-600 hover:bg-teal-50 ${huidig === modus ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}>
       {huidig === modus && <span className="mb-1 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">Zo opgeslagen</span>}
@@ -19,10 +19,10 @@ export default function ModusKeuze({ onKies, onClose, geladen = false, huidig = 
         <h2 className="text-xl font-bold">{geladen ? "Dossier geladen" : "Nieuw dossier"}</h2>
         <p className="mb-4 text-sm text-slate-600">{geladen ? "Dit dossier staat in Eenvoudig. Je kunt het zo openen, of omzetten naar Uitgebreid." : "Hoe wil je werken?"} Eenvoudig kun je later één keer omzetten naar Uitgebreid; er gaat niets verloren. Terug naar Eenvoudig kan niet.</p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Kaart modus="eenvoudig" titel="Eenvoudig" tekst="Ik wil snel zien wat ik verdiend heb en ongeveer aan belasting en BTW moet betalen."
+          <Kaart modus="eenvoudig" titel="Eenvoudig" tekst={soort === "prive" ? "Ik wil snel zien wat er binnenkomt en uitgaat, en waar mijn geld naartoe gaat." : "Ik wil snel zien wat ik verdiend heb en ongeveer aan belasting en BTW moet betalen."}
             punten={geladen ? ["Vier stappen", "Eén vraag tegelijk", "Uitkomst in gewone taal"] : ["Korte wizard met alleen de nodige vragen", "Daarna één vraag tegelijk", "Uitkomst in gewone taal"]} />
-          <Kaart modus="uitgebreid" titel={geladen ? "Omzetten naar Uitgebreid" : "Uitgebreid"} tekst="Volledige controle, voor de adviseur of een aangifte."
-            punten={geladen ? ["Alle controles en instellingen", "Aangifteberekening en onderbouwing"] : ["Volledige wizard", "Alle controles en instellingen", "Aangifteberekening en onderbouwing"]} />
+          <Kaart modus="uitgebreid" titel={geladen ? "Omzetten naar Uitgebreid" : "Uitgebreid"} tekst={soort === "prive" ? "Volledig overzicht met alle controles, ook voor de aangifte inkomstenbelasting." : "Volledige controle, voor de adviseur of een aangifte."}
+            punten={[...(geladen ? [] : ["Volledige wizard"]), "Alle controles en instellingen", soort === "prive" ? "Vaste lasten, box 3 en meerdere jaren" : "Aangifteberekening en onderbouwing"]} />
         </div>
       </div>
     </div>

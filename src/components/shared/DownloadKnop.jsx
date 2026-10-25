@@ -1,4 +1,4 @@
-// V8R5 (ook beide-V4R1) — één knop Downloaden met keuze PDF, Excel of HTML (wens Boska 24-10), voor alle rapporten.
+// beide-V4R1 / V8R5 — één knop Downloaden met keuze PDF, Excel of HTML (wens Boska 24-10), voor alle rapporten.
 // onKies(soort) doet het werk (zie reports/download.js); zolang dat loopt staat de knop op "Bezig…".
 import { useEffect, useRef, useState } from "react";
 import { Download, ChevronDown, Loader2 } from "lucide-react";

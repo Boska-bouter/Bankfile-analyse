@@ -28,7 +28,7 @@ export function useOwnAccountsElsewhereByFile(p) {
     // rekening ook echt geladen wordt.
     const extra = (eigenRekeningenExtra || [])
       .filter((r) => r.iban && !entries.some((e) => ibansMatch(e.iban, r.iban)))
-      .map((r) => ({ iban: r.iban, accountType: r.accountType, isLoadedFile: false }));
+      .map((r) => ({ iban: r.iban, accountType: r.accountType, soort: r.soort, isLoadedFile: false })); // beide-V3R3 — soort (privé)
     const result = {};
     for (const pf of parsedFiles) {
       result[pf.fileName] = [

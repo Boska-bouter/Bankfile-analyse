@@ -70,7 +70,7 @@ ${openHtml}
 </body></html>`;
 }
 
-// V8R5 — soort: "pdf" | "excel" | "html" (zie download.js).
+// beide-V4R1 — soort: "pdf" | "excel" | "html" (zie download.js).
 export function downloadKlantSamenvatting(html, jaar, soort = "html") {
   return downloadRapport({ soort, html, naam: `Samenvatting_${jaar}` });
 }

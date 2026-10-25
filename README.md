@@ -90,3 +90,8 @@ betrokken bij de financiële verwerking, en er wordt niets extern verstuurd.
 - Importcontrole-scherm aanwezig (samenvattend overzicht vóór classificatie, met saldo-aansluiting
   per bestand en tussen bestanden)
 - `App.jsx` verder opsplitsen naarmate de tool groeit — staat nog open
+
+## Tests (sinds beide-V1R0)
+
+`npm test` draait de tests in `tests/`: een vaste controle dat de zakelijke berekening niet verandert
+(`tests/vastgelegd/zakelijk.json`), het dossierprofiel (`src/modus/`) en de rechten per soort in de Worker.

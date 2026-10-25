@@ -1,4 +1,4 @@
-// V7R8 / beide-V3R2 — Eenvoudig → Uitgebreid gaat maar één kant op (besluit Boska 23-10): heen en weer wisselen gaf
+// beide-V3R2 / V7R8 — Eenvoudig → Uitgebreid gaat maar één kant op (besluit Boska 23-10): heen en weer wisselen gaf
 // open vragen die terugkwamen en posten die opnieuw werden gevraagd. Daarom eerst deze bevestiging.
 export default function OmzettenUitgebreid({ onJa, onNee }) {
   return (

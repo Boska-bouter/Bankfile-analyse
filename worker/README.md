@@ -148,3 +148,23 @@ Banking. Bestaande Enable Banking-koppelingen blijven werken zolang die secrets 
    een eigen certificaat en eigen client-ID/secret).
 Ponto vervangt het refresh token bij elk gebruik; de Worker geeft daarom na elke ophaalactie een nieuw koppeltoken terug
 dat de app in het dossier zet. Laad je een oudere dossierkopie, dan is de koppeling daarin niet meer bruikbaar: opnieuw koppelen.
+
+## Zakelijk en privé (beide-V1R0)
+
+Zakelijk en privé zijn aparte abonnementen. Bij het aanmelden kiest iemand verplicht **Zakelijk** (eenmanszaak, zzp, BV) of
+**Privé** (alleen eigen huishouden). Eén account (mailadres) kan beide hebben; via `/aanmelden` (kaart-icoon onderin de
+zijbalk) vraagt iemand met toegang een tweede abonnement aan.
+
+- D1-tabel `rechten` krijgt vanzelf de kolommen `gebruik` (zakelijk, prive of beide), `aanvraag_gebruik` en
+  `prive_eenvoudig`, `prive_uitgebreid`, `prive_koppelen`, `prive_geldig_tot`. De bestaande kolommen zijn zakelijk.
+  Bestaande rijen worden bij het eerste gebruik op zakelijk gezet. Je hoeft geen SQL uit te voeren.
+- `/api/rol` geeft naast de bekende velden ook `soorten` ({zakelijk, prive}, elk eenvoudig/uitgebreid/koppelen) en `gebruik`.
+- Prijzen per soort in de variabele `PRIJZEN`, bijv. `{"zakelijk":{"uitgebreid":4.95},"prive":{"uitgebreid":2.95}}`.
+  De oude vorm zonder soort (`{"uitgebreid":4.95}`) geldt voor zakelijk. Zonder variabele is alles €0.
+
+### Voorwaarden per soort (beide-V1R9)
+
+Privé heeft eigen gebruiksvoorwaarden (`src/content/voorwaardenPrive.jsx`, versie `VOORWAARDEN_PRIVE_VERSIE`). Wie een
+privéabonnement heeft, gaat daar één keer mee akkoord; wie beide heeft, ziet beide teksten en geeft één akkoord. Het akkoord
+staat in de D1-tabel `voorwaarden_akkoord`: `versie`/`tijd` voor zakelijk, `versie_prive`/`tijd_prive` voor privé. De
+Worker voegt die twee kolommen zelf toe; geen SQL nodig. `/api/rol` geeft `voorwaarden` (zakelijk) en `voorwaardenPrive`.

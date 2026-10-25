@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { kaartenVolgensProfiel } from "../modus/index.js";
 import { AlertTriangle, Copy, HelpCircle, Settings, Users } from "lucide-react";
 import CardIcon from "../components/shared/CardIcon.jsx";
 import { eur } from "../utils/amounts.js";
@@ -18,7 +19,7 @@ export function useDashboardCards(p) {
     vpbStatus, yearlyProgress, yearlySummary, zvwStatus,
   } = p;
 
-  return useMemo(() => {
+  const kaarten = useMemo(() => {
     if (transactions.length === 0) return [];
     const yearProgress = activeYear ? yearlyProgress[activeYear] : null;
     const quartersOpenCount = checklistData?.quartersOpen?.length || 0;
@@ -426,4 +427,7 @@ export function useDashboardCards(p) {
     quarterlyBtwData,
     startBtwOverzicht,
   ]);
+  // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
+  const keuze = p.modus?.kaarten?.overzicht ?? null;
+  return useMemo(() => kaartenVolgensProfiel(kaarten, keuze), [kaarten, keuze]);
 }

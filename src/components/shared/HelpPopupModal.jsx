@@ -3,8 +3,8 @@ import { HELP_CHAPTERS } from "../../content/helpChapters.jsx";
 
 // Toont alleen de uitleg voor dit ene onderdeel — opent bewust NOOIT het volledige
 // "Help en uitleg"-paneel, dat blijft een apart, los te openen overzicht.
-export default function HelpPopupModal({ chapterKey, onClose }) {
-  const chapter = HELP_CHAPTERS.find((c) => c.key === chapterKey);
+export default function HelpPopupModal({ chapterKey, onClose, chapters = HELP_CHAPTERS }) {
+  const chapter = chapters.find((c) => c.key === chapterKey);
   if (!chapter) return null;
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>

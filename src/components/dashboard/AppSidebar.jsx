@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard } from "lucide-react";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -65,6 +65,7 @@ function TabItem({ tabKey, active, badge, onClick }) {
 export default function AppSidebar({
   orgName = `© ${new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden`,
   rekeninghouderNaam,
+  dossierSoortNaam = null, // beide-V1R2 — "Zakelijk dossier" / "Privé dossier" (alleen getoond als dat iets zegt)
   onEditRekeninghouder,
   onEenvoudig,
   weergave,
@@ -79,7 +80,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null, abonnement = null,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null, onAbonnementen = null, abonnement = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -169,6 +170,7 @@ export default function AppSidebar({
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
+        {dossierSoortNaam && <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">{dossierSoortNaam}</span>}
         {rekeninghouderNaam ? (
           <div className="flex flex-col gap-0.5">
             <span className="text-slate-400 text-xs">Rekeninghouder</span>
@@ -389,14 +391,21 @@ export default function AppSidebar({
           {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
           {onPasskey && <IcoonKnop onClick={onPasskey} label="Inloggen instellen (wachtwoord en passkey)" Icon={KeyRound} />}
+          {/* beide-V1R0 — abonnementen bekijken en er een aanvragen (bijv. privé naast zakelijk) */}
+          {onAbonnementen && <IcoonKnop onClick={onAbonnementen} label="Abonnementen (zakelijk en privé)" Icon={CreditCard} />}
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>
         {ingelogdAls && <p className="sb-label text-[11px] leading-snug text-slate-400 break-all">Ingelogd als {ingelogdAls}</p>}
-        {/* V7R5 — welk abonnement je hebt */}
-        {abonnement?.length > 0 && <p className="sb-label text-[11px] leading-snug text-slate-400">Abonnement: {abonnement.join(" · ")}</p>}
+        {/* beide-V2R6 / V7R5 — welk abonnement je hebt; klikken opent de abonnementenpagina */}
+        {abonnement?.length > 0 && (
+          <div className="sb-label text-[11px] leading-snug text-slate-400">
+            <span>Abonnement: </span>{abonnement.join(" · ")}
+            {onAbonnementen && <> · <button type="button" onClick={onAbonnementen} style={{ minHeight: 0 }} className="underline hover:text-white">bekijken of wijzigen</button></>}
+          </div>
+        )}
         <p className="sb-label text-[11px] leading-snug text-slate-400" title={`Versie van de app: ${APP_RELEASE}`}>{orgName} · {APP_RELEASE}</p>
       </div>
       {sbTip && (

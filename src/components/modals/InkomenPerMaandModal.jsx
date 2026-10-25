@@ -154,7 +154,7 @@ function DetailPagina({ data, jaar, klantNaam, onTerug, onPrint }) {
           <ArrowLeft className="h-4 w-4" /> Inkomen per maand · Privé-uitgaven via zakelijke rekening {jaar}
         </button>
         <div className="flex gap-2">
-          {/* V8R5 — één knop: PDF, Excel (eigen export met de boekingen) of HTML */}
+          {/* beide-V4R1 — één knop: PDF, Excel (eigen export met de boekingen) of HTML */}
           <DownloadKnop onKies={(soort) => downloadRapport({ soort, html, naam: `Privé-uitgaven via zakelijk ${jaar}${klantNaam ? ` ${klantNaam}` : ""}`, excel: naarExcel })} />
           {onPrint && <button type="button" onClick={() => onPrint(html())} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
         </div>
@@ -337,7 +337,7 @@ export default function InkomenPerMaandModal({
             ) : <span className="text-sm text-slate-600">{jaar}</span>}
           </div>
           <div className="flex gap-2 items-center">
-            {/* V8R5 — één knop: PDF, Excel of HTML; bij meer jaren eerst de jaarkeuze */}
+            {/* beide-V4R1 — één knop: PDF, Excel of HTML; bij meer jaren eerst de jaarkeuze */}
             <DownloadKnop onKies={exporteer} />
             {onPrint && <button type="button" onClick={() => exporteer("print")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>}
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200" title="Sluiten"><X className="h-5 w-5" /></button>

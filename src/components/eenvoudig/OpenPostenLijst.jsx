@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 
-// V7R9 / beide-V3R3 — wens Boska 23-10: alle open vragen van Nakijken in één lijst, zodat je de laatste kleine posten
+// beide-V3R3 / V7R9 — wens Boska 23-10: alle open vragen van Nakijken in één lijst, zodat je de laatste kleine posten
 // in één keer kunt indelen (bijv. allemaal "Overige privé-uitgaven") in plaats van één voor één.
 // `keuzesVoor(vraag)` geeft dezelfde knoppen als bij de losse vraag; `andersKeuze(categorie)` die van "Iets anders…".
 export default function OpenPostenLijst({ vragen, jaar, keuzesVoor, andersKeuze, onToepassen, onClose }) {
