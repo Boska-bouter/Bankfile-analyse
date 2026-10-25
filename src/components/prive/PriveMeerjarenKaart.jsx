@@ -4,7 +4,7 @@ import { useState } from "react";
 import { eur } from "../../utils/amounts.js";
 import { KAART } from "./PriveKaarten.jsx";
 import { metTeken as teken } from "../../reports/prive/opmaak.js";
-import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL } from "../../calc/prive/budget.js";
+import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL, VERSCHOVEN_LABEL } from "../../calc/prive/budget.js";
 
 export default function PriveMeerjarenKaart({ jaren, perJaar }) {
   const [perHoofd, setPerHoofd] = useState(false);
@@ -34,6 +34,7 @@ export default function PriveMeerjarenKaart({ jaren, perJaar }) {
             {rij(overLabel(jaren.map((j) => tot(j).over)), (j) => teken(tot(j).over), "font-semibold")}
             {rij(sparenLabel(jaren.map((j) => tot(j).sparen)), (j) => teken(tot(j).sparen, true))}
             {jaren.some((j) => Math.abs(tot(j).eigenBetaal || 0) >= 0.5) && rij(EIGEN_BETAAL_LABEL, (j) => teken(tot(j).eigenBetaal || 0))}
+            {jaren.some((j) => Math.abs(tot(j).verschoven || 0) >= 0.5) && rij(VERSCHOVEN_LABEL, (j) => teken(tot(j).verschoven || 0))}
             {rij(SALDO_LABEL, (j) => teken(tot(j).saldo))}
             {perHoofd && rij(VASTE_LASTEN_LABEL, (j) => teken(tot(j).vasteLasten, true), "text-xs text-slate-500")}
             {rij("Inkomstenbelasting: terug (−) of bij (+)", (j) => eur(perJaar[j].belasting.verschil))}

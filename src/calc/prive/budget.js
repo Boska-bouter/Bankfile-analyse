@@ -16,11 +16,32 @@ export const hoofdLabel = (hoofd, b) => (allemaal(b, (x) => x < 0) ? `${hoofd} (
 // belegt en wat er met het saldo van je rekening gebeurt, staat eronder (zie SALDO_LABEL).
 export const overLabel = (b) => (allemaal(b, (x) => x >= 0) ? "Over (inkomsten min uitgaven)" : allemaal(b, (x) => x < 0) ? "Meer uitgegeven dan binnengekomen" : "Over (+) of meer uitgegeven (−)");
 export const SALDO_LABEL = "Verandering saldo van je rekening";
+export const VERSCHOVEN_LABEL = "Rond de jaarwisseling in een ander jaar geteld";
 export const VASTE_LASTEN_LABEL = "Vaste lasten (zit al in de uitgaven)";
 
 // beide-V5R2 — eigenBetaal: saldo van overboekingen met je andere (betaal)rekeningen; telt niet mee in het budget, maar
 // over − sparen + eigenBetaal = saldo: de verandering van het saldo van je geladen rekening(en).
-const leeg = () => ({ inkomsten: 0, uitgaven: 0, vasteLasten: 0, sparen: 0, over: 0, eigenBetaal: 0, saldo: 0 });
+const leeg = () => ({ inkomsten: 0, uitgaven: 0, vasteLasten: 0, sparen: 0, over: 0, eigenBetaal: 0, saldo: 0, verschoven: 0 });
+
+// beide-V5R6 — een uitgave rond de jaarwisseling die zelf zegt voor welk jaar hij is ("PREMIE 2026." betaald op
+// 29-12-2025, "contributie 2025" betaald in januari 2025 telt al goed): in december met het volgende jaar, of in januari
+// met het vorige jaar in de omschrijving, telt in het budget van dat jaar (wens Boska 25-10). Alleen het budget; de
+// belasting rekent met de betaaldatum. Niet voor inkomen en belastingen (een teruggaaf "IB 2024" is geld van nu).
+const datumVan = (t) => (t.date instanceof Date ? t.date : new Date(t.date));
+export function budgetJaarVan(t, jaren = null) {
+  const d = datumVan(t);
+  const jaar = t.year ?? d.getFullYear();
+  const maand = d.getMonth();
+  if ((maand !== 11 && maand !== 0) || !(Number(t.amount) < 0) || budgetSoort(t.category) !== "uitgave") return jaar;
+  if (["Belastingen", "Giften"].includes(PRIVE_WEERGAVE.hoofdVan(t.category))) return jaar;
+  const tekst = `${t.description || ""} ${t.fullDescription || ""}`;
+  const noemt = (j) => new RegExp(`(^|[^0-9])${j}([^0-9]|$)`).test(tekst);
+  const ander = maand === 11 ? jaar + 1 : jaar - 1;
+  // "vanaf 2025" zegt niet voor welk jaar; en een jaar zonder gegevens in het dossier laat de uitgave niet verdwijnen
+  if (new RegExp(`(vanaf|sinds|per)\\s+(\\d{1,2}[-\\s/]\\w+[-\\s/])?${ander}`, "i").test(tekst)) return jaar;
+  if (jaren && !jaren.has(ander)) return jaar;
+  return noemt(ander) && !noemt(jaar) ? ander : jaar;
+}
 export const EIGEN_BETAAL_LABEL = "Overboekingen met je andere betaalrekeningen (telt niet mee)";
 
 // soort van een boeking in het budget: "inkomen" | "uitgave" | "sparen" | null (telt niet mee)
@@ -42,8 +63,17 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
   const uitgaven = new Map(); // hoofd → Map(categorie → bedrag)
   const vasteLasten = new Map();
   let aantal = 0;
+  const verschovenUit = [], verschovenIn = [];
+  const jaren = new Set(transacties.map((t) => t.year));
   for (const t of transacties) {
-    if (t.year !== jaar) continue;
+    const bj = budgetJaarVan(t, jaren);
+    if (t.year !== jaar && bj !== jaar) continue;
+    if (bj !== t.year) {
+      // verschoven: in het betaaljaar alleen in het saldo, in het budgetjaar als uitgave (in januari of december)
+      const bedrag = Number(t.amount) || 0;
+      if (t.year === jaar) { totaal.verschoven += bedrag; verschovenUit.push(t); continue; }
+      totaal.verschoven -= bedrag; verschovenIn.push(t);
+    }
     let soort = budgetSoort(t.category);
     if (t.category === "Interne overboeking") {
       const m0 = perMaand[(t.date instanceof Date ? t.date : new Date(t.date)).getMonth()] || perMaand[0];
@@ -51,7 +81,7 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
     }
     if (!soort) continue;
     aantal++;
-    const m = perMaand[(t.date instanceof Date ? t.date : new Date(t.date)).getMonth()] || perMaand[0];
+    const m = perMaand[bj !== t.year ? (bj > t.year ? 0 : 11) : datumVan(t).getMonth()] || perMaand[0];
     const bedrag = Number(t.amount) || 0;
     // Geld dat binnenkomt in een algemene categorie (hoofd "Overig", bijv. "Nog te beoordelen") is inkomen,
     // geen negatieve uitgave; een terugbetaling in een gewone uitgavencategorie verlaagt die uitgave wel.
@@ -74,7 +104,7 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
       }
     }
   }
-  for (const x of [totaal, ...perMaand]) { x.over = x.inkomsten - x.uitgaven; x.saldo = x.over - x.sparen + x.eigenBetaal; }
+  for (const x of [totaal, ...perMaand]) { x.over = x.inkomsten - x.uitgaven; x.saldo = x.over - x.sparen + x.eigenBetaal + x.verschoven; }
   const metLabel = (map) => [...map.entries()].map(([naam, bedrag]) => ({ naam, label: PRIVE_WEERGAVE.label(naam), bedrag })).sort((a, b) => b.bedrag - a.bedrag);
   const volgorde = PRIVE_WEERGAVE.hoofden;
   const uitgavenPerHoofd = [...uitgaven.entries()]
@@ -82,7 +112,7 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
     .sort((a, b) => b.bedrag - a.bedrag || volgorde.indexOf(a.hoofd) - volgorde.indexOf(b.hoofd));
   const maandenMetData = new Set(transacties.filter((t) => t.year === jaar).map((t) => (t.date instanceof Date ? t.date : new Date(t.date)).getMonth()));
   return {
-    jaar, totaal, perMaand, aantal, maanden: maandenMetData.size,
+    jaar, totaal, perMaand, aantal, maanden: maandenMetData.size, verschovenUit, verschovenIn,
     inkomstenPerCategorie: metLabel(inkomsten),
     uitgavenPerHoofd,
     vasteLastenPerCategorie: metLabel(vasteLasten),

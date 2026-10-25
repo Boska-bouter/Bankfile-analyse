@@ -1,7 +1,7 @@
 // beide-V1R8 (fase 7) — budgetrapport (print) en Excel-export voor een privédossier: per jaar inkomsten,
 // uitgaven per categorie, vaste lasten, sparen, per maand, en de belastingindicatie. Plus de samenvatting.
 import { esc, bedrag, metTeken, rij, kopRij, document } from "./opmaak.js";
-import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL } from "../../calc/prive/budget.js";
+import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL, VERSCHOVEN_LABEL } from "../../calc/prive/budget.js";
 import { maandRegels, MAANDEN } from "./maandoverzicht.js";
 
 function jaarBudget(jaar, d) {
@@ -14,7 +14,7 @@ function jaarBudget(jaar, d) {
   const maand = maandRegels(b).map((r) => rij(r.maand, [bedrag(r.inkomsten), bedrag(r.uitgaven), bedrag(r.vasteLasten), bedrag(r.sparen), bedrag(r.over)], r.totaal ? "sterk" : "")).join("");
   const v = d.belasting.verschil;
   return `<section class="jaar"><h2>${esc(jaar)}</h2>
-<table>${rij("Inkomsten", [metTeken(t.inkomsten)])}${b.inkomstenPerCategorie.map((c) => rij(c.label, [metTeken(c.bedrag)], "sub")).join("")}${rij("Uitgaven", [metTeken(t.uitgaven, true)])}${rij(overLabel(t.over), [metTeken(t.over)], "sterk")}${rij(sparenLabel(t.sparen), [metTeken(t.sparen, true)])}${Math.abs(t.eigenBetaal || 0) >= 0.5 ? rij(EIGEN_BETAAL_LABEL, [metTeken(t.eigenBetaal)]) : ""}${rij(SALDO_LABEL, [metTeken(t.saldo)])}</table>
+<table>${rij("Inkomsten", [metTeken(t.inkomsten)])}${b.inkomstenPerCategorie.map((c) => rij(c.label, [metTeken(c.bedrag)], "sub")).join("")}${rij("Uitgaven", [metTeken(t.uitgaven, true)])}${rij(overLabel(t.over), [metTeken(t.over)], "sterk")}${rij(sparenLabel(t.sparen), [metTeken(t.sparen, true)])}${Math.abs(t.eigenBetaal || 0) >= 0.5 ? rij(EIGEN_BETAAL_LABEL, [metTeken(t.eigenBetaal)]) : ""}${Math.abs(t.verschoven || 0) >= 0.5 ? rij(VERSCHOVEN_LABEL, [metTeken(t.verschoven)]) : ""}${rij(SALDO_LABEL, [metTeken(t.saldo)])}</table>
 <h3>Uitgaven per categorie</h3><table>${uitgaven || rij("Geen uitgaven", [""])}</table>
 <h3>Vaste lasten</h3><p class="sub">Deze bedragen zitten al in de uitgaven hierboven.</p><table>${b.vasteLastenPerCategorie.map((c) => rij(c.label, [metTeken(c.bedrag, true)])).join("")}${rij("Totaal vaste lasten", [metTeken(t.vasteLasten, true)], "sterk")}</table>
 <h3>Per maand</h3><table><tr><th></th><th class="num">Inkomsten</th><th class="num">Uitgaven</th><th class="num">Vast</th><th class="num">Sparen</th><th class="num">Over</th></tr>${maand}</table>
@@ -45,6 +45,7 @@ ${hoofden.map((h) => r(hoofdLabel(h, js.map((j) => perHoofd(j, h))), (j) => metT
 ${r(overLabel(js.map((j) => tot(j).over)), (j) => metTeken(tot(j).over), "sterk")}
 ${r(sparenLabel(js.map((j) => tot(j).sparen)), (j) => metTeken(tot(j).sparen, true))}
 ${js.some((j) => Math.abs(tot(j).eigenBetaal || 0) >= 0.5) ? r(EIGEN_BETAAL_LABEL, (j) => metTeken(tot(j).eigenBetaal || 0)) : ""}
+${js.some((j) => Math.abs(tot(j).verschoven || 0) >= 0.5) ? r(VERSCHOVEN_LABEL, (j) => metTeken(tot(j).verschoven || 0)) : ""}
 ${r(SALDO_LABEL, (j) => metTeken(tot(j).saldo))}
 ${r(VASTE_LASTEN_LABEL, (j) => metTeken(tot(j).vasteLasten, true), "sub")}</table>
 <h2>Indicatie inkomstenbelasting</h2><table>${kopRij(js)}
@@ -76,6 +77,7 @@ export async function exportPriveExcel({ jaren, overzicht, transacties, label })
       { Post: overLabel(b.totaal.over), Bedrag: b.totaal.over },
       { Post: sparenLabel(b.totaal.sparen), Bedrag: -b.totaal.sparen },
       { Post: EIGEN_BETAAL_LABEL, Bedrag: b.totaal.eigenBetaal },
+      { Post: VERSCHOVEN_LABEL, Bedrag: b.totaal.verschoven },
       { Post: SALDO_LABEL, Bedrag: b.totaal.saldo },
       { Post: VASTE_LASTEN_LABEL, Bedrag: -b.totaal.vasteLasten },
       { Post: "" },

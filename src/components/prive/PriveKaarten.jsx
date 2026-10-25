@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import { hoofdKleur } from "../../classification/categories.js";
-import { sparenLabel, hoofdLabel } from "../../calc/prive/budget.js";
+import { sparenLabel, hoofdLabel, budgetJaarVan } from "../../calc/prive/budget.js";
 
 export const KAART = "rounded-paneel border border-slate-200 bg-white p-4 shadow-sm space-y-3";
 const KOP = "text-sm font-semibold text-slate-900";
@@ -39,9 +39,17 @@ export function InkomstenUitgavenKaart({ jaar, budget, onPerMaand }) {
       <div className="rounded-lg bg-slate-50 px-2.5 py-2 space-y-1">
         <Regel label={sparenLabel(t.sparen)} bedrag={t.sparen} teken="− " />
         {Math.abs(t.eigenBetaal || 0) >= 0.5 && <Regel label="Van (+) of naar (−) je andere betaalrekeningen" bedrag={t.eigenBetaal} teken="+ " />}
+        {Math.abs(t.verschoven || 0) >= 0.5 && <Regel label="Rond de jaarwisseling in een ander jaar geteld" bedrag={t.verschoven} teken="+ " />}
         <Regel label="Verandering saldo van je rekening" bedrag={t.saldo} teken="+ " />
         <p className="text-xs text-slate-500">Wat over is, gaat naar sparen en beleggen of blijft op je rekening. Zet je in een jaar meer opzij dan er over is, dan daalt het saldo van je rekening; dat is geen tekort.</p>
       </div>
+      {/* beide-V5R6 — uitgaven die volgens de omschrijving bij een ander jaar horen ("PREMIE 2026." in december 2025) */}
+      {[...(budget.verschovenUit || []), ...(budget.verschovenIn || [])].length > 0 && (
+        <ul className="text-xs text-slate-500 space-y-0.5">
+          {(budget.verschovenUit || []).map((x) => <li key={`u${x.id}`}>{(x.description || x.counterparty || "").slice(0, 40)} ({x.date.toLocaleDateString("nl-NL")}, {eur(x.amount)}) telt mee in {budgetJaarVan(x)}.</li>)}
+          {(budget.verschovenIn || []).map((x) => <li key={`i${x.id}`}>{(x.description || x.counterparty || "").slice(0, 40)} (betaald {x.date.toLocaleDateString("nl-NL")}, {eur(x.amount)}) telt mee in {jaar}.</li>)}
+        </ul>
+      )}
       <p className="text-xs text-slate-500">Gemiddeld per maand ({maanden} {maanden === 1 ? "maand" : "maanden"} met gegevens): {eur(t.inkomsten / maanden)} in, {eur(t.uitgaven / maanden)} uit.</p>
       {budget.inkomstenPerCategorie.length > 0 && (
         <ul className="text-xs text-slate-600 space-y-0.5">
