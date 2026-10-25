@@ -303,7 +303,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, geldigTot: abonnementTot, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, bankkoppeling: bankkoppelingAan, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, geldigTot: abonnementTot, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
   const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
@@ -3464,14 +3464,15 @@ export default function App() {
       title: parsedFiles.length > 0 ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen",
       message: modus.rekeningen.vraagSoort
         ? <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>
-        : <p>Kies een of meer bankbestanden (CSV, MT940 of CAMT), of haal je transacties rechtstreeks bij je bank op.</p>,
+        : <p>Kies een of meer bankbestanden (CSV, MT940 of CAMT){bankkoppelingAan ? ", of haal je transacties rechtstreeks bij je bank op" : ""}.</p>,
       actions: [
         ...(modus.rekeningen.vraagSoort ? [
           { label: "Zakelijke rekening", variant: "primary", onClick: () => kiesBestand("Zakelijk") },
           { label: "Privérekening", variant: "primary", onClick: () => kiesBestand("Prive") },
           { label: "Meerdere bestanden / verschillende typen — daarna per bestand kiezen", onClick: () => kiesBestand(null) },
         ] : [{ label: "Bankbestand kiezen", variant: "primary", onClick: () => kiesBestand(modus.rekeningen.standaard) }]),
-        { label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen },
+        // beide-V5R8 — staat de bankkoppeling uit (Worker-variabele BANKKOPPELING), dan nergens een koppelknop.
+        ...(bankkoppelingAan ? [{ label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen }] : []),
       ],
     });
   // beide-V2R2/V2R4 — privé: andere eigen rekeningen (alleen het rekeningnummer); in Eenvoudig stap 1, de wizard en Instellingen.
@@ -3492,13 +3493,13 @@ export default function App() {
   const startAanvraagUitgebreid = () => setDialog({
     title: "Uitgebreid aanvragen",
     message: <>
-      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht. Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op.</p>
-      <p className="text-amber-800">{BANKKOPPELING_STATUS}</p>
+      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht.{bankkoppelingAan ? " Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op." : ""}</p>
+      {bankkoppelingAan && <p className="text-amber-800">{BANKKOPPELING_STATUS}</p>}
       {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
     </>,
     actions: [
       { label: "Uitgebreid aanvragen", variant: "primary", onClick: () => vraagAan("uitgebreid") },
-      { label: "Uitgebreid met bankkoppeling aanvragen", onClick: () => vraagAan("koppelen") },
+      ...(bankkoppelingAan ? [{ label: "Uitgebreid met bankkoppeling aanvragen", onClick: () => vraagAan("koppelen") }] : []),
     ],
   });
   // nieuw-V4R2 — koppelen en ontkoppelen alleen in de uitgebreide weergave. In de eenvoudige weergave
@@ -4463,7 +4464,7 @@ export default function App() {
             alleenVragen={openVragenWizard && !manualWizardOpen && !showSetupWizard && !basisvragenNietGestart ? openBasisvragen.map((v) => v.key) : null}
             loadFilesFirst={parsedFiles.length === 0}
             onPickFiles={() => { pendingAccountTypeRef.current = modus.rekeningen.standaard; bankFileInputRef.current?.click(); }}
-            onKoppelen={startKoppelen}
+            onKoppelen={bankkoppelingAan ? startKoppelen : null}
             importBezig={importBezig}
             importFout={error}
             onSaveProject={startOpslaan}
@@ -4485,7 +4486,7 @@ export default function App() {
             importFout={error}
             importHerladen={importHerladen}
             onPickFiles={() => { pendingAccountTypeRef.current = modus.rekeningen.standaard; bankFileInputRef.current?.click(); }}
-            onKoppelen={startKoppelen}
+            onKoppelen={bankkoppelingAan ? startKoppelen : null}
             alreadyEstablished={Object.keys(accountTypeByFile).length > 0 && jaarvragenGesteld && !openVragenWizard}
             pendingFileNames={pendingAccountFiles}
             onAccountTypeChoose={setAccountType}

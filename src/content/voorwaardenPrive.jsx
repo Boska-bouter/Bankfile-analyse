@@ -3,7 +3,7 @@
 // Bij een inhoudelijke wijziging: VOORWAARDEN_PRIVE_VERSIE ophogen, dan moet iedereen met privé opnieuw akkoord gaan.
 import { VOORWAARDEN_ALGEMEEN } from "./voorwaarden.jsx";
 
-export const VOORWAARDEN_PRIVE_VERSIE = "1";
+export const VOORWAARDEN_PRIVE_VERSIE = "2"; // beide-V5R8 — artikel 4.1 en 4.7 (gedeeld met zakelijk) bijgewerkt
 export const VOORWAARDEN_PRIVE_SLEUTEL = "bankoverzicht-voorwaarden-prive";
 
 const Punt = ({ nr, children }) => (

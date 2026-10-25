@@ -8,7 +8,7 @@
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
-import { opLijst, rechtenVan, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -82,6 +82,7 @@ export default {
     // beide-V3R4 — terugkeer van de bank: de Worker rondt de koppeling zelf af, ook als deze browser niet is ingelogd
     // (app als icoon op het beginscherm: de bank opent dan in Safari). Zie bankTerugRoute in bank.js.
     if (url.pathname === "/bank/terug" && url.searchParams.has("state")) {
+      if (bankkoppelingHelemaalUit(env)) return Response.redirect(`${url.origin}/`, 302); // beide-V5R8 — bankkoppeling staat uit
       const r = await bankTerugRoute(request, env, url);
       if (r) return r;
     }
@@ -97,7 +98,7 @@ export default {
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
       const akkoord = await voorwaardenVan(email, env);
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, ...r });
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, bankkoppeling: bankkoppelingVoor(env, r.beheerder), ...r });
     }
     if (url.pathname === "/api/voorwaarden") return voorwaardenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
@@ -126,6 +127,7 @@ export default {
     }
     // nieuw-V3R8 — rechtstreekse bankkoppeling (zie bank.js). Sinds nieuw-V4R3 alleen met het recht "koppelen".
     if (url.pathname.startsWith("/api/bank/")) {
+      if (bankkoppelingHelemaalUit(env)) return json({ ok: false, fout: "De bankkoppeling staat op dit moment uit" }, 403);
       if (!(await rechtenVan(request.headers.get("Cf-Access-Authenticated-User-Email"), env)).koppelen) {
         return json({ ok: false, fout: "Bankkoppeling staat niet aan voor jouw account" }, 403);
       }

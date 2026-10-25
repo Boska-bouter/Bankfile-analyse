@@ -17,7 +17,7 @@
 
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, WELKOM_STIJL } from "./welkom.js";
-import { GEBRUIK, PLANNEN, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
+import { GEBRUIK, PLANNEN, plannenVoor, bankkoppelingAan, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
 const SESSIE_DAGEN = 30;
@@ -272,7 +272,7 @@ async function stuurLink(env, email, link) {
     lijst: [
       ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
       ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé je budget, vaste lasten en een indicatie van je inkomstenbelasting."],
-      ["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."],
+      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."]] : []),
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
@@ -318,7 +318,7 @@ function welkomSoorten(env) {
   const pr = prijzen(env);
   return ["prive", "zakelijk"].map((s) => ({
     soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
-    plannen: Object.keys(PLANNEN).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
+    plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
   }));
 }
 
@@ -391,7 +391,7 @@ async function bevestigPagina(env, token, huidig = null) {
     }
   } catch { /* dan de gewone tekst */ }
   const tekst = {
-    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
+    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
     wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor Bankoverzicht is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
     gewoon: ["Inloggen bij Bankoverzicht", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
     verlopen: ["Link verlopen", "Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.", "", ""],

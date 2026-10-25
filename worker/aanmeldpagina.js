@@ -3,7 +3,7 @@
 // - Op /aanmelden ziet iedereen die is ingelogd zijn abonnementen en kan een abonnement aanvragen, ook een tweede
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
-import { PLANNEN, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc } from "./rechten.js";
+import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc } from "./rechten.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
 const nlDatum = (iso) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" });
@@ -23,7 +23,7 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   const heeftToegang = !!r?.toegang;
   const huidig = slot ? huidigeAbonnementen(r) : []; // zonder slot heeft iedereen Eenvoudig; dan niets tonen
   const kiesSoort = GEBRUIK[soort] ? soort : null;
-  const kiesPlan = PLANNEN[plan] ? plan : "eenvoudig";
+  const kiesPlan = plannenVoor(env)[plan] ? plan : "eenvoudig";
   const [voornaam, ...rest] = String(r?.naam || "").trim().split(/\s+/);
   const achternaam = rest.join(" ");
   const soortKeuzes = Object.entries(GEBRUIK).map(([k, v]) => {
@@ -31,7 +31,7 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
     return `<label class="keuze"><input type="radio" name="gebruik" value="${k}" required${kiesSoort === k ? " checked" : ""}>
       <span><b>${v}</b><small>${esc(GEBRUIK_UITLEG[k])}${n ? ` · je hebt nu ${esc(PLANNEN[NIVEAU_PLAN[n]])}` : ""}</small></span></label>`;
   }).join("");
-  const planKeuzes = Object.keys(PLANNEN).map((k) => `
+  const planKeuzes = Object.keys(plannenVoor(env)).map((k) => `
     <label class="keuze"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
       <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("");
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
@@ -39,8 +39,8 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
     : "";
   // Teksten per soort voor het script (prijs, uitleg, voorbeeld bij de reden).
   const perSoort = Object.fromEntries(Object.keys(GEBRUIK).map((s) => [s, {
-    prijs: Object.fromEntries(Object.keys(PLANNEN).map((k) => [k, prijsTekst(prijs[s][k])])),
-    uitleg: Object.fromEntries(Object.keys(PLANNEN).map((k) => [k, PLAN_UITLEG[s][k].replace(/^./, (c) => c.toUpperCase())])),
+    prijs: Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, prijsTekst(prijs[s][k])])),
+    uitleg: Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, PLAN_UITLEG[s][k].replace(/^./, (c) => c.toUpperCase())])),
     voorbeeld: s === "prive"
       ? "Bijvoorbeeld: ik wil inzicht in de uitgaven van ons huishouden en een indicatie van onze inkomstenbelasting."
       : "Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte.",

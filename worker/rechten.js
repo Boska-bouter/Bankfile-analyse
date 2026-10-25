@@ -76,6 +76,21 @@ export const PLANNEN = {
   koppelen: "Uitgebreid met bankkoppeling",
 };
 const NIVEAU = { eenvoudig: 1, uitgebreid: 2, koppelen: 3 };
+// beide-V5R8 — de bankkoppeling staat standaard uit, voor zakelijk en privé (besluit Boska 25-10). Aanzetten met de
+// variabele BANKKOPPELING = "aan". Staat hij uit, dan is "Uitgebreid met bankkoppeling" niet aan te vragen, heeft
+// niemand (ook de beheerder niet) het recht "koppelen" en weigert de Worker /api/bank/ en /bank/terug.
+// beide-V5R9 — BANKKOPPELING = "beheerders": alleen de adressen in BEHEERDERS kunnen koppelen (om zelf in productie te
+// testen); voor anderen blijft alles zoals bij "uit" (geen knoppen, niet aan te vragen).
+const schakelaar = (env) => String(env?.BANKKOPPELING || "").trim().toLowerCase();
+export const bankkoppelingAan = (env) => schakelaar(env) === "aan";
+export const bankkoppelingVoor = (env, beheerder) => bankkoppelingAan(env) || (schakelaar(env) === "beheerders" && !!beheerder);
+export const bankkoppelingHelemaalUit = (env) => !bankkoppelingAan(env) && schakelaar(env) !== "beheerders";
+export const plannenVoor = (env) => (bankkoppelingAan(env) ? PLANNEN : { eenvoudig: PLANNEN.eenvoudig, uitgebreid: PLANNEN.uitgebreid });
+function zonderKoppelen(r, env) {
+  if (!r || bankkoppelingVoor(env, r.beheerder)) return r;
+  const soorten = r.soorten ? Object.fromEntries(Object.entries(r.soorten).map(([s, x]) => [s, { ...x, koppelen: false }])) : r.soorten;
+  return { ...r, koppelen: false, soorten };
+}
 export const planNaam = (gebruik, plan) => `${GEBRUIK[gebruik] || GEBRUIK.zakelijk} · ${PLANNEN[plan] || plan}`;
 const geldigGebruik = (g) => (GEBRUIK[g] ? g : null);
 
@@ -183,6 +198,9 @@ export function rechtenUitRij(r, { open = false, nu = vandaag() } = {}) {
 }
 
 export async function rechtenVan(email, env) {
+  return zonderKoppelen(await rechtenZonderSchakelaar(email, env), env);
+}
+async function rechtenZonderSchakelaar(email, env) {
   const e = String(email || "").trim().toLowerCase();
   const open = !toegangVerplicht(env); // zonder slot mag iedereen die via Access binnenkomt de app (Eenvoudig) gebruiken
   const leeg = rechtenUitRij(null, { open });
@@ -251,7 +269,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
   const plan = String(body?.plan || "");
-  if (!PLANNEN[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
+  if (!plannenVoor(env)[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
   // beide-V1R0 — verplichte keuze zakelijk of privé.
   const gebruik = geldigGebruik(String(body?.gebruik || ""));
   if (!gebruik) return json({ ok: false, fout: "Kies of je Bankoverzicht zakelijk of privé gebruikt." }, 400);
@@ -295,8 +313,8 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
     `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij Bankoverzicht, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
     `Je hebt gekozen voor ${gebruik === "prive" ? "privégebruik (alleen je eigen huishouden)" : "zakelijk gebruik (eenmanszaak, zzp of BV)"}.`,
-    `Ter herinnering, dit zijn de drie abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
-  ], null, naam, Object.entries(PLANNEN).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
+    `Ter herinnering, dit zijn de ${Object.keys(plannenVoor(env)).length === 3 ? "drie" : "twee"} abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
+  ], null, naam, Object.entries(plannenVoor(env)).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
     "Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt een e-mail zodra hij is goedgekeurd; daarna kun je meteen aan de slag.",
     "Heb je vragen? Beantwoord dan gerust deze e-mail.",
   ]);
