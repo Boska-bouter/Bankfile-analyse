@@ -25,13 +25,14 @@ export default function AansluitingDetailPanel({
   transactionNotes,
   onSetNote,
   onOpenHelp,
+  zonderZakelijk = false, // beide-V5R5 — privédossier zonder zakelijke boekingen: alleen de privétabel (wens Boska 25-10)
 }) {
   return (
     <div className="space-y-3">
-      <div ref={detailsRef} className={expandedTable ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
+      <div ref={detailsRef} className={expandedTable || zonderZakelijk ? "grid grid-cols-1 gap-4" : "grid md:grid-cols-2 gap-4 items-start"}>
         {/* release30V10 — beide tabellen blijven gemount (de andere wordt alleen verborgen): voorheen werd de
             andere tabel bij Uitvergroten/Verkleinen opnieuw opgebouwd, wat traag was en filters liet vergeten. */}
-        {(
+        {!zonderZakelijk && (
           <div className={expandedTable && expandedTable !== "Zakelijk" ? "hidden" : ""}>
             <DetailTable
               group={zakGroupForYear}
@@ -47,7 +48,7 @@ export default function AansluitingDetailPanel({
           </div>
         )}
         {(
-          <div className={expandedTable && expandedTable !== "Prive" ? "hidden" : ""}>
+          <div className={expandedTable && expandedTable !== "Prive" && !zonderZakelijk ? "hidden" : ""}>
             <DetailTable
               group={priGroupForYear}
               onRequestChange={onRequestCategoryChange}
