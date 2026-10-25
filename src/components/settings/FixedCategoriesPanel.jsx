@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { INCOME_TRANSFER_CATEGORIES, subtypesForMainCategory, groepeerPerWeergave, CATEGORY_COLOR, hoofdcategorieen, hoofdKleur, getCategorieProfiel, categorieLabel } from "../../classification/categories.js";
 import HelpHint from "../shared/HelpHint.jsx";
@@ -8,12 +8,35 @@ import HelpHint from "../shared/HelpHint.jsx";
 // Inkomsten en overboekingen tussen Zakelijk/Prive horen bij geen van beide. Gegroepeerd per
 // hoofdcategorie — de instelling zelf blijft per subtype (zo kan bijv. "Autokosten" variabel zijn
 // terwijl "Lease (operationeel)" binnen dezelfde hoofdcategorie "Vervoer & auto" vast is).
+// beide-V5R7 — de link "Kiezen wat vaste lasten zijn" op de privékaart Vaste lasten opent dit
+// paneel meteen (in plaats van alleen naar Instellingen te gaan). Het verzoek blijft staan tot het
+// paneel gemount is, want de kaart Automatisering wordt pas na de tabwissel uitgeklapt.
+let openVerzocht = false;
+const OPEN_EVENT = "bankoverzicht:vaste-lasten-openen";
+export function openVasteLastenPaneel() {
+  openVerzocht = true;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 export default function FixedCategoriesPanel({ fixedCategories, setFixedCategories, onOpenHelp }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
+  const sectieRef = useRef(null);
+
+  useEffect(() => {
+    const openen = () => {
+      if (!openVerzocht) return;
+      openVerzocht = false;
+      setOpen(true);
+      window.setTimeout(() => sectieRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 350);
+    };
+    openen();
+    window.addEventListener(OPEN_EVENT, openen);
+    return () => window.removeEventListener(OPEN_EVENT, openen);
+  }, []);
 
   return (
-    <section className="rounded-paneel border border-slate-200 bg-white shadow-sm">
+    <section ref={sectieRef} className="rounded-paneel border border-slate-200 bg-white shadow-sm scroll-mt-28">
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 p-5 text-sm font-semibold text-left">
         <span>Vaste/variabele kosten</span>
         <span className="text-xs font-normal text-slate-400">({fixedCategories.length} vast)</span>

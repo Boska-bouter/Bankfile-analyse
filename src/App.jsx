@@ -149,7 +149,7 @@ import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
 import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
 import KeywordManager from "./components/settings/KeywordManager.jsx";
 import TegenpartijenPanel from "./components/settings/TegenpartijenPanel.jsx";
-import FixedCategoriesPanel from "./components/settings/FixedCategoriesPanel.jsx";
+import FixedCategoriesPanel, { openVasteLastenPaneel } from "./components/settings/FixedCategoriesPanel.jsx";
 import OpschonenPanel from "./components/review/OpschonenPanel.jsx";
 import { effectieveStartersaftrekStatus } from "./tax/startersaftrekToets.js";
 import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.jsx";
@@ -4239,7 +4239,7 @@ export default function App() {
             {activeYear && priveOverzicht && (
               <PriveOverzicht
                 overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear}
-                onVasteLasten={() => setActiveTab("instellingen")}
+                onVasteLasten={() => { openVasteLastenPaneel(); jumpToSection(automatiseringSectionRef); }}
                 onBerekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
                 onVragen={() => setManualWizardOpen(true)}
                 onActie={handleDetailsJump} onSamenvatting={startKlantSamenvatting}

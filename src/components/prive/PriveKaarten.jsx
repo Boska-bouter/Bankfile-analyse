@@ -98,10 +98,10 @@ export function VasteLastenKaart({ jaar, budget, onInstellen }) {
     <section className={KAART}>
       <div className="flex items-center justify-between gap-2">
         <h3 className={KOP}>Vaste lasten {jaar}</h3>
-        {onInstellen && <button type="button" onClick={onInstellen} className={LINK}>Aanpassen →</button>}
+        {onInstellen && <button type="button" onClick={onInstellen} className={LINK} title="Kies in Instellingen welke categorieën als vaste lasten tellen">Kiezen wat vaste lasten zijn →</button>}
       </div>
       {budget.vasteLastenPerCategorie.length === 0 ? (
-        <p className="text-sm text-slate-500">Geen vaste lasten gevonden. Kies bij Instellingen welke categorieën vaste lasten zijn.</p>
+        <p className="text-sm text-slate-500">Geen vaste lasten gevonden. Kies via de link hierboven welke categorieën vaste lasten zijn.</p>
       ) : (
         <>
           <ul className="text-sm text-slate-700 space-y-0.5">
