@@ -2,6 +2,7 @@ import { useToonFijn } from "../../utils/useToonFijn.js";
 import { useEffect, useMemo, useRef, useState, Fragment, memo } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
 import { CATEGORY_COLOR, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_ALFA, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor } from "../../classification/categories.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
@@ -199,39 +200,12 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
           </span>
         ) : (<>
-        <select
-          value={mainCategoryOf(t.category)}
-          onChange={(e) => acties.call("applyChange", t, { category: categoryForMainChange(e.target.value, t.category), type: t.type })}
-          className={`block rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
-        >
-          {MAIN_CATEGORY_ALFA.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        {subtypeChoicesFor(mainCategoryOf(t.category)).length > 1 && (
-        <select
-          value={displayCategory(t.category)}
-          onChange={(e) => acties.call("applyChange", t, { category: storedCategoryForChoice(e.target.value, t.category), type: t.type })}
-          className="block mt-1 rounded-md px-1 py-0 text-[11px] text-slate-500 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-          title="Subtype (bepaalt BTW-percentage en vast/variabel)"
-        >
-          {subtypeChoicesFor(mainCategoryOf(t.category)).map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        )}
-        {soortenVoor(t.category) && (
-          <select
-            value={t.category}
-            onChange={(e) => acties.call("applyChange", t, { category: e.target.value, type: t.type })}
-            className="block mt-0.5 rounded-md px-1 py-0 text-[11px] text-slate-400 border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-400 max-w-[9rem]"
-            title="Soort — bepaalt BTW, aangifte-rubriek en het zakelijke percentage per soort"
-          >
-            {soortenVoor(t.category).map((o) => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        )}
+        {/* V9R3 (= beide-V5R1) — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
+        <CategorieSelect
+          value={t.category}
+          onChange={(v) => acties.call("applyChange", t, { category: v, type: t.type })}
+          className={`block max-w-[13rem] rounded-md px-1.5 py-0.5 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(t.category)] || "bg-slate-200 text-slate-700"}`}
+        />
         </>)}
       </td>
       <td className="px-4 py-2">

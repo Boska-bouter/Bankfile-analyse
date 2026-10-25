@@ -1,6 +1,9 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
+// V9R2 (ook beide-V5R0) — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
+export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|leningdeel|rente\s+lening|aflossing\s+lening/;
+
 
 // V58 — woordgrens voor KORTE standaardzoekwoorden. "izz" matchte "Pizza", "aldi" matchte "Kanaaldijk",
 // "avia" matchte "Transavia", "q8" matchte een betaalreferentie ("CXQ8PH"). Voor een standaardzoekwoord
@@ -31,6 +34,8 @@ export function keywordInText(text, keyword) {
   return false;
 }
 export function ruleMatchesText(rule, text, accountType = null) {
+  // V9R2 (ook beide-V5R0) — "inzake   rente" staat met wisselende spaties in de omschrijving.
+  if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   return rule.keywords.some((kw) => {
     if (!keywordInText(text, kw)) return false;
     const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
@@ -470,6 +475,13 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // diezelfde bank-app is geen kostenafschrijving maar een gewone overboeking tussen twee mensen —
   // de banknaam staat er toevallig ook in (bijv. "ING Betaalverzoek via ING Bank").
   if (rule.name === "Bankkosten" && /betaalverzoek|tikkie/.test(text)) return true;
+  // V9R2 (ook beide-V5R0) — de bank die rente of aflossing incasseert ("Aut. incasso inzake Rente" van Rabobank) is de
+  // hypotheek of een lening, geen bankkosten (wens Boska 25-10). "Afschrijving rente" (rood staan) blijft bankkosten.
+  if (rule.name === "Bankkosten" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
+  // Geld op een eigen rekening bij een andere bank zetten ("top-up via bunq") is ook geen bankkosten.
+  if (rule.name === "Bankkosten" && /\btop-?up\b|opwaarderen/.test(text)) return true;
+  // Op een zakelijke rekening is rente aan de bank zonder het woord hypotheek eerder een zakelijke lening: nakijken.
+  if (rule.name === "Hypotheek" && accountType === "Zakelijk" && !/hypothe/.test(text)) return true;
   // "Boekhouder, accountant & administratie" herkent het boekhoudpakket AFAS op het kale woord
   // "afas" — dat matcht óók op "AFAS Live" (de concertzaal in Amsterdam-Zuidoost, gesponsord door
   // hetzelfde bedrijf), een heel gewone privé-uitgave (kaartje/consumptie), geen boekhoudpakket-

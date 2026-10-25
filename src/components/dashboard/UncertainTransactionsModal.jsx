@@ -3,6 +3,7 @@ import { X, Check, Lock } from "lucide-react";
 import {
   MAIN_CATEGORY_ORDER, MAIN_CATEGORY_ALFA, MAIN_CATEGORY_COLOR, MAIN_CATEGORY_DEFAULT_SUBTYPE, mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor,
 } from "../../classification/categories.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
@@ -86,37 +87,12 @@ export default function UncertainTransactionsModal({
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(tx.category)}
           </span>
         ) : (<>
-          <select
-            value={mainCategoryOf(tx.category)}
-            onChange={(e) => onRequestChange(tx, { category: categoryForMainChange(e.target.value, tx.category), type: tx.type })}
-            className={`shrink-0 rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
-          >
-            {MAIN_CATEGORY_ALFA.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          {subtypeChoicesFor(mainCategoryOf(tx.category)).length > 1 && (
-          <select
-            value={displayCategory(tx.category)}
-            onChange={(e) => onRequestChange(tx, { category: storedCategoryForChoice(e.target.value, tx.category), type: tx.type })}
-            className="shrink-0 rounded-md border border-slate-300 px-1.5 py-1 text-[11px] max-w-[8rem]"
-            title="Subtype (bepaalt BTW-percentage en vast/variabel)"
-          >
-            {subtypeChoicesFor(mainCategoryOf(tx.category)).map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          )}
-          {soortenVoor(tx.category) && (
-            <select
-              value={tx.category}
-              onChange={(e) => onRequestChange(tx, { category: e.target.value, type: tx.type })}
-              className="shrink-0 rounded-md border border-slate-200 px-1.5 py-1 text-[11px] text-slate-500 max-w-[7rem]"
-              title="Soort — bepaalt het zakelijke percentage per soort"
-            >
-              {soortenVoor(tx.category).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-            </select>
-          )}
+          {/* V9R3 (= beide-V5R1) — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
+        <CategorieSelect
+          value={tx.category}
+          onChange={(v) => onRequestChange(tx, { category: v, type: tx.type })}
+          className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${MAIN_CATEGORY_COLOR[mainCategoryOf(tx.category)] || "bg-slate-200 text-slate-700"}`}
+        />
         </>)}
         <span
           className={`shrink-0 inline-flex items-center rounded-md px-1.5 py-1 text-xs font-medium cursor-help ${(tx.accountType || tx.type) === "Zakelijk" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
