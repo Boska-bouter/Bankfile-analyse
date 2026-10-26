@@ -22,6 +22,7 @@ import {
 } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
+import { overlapBestandKoppeling } from "./importers/overlapKoppeling.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
 import { eur } from "./utils/amounts.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
@@ -56,6 +57,7 @@ import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWe
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
+import { dossierWaardenLijst, zetDossierTerug, NIET_GETELD } from "./dossier/dossierVelden.js";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
 import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
 import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
@@ -1118,6 +1120,46 @@ export default function App() {
     setLoaded(true);
   };
 
+  // beide-V6R4 — alle gegevens van het dossier op één plek (namen in dossier/dossierVelden.js). Automatisch bewaren,
+  // het dossierbestand, het tellen van wijzigingen en "Ongedaan maken" gebruiken deze twee objecten.
+  const dossierGegevens = {
+    parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules, categoryBtwRates,
+    btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
+    dismissedDuplicateNotice, bevestigdeControles, businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys,
+    reviewedOverigKeys, kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
+    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints,
+    transactionNotes, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad,
+    eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd, ibStatus,
+    zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus,
+    weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus,
+    autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
+    categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+  };
+  const dossierZetters = {
+    parsedFiles: setParsedFiles, accountTypeByFile: setAccountTypeByFile, overridesByCounterparty: setOverridesByCounterparty,
+    overridesByRow: setOverridesByRow, categoryRules: setCategoryRules, categoryBtwRates: setCategoryBtwRates,
+    btwVerlegd: setBtwVerlegd, korRegeling: setKorRegeling, rechtsvorm: setRechtsvorm,
+    heeftHolding: setHeeftHolding, holdingBoekingen: setHoldingBoekingen, excludedDuplicateFingerprints: setExcludedDuplicateFingerprints,
+    dismissedDuplicateNotice: setDismissedDuplicateNotice, bevestigdeControles: setBevestigdeControles, businessKeywords: setBusinessKeywords,
+    businessExpenseKeywords: setBusinessExpenseKeywords, reviewedIncomeKeys: setReviewedIncomeKeys, reviewedPersonKeys: setReviewedPersonKeys,
+    reviewedOverigKeys: setReviewedOverigKeys, kwartaalStatus: setKwartaalStatus, voorbelastingExcluded: setVoorbelastingExcluded,
+    periodeQuarterOverrides: setPeriodeQuarterOverrides, reviewedPeriodeKeys: setReviewedPeriodeKeys, loanDetails: setLoanDetails,
+    leaseDetails: setLeaseDetails, leaseMergedInto: setLeaseMergedInto, activaDetails: setActivaDetails,
+    confirmedLeaseTypeKeys: setConfirmedLeaseTypeKeys, fixedCategories: setFixedCategories, excludedManualFingerprints: setExcludedManualFingerprints,
+    transactionNotes: setTransactionNotes, verwachteLease: setVerwachteLease, verwachteLeaseOverig: setVerwachteLeaseOverig,
+    verwachteLening: setVerwachteLening, verwachteAOV: setVerwachteAOV, heeftVoorraad: setHeeftVoorraad,
+    eigenNamen: setEigenNamen, eigenRekeningenExtra: setEigenRekeningenExtra, bankKoppelingen: setBankKoppelingen,
+    zakelijkeSpaarRekening: setZakelijkeSpaarRekening, opdrachtgeversGevraagd: setOpdrachtgeversGevraagd, ibStatus: setIbStatus,
+    zvwStatus: setZvwStatus, vpbStatus: setVpbStatus, zelfstandigenaftrekStatus: setZelfstandigenaftrekStatusState,
+    zaLegacyJaDefault: setZaLegacyJaDefault, startersaftrekStatus: setStartersaftrekStatusState, werkruimteStatus: setWerkruimteStatusState,
+    weergave: setWeergave, eenvoudigGezien: setEenvoudigGezien, tariefOverrides: setTariefOverridesState,
+    overigInkomenBox1: setOverigInkomenBox1State, priveAntwoorden: setPriveAntwoorden, autoStatus: setAutoStatusState,
+    autoWizardStatus: setAutoWizardStatus, autoActivaDetails: setAutoActivaDetails, kmVergoedingDetails: setKmVergoedingDetailsState,
+    huurZakelijkPercentageStatus: setHuurZakelijkPercentageStatusState, energieZakelijkPercentageStatus: setEnergieZakelijkPercentageStatusState, gemeentelijkeKostenZakelijkPercentageStatus: setGemeentelijkeKostenZakelijkPercentageStatusState,
+    categoryZakelijkPercentage: setCategoryZakelijkPercentageState, openingBalanceCorrections: setOpeningBalanceCorrections, incomeBtwTarieven: setIncomeBtwTarieven,
+    meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden,
+  };
+
   // ---- Automatisch bewaren per browser bij elke wijziging ----
   useEffect(() => {
     if (!loaded) return;
@@ -1128,33 +1170,15 @@ export default function App() {
     (async () => {
       setSaveState("saving");
       const ok1 = await persistParsedFiles(parsedFiles);
+      const { parsedFiles: _bestanden, ...instellingen } = dossierGegevens;
       const ok2 = await persistSettings({
-        accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, dossierSoort: soortDossier, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
-        excludedDuplicateFingerprints, businessKeywords, businessExpenseKeywords,
-        reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-        kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-        ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-        incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
+        ...instellingen, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION, loadedProjectFileName,
         changesSinceExport, lastExportAtMs: lastExportAt ? +lastExportAt : null,
       });
       setSaveState(ok1 && ok2 ? "saved" : "error");
       if (ok1 && ok2) setLastSavedAt(new Date());
     })();
-  }, [
-    parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, soortDossier, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
-    businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-    kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, loadedProjectFileName,
-    changesSinceExport, lastExportAt,
-    loaded,
-  ]);
+  }, [...dossierWaardenLijst(dossierGegevens), soortDossier, loadedProjectFileName, changesSinceExport, lastExportAt, loaded]);
 
   // nieuw-V6R6 — `weergave` (Eenvoudig/Uitgebreid) telt niet als wijziging: alleen van weergave wisselen
   // (ook de keuze direct na het laden) maakt een bewaard dossier niet ‘niet opgeslagen’.
@@ -1170,16 +1194,7 @@ export default function App() {
       return;
     }
     setChangesSinceExport((n) => n + 1);
-  }, [
-    parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-    categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints,
-    businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-    kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-    leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-    ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, dismissedDuplicateNotice, bevestigdeControles,
-    verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-    incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
-  ]);
+  }, dossierWaardenLijst(dossierGegevens, NIET_GETELD));
 
   // v305 (V27) — waarschuwing bij het sluiten/verversen van de pagina zolang er wijzigingen zijn die
   // nog niet als dossierbestand zijn geëxporteerd. (De automatische browseropslag blijft gewoon
@@ -1284,15 +1299,32 @@ export default function App() {
     [fileContinuityRuw, bevestigdeControles]
   );
 
+  // beide-V6R5 — zelfde rekening via een bestand én de bankkoppeling: in de periode van de koppeling telt de
+  // koppeling. Importcontrole en saldocontrole blijven op de volledige bestanden (allTransactions) werken.
+  const overlapKoppeling = useMemo(
+    () => overlapBestandKoppeling(allTransactions, parsedFiles, ownAccountByFile),
+    [allTransactions, parsedFiles, ownAccountByFile]
+  );
+  // Eigen keuze bij een boeking uit het bestand gaat mee naar dezelfde boeking uit de koppeling (als die er nog geen heeft).
+  useEffect(() => {
+    if (!overlapKoppeling.paren.size) return;
+    const erbij = {};
+    for (const [van, naar] of overlapKoppeling.paren) if (overridesByRow[van] && !overridesByRow[naar]) erbij[naar] = overridesByRow[van];
+    if (Object.keys(erbij).length) setOverridesByRow((prev) => ({ ...prev, ...erbij }));
+  }, [overlapKoppeling, overridesByRow]);
+  const txZonderOverlap = useMemo(
+    () => (overlapKoppeling.weg.size ? allTransactions.filter((tx) => !overlapKoppeling.weg.has(tx.id)) : allTransactions),
+    [allTransactions, overlapKoppeling]
+  );
   const { fingerprintByTxId, duplicateGroups, duplicateFingerprints, confirmedSeparateGroups } = useMemo(
-    () => computeDuplicateInfo(allTransactions),
-    [allTransactions]
+    () => computeDuplicateInfo(txZonderOverlap),
+    [txZonderOverlap]
   );
   const transactions = useMemo(() => {
-    if (excludedDuplicateFingerprints.length === 0 && excludedManualFingerprints.length === 0) return allTransactions;
+    if (excludedDuplicateFingerprints.length === 0 && excludedManualFingerprints.length === 0) return txZonderOverlap;
     const excludedSet = new Set([...excludedDuplicateFingerprints, ...excludedManualFingerprints]);
-    return allTransactions.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
-  }, [allTransactions, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId]);
+    return txZonderOverlap.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
+  }, [txZonderOverlap, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId]);
   // ---- Ongedaan maken laatste actie — momentopname/herstel voor de grote, risicovolle acties
   // (duplicaten verwijderen, wis alles). Bewust maar 1 stap terug — elke volgende momentopname
   // overschrijft de vorige. ----
@@ -1311,15 +1343,7 @@ export default function App() {
     if (doorgaand) return;
     setLastActionSnapshot({
       label,
-      state: {
-        parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-        categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, heeftHolding, holdingBoekingen, excludedDuplicateFingerprints, excludedManualFingerprints, transactionNotes,
-        businessKeywords, businessExpenseKeywords, reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-        kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-        leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, startersaftrekStatus, werkruimteStatus, weergave, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage,
-        verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-        incomeBtwTarieven, meerdereTarievenBevestigd,
-      },
+      state: { ...dossierGegevens },
     });
   };
   // v305 (V27) — alleen deze ingrijpende acties houden de opvallende, blijvende "Ongedaan maken"-
@@ -1329,69 +1353,7 @@ export default function App() {
   const undoLastAction = () => {
     if (!lastActionSnapshot) return;
     snapMeta.current = { label: null, t: 0 };
-    const s = lastActionSnapshot.state;
-    setParsedFiles(s.parsedFiles);
-    setAccountTypeByFile(s.accountTypeByFile);
-    setOverridesByCounterparty(s.overridesByCounterparty);
-    setOverridesByRow(s.overridesByRow);
-    setCategoryRules(s.categoryRules);
-    setCategoryBtwRates(s.categoryBtwRates);
-    setBtwVerlegd(s.btwVerlegd);
-    setKorRegeling(s.korRegeling);
-    setRechtsvorm(s.rechtsvorm);
-    setHeeftHolding(s.heeftHolding);
-    setHoldingBoekingen(s.holdingBoekingen);
-    setExcludedDuplicateFingerprints(s.excludedDuplicateFingerprints);
-    setExcludedManualFingerprints(s.excludedManualFingerprints);
-    setTransactionNotes(s.transactionNotes || {});
-    setBusinessKeywords(s.businessKeywords);
-    setBusinessExpenseKeywords(s.businessExpenseKeywords);
-    setReviewedIncomeKeys(s.reviewedIncomeKeys);
-    setReviewedPersonKeys(s.reviewedPersonKeys);
-    setReviewedOverigKeys(s.reviewedOverigKeys);
-    setKwartaalStatus(s.kwartaalStatus);
-    setVoorbelastingExcluded(s.voorbelastingExcluded);
-    setPeriodeQuarterOverrides(s.periodeQuarterOverrides);
-    setReviewedPeriodeKeys(s.reviewedPeriodeKeys);
-    setLoanDetails(s.loanDetails);
-    setLeaseDetails(s.leaseDetails);
-    setLeaseMergedInto(s.leaseMergedInto || {});
-    setActivaDetails(s.activaDetails || {});
-    setVerwachteLease(s.verwachteLease ?? null);
-    setVerwachteLeaseOverig(s.verwachteLeaseOverig ?? null);
-    setVerwachteLening(s.verwachteLening ?? null);
-    setVerwachteAOV(s.verwachteAOV ?? null);
-    setAutoWizardStatus(normalizeAutoWizard(s.autoWizardStatus));
-    setAutoActivaDetails(s.autoActivaDetails && typeof s.autoActivaDetails === "object" ? s.autoActivaDetails : {});
-    setKmVergoedingDetailsState(s.kmVergoedingDetails && typeof s.kmVergoedingDetails === "object" ? s.kmVergoedingDetails : {});
-    setHeeftVoorraad(s.heeftVoorraad ?? null);
-    setEigenNamen(s.eigenNamen ?? null);
-    setEigenRekeningenExtra(s.eigenRekeningenExtra ?? null);
-    setBankKoppelingen(Array.isArray(s.bankKoppelingen) ? s.bankKoppelingen : []);
-    setZakelijkeSpaarRekening(s.zakelijkeSpaarRekening ?? null);
-    setOpdrachtgeversGevraagd(s.opdrachtgeversGevraagd ?? null);
-    setIncomeBtwTarieven(s.incomeBtwTarieven ?? null);
-    setMeerdereTarievenBevestigd(s.meerdereTarievenBevestigd ?? false);
-    setConfirmedLeaseTypeKeys(s.confirmedLeaseTypeKeys);
-    setFixedCategories(s.fixedCategories);
-    setIbStatus(s.ibStatus);
-    setZvwStatus(s.zvwStatus || {});
-    setVpbStatus(s.vpbStatus || {});
-    // v269 — deze 5 velden zaten al in de momentopname (snapshotBeforeAction hierboven) maar werden
-    // hier nooit teruggezet: "Percentage zakelijk per categorie" en de aftrek-/auto-instellingen
-    // leken daardoor ten onrechte NIET ongedaan te maken (de state bleef gewoon op de nieuwe waarde
-    // staan, alleen het paneel las hem uit alsof er niets gebeurd was).
-    setZelfstandigenaftrekStatusState(s.zelfstandigenaftrekStatus || {});
-    setStartersaftrekStatusState(s.startersaftrekStatus || {});
-    setWerkruimteStatusState(s.werkruimteStatus || {});
-    setTariefOverridesState(s.tariefOverrides || {});
-    setOverigInkomenBox1State(s.overigInkomenBox1 || {});
-    setPriveAntwoorden(s.priveAntwoorden || {});
-    setAutoStatusState(normalizeAutoStatus(s.autoStatus));
-    setHuurZakelijkPercentageStatusState(s.huurZakelijkPercentageStatus || {});
-    setEnergieZakelijkPercentageStatusState(s.energieZakelijkPercentageStatus || {});
-    setGemeentelijkeKostenZakelijkPercentageStatusState(s.gemeentelijkeKostenZakelijkPercentageStatus || {});
-    setCategoryZakelijkPercentageState(s.categoryZakelijkPercentage || {});
+    zetDossierTerug(lastActionSnapshot.state, dossierZetters);
     setLastActionSnapshot(null);
   };
 
@@ -3206,7 +3168,7 @@ export default function App() {
     };
   };
   const controlerenCardGroups = useControlerenCardGroups({
-    rechtsvorm,
+    rechtsvorm, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
@@ -3669,14 +3631,7 @@ export default function App() {
     } else if (dossierHerstelcode) setDossierHerstelcode(null);
     const project = buildProjectFile({
       auditLog,
-      parsedFiles, accountTypeByFile, overridesByCounterparty, overridesByRow, categoryRules,
-      categoryBtwRates, btwVerlegd, korRegeling, rechtsvorm, dossierSoort: soortDossier, heeftHolding, holdingBoekingen, btwRatesVersion: BTW_RATES_VERSION,
-      excludedDuplicateFingerprints, dismissedDuplicateNotice, bevestigdeControles, businessKeywords, businessExpenseKeywords,
-      reviewedIncomeKeys, reviewedPersonKeys, reviewedOverigKeys,
-      kwartaalStatus, voorbelastingExcluded, periodeQuarterOverrides, reviewedPeriodeKeys, loanDetails,
-      leaseDetails, leaseMergedInto, activaDetails, confirmedLeaseTypeKeys, fixedCategories, excludedManualFingerprints, transactionNotes,
-      verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, heeftVoorraad, eigenNamen, eigenRekeningenExtra, bankKoppelingen, zakelijkeSpaarRekening, opdrachtgeversGevraagd,
-      ibStatus, zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus, weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus, autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+      ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION,
       resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
       overgeslagenStappen,
     });

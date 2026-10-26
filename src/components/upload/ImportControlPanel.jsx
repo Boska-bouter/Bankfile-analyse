@@ -27,7 +27,7 @@ function StatusLine({ ok, warn, children }) {
 // Een korte "APK" per geüpload bestand, vóór je verder gaat met classificeren — geeft vertrouwen
 // dat een bestand goed is ingelezen (of laat direct zien waar het misgaat) zonder een verplichte
 // extra stap te zijn: de rest van de app blijft gewoon meteen bruikbaar.
-export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], onRemoveFile, accountTypeByFile = {}, bevestigd = {}, onBevestig, onHerroep }) {
+export default function ImportControlPanel({ diagnostics, onReviewFile, continuity = [], overlap = [], onRemoveFile, accountTypeByFile = {}, bevestigd = {}, onBevestig, onHerroep }) {
   // v243 — null = "auto" (open zodra er een echt punt is, ingeklapt zodra alles klopt), zelfde
   // patroon als de andere Controleren-secties — een expliciete klik wint daarna, ongeacht of er
   // later nog een bestand bijkomt.
@@ -37,7 +37,7 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
   const anyIssue =
     diagnostics.some(
       (d) => d.skippedNoDate > 0 || d.skippedBadAmount > 0 || d.missingCounterparty > 0 || (d.balanceCheck && !d.balanceCheck.ok && !isMinorDiff(d.balanceCheck.diff) && !bevestigd[saldoControleSleutel(d)])
-    ) || continuity.some((c) => !c.ok && classifyContinuityGap(c.diff) !== "groen");
+    ) || continuity.some((c) => !c.ok && classifyContinuityGap(c.diff) !== "groen") || overlap.some((o) => o.zonderTegenhanger > 0);
   const open = openOverride === null ? anyIssue : openOverride;
 
   return (
@@ -104,6 +104,19 @@ export default function ImportControlPanel({ diagnostics, onReviewFile, continui
                       Periode: {d.from.toLocaleDateString("nl-NL")} t/m {d.to.toLocaleDateString("nl-NL")}
                     </StatusLine>
                   )}
+                  {/* beide-V6R5 — zelfde rekening ook via de bankkoppeling: in die periode telt de koppeling */}
+                  {overlap.filter((o) => o.bestand === d.fileName).map((o) => (
+                    <StatusLine key={o.iban} ok={o.zonderTegenhanger === 0} warn>
+                      Rekening {o.iban} staat ook in de bankkoppeling. Van {o.van.toLocaleDateString("nl-NL")} t/m {o.tot.toLocaleDateString("nl-NL")} telt de koppeling:{" "}
+                      {o.weggelaten} boeking{o.weggelaten === 1 ? "" : "en"} uit dit bestand tellen niet mee.
+                      {o.zonderTegenhanger > 0 && (
+                        <>
+                          {" "}<strong>{o.zonderTegenhanger} daarvan {o.zonderTegenhanger === 1 ? "staat" : "staan"} niet in de koppeling</strong> (ander bedrag of andere datum);{" "}
+                          <button onClick={() => onReviewFile(d.fileName)} className="underline hover:no-underline">bekijk het bestand</button>.
+                        </>
+                      )}
+                    </StatusLine>
+                  ))}
                   <StatusLine ok={d.missingCounterparty === 0} warn>
                     {d.missingCounterparty === 0
                       ? "Alle transacties hebben een tegenpartij of omschrijving"
