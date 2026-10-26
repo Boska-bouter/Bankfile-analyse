@@ -19,47 +19,6 @@ const json = (data, status = 200) =>
 const schoon = (v, max) => String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// release32V0 — leest (zonder te valideren, alleen om te tonen) de tijden uit het Access-inlogbewijs: de header
-// Cf-Access-Jwt-Assertion en, ter vergelijking, het cookie CF_Authorization. Het bewijs zelf wordt niet teruggegeven.
-function leesJwt(token) {
-  try {
-    const deel = String(token || "").split(".")[1];
-    if (!deel) return null;
-    const b64 = deel.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((deel.length + 3) % 4);
-    return JSON.parse(atob(b64));
-  } catch { return null; }
-}
-const nlTijd = (sec) => (sec ? new Date(sec * 1000).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "—");
-const duur = (a, b) => {
-  if (!a || !b) return "—";
-  const min = Math.max(0, Math.round((b - a) / 60));
-  return `${Math.floor(min / 60)} uur ${min % 60} min`;
-};
-function samenvatting(p) {
-  if (!p) return null;
-  const nu = Math.floor(Date.now() / 1000);
-  return {
-    type: p.type ?? null,
-    uitgegeven: nlTijd(p.iat), verloopt: nlTijd(p.exp), geldigheid: duur(p.iat, p.exp), nogGeldig: duur(nu, p.exp),
-    iat: p.iat ?? null, exp: p.exp ?? null,
-  };
-}
-function sessieInfo(request, url) {
-  const header = samenvatting(leesJwt(request.headers.get("Cf-Access-Jwt-Assertion")));
-  const cookie = (request.headers.get("Cookie") || "").split(/;\s*/).find((c) => c.startsWith("CF_Authorization="));
-  const uitCookie = samenvatting(leesJwt(cookie ? cookie.slice("CF_Authorization=".length) : ""));
-  const data = { nu: nlTijd(Math.floor(Date.now() / 1000)), email: request.headers.get("Cf-Access-Authenticated-User-Email") || null, header, cookie: uitCookie };
-  if (url.searchParams.has("json")) return json(data);
-  const blok = (titel, x) => `<h3>${titel}</h3>${x ? `<table>${[["Soort", x.type], ["Uitgegeven", x.uitgegeven], ["Verloopt", x.verloopt], ["Geldigheid", x.geldigheid], ["Nog geldig", x.nogGeldig]].map(([k, v]) => `<tr><td>${k}</td><td><b>${esc(v ?? "—")}</b></td></tr>`).join("")}</table>` : "<p>Niet gevonden.</p>"}`;
-  const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sessietest</title>
-<style>body{font-family:system-ui,sans-serif;margin:20px;color:#0f172a}td{padding:4px 12px 4px 0}h3{margin:18px 0 6px}p{color:#475569}</style></head><body>
-<h2>Sessietest Bankoverzicht</h2><p>Nu: <b>${esc(data.nu)}</b>${data.email ? ` · ingelogd als ${esc(data.email)}` : ""}</p>
-${blok("Inlogbewijs dat de app meekrijgt (header)", header)}${blok("Inlogcookie (ter vergelijking)", uitCookie)}
-<p>Open deze pagina een paar keer, verspreid over een uur. Blijft "Verloopt" gelijk en is "Geldigheid" ongeveer de sessieduur die in Cloudflare is ingesteld, dan is dit tijdstip bruikbaar voor een waarschuwing.</p>
-</body></html>`;
-  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
-}
-
 // nieuw-V2R0 — mag de ingelogde gebruiker de uitgebreide weergave gebruiken? Sinds nieuw-V4R3: Secret "AccessAll",
 // Secret "BEHEERDERS" en de D1-tabel "rechten" (zie rechten.js). Geen recht of niet ingelogd = alleen Eenvoudig.
 export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
@@ -90,8 +49,9 @@ export default {
       if (url.pathname.startsWith("/api/")) return json({ ok: false, fout: "Niet ingelogd" }, 401);
       return Response.redirect(`${url.origin}/inloggen`, 302);
     }
-    // release32V0 — test: wat zegt het Access-inlogbewijs over inlogtijd en verlooptijd? (zie sessieInfo)
-    if (url.pathname === "/api/sessie") return sessieInfo(request, url);
+    // beide-V6R3 — alleen nog "ben je ingelogd?" (401 hierboven = nee), gebruikt door useSessieWaarschuwing/FeedbackModal.
+    // De oude testpagina met de tijden uit het Cloudflare Access-inlogbewijs is weg.
+    if (url.pathname === "/api/sessie") return json({ ok: true });
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await rechtenVan(email, env);

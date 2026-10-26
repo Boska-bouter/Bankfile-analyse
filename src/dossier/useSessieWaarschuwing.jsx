@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 
 // release32V1 — waarschuwing voor het einde van de Cloudflare-inlogsessie. De Worker geeft op /api/sessie het
 // verlooptijdstip uit het Access-inlogbewijs terug (getest: gelijk aan de in Cloudflare ingestelde sessieduur).
+// beide-V6R3 — met de eigen inlog (sessie van 30 dagen die vanzelf verlengt) geeft /api/sessie geen verlooptijd meer;
+// de balk verschijnt dan alleen nog als de sessie toch blijkt verlopen (401).
 // 10 minuten voor het einde: gele balk; daarna: rode balk. Lukt het opvragen niet (offline, lokaal), dan niets.
 // release32V6 — na het verlopen vernieuwt Cloudflare de sessie bij herladen meestal zonder inlogscherm (zolang de
 // algemene Cloudflare-sessie nog geldt). Daarom "Sessie vernieuwen". Mislukt intussen het ophalen van een
