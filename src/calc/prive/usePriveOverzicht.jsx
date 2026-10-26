@@ -12,6 +12,7 @@ export function berekenPriveOverzicht({ transacties, jaren, vasteCategorieen, an
     const { invoer, aannames } = priveBelastingInvoer({ transacties, jaar, budget, antwoorden, eenvoudig });
     const belasting = berekenPriveJaar(invoer, jaar);
     if (belasting.tariefStatus === "benadering") aannames.push(`Voor ${jaar} zijn nog niet alle tarieven bekend: gerekend met die van een eerder jaar. Je kunt ze aanpassen bij Instellingen → Tarieven en bedragen.`);
+    else if (belasting.tariefStatus === "voorlopig") aannames.push(`De tarieven voor ${jaar} zijn voorlopig (Belastingplan, nog niet definitief vastgesteld) en kunnen nog wijzigen.`);
     perJaar[jaar] = { budget, invoer, belasting, aannames };
   }
   return { perJaar };

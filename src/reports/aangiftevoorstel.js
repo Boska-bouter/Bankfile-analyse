@@ -4,7 +4,7 @@ import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
   getIbParams, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
-  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, STARTERSAFTREK_BEDRAG,
+  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, startersaftrekBedrag,
   resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
 import { computeIbBoxMapping } from "../tax/boxMapping.js";
@@ -172,7 +172,7 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
 function buildOnbekendScenario(winst, year, metZelfstandigenaftrek, startersaftrekToegepast) {
   const basisBedrag = getIbParams(year).zelfstandigenaftrek;
   const staToegepast = metZelfstandigenaftrek && startersaftrekToegepast;
-  const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? STARTERSAFTREK_BEDRAG : 0) : 0;
+  const ondernemersaftrekBedrag = metZelfstandigenaftrek ? basisBedrag + (staToegepast ? startersaftrekBedrag(year) : 0) : 0;
   return {
     startersaftrekToegepast: staToegepast,
     ondernemersaftrekBedrag,
@@ -746,7 +746,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
   ${ibEstimate.overigInkomen > 0 ? `<p class="toelichting">Inclusief effect van overig inkomen box 1 (${eur(ibEstimate.overigInkomen)}, opgegeven in de wizard): de belasting en de heffingskortingen zijn berekend als het verschil tussen winst + overig inkomen en overig inkomen alleen. Een negatieve heffingskorting betekent dat er door de winst korting verloren gaat die er op het overige inkomen alleen wél was.</p>` : ""}
   ${ibEstimate.beperkingAftrek > 0 ? `<p>Beperking aftrek (aftrekposten in de hoogste schijf maar beperkt aftrekbaar): <strong>${eur(ibEstimate.beperkingAftrek)}</strong> extra IB, al opgenomen in de IB hierboven.</p>` : ""}
-  ${ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard" ? `<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>` : ""}
+  ${ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard" ? `<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : ibEstimate.tariefStatus === "voorlopig" ? "voorlopig, uit het Belastingplan (kan nog wijzigen)" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>` : ""}
   `}
 
   <h3>Mogelijke investeringsaftrek (KIA)</h3>

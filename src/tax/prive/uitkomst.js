@@ -17,7 +17,7 @@ import { aftrekposten } from "./aftrekposten.js";
 import { box3 } from "./box3.js";
 import { besteVerdeling } from "./partner.js";
 import { priveTariefStatus } from "./tarieven.js";
-import { tariefStatusVoorJaar } from "../incomeTax.js";
+import { tariefStatusVoorJaar, combineerTariefStatus } from "../incomeTax.js";
 
 const som = (p) => (p.loon || 0) + (p.uitkering || 0) + (p.pensioen || 0);
 
@@ -91,6 +91,6 @@ export function berekenPriveJaar(invoer, jaar) {
     ib: uitkomst.totaal, loonheffing, loonheffingGeschat: uitkomst.per.some((p) => p.loonheffingGeschat),
     // positief = bijbetalen, negatief = terugkrijgen
     verschil: uitkomst.totaal - loonheffing,
-    tariefStatus: tarieven.includes("aangepast") ? "aangepast" : tarieven.includes("benadering") ? "benadering" : "standaard",
+    tariefStatus: combineerTariefStatus(tarieven),
   };
 }

@@ -8,6 +8,7 @@
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
+import { tarievenRoute, tarievenBeheerRoute } from "./tarieven.js";
 import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
@@ -52,6 +53,9 @@ export default {
     // beide-V6R3 — alleen nog "ben je ingelogd?" (401 hierboven = nee), gebruikt door useSessieWaarschuwing/FeedbackModal.
     // De oude testpagina met de tijden uit het Cloudflare Access-inlogbewijs is weg.
     if (url.pathname === "/api/sessie") return json({ ok: true });
+    // beide-V6R7 — tarievenbestand (zie tarieven.js): ophalen door de app, wijzigen alleen door BEHEERDERS.
+    if (url.pathname === "/api/tarieven") return tarievenRoute(request, env);
+    if (url.pathname === "/api/beheer/tarieven") return tarievenBeheerRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await rechtenVan(email, env);

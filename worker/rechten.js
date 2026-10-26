@@ -232,7 +232,7 @@ export async function heeftToegang(email, env) {
   return r;
 }
 
-function controleerPost(request, url) {
+export function controleerPost(request, url) {
   // Alleen JSON van de app zelf (een formulier van een andere site kan dit niet nabootsen).
   const origin = request.headers.get("Origin");
   if (origin && origin !== url.origin) return json({ ok: false, fout: "Verkeerde herkomst" }, 403);

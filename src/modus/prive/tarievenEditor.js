@@ -1,7 +1,7 @@
 // beide-V1R9 — fase 8: welke tarieftabellen Instellingen → Tarieven in een privédossier toont (data voor
 // components/overview/TarievenJaarEditor). Box 1-schijven en kortingen komen uit incomeTax.js (gedeeld met zakelijk),
 // de rest uit tax/prive/tarieven.js. Eigen waarden staan in tariefOverrides (privé onder "prive_<groep>").
-import { resolveTariefGroep } from "../../tax/incomeTax.js";
+import { resolveTariefGroep, combineerTariefStatus } from "../../tax/incomeTax.js";
 import { priveTarief } from "../../tax/prive/tarieven.js";
 
 export const PRIVE_TARIEF_GROEPEN = Object.freeze([
@@ -26,5 +26,5 @@ export const resolvePriveTarief = (key, jaar) => (key.startsWith("prive_") ? pri
 
 export function priveTarievenStatus(jaar) {
   const st = PRIVE_TARIEF_GROEPEN.map((g) => resolvePriveTarief(g.key, jaar).status);
-  return st.includes("aangepast") ? "aangepast" : st.includes("benadering") ? "benadering" : "standaard";
+  return combineerTariefStatus(st);
 }

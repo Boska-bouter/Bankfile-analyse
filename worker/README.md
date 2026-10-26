@@ -168,3 +168,11 @@ Privé heeft eigen gebruiksvoorwaarden (`src/content/voorwaardenPrive.jsx`, vers
 privéabonnement heeft, gaat daar één keer mee akkoord; wie beide heeft, ziet beide teksten en geeft één akkoord. Het akkoord
 staat in de D1-tabel `voorwaarden_akkoord`: `versie`/`tijd` voor zakelijk, `versie_prive`/`tijd_prive` voor privé. De
 Worker voegt die twee kolommen zelf toe; geen SQL nodig. `/api/rol` geeft `voorwaarden` (zakelijk) en `voorwaardenPrive`.
+
+## Tarievenbestand (beide-V6R7)
+
+De belastingtarieven kunnen los van de app worden bijgewerkt. De beheerder zet een tarievenbestand (JSON) op de server via
+Gebruikers en rechten → Tarieven; het staat in de D1-tabel `tarieven` (maakt de Worker zelf aan, geen SQL nodig). De app haalt
+het bij het starten op via `GET /api/tarieven` (alleen ingelogd) en bewaart een kopie in de browser. Zonder bestand, of als de
+server niet bereikbaar is, gelden de tarieven die in de app zitten. Vorm en controle: `src/tax/tarievenBestand.js` (de Worker
+gebruikt dezelfde controle, dus een onvolledig bestand wordt geweigerd). Geen wijziging in wrangler.jsonc nodig.

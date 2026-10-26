@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
+import BeheerTarieven from "./BeheerTarieven.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 
 // nieuw-V4R3 — "Gebruikers en rechten": de beheerder (Secret BEHEERDERS in de Worker) geeft per e-mailadres
@@ -80,7 +81,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
   const [bezig, setBezig] = useState(false);
   const [form, setForm] = useState(LEEG);
   const [bewerkt, setBewerkt] = useState(null); // e-mailadres van de rij die in het formulier staat
-  const [tab, setTab] = useState(null); // "aanvragen" | "gebruikers"; null = kies zelf bij het laden
+  const [tab, setTab] = useState(null); // "aanvragen" | "gebruikers" | "tarieven" (beide-V6R7); null = kies zelf bij het laden
   const [zoek, setZoek] = useState("");
   const [filter, setFilter] = useState("alle");
   const [soortFilter, setSoortFilter] = useState("alle");
@@ -188,7 +189,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
         {fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{fout}</p>}
 
         <div className="flex gap-1 border-b border-slate-200" role="tablist">
-          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`]].map(([k, t]) => (
+          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"]].map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => kiesTab(k)}
               className={`-mb-px border-b-2 px-3 py-2 font-medium ${tab === k ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
               {t}{k === "aanvragen" && totaalAanvragen > 0 ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" /> : null}
@@ -196,6 +197,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
           ))}
         </div>
 
+        {tab === "tarieven" ? <BeheerTarieven /> : (<>
         <div className="flex flex-wrap gap-2">
           <input type="search" value={zoek} onChange={(e) => { setZoek(e.target.value); setPagina(0); }} placeholder="Zoek op naam, e-mailadres of notitie"
             className={`${VELD_KLEIN} min-w-0 flex-1`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken" />
@@ -311,6 +313,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
             <Bladeren pagina={pag} totaal={gebruikers.length} onPagina={setPagina} />
           </>
         )}
+        </>)}
       </div>
     </ModalShell>
   );

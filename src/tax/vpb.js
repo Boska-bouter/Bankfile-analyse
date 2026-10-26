@@ -11,14 +11,24 @@ export const VPB_TARIEVEN_BY_YEAR = {
   2024: { brackets: [{ tot: 200000, tarief: 0.19 }, { tot: Infinity, tarief: 0.258 }] },
   2025: { brackets: [{ tot: 200000, tarief: 0.19 }, { tot: Infinity, tarief: 0.258 }] },
   2026: { brackets: [{ tot: 200000, tarief: 0.19 }, { tot: Infinity, tarief: 0.258 }] },
+  2027: { brackets: [{ tot: 200000, tarief: 0.19 }, { tot: Infinity, tarief: 0.258 }] },
 };
+
+// beide-V6R7 — jaar uit de tabel: het jaar zelf, anders het dichtstbijzijnde eerdere (of het eerste) jaar.
+// Niet meer vast t/m 2026/2027: het tarievenbestand op de server kan jaren toevoegen (tax/tarievenBestand.js).
+function tabelJaar(tabel, year) {
+  if (tabel[year]) return year;
+  const jaren = Object.keys(tabel).map(Number).sort((a, b) => a - b);
+  const lager = jaren.filter((j) => j < year);
+  return lager.length ? lager[lager.length - 1] : jaren[0];
+}
 
 // Vennootschapsbelasting over het resultaat vóór Vpb van de (werk-)BV. Geen zelfstandigenaftrek of
 // mkb-winstvrijstelling (die bestaan alleen in de IB) — de volledige winst is belastbaar, in
 // schijven.
 export function estimateVpb(resultaatVoorVpb, year) {
   if (!resultaatVoorVpb || resultaatVoorVpb <= 0) return { belasting: 0, geëxtrapoleerd: false };
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = tabelJaar(VPB_TARIEVEN_BY_YEAR, year);
   const t = VPB_TARIEVEN_BY_YEAR[clampedYear];
   let belasting = 0;
   let vorige = 0;
@@ -39,6 +49,7 @@ export const BOX2_TARIEVEN_BY_YEAR = {
   2024: { brackets: [{ tot: 67000, tarief: 0.245 }, { tot: Infinity, tarief: 0.33 }] },
   2025: { brackets: [{ tot: 67804, tarief: 0.245 }, { tot: Infinity, tarief: 0.31 }] },
   2026: { brackets: [{ tot: 68843, tarief: 0.245 }, { tot: Infinity, tarief: 0.31 }] },
+  2027: { brackets: [{ tot: 69607, tarief: 0.245 }, { tot: Infinity, tarief: 0.31 }] }, // voorlopig (Belastingplan 2027)
 };
 
 // dividendBedrag is het bedrag dat de DGA in dit jaar privé ontvangt (dus ná een eventuele
@@ -46,7 +57,7 @@ export const BOX2_TARIEVEN_BY_YEAR = {
 // hier niet mee, zie de toelichting bij de holdingstructuur in het bouwplan).
 export function estimateBox2(dividendBedrag, year) {
   if (!dividendBedrag || dividendBedrag <= 0) return { belasting: 0, geëxtrapoleerd: false };
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = tabelJaar(BOX2_TARIEVEN_BY_YEAR, year);
   const t = BOX2_TARIEVEN_BY_YEAR[clampedYear];
   let belasting = 0;
   let vorige = 0;
@@ -67,7 +78,7 @@ export function estimateBox2(dividendBedrag, year) {
 export const GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR = { 2023: 51000, 2024: 56000, 2025: 56000, 2026: 58000 };
 
 export function checkGebruikelijkLoon(dgaSalaris, year) {
-  const clampedYear = Math.max(2023, Math.min(2026, year));
+  const clampedYear = tabelJaar(GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR, year);
   const minimum = GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR[clampedYear];
   const bedrag = dgaSalaris || 0;
   return { minimum, voldoetVermoedelijk: bedrag >= minimum, verschil: minimum - bedrag, geëxtrapoleerd: clampedYear !== year };
