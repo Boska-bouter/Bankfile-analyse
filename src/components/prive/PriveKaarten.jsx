@@ -38,10 +38,10 @@ export function InkomstenUitgavenKaart({ jaar, budget, onPerMaand }) {
       {/* beide-V5R4 — waar het overschot bleef: sparen/beleggen en het saldo van je rekening (wens Boska 25-10). */}
       <div className="rounded-lg bg-slate-50 px-2.5 py-2 space-y-1">
         <Regel label={sparenLabel(t.sparen)} bedrag={t.sparen} teken="− " />
-        {Math.abs(t.eigenBetaal || 0) >= 0.5 && <Regel label="Van (+) of naar (−) je andere betaalrekeningen" bedrag={t.eigenBetaal} teken="+ " />}
+        {Math.abs(t.eigenBetaal || 0) >= 0.5 && <Regel label="Van (+) of naar (−) andere eigen betaalrekeningen" bedrag={t.eigenBetaal} teken="+ " />}
         {Math.abs(t.verschoven || 0) >= 0.5 && <Regel label="Rond de jaarwisseling in een ander jaar geteld" bedrag={t.verschoven} teken="+ " />}
-        <Regel label="Verandering saldo van je rekening" bedrag={t.saldo} teken="+ " />
-        <p className="text-xs text-slate-500">Wat over is, gaat naar sparen en beleggen of blijft op je rekening. Zet je in een jaar meer opzij dan er over is, dan daalt het saldo van je rekening; dat is geen tekort.</p>
+        <Regel label="Verandering saldo van de rekening" bedrag={t.saldo} teken="+ " />
+        <p className="text-xs text-slate-500">Wat over is, gaat naar sparen en beleggen of blijft op de rekening. Gaat er in een jaar meer opzij dan er over is, dan daalt het saldo van de rekening; dat is geen tekort.</p>
       </div>
       {/* beide-V5R6 — uitgaven die volgens de omschrijving bij een ander jaar horen ("PREMIE 2026." in december 2025) */}
       {[...(budget.verschovenUit || []), ...(budget.verschovenIn || [])].length > 0 && (
@@ -110,7 +110,7 @@ export function VasteLastenKaart({ jaar, budget, onInstellen }) {
             ))}
           </ul>
           <Regel label="Totaal per maand" bedrag={budget.totaal.vasteLasten / maanden} sterk />
-          <p className="text-xs text-slate-500">{budget.totaal.inkomsten > 0 ? `${Math.round((100 * budget.totaal.vasteLasten) / budget.totaal.inkomsten)}% van je inkomsten gaat naar vaste lasten. ` : ""}Deze bedragen zitten al in de uitgaven.</p>
+          <p className="text-xs text-slate-500">{budget.totaal.inkomsten > 0 ? `${Math.round((100 * budget.totaal.vasteLasten) / budget.totaal.inkomsten)}% van de inkomsten gaat naar vaste lasten. ` : ""}Deze bedragen zitten al in de uitgaven.</p>
         </>
       )}
     </section>
@@ -123,7 +123,7 @@ export function SparenKaart({ jaar, budget, belasting }) {
     <section className={KAART}>
       <h3 className={KOP}>Sparen {jaar}</h3>
       <Regel label={sparenLabel(budget.totaal.sparen)} bedrag={Math.abs(budget.totaal.sparen)} />
-      {budget.totaal.inkomsten > 0 && budget.totaal.sparen > 0 && <p className="text-xs text-slate-500">Dat is {Math.round((100 * budget.totaal.sparen) / budget.totaal.inkomsten)}% van je inkomsten.</p>}
+      {budget.totaal.inkomsten > 0 && budget.totaal.sparen > 0 && <p className="text-xs text-slate-500">Dat is {Math.round((100 * budget.totaal.sparen) / budget.totaal.inkomsten)}% van de inkomsten.</p>}
       {b3 && (
         <div className="border-t border-slate-100 pt-2 space-y-1">
           <Regel label="Vermogen box 3 (1 januari)" bedrag={b3.grondslag} />
@@ -161,14 +161,14 @@ export function BelastingKaart({ jaar, belasting, aannames = [], onBerekening, o
         <Regel label={`Al ingehouden loonheffing (${som(belasting.personen, "brutoOpgegeven") > 0 ? "bruto min netto" : "jaaropgave"})`} bedrag={belasting.loonheffing} teken="− " />
       </>}
       {belasting.loonheffingGeschat && (
-        <p className="text-xs text-slate-500">Over je netto inkomen is de belasting al betaald. Wat hierboven staat, komt alleen nog uit je aftrekposten, je woning{som(belasting.personen, "zonderInhouding") > 0 ? ", box 3 en het inkomen zonder ingehouden belasting" : " en box 3"}.</p>
+        <p className="text-xs text-slate-500">Over het netto inkomen is de belasting al betaald. Wat hierboven staat, komt alleen nog uit de aftrekposten, de woning{som(belasting.personen, "zonderInhouding") > 0 ? ", box 3 en het inkomen zonder ingehouden belasting" : " en box 3"}.</p>
       )}
       <button type="button" onClick={() => setDetails((d) => !d)} className={LINK}>{details ? "Minder details" : "Hoe is dit berekend?"}</button>
       {details && (
         <div className="space-y-2 text-xs text-slate-600">
           {belasting.personen.map((p) => (
             <div key={p.rol} className="rounded-lg bg-slate-50 p-2 space-y-0.5">
-              <p className="font-semibold text-slate-700">{p.rol === "partner" ? "Partner" : belasting.metPartner ? "Jij" : "Box 1"}{p.aow ? " (AOW-leeftijd)" : ""}</p>
+              <p className="font-semibold text-slate-700">{p.rol === "partner" ? "Partner" : belasting.metPartner ? "Hoofdpersoon" : "Box 1"}{p.aow ? " (AOW-leeftijd)" : ""}</p>
               <Regel label={`Bruto inkomen (loon, uitkering, pensioen)${p.loonheffingGeschat ? ", teruggerekend uit netto" : ""}`} bedrag={p.bruto} />
               {p.eigenWoning !== 0 && <Regel label="Eigen woning (forfait min rente)" bedrag={p.eigenWoning} />}
               {p.persoonsgebondenAftrek > 0 && <Regel label="Aftrekposten" bedrag={p.persoonsgebondenAftrek} teken="− " />}
@@ -194,7 +194,7 @@ export function BelastingKaart({ jaar, belasting, aannames = [], onBerekening, o
           <input type="checkbox" checked={!!gedaan} onChange={(e) => onGedaan(e.target.checked)} /> Aangifte inkomstenbelasting {jaar} gedaan
         </label>
       )}
-      <p className="text-xs text-slate-400">Indicatie op basis van je bankgegevens en antwoorden; geen vervanging van de aangifte bij de Belastingdienst. Toeslagen worden niet berekend.</p>
+      <p className="text-xs text-slate-400">Indicatie op basis van de bankgegevens en antwoorden; geen vervanging van de aangifte bij de Belastingdienst. Toeslagen worden niet berekend.</p>
     </section>
   );
 }

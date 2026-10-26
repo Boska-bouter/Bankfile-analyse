@@ -82,7 +82,7 @@ function Veld({ label, hint, children }) {
 function Voorstel({ tekst, onNeem }) {
   return (
     <button type="button" onClick={onNeem} className="mt-1 text-xs text-teal-700 underline decoration-dotted hover:text-teal-900">
-      Voorstel uit je bank: {tekst} — overnemen
+      Voorstel uit de bank: {tekst} — overnemen
     </button>
   );
 }
@@ -194,7 +194,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
             <button onClick={onClose} className="text-teal-50 hover:text-white"><X className="h-5 w-5" /></button>
           </div>
           <div className="p-5 space-y-3">
-            <p className="text-sm text-slate-700">Is dit een <strong>financiële lease</strong> (je leent in feite het bedrag; alleen de rente is aftrekbaar) of een <strong>operationele lease</strong> (de hele termijn is aftrekbaar)?</p>
+            <p className="text-sm text-slate-700">Is dit een <strong>financiële lease</strong> (in feite een lening; alleen de rente is aftrekbaar) of een <strong>operationele lease</strong> (de hele termijn is aftrekbaar)?</p>
             <div className="flex gap-2">
               <button className={`${KNOP} ${KNOP_UIT}`} onClick={() => { onConfirmType(lease, "operationeel"); onClose(); onFinished?.(); }}>Operationeel — klaar, geen gegevens nodig</button>
               <button className={`${KNOP} ${KNOP_AAN}`} onClick={() => { onConfirmType(lease, "financieel"); setTypeGekozen(true); }}>Financial — gegevens invullen</button>
@@ -206,7 +206,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
   }
 
   const statusKleur = { groen: "bg-emerald-50 border-emerald-200 text-emerald-800", oranje: "bg-amber-50 border-amber-200 text-amber-800", rood: "bg-red-50 border-red-200 text-red-800" };
-  const statusTekst = { groen: "Berekening sluit aan op je betalingen", oranje: "Kleine afwijking — controleer de invoer", rood: "Rente niet betrouwbaar te berekenen — controleer koopprijs, looptijd en maandbedrag" };
+  const statusTekst = { groen: "Berekening sluit aan op de betalingen", oranje: "Kleine afwijking — controleer de invoer", rood: "Rente niet betrouwbaar te berekenen — controleer koopprijs, looptijd en maandbedrag" };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
@@ -257,7 +257,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
 
           {stapNu === "aankoop" && (
             <>
-              <p className="text-xs text-slate-500">Zoals op het leasecontract of de offerte staat. Weet je een bedrag niet, laat het dan leeg (alleen de koopprijs is nodig).</p>
+              <p className="text-xs text-slate-500">Zoals op het leasecontract of de offerte staat. Is een bedrag onbekend, laat het dan leeg (alleen de koopprijs is nodig).</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Veld label="Koopprijs (excl. BTW)"><input type="number" step="0.01" className={INPUT} value={form.koopprijs} onChange={(e) => set({ koopprijs: e.target.value })} /></Veld>
                 <Veld label="Te betalen BTW"><input type="number" step="0.01" className={INPUT} value={form.teBetalenBtw} onChange={(e) => set({ teBetalenBtw: e.target.value })} /></Veld>
@@ -322,7 +322,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                   <p className="text-xs text-slate-400 mt-1">Alleen bij meer dan 500 km privé per jaar geldt de bijtelling. Voor dezelfde auto telt een vinkje voor alle contracten.</p>
                 </div>
               )}
-              <p className="text-xs text-slate-400">KIA-beoordeling stel je in via "Meer opties" (alles op één scherm).</p>
+              <p className="text-xs text-slate-400">KIA-beoordeling staat bij "Meer opties" (alles op één scherm).</p>
             </>
           )}
 
@@ -350,7 +350,7 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
                 <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">De ingevulde leasevergoeding sluit niet aan op koopprijs + betalingen. Controleer stap Aankoop en Leasevoorwaarden.</p>
               )}
               {controle.match && ((controle.match.results || []).some((r) => !r.matchedTx) || (controle.match.onverwachteBetalingen?.length > 0)) && (
-                <p className="text-xs text-slate-500">Niet elke termijn in het schema is in je bank terug te vinden. Dat kan kloppen (bijv. een deel is van een andere rekening betaald); het volledige schema zie je in "Meer opties".</p>
+                <p className="text-xs text-slate-500">Niet elke termijn in het schema is in de bank terug te vinden. Dat kan kloppen (bijv. een deel is van een andere rekening betaald); het volledige schema staat bij "Meer opties".</p>
               )}
               {!controle.genoeg && verplichtOntbreekt.length === 0 && <p className="text-xs text-slate-500">Nog niet genoeg ingevuld om te controleren.</p>}
             </>
@@ -373,8 +373,8 @@ export default function FinancialLeaseWizard({ lease, details, typeConfirmed, on
               <div className="border-t border-slate-100 pt-3 space-y-1.5">
                 <p className="text-xs font-medium text-slate-600">Volgt er een nieuw contract?</p>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className={`${KNOP} ${KNOP_UIT}`} onClick={() => startVervolg(false)} title="Het huidige contract wordt als beëindigd gemarkeerd en je vult het vervangende contract in">Vervangen door een nieuw contract</button>
-                  <button type="button" className={`${KNOP} ${KNOP_UIT}`} onClick={() => startVervolg(true)} title="Het huidige contract loopt gewoon uit; je vult het vervolgcontract in dat daarna begint">Verlengd / vervolgcontract</button>
+                  <button type="button" className={`${KNOP} ${KNOP_UIT}`} onClick={() => startVervolg(false)} title="Het huidige contract wordt als beëindigd gemarkeerd; daarna volgt het vervangende contract">Vervangen door een nieuw contract</button>
+                  <button type="button" className={`${KNOP} ${KNOP_UIT}`} onClick={() => startVervolg(true)} title="Het huidige contract loopt gewoon uit; daarna volgt het vervolgcontract dat dan begint">Verlengd / vervolgcontract</button>
                 </div>
               </div>
             </>

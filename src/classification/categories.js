@@ -109,7 +109,7 @@ export const DEFAULT_RULES = [
     "tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn",
     "onlyfans", "coffeeshop",
   ],
-    description: "Persoonlijke, vertrouwelijke uitgaven die je bewust apart wilt houden van de rest (gokken, dating, adult content, drugs, en overige gevoelige uitgaven) — één subtype, geen verdere onderverdeling." },
+    description: "Persoonlijke, vertrouwelijke uitgaven die bewust apart worden gehouden van de rest (gokken, dating, adult content, drugs, en overige gevoelige uitgaven) — één subtype, geen verdere onderverdeling." },
   { name: "Belastingen: overig", color: "bg-fuchsia-50 text-fuchsia-700", keywords: ["belastingdienst"],
     description: "Belastingen/heffingen waarvan nog niet duidelijk is om welk specifiek type het gaat (OB, LH, MRB, ZVW, IH) — later te verfijnen." },
   { name: "Privé: overig", color: "bg-stone-100 text-stone-700", keywords: [],
@@ -264,7 +264,7 @@ export const DEFAULT_RULES = [
   // tax/categorySplit.js). Bij "Inkoop & zakelijke uitgaven" ingedeeld (zelfde groep als "Zakelijke
   // inkoop/uitgaven"), niet bij "Telecom & abonnementen" — dat zijn de vaste telefonie/internet-kosten.
   { name: "Streaming diensten", color: "bg-violet-100 text-violet-800", keywords: [],
-    description: "Streaming-abonnement (bijv. video/muziek) dat aantoonbaar deels zakelijk gebruikt wordt — in tegenstelling tot \"Prive overige abonnementen\" (altijd 100% privé) is hier een handmatig ingesteld percentage zakelijk gebruik van toepassing. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
+    description: "Streaming-abonnement (bijv. video/muziek) dat aantoonbaar deels zakelijk gebruikt wordt — in tegenstelling tot \"Prive overige abonnementen\" (altijd 100% privé) is hier een handmatig ingesteld percentage zakelijk gebruik van toepassing. Wijs hier alleen transacties aan die zelf zijn beoordeeld; nooit automatisch toegekend." },
   // v288 — privé-tegenhanger van "Streaming diensten" hierboven, zelfde reden als "Prive -
   // mobiel/internet" naast "Zakelijk mobiel/internet": "Streaming diensten" zelf valt onder
   // hoofdcategorie "Inkoop & zakelijke uitgaven" (dus standaard 100% zakelijk) en staat daardoor
@@ -275,7 +275,7 @@ export const DEFAULT_RULES = [
   // tax/categorySplit.js, nooit automatisch toegekend (geen keywords — "Privé overige abonnementen"
   // blijft de automatische standaard-bucket voor Netflix/Spotify/etc.).
   { name: "Privé - streaming diensten", color: "bg-violet-50 text-violet-700", keywords: [],
-    description: "Streaming-abonnement dat in beginsel privé is, maar aantoonbaar deels zakelijk gebruikt wordt — de privé-tegenhanger van \"Streaming diensten\", met hetzelfde instelbare percentage zakelijk gebruik. Wijs hier alleen transacties aan die je zelf hebt beoordeeld; nooit automatisch toegekend." },
+    description: "Streaming-abonnement dat in beginsel privé is, maar aantoonbaar deels zakelijk gebruikt wordt — de privé-tegenhanger van \"Streaming diensten\", met hetzelfde instelbare percentage zakelijk gebruik. Wijs hier alleen transacties aan die zelf zijn beoordeeld; nooit automatisch toegekend." },
   { name: "Software & Online diensten", color: "bg-sky-100 text-sky-800", keywords: [],
     description: "Software-/onlinedienst-abonnement dat deels zakelijk en deels privé gebruikt wordt (bijv. thuis én zakelijk). Net als \"Streaming diensten\" een handmatig ingesteld percentage zakelijk gebruik, nooit automatisch toegekend." },
   // ---- Alleen relevant bij rechtsvorm "bv" (zie App.jsx) — voor zzp/eenmanszaak blijven deze

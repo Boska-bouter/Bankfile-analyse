@@ -69,7 +69,7 @@ export default function AangifteYearPickerModal({
           </JaarSwipe>
         ) : (
           <>
-            <p className="text-sm font-medium mb-2">Voor welke jaren wil je een indicatieve aangifteberekening?</p>
+            <p className="text-sm font-medium mb-2">Voor welke jaren een indicatieve aangifteberekening?</p>
             <div className="flex flex-wrap gap-3 mb-3">
               {years.map((year) => (
                 <label key={year} className="inline-flex items-center gap-1.5 text-sm">

@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 // De keuze ligt daarna vast voor dit dossier.
 const KAARTEN = {
   zakelijk: { titel: "Zakelijk", tekst: "Voor een eenmanszaak, zzp of BV.", punten: ["Omzet, kosten en btw", "Indicatie inkomstenbelasting of vennootschapsbelasting"] },
-  prive: { titel: "Privé", tekst: "Voor je eigen huishouden, zonder onderneming.", punten: ["Inkomsten en uitgaven per maand", "Vaste lasten en sparen", "Indicatie inkomstenbelasting"] },
+  prive: { titel: "Privé", tekst: "Voor particulieren en hun huishouden, zonder onderneming.", punten: ["Inkomsten en uitgaven per maand", "Vaste lasten en sparen", "Indicatie inkomstenbelasting"] },
 };
 
 export default function SoortKeuze({ beschikbaar, onKies, onClose }) {
@@ -14,7 +14,7 @@ export default function SoortKeuze({ beschikbaar, onKies, onClose }) {
       <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
         <button type="button" onClick={onClose} className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /> Sluiten</button>
         <h2 className="text-xl font-bold">Nieuw dossier</h2>
-        <p className="mb-4 text-sm text-slate-600">Is dit dossier zakelijk of privé? Dit kun je later niet meer wijzigen. Wil je allebei, maak dan een tweede dossier.</p>
+        <p className="mb-4 text-sm text-slate-600">Is dit dossier zakelijk of privé? Dit is later niet meer te wijzigen. Voor allebei: maak een tweede dossier.</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           {Object.entries(KAARTEN).map(([soort, k]) => {
             const mag = beschikbaar.includes(soort);

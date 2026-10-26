@@ -146,14 +146,14 @@ function LeaseGroepPanel({
                     </select>
                     {heeftContract && (
                       <div>
-                        <p className="text-slate-600">Deze maatschappij heeft al een contract. Dit nieuwe contract wordt een <strong>apart contract</strong> (bijv. een andere {soort === "machine" ? "machine" : "auto"}). Een vervolgcontract voeg je toe bij het bestaande contract.</p>
-                        <p className="mt-1 text-slate-500">Betalingen die al bij het bestaande contract staan blijven daar, ook als het bedrag lijkt op dat van dit contract. Kenteken en gegevens vul je in de stappen die hierna starten. Staat het kenteken (of type auto) in het afschrift, dan worden die betalingen vanzelf gekoppeld; lijken andere betalingen op dit contract, dan vraag ik eerst bij welk contract ze horen.</p>
+                        <p className="text-slate-600">Deze maatschappij heeft al een contract. Dit nieuwe contract wordt een <strong>apart contract</strong> (bijv. een andere {soort === "machine" ? "machine" : "auto"}). Een vervolgcontract hoort bij het bestaande contract.</p>
+                        <p className="mt-1 text-slate-500">Betalingen die al bij het bestaande contract staan blijven daar, ook als het bedrag lijkt op dat van dit contract. Kenteken en gegevens volgen in de stappen die hierna starten. Staat het kenteken (of type auto) in het afschrift, dan worden die betalingen vanzelf gekoppeld; lijken andere betalingen op dit contract, dan vraagt de app eerst bij welk contract ze horen.</p>
                       </div>
                     )}
                     {kiesLease === ANDERS && (
                       <div>
                         <input value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} placeholder="Naam leasemaatschappij" className="rounded border border-slate-300 bg-white px-2 py-1 text-xs w-64 max-w-full" />
-                        <p className="mt-1 text-slate-500">Er zijn geen betalingen aan deze maatschappij gevonden in de geladen bankbestanden — mogelijk heeft de client die niet aangeleverd. Je kunt het contract wel invullen; de rente-uitsplitsing per betaling is dan niet mogelijk.</p>
+                        <p className="mt-1 text-slate-500">Er zijn geen betalingen aan deze maatschappij gevonden in de geladen bankbestanden — mogelijk zijn die niet aangeleverd. Het contract is wel in te vullen; de rente-uitsplitsing per betaling is dan niet mogelijk.</p>
                       </div>
                     )}
                     <div className="flex gap-2">
@@ -366,7 +366,7 @@ function LeaseGroepPanel({
                     <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                       <p>
                         <strong>Bij welk contract horen deze betalingen?</strong> Er staan {lease.splitKandidaten.length} betalingen van ongeveer {eur(lease.splitBedrag)} bij het
-                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan te zien is bij welk contract ze horen — dat bepaal jij.
+                        bestaande contract van deze maatschappij. In het afschrift staat geen kenteken of type auto waaraan te zien is bij welk contract ze horen — dat is zelf te bepalen.
                       </p>
                       <ul className="mt-1.5 max-h-28 overflow-y-auto text-xs text-blue-800">
                         {lease.splitKandidaten.slice(0, 12).map((tx, i) => (
@@ -498,7 +498,7 @@ export default function LeaseInterestPanel(props) {
         </div>
       )}
       <LeaseGroepPanel {...gemeenschappelijk} soort="auto" groep="auto" titel="Lease (financieel) — auto" uitleg={UITLEG.auto} leaseSummary={auto} legeTekst="Geen autolease gevonden in de bankgegevens." />
-      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit je bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
+      <LeaseGroepPanel {...gemeenschappelijk} soort="machine" groep="overig" titel="Lease (financieel) — andere middelen (machines)" uitleg={UITLEG.overig} leaseSummary={overig} legeTekst="Geen lease van machines of andere bedrijfsmiddelen gevonden. Leases komen uit de bankgegevens: zodra betalingen aan de leasemaatschappij in de bankbestanden staan verschijnt de lease hier (bij een nieuw dossier helpt de naam uit de basisvragen om hem hier te plaatsen). Gebruikt de lease een andere maatschappij dan bij de auto, laad dan ook die bankbetalingen." />
     </div>
   );
 }

@@ -394,7 +394,7 @@ export default function AppSidebar({
           {/* beide-V1R0 — abonnementen bekijken en er een aanvragen (bijv. privé naast zakelijk) */}
           {onAbonnementen && <IcoonKnop onClick={onAbonnementen} label="Abonnementen (zakelijk en privé)" Icon={CreditCard} />}
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: je bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
           <span className="sb-label">Gegevens blijven lokaal</span>
         </div>

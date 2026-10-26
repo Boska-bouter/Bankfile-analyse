@@ -133,7 +133,7 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
       const privePct = Math.min(100, Math.max(0, Number(instelling.privePct) || 0));
       pct = privePct;
       berekend = (gebruik + (binnenAanschafperiode && auto.btwAanschafBekend ? auto.btwAanschaf / 5 : 0)) * (privePct / 100);
-      meldingen.push("Werkelijk privégebruik: indicatieve berekening (privé-% × btw op gebruik en 1/5 aanschaf-btw). Controleer met je km-administratie.");
+      meldingen.push("Werkelijk privégebruik: indicatieve berekening (privé-% × btw op gebruik en 1/5 aanschaf-btw). Controleer met de km-administratie.");
     }
     let bedrag = berekend;
     let afgetopt = false;

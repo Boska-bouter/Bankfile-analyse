@@ -196,7 +196,7 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
         {t.transferLocked ? (
           <span
             className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${hoofdKleur(mainCategoryOf(t.category))}`}
-            title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
+            title="Overboeking tussen eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
           >
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
           </span>
@@ -216,7 +216,7 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
             title={"Spiegelboeking — geen echte bankregel. Dit is automatisch de privékant van een " +
               `"${t.category}" die op de zakelijke rekening staat (zelfde bedrag, omgekeerd teken), ` +
               "omdat de privérekening zelf niet is ingeladen. Het type ligt daarom vast op Privé. " +
-              "Wijzig je de categorie, dan wordt de originele zakelijke boeking aangepast; " +
+              "Wordt de categorie gewijzigd, dan wordt de originele zakelijke boeking aangepast; " +
               "is die geen privé-opname/terugboeking meer, dan verdwijnt deze spiegel vanzelf."}
           >
             Privé <span className="text-[11px] font-normal">↔ spiegel</span>

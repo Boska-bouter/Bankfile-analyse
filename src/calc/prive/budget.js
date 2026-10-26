@@ -15,7 +15,7 @@ export const hoofdLabel = (hoofd, b) => (allemaal(b, (x) => x < 0) ? `${hoofd} (
 // beide-V5R4 — "Over" is inkomsten min uitgaven (wens Boska 25-10: "we houden altijd over"). Wat je daarvan spaart of
 // belegt en wat er met het saldo van je rekening gebeurt, staat eronder (zie SALDO_LABEL).
 export const overLabel = (b) => (allemaal(b, (x) => x >= 0) ? "Over (inkomsten min uitgaven)" : allemaal(b, (x) => x < 0) ? "Meer uitgegeven dan binnengekomen" : "Over (+) of meer uitgegeven (−)");
-export const SALDO_LABEL = "Verandering saldo van je rekening";
+export const SALDO_LABEL = "Verandering saldo van de rekening";
 export const VERSCHOVEN_LABEL = "Rond de jaarwisseling in een ander jaar geteld";
 export const VASTE_LASTEN_LABEL = "Vaste lasten (zit al in de uitgaven)";
 
@@ -42,7 +42,7 @@ export function budgetJaarVan(t, jaren = null) {
   if (jaren && !jaren.has(ander)) return jaar;
   return noemt(ander) && !noemt(jaar) ? ander : jaar;
 }
-export const EIGEN_BETAAL_LABEL = "Overboekingen met je andere betaalrekeningen (telt niet mee)";
+export const EIGEN_BETAAL_LABEL = "Overboekingen met andere eigen betaalrekeningen (telt niet mee)";
 
 // soort van een boeking in het budget: "inkomen" | "uitgave" | "sparen" | null (telt niet mee)
 export function budgetSoort(categorie) {

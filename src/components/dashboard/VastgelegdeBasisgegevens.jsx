@@ -94,11 +94,11 @@ export default function VastgelegdeBasisgegevens({
         <p className="text-sm text-slate-500 mt-0.5">
           {modus === "controleren"
             ? (prive
-              ? "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn je antwoorden uit de wizard; na de import controleert de app de transacties hiertegen."
-              : "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn je antwoorden uit de wizard; na de import controleert de app de transacties hiertegen (bijv. of de opgegeven lease en leningen ook echt in de bank staan).")
+              ? "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn de antwoorden uit de wizard; na de import controleert de app de transacties hiertegen."
+              : "Er is nog geen bankbestand, dus er valt nog niets te controleren. Dit zijn de antwoorden uit de wizard; na de import controleert de app de transacties hiertegen (bijv. of de opgegeven lease en leningen ook echt in de bank staan).")
             : prive
-              ? "Er is nog geen bankbestand. Dit zijn je antwoorden uit de wizard. Instellingen per jaar komen na de import."
-              : "Er is nog geen bankbestand. Dit zijn je antwoorden uit de wizard. Instellingen per jaar (urencriterium, startersaftrek, werkruimte, BTW-kwartalen) komen na de import."}
+              ? "Er is nog geen bankbestand. Dit zijn de antwoorden uit de wizard. Instellingen per jaar komen na de import."
+              : "Er is nog geen bankbestand. Dit zijn de antwoorden uit de wizard. Instellingen per jaar (urencriterium, startersaftrek, werkruimte, BTW-kwartalen) komen na de import."}
         </p>
       </div>
 

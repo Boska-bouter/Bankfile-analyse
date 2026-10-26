@@ -64,13 +64,13 @@ export default function BvSignaleringPanel({ signalering, activeYear, heeftHoldi
               <strong>Fiscaal voordeel bij liquidatie:</strong> normaal is een verlies op de deelneming
               (werkmaatschappij) niet aftrekbaar voor de holding. Bij daadwerkelijke liquidatie mag de holding dit
               verlies, onder voorwaarden, tóch aftrekken (liquidatieverliesregeling, art. 13d Wet Vpb) — de precieze
-              berekening vraagt maatwerk van een fiscalist. Dit is relevant omdat je hebt aangegeven dat er een
+              berekening vraagt maatwerk van een fiscalist. Dit is relevant omdat is aangegeven dat er een
               holding boven deze BV staat.
             </p>
           ) : (
             <p>
               De liquidatieverliesregeling (een fiscaal voordeel bij liquidatie via een holding) is hier niet van
-              toepassing — je gaf aan dat er geen holding boven deze BV staat.
+              toepassing — opgegeven is dat er geen holding boven deze BV staat.
             </p>
           )}
           <p className="text-rose-400">

@@ -15,12 +15,12 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
     <section className="rounded-paneel border border-slate-200 bg-white overflow-hidden shadow-sm">
       <div className="bg-slate-900 text-stone-50 px-5 py-4">
         <h2 className="text-sm font-semibold flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-emerald-400" /> Wie zijn je zakelijke klanten?
+          <Building2 className="h-4 w-4 text-emerald-400" /> Wie zijn de zakelijke klanten?
         </h2>
         <p className="text-xs text-slate-300 mt-1 max-w-2xl">
           Voor elke binnenkomende betaling: is dit een{" "}
           <span className="text-emerald-400 font-medium">zakelijke klant/opdrachtgever</span>? Bij "Nee" komt het bij
-          "Overig" te staan — daar kun je het daarna alsnog aan een specifieke categorie toewijzen.
+          "Overig" te staan — daar is het daarna alsnog aan een specifieke categorie toe te wijzen.
         </p>
         <div className="mt-3 flex items-center gap-3">
           <div className="flex-1 h-1.5 rounded-full bg-slate-700 overflow-hidden">

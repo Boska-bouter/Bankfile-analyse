@@ -3463,8 +3463,8 @@ export default function App() {
     setDialog({
       title: parsedFiles.length > 0 ? "Extra bankbestand toevoegen" : "Bankbestand toevoegen",
       message: modus.rekeningen.vraagSoort
-        ? <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Kies je meerdere bestanden van verschillend type, kies dan de laatste optie: je geeft het type daarna per bestand aan.</p>
-        : <p>Kies een of meer bankbestanden (CSV, MT940 of CAMT){bankkoppelingAan ? ", of haal je transacties rechtstreeks bij je bank op" : ""}.</p>,
+        ? <p>Is het bankbestand van een zakelijke rekening of van een privérekening? Bij meerdere bestanden van verschillend type: kies de laatste optie en geef het type daarna per bestand aan.</p>
+        : <p>Kies een of meer bankbestanden (CSV, MT940 of CAMT){bankkoppelingAan ? ", of haal de transacties rechtstreeks bij de bank op" : ""}.</p>,
       actions: [
         ...(modus.rekeningen.vraagSoort ? [
           { label: "Zakelijke rekening", variant: "primary", onClick: () => kiesBestand("Zakelijk") },
@@ -3493,7 +3493,7 @@ export default function App() {
   const startAanvraagUitgebreid = () => setDialog({
     title: "Uitgebreid aanvragen",
     message: <>
-      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht.{bankkoppelingAan ? " Met de bankkoppeling haal je je transacties ook rechtstreeks bij je bank op." : ""}</p>
+      <p>Met Uitgebreid krijg je alle tabbladen, de controles, de aangifteberekening en het maandoverzicht.{bankkoppelingAan ? " Met de bankkoppeling komen de transacties ook rechtstreeks van de bank." : ""}</p>
       {bankkoppelingAan && <p className="text-amber-800">{BANKKOPPELING_STATUS}</p>}
       {eigenAanvraag && <p className="font-medium text-amber-800">Je hebt al een aanvraag lopen ({eigenAanvraag === "koppelen" ? "Uitgebreid met bankkoppeling" : eigenAanvraag === "uitgebreid" ? "Uitgebreid" : "Eenvoudig"}).</p>}
     </>,
@@ -3518,12 +3518,12 @@ export default function App() {
     setDialog(magUitgebreid
       ? {
           title: "Bankkoppeling",
-          message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kun je wel bankbestanden (CSV, MT940 of CAMT) toevoegen.</p>,
+          message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kunnen wel bankbestanden (CSV, MT940 of CAMT) worden toegevoegd.</p>,
           actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => naarUitgebreidVanuitEenvoudig(() => setBankKoppeling({})) }],
         }
       : {
           title: "Bankkoppeling",
-          message: <p>Een bank rechtstreeks koppelen kan alleen met een uitgebreid account. Voeg in de eenvoudige weergave je bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
+          message: <p>Een bank rechtstreeks koppelen kan alleen met een uitgebreid account. Voeg in de eenvoudige weergave de bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
           actions: [],
         });
   };
@@ -4084,7 +4084,7 @@ export default function App() {
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={startOpslaan} />
         {!eenvoudigActief && overgeslagenMelding && parsedFiles.length > 0 && overgeslagenInEenvoudig.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-            <span className="min-w-0 flex-1">In Eenvoudig zijn {overgeslagenInEenvoudig.length} vra{overgeslagenInEenvoudig.length === 1 ? "ag" : "gen"} overgeslagen: <b>{overgeslagenInEenvoudig.join(", ")}</b>. Wat je hier invult, kan de uitkomst in Eenvoudig veranderen.</span>
+            <span className="min-w-0 flex-1">In Eenvoudig zijn {overgeslagenInEenvoudig.length} vra{overgeslagenInEenvoudig.length === 1 ? "ag" : "gen"} overgeslagen: <b>{overgeslagenInEenvoudig.join(", ")}</b>. Wat hier wordt ingevuld, kan de uitkomst in Eenvoudig veranderen.</span>
             <button type="button" onClick={() => { setOvergeslagenMelding(false); setActiveTab("overzicht"); setManualWizardOpen(true); }} className="rounded-lg bg-sky-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-sky-800">Nu beantwoorden</button>
             <button type="button" onClick={() => setOvergeslagenMelding(false)} className="rounded-lg px-2 py-1.5 text-xs text-sky-800 underline">Later</button>
           </div>
@@ -4813,7 +4813,7 @@ export default function App() {
 
         {onderbouwingKeuze && (
           <KlantJaarKeuzeModal years={years} selected={onderbouwingKeuze} setSelected={setOnderbouwingKeuze} onOpen={openOnderbouwing} onClose={() => setOnderbouwingKeuze(null)}
-            vraag="Voor welke jaren wil je het onderbouwingsoverzicht?" knop="Onderbouwing tonen" />
+            vraag="Voor welke jaren het onderbouwingsoverzicht?" knop="Onderbouwing tonen" />
         )}
         {onderbouwingHtml && (
           <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
@@ -4821,7 +4821,7 @@ export default function App() {
         )}
         {btwOverzichtKeuze && (
           <KlantJaarKeuzeModal years={years} selected={btwOverzichtKeuze} setSelected={setBtwOverzichtKeuze} onOpen={openBtwOverzicht} onClose={() => setBtwOverzichtKeuze(null)}
-            vraag="Voor welke jaren wil je het BTW-overzicht per kwartaal?" knop="Overzicht tonen" />
+            vraag="Voor welke jaren het BTW-overzicht per kwartaal?" knop="Overzicht tonen" />
         )}
         {btwOverzichtHtml && (
           <AangifteVoorstelPreviewModal html={btwOverzichtHtml} years={btwOverzichtJaren} titel={`BTW per kwartaal ${jarenBereik(btwOverzichtJaren)}`}

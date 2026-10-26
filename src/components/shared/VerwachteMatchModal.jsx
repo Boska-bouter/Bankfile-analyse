@@ -25,7 +25,7 @@ export default function VerwachteMatchModal({ suggestie, onAccept, onDismiss }) 
         </div>
         <div className="p-4 text-sm text-slate-600 space-y-3">
           <p>
-            Je gaf aan dat er een {label.werkwoord} is bij <strong>"{naam}"</strong>. Er {matches.length === 1 ? "is 1 transactie" : `zijn ${matches.length} transacties`} gevonden die
+            Opgegeven is dat er een {label.werkwoord} is bij <strong>"{naam}"</strong>. Er {matches.length === 1 ? "is 1 transactie" : `zijn ${matches.length} transacties`} gevonden die
             hierop lijken:
           </p>
           <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">

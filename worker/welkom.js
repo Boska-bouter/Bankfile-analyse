@@ -69,10 +69,10 @@ export const alleGratis = (soorten) => soorten.every((s) => s.plannen.every((p) 
 export function welkomKop(soorten) {
   const gratis = alleGratis(soorten);
   const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
-    "Je bankbestanden blijven in je browser", gratis ? "Voorlopig gratis" : null].filter(Boolean);
+    "Bankbestanden blijven in de browser", gratis ? "Voorlopig gratis" : null].filter(Boolean);
   return `<header class="kop">
 <h1>Bankoverzicht</h1>
-<p class="sub">Je bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie van je belasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
+<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie van de belasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
 <ul class="kenmerken">${kenmerken.map((k) => `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
 }
@@ -93,9 +93,9 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
   <section aria-labelledby="wat">
     <h2 id="wat">Wat doet Bankoverzicht?</h2>
     <div class="stappen">
-      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van je bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
+      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
       <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>
-      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar je geld vandaan komt en heen gaat, per maand en categorie, en indicatieve belastingoverzichten. Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
+      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar het geld vandaan komt en heen gaat, per maand en categorie, en indicatieve belastingoverzichten. Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
     </div>
   </section>
 
@@ -121,7 +121,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
   <section>
     <h2>De veiligheid van jouw gegevens</h2>
     <div class="kaart">
-      <p style="margin:0">Je bankbestanden worden in je eigen browser verwerkt en niet naar een server gestuurd. Je dossier bewaar je zelf als bestand, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
+      <p style="margin:0">Bankbestanden worden in de eigen browser verwerkt en niet naar een server gestuurd. Het dossier wordt als bestand bewaard, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
       <p class="let-op">${e(veilig)}</p>
     </div>
   </section>
