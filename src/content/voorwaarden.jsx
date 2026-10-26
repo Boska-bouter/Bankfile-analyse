@@ -1,6 +1,6 @@
 // Gebruiksvoorwaarden — getoond bij het eerste gebruik (per apparaat/browser) en terug te lezen in de Help.
 // Bij een inhoudelijke wijziging: VOORWAARDEN_VERSIE ophogen, dan moet iedereen opnieuw akkoord gaan.
-export const VOORWAARDEN_VERSIE = "9"; // beide-V7R1 — 4.8: telefoonnummer en organisatie bij de aanvraag
+export const VOORWAARDEN_VERSIE = "10"; // beide-V7R3 — 4.8: antwoord peilvraag; 5: gratis abonnement 30 dagen en verlengen (V7R1: telefoon en organisatie)
 export const VOORWAARDEN_SLEUTEL = "bankoverzicht-voorwaarden";
 
 // beide-V1R9 — artikel 4 t/m 8 gelden voor zakelijk en privé; de privévoorwaarden (voorwaardenPrive.jsx) gebruiken ze ook.
@@ -16,13 +16,16 @@ export const VOORWAARDEN_ALGEMEEN = (
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.5</span><span><strong>Internetverbinding.</strong> Naast 4.4, 4.7 en 4.8 maakt de app alleen verbinding met internet om de app zelf te laden (de app-bestanden via Cloudflare, lettertypen via Google Fonts) en om te controleren of er een nieuwe versie is. Daarbij gaan geen dossiergegevens mee.</span></li>
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.6</span><span><strong>Exports en projectbestanden.</strong> Je projectbestanden en exports (Dossier opslaan, Excel, rapporten) kunnen financiële en persoonlijke gegevens bevatten: bewaar ze zorgvuldig.</span></li>
         <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.7</span><span><strong>Bankkoppeling (op dit moment niet beschikbaar; alleen als je die zelf gebruikt).</strong> Koppel je een rekening rechtstreeks, dan geef je bij je eigen bank toestemming om je saldo en transacties te laten lezen. Dat loopt via Enable Banking of Ponto van Isabel Group (vergunninghoudende diensten voor rekeninginformatie onder de Europese PSD2-regels) en de server van de app bij Cloudflare. De server geeft de transacties direct door aan je browser en slaat ze niet op. Alleen om het koppelen af te ronden, bijvoorbeeld als de bank in een ander venster opent, bewaart de server maximaal 2 uur de namen en rekeningnummers van de gekoppelde rekeningen en een versleutelde koppelcode; daarna worden ze gewist. Om later opnieuw te kunnen ophalen, bewaart je dossier die versleutelde koppelcode; de app kan alleen lezen, nooit betalen. Gebruik je Ponto, dan gelden ook de voorwaarden van Ponto voor je Ponto-account. Je kunt een koppeling altijd intrekken met "Ontkoppelen" of bij je bank. De toestemming verloopt vanzelf na de termijn die je bank of Ponto hanteert (meestal 90 tot 180 dagen).</span></li>
-        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.8</span><span><strong>Inloggen en account.</strong> Voor je account bewaart de app op de server bij Cloudflare je e-mailadres, je voor- en achternaam, je organisatie (als je die opgeeft), je abonnement, je aanvraag en de reden die je daarbij opgeeft, je telefoonnummer (alleen om na te gaan of de aanvraag echt is; het wordt gewist zodra de aanvraag is goedgekeurd of afgewezen, en uiterlijk na 30 dagen), je wachtwoord (alleen als onomkeerbare hash, nooit leesbaar), je passkey (alleen het openbare deel, geen vingerafdruk of gezicht) en je inlogsessie. Inloglinks en berichten over je aanmelding worden per e-mail verstuurd via Cloudflare. Wil je je account laten verwijderen, neem dan contact op met de maker.</span></li>
+        <li className="flex gap-2"><span className="shrink-0 text-slate-400 tabular-nums">4.8</span><span><strong>Inloggen en account.</strong> Voor je account bewaart de app op de server bij Cloudflare je e-mailadres, je voor- en achternaam, je organisatie (als je die opgeeft), je abonnement, je aanvraag en de reden die je daarbij opgeeft, je telefoonnummer (alleen om na te gaan of de aanvraag echt is; het wordt gewist zodra de aanvraag is goedgekeurd of afgewezen, en uiterlijk na 30 dagen), je antwoord op de vrijwillige vraag over betalen als je verlenging aanvraagt (bewaard tot je account wordt verwijderd), je wachtwoord (alleen als onomkeerbare hash, nooit leesbaar), je passkey (alleen het openbare deel, geen vingerafdruk of gezicht) en je inlogsessie. Inloglinks en berichten over je aanmelding worden per e-mail verstuurd via Cloudflare. Wil je je account laten verwijderen, neem dan contact op met de maker.</span></li>
       </ol>
     </section>
     <section>
       <h3 className="font-semibold text-slate-800">5. Toegang</h3>
       <p>
         Toegang tot de app is persoonlijk. Geef je inlog of de app niet door aan anderen zonder toestemming van de maker.
+        Een gratis abonnement loopt 30 dagen vanaf de goedkeuring. Daarna kun je verlenging aanvragen; de maker beslist
+        daarover. Je krijgt vooraf een herinnering. Na afloop kun je niet meer in de app werken, maar je dossiers blijven
+        van jou: die bewaar je zelf als bestand.
       </p>
     </section>
     <section>

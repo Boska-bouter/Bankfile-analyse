@@ -164,7 +164,7 @@ import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModa
 import ActivaPanel from "./components/loans/ActivaPanel.jsx";
 import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAannamesPanel.jsx";
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
-import { abonnementRegels } from "./content/abonnement.js";
+import { abonnementRegels, aflopendeAbonnementen } from "./content/abonnement.js";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
@@ -315,6 +315,9 @@ export default function App() {
   // beide-V2R6 — het abonnement, zichtbaar in de zijbalk en in Eenvoudig.
   const abonnement = useMemo(() => abonnementRegels({ soorten: rechtenPerSoort, mag: magUitgebreidAccount, koppelen: magKoppelenAccount, geldigTot: abonnementTot, beheerder: isBeheerder }),
     [rechtenPerSoort, magUitgebreidAccount, magKoppelenAccount, abonnementTot, isBeheerder]);
+  // beide-V7R3 — melding als een abonnement binnen 10 dagen afloopt, met de knop om te verlengen (wegklikken = deze sessie).
+  const aflopend = useMemo(() => aflopendeAbonnementen(rechtenPerSoort, { beheerder: isBeheerder }), [rechtenPerSoort, isBeheerder]);
+  const [aflopendWeg, setAflopendWeg] = useState(false);
   const naarAbonnementen = () => { window.location.href = "/aanmelden"; };
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
@@ -4050,6 +4053,16 @@ export default function App() {
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <SessieBalk sessie={sessie} onOpslaan={startOpslaan} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={startOpslaan} />
+        {aflopend.length > 0 && !aflopendWeg && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+            <span className="min-w-0 flex-1">
+              {aflopend.map((a) => <span key={a.soort} className="block">Abonnement <b>{a.tekst}</b> loopt af op {a.datum}{a.dagen === 0 ? " (vandaag)" : a.dagen === 1 ? " (morgen)" : ` (over ${a.dagen} dagen)`}.</span>)}
+              <span className="block text-xs text-amber-800">Dossiers blijven bewaard als bestand. Verlengen kost één knop.</span>
+            </span>
+            <button type="button" onClick={() => { window.location.href = `/aanmelden?verlengen=${aflopend[0].soort}`; }} className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-800">Verlengen</button>
+            <button type="button" onClick={() => setAflopendWeg(true)} className="rounded-lg px-2 py-1.5 text-xs text-amber-800 underline">Later</button>
+          </div>
+        )}
         {!eenvoudigActief && overgeslagenMelding && parsedFiles.length > 0 && overgeslagenInEenvoudig.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
             <span className="min-w-0 flex-1">In Eenvoudig zijn {overgeslagenInEenvoudig.length} vra{overgeslagenInEenvoudig.length === 1 ? "ag" : "gen"} overgeslagen: <b>{overgeslagenInEenvoudig.join(", ")}</b>. Wat hier wordt ingevuld, kan de uitkomst in Eenvoudig veranderen.</span>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
 import BeheerTarieven from "./BeheerTarieven.jsx";
 import BeheerLogboek from "./BeheerLogboek.jsx";
+import BeheerPeiling from "./BeheerPeiling.jsx";
 import { tarievenHerinnering } from "../../tax/tarievenLaden.js";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 
@@ -145,14 +146,16 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     } catch (e) { setFout(e.message); } finally { setBezig(false); }
   };
 
-  const beslis = async (email, actie) => {
-    if (actie === "afwijzen" && !window.confirm(`Aanvraag van ${email} afwijzen?\n\nDe aanvrager krijgt daarover een e-mail.`)) return;
+  const beslis = async (email, actie, verlenging = false) => {
+    if (actie === "afwijzen" && !window.confirm(`${verlenging ? "Verlenging" : "Aanvraag"} van ${email} afwijzen?\n\nDe aanvrager krijgt daarover een e-mail.${verlenging ? " Het abonnement loopt dan af op de huidige einddatum." : ""}`)) return;
     setBezig(true); setFout(""); setMelding("");
     try {
       const d = await api(actie, { email });
       // nieuw-V4R8 — de Worker mailt de aanvrager; meld het als die mail niet weg kon.
       // beide-V6R8 — een niet verstuurde mail blijft als waarschuwing staan tot hij is weggeklikt (en staat in het logboek).
-      const wat = actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd` : `De aanvraag van ${email} is afgewezen`;
+      // beide-V7R3 — gratis abonnement krijgt een einddatum (30 dagen); noem die in de melding.
+      const tot = d.geldigTot ? ` (tot en met ${new Date(`${d.geldigTot}T12:00:00`).toLocaleDateString("nl-NL")})` : "";
+      const wat = `De ${verlenging ? "verlenging" : "aanvraag"} van ${email} is ${actie === "goedkeuren" ? `goedgekeurd${tot}` : "afgewezen"}`;
       if (d.mailFout) setWaarschuwing(`${wat}, maar de e-mail aan de aanvrager is NIET verstuurd (${d.mailFout}). Laat het de aanvrager zelf weten.`);
       else setMelding(`${wat} en de aanvrager krijgt een e-mail.`);
       await laad();
@@ -229,7 +232,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
         {fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{fout}</p>}
 
         <div className="flex gap-1 border-b border-slate-200" role="tablist">
-          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"], ["logboek", "Logboek"]].map(([k, t]) => (
+          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"], ["peiling", "Peiling"], ["logboek", "Logboek"]].map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => kiesTab(k)}
               className={`-mb-px border-b-2 px-3 py-2 font-medium ${tab === k ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
               {t}{(k === "aanvragen" && totaalAanvragen > 0) || (k === "tarieven" && tariefHerinnering) ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" /> : null}
@@ -238,7 +241,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
           ))}
         </div>
 
-        {tab === "tarieven" ? <BeheerTarieven /> : tab === "logboek" ? <BeheerLogboek /> : (<>
+        {tab === "tarieven" ? <BeheerTarieven /> : tab === "peiling" ? <BeheerPeiling /> : tab === "logboek" ? <BeheerLogboek /> : (<>
         <div className="flex flex-wrap gap-2">
           <input type="search" value={zoek} onChange={(e) => { setZoek(e.target.value); setPagina(0); }} placeholder="Zoek op naam, e-mailadres of notitie"
             className={`${VELD_KLEIN} min-w-0 flex-1`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken" />
@@ -309,7 +312,8 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                   <li key={r.email} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-slate-800 break-all"><SoortLabel soort={r.aanvraagGebruik || "zakelijk"} />{r.naam ? `${r.naam} · ` : ""}{r.email}</p>
-                      <p className="text-xs text-slate-600">vraagt <b>{planNaam(r.aanvraagGebruik, r.aanvraag)}</b>{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}
+                      <p className="text-xs text-slate-600">{r.verlenging ? <>vraagt <b>verlenging</b> van </> : "vraagt "}<b>{planNaam(r.aanvraagGebruik, r.aanvraag)}</b>
+                        {r.verlenging && soortVan(r, r.aanvraagGebruik || "zakelijk").geldigTot ? ` (einddatum ${new Date(`${soortVan(r, r.aanvraagGebruik || "zakelijk").geldigTot}T12:00:00`).toLocaleDateString("nl-NL")})` : ""}{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}
                         {["zakelijk", "prive"].map((s) => niveauTekst(soortVan(r, s)) && ` · heeft nu ${SOORT[s]}: ${niveauTekst(soortVan(r, s))}`).filter(Boolean).join("")}</p>
                       {(r.telefoon || r.organisatie) && (
                         <p className="mt-1 text-sm text-slate-700">
@@ -317,10 +321,10 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                           {r.telefoon ? <>Telefoon: <a href={`tel:${r.telefoon.replace(/[^\d+]/g, "")}`} className="font-semibold text-teal-800 underline">{r.telefoon}</a> <span className="text-xs text-slate-500">(wordt gewist na goedkeuren of afwijzen)</span></> : null}
                         </p>
                       )}
-                      <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{r.reden ? `Reden: ${r.reden}` : "Geen reden opgegeven"}</p>
+                      <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{r.reden ? `${r.verlenging ? "Reden bij aanmelden" : "Reden"}: ${r.reden}` : "Geen reden opgegeven"}</p>
                     </div>
-                    <button type="button" disabled={bezig} onClick={() => beslis(r.email, "goedkeuren")} className={`${KNOP_PRIMAIR} disabled:opacity-50`}>Goedkeuren</button>
-                    <button type="button" disabled={bezig} onClick={() => beslis(r.email, "afwijzen")} className={KNOP_SECUNDAIR_KLEIN}>Afwijzen</button>
+                    <button type="button" disabled={bezig} onClick={() => beslis(r.email, "goedkeuren", r.verlenging)} className={`${KNOP_PRIMAIR} disabled:opacity-50`}>Goedkeuren</button>
+                    <button type="button" disabled={bezig} onClick={() => beslis(r.email, "afwijzen", r.verlenging)} className={KNOP_SECUNDAIR_KLEIN}>Afwijzen</button>
                   </li>
                 ))}
               </ul>

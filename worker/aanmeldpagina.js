@@ -3,7 +3,8 @@
 // - Op /aanmelden ziet iedereen die is ingelogd zijn abonnementen en kan een abonnement aanvragen, ook een tweede
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
-import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc } from "./rechten.js";
+import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
+import { BETALEN } from "./peiling.js";
 import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
@@ -19,7 +20,41 @@ function huidigeAbonnementen(r) {
   }).filter(Boolean);
 }
 
-export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, plan = null, slot = true } = {}) {
+// beide-V7R3 — welke abonnementen kunnen nu worden verlengd: afgelopen, of binnen HERINNER_DAGEN, of gevraagd via de link
+// in de herinneringsmail (?verlengen=soort). Niet als er voor die soort al een aanvraag openstaat.
+function teVerlengen(r, verlengen, vandaag = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" })) {
+  return Object.keys(GEBRUIK).map((s) => {
+    const x = r?.soorten?.[s];
+    if (!x?.niveauRuw || (r?.aanvraag && r.aanvraagGebruik === s)) return null;
+    const bijna = x.geldigTot && x.geldigTot <= plusDagen(vandaag, HERINNER_DAGEN);
+    if (!x.verlopen && !bijna && verlengen !== s) return null;
+    return { soort: s, plan: NIVEAU_PLAN[x.niveauRuw], geldigTot: x.geldigTot, verlopen: !!x.verlopen };
+  }).filter(Boolean);
+}
+
+function verlengBlok(lijst) {
+  if (!lijst.length) return "";
+  const keuze = lijst.length > 1
+    ? `<fieldset><legend>Welk abonnement?</legend>${lijst.map((v, i) => `<label class="keuze"><input type="radio" name="vsoort" value="${v.soort}"${i === 0 ? " checked" : ""}><span><b>${esc(planNaam(v.soort, v.plan))}</b></span></label>`).join("")}</fieldset>`
+    : `<input type="hidden" name="vsoort" value="${lijst[0].soort}">`;
+  const regels = lijst.map((v) => `<li>${esc(planNaam(v.soort, v.plan))} ${v.geldigTot ? `${v.verlopen ? "is afgelopen op" : "loopt af op"} <b>${esc(nlDatum(v.geldigTot))}</b>` : "loopt zonder einddatum"}</li>`).join("");
+  return `<form id="verleng" class="verleng">
+<h2>Abonnement verlengen</h2>
+<ul style="margin:0;padding-left:20px">${regels}</ul>
+<p class="sub" style="margin:0">Met één knop vraag je verlenging aan. Je krijgt een e-mail zodra het is verlengd. Je dossiers blijven altijd van jou.</p>
+${keuze}
+<fieldset><legend>Zou je bereid zijn voor Bankoverzicht te betalen? (vrijwillig)</legend>
+<div class="peil">${Object.entries(BETALEN).map(([k, t]) => `<label><input type="radio" name="betalen" value="${k}"> ${t}</label>`).join("")}</div>
+<label id="bedragvak">Zo ja, hoeveel per maand ongeveer? <span style="white-space:nowrap">€ <input type="text" name="bedrag" inputmode="decimal" maxlength="8" style="width:6em"></span></label>
+<label>Toelichting (optioneel)<br><textarea name="toelichting" maxlength="500" rows="2" style="width:100%;box-sizing:border-box"></textarea></label>
+<small class="hint">Met de antwoorden wordt bepaald of en voor welke prijs er later betaalde abonnementen komen. Het antwoord heeft geen invloed op de verlenging.</small>
+</fieldset>
+<button type="submit">Verlenging aanvragen</button>
+<p id="vstatus" role="status"></p>
+</form>`;
+}
+
+export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, plan = null, verlengen = null, slot = true } = {}) {
   const prijs = prijzen(env);
   const heeftToegang = !!r?.toegang;
   const huidig = slot ? huidigeAbonnementen(r) : []; // zonder slot heeft iedereen Eenvoudig; dan niets tonen
@@ -35,7 +70,10 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   const planKeuzes = Object.keys(plannenVoor(env)).map((k) => `
     <label class="keuze"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
       <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("");
-  const loopt = r?.aanvraag && PLANNEN[r.aanvraag]
+  const verlengLijst = slot ? teVerlengen(r, verlengen) : [];
+  const loopt = r?.aanvraag && PLANNEN[r.aanvraag] && r.verlenging
+    ? `<p class="melding">Je verzoek om <b>${esc(planNaam(r.aanvraagGebruik || "zakelijk", r.aanvraag))}</b> te verlengen is ontvangen${r.aangevraagd ? ` op ${esc(nlDatum(r.aangevraagd))}` : ""}. Je krijgt een e-mail zodra het is verlengd${heeftToegang ? "" : ". Je kunt dit tabblad nu sluiten"}.</p>`
+    : r?.aanvraag && PLANNEN[r.aanvraag]
     ? `<p class="melding">Je aanvraag voor <b>${esc(planNaam(r.aanvraagGebruik || "zakelijk", r.aanvraag))}</b> is ontvangen${r.aangevraagd ? ` op ${esc(nlDatum(r.aangevraagd))}` : ""}. Zodra hij is goedgekeurd, krijg je een e-mail${heeftToegang ? "" : " met een knop om in te loggen. Je kunt dit tabblad nu sluiten"}. Wil je toch iets anders aanvragen, kies het dan hieronder; dat vervangt deze aanvraag.</p>`
     : "";
   // Teksten per soort voor het script (prijs, uitleg, voorbeeld bij de reden).
@@ -55,6 +93,7 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,sans-serif}
 main{max-width:560px;margin:0 auto;padding:32px 16px;display:flex;flex-direction:column;gap:16px}
 h1{margin:0;font-size:1.4rem}h2{margin:4px 0 0;font-size:1rem}.sub{margin:0;color:var(--muted)}
+.peil{display:flex;gap:16px;flex-wrap:wrap}h2{margin:0}
 form,.melding,.huidig{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 form{display:flex;flex-direction:column;gap:10px}.huidig ul{margin:6px 0 0;padding-left:20px}
 fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:8px}legend{font-weight:600;margin-bottom:8px}
@@ -65,7 +104,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:col
 textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);resize:vertical}
 .namen{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:420px){.namen{grid-template-columns:1fr}}
 .hint{display:block;color:var(--muted);font-size:13px;margin-top:4px}
-input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
+input[type=text],input[type=tel]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
 button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#status.err{color:var(--err)}
 [hidden]{display:none!important}a{color:var(--accent)}
@@ -78,6 +117,8 @@ details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vg
     : "Kies of je Bankoverzicht zakelijk of privé gebruikt, kies een abonnement en vertel kort waarom je toegang vraagt. De beheerder keurt je aanmelding goed en je krijgt daarover een e-mail."}</p>
 ${huidig.length ? `<div class="huidig"><b>Je abonnementen</b><ul>${huidig.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>` : ""}
 ${loopt}
+${verlengBlok(verlengLijst)}
+${verlengLijst.length ? `<h2 style="margin-top:8px">Of een ander abonnement aanvragen</h2>` : ""}
 <form id="f">
 <fieldset><legend>Waarvoor gebruik je Bankoverzicht? (verplicht)</legend><div class="soorten">${soortKeuzes}</div></fieldset>
 <fieldset id="plannen"${kiesSoort ? "" : " hidden"}><legend>Abonnement</legend>${planKeuzes}
@@ -109,5 +150,13 @@ const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||(
 if(d.alActief){st.textContent=d.melding||"Dit abonnement heb je al.";return}
 st.textContent=TOEGANG?"Je aanvraag is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.":"Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld. Je kunt dit tabblad daarna sluiten.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
+const vf=document.getElementById("verleng");
+if(vf){const vs=document.getElementById("vstatus"),bv=document.getElementById("bedragvak");
+const toon=()=>{bv.hidden=vf.betalen.value==="nee"};for(const x of vf.querySelectorAll("input[name=betalen]"))x.addEventListener("change",toon);
+vf.addEventListener("submit",async(e)=>{e.preventDefault();const k=vf.querySelector("button");k.disabled=true;vs.className="";vs.textContent="Bezig…";
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({verlengen:true,gebruik:vf.vsoort.value,peiling:{betalen:vf.betalen.value||null,bedrag:vf.bedrag.value,toelichting:vf.toelichting.value}})});
+const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
+vs.textContent="Je verzoek om te verlengen is verstuurd. Je krijgt een e-mail zodra het is verlengd.";setTimeout(()=>location.reload(),2500)}
+catch(x){vs.className="err";vs.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}})}
 </script></body></html>`, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }

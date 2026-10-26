@@ -14,7 +14,7 @@ export const PRIVACY_BLOKKEN = [
   },
   {
     titel: "Account",
-    tekst: "E-mailadres, naam, organisatie, abonnement, de aanvraag, het telefoonnummer (alleen tot de aanvraag is beoordeeld, hooguit 30 dagen), het wachtwoord (alleen onleesbaar versleuteld), de passkey (alleen het openbare deel) en het akkoord met de voorwaarden staan op de server van de app bij Cloudflare. Hulpvragen en feedback gaan alleen als ze zelf worden verstuurd per e-mail naar de maker, zonder dossiergegevens.",
+    tekst: "E-mailadres, naam, organisatie, abonnement, de aanvraag, het telefoonnummer (alleen tot de aanvraag is beoordeeld, hooguit 30 dagen), het antwoord op de vrijwillige vraag over betalen bij verlengen, het wachtwoord (alleen onleesbaar versleuteld), de passkey (alleen het openbare deel) en het akkoord met de voorwaarden staan op de server van de app bij Cloudflare. Hulpvragen en feedback gaan alleen als ze zelf worden verstuurd per e-mail naar de maker, zonder dossiergegevens.",
   },
   {
     titel: "Bankkoppeling",

@@ -38,7 +38,7 @@ const VEILIG = "Bankoverzicht vraagt je nooit om je rekeningnummer, inlogcodes, 
 // "alleen" = alleen bij die soort dossier; de soort komt erachter als beide soorten op de pagina staan.
 const V = "✓", N = "–";
 const VERGELIJK = [
-  { t: "Eerste inzicht", w: { eenvoudig: "± ½ uur", uitgebreid: "± 1 uur", koppelen: "± 1 uur" } },
+  { t: "Eerste inzicht", w: { eenvoudig: "± ½ uur", uitgebreid: "± 60-90 min", koppelen: "± 60-90 min" } },
   { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" } },
   { t: "Samenvatting om te bewaren of printen", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
   { t: "Indicatie belasting", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },

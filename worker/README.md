@@ -160,6 +160,10 @@ zijbalk) vraagt iemand met toegang een tweede abonnement aan.
   Bestaande rijen worden bij het eerste gebruik op zakelijk gezet. Je hoeft geen SQL uit te voeren.
 - `/api/rol` geeft naast de bekende velden ook `soorten` ({zakelijk, prive}, elk eenvoudig/uitgebreid/koppelen) en `gebruik`.
 - Prijzen per soort in de variabele `PRIJZEN`, bijv. `{"zakelijk":{"uitgebreid":4.95},"prive":{"uitgebreid":2.95}}`.
+- beide-V7R3 — een gratis abonnement loopt 30 dagen vanaf goedkeuren (variabele `GRATIS_DAGEN` optioneel, 0 = zonder
+  einddatum). Tien dagen voor het einde krijgt de gebruiker een mail met de knop "Verlenging aanvragen"; die mails gaan
+  weg zodra een beheerder de app opent (hooguit eens per uur) of via de Cron Trigger. Verlengen = één knop op
+  /aanmelden, met een vrijwillige peilvraag over betalen (D1-tabel `peiling`, Beheer → Peiling). Geen SQL nodig.
   De oude vorm zonder soort (`{"uitgebreid":4.95}`) geldt voor zakelijk. Zonder variabele is alles €0.
 
 ### Voorwaarden per soort (beide-V1R9)
