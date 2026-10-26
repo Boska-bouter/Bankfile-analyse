@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "node tests/e2e/hoofdroutes.e2e.mjs"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",

@@ -9,7 +9,7 @@ import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
 import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
-import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen } from "./rechten.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen, logboekControle } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -32,6 +32,7 @@ export default {
     ctx.waitUntil(tarievenHerinneringMail(env));
     if (env.DB) ctx.waitUntil(wisOudeTelefoons(env.DB).catch(() => {})); // beide-V7R1 — telefoonnummers niet langer bewaren dan nodig
     ctx.waitUntil(verloopHerinneringen(env).catch(() => {})); // beide-V7R3 — knop in de mail alleen met variabele APP_URL
+    ctx.waitUntil(logboekControle(env).catch(() => {})); // beide-V7R7
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -73,6 +74,7 @@ export default {
       if (r.beheerder && env.DB && Date.now() - laatsteHerinnering > 3600_000) {
         laatsteHerinnering = Date.now();
         ctx.waitUntil(verloopHerinneringen(env, { origin: url.origin }).catch((e) => console.error("herinneringen", e?.message)));
+        ctx.waitUntil(logboekControle(env).catch((e) => console.error("logboek", e?.message))); // beide-V7R7 — logboek te groot?
       }
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
       const akkoord = await voorwaardenVan(email, env);

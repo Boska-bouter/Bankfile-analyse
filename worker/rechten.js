@@ -14,7 +14,7 @@
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
-import { logBeheer, leesLogboek, beschrijfRechten } from "./logboek.js";
+import { logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
 import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN } from "./peiling.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
@@ -429,6 +429,15 @@ export async function verloopHerinneringen(env, { nu = vandaag(), origin = null 
   }
   return { verstuurd };
 }
+// beide-V7R7 — mail aan de beheerders als het logboek boven de grens komt (zie logboek.js).
+export function logboekControle(env) {
+  const from = env.INLOG_FROM || env.FEEDBACK_FROM;
+  if ((!env.EMAIL && !env.RESEND_API_KEY) || !from) return Promise.resolve({ gemeld: false });
+  return controleerLogboekGrootte(env, async (to, onderwerp, regels) => {
+    const { text, html } = opmaakMail(env, { regels });
+    await verstuur(env, { to, from, subject: `Bankoverzicht: ${onderwerp}`, text, html });
+  });
+}
 const datumNl = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 // /api/beheer/* — alleen voor adressen in BEHEERDERS.
@@ -450,9 +459,17 @@ export async function beheerRoute(request, env, url, email) {
     if (url.pathname === "/api/beheer/peiling" && request.method === "GET") {
       return json({ ok: true, ...(await leesPeiling(env.DB)) });
     }
-    // beide-V6R8 — logboek (laatste 200, met zoeken)
+    // beide-V6R8 — logboek (laatste 200, met zoeken). beide-V7R7 — met het aantal regels en de grens, exporteren en opschonen.
     if (url.pathname === "/api/beheer/logboek" && request.method === "GET") {
-      return json({ ok: true, logboek: await leesLogboek(env.DB, { zoek: url.searchParams.get("zoek") }) });
+      return json({ ok: true, logboek: await leesLogboek(env.DB, { zoek: url.searchParams.get("zoek") }), aantal: await telLogboek(env.DB), grens: logboekGrens(env) });
+    }
+    if (url.pathname === "/api/beheer/logboek/export" && request.method === "GET") {
+      return json({ ok: true, ...(await exporteerLogboek(env.DB)) });
+    }
+    if (url.pathname === "/api/beheer/logboek/opschonen" && request.method === "POST") {
+      let b;
+      try { b = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
+      return json({ ok: true, verwijderd: await schoonLogboekOp(env.DB, b?.totId, String(email).toLowerCase()) });
     }
     let body;
     try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
