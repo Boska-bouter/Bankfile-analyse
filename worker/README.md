@@ -164,6 +164,8 @@ zijbalk) vraagt iemand met toegang een tweede abonnement aan.
   einddatum). Tien dagen voor het einde krijgt de gebruiker een mail met de knop "Verlenging aanvragen"; die mails gaan
   weg zodra een beheerder de app opent (hooguit eens per uur) of via de Cron Trigger. Verlengen = één knop op
   /aanmelden, met een vrijwillige peilvraag over betalen (D1-tabel `peiling`, Beheer → Peiling). Geen SQL nodig.
+- beide-V7R7 — Beheer → Logboek: Exporteren (CSV voor Excel) en daarna opschonen. Boven de grens (variabele
+  `LOGBOEK_GRENS`, standaard 2000 regels) krijgen de BEHEERDERS één mail, opnieuw pas na opschonen.
   De oude vorm zonder soort (`{"uitgebreid":4.95}`) geldt voor zakelijk. Zonder variabele is alles €0.
 
 ### Voorwaarden per soort (beide-V1R9)

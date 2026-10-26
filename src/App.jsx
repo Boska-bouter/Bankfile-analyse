@@ -1,36 +1,25 @@
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Check, Download, Trash2, Loader2, Printer, X, Lock, ChevronDown, ChevronRight, ListTree, MessageSquare, Settings, AlertTriangle, Users, HelpCircle, Copy, ArrowLeft } from "lucide-react";
+import { AlertCircle, Loader2, ListTree, MessageSquare } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
 import BeheerRechtenModal from "./components/beheer/BeheerRechtenModal.jsx";
 import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKoppelingModal.jsx";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
-import ImportControlPanel from "./components/upload/ImportControlPanel.jsx";
-import { resolveClassification, detectOwnAccountTransfer } from "./classification/classify.js";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
-import { koppelDoorsluisOverboekingen } from "./classification/doorsluis.js";
-import { scoreClassification } from "./classification/confidence.js";
-import { categorieLabel, DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, fiscalTreatmentOf, setActieveRechtsvorm } from "./classification/categories.js";
+import { categorieLabel, DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, setActieveRechtsvorm } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
 import { computeSplitsbareCategorieTotalenVoorJaar, heeftGeregistreerdeAutoOpDeZaak } from "./tax/categorySplit.js";
-import {
-  estimateIncomeTax, estimateZvw, registerTariefInstellingen, computeOndernemersaftrekMetReserve, estimateIncomeTaxMetOndernemersaftrek,
-  estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
-} from "./tax/incomeTax.js";
+import { estimateIncomeTax, estimateZvw, registerTariefInstellingen, estimateIncomeTaxMetOndernemersaftrek, estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { overlapBestandKoppeling } from "./importers/overlapKoppeling.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
-import { eur } from "./utils/amounts.js";
-import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, ibansMatch, extractRecurringName } from "./utils/normalization.js";
+import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
-import {
-  loadPersistedParsedFiles, persistParsedFiles, clearPersistedData,
-  loadPersistedSettings, persistSettings, clearPersistedSettings,
-} from "./storage/projectStorage.js";
+import { loadPersistedParsedFiles, persistParsedFiles, loadPersistedSettings, persistSettings } from "./storage/projectStorage.js";
 import { useDashboardCards } from "./cards/useDashboardCards.jsx";
 import { useControlerenDashboardCards } from "./cards/useControlerenDashboardCards.jsx";
 import { useInstellingenDashboardCards } from "./cards/useInstellingenDashboardCards.jsx";
@@ -52,23 +41,16 @@ import { useAlleStappen } from "./calc/useAlleStappen.jsx";
 import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByFile.jsx";
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
-import { laadDossierBestand, wisDossier } from "./dossier/dossierLaden.jsx";
 import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
-import { useOpslaanHerinnering, OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
-import { useSessieWaarschuwing, SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
+import { OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
+import { SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
 import { dossierWaardenLijst, zetDossierTerug, NIET_GETELD } from "./dossier/dossierVelden.js";
 import { useTodoItems } from "./dossier/useTodoItems.jsx";
-import { useDossierDialogen } from "./dossier/useDossierDialogen.jsx";
-import { buildProjectFile, downloadProjectFile, readProjectFile } from "./storage/projectFile.js";
 import ConfirmDialog from "./components/shared/ConfirmDialog.jsx";
 import UndoToast from "./components/shared/UndoToast.jsx";
 import { berekenDekking, vindTerugkerendeInconsistenties, vindJaarSprongen, vindInkomstenInKosten } from "./tax/controleSuggesties.js";
 import { berekenJaarPeriodes } from "./utils/periode.js";
-import OpslaanModal, { BEHOUD } from "./components/shared/OpslaanModal.jsx";
-import HerstelcodeModal from "./components/shared/HerstelcodeModal.jsx";
-import { maakHerstelcode } from "./storage/herstelcode.js";
-import WachtwoordModal from "./components/shared/WachtwoordModal.jsx";
 import ZoekAllesModal from "./components/shared/ZoekAllesModal.jsx";
 import BegrippenModal from "./components/shared/BegrippenModal.jsx";
 import RouteBalk from "./components/dashboard/RouteBalk.jsx";
@@ -90,10 +72,8 @@ import PriveWizardModal from "./components/prive/PriveWizardModal.jsx";
 import PriveOverzicht from "./components/prive/PriveOverzicht.jsx";
 import PriveUitkomstEenvoudig from "./components/prive/PriveUitkomstEenvoudig.jsx";
 import { PRIVE_EENVOUDIG } from "./modus/prive/eenvoudig.js";
-import { PriveGegevensKaart } from "./components/prive/PriveKaarten.jsx";
 import { usePriveOverzicht } from "./calc/prive/usePriveOverzicht.jsx";
-import { buildAangiftevoorstelPriveHtml } from "./reports/aangiftevoorstel-prive.js";
-import { buildBudgetRapportHtml, buildPriveSamenvattingHtml, exportPriveExcel } from "./reports/prive/budgetRapport.js";
+import { buildBudgetRapportHtml, exportPriveExcel } from "./reports/prive/budgetRapport.js";
 import { voorladenExcel } from "./importers/excel.js";
 import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
@@ -101,17 +81,10 @@ import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
-import { CategorySummaryCard, DetailTable } from "./components/overview/GroupView.jsx";
-import BtwRatesPanel from "./components/btw/BtwRatesPanel.jsx";
-import IncomeReviewStep from "./components/review/IncomeReviewStep.jsx";
-import ReviewStep from "./components/review/ReviewStep.jsx";
-import HerkomstVanGeldPanel from "./components/review/HerkomstVanGeldPanel.jsx";
 import { computePeriodeMismatches } from "./tax/periodDetection.js";
 import { computeChecklistLikeDataForYear } from "./tax/checklist.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
-import RecurringPaymentsPanel from "./components/overview/RecurringPaymentsPanel.jsx";
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
-import AangifteVoorstelPreviewModal from "./components/modals/AangifteVoorstelPreviewModal.jsx";
 import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
@@ -129,17 +102,13 @@ import OmzettenUitgebreid from "./components/eenvoudig/OmzettenUitgebreid.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
-import { useDossierSoort, rechtVoorSoort } from "./modus/useDossierSoort.jsx";
+import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
-import { berekenBetrouwbaarheid, maakBevestigd } from "./calc/eenvoudig.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
-import CardIcon from "./components/shared/CardIcon.jsx";
 import NextStepCard from "./components/dashboard/NextStepCard.jsx";
-import JaaroverzichtCard from "./components/dashboard/JaaroverzichtCard.jsx";
 import DetailsPanel from "./components/dashboard/DetailsPanel.jsx";
 import YearDropdown from "./components/dashboard/YearDropdown.jsx";
-import ClassificationConfidencePanel from "./components/dashboard/ClassificationConfidencePanel.jsx";
 import UncertainTransactionsModal from "./components/dashboard/UncertainTransactionsModal.jsx";
 import DuplicateGroupDetailModal from "./components/dashboard/DuplicateGroupDetailModal.jsx";
 import KeywordSuggestionModal from "./components/shared/KeywordSuggestionModal.jsx";
@@ -147,43 +116,26 @@ import VerwachteMatchModal from "./components/shared/VerwachteMatchModal.jsx";
 import CategoryOverviewModal from "./components/shared/CategoryOverviewModal.jsx";
 import UpdateAvailableBanner from "./components/shared/UpdateAvailableBanner.jsx";
 import { useVersionCheck } from "./hooks/useVersionCheck.js";
-import CategoryRulesPanel from "./components/settings/CategoryRulesPanel.jsx";
-import CounterpartyRulesPanel from "./components/settings/CounterpartyRulesPanel.jsx";
-import KeywordManager from "./components/settings/KeywordManager.jsx";
-import TegenpartijenPanel from "./components/settings/TegenpartijenPanel.jsx";
-import FixedCategoriesPanel, { openVasteLastenPaneel } from "./components/settings/FixedCategoriesPanel.jsx";
-import OpschonenPanel from "./components/review/OpschonenPanel.jsx";
+import { openVasteLastenPaneel } from "./components/settings/FixedCategoriesPanel.jsx";
 import { effectieveStartersaftrekStatus } from "./tax/startersaftrekToets.js";
-import AansluitingDetailPanel from "./components/review/AansluitingDetailPanel.jsx";
-import LoanInterestPanel from "./components/loans/LoanInterestPanel.jsx";
-import LeaseInterestPanel from "./components/loans/LeaseInterestPanel.jsx";
 import LoanDetailsModal from "./components/loans/LoanDetailsModal.jsx";
 import { useLeaseWizardOpening } from "./hooks/useLeaseWizardOpening.jsx";
 import FinancialLeaseDetailsModal from "./components/loans/FinancialLeaseDetailsModal.jsx";
 import AutoOpDeZaakDetailsModal from "./components/loans/AutoOpDeZaakDetailsModal.jsx";
-import ActivaPanel from "./components/loans/ActivaPanel.jsx";
-import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAannamesPanel.jsx";
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
 import { abonnementRegels, aflopendeAbonnementen } from "./content/abonnement.js";
 import HandleidingVraag from "./components/shared/HandleidingVraag.jsx";
-import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
+import { useRapporten } from "./reports/useRapporten.jsx";
+import { useDossierBestand } from "./dossier/useDossierBestand.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
-import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
-import { computeIbBoxMapping } from "./tax/boxMapping.js";
+import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
-import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, stripBronHtml, zonderUitlegHtml } from "./reports/aangiftevoorstel.js";
-import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv, computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
-import { bepaalAandachtspunten, aandachtspuntenHtml } from "./reports/aandachtspunten.js";
-import { jarenBereik } from "./dossier/dossierProfiel.js";
-import { buildOnderbouwingHtml, downloadOnderbouwing } from "./reports/onderbouwing.js";
-import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./reports/btwOverzicht.js";
-import KlantJaarKeuzeModal from "./components/modals/KlantJaarKeuzeModal.jsx";
-import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./reports/klantSamenvatting.js";
+import { computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
 import { printReport, printHtmlDocument, buildReportHtml } from "./reports/printReport.js";
 import { downloadRapport } from "./reports/download.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear, suggestLeaseMerges, leaseKeyVanTx } from "./tax/loanAmortization.js";
-import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails, getLeaseSegments } from "./tax/financialLease.js";
+import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "./tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
@@ -192,6 +144,7 @@ import { BANKKOPPELING_STATUS } from "./content/bankkoppelingStatus.jsx";
 import { tarievenHerinnering } from "./tax/tarievenLaden.js";
 import { metRapportKop, registreerRapportKop } from "./reports/rapportKop.js";
 import { PRIVACY_LABEL, PRIVACY_TITEL } from "./content/privacy.jsx";
+import CategorieEnDetail from "./components/review/CategorieEnDetail.jsx";
 
 // nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
 // laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
@@ -429,7 +382,6 @@ export default function App() {
   // `categoryZakelijkPercentageEff`.
   // "Correctie privé-uitgaven" is verwijderd (overbodig geworden na Route B: de app signaleert nu
   // zelf al wanneer zakelijke kosten vanaf de privérekening zijn betaald).
-  const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
   const [showAangifteYearPicker, setShowAangifteYearPicker] = useState(false);
   // Fase 3 (bouwvoorstel) — per kaart onthouden of 'ie is uitgeklapt naar het volledige
   // onderliggende paneel, i.p.v. ernaartoe te springen. Alleen voor kaarten die dat aankunnen
@@ -597,9 +549,6 @@ export default function App() {
   }, []);
   const [dossierWachtwoord, setDossierWachtwoord] = useState(null);
   const [dossierHerstelcode, setDossierHerstelcode] = useState(null);
-  const [herstelcodeToon, setHerstelcodeToon] = useState(null); // { code, nieuw }
-  const [wachtwoordModal, setWachtwoordModal] = useState(null); // { modus: "vraag"|"instellen", fout, resolve }
-  const vraagWachtwoord = (fout) => new Promise((resolve) => setWachtwoordModal({ modus: "vraag", fout, resolve }));
   const projectFileInputRef = useRef(null);
   // nieuw-V3R8 — rechtstreekse bankkoppeling (proef). Na het inloggen bij de bank komt de gebruiker terug op
   // /bank/terug?code=…&state=…; dan gaat het koppelvenster meteen open om de koppeling af te ronden.
@@ -1842,145 +1791,6 @@ export default function App() {
   };
 
 
-  // yearsOverride: gebruikt door de "Voorstel bekijken"-snelknop voor het actieve jaar, die niet
-  // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
-  // gewoon de bestaande jaren-selectie (uit de checkboxes) gebruikt.
-  const exportAangiftevoorstel = (yearsOverride) => {
-    const targetYears = yearsOverride || selectedAangifteYears;
-    if (targetYears.length === 0) {
-      window.alert("Selecteer minstens één jaar.");
-      return;
-    }
-    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
-    const aandachtspuntenBlok = aandachtspuntenHtml(bepaalAandachtspunten({
-      years: targetYears, yearPeriod, classified, incompleteLeases: incompleteLeasesCount, incompleteLoans: incompleteLoansCount,
-      zelfstandigenaftrekStatus, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
-    }));
-    const html = priveOverzicht
-      ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen })
-      : rechtsvorm === "bv"
-      ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
-      : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
-    setAangiftevoorstelPreview(metRapportKop(html, targetYears));
-    setShowAangifteYearPicker(false);
-    setShowAangifteMeerdereJaren(false);
-  };
-  // E2 — samenvatting voor de klant (één pagina, zelfde cijfers als het Overzicht).
-  const [klantSamenvattingHtml, setKlantSamenvattingHtml] = useState(null);
-  const [klantJaarKeuze, setKlantJaarKeuze] = useState(null); // null = picker dicht, anders gekozen jaren
-  const [klantSamenvattingJaren, setKlantSamenvattingJaren] = useState([]);
-  const klantJaarData = (y) => {
-    const s = yearlySummaries[y];
-    if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
-    let delen = [];
-    let btwSaldo = null;
-    if (!korRegeling) {
-      const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }));
-      btwSaldo = [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting + (r.btwPrivegebruikAuto || 0) : 0); }, 0);
-    }
-    if (rechtsvorm === "bv") {
-      delen.push({ label: "Vpb", bedrag: estimateVpb(s.winst, y).belasting || 0 });
-    } else {
-      const aftrek = ondernemersaftrekPerJaar[y];
-      const starters = startersaftrekEff?.[y] === "ja";
-      const bedragAftrek = aftrek ? aftrek.zelfstandigenaftrekBedrag + aftrek.startersaftrekBedrag : 0;
-      const ib = estimateIncomeTaxMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
-      const hk = estimateHeffingskortingenMetOndernemersaftrek(s.winst, y, bedragAftrek, starters)?.totaal || 0;
-      const zvw = estimateZvwMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
-      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (ib?.belasting || 0) - hk) });
-      delen.push({ label: "Zvw", bedrag: zvw?.bijdrage || 0 });
-    }
-    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0), btw: btwSaldo } };
-  };
-  const [onderbouwingKeuze, setOnderbouwingKeuze] = useState(null);
-  const [onderbouwingHtml, setOnderbouwingHtml] = useState(null);
-  const [onderbouwingJaren, setOnderbouwingJaren] = useState([]);
-  const openOnderbouwing = (gekozen) => {
-    const jaren = [...gekozen].sort();
-    if (jaren.length === 0) return;
-    setOnderbouwingKeuze(null);
-    setOnderbouwingJaren(jaren);
-    setOnderbouwingHtml(metRapportKop(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified, categoryZakelijkPercentage: categoryZakelijkPercentageEff, werkruimteStatus }), jaren));
-  };
-  // BTW-aangifte per kwartaal als los document (één of meer jaren).
-  const [btwOverzichtKeuze, setBtwOverzichtKeuze] = useState(null);
-  const [btwOverzichtHtml, setBtwOverzichtHtml] = useState(null);
-  const [btwOverzichtJaren, setBtwOverzichtJaren] = useState([]);
-  const openBtwOverzicht = (gekozen) => {
-    const jaren = [...gekozen].sort();
-    if (jaren.length === 0) return;
-    setBtwOverzichtKeuze(null);
-    setBtwOverzichtJaren(jaren);
-    setBtwOverzichtHtml(metRapportKop(buildBtwOverzichtHtml({
-      klantNaam: eigenNamen?.ondernemer, kwartaalStatus,
-      jaren: jaren.map((y) => ({
-        year: y,
-        quarters: computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm })),
-      })),
-    }), jaren));
-  };
-  const startBtwOverzicht = () => {
-    if (!activeYear) return;
-    if ((years || []).length > 1) setBtwOverzichtKeuze([activeYear]);
-    else openBtwOverzicht([activeYear]);
-  };
-  const startOnderbouwing = () => {
-    if (!activeYear) return;
-    if ((years || []).length > 1) setOnderbouwingKeuze([activeYear]);
-    else openOnderbouwing([activeYear]);
-  };
-  const startKlantSamenvatting = () => {
-    if (!activeYear) return;
-    if ((years || []).length > 1) setKlantJaarKeuze([activeYear]);
-    else openKlantSamenvatting([activeYear]);
-  };
-  const openKlantSamenvatting = (gekozen) => {
-    const jaren = [...gekozen].sort();
-    if (jaren.length === 0) return;
-    setKlantJaarKeuze(null);
-    setKlantSamenvattingJaren(jaren);
-    if (priveOverzicht) {
-      setKlantSamenvattingHtml(metRapportKop(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }), jaren));
-      return;
-    }
-    setKlantSamenvattingHtml(metRapportKop(buildKlantSamenvattingHtml({
-      klantNaam: eigenNamen?.ondernemer, rechtsvorm,
-      jaren: jaren.map(klantJaarData),
-      profiel: dossierProfiel,
-      openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
-      // nieuw-V3R7 — vanuit Eenvoudig: één regel met de zekerheid per jaar (onzeker bedrag in euro's).
-      zekerheid: eenvoudigActief ? jaren.map((y) => {
-        const z = berekenBetrouwbaarheid(classified, y, maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), yearlySummaries?.[y]?.zakelijkeInkomstenNetto || 0);
-        const oordeel = { betrouwbaar: "Betrouwbaar", redelijk: "Redelijk", onzeker: "Nog onzeker", geen: "Geen gegevens" }[z.oordeel];
-        return { jaar: y, tekst: z.onzeker > 0 ? `${oordeel} – nog ${eur(Math.round(z.onzeker))} onzeker` : `${oordeel} – niets meer onzeker` };
-      }) : null,
-      meegenomen: (() => {
-        const m = [];
-        const act = activaSummary.map((a) => activaDetails[a.key]?.naam || a.naam).filter(Boolean);
-        if (act.length) m.push({ label: "Bedrijfsmiddelen (activa)", items: act });
-        const len = loanSummary.map((l) => l.name).filter(Boolean);
-        if (len.length) m.push({ label: "Leningen", items: len });
-        const fin = leaseSummary.filter((l) => l.category === "Lease (financieel)").map((l) => l.name);
-        const op = leaseSummary.filter((l) => l.category !== "Lease (financieel)").map((l) => l.name);
-        if (fin.length) m.push({ label: "Financiële lease", items: fin });
-        if (op.length) m.push({ label: "Operationele lease", items: op });
-        const soortTxt = autoWizardStatus?.soort === "financial" ? " (financiële lease)" : autoWizardStatus?.soort === "koop" ? " (gekocht)" : autoWizardStatus?.soort === "operational" ? " (operationele lease)" : "";
-        const metJaren = (txt, js) => (jaren.length > 1 ? `${txt} (${jarenBereik(js)})` : txt);
-        const priveJ = jaren.filter((j) => autoStatus?.[j] === "prive");
-        const zaakJ = jaren.filter((j) => autoStatus?.[j] === "zaak");
-        const autoItems = [];
-        if (priveJ.length) autoItems.push(metJaren("privéauto zakelijk gebruikt", priveJ));
-        if (zaakJ.length) autoItems.push(metJaren(`auto op de zaak${soortTxt}`, zaakJ));
-        if (autoItems.length) m.push({ label: "Auto", items: autoItems });
-        if (heeftVoorraad === true) m.push({ label: "Voorraad", items: ["aanwezig"] });
-        return m;
-      })(),
-    }), jaren));
-  };
-  const [uitlegMeenemen, setUitlegMeenemen] = useState(false);
-  const voorstelHtmlWeergave = uitlegMeenemen ? aangiftevoorstelPreview : zonderUitlegHtml(aangiftevoorstelPreview);
-  const printAangiftevoorstelPreview = () => printHtmlDocument(stripBronHtml(voorstelHtmlWeergave));
-  const downloadAangiftevoorstelPreview = (soort) => (rechtsvorm === "bv" ? downloadAangiftevoorstelBv : downloadAangiftevoorstel)(stripBronHtml(voorstelHtmlWeergave), selectedAangifteYears, soort);
 
   // Tegenpartij-brede correctie: geldt voor alle transacties van diezelfde tegenpartij (zelfde
   // teken), in alle jaren. Ruimt een eventuele losse rij-correctie voor diezelfde tegenpartij op
@@ -3038,7 +2848,7 @@ export default function App() {
     leasesSectionRef, loanDetails, loanSummary, loansSectionRef, overigReviewSectionRef,
     pendingDuplicateCount, pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef,
     quarterlyBtwData, rechtsvorm, setDismissedDuplicateNotice, setOpenConfidenceLevel, setShowAangifteYearPicker,
-    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions, startBtwOverzicht,
+    setShowMultiYearModal, setShowOverigReview, setShowPersonReview, setShowQuarterlyBtwModal, transactions, startBtwOverzicht: () => startBtwOverzicht(), // beide-V7R8 — komt verderop uit useRapporten
     vpbStatus, yearlyProgress, yearlySummary, zvwStatus,
   });
 
@@ -3399,6 +3209,22 @@ export default function App() {
   const alleStappen = useAlleStappen({
     inTeStellenItems, stapVolgorde, teControlerenItems,
   });
+  const {
+    exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    rapportVensters,
+  } = useRapporten({
+    accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, autoActivaDetails, autoStatus,
+    autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
+    effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
+    gemeentelijkeKostenZakelijkPercentageStatus, heeftHolding, heeftLeaseAutoDossierBreed, heeftVoorraad,
+    huurZakelijkPercentageStatus, importDiagnostics, incompleteLeasesCount, incompleteLoansCount,
+    kmVergoedingDetails, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary,
+    ondernemersaftrekPerJaar, overigInkomenBox1, periodeQuarterOverrides, priveOverzicht, priveRekeningGeladen,
+    rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, selectedAangifteYears, setSelectedAangifteYears,
+    setShowAangifteMeerdereJaren, setShowAangifteYearPicker, startersaftrekEff, startersaftrekStatus,
+    tariefOverrides, voorbelastingExcluded, werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault,
+    zelfstandigenaftrekStatus,
+  });
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.
   registreerRapportKop({
@@ -3657,105 +3483,36 @@ export default function App() {
     btwAan: modus.onderdelen.btw !== false,
   });
 
-  const [resumeHint, setResumeHint] = useState(null);
-  // ---- Dossier opslaan als downloadbaar bestand ----
-  const saveProjectFile = async (pwOverride, codeOverride) => {
-    const pwGebruik = typeof pwOverride === "string" ? pwOverride : dossierWachtwoord;
-    let codeGebruik = null;
-    if (pwGebruik) {
-      codeGebruik = typeof codeOverride === "string" ? codeOverride : dossierHerstelcode;
-      if (!codeGebruik) {
-        // Eerst de herstelcode tonen en laten bevestigen; pas daarna wordt het bestand opgeslagen.
-        const nieuweCode = maakHerstelcode();
-        setHerstelcodeToon({ code: nieuweCode, nieuw: true, daarna: () => { setDossierHerstelcode(nieuweCode); saveProjectFile(pwGebruik, nieuweCode); } });
-        return;
-      }
-    } else if (dossierHerstelcode) setDossierHerstelcode(null);
-    const project = buildProjectFile({
-      auditLog,
-      ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION,
-      resumePositie: { tab: activeTab, jaar: activeYear, openPunten: dossierOpenPoints },
-      overgeslagenStappen,
-    });
-    let filename;
-    try {
-      filename = await downloadProjectFile(project, loadedProjectFileName, eigenNamen?.ondernemer, pwGebruik, codeGebruik);
-    } catch (e) {
-      setError(e.message || "Opslaan mislukt.");
-      return;
-    }
-    setLoadedProjectFileName(filename);
-    restoredChangesRef.current = 0;
-    setChangesSinceExport(0);
-    setLastExportAt(new Date());
-  };
-
-  // Sidebar-knop: bij een nieuw (onbeveiligd) dossier eerst kiezen met/zonder wachtwoord; daarna direct opslaan.
-  const [opslaanModal, setOpslaanModal] = useState(false);
-  const [opslaanKeuzeGemaakt, setOpslaanKeuzeGemaakt] = useState(false);
-  // V7R4 — met wachtwoord: één keer per (geladen of nieuw) wachtwoord vragen of het erop blijft.
-  const [wachtwoordBevestigd, setWachtwoordBevestigd] = useState(null);
-  const startOpslaan = () => {
-    if (dossierWachtwoord ? wachtwoordBevestigd === dossierWachtwoord : opslaanKeuzeGemaakt) saveProjectFile();
-    else setOpslaanModal(true);
-  };
-
-  // ---- Dossier laden vanaf een bestand ----
-  const dossierCtx = {
-    setSoortDossier, suppressChangeCount, snapshotBeforeAction, vraagWachtwoord, setDossierHerstelcode,
-    setDossierWachtwoord: (pw) => { setWachtwoordBevestigd(null); setDossierWachtwoord(pw); }, // V7R4 — na laden opnieuw vragen setAuditLog, setBevestigdeControles,
-    setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey,
-    setActiveTab, setActiveYear, setAutoActivaDetails, setAutoStatusState,
-    setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords,
-    setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys,
-    setDialog, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setBankKoppelingen,
-    setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints,
-    setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding,
-    setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus,
-    setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus,
-    setLastExportAt, setLeaseDetails, setLeaseDetailsModalKey, setLeaseMergedInto,
-    setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey, setManualWizardOpen,
-    setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections,
-    setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles,
-    setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewFileModal,
-    setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys,
-    setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setStartersaftrekStatusState, setWerkruimteStatusState, setWeergave, setEenvoudigGezien, startNieuwDossierWizard, naDossierLaden: (w) => { setModusKeuzeOpen(false); if (magUitgebreid && w === "eenvoudig") setModusNaLaden(w); }, setTariefOverridesState, setOverigInkomenBox1State, setPriveAntwoorden,
-    setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease,
-    setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, setVoorbelastingExcluded,
-    setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState,
-    setZvwStatus,
-  };
-  const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
-  const doClearAllData = (askWizard = false) => wisDossier(dossierCtx, askWizard);
-  const dossierSoortKeuze = useDossierSoort({
-    soorten: rechtenPerSoort, soortDossier, setSoortDossier, heeftDossier: parsedFiles.length > 0 || !!loadedProjectFileName,
-    setDialog, onNieuwDossier: () => { setDialog(null); doClearAllData(true); },
-  });
-
-  // ---- Dossier laden: vraagt eerst bevestiging als er al een dossier openstaat (v304) ----
-  // loadProjectFile vervangt het hele huidige dossier; voorheen zonder enige waarschuwing en zonder
-  // ongedaan maken. Nu: keuzevenster mét namen van beide dossiers, optioneel eerst opslaan, en een
-  // momentopname zodat "Ongedaan maken" het vorige dossier terugzet.
-  // V52 — volgorde omgedraaid: eerst de vraag of het HUIDIGE dossier moet worden opgeslagen, pas daarna
-  // het kiezen van het te laden dossier (voorheen eerst kiezen, dan pas vragen).
-  const openProjectPicker = () => projectFileInputRef.current?.click();
-  const requestLoadProject = (file) => {
-    if (parsedFiles.length > 0) snapshotBeforeAction("Dossier geladen");
-    loadProjectFile(file);
-  };
-
-  // ---- Nieuw dossier (voorheen "Wis alles") ----
-  // v304 — zelfde handeling als voorheen (alles leegmaken, met momentopname voor "Ongedaan maken"),
-  // maar benoemd zoals een professional ernaar kijkt (klaar met cliënt A, nu cliënt B) en met de
-  // kans om eerst een dossierbestand te bewaren. De oude tekst "kan niet ongedaan worden gemaakt"
-  // klopte al niet meer: er wordt wel degelijk een momentopname gemaakt.
-  // V33 — de opslagvraag komt alleen nog als er sinds de laatste opslag/het laden iets is gewijzigd.
-  const opslaanHerinnering = useOpslaanHerinnering({ changesSinceExport, hasData: parsedFiles.length > 0 });
-  const sessie = useSessieWaarschuwing(); // release32V1 — einde Cloudflare-inlogsessie
-  const { startLoadProject, clearAllData } = useDossierDialogen({
-    parsedFilesCount: parsedFiles.length, changesSinceExport, eigenNamen, lastExportAt, loadedProjectFileName,
-    setDialog, saveProjectFile, openProjectPicker, doClearAllData, setActiveTab, setManualWizardOpen: (v) => (v ? startNieuwDossierWizard() : setManualWizardOpen(false)),
-    heeftAntwoorden: !basisvragenNietGestart,
+  const {
+    dossierVensters, setHerstelcodeToon, setWachtwoordModal,
+    clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
+    sessie, setResumeHint,
+    startLoadProject, startOpslaan,
+  } = useDossierBestand({
+    activeTab, activeYear, auditLog, basisvragenNietGestart, changesSinceExport, dossierGegevens, dossierHerstelcode,
+    dossierOpenPoints, dossierWachtwoord, eigenNamen, lastExportAt, loadedProjectFileName, magUitgebreid,
+    overgeslagenStappen, parsedFiles, projectFileInputRef, rechtenPerSoort, restoredChangesRef,
+    setAangiftevoorstelPreview, setAccountTypeByFile, setActivaDetails, setActivaDetailsModalKey, setActiveTab,
+    setActiveYear, setAuditLog, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBankKoppelingen,
+    setBevestigdeControles, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates,
+    setCategoryRules, setCategoryZakelijkPercentageState, setChangesSinceExport, setConfirmedLeaseTypeKeys,
+    setDialog, setDismissedDuplicateNotice, setDossierHerstelcode, setDossierWachtwoord, setEenvoudigGezien,
+    setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError,
+    setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories,
+    setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad,
+    setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven,
+    setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails,
+    setLeaseDetailsModalKey, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey,
+    setManualWizardOpen, setMaxStappen, setMeerdereTarievenBevestigd, setModusKeuzeOpen, setModusNaLaden,
+    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverigInkomenBox1State,
+    setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setPriveAntwoorden,
+    setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys,
+    setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setSoortDossier,
+    setStartersaftrekStatusState, setTariefOverridesState, setTransactionNotes, setVerwachteAOV,
+    setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening,
+    setVerwachteMatchSuggestie, setVoorbelastingExcluded, setVpbStatus, setWeergave, setWerkruimteStatusState,
+    setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus,
+    snapshotBeforeAction, soortDossier, startNieuwDossierWizard, suppressChangeCount, 
   });
 
   // nieuw-V5R2 — eerst wachten tot bekend is wie er is ingelogd. Anders gold kort het adres van de vorige gebruiker op dit
@@ -4695,108 +4452,37 @@ export default function App() {
             inkomstenbron opleverde (Herkomst van inkomsten: 1 open), verdwenen de categoriekaarten én de
             detailtabellen van Controleren. Die blijven nu altijd staan. */}
         {transactions.length > 0 && !eenvoudigActief && (
-          <>
-
-            {/* Op verzoek (v281) staat "Opschonen" (OpschonenPanel.jsx) alleen nog binnen de
-                uitgeklapte kaart (zie controlerenCardGroups hierboven) — niet meer standaard
-                zichtbaar op de pagina. */}
-
-            {/* v245 — Leningen/Lease/Activa/Persoonlijke aannames/Percentage zakelijk per categorie
-                hiernaartoe verplaatst vanuit het vervallen tabblad "Resultaten".
-                v252 — volgorde aangepast: "Rentepercentage per lening" moet direct onder "Percentage
-                zakelijk per categorie" staan, en "Lease" (als die er is) daar weer boven — dus nu
-                Activa → Persoonlijke aannames → Percentage zakelijk per categorie → Lease → Leningen. */}
-            {/* Op verzoek (v281) staan "Bedrijfsmiddelen & financiering" en "Persoonlijke aannames"
-                alleen nog binnen hun uitgeklapte kaart (zie controlerenCardGroups/
-                instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
-
-            {years.length > 0 && activeYear && (
-              <>
-                {/* De jaren-kiezer is een centraal modal-venster, direct zichtbaar op de plek waar
-                    je al kijkt, ongeacht scrollpositie (in plaats van een blok ver onderaan de
-                    pagina met een scroll-naar-beneden). Eerste stap: direct het
-                    actieve jaar met status en openstaande punten, zodat iemand niet meteen een
-                    jaren-selectie hoeft te maken voor de meest voorkomende situatie (het jaar waar
-                    je toch al in zit). "Ander jaar/meerdere jaren kiezen" schakelt binnen hetzelfde
-                    venster door naar de checkbox-lijst. */}
-
-
-
-        {/* v243 — "Controleren / Geladen files" (de losse bestand-chips) stond hier apart, met
-            grotendeels dezelfde informatie (bestandsnaam, regelaantal, saldo-check) als de
-            "Importcontrole"-sectie bovenaan dit tabblad, die dat allemaal al toont (én uitgebreider:
-            ook overgeslagen regels, ontbrekende tegenpartij en aansluiting tussen bestanden) — inclusief
-            dezelfde klik-om-te-bekijken-knop (onReviewFile). Hier weggehaald om de dubbeling op te
-            heffen; gebruik de Importcontrole-sectie (via de "Import controle"-kaart in het
-            mini-dashboard) voor dit alles. */}
-
-        {/* Op verzoek (v281) staan "BTW" en "Automatisering" alleen nog binnen hun uitgeklapte kaart
-            (zie instellingenCardGroups hierboven) — niet meer standaard zichtbaar op de pagina. */}
-
-                {/* v245 — "Categorieën Zakelijk"/"Categorieën Privé" hiernaartoe verplaatst vanuit het
-                    vervallen tabblad "Resultaten", nu boven de detailtabellen ("Details", hieronder
-                    via detailsSectionRef) binnen tabblad "Controleren", zoals gevraagd.
-                    Fase 3 — verborgen zodra de kaart "Categorieën" is uitgeklapt (toont dit dan zelf). */}
-                {priveOverzicht && activeYear && priveOverzicht.perJaar[activeYear] && (
-                  <div style={sectionTabStyle("controleren")}>
-                    <PriveGegevensKaart jaar={activeYear} aannames={priveOverzicht.perJaar[activeYear].aannames} onAanvullen={() => setManualWizardOpen(true)} />
-                  </div>
-                )}
-                {!expandedCardKeys.categorieen && (
-                <div ref={categorySectionRef} className="grid md:grid-cols-2 gap-4" style={sectionTabStyle("controleren")}>
-                  {modus.onderdelen.btw === false ? (
-                    // beide-V1R8 — privédossier: één tabel met alle boekingen van het jaar, zonder BTW
-                    <div className="md:col-span-2"><CategorySummaryCard group={{ ...priGroupShown, items: [...(zakGroupForYear?.items || []), ...(priGroupShown?.items || [])] }} titel={`Categorieën ${activeYear}`} zonderBtw categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} /></div>
-                  ) : (<>
-                  <CategorySummaryCard group={zakGroupForYear} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} onOpenHelp={setHelpPopupChapter} rekeningen={rekeningenVoorGroep(zakGroupForYear, "Zakelijk")} eigenPriveIbans={eigenPriveIbans} />
-                  <CategorySummaryCard group={priGroupShown} categoryBtwRates={effectiveCategoryBtwRates} btwVerlegd={btwVerlegd} rekeningen={rekeningenVoorGroep(priGroupShown, "Prive")} />
-                  </>)}
-                </div>
-                )}
-
-                {/* Fase 3 — "Aansluiting & detail" (banner + detailtabellen Zakelijk/Prive) is nu
-                    AansluitingDetailPanel.jsx, een zelfstandig onderdeel — verborgen zodra de kaart
-                    "Aansluiting & detail" is uitgeklapt (toont dit paneel dan zelf, zie
-                    controlerenCardGroups hierboven) om dubbele content te voorkomen. */}
-                {/* V87 — de detailtabellen staan standaard ingeklapt (openen met de balk hieronder); links die naar
-                    de tabellen springen (jumpToSection) klappen ze automatisch open. */}
-                <div style={sectionTabStyle("controleren")}>
-                  <button
-                    type="button"
-                    onClick={() => toggleCardExpand("detailTabellen")}
-                    aria-expanded={!!expandedCardKeys.detailTabellen}
-                    className="w-full flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-slate-50"
-                  >
-                    {expandedCardKeys.detailTabellen ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
-                    <span className="text-sm font-semibold text-slate-800">Detailtabellen</span>
-                    <span className="text-xs text-slate-400">
-                      {soortDossier === "prive" && !(zakGroupForYear?.items?.length) ? `${priGroupShown?.items?.length ?? 0} transacties` : `${zakGroupForYear?.items?.length ?? 0} zakelijke en ${priGroupShown?.items?.length ?? 0} privé-transacties`} · {expandedCardKeys.detailTabellen ? "klik om in te klappen" : "klik om te openen"}
-                    </span>
-                  </button>
-                </div>
-                {expandedCardKeys.detailTabellen && (
-                  <div style={sectionTabStyle("controleren")}>
-                    <AansluitingDetailPanel
-                      detailsRef={detailsSectionRef}
-                      zakGroupForYear={zakGroupWeergave}
-                      priGroupForYear={priGroupWeergave}
-                      priveRekeningGeladen={priveRekeningGeladen}
-                      zakelijkRekeningGeladen={zakelijkRekeningGeladen}
-                      expandedTable={expandedTable}
-                      onToggleExpandTable={(zone) => setExpandedTable((v) => (v === zone ? null : zone))} /* release30V10 — direct i.p.v. startTransition */
-                      onRequestCategoryChange={requestCategoryChange}
-                      onConfirmCorrect={confirmClassificationCorrect}
-                      fingerprintByTxId={fingerprintByTxId}
-                      transactionNotes={transactionNotes}
-                      onSetNote={setTransactionNote}
-                      onOpenHelp={setHelpPopupChapter}
-                      zonderZakelijk={soortDossier === "prive" && !(zakGroupWeergave?.items?.length)}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <CategorieEnDetail
+            activeYear={activeYear}
+            btwVerlegd={btwVerlegd}
+            categorySectionRef={categorySectionRef}
+            confirmClassificationCorrect={confirmClassificationCorrect}
+            detailsSectionRef={detailsSectionRef}
+            effectiveCategoryBtwRates={effectiveCategoryBtwRates}
+            eigenPriveIbans={eigenPriveIbans}
+            expandedCardKeys={expandedCardKeys}
+            expandedTable={expandedTable}
+            fingerprintByTxId={fingerprintByTxId}
+            modus={modus}
+            priGroupShown={priGroupShown}
+            priGroupWeergave={priGroupWeergave}
+            priveOverzicht={priveOverzicht}
+            priveRekeningGeladen={priveRekeningGeladen}
+            rekeningenVoorGroep={rekeningenVoorGroep}
+            requestCategoryChange={requestCategoryChange}
+            sectionTabStyle={sectionTabStyle}
+            setExpandedTable={setExpandedTable}
+            setHelpPopupChapter={setHelpPopupChapter}
+            setManualWizardOpen={setManualWizardOpen}
+            setTransactionNote={setTransactionNote}
+            soortDossier={soortDossier}
+            toggleCardExpand={toggleCardExpand}
+            transactionNotes={transactionNotes}
+            years={years}
+            zakGroupForYear={zakGroupForYear}
+            zakGroupWeergave={zakGroupWeergave}
+            zakelijkRekeningGeladen={zakelijkRekeningGeladen}
+          />
         )}
 
         {/* Indicatieve aangifte — globale modal.
@@ -4820,47 +4506,7 @@ export default function App() {
                   />
                 )}
 
-        {onderbouwingKeuze && (
-          <KlantJaarKeuzeModal years={years} selected={onderbouwingKeuze} setSelected={setOnderbouwingKeuze} onOpen={openOnderbouwing} onClose={() => setOnderbouwingKeuze(null)}
-            vraag="Voor welke jaren het onderbouwingsoverzicht?" knop="Onderbouwing tonen" />
-        )}
-        {onderbouwingHtml && (
-          <AangifteVoorstelPreviewModal html={onderbouwingHtml} years={onderbouwingJaren} titel={`Onderbouwing ${jarenBereik(onderbouwingJaren)}`}
-            onDownload={(soort) => downloadOnderbouwing(onderbouwingHtml, onderbouwingJaren, soort)} onPrint={() => printHtmlDocument(onderbouwingHtml)} onClose={() => setOnderbouwingHtml(null)} />
-        )}
-        {btwOverzichtKeuze && (
-          <KlantJaarKeuzeModal years={years} selected={btwOverzichtKeuze} setSelected={setBtwOverzichtKeuze} onOpen={openBtwOverzicht} onClose={() => setBtwOverzichtKeuze(null)}
-            vraag="Voor welke jaren het BTW-overzicht per kwartaal?" knop="Overzicht tonen" />
-        )}
-        {btwOverzichtHtml && (
-          <AangifteVoorstelPreviewModal html={btwOverzichtHtml} years={btwOverzichtJaren} titel={`BTW per kwartaal ${jarenBereik(btwOverzichtJaren)}`}
-            onDownload={(soort) => downloadBtwOverzicht(btwOverzichtHtml, btwOverzichtJaren, soort)} onPrint={() => printHtmlDocument(btwOverzichtHtml)} onClose={() => setBtwOverzichtHtml(null)} />
-        )}
-        {klantJaarKeuze && (
-          <KlantJaarKeuzeModal years={years} selected={klantJaarKeuze} setSelected={setKlantJaarKeuze} onOpen={openKlantSamenvatting} onClose={() => setKlantJaarKeuze(null)} />
-        )}
-        {klantSamenvattingHtml && (
-          <AangifteVoorstelPreviewModal
-            html={klantSamenvattingHtml}
-            years={klantSamenvattingJaren}
-            titel={`Samenvatting voor klant ${jarenBereik(klantSamenvattingJaren)}`}
-            onDownload={(soort) => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren), soort)}
-            onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
-            onClose={() => setKlantSamenvattingHtml(null)}
-          />
-        )}
-        {aangiftevoorstelPreview && (
-          <AangifteVoorstelPreviewModal
-            html={voorstelHtmlWeergave}
-            years={selectedAangifteYears}
-            uitleg={uitlegMeenemen}
-            setUitleg={setUitlegMeenemen}
-            onDownload={downloadAangiftevoorstelPreview}
-            onPrint={printAangiftevoorstelPreview}
-            onClose={() => setAangiftevoorstelPreview(null)}
-            extraKnop={{ label: "Onderbouwing tonen", title: "Overzicht van de transacties achter de bedragen in deze berekening", onClick: () => { const jaren = selectedAangifteYears; setAangiftevoorstelPreview(null); openOnderbouwing(jaren); } }}
-          />
-        )}
+        {rapportVensters}
         {showInkomenPerMaand && years.length > 0 && (
           <InkomenPerMaandModal
             classified={classified}
@@ -4953,35 +4599,7 @@ export default function App() {
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
-      {opslaanModal && (
-        <OpslaanModal
-          heeftWachtwoord={!!dossierWachtwoord}
-          onAnnuleer={() => setOpslaanModal(false)}
-          onOpslaan={(pw) => {
-            setOpslaanModal(false);
-            setOpslaanKeuzeGemaakt(true);
-            if (pw === BEHOUD) { setWachtwoordBevestigd(dossierWachtwoord); saveProjectFile(); return; }
-            if (!pw && dossierWachtwoord) { setDossierWachtwoord(null); setDossierHerstelcode(null); }
-            if (pw) { setDossierWachtwoord(pw); setWachtwoordBevestigd(pw); }
-            saveProjectFile(pw || "");
-          }}
-        />
-      )}
-      {herstelcodeToon && <HerstelcodeModal code={herstelcodeToon.code} nieuw={herstelcodeToon.nieuw} onSluit={() => setHerstelcodeToon(null)} onBevestig={herstelcodeToon.daarna ? () => { const f = herstelcodeToon.daarna; setHerstelcodeToon(null); f(); } : null} />}
-      {wachtwoordModal && (
-        <WachtwoordModal
-          modus={wachtwoordModal.modus}
-          fout={wachtwoordModal.fout}
-          heeftWachtwoord={!!dossierWachtwoord}
-          onOK={(pw) => {
-            if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(pw);
-            else { setDossierWachtwoord(pw); setWachtwoordBevestigd(pw); setChangesSinceExport((n) => Math.max(n, 1)); }
-            setWachtwoordModal(null);
-          }}
-          onAnnuleer={() => { if (wachtwoordModal.modus === "vraag") wachtwoordModal.resolve(null); setWachtwoordModal(null); }}
-          onVerwijder={() => { setOpslaanKeuzeGemaakt(true); setDossierWachtwoord(null); setDossierHerstelcode(null); setChangesSinceExport((n) => Math.max(n, 1)); setWachtwoordModal(null); }}
-        />
-      )}
+      {dossierVensters}
       {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
       {showBegrippen && <BegrippenModal onClose={() => setShowBegrippen(false)} />}
       {showLog && (
