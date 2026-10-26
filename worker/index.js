@@ -8,7 +8,7 @@
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
-import { tarievenRoute, tarievenBeheerRoute } from "./tarieven.js";
+import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
 import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
@@ -25,6 +25,10 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
 
 export default {
+  // beide-V6R8 — geplande taken (alleen met een Cron Trigger in wrangler.jsonc): herinnering tarieven bijwerken.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(tarievenHerinneringMail(env));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // nieuw-V4R6 — wie is ingelogd? Met INLOG_MODUS = "eigen" uit de eigen sessiecookie (zie inloggen.js), anders

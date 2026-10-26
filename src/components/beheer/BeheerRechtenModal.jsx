@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalShell from "../modals/ModalShell.jsx";
 import BeheerTarieven from "./BeheerTarieven.jsx";
+import BeheerLogboek from "./BeheerLogboek.jsx";
+import { tarievenHerinnering } from "../../tax/tarievenLaden.js";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 
 // nieuw-V4R3 — "Gebruikers en rechten": de beheerder (Secret BEHEERDERS in de Worker) geeft per e-mailadres
@@ -17,6 +19,11 @@ const planNaam = (soort, plan) => `${SOORT[soort] || SOORT.zakelijk} · ${PLAN[p
 // Wat iemand binnen één soort heeft, kort ("Uitgebreid + bankkoppeling"), of null.
 const niveauTekst = (x) => (x?.uitgebreid ? (x.koppelen ? "Uitgebreid + bankkoppeling" : "Uitgebreid") : x?.eenvoudig ? "Eenvoudig" : null);
 const verlopenOp = (x, vandaag) => x?.geldigTot && vandaag && x.geldigTot < vandaag;
+// beide-V6R8 — verloopt binnen 30 dagen (nog niet verlopen).
+const plusDagen = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const bijnaVerlopen = (x, vandaag) => !!(x?.eenvoudig && x.geldigTot && vandaag && x.geldigTot >= vandaag && x.geldigTot <= plusDagen(vandaag, 30));
+const NIVEAU_NAAM = ["geen toegang", "Eenvoudig", "Uitgebreid", "Uitgebreid + bankkoppeling"];
+const niveauVan = (x) => (x?.uitgebreid ? (x.koppelen ? 3 : 2) : x?.eenvoudig ? 1 : 0);
 // Rij uit een oudere Worker (zonder soorten) als zakelijk lezen.
 const soortVan = (r, s) => r?.[s] || (s === "zakelijk" ? { eenvoudig: r?.eenvoudig, uitgebreid: r?.uitgebreid, koppelen: r?.koppelen, geldigTot: r?.geldigTot } : GEEN_SOORT);
 
@@ -35,7 +42,7 @@ async function api(pad, body) {
 const PER_PAGINA = 50;
 const FILTERS = [
   ["alle", "Alle abonnementen"], ["eenvoudig", "Alleen Eenvoudig"], ["uitgebreid", "Uitgebreid (zonder koppeling)"],
-  ["koppelen", "Met bankkoppeling"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
+  ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 30 dagen"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
 ];
 // beide-V1R0 — filter op soort gebruik (kolom rechten.gebruik).
 const SOORT_FILTERS = [["alle", "Zakelijk en privé"], ["zakelijk", "Zakelijk"], ["prive", "Privé"], ["beide", "Beide"]];
@@ -78,6 +85,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
   const [slot, setSlot] = useState(false);
   const [fout, setFout] = useState("");
   const [melding, setMelding] = useState("");
+  const [waarschuwing, setWaarschuwing] = useState(""); // beide-V6R8 — blijft staan tot hij is weggeklikt (bijv. mail niet verstuurd)
   const [bezig, setBezig] = useState(false);
   const [form, setForm] = useState(LEEG);
   const [bewerkt, setBewerkt] = useState(null); // e-mailadres van de rij die in het formulier staat
@@ -107,6 +115,18 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     try {
       const email = form.email.trim().toLowerCase();
       const schoon = (x) => ({ eenvoudig: !!(x.uitgebreid || x.eenvoudig), uitgebreid: !!x.uitgebreid, koppelen: !!(x.uitgebreid && x.koppelen), geldigTot: x.geldigTot || null });
+      // beide-V6R8 — minder rechten of een einddatum in het verleden: eerst bevestigen.
+      const oud = bewerkt ? (lijst || []).find((r) => r.email === bewerkt) : null;
+      if (oud) {
+        const minder = Object.entries(SOORT).flatMap(([k, titel]) => {
+          const a = soortVan(oud, k), b = schoon(form[k]);
+          const regels = [];
+          if (niveauVan(b) < niveauVan(a)) regels.push(`${titel}: ${NIVEAU_NAAM[niveauVan(a)]} → ${NIVEAU_NAAM[niveauVan(b)]}`);
+          if (b.geldigTot && vandaag && b.geldigTot < vandaag && b.geldigTot !== a.geldigTot) regels.push(`${titel}: einddatum ${nlDatum(b.geldigTot)} ligt in het verleden, de toegang stopt meteen`);
+          return regels;
+        });
+        if (minder.length && !window.confirm(`Rechten van ${email} intrekken?\n\n${minder.join("\n")}`)) { setBezig(false); return; }
+      }
       await api("rechten", { email, zakelijk: schoon(form.zakelijk), prive: schoon(form.prive), notitie: form.notitie });
       setMelding(`${email} is opgeslagen.`);
       setForm(LEEG); setBewerkt(null); setFormOpen(false);
@@ -115,6 +135,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
   };
 
   const verwijder = async (email) => {
+    if (!window.confirm(`${email} verwijderen?\n\nToegang, wachtwoord, passkeys, inlog en het akkoord met de voorwaarden worden gewist. Dit kan niet ongedaan worden gemaakt.`)) return;
     setBezig(true); setFout(""); setMelding("");
     try {
       await api("verwijder", { email });
@@ -125,11 +146,15 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
   };
 
   const beslis = async (email, actie) => {
+    if (actie === "afwijzen" && !window.confirm(`Aanvraag van ${email} afwijzen?\n\nDe aanvrager krijgt daarover een e-mail.`)) return;
     setBezig(true); setFout(""); setMelding("");
     try {
       const d = await api(actie, { email });
       // nieuw-V4R8 — de Worker mailt de aanvrager; meld het als die mail niet weg kon.
-      setMelding(`${actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd` : `De aanvraag van ${email} is afgewezen`}${d.mailFout ? `, maar de e-mail aan de aanvrager is niet verstuurd (${d.mailFout}).` : " en de aanvrager krijgt een e-mail."}`);
+      // beide-V6R8 — een niet verstuurde mail blijft als waarschuwing staan tot hij is weggeklikt (en staat in het logboek).
+      const wat = actie === "goedkeuren" ? `De aanvraag van ${email} is goedgekeurd` : `De aanvraag van ${email} is afgewezen`;
+      if (d.mailFout) setWaarschuwing(`${wat}, maar de e-mail aan de aanvrager is NIET verstuurd (${d.mailFout}). Laat het de aanvrager zelf weten.`);
+      else setMelding(`${wat} en de aanvrager krijgt een e-mail.`);
       await laad();
     } catch (e) { setFout(e.message); } finally { setBezig(false); }
   };
@@ -156,12 +181,15 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
       if (filter === "uitgebreid") return soorten.some((x) => x.uitgebreid && !x.koppelen);
       if (filter === "koppelen") return soorten.some((x) => x.koppelen);
       if (filter === "verlopen") return soorten.some((x) => x.eenvoudig && verlopenOp(x, vandaag));
+      if (filter === "bijna") return soorten.some((x) => bijnaVerlopen(x, vandaag));
       if (filter === "geen") return !r.eenvoudig && !r.uitgebreid;
       return true;
     })
     .filter((r) => !zoekWoord || zoekTekst(r).includes(zoekWoord))
     .sort((a, b) => String(b.gewijzigd || "").localeCompare(String(a.gewijzigd || ""))), [lijst, filter, soortFilter, zoekWoord, vandaag]); // nieuwste eerst
   const totaalAanvragen = (lijst || []).filter((r) => r.aanvraag).length;
+  const aantalBijna = (lijst || []).filter((r) => ["zakelijk", "prive"].some((k) => bijnaVerlopen(soortVan(r, k), vandaag))).length;
+  const tariefHerinnering = useMemo(() => tarievenHerinnering(), []);
   const totaalGebruikers = (lijst || []).filter((r) => r.eenvoudig || r.uitgebreid || !r.aanvraag).length;
   const huidige = tab === "aanvragen" ? aanvragen : gebruikers;
   const maxPagina = Math.max(0, Math.ceil(huidige.length / PER_PAGINA) - 1);
@@ -185,19 +213,32 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
             ? "Alleen wie hieronder Eenvoudig of Uitgebreid heeft, krijgt de app; anderen zien de aanmeldpagina."
             : "Iedereen die inlogt, kan Eenvoudig gebruiken. Zet TOEGANG_VERPLICHT op \"ja\" om alleen goedgekeurde gebruikers toe te laten."}
         </p>
+        {tariefHerinnering && tab !== "tarieven" && (
+          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-amber-900">
+            <span className="flex-1">{tariefHerinnering.tekst}. Zet het nieuwe tarievenbestand op de server.</span>
+            <button type="button" onClick={() => kiesTab("tarieven")} className={KNOP_SECUNDAIR_KLEIN}>Naar Tarieven</button>
+          </p>
+        )}
+        {waarschuwing && (
+          <p className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">
+            <span className="flex-1">⚠ {waarschuwing}</span>
+            <button type="button" onClick={() => setWaarschuwing("")} className="text-xs underline">Weg</button>
+          </p>
+        )}
         {melding && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">{melding}</p>}
         {fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{fout}</p>}
 
         <div className="flex gap-1 border-b border-slate-200" role="tablist">
-          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"]].map(([k, t]) => (
+          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"], ["logboek", "Logboek"]].map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => kiesTab(k)}
               className={`-mb-px border-b-2 px-3 py-2 font-medium ${tab === k ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-              {t}{k === "aanvragen" && totaalAanvragen > 0 ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" /> : null}
+              {t}{(k === "aanvragen" && totaalAanvragen > 0) || (k === "tarieven" && tariefHerinnering) ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" /> : null}
+              {k === "gebruikers" && aantalBijna > 0 ? <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[11px] text-amber-900">{aantalBijna} verloopt binnenkort</span> : null}
             </button>
           ))}
         </div>
 
-        {tab === "tarieven" ? <BeheerTarieven /> : (<>
+        {tab === "tarieven" ? <BeheerTarieven /> : tab === "logboek" ? <BeheerLogboek /> : (<>
         <div className="flex flex-wrap gap-2">
           <input type="search" value={zoek} onChange={(e) => { setZoek(e.target.value); setPagina(0); }} placeholder="Zoek op naam, e-mailadres of notitie"
             className={`${VELD_KLEIN} min-w-0 flex-1`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken" />

@@ -188,6 +188,8 @@ import { computeBtwPrivegebruikAuto } from "./tax/btwPrivegebruikAuto.js";
 import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 import { BANKKOPPELING_STATUS } from "./content/bankkoppelingStatus.jsx";
+import { tarievenHerinnering } from "./tax/tarievenLaden.js";
+import { PRIVACY_LABEL, PRIVACY_TITEL } from "./content/privacy.jsx";
 
 // nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
 // laden lezen en de adresbalk meteen opschonen, zodat de eenmalige code niet in de geschiedenis blijft staan.
@@ -548,7 +550,8 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [helpPopupChapter, setHelpPopupChapter] = useState(null);
   const [dialog, setDialog] = useState(null);
-  const [showBeheer, setShowBeheer] = useState(false); // nieuw-V4R3 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
+  const [showBeheer, setShowBeheer] = useState(false);
+  const tariefMelding = useMemo(() => tarievenHerinnering()?.tekst || null, []); // beide-V6R8 — herinnering voor de beheerder // nieuw-V4R3 — Gebruikers en rechten (alleen beheerders) // v304 — keuzevenster, zie ConfirmDialog.jsx
   const [lastActionSnapshot, setLastActionSnapshot] = useState(null); // { label, state }
   // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
   const [auditLog, setAuditLog] = useState([]);
@@ -3915,7 +3918,7 @@ export default function App() {
         onOpenLog={() => setShowLog(true)}
         onZoek={() => setShowZoek(true)}
         onBegrippen={() => setShowBegrippen(true)}
-        onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen}
+        onBeheer={isBeheerder ? () => setShowBeheer(true) : null} beheerTeller={openAanvragen} beheerMelding={isBeheerder ? tariefMelding : null}
         ingelogdAls={ingelogdAls} onUitloggen={uitloggen}
         onPasskey={inlogModus === "eigen" ? () => { window.location.href = "/inloggen/passkey"; } : null}
         onAbonnementen={ingelogdAls ? naarAbonnementen : null}
@@ -4837,7 +4840,7 @@ export default function App() {
       >
         {/* nieuw-V2R8 — in Eenvoudig (geen zijbalk) staan versie en copyright links in deze onderbalk */}
         {eenvoudigActief && (
-          <span className="mr-auto text-[11px] text-slate-400">Gegevens blijven lokaal · © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</span>
+          <span className="mr-auto text-[11px] text-slate-400" title={PRIVACY_TITEL}>{PRIVACY_LABEL} · © {new Date().getFullYear()} Paul Gerits — alle rechten voorbehouden · {APP_RELEASE}</span>
         )}
         <button
           onClick={() => setShowFeedback(true)}

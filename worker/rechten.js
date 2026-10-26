@@ -14,6 +14,7 @@
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
+import { logBeheer, leesLogboek, beschrijfRechten } from "./logboek.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
   email TEXT PRIMARY KEY,
@@ -336,6 +337,10 @@ export async function beheerRoute(request, env, url, email) {
       const { results } = await env.DB.prepare("SELECT * FROM rechten ORDER BY aanvraag IS NULL, aangevraagd DESC, email").all();
       return json({ ok: true, vandaag: vandaag(), slot: toegangVerplicht(env), rechten: (results || []).map(rijNaarRecht) });
     }
+    // beide-V6R8 — logboek (laatste 200, met zoeken)
+    if (url.pathname === "/api/beheer/logboek" && request.method === "GET") {
+      return json({ ok: true, logboek: await leesLogboek(env.DB, { zoek: url.searchParams.get("zoek") }) });
+    }
     let body;
     try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
     const doel = String(body?.email || "").trim().toLowerCase();
@@ -364,6 +369,11 @@ export async function beheerRoute(request, env, url, email) {
            prive_eenvoudig = ?6, prive_uitgebreid = ?7, prive_koppelen = ?8, prive_geldig_tot = ?9, notitie = ?10, gewijzigd = ?11, gewijzigd_door = ?12`
       ).bind(doel, ...waarden.zakelijk, ...waarden.prive, notitie, tijd, door).run();
       await werkGebruikBij(env.DB, doel);
+      const naarSoort = (w) => ({ eenvoudig: !!w[0], uitgebreid: !!w[1], koppelen: !!w[2], geldigTot: w[3] });
+      const oud = bestaand ? Object.fromEntries(Object.keys(GEBRUIK).map((x) => [x, soortUitRij(bestaand, x)])) : {};
+      const nieuw = Object.fromEntries(Object.keys(GEBRUIK).map((x) => [x, naarSoort(waarden[x])]));
+      await logBeheer(env.DB, { door, email: doel, actie: bestaand ? "rechten gewijzigd" : "gebruiker toegevoegd",
+        details: beschrijfRechten(oud, nieuw, GEBRUIK) + (notitie !== (bestaand?.notitie || "") ? `; notitie: ${notitie || "leeg"}` : "") });
       return json({ ok: true });
     }
     // nieuw-V4R5 — aanvraag goedkeuren: rechten volgens het gevraagde abonnement, de aanvraag vervalt.
@@ -388,6 +398,7 @@ export async function beheerRoute(request, env, url, email) {
         : [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt Bankoverzicht nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.`],
         { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open Bankoverzicht" }, r?.naam || "", [],
         link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
+      await logBeheer(env.DB, { door, email: doel, actie: "aanvraag goedgekeurd", details: `${planNaam(gebruik, plan)}${mailFout ? `; mail NIET verstuurd: ${mailFout}` : "; mail verstuurd"}` });
       return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/afwijzen" && request.method === "POST") {
@@ -402,6 +413,7 @@ export async function beheerRoute(request, env, url, email) {
           "Helaas kan ik je aanvraag op dit moment niet goedkeuren, omdat er te weinig informatie is gegeven om je toegang tot de app te geven.",
           "Je kunt op deze e-mail reageren met de vraag wat er ontbreekt. Je kunt ook meteen meer informatie sturen over waarom je toegang vraagt en waarvoor je de app wilt gebruiken. Daarna bekijk ik je aanvraag opnieuw."],
         null, r?.naam || "") : null;
+      await logBeheer(env.DB, { door, email: doel, actie: "aanvraag afgewezen", details: `${PLANNEN[r?.aanvraag] ? planNaam(geldigGebruik(r.aanvraag_gebruik) || "zakelijk", r.aanvraag) : "geen open aanvraag"}${mailFout ? `; mail NIET verstuurd: ${mailFout}` : ""}` });
       return json({ ok: true, mailFout });
     }
     if (url.pathname === "/api/beheer/verwijder" && request.method === "POST") {
@@ -411,6 +423,7 @@ export async function beheerRoute(request, env, url, email) {
         try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
       }
       slotCache.delete(doel);
+      await logBeheer(env.DB, { door, email: doel, actie: "gebruiker verwijderd", details: "toegang, sessies, inloglinks, passkeys, wachtwoord en akkoord voorwaarden gewist" });
       return json({ ok: true });
     }
     return json({ ok: false, fout: "Onbekende route" }, 404);

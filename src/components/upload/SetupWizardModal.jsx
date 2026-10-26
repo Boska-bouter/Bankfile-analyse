@@ -7,6 +7,7 @@ import { eur } from "../../utils/amounts.js";
 import DossierProfielLijst from "../shared/DossierProfielLijst.jsx";
 
 import { KNOP_PRIMAIR_GROOT, KNOP_SECUNDAIR_KLEIN } from "../ui/stijl.js";
+import { PRIVACY_KORT } from "../../content/privacy.jsx";
 // V65 — de wizard is herindeeld van 17 losse vragen naar 7 schermen. Elk scherm bundelt vragen die bij
 // elkaar horen; de antwoorden worden met één "Doorgaan" vastgelegd via exact dezelfde setters als voorheen.
 //   20 Bankbestanden laden            (alleen bij een leeg dossier)
@@ -318,7 +319,7 @@ export default function SetupWizardModal({
                 </ul>
               )}
               <p className="text-xs text-slate-500">
-                <strong>Privacy:</strong> bankgegevens worden lokaal in de browser verwerkt en niet naar een externe server gestuurd voor analyse.
+                <strong>Privacy:</strong> {PRIVACY_KORT}
               </p>
               <p className="text-xs text-slate-400">
                 Tip: laad zowel de zakelijke als de privérekening, anders kan de app overboekingen tussen de rekeningen niet controleren.

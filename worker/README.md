@@ -176,3 +176,14 @@ Gebruikers en rechten → Tarieven; het staat in de D1-tabel `tarieven` (maakt d
 het bij het starten op via `GET /api/tarieven` (alleen ingelogd) en bewaart een kopie in de browser. Zonder bestand, of als de
 server niet bereikbaar is, gelden de tarieven die in de app zitten. Vorm en controle: `src/tax/tarievenBestand.js` (de Worker
 gebruikt dezelfde controle, dus een onvolledig bestand wordt geweigerd). Geen wijziging in wrangler.jsonc nodig.
+
+## Logboek en herinnering tarieven (beide-V6R8)
+
+Elke wijziging in Gebruikers en rechten (rechten, goedkeuren, afwijzen, verwijderen, tarievenbestand) komt in de D1-tabel
+`beheer_log` (maakt de Worker zelf aan); zichtbaar in het tabblad Logboek. Van december t/m maart toont het beheerscherm een
+melding zolang de tarieven van het komende of lopende jaar ontbreken of voorlopig zijn. Wie daarnaast een mail wil, zet in
+wrangler.jsonc op het hoogste niveau (en/of in `previews` voor DEV):
+
+    "triggers": { "crons": ["0 7 1,15 12,1,2,3 *"] }
+
+Dan mailt de Worker op de 1e en 15e van december t/m maart de adressen in BEHEERDERS, alleen als er iets bij te werken is.

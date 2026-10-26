@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Check, FileSpreadsheet, X } from "lucide-react";
 import PriveVraag from "./PriveVraag.jsx";
 import { KNOP_PRIMAIR_GROOT } from "../ui/stijl.js";
+import { PRIVACY_KORT } from "../../content/privacy.jsx";
 
 const BESTANDEN = "bestanden";
 const OPSLAAN = "opslaan";
@@ -127,7 +128,7 @@ export default function PriveWizardModal({
                   <p className="text-xs text-slate-600">Zijn er meer rekeningen, zoals een spaarrekening, beleggingsrekening, kinderrekening of een rekening van de partner? Voeg die bestanden ook toe met de knop hierboven.</p>
                 </>
               )}
-              <p className="text-xs text-slate-500"><strong>Privacy:</strong> bankgegevens worden lokaal in de browser verwerkt en niet naar een externe server gestuurd voor analyse.</p>
+              <p className="text-xs text-slate-500"><strong>Privacy:</strong> {PRIVACY_KORT}</p>
             </>
           )}
           {huidig.id === REKENINGEN && (

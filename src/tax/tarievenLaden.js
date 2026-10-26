@@ -89,3 +89,17 @@ export async function laadTarieven({ wacht = 2500 } = {}) {
   const bewaard = leesCache();
   if (bewaard) pasTarievenToe(bewaard, "bewaard");
 }
+
+// beide-V6R8 — herinnering voor de beheerder: in december voor het komende jaar, van januari t/m maart voor het lopende
+// jaar, zolang dat jaar ontbreekt of nog voorlopig is. Zonder `bestand`: de tabellen zoals de app ze nu gebruikt (na
+// laadTarieven). Met `bestand` (de Worker): de ingebouwde tabellen plus dat bestand, zonder iets te wijzigen.
+export function tarievenHerinnering(nu = new Date(), bestand = null) {
+  const maand = nu.getMonth() + 1;
+  const jaar = maand === 12 ? nu.getFullYear() + 1 : maand <= 3 ? nu.getFullYear() : null;
+  if (!jaar) return null;
+  const inBestand = bestand?.jaren?.[jaar];
+  const bekend = !!IB_TARIEVEN_BY_YEAR[jaar] || !!inBestand?.ib;
+  const voorlopig = inBestand ? inBestand.status === "voorlopig" : VOORLOPIGE_JAREN.has(jaar);
+  if (bekend && !voorlopig) return null;
+  return { jaar, tekst: bekend ? `Tarieven ${jaar} zijn nog voorlopig` : `Tarieven ${jaar} ontbreken nog` };
+}
