@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { resolveTariefGroep, tariefStatusVoorJaar, IB_TARIEVEN_BY_YEAR } from "../../tax/incomeTax.js";
+import { tarievenInfo } from "../../tax/tarievenLaden.js";
 
 // Ingeklapt onderdeel van "Persoonlijke aannames voor IB": de tarieven en bedragen die de
 // indicatieve berekening per jaar gebruikt. Standaard staan de officiële waarden ingevuld
@@ -41,10 +42,11 @@ const GROEPEN = [
 
 const STATUS_STIJL = {
   standaard: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  voorlopig: "bg-violet-50 text-violet-900 border-violet-300",
   benadering: "bg-amber-50 text-amber-900 border-amber-300",
   aangepast: "bg-sky-50 text-sky-900 border-sky-300",
 };
-const STATUS_TEKST = { standaard: "standaard", benadering: "benadering", aangepast: "aangepast" };
+const STATUS_TEKST = { standaard: "standaard", voorlopig: "voorlopig", benadering: "benadering", aangepast: "aangepast" };
 
 // JSON kent geen Infinity — de bovenste schijf wordt als tot: null bewaard.
 const naarOpslag = (w) => ({
@@ -114,9 +116,16 @@ export default function TarievenJaarEditor({
         <div className="mt-2 space-y-3">
           <p className="text-xs text-slate-500">
             Standaard staan de officiële tarieven ingevuld. Een jaar zonder eigen tabel gebruikt tijdelijk de waarden van het
-            dichtstbijzijnde eerdere jaar (benadering). Pas een waarde aan, of vul een nieuw jaar in, zodra de officiële
+            dichtstbijzijnde eerdere jaar (benadering). Cijfers uit een Belastingplan dat nog niet is vastgesteld heten
+            voorlopig: ze kunnen nog wijzigen. Pas een waarde aan, of vul een nieuw jaar in, zodra de officiële
             cijfers bekend zijn.
           </p>
+          {tarievenInfo() && (
+            <p className="text-xs text-slate-500">
+              Tarieven bijgewerkt{tarievenInfo().versie ? ` op ${tarievenInfo().versie}` : ""} via de server
+              {tarievenInfo().herkomst === "bewaard" ? " (laatst opgehaalde versie, de server was niet bereikbaar)" : ""}.
+            </p>
+          )}
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <span>Jaar:</span>
             <select value={jaar} onChange={(e) => setJaar(Number(e.target.value))} className="rounded border border-slate-300 px-2 py-1 text-xs">

@@ -1,6 +1,7 @@
 import { metBolletjes } from "../components/shared/StatusDot.jsx";
 import { VOORWAARDEN_INHOUD } from "./voorwaarden.jsx";
 import { VEILIG_INHOUD } from "./veiligheid.jsx";
+import { PrivacyBlokken } from "./privacy.jsx";
 // Alle uitgebreide toelichtingsteksten, gebundeld — hergebruikt door zowel het volledige
 // "Help en uitleg"-overzicht als de gerichte pop-up die bij losse "?"-knopjes opent.
 export const HELP_GROEPEN = [
@@ -50,6 +51,13 @@ export const HELP_CHAPTERS = [
     inhoud: <div className="space-y-2.5">{VEILIG_INHOUD}</div>,
   },
   {
+    // beide-V6R9 — wat blijft in de browser en wat staat op de server (zelfde tekst als overal, content/privacy.jsx)
+    key: "privacy",
+    groep: "beginnen",
+    titel: "Privacy: wat blijft lokaal en wat niet",
+    inhoud: <PrivacyBlokken />,
+  },
+  {
     key: "hulpvraag-feedback",
     groep: "beginnen",
     titel: "Hulpvraag of feedback sturen",
@@ -87,8 +95,9 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          <strong>Automatisch bewaard.</strong> De bankgegevens worden lokaal in deze browser verwerkt en bewaard; ze worden niet op
-          een server opgeslagen. De app maakt alleen internetverbinding voor het inloggen, het laden van de app zelf, de controle op een nieuwe versie, de bankkoppeling (als die wordt gebruikt; de transacties worden alleen doorgegeven) en (alleen als die zelf wordt verstuurd) feedback. Bewaar exports en projectbestanden zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten. "Dossier opslaan" maakt daarnaast een bestand om zelf te bewaren en later weer te laden.
+          <strong>Automatisch bewaard.</strong> Het dossier wordt automatisch in deze browser bewaard, niet op een server (zie
+          "Privacy: wat blijft lokaal en wat niet"). "Dossier opslaan" maakt daarnaast een bestand om zelf te bewaren en later weer te laden.
+          Bewaar dat bestand en exports zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten.
         </p>
         <p>
           <strong>Met of zonder wachtwoord.</strong> De keuze volgt bij de eerste keer opslaan. Met een

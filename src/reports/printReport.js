@@ -1,4 +1,5 @@
 import { CATEGORY_ORDER } from "../classification/categories.js";
+import { metRapportKop } from "./rapportKop.js";
 import { eur } from "../utils/amounts.js";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -49,8 +50,8 @@ const PRINT_STYLES = `
 
 // beide-V4R1 — ook gebruikt voor Downloaden (PDF/HTML); downloadRapport haalt de onload-print eraf.
 export function buildReportHtml(groups) {
-  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Bankoverzicht Zakelijk & Privé</title>
-<style>${PRINT_STYLES}</style></head><body onload="window.print()">${buildReportBodyContent(groups)}</body></html>`;
+  return metRapportKop(`<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Bankoverzicht Zakelijk & Privé</title>
+<style>${PRINT_STYLES}</style></head><body onload="window.print()">${buildReportBodyContent(groups)}</body></html>`);
 }
 
 // Print binnen dezelfde pagina (geen iframe, geen nieuw venster) — de meest betrouwbare manier

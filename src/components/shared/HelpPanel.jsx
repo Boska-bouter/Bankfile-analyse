@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { isValidElement } from "react";
 import { HELP_CHAPTERS, HELP_GROEPEN } from "../../content/helpChapters.jsx";
+import { PRIVACY_KORT } from "../../content/privacy.jsx";
 
 const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
@@ -23,7 +24,7 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      De bankgegevens worden lokaal in deze browser verwerkt en automatisch bewaard. Ze worden niet op een server opgeslagen, ook niet als ze via de bankkoppeling zijn opgehaald. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
+      {PRIVACY_KORT} Bij de bankkoppeling worden de boekingen alleen doorgegeven, niet bewaard (zie "Privacy" hieronder). Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
     </li>
   </ol>
 );

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { ErrorBoundary } from "./ErrorBoundary.jsx";
 import { installStoragePolyfill } from "./storage/projectStorage.js";
+import { laadTarieven } from "./tax/tarievenLaden.js";
 import "./index.css";
 
 installStoragePolyfill();
@@ -18,10 +19,14 @@ document.addEventListener("keydown", (e) => {
   vensters[vensters.length - 1].click();
 });
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+// beide-V6R7 — eerst het tarievenbestand van de server (hooguit 2,5 seconde), zodat alles meteen met de nieuwste
+// tarieven rekent. Mislukt het, dan start de app gewoon met de bewaarde of ingebouwde tarieven.
+laadTarieven().finally(() => {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+});

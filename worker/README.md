@@ -160,6 +160,10 @@ zijbalk) vraagt iemand met toegang een tweede abonnement aan.
   Bestaande rijen worden bij het eerste gebruik op zakelijk gezet. Je hoeft geen SQL uit te voeren.
 - `/api/rol` geeft naast de bekende velden ook `soorten` ({zakelijk, prive}, elk eenvoudig/uitgebreid/koppelen) en `gebruik`.
 - Prijzen per soort in de variabele `PRIJZEN`, bijv. `{"zakelijk":{"uitgebreid":4.95},"prive":{"uitgebreid":2.95}}`.
+- beide-V7R3 — een gratis abonnement loopt 30 dagen vanaf goedkeuren (variabele `GRATIS_DAGEN` optioneel, 0 = zonder
+  einddatum). Tien dagen voor het einde krijgt de gebruiker een mail met de knop "Verlenging aanvragen"; die mails gaan
+  weg zodra een beheerder de app opent (hooguit eens per uur) of via de Cron Trigger. Verlengen = één knop op
+  /aanmelden, met een vrijwillige peilvraag over betalen (D1-tabel `peiling`, Beheer → Peiling). Geen SQL nodig.
   De oude vorm zonder soort (`{"uitgebreid":4.95}`) geldt voor zakelijk. Zonder variabele is alles €0.
 
 ### Voorwaarden per soort (beide-V1R9)
@@ -168,3 +172,22 @@ Privé heeft eigen gebruiksvoorwaarden (`src/content/voorwaardenPrive.jsx`, vers
 privéabonnement heeft, gaat daar één keer mee akkoord; wie beide heeft, ziet beide teksten en geeft één akkoord. Het akkoord
 staat in de D1-tabel `voorwaarden_akkoord`: `versie`/`tijd` voor zakelijk, `versie_prive`/`tijd_prive` voor privé. De
 Worker voegt die twee kolommen zelf toe; geen SQL nodig. `/api/rol` geeft `voorwaarden` (zakelijk) en `voorwaardenPrive`.
+
+## Tarievenbestand (beide-V6R7)
+
+De belastingtarieven kunnen los van de app worden bijgewerkt. De beheerder zet een tarievenbestand (JSON) op de server via
+Gebruikers en rechten → Tarieven; het staat in de D1-tabel `tarieven` (maakt de Worker zelf aan, geen SQL nodig). De app haalt
+het bij het starten op via `GET /api/tarieven` (alleen ingelogd) en bewaart een kopie in de browser. Zonder bestand, of als de
+server niet bereikbaar is, gelden de tarieven die in de app zitten. Vorm en controle: `src/tax/tarievenBestand.js` (de Worker
+gebruikt dezelfde controle, dus een onvolledig bestand wordt geweigerd). Geen wijziging in wrangler.jsonc nodig.
+
+## Logboek en herinnering tarieven (beide-V6R8)
+
+Elke wijziging in Gebruikers en rechten (rechten, goedkeuren, afwijzen, verwijderen, tarievenbestand) komt in de D1-tabel
+`beheer_log` (maakt de Worker zelf aan); zichtbaar in het tabblad Logboek. Van december t/m maart toont het beheerscherm een
+melding zolang de tarieven van het komende of lopende jaar ontbreken of voorlopig zijn. Wie daarnaast een mail wil, zet in
+wrangler.jsonc op het hoogste niveau (en/of in `previews` voor DEV):
+
+    "triggers": { "crons": ["0 7 1,15 12,1,2,3 *"] }
+
+Dan mailt de Worker op de 1e en 15e van december t/m maart de adressen in BEHEERDERS, alleen als er iets bij te werken is.

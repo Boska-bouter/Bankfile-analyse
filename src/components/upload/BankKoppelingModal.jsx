@@ -292,13 +292,13 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
           <p className="text-slate-500">
             Inloggen gaat bij Ponto (een dienst van Isabel Group met een PSD2-vergunning); daar worden de bank en de
             te delen rekeningen gekozen. Is er nog geen Ponto-account, dan wordt dat daar aangemaakt. De app kan alleen lezen,
-            geen betalingen doen. De transacties gaan rechtstreeks naar deze browser en worden niet op een server bewaard.
+            geen betalingen doen. De server van de app geeft de transacties direct door aan deze browser en bewaart ze niet.
             De koppeling wordt in dit dossier bewaard; Ponto vraagt ongeveer elk half jaar om opnieuw toestemming te geven.
           </p>
         ) : (
           <p className="text-slate-500">
             Inloggen gaat bij de eigen bank, met toestemming om de transacties te lezen (alleen lezen, geen betalingen).
-            De gegevens gaan via Enable Banking rechtstreeks naar deze browser en worden niet op een server bewaard.
+            De gegevens komen via Enable Banking binnen; de server van de app geeft ze direct door aan deze browser en bewaart ze niet.
             De koppeling wordt in dit dossier bewaard en gaat mee met opslaan en laden. De toestemming verloopt na maximaal 180 dagen.
           </p>
         )}

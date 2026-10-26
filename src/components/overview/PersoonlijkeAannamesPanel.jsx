@@ -200,7 +200,7 @@ export default function PersoonlijkeAannamesPanel({
             <p className="mt-1.5 text-xs text-slate-400">
               Alleen mogelijk bij recht op zelfstandigenaftrek, als de ondernemer in minstens 1 van de 5 voorgaande jaren nog
               geen ondernemer was, en de aftrek in die periode niet vaker dan 2x eerder is toegepast (max. 3x in de
-              eerste 5 jaar). Vast bedrag van € 2.123 (2023 t/m 2026 ongewijzigd) — controleer dit zelf.
+              eerste 5 jaar). Vast bedrag van € 2.123 (2023 t/m 2026); volgens het Belastingplan 2027 nog € 10 in 2027 en afgeschaft vanaf 2028 — controleer dit zelf.
             </p>
             {toetsStartersaftrek(startersaftrekStatus, zelfstandigenaftrekStatus).meldingen.map((m, i) => (
               <p key={i} className="mt-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">⚠ {m}</p>

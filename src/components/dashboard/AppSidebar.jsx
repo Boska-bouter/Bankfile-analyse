@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
 import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard } from "lucide-react";
+import { PRIVACY_LABEL, PRIVACY_TITEL } from "../../content/privacy.jsx";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
 // donkere header-balk (titel + bestandsknoppen) en StickyTopNav.jsx door een vaste linker
@@ -22,7 +23,7 @@ const TAB_LABELS = {
 
 
 // Icoonknop met een duidelijke tekstballon (fixed, dus niet afgekapt door de scrollende zijbalk).
-function IcoonKnop({ onClick, label, Icon, teller = 0 }) {
+function IcoonKnop({ onClick, label, Icon, teller = 0, stip = false }) {
   const [tip, setTip] = useState(null);
   const toon = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ x: r.left, y: r.top }); };
   return (
@@ -31,6 +32,7 @@ function IcoonKnop({ onClick, label, Icon, teller = 0 }) {
         className="relative rounded-lg p-2 text-slate-400 hover:text-white hover:bg-white/10">
         <Icon className="h-[18px] w-[18px]" />
         {teller > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-amber-400 px-1 text-center text-[10px] font-bold leading-4 text-slate-900">{teller}</span>}
+        {teller === 0 && stip && <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-amber-400" />}
       </button>
       {tip && (
         <span role="tooltip" className="pointer-events-none fixed z-[100] -translate-y-full whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-[13px] font-semibold text-white shadow-xl ring-1 ring-white/20"
@@ -80,7 +82,7 @@ export default function AppSidebar({
   onLoadProject,
   onClearAll,
   canClearAll,
-  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, ingelogdAls = null, onUitloggen = null, onPasskey = null, onAbonnementen = null, abonnement = null,
+  onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, beheerMelding = null, ingelogdAls = null, onUitloggen = null, onPasskey = null, onAbonnementen = null, abonnement = null,
   saveState,
   lastSavedAt,
   projectStatus,
@@ -388,15 +390,15 @@ export default function AppSidebar({
           <IcoonKnop onClick={onZoek} label="Zoeken in transacties (Ctrl+K)" Icon={Search} />
           <IcoonKnop onClick={onBegrippen} label="Begrippen (uitleg vakwoorden)" Icon={BookOpen} />
           {projectStatus?.hasData && <IcoonKnop onClick={onOpenLog} label={`Wijzigingslog${logAantal ? ` (${logAantal})` : ""}`} Icon={ClipboardList} />}
-          {onBeheer && <IcoonKnop onClick={onBeheer} label={beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"} Icon={Users} teller={beheerTeller} />}
+          {onBeheer && <IcoonKnop onClick={onBeheer} label={`${beheerTeller > 0 ? `Gebruikers en rechten: ${beheerTeller} aanvra${beheerTeller === 1 ? "ag" : "gen"}` : "Gebruikers en rechten (beheer)"}${beheerMelding ? ` · ${beheerMelding}` : ""}`} Icon={Users} teller={beheerTeller} stip={!!beheerMelding} />}
           <IcoonKnop onClick={onToggleHelp} label="Help en uitleg" Icon={HelpCircle} />
           {onPasskey && <IcoonKnop onClick={onPasskey} label="Inloggen instellen (wachtwoord en passkey)" Icon={KeyRound} />}
           {/* beide-V1R0 — abonnementen bekijken en er een aanvragen (bijv. privé naast zakelijk) */}
           {onAbonnementen && <IcoonKnop onClick={onAbonnementen} label="Abonnementen (zakelijk en privé)" Icon={CreditCard} />}
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-500" title="Privacy: bankgegevens worden lokaal in deze browser verwerkt en niet op een server opgeslagen. Bij de bankkoppeling worden transacties alleen doorgegeven. Zie de voorwaarden, artikel 4.">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500" title={PRIVACY_TITEL}>
           <span className="w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />
-          <span className="sb-label">Gegevens blijven lokaal</span>
+          <span className="sb-label">{PRIVACY_LABEL}</span>
         </div>
         {ingelogdAls && <p className="sb-label text-[11px] leading-snug text-slate-400 break-all">Ingelogd als {ingelogdAls}</p>}
         {/* beide-V2R6 / V7R5 — welk abonnement je hebt; klikken opent de abonnementenpagina */}

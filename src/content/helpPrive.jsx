@@ -2,6 +2,7 @@
 // zakelijk, onderbouwing) worden verborgen; hoofdstukken met dezelfde sleutel worden vervangen door een privéversie;
 // de rest (opslaan, oplichting, herkenning, regels, begrippen) blijft gelijk. Alleen tekst, geen logica.
 import { HELP_CHAPTERS, HELP_GROEPEN } from "./helpChapters.jsx";
+import { PRIVACY_KORT } from "./privacy.jsx";
 import { VOORWAARDEN_PRIVE_INHOUD } from "./voorwaardenPrive.jsx";
 
 const VERBORGEN_IN_PRIVE = new Set([
@@ -17,7 +18,7 @@ export const PRIVE_INTRO = (
     <Li>De wizard (Basisvragen) vraagt naar de naam, een fiscale partner, waar het inkomen vandaan komt, wonen (huur of koop) en spaargeld. In de uitgebreide weergave komen daar onder meer WOZ-waarde, hypotheekrente, vermogen op 1 januari en de loonheffing van de jaaropgave bij.</Li>
     <Li>Laad de bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt de boekingen in categorieën in, zoals Wonen, Boodschappen, Vervoer en Zorg. Klopt een indeling niet? Pas hem aan bij Controleren; dat onthoudt de app voor dezelfde tegenpartij, in alle jaren.</Li>
     <Li>Het Overzicht toont per jaar het budget en de belastingindicatie. Links bij Acties staan de berekening inkomstenbelasting, de samenvatting en het budgetoverzicht (als PDF, Excel of HTML).</Li>
-    <Li>De bankgegevens worden lokaal in deze browser verwerkt en bewaard, niet op een server. Gebruik "Dossier opslaan" voor een back-upbestand.</Li>
+    <Li>{PRIVACY_KORT} Gebruik "Dossier opslaan" voor een back-upbestand.</Li>
   </ol>
 );
 

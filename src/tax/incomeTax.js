@@ -19,7 +19,17 @@ export const IB_TARIEVEN_BY_YEAR = {
   2024: { brackets: [{ tot: 75518, tarief: 0.3697 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 3750, mkbPct: 13.31, aftrekBeperkingPct: 36.97 },
   2025: { brackets: [{ tot: 38441, tarief: 0.3582 }, { tot: 76817, tarief: 0.3748 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 2470, mkbPct: 12.7, aftrekBeperkingPct: 37.48 },
   2026: { brackets: [{ tot: 38883, tarief: 0.3575 }, { tot: 78426, tarief: 0.3756 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 1200, mkbPct: 12.7, aftrekBeperkingPct: 37.56 },
+  // beide-V6R6 — 2027 voorlopig (Belastingplan 2027, Prinsjesdag 2026; nog niet door het parlement).
+  2027: { brackets: [{ tot: 39247, tarief: 0.3623 }, { tot: 78426, tarief: 0.3816 }, { tot: Infinity, tarief: 0.495 }], zelfstandigenaftrek: 900, mkbPct: 12.7, aftrekBeperkingPct: 38.16 },
 };
+// beide-V6R6 — jaren waarvan de tarieven wel zijn ingevuld, maar nog voorlopig zijn (wetsvoorstel,
+// kan nog wijzigen). Status "voorlopig" in plaats van "standaard"; na vaststelling uit deze lijst halen.
+export const VOORLOPIGE_JAREN = new Set([2027]);
+// Eén status voor een lijst statussen: aangepast > benadering > voorlopig > standaard.
+export function combineerTariefStatus(statussen) {
+  for (const s of ["aangepast", "benadering", "voorlopig"]) if (statussen.includes(s)) return s;
+  return "standaard";
+}
 // Ondergrens/bovengrens van de hierboven daadwerkelijk ingevulde jaren — computeBelastbaarWinst,
 // estimateIncomeTax en estimateZvw klemmen een jaar buiten dit bereik naar het dichtstbijzijnde
 // bekende jaar (zie IB_TARIEVEN_BY_YEAR/ZVW_TARIEVEN_BY_YEAR hierboven/hieronder) en zetten dan
@@ -56,7 +66,7 @@ export function standaardJaarVoor(groep, year) {
   const lager = jaren.filter((j) => j < year);
   return lager.length ? lager[lager.length - 1] : jaren[0];
 }
-// → { waarde, status: "standaard" | "benadering" | "aangepast", bronJaar }
+// → { waarde, status: "standaard" | "voorlopig" | "benadering" | "aangepast", bronJaar }
 export function resolveTariefGroep(groep, year) {
   const eigen = _overrides?.[year]?.[groep];
   const bronJaar = standaardJaarVoor(groep, year);
@@ -67,7 +77,7 @@ export function resolveTariefGroep(groep, year) {
     if (Array.isArray(waarde.brackets)) waarde.brackets = waarde.brackets.map((b) => ({ ...b, tot: b.tot == null || !Number.isFinite(Number(b.tot)) ? Infinity : Number(b.tot) }));
     return { waarde, status: "aangepast", bronJaar };
   }
-  return { waarde: basis, status: bronJaar === year ? "standaard" : "benadering", bronJaar };
+  return { waarde: basis, status: bronJaar !== year ? "benadering" : VOORLOPIGE_JAREN.has(year) ? "voorlopig" : "standaard", bronJaar };
 }
 // beide-V1R9 — eigen waarden voor andere tabellen (privé: tax/prive/tarieven.js), in hetzelfde dossierveld.
 export const tariefOverride = (year, groep) => { const e = _overrides?.[year]?.[groep]; return e && typeof e === "object" ? e : null; };
@@ -76,12 +86,11 @@ export function tariefStatusVoorJaar(year) {
   const groepen = ["ib", "zvw", "ahk", "ak", "kia"];
   const per = Object.fromEntries(groepen.map((g) => [g, resolveTariefGroep(g, year)]));
   const statussen = groepen.map((g) => per[g].status);
-  const status = statussen.includes("aangepast") ? "aangepast" : statussen.includes("benadering") ? "benadering" : "standaard";
-  return { status, per };
+  return { status: combineerTariefStatus(statussen), per };
 }
 
 export const IB_MIN_YEAR = 2020;
-export const IB_MAX_YEAR = 2026;
+export const IB_MAX_YEAR = 2027;
 
 // Winst na zelfstandigenaftrek en mkb-winstvrijstelling — dit is tegelijk de belastbare winst
 // voor box 1 (IB) én de grondslag ("bijdrage-inkomen") voor de inkomensafhankelijke bijdrage
@@ -178,6 +187,7 @@ export const ZVW_TARIEVEN_BY_YEAR = {
   2024: { pct: 5.32, maxBijdrageInkomen: 71624 },
   2025: { pct: 5.26, maxBijdrageInkomen: 75864 },
   2026: { pct: 4.85, maxBijdrageInkomen: 79409 },
+  2027: { pct: 5.02, maxBijdrageInkomen: 82547 },
 };
 
 function zvwBerekening(belastbaarRuw, year) {
@@ -209,7 +219,15 @@ export function estimateZvw(winst, year, zelfstandigenaftrekToegepast = true) {
 // ongewijzigd. Mét startersaftrek mag de gecombineerde ondernemersaftrek de winst wél volledig
 // wegstrepen (zelfs tot een negatief bedrag); zónder startersaftrek kan zelfstandigenaftrek de
 // winst nooit verder verlagen dan € 0.
+// beide-V6R6 — Belastingplan 2027: € 10 in 2027 (voorlopig), afgeschaft vanaf 2028.
 export const STARTERSAFTREK_BEDRAG = 2123;
+// beide-V6R7 — als tabel, zodat het tarievenbestand op de server een jaar kan toevoegen of wijzigen.
+export const STARTERSAFTREK_BY_YEAR = { 2023: 2123, 2024: 2123, 2025: 2123, 2026: 2123, 2027: 10, 2028: 0 };
+export function startersaftrekBedrag(year) {
+  if (STARTERSAFTREK_BY_YEAR[year] != null) return STARTERSAFTREK_BY_YEAR[year];
+  const lager = Object.keys(STARTERSAFTREK_BY_YEAR).map(Number).filter((j) => j < year).sort((a, b) => a - b);
+  return lager.length ? STARTERSAFTREK_BY_YEAR[lager[lager.length - 1]] : STARTERSAFTREK_BEDRAG;
+}
 
 // Niet-gerealiseerde zelfstandigenaftrek: het deel van de zelfstandigenaftrek dat in een jaar niet
 // kon worden benut omdat de winst te laag was. Mag tot 9 jaar later alsnog worden verrekend, in een
@@ -267,7 +285,7 @@ export function computeOndernemersaftrekMetReserve(jarenData) {
 
     resultaat[year] = {
       zelfstandigenaftrekBedrag: gerealiseerdBasis + verrekendUitReserve,
-      startersaftrekBedrag: startersaftrekToegepast ? STARTERSAFTREK_BEDRAG : 0,
+      startersaftrekBedrag: startersaftrekToegepast ? startersaftrekBedrag(year) : 0,
       verrekendUitReserve,
       nietGerealiseerdNieuw,
       reserveresterend: reserves.reduce((a, r) => a + r.bedrag, 0),
@@ -365,6 +383,7 @@ export const ALGEMENE_HEFFINGSKORTING_BY_YEAR = {
   2024: { max: 3362, afbouwGrens: 24812, afbouwPct: 6.63 },
   2025: { max: 3068, afbouwGrens: 28406, afbouwPct: 6.337 },
   2026: { max: 3115, afbouwGrens: 29736, afbouwPct: 6.398 },
+  2027: { max: 3154, afbouwGrens: 30910, afbouwPct: 6.638 },
 };
 
 // Grondslag: belastbaar inkomen uit werk en woning (= dezelfde belastbare winst als bij de
@@ -450,6 +469,16 @@ export const ARBEIDSKORTING_BY_YEAR = {
     ],
     max: 5685,
     afbouwVanaf: 45592,
+    afbouwPct: 6.51,
+  },
+  2027: {
+    opbouw: [
+      { tot: 12438, pct: 9.503 },
+      { tot: 26866, van: 12438, basis: 1182, pct: 30.205 },
+      { tot: 47834, van: 26866, basis: 5540, pct: 1.855 },
+    ],
+    max: 5929,
+    afbouwVanaf: 47834,
     afbouwPct: 6.51,
   },
 };

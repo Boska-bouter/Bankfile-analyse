@@ -1,5 +1,6 @@
 // beide-V1R8 (fase 5/7) — maandoverzicht privé als regels en als CSV (Excel opent dit met puntkomma's).
 // beide-V4R1 — ook als HTML-document (voor PDF, HTML en printen) en als echt Excel-bestand.
+import { metRapportKop } from "../rapportKop.js";
 import { esc, bedrag, rij, document } from "./opmaak.js";
 export const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
@@ -18,6 +19,9 @@ export function maandCsv(jaar, budget) {
 }
 
 export function maandHtml(jaar, budget) {
+  return metRapportKop(maandHtmlZonderKop(jaar, budget), [jaar]);
+}
+function maandHtmlZonderKop(jaar, budget) {
   const regels = maandRegels(budget).map((r) => rij(r.maand, [bedrag(r.inkomsten), bedrag(r.uitgaven), bedrag(r.vasteLasten), bedrag(r.sparen), bedrag(r.over)], r.totaal ? "sterk" : "")).join("");
   return document({
     titel: `Maandoverzicht ${jaar}`,

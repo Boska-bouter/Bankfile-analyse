@@ -16,8 +16,8 @@
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
-import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, WELKOM_STIJL } from "./welkom.js";
-import { GEBRUIK, PLANNEN, plannenVoor, bankkoppelingAan, PLAN_UITLEG, prijzen, prijsTekst } from "./rechten.js";
+import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
 const SESSIE_DAGEN = 30;
@@ -266,13 +266,13 @@ async function stuurLink(env, email, link) {
   const { text, html } = opmaakMail(env, nieuw ? {
     zonderNaam: "Beste aanvrager,",
     regels: [
-      "Bedankt voor je interesse in Bankoverzicht, de app die je bankafschriften omzet in overzichten van je inkomsten en uitgaven.",
+      "Bedankt voor je interesse in Bankoverzicht, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
       "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (particulier huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
-      ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
-      ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé je budget, vaste lasten en een indicatie van je inkomstenbelasting."],
-      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."]] : []),
+      ["Eenvoudig", "in vier stappen de bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van de btw en inkomstenbelasting, privé de inkomsten en uitgaven per maand."],
+      ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé het budget, de vaste lasten en een indicatie van de inkomstenbelasting."],
+      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."]] : []),
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
@@ -310,21 +310,10 @@ const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "") =>
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
 // beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
-const SOORT_UITLEG = {
-  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
-  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"] },
-};
-function welkomSoorten(env) {
-  const pr = prijzen(env);
-  return ["prive", "zakelijk"].map((s) => ({
-    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
-    plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
-  }));
-}
-
 function inlogPagina(env) {
   const soorten = welkomSoorten(env);
-  return pagina("Inloggen", `<style>${WELKOM_STIJL}</style>
+  return pagina("Inloggen", `<style>${WELKOM_STIJL}
+${VERGELIJK_STIJL}</style>
 <div class="welkom-grid">
 ${welkomKop(soorten)}
 <aside class="inlogkolom">

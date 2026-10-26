@@ -8,7 +8,8 @@
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
-import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
+import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -23,7 +24,15 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 // Secret "BEHEERDERS" en de D1-tabel "rechten" (zie rechten.js). Geen recht of niet ingelogd = alleen Eenvoudig.
 export const magUitgebreid = opLijst; // nieuw-V4R3 — verhuisd naar rechten.js (daar ook BEHEERDERS en de D1-tabel)
 
+let laatsteHerinnering = 0;
+
 export default {
+  // beide-V6R8 — geplande taken (alleen met een Cron Trigger in wrangler.jsonc): herinnering tarieven bijwerken.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(tarievenHerinneringMail(env));
+    if (env.DB) ctx.waitUntil(wisOudeTelefoons(env.DB).catch(() => {})); // beide-V7R1 — telefoonnummers niet langer bewaren dan nodig
+    ctx.waitUntil(verloopHerinneringen(env).catch(() => {})); // beide-V7R3 — knop in de mail alleen met variabele APP_URL
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // nieuw-V4R6 — wie is ingelogd? Met INLOG_MODUS = "eigen" uit de eigen sessiecookie (zie inloggen.js), anders
@@ -52,10 +61,19 @@ export default {
     // beide-V6R3 — alleen nog "ben je ingelogd?" (401 hierboven = nee), gebruikt door useSessieWaarschuwing/FeedbackModal.
     // De oude testpagina met de tijden uit het Cloudflare Access-inlogbewijs is weg.
     if (url.pathname === "/api/sessie") return json({ ok: true });
+    // beide-V6R7 — tarievenbestand (zie tarieven.js): ophalen door de app, wijzigen alleen door BEHEERDERS.
+    if (url.pathname === "/api/tarieven") return tarievenRoute(request, env);
+    if (url.pathname === "/api/beheer/tarieven") return tarievenBeheerRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     if (url.pathname === "/api/rol") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
+      // beide-V7R3 — herinneringen "abonnement loopt af" versturen als de beheerder de app opent (hooguit eens per uur
+      // per isolate), zodat er geen Cron Trigger nodig is. Dubbel versturen kan niet: de database onthoudt het per einddatum.
+      if (r.beheerder && env.DB && Date.now() - laatsteHerinnering > 3600_000) {
+        laatsteHerinnering = Date.now();
+        ctx.waitUntil(verloopHerinneringen(env, { origin: url.origin }).catch((e) => console.error("herinneringen", e?.message)));
+      }
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
       const akkoord = await voorwaardenVan(email, env);
       return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, bankkoppeling: bankkoppelingVoor(env, r.beheerder), ...r });
@@ -69,7 +87,7 @@ export default {
     if (url.pathname === "/aanmelden") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       return aanmeldPagina(email, await rechtenVan(email, env), env,
-        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), slot: toegangVerplicht(env) });
+        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), verlengen: url.searchParams.get("verlengen"), slot: toegangVerplicht(env) });
     }
     // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
     // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.

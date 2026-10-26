@@ -2,6 +2,8 @@
 // de abonnementen met prijs en hoe het met je gegevens zit, met het inlogvak ernaast (breed) of erboven (smal).
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
+import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
+
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // Breed scherm (iPad liggend, computer): uitleg links, inloggen rechts en blijft staan bij scrollen. Smal scherm:
@@ -26,44 +28,68 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .stap{counter-increment:stap;gap:4px}.stap::before{content:counter(stap);display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px}
 .stap p{margin:0}.duo{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .klein{font-size:13px;color:var(--muted);margin:0}
-.tabel{padding:0;overflow:hidden}.tabel table{width:100%;border-collapse:collapse}
-.tabel th,.tabel td{padding:12px 16px;text-align:left;vertical-align:top;border-top:1px solid var(--line)}
-.tabel thead th{border-top:0;font-size:13px;color:var(--muted);font-weight:600;background:var(--bg)}
-.tabel td.prijs,.tabel th.prijs{text-align:right;white-space:nowrap}.tabel td.prijs{color:var(--accent);font-weight:600}
-.tabel td p{margin:2px 0 0}.tabel td p.let{color:#b45309}
-@media (max-width:520px){.tabel th,.tabel td{padding:10px 12px}}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
 
 // Zelfde tekst als VEILIG_KORT in src/content/veiligheid.jsx (de Worker laadt geen React-bestanden).
 const VEILIG = "Bankoverzicht vraagt je nooit om je rekeningnummer, inlogcodes, wachtwoord of bankbestanden per mail, sms, WhatsApp of telefoon. Krijg je zo'n verzoek, stuur dan niets. Help je iemand anders, vraag dan ook zelf nooit om zulke gegevens op die manier.";
 
-// Per abonnement: korte omschrijving en welke overzichten en rapportages erbij horen (wens Boska 24-10: dan is het verschil
-// tussen de abonnementen duidelijker). "alleen" = alleen bij die soort dossier; staan beide soorten op de pagina, dan
-// komt de soort tussen haakjes erachter. De lange teksten per soort staan op de aanmeldpagina.
-const PLAN_INFO = {
-  eenvoudig: {
-    tekst: "Snel een helder beeld als vertrekpunt; eerste inzicht in ongeveer een half uur. Vier stappen, één vraag tegelijk, de uitkomst in gewone taal.",
-    rapporten: [{ t: "samenvatting" }, { t: "maandoverzicht" }, { t: "indicatieve belastingoverzichten" }],
-  },
-  uitgebreid: {
-    tekst: "Gedetailleerd inzicht als basis voor een plan van aanpak; eerste inzichten in ongeveer een uur. Alle overzichten, controles en instellingen, ook meerdere jaren naast elkaar.",
-    rapporten: [{ t: "alles van Eenvoudig" }, { t: "overzichten per categorie, maand en jaar" }, { t: "downloaden in PDF, HTML of Excel en printen" },
-      { t: "btw per kwartaal en aangifteberekening", alleen: "zakelijk" }, { t: "budget, vaste lasten en sparen", alleen: "prive" }],
-  },
-  koppelen: {
-    tekst: "Alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. Nog in ontwikkeling.",
-    rapporten: [{ t: "alles van Uitgebreid" }],
-    let: "Straks met extra kosten, vanwege de koppeling met je bank en de extra beveiliging die daarvoor nodig is.",
-  },
-};
+// beide-V7R2 — abonnementen compact naast elkaar (ChatGPT-review punt 1): per regel wat elk abonnement heeft, plus
+// waar de bankgegevens vandaan komen, wanneer het beschikbaar is en de prijs per soort. Ook op de aanmeldpagina.
+// "alleen" = alleen bij die soort dossier; de soort komt erachter als beide soorten op de pagina staan.
+const V = "✓", N = "–";
+const VERGELIJK = [
+  { t: "Eerste inzicht", w: { eenvoudig: "± ½ uur", uitgebreid: "± 60-90 min", koppelen: "± 60-90 min" } },
+  { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" } },
+  { t: "Samenvatting om te bewaren of printen", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
+  { t: "Indicatie belasting", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
+  { t: "Maandoverzicht", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Meerdere jaren naast elkaar", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Downloaden (PDF, HTML, Excel)", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Btw per kwartaal en aangifteberekening", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Budget, vaste lasten en sparen", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" } },
+  { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: "in ontwikkeling" } },
+];
 const SOORT_NAAM = { zakelijk: "zakelijk", prive: "privé" };
-function rapportTekst(k, sleutels) {
-  const lijst = (PLAN_INFO[k]?.rapporten || []).filter((x) => !x.alleen || sleutels.includes(x.alleen))
-    .map((x) => (x.alleen && sleutels.length > 1 ? `${x.t} (${SOORT_NAAM[x.alleen]})` : x.t));
-  return lijst.length ? `Overzichten en rapportages: ${lijst.join(", ")}.` : "";
+
+// soorten: zie welkomSoorten. Geeft de tabel met de abonnementen als kolommen.
+export function vergelijkTabel(soorten) {
+  const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
+  const soortSleutels = soorten.map((s) => s.soort);
+  const meer = soorten.length > 1;
+  const plan = (s, k) => s.plannen.find((p) => p.sleutel === k) || {};
+  const cel = (w) => `<td class="${w === V ? "ja" : w === N ? "nee" : ""}">${e(w)}</td>`;
+  const regels = VERGELIJK.filter((r) => !r.alleen || soortSleutels.includes(r.alleen)).map((r) =>
+    `<tr><th scope="row">${e(r.t)}${r.alleen && meer ? ` <span class="soort">(${SOORT_NAAM[r.alleen]})</span>` : ""}</th>${sleutels.map((k) => cel(r.w[k])).join("")}</tr>`);
+  const prijzen = soorten.map((s) =>
+    `<tr class="prijsregel"><th scope="row">Prijs${meer ? ` ${e(SOORT_NAAM[s.soort])}` : ""}</th>${sleutels.map((k) => `<td>${e(plan(s, k).gratis ? "gratis" : String(plan(s, k).prijs).replace(" per maand", "/mnd"))}</td>`).join("")}</tr>`);
+  return `<div class="vergelijk"><table>
+<thead><tr><th></th>${sleutels.map((k) => `<th scope="col">${e(plan(soorten[0], k).naam)}</th>`).join("")}</tr></thead>
+<tbody>${regels.join("")}${prijzen.join("")}</tbody></table></div>${sleutels.includes("koppelen")
+    ? `<p class="klein let">De bankkoppeling krijgt straks extra kosten, vanwege de koppeling met de bank en de extra beveiliging die daarvoor nodig is.</p>` : ""}`;
 }
+export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.vergelijk table{width:100%;border-collapse:collapse;font-size:13px}
+.vergelijk th,.vergelijk td{padding:8px 10px;text-align:center;vertical-align:top;border-top:1px solid var(--line)}
+.vergelijk thead th{border-top:0;color:var(--fg);font-weight:600;background:var(--bg)}
+.vergelijk tbody th{text-align:left;font-weight:500;color:var(--muted)}.vergelijk .soort{font-weight:400}
+.vergelijk td.ja{color:var(--accent);font-weight:700}.vergelijk td.nee{color:var(--muted)}
+.vergelijk .prijsregel td{color:var(--accent);font-weight:600}
+@media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px}.vergelijk table{font-size:12px}}
+.let{color:#b45309}`;
 
 // soorten: [{ soort, naam, voor, kan: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
+const SOORT_UITLEG = {
+  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"] },
+};
+export function welkomSoorten(env) {
+  const pr = prijzen(env);
+  return ["prive", "zakelijk"].map((s) => ({
+    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
+    plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
+  }));
+}
 export const alleGratis = (soorten) => soorten.every((s) => s.plannen.every((p) => p.gratis));
 
 export function welkomKop(soorten) {
@@ -86,8 +112,6 @@ export const welkomNieuw = (gratis) => `<ol class="nieuw">
 export function welkomInhoud({ soorten, veilig = VEILIG }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
-  const soortSleutels = soorten.map((s) => s.soort);
-  const plan = (s, k) => s.plannen.find((p) => p.sleutel === k) || {};
   return `
 <div class="welkom">
   <section aria-labelledby="wat">
@@ -109,11 +133,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
 
   <section>
     <h2>Abonnementen</h2>
-    <div class="kaart tabel"><table>
-      <thead><tr><th>Abonnement</th>${soorten.map((s) => `<th class="prijs">${meer ? e(s.naam) : "Prijs"}</th>`).join("")}</tr></thead>
-      <tbody>${sleutels.map((k) => `
-        <tr><td><b>${e(plan(soorten[0], k).naam)}</b><p class="klein">${e(PLAN_INFO[k]?.tekst || "")}</p><p class="klein">${e(rapportTekst(k, soortSleutels))}</p>${PLAN_INFO[k]?.let ? `<p class="klein let">${e(PLAN_INFO[k].let)}</p>` : ""}</td>${soorten.map((s) => `<td class="prijs">${e(plan(s, k).gratis ? "Gratis" : plan(s, k).prijs)}</td>`).join("")}</tr>`).join("")}
-      </tbody></table></div>
+    ${vergelijkTabel(soorten)}
     <p class="klein">De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
     <p class="klein">Eenvoudig of Uitgebreid kies je per dossier. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
   </section>
