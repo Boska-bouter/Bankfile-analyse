@@ -189,6 +189,7 @@ import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "./tax/autoAc
 import { computeKmVergoedingVoorJaar } from "./tax/kmVergoeding.js";
 import { BANKKOPPELING_STATUS } from "./content/bankkoppelingStatus.jsx";
 import { tarievenHerinnering } from "./tax/tarievenLaden.js";
+import { metRapportKop, registreerRapportKop } from "./reports/rapportKop.js";
 import { PRIVACY_LABEL, PRIVACY_TITEL } from "./content/privacy.jsx";
 
 // nieuw-V3R8 — terugkeer van de bank na het geven van toestemming (/bank/terug?code=…&state=…). Eén keer bij het
@@ -1831,7 +1832,7 @@ export default function App() {
       : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
       : buildAangiftevoorstelHtml(targetYears, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
-    setAangiftevoorstelPreview(html);
+    setAangiftevoorstelPreview(metRapportKop(html, targetYears));
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
   };
@@ -1870,7 +1871,7 @@ export default function App() {
     if (jaren.length === 0) return;
     setOnderbouwingKeuze(null);
     setOnderbouwingJaren(jaren);
-    setOnderbouwingHtml(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified, categoryZakelijkPercentage: categoryZakelijkPercentageEff, werkruimteStatus }));
+    setOnderbouwingHtml(metRapportKop(buildOnderbouwingHtml({ klantNaam: eigenNamen?.ondernemer, jaren, classified, categoryZakelijkPercentage: categoryZakelijkPercentageEff, werkruimteStatus }), jaren));
   };
   // BTW-aangifte per kwartaal als los document (één of meer jaren).
   const [btwOverzichtKeuze, setBtwOverzichtKeuze] = useState(null);
@@ -1881,13 +1882,13 @@ export default function App() {
     if (jaren.length === 0) return;
     setBtwOverzichtKeuze(null);
     setBtwOverzichtJaren(jaren);
-    setBtwOverzichtHtml(buildBtwOverzichtHtml({
+    setBtwOverzichtHtml(metRapportKop(buildBtwOverzichtHtml({
       klantNaam: eigenNamen?.ondernemer, kwartaalStatus,
       jaren: jaren.map((y) => ({
         year: y,
         quarters: computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm })),
       })),
-    }));
+    }), jaren));
   };
   const startBtwOverzicht = () => {
     if (!activeYear) return;
@@ -1910,10 +1911,10 @@ export default function App() {
     setKlantJaarKeuze(null);
     setKlantSamenvattingJaren(jaren);
     if (priveOverzicht) {
-      setKlantSamenvattingHtml(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }));
+      setKlantSamenvattingHtml(metRapportKop(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }), jaren));
       return;
     }
-    setKlantSamenvattingHtml(buildKlantSamenvattingHtml({
+    setKlantSamenvattingHtml(metRapportKop(buildKlantSamenvattingHtml({
       klantNaam: eigenNamen?.ondernemer, rechtsvorm,
       jaren: jaren.map(klantJaarData),
       profiel: dossierProfiel,
@@ -1945,7 +1946,7 @@ export default function App() {
         if (heeftVoorraad === true) m.push({ label: "Voorraad", items: ["aanwezig"] });
         return m;
       })(),
-    }));
+    }), jaren));
   };
   const [uitlegMeenemen, setUitlegMeenemen] = useState(false);
   const voorstelHtmlWeergave = uitlegMeenemen ? aangiftevoorstelPreview : zonderUitlegHtml(aangiftevoorstelPreview);
@@ -3370,6 +3371,15 @@ export default function App() {
     inTeStellenItems, stapVolgorde, teControlerenItems,
   });
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
+  // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.
+  registreerRapportKop({
+    naam: [eigenNamen?.ondernemer, eigenNamen?.partner].filter(Boolean).join(" en "),
+    soort: soortDossier === "prive" ? "Privé" : rechtsvorm === "bv" ? "Zakelijk · BV" : "Zakelijk · eenmanszaak / zzp",
+    jaren: years,
+    dekking: (importDiagnostics || []).filter((d) => d.from && d.to).map((d) => ({ label: d.fileName, type: accountTypeByFile?.[d.fileName] || null, van: d.from, tot: d.to })),
+    gaten: (fileContinuity || []).filter((g) => !g.ok && classifyContinuityGap(g.diff) === "rood").map((g) => ({ van: g.aTo, tot: g.bFrom })),
+    openPunten: alleStappen.map((st) => ({ label: st.label, count: st.count || 0 })),
+  });
   // V22 — een uitgeklapte Controleren-kaart klapt vanzelf in zodra de LAATSTE open stap erin is afgerond
   // (bijv. Overig opruimen → 0 open en de rest van "Herkomst & opschonen" ook klaar). Alleen bij de overgang
   // "had open punten → geen open punten meer"; bij het laden van een dossier of een al-groene kaart gebeurt niets.
@@ -3575,11 +3585,11 @@ export default function App() {
       // beide-V4R1 — Downloaden als PDF of HTML: hetzelfde rapport als Printen.
       case "pdf":
       case "html":
-        if (priveOverzicht) downloadRapport({ soort: target, html: buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), naam: `Budgetoverzicht_${years.join("-")}` });
-        else if (groups.length) downloadRapport({ soort: target, html: buildReportHtml(groups), naam: "Bankoverzicht_Zakelijk_Prive" });
+        if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Budgetoverzicht_${years.join("-")}` });
+        else if (groups.length) downloadRapport({ soort: target, html: metRapportKop(buildReportHtml(groups)), naam: "Bankoverzicht_Zakelijk_Prive" });
         break;
       case "print":
-        if (priveOverzicht) printHtmlDocument(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }));
+        if (priveOverzicht) printHtmlDocument(metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years));
         else printReport(groups);
         break;
       case "aangifte":
