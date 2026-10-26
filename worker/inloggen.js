@@ -267,7 +267,7 @@ async function stuurLink(env, email, link) {
     zonderNaam: "Beste aanvrager,",
     regels: [
       "Bedankt voor je interesse in Bankoverzicht, de app die je bankafschriften omzet in overzichten van je inkomsten en uitgaven.",
-      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (alleen je eigen huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
+      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (particulier huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
       ["Eenvoudig", "in vier stappen je bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van je btw en inkomstenbelasting, privé je inkomsten en uitgaven per maand."],
@@ -311,7 +311,7 @@ ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { head
 
 // beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
 const SOORT_UITLEG = {
-  prive: { voor: "Voor je eigen huishouden, eventueel met je partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
+  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
   zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"] },
 };
 function welkomSoorten(env) {

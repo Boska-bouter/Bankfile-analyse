@@ -317,7 +317,7 @@ export default function InkomenPerMaandModal({
             years={years}
             selected={exportJaren}
             setSelected={setExportJaren}
-            vraag={`Welke jaren wil je ${EXPORT_TEKST[exportKeuze.soort][0]}? ${exportKeuze.soort === "excel" ? "Elk jaar krijgt een eigen tabblad." : "Elk jaar begint op een nieuwe pagina."}`}
+            vraag={`Welke jaren ${EXPORT_TEKST[exportKeuze.soort][0]}? ${exportKeuze.soort === "excel" ? "Elk jaar krijgt een eigen tabblad." : "Elk jaar begint op een nieuwe pagina."}`}
             knop={EXPORT_TEKST[exportKeuze.soort][1]}
             onOpen={(jaren) => { const soort = exportKeuze.soort; setExportKeuze(null); voerUit(soort, jaren); }}
             onClose={() => setExportKeuze(null)}

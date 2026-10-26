@@ -428,7 +428,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
             veldlabel — makkelijk over het hoofd te zien, met als risico dat iemand hier per ongeluk
             de BTW-inclusieve prijs intypt (die dan dubbel zou meetellen, samen met "Te betalen BTW"). */}
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-3">
-          Let op: "Koopprijs" is altijd <strong>exclusief BTW</strong> — de BTW vul je apart in bij "Te betalen BTW"
+          Let op: "Koopprijs" is altijd <strong>exclusief BTW</strong> — de BTW komt apart bij "Te betalen BTW"
           hieronder.
         </p>
         {/* v289 — was een niet-responsieve "grid-cols-2" (anders dan bijv. de vergelijkbare grid bij
@@ -535,7 +535,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
           staan om de bestaande berekening (alleen rente aftrekbaar) ongewijzigd te laten.
         </p>
         <p className="text-xs text-slate-400 mb-2">
-          "Restwaarde" is de verwachte waarde aan het einde van de afschrijvingstermijn — je schrijft af
+          "Restwaarde" is de verwachte waarde aan het einde van de afschrijvingstermijn — er wordt afgeschreven
           tot deze waarde, niet tot € 0 (bij een auto met een aanzienlijke eindbetaling/verwachte
           restwaarde is dat vaak niet nul). Leeg = € 0 restwaarde (volledig afschrijven), zoals voorheen.
         </p>
@@ -896,7 +896,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
 
       {!canAddNext && !form.contractBeeindigd ? (
         <div className="border-t border-slate-200 pt-3">
-          <p className="text-xs text-slate-500">Dit contract is opgevolgd door een vervolgcontract. Beëindigen of verlengen stel je in bij het laatste contract.</p>
+          <p className="text-xs text-slate-500">Dit contract is opgevolgd door een vervolgcontract. Beëindigen of verlengen staat bij het laatste contract.</p>
         </div>
       ) : (
       <div className="border-t border-slate-200 pt-3">
@@ -1135,9 +1135,9 @@ export default function FinancialLeaseDetailsModal({ lease, details, onSave, onC
         <div className="p-5 overflow-y-auto space-y-5">
           <p className="text-xs text-slate-500">
             Vul de aankoop- en leasestructuur in zoals die op het leasecontract staat — het jaarlijkse
-            rentepercentage berekent de app daaruit vanzelf, in plaats van dat je dat zelf moet opzoeken.
+            rentepercentage berekent de app daaruit vanzelf, zonder dat het zelf moet worden opgezocht.
             De lease vergoeding is de financieringskost bovenop het onbetaalde koopbedrag: samen vormen ze
-            het totaal dat je terugbetaalt via de maandbedragen en de eventuele eindbetaling.
+            het totaal dat wordt terugbetaald via de maandbedragen en de eventuele eindbetaling.
             {contracts.length > 1 && (
               <> Dit contract is halverwege vervangen door een nieuw contract — elk contract hieronder rekent
               onafhankelijk met zijn eigen bedrag, looptijd en de banktransacties uit zijn eigen periode.</>

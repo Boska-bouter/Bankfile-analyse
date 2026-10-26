@@ -51,12 +51,12 @@ export function useInstellingenCardGroups(p) {
             { label: "Rekeningen", value: `${eigenRekeningenGeladen.length} geladen · ${(eigenRekeningenExtra || []).length} extra` },
             { label: "Nog niet opgegeven", value: String(nogOpen) },
           ],
-          hint: "Overzicht van je antwoorden en eigen rekeningen — klopt dit?",
+          hint: "Overzicht van de antwoorden en eigen rekeningen — klopt dit?",
           actionLabel: "Bekijken",
         },
         "dossierProfiel",
         <div className="px-1 pb-1">
-          <p className="text-xs text-slate-500 mb-3">Klopt dit? Dit is wat de app uit je antwoorden en instellingen heeft opgebouwd. Wijzigen kan bij de betreffende kaarten of via de wizard.</p>
+          <p className="text-xs text-slate-500 mb-3">Klopt dit? Dit is wat de app uit de antwoorden en instellingen heeft opgebouwd. Wijzigen kan bij de betreffende kaarten of via de wizard.</p>
           <DossierProfielLijst blokken={dossierProfiel} />
           <div className="mt-5">
             <EigenRekeningenPanel

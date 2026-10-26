@@ -716,7 +716,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}
-  <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht kun je in de app zelf terugvinden.</p>
+  <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht zijn in de app zelf terug te vinden.</p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
   <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw.<!--V--> Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.<!--/V--></p>
@@ -744,7 +744,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
   ${heffingskortingen.werkelijkIngevuld ? `<p class="toelichting">Heffingskorting: werkelijk ingevuld bedrag gebruikt (geschat was ${eur(heffingskortingen.geschatTotaal)}).</p>` : ""}
   <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
-  ${ibEstimate.overigInkomen > 0 ? `<p class="toelichting">Inclusief effect van overig inkomen box 1 (${eur(ibEstimate.overigInkomen)}, opgegeven in de wizard): de belasting en de heffingskortingen zijn berekend als het verschil tussen winst + overig inkomen en overig inkomen alleen. Een negatieve heffingskorting betekent dat je door de winst korting verliest die je op het overige inkomen alleen wél had.</p>` : ""}
+  ${ibEstimate.overigInkomen > 0 ? `<p class="toelichting">Inclusief effect van overig inkomen box 1 (${eur(ibEstimate.overigInkomen)}, opgegeven in de wizard): de belasting en de heffingskortingen zijn berekend als het verschil tussen winst + overig inkomen en overig inkomen alleen. Een negatieve heffingskorting betekent dat er door de winst korting verloren gaat die er op het overige inkomen alleen wél was.</p>` : ""}
   ${ibEstimate.beperkingAftrek > 0 ? `<p>Beperking aftrek (aftrekposten in de hoogste schijf maar beperkt aftrekbaar): <strong>${eur(ibEstimate.beperkingAftrek)}</strong> extra IB, al opgenomen in de IB hierboven.</p>` : ""}
   ${ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard" ? `<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>` : ""}
   `}
@@ -754,7 +754,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat de KIA wordt toegepast.</p>
   ` : ""}
   ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
 
@@ -895,7 +895,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   ${overzichtJarenHtml}
   ${sections}
   ${PAGE_BREAK_DIVIDER}
-  <h2>Lees dit voordat je de cijfers gebruikt</h2>
+  <h2>Lees dit vóór het gebruik van de cijfers</h2>
   <div class="controledoel">
     <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>onafhankelijke reconstructie</strong>: het laat
     zien wat er volgens uitsluitend de bankgegevens aangegeven en betaald had moeten worden. Vergelijk de bedragen
@@ -914,7 +914,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
       <li>Contante ontvangsten en uitgaven</li>
       <li>Openstaande facturen — nog te ontvangen bedragen (debiteuren) en nog te betalen bedragen (crediteuren) die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>
       <li>Voorraad — inkoopwaarde en verkoopwaarde van onverkochte goederen aan het begin/einde van het jaar${
-        heeftVoorraad ? " (je gaf aan dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""
+        heeftVoorraad ? " (opgegeven is dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""
       }</li>
       <li>Privégebruik van bedrijfsmiddelen (bijv. een auto) voor zover dat niet als aparte correctie is vastgelegd</li>
       <li>Inkomsten of kosten die buiten deze bankrekening om liepen (bijv. via een andere rekening, contant, of in natura)</li>
@@ -925,9 +925,9 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
     zichtbaar te maken wat wél en niet uit de bankgegevens kan worden vastgesteld.</p>
   </div>
   <div class="disclaimer">
-    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze app —
-    geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met je boekhouder voordat
-    je aangifte doet.
+    Dit is een <strong>voorstel</strong>, samengesteld uit de eigen bankgegevens en categorie-indeling in deze app —
+    geen officiële aangifte en geen belastingadvies. Controleer de cijfers altijd zelf of met een boekhouder voordat
+    er aangifte wordt gedaan.
   </div>
   ${aandachtspuntenBlok}
   <!--UITLEG-START-->
@@ -1025,10 +1025,10 @@ function buildBijlageToelichtingenHtml() {
   <p class="toelichting">
     <strong>2. Restschuld of overwaarde</strong> = de opbrengst vergeleken met de nog openstaande
     lease-hoofdsom (dus NIET de boekwaarde) op dat moment. Is de opbrengst lager dan de openstaande
-    hoofdsom, dan blijft er een restschuld over die je nog aan de leasemaatschappij moet betalen — dat
+    hoofdsom, dan blijft er een restschuld over die nog aan de leasemaatschappij moet worden betaald — dat
     is een balansmutatie (aflossing), GEEN kostenpost, en telt dus niet mee in de winst hierboven. Is de
-    opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de leasemaatschappij aan
-    je terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit al in punt 1 verwerkt).
+    opbrengst hoger, dan wordt het verschil (overwaarde) normaal gesproken door de leasemaatschappij
+    terugbetaald — ook dat is geen aparte winstpost (de eventuele winst zit al in punt 1 verwerkt).
     Deze app berekent de openstaande hoofdsom op basis van de daadwerkelijke bankbetalingen tot aan de
     einddatum — dit kan afwijken van wat de leasemaatschappij zelf als afkoopsom rekent (bijv. bij
     afwijkende voorwaarden bij vroegtijdige beëindiging), dus controleer dit bedrag altijd bij de
@@ -1082,7 +1082,7 @@ function buildBijlageToelichtingenHtml() {
   <h2>Heffingskortingen — aannames</h2>
   <p class="toelichting">
     ⚠ Persoonlijke heffingskortingen zijn niet volledig meegenomen: deze schatting gaat ervan uit dat
-    de winst uit onderneming je enige inkomen is (tenzij je overig inkomen box 1 in de wizard hebt opgegeven), dat je nog geen AOW-leeftijd hebt bereikt, en dat er
+    de winst uit onderneming het enige inkomen is (tenzij overig inkomen box 1 in de wizard is opgegeven), dat de AOW-leeftijd nog niet is bereikt, en dat er
     geen fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is deze
     indicatie minder betrouwbaar. Geen belastingadvies.
   </p>

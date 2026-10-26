@@ -40,7 +40,7 @@ export default function PriveMaandModal({ jaar, jaren = [], budget, onSelectYear
         <DownloadKnop onKies={download} rechts={false} />
         <button type="button" onClick={() => printHtmlDocument(maandHtml(jaar, budget))} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400"><Printer className="h-4 w-4" /> Printen</button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Overboekingen tussen je eigen rekeningen tellen niet mee. {MAANDEN.length} maanden; maanden zonder gegevens staan op nul.</p>
+      <p className="mt-2 text-xs text-slate-500">Overboekingen tussen eigen rekeningen tellen niet mee. {MAANDEN.length} maanden; maanden zonder gegevens staan op nul.</p>
     </ModalShell>
   );
 }

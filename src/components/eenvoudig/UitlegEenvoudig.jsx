@@ -20,55 +20,55 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false, Inhoud = 
         </div>
         <div className="overflow-y-auto px-5 pb-5 pt-2">
           {Inhoud ? <Inhoud /> : <>
-          <P>Met deze app zie je op basis van je bankafschriften <b>wat je bedrijf heeft verdiend</b>, <b>hoeveel belasting</b> je ongeveer moet betalen en <b>hoeveel BTW</b> per kwartaal. Je doorloopt vier stappen. Je kunt altijd stoppen; alles wat je doet wordt direct bewaard op dit apparaat.</P>
+          <P>Deze app laat op basis van de bankafschriften zien <b>wat het bedrijf heeft verdiend</b>, <b>hoeveel belasting</b> er ongeveer betaald moet worden en <b>hoeveel BTW</b> per kwartaal. Er zijn vier stappen. Stoppen kan altijd; alles wordt direct bewaard op dit apparaat.</P>
 
           <H>Stap 1 · Gegevens</H>
-          <P>Hier voeg je de bankbestanden toe: de afschriften van je zakelijke rekening en, als je die hebt, van je privérekening. Je downloadt ze bij je bank (bijvoorbeeld als CSV-bestand). De app leest ze in; er gaat niets naar internet.</P>
-          <P>Met <b>Basisvragen</b> (bovenin) vul je een paar dingen over jezelf en je bedrijf in, zoals je naam, of je een eenmanszaak of BV hebt en of je de kleineondernemersregeling (KOR) gebruikt. Die antwoorden bepalen hoe de app rekent.</P>
+          <P>Hier komen de bankbestanden: de afschriften van de zakelijke rekening en, als die er is, van de privérekening. Ze zijn te downloaden bij de bank (bijvoorbeeld als CSV-bestand). De app leest ze in; er gaat niets naar internet.</P>
+          <P>Bij <b>Basisvragen</b> (bovenin) staan een paar vragen over de ondernemer en het bedrijf, zoals de naam, eenmanszaak of BV, en of de kleineondernemersregeling (KOR) wordt gebruikt. Die antwoorden bepalen hoe de app rekent.</P>
 
           <H>Stap 2 · Nakijken</H>
-          <P>De app deelt al je boekingen zelf in. Waar hij twijfelt, vraagt hij het jou: <b>één vraag tegelijk</b>, de grootste bedragen eerst. Een vraag gaat over alle boekingen met dezelfde naam; je antwoord geldt voor allemaal, ook in andere jaren. Met <b>Toon de boekingen</b> zie je precies om welke betalingen het gaat.</P>
-          <P>Wat gebeurt er met je antwoord?</P>
+          <P>De app deelt alle boekingen zelf in. Waar hij twijfelt, stelt hij een vraag: <b>één vraag tegelijk</b>, de grootste bedragen eerst. Een vraag gaat over alle boekingen met dezelfde naam; het antwoord geldt voor allemaal, ook in andere jaren. <b>Toon de boekingen</b> laat precies zien om welke betalingen het gaat.</P>
+          <P>Wat gebeurt er met het antwoord?</P>
           <ul className="mb-2 space-y-1.5 text-sm">
-            <Keuze titel="Voor mijn bedrijf">Telt mee als omzet (geld van een klant) of als kosten van je bedrijf. Dat verandert de winst, de belasting en de BTW.</Keuze>
-            <Keuze titel="Privé">Geld voor jezelf of je huishouden. Telt niet mee voor de winst.</Keuze>
-            <Keuze titel="Naar / van mijn eigen rekening">Je hebt alleen geld verschoven tussen je eigen rekeningen. Dat is geen inkomen en geen uitgave.</Keuze>
-            <Keuze titel="Iets anders…">Je kiest zelf een preciezere soort uit de lijst, bijvoorbeeld huur, verzekering of autokosten.</Keuze>
-            <Keuze titel="Weet ik niet, sla over">De vraag komt aan het eind nog een keer terug. Je kunt hem ook laten staan.</Keuze>
+            <Keuze titel="Voor het bedrijf">Telt mee als omzet (geld van een klant) of als kosten van het bedrijf. Dat verandert de winst, de belasting en de BTW.</Keuze>
+            <Keuze titel="Privé">Geld voor de ondernemer zelf of het huishouden. Telt niet mee voor de winst.</Keuze>
+            <Keuze titel="Naar / van een eigen rekening">Er is alleen geld verschoven tussen eigen rekeningen. Dat is geen inkomen en geen uitgave.</Keuze>
+            <Keuze titel="Iets anders…">Kies zelf een preciezere soort uit de lijst, bijvoorbeeld huur, verzekering of autokosten.</Keuze>
+            <Keuze titel="Weet ik niet, sla over">De vraag komt aan het eind nog een keer terug. Laten staan kan ook.</Keuze>
           </ul>
           <P>Het groene vak <b>Voorstel</b> is wat de app denkt. Klopt het, tik er dan gewoon op.</P>
 
           <H>Hoe zeker is de uitkomst?</H>
-          <P>De balk laat zien hoeveel van je geld (naar bedrag, niet naar aantal boekingen) de app goed kent:</P>
+          <P>De balk laat zien hoeveel van het geld (naar bedrag, niet naar aantal boekingen) de app goed kent:</P>
           <ul className="mb-2 space-y-1 text-sm text-slate-700">
-            <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-600" /><b>Herkend</b> — de app weet het zeker, of jij hebt het bevestigd.</li>
+            <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-600" /><b>Herkend</b> — de app weet het zeker, of het is bevestigd.</li>
             <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-500" /><b>Geschat</b> — de app denkt het te weten, maar niet zeker.</li>
             <li><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-600" /><b>Nog onbekend</b> — de app weet niet waar het voor was.</li>
           </ul>
-          <P>De balk laat je voortgang zien. Of de uitkomst <b>betrouwbaar</b> is, hangt af van hoeveel geld er nog onzeker is, in euro's. Wat onzeker is op je <b>zakelijke</b> rekening telt volledig mee. Op je <b>privé</b>rekening telt het maar voor een kwart, want privé-uitgaven veranderen je winst zelden. Onder de balk staat bijvoorbeeld: "Nog € 4.800 onzeker; de belasting kan daardoor ongeveer € 1.900 afwijken."</P>
+          <P>De balk laat de voortgang zien. Of de uitkomst <b>betrouwbaar</b> is, hangt af van hoeveel geld er nog onzeker is, in euro's. Wat onzeker is op de <b>zakelijke</b> rekening telt volledig mee. Op de <b>privé</b>rekening telt het maar voor een kwart, want privé-uitgaven veranderen de winst zelden. Onder de balk staat bijvoorbeeld: "Nog € 4.800 onzeker; de belasting kan daardoor ongeveer € 1.900 afwijken."</P>
           <ul className="mb-2 space-y-1 text-sm text-slate-700">
-            <li><b>Betrouwbaar</b> — hooguit € 2.500 onzeker (of 5% van je omzet, als dat meer is).</li>
-            <li><b>Redelijk</b> — hooguit € 7.500 onzeker (of 15% van je omzet).</li>
+            <li><b>Betrouwbaar</b> — hooguit € 2.500 onzeker (of 5% van de omzet, als dat meer is).</li>
+            <li><b>Redelijk</b> — hooguit € 7.500 onzeker (of 15% van de omzet).</li>
             <li><b>Nog onzeker</b> — meer dan dat. De app laat dan nog geen belasting zien.</li>
           </ul>
-          <P>Boven de vraag zie je hoeveel vragen je ongeveer nog nodig hebt tot Betrouwbaar; de vragen met de meeste invloed komen eerst. Daarna mag je de rest overslaan.</P>
+          <P>Boven de vraag staat hoeveel vragen er ongeveer nog nodig zijn tot Betrouwbaar; de vragen met de meeste invloed komen eerst. Daarna mag de rest worden overgeslagen.</P>
 
           <H>Stap 3 · Uitkomst</H>
           <ul className="mb-2 space-y-1.5 text-sm">
-            <Keuze titel="Wat heeft je bedrijf verdiend?">De winst: wat je van klanten ontving min de kosten van je bedrijf, zonder BTW. Soms staat er een regel "overige posten" bij, bijvoorbeeld afschrijving op een auto of machine.</Keuze>
-            <Keuze titel="Hoeveel belasting ongeveer?">Een schatting van de inkomstenbelasting en de Zvw-bijdrage over die winst, na de kortingen waar je recht op hebt. Wat je dit jaar al via de bank aan de Belastingdienst betaalde, gaat eraf. "Per maand opzij zetten" helpt je om te sparen voor de aanslag.</Keuze>
-            <Keuze titel="BTW per kwartaal">Hoeveel BTW je per kwartaal moet betalen of terugkrijgt. Heb je een kwartaal nog niet aangegeven, dan moet die aangifte nog gedaan worden.</Keuze>
+            <Keuze titel="Wat heeft het bedrijf verdiend?">De winst: wat er van klanten binnenkwam min de kosten van het bedrijf, zonder BTW. Soms staat er een regel "overige posten" bij, bijvoorbeeld afschrijving op een auto of machine.</Keuze>
+            <Keuze titel="Hoeveel belasting ongeveer?">Een schatting van de inkomstenbelasting en de Zvw-bijdrage over die winst, na de kortingen waar recht op is. Wat dit jaar al via de bank aan de Belastingdienst is betaald, gaat eraf. "Per maand opzij zetten" helpt om te sparen voor de aanslag.</Keuze>
+            <Keuze titel="BTW per kwartaal">Hoeveel BTW er per kwartaal betaald moet worden of terugkomt. Is een kwartaal nog niet aangegeven, dan moet die aangifte nog gedaan worden.</Keuze>
           </ul>
-          <P>Met <b>Samenvatting</b> maak je een document van één pagina dat je kunt bewaren, printen of aan je adviseur geven; bovenaan staat hoe zeker de cijfers zijn. Heb je toegang tot de uitgebreide versie, dan zijn er ook <b>Maandoverzicht</b> en <b>Indicatieve aangifteberekening</b>. Alles is een schatting op basis van je bankgegevens, geen officiële aangifte.</P>
+          <P><b>Samenvatting</b> maakt een document van één pagina om te bewaren, te printen of aan een adviseur te geven; bovenaan staat hoe zeker de cijfers zijn. Met toegang tot de uitgebreide versie zijn er ook <b>Maandoverzicht</b> en <b>Indicatieve aangifteberekening</b>. Alles is een schatting op basis van de bankgegevens, geen officiële aangifte.</P>
 
           <H>Stap 4 · Bewaren</H>
-          <P>Je werk staat al op dit apparaat. Met <b>Dossier opslaan</b> maak je een bestand dat je ergens anders bewaart of op een ander apparaat weer opent (via Dossier → Dossier laden). Doe dat regelmatig, zeker voordat je een nieuw dossier begint.</P>
+          <P>Het werk staat al op dit apparaat. <b>Dossier opslaan</b> maakt een bestand om ergens anders te bewaren of op een ander apparaat weer te openen (via Dossier → Dossier laden). Doe dat regelmatig, zeker voor het begin van een nieuw dossier.</P>
 
           <H>Pas op voor oplichting</H>
           <div className="mb-2 space-y-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">{VEILIG_INHOUD}</div>
 
           <H>Hulp nodig?</H>
-          <P>Gebruik de knop <b>Hulpvraag of feedback</b> rechtsonder. Twijfel je over je belasting of over een boeking, vraag het dan ook je adviseur.</P>
+          <P>Gebruik de knop <b>Hulpvraag of feedback</b> rechtsonder. Bij twijfel over de belasting of over een boeking: vraag het ook een adviseur.</P>
           </>}
         </div>
         <div className="border-t border-slate-200 px-5 py-3 text-right">

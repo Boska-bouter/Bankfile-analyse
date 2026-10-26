@@ -30,8 +30,8 @@ export default function BasisvragenEenvoudig({
         </div>
         <div className="overflow-y-auto px-5 py-3">
           <p className="mb-2 text-xs text-slate-500">Een wijziging rekent direct mee in de uitkomst.</p>
-          <h3 className="mt-1 text-sm font-bold text-slate-900">Over jou en je bedrijf</h3>
-          <Rij label="Je naam">
+          <h3 className="mt-1 text-sm font-bold text-slate-900">Over de ondernemer en het bedrijf</h3>
+          <Rij label="Naam ondernemer">
             <input value={naam} onChange={(e) => setNaam(e.target.value)} onBlur={bewaarNaam} className={veld} placeholder="naam" />
           </Rij>
           <Rij label="Soort bedrijf">
@@ -42,7 +42,7 @@ export default function BasisvragenEenvoudig({
             </select>
           </Rij>
           {rechtsvorm !== "bv" && (
-            <Rij label="Kleineondernemersregeling (KOR)" uitleg="Met KOR reken je geen BTW">
+            <Rij label="Kleineondernemersregeling (KOR)" uitleg="Met KOR geen BTW rekenen">
               <select value={korRegeling === true ? "ja" : korRegeling === false ? "nee" : ""} onChange={(e) => setKorRegeling(e.target.value === "ja" ? true : e.target.value === "nee" ? false : null)} className={veld}>
                 <option value="">nog niet ingevuld</option>
                 <option value="nee">Nee, ik reken BTW</option>
@@ -54,7 +54,7 @@ export default function BasisvragenEenvoudig({
             <>
               <h3 className="mt-4 mb-1 text-sm font-bold text-slate-900">Keuzes voor {jaar}</h3>
               <div className="rounded-xl border border-slate-200 p-2">{jaarKeuzes}</div>
-              <p className="mt-1 text-xs text-slate-400">Andere jaren kies je bovenaan in de jaarkeuze.</p>
+              <p className="mt-1 text-xs text-slate-400">Andere jaren staan bovenaan in de jaarkeuze.</p>
             </>
           )}
           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">

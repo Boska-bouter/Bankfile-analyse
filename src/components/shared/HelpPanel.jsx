@@ -7,7 +7,7 @@ const INTRO_CONTENT = (
   <ol className="space-y-2.5 list-none">
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">1.</span>
-      Start een nieuw dossier: het stappenplan stelt eerst een paar vragen (rekening, rechtsvorm, BTW, auto, lease, urencriterium, startersaftrek) en laadt dan je bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt transacties automatisch in Zakelijk/Privé en in categorieën in.
+      Start een nieuw dossier: het stappenplan stelt eerst een paar vragen (rekening, rechtsvorm, BTW, auto, lease, urencriterium, startersaftrek) en laadt dan de bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt transacties automatisch in Zakelijk/Privé en in categorieën in.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">2.</span>
@@ -15,15 +15,15 @@ const INTRO_CONTENT = (
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">3.</span>
-      De route onder de kop (Import → Controleren → Bedrijfsmiddelen → Instellingen → Advies) en de kaart "Eerstvolgende stap" laten zien wat je nu moet doen. De kaart "Dossiercontrole" toont hoeveel open punten er nog zijn.
+      De route onder de kop (Import → Controleren → Bedrijfsmiddelen → Instellingen → Advies) en de kaart "Eerstvolgende stap" laten zien wat nu moet gebeuren. De kaart "Dossiercontrole" toont hoeveel open punten er nog zijn.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">4.</span>
-      Per jaar vind je onder "Details en overzichten" het jaaroverzicht, de BTW-kwartalen en (bij meerdere jaren) het meerjarenoverzicht. Links bij Acties maak je de indicatieve aangifteberekening, de samenvatting voor de klant en de onderbouwing.
+      Per jaar staan onder "Details en overzichten" het jaaroverzicht, de BTW-kwartalen en (bij meerdere jaren) het meerjarenoverzicht. Links bij Acties staan de indicatieve aangifteberekening, de samenvatting voor de klant en de onderbouwing.
     </li>
     <li className="flex gap-2.5">
       <span className="text-slate-400 shrink-0">5.</span>
-      Je bankgegevens worden lokaal in deze browser verwerkt en automatisch bewaard. Ze worden niet op een server opgeslagen, ook niet als je ze via de bankkoppeling ophaalt. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
+      De bankgegevens worden lokaal in deze browser verwerkt en automatisch bewaard. Ze worden niet op een server opgeslagen, ook niet als ze via de bankkoppeling zijn opgehaald. Gebruik "Dossier opslaan" om ook een back-upbestand te downloaden, eventueel met wachtwoord (en een herstelcode). Zie "Dossier opslaan en nieuw dossier starten" hieronder.
     </li>
   </ol>
 );

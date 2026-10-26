@@ -149,9 +149,9 @@ export default function EenvoudigeApp({
   const slaOver = () => { if (terug) { setTerugIdx(null); return; } if (vraag) setOvergeslagen((p) => [...p.filter((k) => k !== vraag.key), vraag.key]); setAnders(""); };
   const voorstel = vraag ? (teksten ? teksten.voorstel(vraag) : voorstelVoor(vraag)) : null;
   const keuzesVoor = (v) => (teksten ? teksten.keuzes(v) : [
-    { k: "bedrijf", t: "Voor mijn bedrijf", s: v.teken > 0 ? "betaling van een klant" : "bijv. inkoop, software, administratie" },
+    { k: "bedrijf", t: "Voor het bedrijf", s: v.teken > 0 ? "betaling van een klant" : "bijv. inkoop, software, administratie" },
     { k: "prive", t: "Privé", s: v.teken > 0 ? "geld voor mezelf of het huishouden" : "voor mezelf of het huishouden" },
-    { k: "eigen", t: v.rekening === "Zakelijk" ? "Naar / van mijn eigen privérekening" : "Van / naar mijn zakelijke rekening", s: "geld tussen je eigen rekeningen" },
+    { k: "eigen", t: v.rekening === "Zakelijk" ? "Naar / van de eigen privérekening" : "Van / naar de eigen zakelijke rekening", s: "geld tussen eigen rekeningen" },
   ]);
   const KEUZES = vraag ? keuzesVoor(vraag) : [];
   const andersKeuze = (cat) => ({ category: cat, type: teksten?.soort || (/^Privé/.test(mainCategoryOf(cat)) || /^Privé/.test(cat) ? "Prive" : "Zakelijk") });
@@ -239,8 +239,8 @@ export default function EenvoudigeApp({
       {stap === 1 && (
         <div className="grid gap-4 md:grid-cols-[1fr_20rem]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-bold">Je gegevens</h2>
-            <p className="mb-3 text-sm text-slate-600">{bestanden.length === 0 ? (teksten?.bestandenLeeg || "Er zijn nog geen bankbestanden. Voeg de afschriften van je zakelijke (en eventueel privé) rekening toe; de app leest ze daarna in.") : "Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe."}</p>
+            <h2 className="text-lg font-bold">Gegevens</h2>
+            <p className="mb-3 text-sm text-slate-600">{bestanden.length === 0 ? (teksten?.bestandenLeeg || "Er zijn nog geen bankbestanden. Voeg de afschriften van de zakelijke (en eventueel privé) rekening toe; de app leest ze daarna in.") : "Dit zijn de bankbestanden in dit dossier. Mist er een rekening of een periode? Voeg het bestand toe."}</p>
             <ul className="mb-3 space-y-1 text-sm">
               {bestanden.map((f) => <li key={f.naam} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="truncate">{f.naam}</span><span className="shrink-0 text-slate-500">{f.type === "Zakelijk" ? "zakelijk" : f.type === "Prive" ? "privé" : "?"}</span></li>)}
             </ul>
@@ -275,13 +275,13 @@ export default function EenvoudigeApp({
                 <h2 className="mb-1 text-xl font-bold">{vraag.soort === "kleinePin" ? (teksten?.vraagKleinePin || "Waren dit privé-aankopen?") : vraag.teken > 0 ? "Waarvoor was dit geld?" : "Waarvoor was deze betaling?"}</h2>
                 <p className="mb-3 text-sm text-slate-600">
                   {vraag.soort === "kleinePin"
-                    ? "Kleine pinbetalingen die de app niet kon herkennen, bijvoorbeeld bij winkels. Je antwoord geldt voor allemaal."
+                    ? "Kleine pinbetalingen die de app niet kon herkennen, bijvoorbeeld bij winkels. Het antwoord geldt voor allemaal."
                     : vraag.groepen[0]?.perBoeking
-                      ? <>Betaling via een betaaldienst. De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b> van deze partij; je antwoord geldt alleen daarvoor.</>
-                      : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; je antwoord geldt voor allemaal, ook in andere jaren.</>}
+                      ? <>Betaling via een betaaldienst. De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b> van deze partij; het antwoord geldt alleen daarvoor.</>
+                      : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; het antwoord geldt voor allemaal, ook in andere jaren.</>}
                 </p>
                 {vraag.betaaldienst && !vraag.groepen[0]?.perBoeking && (
-                  <p className="-mt-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Dit is een betaaldienst: hierachter kunnen verschillende betalingen zitten, zakelijk en privé. Twijfel je? Kies <b>Weet ik niet</b>; dan kan het in Uitgebreid per boeking worden ingedeeld.</p>
+                  <p className="-mt-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Dit is een betaaldienst: hierachter kunnen verschillende betalingen zitten, zakelijk en privé. Bij twijfel: kies <b>Weet ik niet</b>; dan kan het in Uitgebreid per boeking worden ingedeeld.</p>
                 )}
                 {(() => {
                   // nieuw-V3R2 — geen voorbeeldomschrijving meer in dit vak: het bedrag is het totaal van alle boekingen in het jaar.
@@ -315,7 +315,7 @@ export default function EenvoudigeApp({
                             </tbody>
                           </table>
                           {txs.length > 100 && <p className="px-3 py-1.5 text-xs text-slate-500">… en nog {txs.length - 100} boekingen</p>}
-                          {elders > 0 && <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">Daarnaast {elders} {elders === 1 ? "boeking" : "boekingen"} in andere jaren; je antwoord geldt ook daarvoor.</p>}
+                          {elders > 0 && <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">Daarnaast {elders} {elders === 1 ? "boeking" : "boekingen"} in andere jaren; het antwoord geldt ook daarvoor.</p>}
                         </div>
                       )}
                     </div>
@@ -324,7 +324,7 @@ export default function EenvoudigeApp({
                 <div className="grid gap-2 sm:grid-cols-2">
                   {KEUZES.map((c) => (
                     <button key={c.k} type="button" onClick={() => beantwoord(c.keuze || c.k)} className={`rounded-xl border-2 p-3 text-left text-[15px] font-semibold hover:border-teal-600 ${(terug ? terug.keuze === c.k : voorstel === c.k) ? (terug ? "border-amber-500 bg-amber-50" : "border-teal-600 bg-teal-50") : "border-slate-300 bg-white"}`}>
-                      {terug ? terug.keuze === c.k && <span className="mb-1 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">Je koos</span>
+                      {terug ? terug.keuze === c.k && <span className="mb-1 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">Gekozen</span>
                         : voorstel === c.k && <span className="mb-1 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">Voorstel</span>}
                       <span className="block">{c.t}</span><span className="block text-xs font-normal text-slate-500">{c.s}</span>
                     </button>
@@ -335,7 +335,7 @@ export default function EenvoudigeApp({
                     {anders && <button type="button" onClick={() => beantwoord(andersKeuze(anders))} className="mt-2 rounded-lg bg-teal-700 px-3 py-1 text-xs font-bold text-white">Toepassen</button>}
                   </div>
                 </div>
-                {terug && terug.keuze?.startsWith("cat:") && <p className="mt-2 text-xs text-amber-700">Je koos: {terug.keuze.slice(4)}</p>}
+                {terug && terug.keuze?.startsWith("cat:") && <p className="mt-2 text-xs text-amber-700">Gekozen: {terug.keuze.slice(4)}</p>}
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                   <button type="button" onClick={slaOver} style={{ minHeight: 0 }} className="text-slate-600 underline">{terug ? "Laat zo, terug naar de huidige vraag" : "Weet ik niet, sla over"}</button>
                   {(terugIdx ?? geschiedenis.length) > 0 && <button type="button" onClick={vorigeVraag} style={{ minHeight: 0 }} className="text-slate-600 underline">← Vorige vraag</button>}
@@ -357,7 +357,7 @@ export default function EenvoudigeApp({
           </div>
           <div className="space-y-3">
             <Zekerheid b={b} compact nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
-            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Je kunt altijd stoppen: je antwoorden worden direct bewaard. {onUitgebreid ? <>{teksten?.uitgebreidTip || "Fijner werk (percentages, één boeking apart) doe je in"} <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel je over een boeking? Sla hem over of vraag het je adviseur."}</p>
+            <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Stoppen kan altijd: de antwoorden worden direct bewaard. {onUitgebreid ? <>{teksten?.uitgebreidTip || "Fijner werk (percentages, één boeking apart) kan in"} <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel over een boeking? Sla hem over of vraag het een adviseur."}</p>
           </div>
         </div>
       )}
@@ -367,7 +367,7 @@ export default function EenvoudigeApp({
           <Zekerheid b={b} nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
           {uitkomst ? uitkomst({ bruikbaar, naarNakijken: () => setStap(2) }) : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-slate-500">Wat heeft je bedrijf verdiend?</p>
+              <p className="text-xs text-slate-500">Wat heeft het bedrijf verdiend?</p>
               <p className="my-1 text-3xl font-extrabold">{r0(jaarSummary?.winst)}</p>
               <Rij label="Ontvangen van klanten" waarde={r0(jaarSummary?.zakelijkeInkomstenNetto)} />
               <Rij label="Kosten van het bedrijf" waarde={`− ${r0(jaarSummary?.zakelijkeKostenNetto)}`} />
@@ -376,7 +376,7 @@ export default function EenvoudigeApp({
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs text-slate-500">Hoeveel belasting ongeveer?</p>
-              {isBV ? <p className="mt-2 text-sm text-slate-600">Een BV betaalt vennootschapsbelasting. Vraag je adviseur.</p>
+              {isBV ? <p className="mt-2 text-sm text-slate-600">Een BV betaalt vennootschapsbelasting. Vraag een adviseur.</p>
                 : !bruikbaar ? <><p className="my-1 text-2xl font-extrabold text-slate-400">nog niet bruikbaar</p><p className="text-xs text-slate-500">Er is nog te veel onbekend. Ga terug naar Nakijken.</p><button type="button" onClick={() => setStap(2)} className="mt-2 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white">Verder met nakijken</button></>
                 : <>
                   <p className="my-1 text-3xl font-extrabold">{r0(nogBelasting)}</p>
@@ -389,7 +389,7 @@ export default function EenvoudigeApp({
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs text-slate-500">BTW per kwartaal</p>
-              {fis?.kor ? <p className="mt-2 text-sm text-slate-600">Je gebruikt de kleineondernemersregeling: geen BTW afdragen.</p>
+              {fis?.kor ? <p className="mt-2 text-sm text-slate-600">Kleineondernemersregeling: geen BTW afdragen.</p>
                 : !fis?.btw ? <p className="mt-2 text-sm text-slate-600">Geen BTW-gegevens voor dit jaar.</p>
                 : <>
                   <p className={`my-1 text-3xl font-extrabold ${btwJaar < 0 ? "text-emerald-700" : ""}`}>{r0(Math.abs(btwJaar))} <span className="text-base font-semibold">{btwJaar < 0 ? "terug" : "te betalen"}</span></p>
@@ -399,7 +399,7 @@ export default function EenvoudigeApp({
             </div>
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
               <p className="mb-2 font-semibold text-slate-800">Meer details?</p>
-              <p>{onUitgebreid ? <>Lease, afschrijvingen, percentages zakelijk/privé en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : "Lease, afschrijvingen en percentages zakelijk/privé bekijkt je adviseur. "}Twijfel je over iets? Vraag het je adviseur.</p>
+              <p>{onUitgebreid ? <>Lease, afschrijvingen, percentages zakelijk/privé en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : "Lease, afschrijvingen en percentages zakelijk/privé zijn voor een adviseur. "}Bij twijfel: vraag het een adviseur.</p>
             </div>
           </div>}
           <div className="flex flex-wrap gap-2">
@@ -414,7 +414,7 @@ export default function EenvoudigeApp({
       {stap === 4 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-lg font-bold">Bewaren</h2>
-          <p className="mb-3 text-sm text-slate-600">Je werk staat al in deze browser. Wil je het op een andere plek bewaren of later verder op een ander apparaat? Sla dan het dossier op als bestand.</p>
+          <p className="mb-3 text-sm text-slate-600">Het werk staat al in deze browser. Voor bewaren op een andere plek of later verder werken op een ander apparaat: sla het dossier op als bestand.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onOpslaan} className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"><Save className="h-4 w-4" /> Dossier opslaan</button>
             <button type="button" onClick={() => setStap(3)} className="inline-flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:underline"><ChevronLeft className="h-4 w-4" /> Terug naar de uitkomst</button>

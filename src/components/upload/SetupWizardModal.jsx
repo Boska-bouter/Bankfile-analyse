@@ -250,9 +250,9 @@ export default function SetupWizardModal({
         <div className="p-5 overflow-y-auto flex-1">
           {currentStepId === 20 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium text-slate-800">Wil je al bankbestand(en) toevoegen?</p>
+              <p className="text-sm font-medium text-slate-800">Nu al bankbestand(en) toevoegen?</p>
               <p className="text-sm text-slate-600">
-                Afschriften van een Nederlandse bank, zakelijk en privé, per jaar of over meerdere jaren. Je kunt ze ook later altijd nog laden.
+                Afschriften van een Nederlandse bank, zakelijk en privé, per jaar of over meerdere jaren. Later laden kan ook altijd nog.
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {["CSV", "XLS / XLSX", "MT940 (.sta / .940)", "CAMT.053 (.xml)"].map((f) => (
@@ -305,7 +305,7 @@ export default function SetupWizardModal({
               )}
               {loadedFileNames.length === 0 && (
                 <p className="text-xs text-slate-500">
-                  Zonder bestanden slaat de wizard de vragen per jaar over (zoals startersaftrek en urencriterium). Die komen vanzelf aan bod zodra je later bestanden laadt.
+                  Zonder bestanden slaat de wizard de vragen per jaar over (zoals startersaftrek en urencriterium). Die komen vanzelf aan bod zodra er later bestanden worden geladen.
                 </p>
               )}
               {loadedFileNames.length > 0 && (
@@ -318,10 +318,10 @@ export default function SetupWizardModal({
                 </ul>
               )}
               <p className="text-xs text-slate-500">
-                <strong>Privacy:</strong> bankgegevens worden lokaal in je browser verwerkt en niet naar een externe server gestuurd voor analyse.
+                <strong>Privacy:</strong> bankgegevens worden lokaal in de browser verwerkt en niet naar een externe server gestuurd voor analyse.
               </p>
               <p className="text-xs text-slate-400">
-                Tip: laad zowel de zakelijke als de privérekening, anders kan de app overboekingen tussen je rekeningen niet controleren.
+                Tip: laad zowel de zakelijke als de privérekening, anders kan de app overboekingen tussen de rekeningen niet controleren.
               </p>
             </div>
           )}
@@ -342,13 +342,13 @@ export default function SetupWizardModal({
                 </div>
               )}
               <p className="text-sm text-slate-700 font-medium">
-                Niet vergeten: sla je dossier op, anders gaan je correcties en aanpassingen verloren.
+                Niet vergeten: sla het dossier op, anders gaan de correcties en aanpassingen verloren.
               </p>
               <p className="text-sm text-slate-600">
-                Je instellingen en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als je de browsergegevens of websitegegevens wist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
+                Instellingen en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als de browsergegevens of websitegegevens worden gewist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
               </p>
               <p className="text-sm text-slate-600">
-                Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met je boekhouder. Sla na elke sessie op.
+                Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met een boekhouder. Sla na elke sessie op.
               </p>
               {onSaveProject && (
                 <button
@@ -474,7 +474,7 @@ function NaamLijst({ lijst, onChange, placeholder, max, suggesties = [], dubbelT
       )}
       {open.length > 0 && !vol && (
         <div className="space-y-1">
-          <p className="text-xs text-slate-400">Gevonden in je bankdata — klik om toe te voegen:</p>
+          <p className="text-xs text-slate-400">Gevonden in de bankdata — klik om toe te voegen:</p>
           <div className="flex flex-wrap gap-1.5">
             {open.map((s) => (
               <button key={s.naam} type="button" onClick={() => voeg(s.naam)} className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs text-teal-800 hover:bg-teal-100">
@@ -558,7 +558,7 @@ function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, 
           <button type="button" disabled={!geldig} onClick={() => { onRekeningWijzig(g.files, schoon); setBewerk(false); }}
             className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40">Opslaan</button>
           {g.iban && <button type="button" onClick={() => { setInvoer(g.iban); setBewerk(false); }} className="text-xs text-slate-500 underline">Annuleren</button>}
-          {!g.iban && <p className="w-full text-[11px] text-slate-500">Niet verplicht. Zonder rekeningnummer herkent de app overboekingen tussen je eigen rekeningen minder goed.</p>}
+          {!g.iban && <p className="w-full text-[11px] text-slate-500">Niet verplicht. Zonder rekeningnummer herkent de app overboekingen tussen eigen rekeningen minder goed.</p>}
         </div>
       )}
       {gekozen && waarschuwingen.map((c) => (
@@ -607,7 +607,7 @@ function Scherm31({
                 <strong>Zakelijk:</strong> {maandTekst(pps.Zakelijk.van)} – {maandTekst(pps.Zakelijk.tot)} · <strong>Privé:</strong> {maandTekst(pps.Prive.van)} – {maandTekst(pps.Prive.tot)}.
               </p>
               <p>
-                {periode.eenzijdig.map((e) => `${e.tekst} alleen ${e.alleen}`).join("; ")}: in die maanden kan de app overboekingen tussen beide rekeningen niet controleren. De indeling in categorieën werkt gewoon. Heb je de afschriften van die maanden? Laad ze dan ook.
+                {periode.eenzijdig.map((e) => `${e.tekst} alleen ${e.alleen}`).join("; ")}: in die maanden kan de app overboekingen tussen beide rekeningen niet controleren. De indeling in categorieën werkt gewoon. Zijn de afschriften van die maanden er? Laad ze dan ook.
               </p>
               {onPickFiles && (
                 <button type="button" onClick={onPickFiles} className="rounded-lg border border-amber-400 bg-white px-2.5 py-1 font-semibold text-amber-900 hover:bg-amber-100">Bestand toevoegen</button>
@@ -621,7 +621,7 @@ function Scherm31({
       )}
 
       {needs.naam && (
-        <Sectie titel="Eigen naam (en die van je fiscaal partner)" uitleg="Zo herkent de app overboekingen naar/van jezelf als privé. Optioneel.">
+        <Sectie titel="Naam ondernemer (en die van de fiscale partner)" uitleg="Zo herkent de app overboekingen naar/van de ondernemer zelf als privé. Optioneel.">
           <input
             type="text"
             value={naamO}
@@ -640,7 +640,7 @@ function Scherm31({
       )}
 
       {toonRechtsvorm && (
-        <Sectie titel="Onderneem je als eenmanszaak/zzp of vanuit een BV?" uitleg="Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.">
+        <Sectie titel="Eenmanszaak/zzp of BV?" uitleg="Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.">
           <div className="flex gap-2">
             <button
               type="button"
@@ -725,8 +725,8 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
     <div className="space-y-4">
       {needs.andere && (
         <Sectie
-          titel="Andere eigen rekeningen die je niet laadt?"
-          uitleg="Met het rekeningnummer herkent de app overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die je niet laadt kun je hier opgeven."
+          titel="Andere eigen rekeningen die niet worden geladen?"
+          uitleg="Met het rekeningnummer herkent de app overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die niet worden geladen, zijn hier op te geven."
         >
           {lijst.length > 0 && (
             <ul className="space-y-1">
@@ -767,15 +767,15 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
 
       {needs.spaar && (
         <Sectie
-          titel="Zakelijke spaarrekening gekoppeld aan je zakelijke rekening?"
-          uitleg="Meestal een pakketkeuze bij dezelfde bank: die overboekingen staan dan gewoon tussen de transacties van je zakelijke rekening."
+          titel="Zakelijke spaarrekening gekoppeld aan de zakelijke rekening?"
+          uitleg="Meestal een pakketkeuze bij dezelfde bank: die overboekingen staan dan gewoon tussen de transacties van de zakelijke rekening."
         >
           <JaNee value={spaarGekoppeld === null ? null : spaarGekoppeld} onChange={(v) => zet({ spaarGekoppeld: v })}>
             <input
               type="text"
               value={spaarNaam}
               onChange={(e) => zet({ zakelijkeSpaarNaam: e.target.value })}
-              placeholder="Naam zoals in je bankexport (bijv. Zakelijke Oranje Spaarrekening) — optioneel"
+              placeholder="Naam zoals in de bankexport (bijv. Zakelijke Oranje Spaarrekening) — optioneel"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </JaNee>
@@ -784,22 +784,22 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
 
       {toonPriveSpaar && (
         <Sectie
-          titel="Privé-spaarrekening gekoppeld aan je privérekening?"
-          uitleg="Een spaarrekening die bij je privérekening hoort (bijv. een Oranje Spaarrekening): overboekingen daarheen zijn geen uitgave maar interne overboekingen."
+          titel="Privé-spaarrekening gekoppeld aan de privérekening?"
+          uitleg="Een spaarrekening die bij de privérekening hoort (bijv. een Oranje Spaarrekening): overboekingen daarheen zijn geen uitgave maar interne overboekingen."
         >
           <JaNee value={priveGekoppeld === null ? null : priveGekoppeld} onChange={(v) => zet({ priveSpaarGekoppeld: v })}>
             <input
               type="text"
               value={priveSpaarNaam}
               onChange={(e) => zet({ priveSpaarNaam: e.target.value })}
-              placeholder="Naam zoals in je bankexport (bijv. Oranje Spaarrekening) — optioneel"
+              placeholder="Naam zoals in de bankexport (bijv. Oranje Spaarrekening) — optioneel"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </JaNee>
         </Sectie>
       )}
 
-      <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog invullen of aanvullen.</p>
+      <p className="text-xs text-slate-400">Niet verplicht — later invullen of aanvullen kan ook.</p>
       <button
         type="button"
         onClick={() => {
@@ -839,14 +839,14 @@ function Scherm33({ typedNow, zet, goNext, onAddBusinessKeywords, onAddBusinessE
     <div className="space-y-4">
       <Sectie
         titel="Grootste of vaste opdrachtgevers (max. 10)"
-        uitleg="Zo herkent de app binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat je dat achteraf per klant moet bevestigen."
+        uitleg="Zo herkent de app binnenkomende betalingen van deze klanten meteen als omzet, in plaats van dat dat achteraf per klant bevestigd moet worden."
       >
         <NaamLijst lijst={klanten} onChange={(l) => zet({ opdrachtgeversLijst: l })} placeholder="Naam opdrachtgever" max={10} suggesties={suggesties.opdrachtgevers || []} />
       </Sectie>
       <Sectie titel="Grootste of vaste leveranciers (max. 10, optioneel)" uitleg="Zelfde idee, maar dan voor vaste zakelijke uitgaven.">
         <NaamLijst lijst={lev} onChange={(l) => zet({ leveranciersLijst: l })} placeholder="Naam leverancier" max={10} suggesties={suggesties.leveranciers || []} />
       </Sectie>
-      <p className="text-xs text-slate-400">Niet verplicht — je kunt dit ook later nog aanvullen.</p>
+      <p className="text-xs text-slate-400">Niet verplicht — later aanvullen kan ook.</p>
       <button
         type="button"
         onClick={() => {
@@ -955,7 +955,7 @@ function Scherm34({
       {toonLeaseAuto && (
         <Sectie
           titel="Is er een leaseauto (financieel) in dit bedrijf?"
-          uitleg={t.autoSoort === "financial" ? "Je gaf aan dat de auto financiële lease is — vul de leasemaatschappij in. Meerdere auto's of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
+          uitleg={t.autoSoort === "financial" ? "De auto is financiële lease — vul de leasemaatschappij in. Meerdere auto's of contracten? Voeg de namen toe zoals ze in de bank staan; daarna volgt welke bij hetzelfde contract horen." : "Meerdere auto's of contracten (ook bij dezelfde maatschappij)? Voeg de naam voor elk contract toe."}
         >
           <JaNee
             value={leaseAutoJa}
@@ -992,7 +992,7 @@ function Scherm34({
           </div>
           {t.leaseOverigJa && (
             <div className="pt-2 space-y-2">
-              <p className="text-xs text-slate-600">Je gaf aan dat het financiële lease is — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe die je in de bank ziet; daarna geef je aan welke bij hetzelfde contract horen.</p>
+              <p className="text-xs text-slate-600">Het is financiële lease — vul de leasemaatschappij in. Meerdere machines of contracten? Voeg de namen toe zoals ze in de bank staan; daarna volgt welke bij hetzelfde contract horen.</p>
               <NaamLijst lijst={t.leaseOverigLijst || []} onChange={(l) => zet({ leaseOverigLijst: l, leaseOverigContracten: syncContracten(t.leaseOverigContracten, l) })} placeholder="Naam leasemaatschappij (bijv. DLL, Alfam)" suggesties={(suggesties.leaseAuto || []).filter((s) => !(t.leaseLijst || []).some((x) => x.toLowerCase() === s.naam.toLowerCase()))} />
               <LeaseContractenVraag namen={t.leaseOverigLijst || []} contracten={t.leaseOverigContracten ?? null} onChange={(c) => zet({ leaseOverigContracten: c })} soortTekst="machine" />
             </div>
@@ -1009,13 +1009,13 @@ function Scherm34({
       )}
 
       {needs.voorraad && (
-        <Sectie titel="Heb je voorraad (goederen die je inkoopt om door te verkopen)?" uitleg="Alleen een signaal; er wordt nog niets automatisch berekend.">
+        <Sectie titel="Is er voorraad (goederen ingekocht om door te verkopen)?" uitleg="Alleen een signaal; er wordt nog niets automatisch berekend.">
           <JaNee value={t.voorraadJa ?? null} onChange={(v) => zet({ voorraadJa: v })} />
         </Sectie>
       )}
 
       {needs.activa && (
-        <Sectie titel="Heb je machines, gereedschap of inventaris gekocht voor de zaak?" uitleg={`Dat zijn bedrijfsmiddelen die je over meerdere jaren afschrijft.${activaAantalBank > 0 ? ` In de bankbestanden staan al ${activaAantalBank} aankoop${activaAantalBank === 1 ? "" : "en"} als apparatuur/machines — die hoef je hier niet nogmaals te noemen.` : ""} Noem hier alleen wat niet (of nog niet) via de bank is gelopen; bedragen vul je later in bij Bedrijfsmiddelen.`}>
+        <Sectie titel="Zijn er machines, gereedschap of inventaris gekocht voor de zaak?" uitleg={`Dat zijn bedrijfsmiddelen die over meerdere jaren worden afgeschreven.${activaAantalBank > 0 ? ` In de bankbestanden staan al ${activaAantalBank} aankoop${activaAantalBank === 1 ? "" : "en"} als apparatuur/machines — die hoeven hier niet nogmaals.` : ""} Noem hier alleen wat niet (of nog niet) via de bank is gelopen; bedragen volgen later bij Bedrijfsmiddelen.`}>
           <JaNee value={t.activaJa ?? null} onChange={(v) => zet({ activaJa: v, activaLijst: v ? t.activaLijst || [] : [] })}>
             <NaamLijst lijst={t.activaLijst || []} onChange={(l) => zet({ activaLijst: l })} placeholder="Bijv. CNC-machine, laptop, bedrijfsbus" dubbelToegestaan />
           </JaNee>
@@ -1107,7 +1107,7 @@ function Scherm35({
   return (
     <div className="space-y-4">
       {needs.aov && (
-        <Sectie titel="Heb je een AOV (arbeidsongeschiktheidsverzekering)?">
+        <Sectie titel="Is er een AOV (arbeidsongeschiktheidsverzekering)?">
           <JaNee
             value={t.aovJa ?? null}
             onChange={(v) => zet({ aovJa: v, aovNaam: v ? t.aovNaam || aovSug[0]?.naam || "" : "" })}
@@ -1120,24 +1120,24 @@ function Scherm35({
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
             {aovSug.length > 0 && !t.aovNaam && (
-              <p className="text-xs text-slate-400">Gevonden in je bankdata: {aovSug.map((s) => `${s.naam} (${s.count}×)`).join(", ")}</p>
+              <p className="text-xs text-slate-400">Gevonden in de bankdata: {aovSug.map((s) => `${s.naam} (${s.count}×)`).join(", ")}</p>
             )}
           </JaNee>
         </Sectie>
       )}
 
       {toonKor && (
-        <Sectie titel="Val je onder de kleineondernemersregeling (KOR)?" uitleg="Bij KOR bereken je geen BTW en is er geen BTW-aangifteplicht.">
+        <Sectie titel="Kleineondernemersregeling (KOR)?" uitleg="Bij KOR wordt geen BTW berekend en is er geen BTW-aangifteplicht.">
           <JaNee value={kor ?? null} onChange={(v) => setKorRegeling(v)} opties={[{ k: true, l: "Ja, KOR" }, { k: false, l: "Nee" }]} />
         </Sectie>
       )}
 
       {toonVerlegd && kor !== true && (
-        <Sectie titel="Werk je met BTW-verlegd (bijv. onderaannemer in de bouw)?" uitleg="Standaardinstelling. Kies de situatie die het vaakst voorkomt; per klant later aan te passen bij &quot;Zakelijke tegenpartijen (inkomsten)&quot;.">
+        <Sectie titel="BTW-verlegd (bijv. onderaannemer in de bouw)?" uitleg="Standaardinstelling. Kies de situatie die het vaakst voorkomt; per klant later aan te passen bij &quot;Zakelijke tegenpartijen (inkomsten)&quot;.">
           <JaNee value={verlegd ?? null} onChange={(v) => setBtwVerlegd(v)} />
           {verlegd === false && (
             <div className="pt-1 space-y-1.5">
-              <p className="text-xs text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de diensten die je factureert? (meer dan één mag)</p>
+              <p className="text-xs text-slate-600">Onder welk(e) BTW-tarief(ven) vallen de gefactureerde diensten? (meer dan één mag)</p>
               <div className="flex flex-col gap-1.5">
                 {TARIEF_OPTIES.map((o) => (
                   <label key={o.waarde} className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 cursor-pointer">
@@ -1148,7 +1148,7 @@ function Scherm35({
               </div>
               {tarieven.length > 1 && (
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-600">Welk tarief komt het meeste voor? Dat wordt het standaardtarief; de andere kies je per klant of transactie.</p>
+                  <p className="text-xs text-slate-600">Welk tarief komt het meeste voor? Dat wordt het standaardtarief; de andere zijn per klant of transactie te kiezen.</p>
                   <div className="flex flex-wrap gap-2">
                     {TARIEF_OPTIES.filter((o) => tarieven.includes(o.waarde)).map((o) => (
                       <button key={o.waarde} type="button" onClick={() => zet({ btwStandaard: o.waarde })} className={`${KNOP} ${t.btwStandaard === o.waarde ? KNOP_AAN : KNOP_UIT}`}>
@@ -1165,8 +1165,8 @@ function Scherm35({
 
       {toonUren && (
         <Sectie
-          titel="Voldoe je aan het urencriterium voor de zelfstandigenaftrek?"
-          uitleg="Minimaal 1.225 uur per jaar (en meer dan de helft van je werktijd, tenzij je pas start). Niet zeker? Kies Onbekend: dan toont de app beide scenario's naast elkaar."
+          titel="Is voldaan aan het urencriterium voor de zelfstandigenaftrek?"
+          uitleg="Minimaal 1.225 uur per jaar (en meer dan de helft van de werktijd, behalve bij starters). Niet zeker? Kies Onbekend: dan toont de app beide scenario's naast elkaar."
         >
           <div className="space-y-1.5">
             <p className="text-xs text-slate-600">In alle jaren ({years[0]}{years.length > 1 ? `–${years[years.length - 1]}` : ""}):</p>
@@ -1249,8 +1249,8 @@ function Scherm36({
     <div className="space-y-4">
       {toonWerkruimte && (
         <Sectie
-          titel="Huur je een zakelijk pand of bedrijfsruimte?"
-          uitleg="Bijvoorbeeld een kantoor, winkel, loods of schuur. Huur, energie en gemeentelijke kosten daarvan zijn zakelijke kosten, ook als je ze (deels) vanaf je privérekening betaalt."
+          titel="Wordt er een zakelijk pand of bedrijfsruimte gehuurd?"
+          uitleg="Bijvoorbeeld een kantoor, winkel, loods of schuur. Huur, energie en gemeentelijke kosten daarvan zijn zakelijke kosten, ook als ze (deels) vanaf de privérekening zijn betaald."
         >
           <div className="flex gap-2">
             <button type="button" onClick={() => zet({ werkPand: false })} className={`${KNOP} ${werkPandNee ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
@@ -1261,8 +1261,8 @@ function Scherm36({
 
       {toonWerkruimte && (
         <Sectie
-          titel="Gebruik je een werkruimte in je eigen woning (thuiskantoor)?"
-          uitleg="Alleen een zelfstandige werkruimte (eigen ingang en voorzieningen, niet via de woonruimte bereikbaar, en aan de extra voorwaarden voldaan) maakt het zakelijke deel van huur, energie en gemeentelijke kosten aftrekbaar. Voor een kamer of hoek in je woning is dat niet zo. Controleer de voorwaarden zelf; je kunt dit later per jaar en per rekening aanpassen."
+          titel="Is er een werkruimte in de eigen woning (thuiskantoor)?"
+          uitleg="Alleen een zelfstandige werkruimte (eigen ingang en voorzieningen, niet via de woonruimte bereikbaar, en aan de extra voorwaarden voldaan) maakt het zakelijke deel van huur, energie en gemeentelijke kosten aftrekbaar. Voor een kamer of hoek in de woning is dat niet zo. Controleer de voorwaarden zelf; later per jaar en per rekening aan te passen."
         >
           <div className="flex flex-col gap-2">
             <button type="button" onClick={() => zet({ werkWoning: "nee" })} className={`${KNOP} ${werkWoning === "nee" ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
@@ -1274,8 +1274,8 @@ function Scherm36({
 
       {toonStarters && (
         <Sectie
-          titel="In welke jaren heb je startersaftrek toegepast?"
-          uitleg="Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als je aan het urencriterium voldoet). Geen enkel jaar aangevinkt = geen startersaftrek."
+          titel="In welke jaren is startersaftrek toegepast?"
+          uitleg="Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als aan het urencriterium is voldaan). Geen enkel jaar aangevinkt = geen startersaftrek."
         >
           <div className="flex flex-wrap gap-2">
             <button
@@ -1304,8 +1304,8 @@ function Scherm36({
 
       {toonOverig && (
         <Sectie
-          titel="Had je naast je bedrijf nog een andere bron van inkomsten, en in welke jaren?"
-          uitleg="Bijvoorbeeld loon uit een baan of een uitkering. Dit bepaalt in welke belastingschijf je winst valt en hoeveel heffingskorting je daarover krijgt. Vul per jaar het bruto jaarbedrag ongeveer in; leeg = geen ander inkomen."
+          titel="Was er naast het bedrijf nog een andere bron van inkomsten, en in welke jaren?"
+          uitleg="Bijvoorbeeld loon uit een baan of een uitkering. Dit bepaalt in welke belastingschijf de winst valt en hoeveel heffingskorting daarover geldt. Vul per jaar het bruto jaarbedrag ongeveer in; leeg = geen ander inkomen."
         >
           <div className="flex gap-2">
             <button type="button" onClick={() => zet({ overigJa: false })} className={`${KNOP} ${overigNee ? KNOP_AAN : KNOP_UIT}`}>Nee</button>

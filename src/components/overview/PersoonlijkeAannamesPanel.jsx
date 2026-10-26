@@ -179,8 +179,8 @@ export default function PersoonlijkeAannamesPanel({
               Het urencriterium (doorgaans: minimaal 1.225 uur per jaar aan de onderneming besteed) is een
               persoonlijke voorwaarde die deze app niet uit bankgegevens kan afleiden.{" "}
               {zaLegacyJaDefault
-                ? "Zolang je hier niets aangeeft, rekent de app zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra je dit weet."
-                : "Zolang je hier niets aangeeft, toont de app voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra je dit weet."}
+                ? "Zolang hier niets is aangegeven, rekent de app zoals voorheen mét zelfstandigenaftrek — geef het hier aan zodra het bekend is."
+                : "Zolang hier niets is aangegeven, toont de app voor de zekerheid beide scenario's (mét/zonder) naast elkaar — kies \"Ja\" of \"Nee\" zodra het bekend is."}
             </p>
           </div>
 
@@ -198,8 +198,8 @@ export default function PersoonlijkeAannamesPanel({
               <option value="ja">Ja</option>
             </select>
             <p className="mt-1.5 text-xs text-slate-400">
-              Alleen mogelijk als je ook zelfstandigenaftrek krijgt, in minstens 1 van de 5 voorgaande jaren nog
-              geen ondernemer was, en dit in die periode niet vaker dan 2x eerder hebt toegepast (max. 3x in de
+              Alleen mogelijk bij recht op zelfstandigenaftrek, als de ondernemer in minstens 1 van de 5 voorgaande jaren nog
+              geen ondernemer was, en de aftrek in die periode niet vaker dan 2x eerder is toegepast (max. 3x in de
               eerste 5 jaar). Vast bedrag van € 2.123 (2023 t/m 2026 ongewijzigd) — controleer dit zelf.
             </p>
             {toetsStartersaftrek(startersaftrekStatus, zelfstandigenaftrekStatus).meldingen.map((m, i) => (
@@ -224,7 +224,7 @@ export default function PersoonlijkeAannamesPanel({
               className="w-44 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
             />
             <p className="mt-1.5 text-xs text-slate-400">
-              Bepaalt in welke schijf je winst valt en hoeveel heffingskorting daarbovenop nog meetelt. Is er geen ander
+              Bepaalt in welke schijf de winst valt en hoeveel heffingskorting daarbovenop nog meetelt. Is er geen ander
               inkomen, laat dit dan leeg. Pensioen of ander niet-arbeidsinkomen: de arbeidskorting is dan te hoog geschat.
             </p>
           </div>
@@ -247,13 +247,13 @@ export default function PersoonlijkeAannamesPanel({
             <p className="pt-1.5 border-t border-slate-200">
               Geschatte heffingskortingen: algemene heffingskorting <strong>{eur(heffingskortingen.algemeneHeffingskorting)}</strong> +
               {" "}arbeidskorting <strong>{eur(heffingskortingen.arbeidskorting)}</strong> = <strong>{eur(heffingskortingen.totaal)}</strong>
-              {" "}— ervan uitgaande dat de winst je enige inkomen is, je nog geen AOW-leeftijd hebt bereikt en er geen
+              {" "}— ervan uitgaande dat de winst het enige inkomen is, de AOW-leeftijd nog niet is bereikt en er geen
               fiscale partner is om mee te verrekenen. Klopt een van die aannames niet, dan is dit minder betrouwbaar.
             </p>
             {(overigInkomenBox1?.[activeYear] || 0) > 0 && (
               <p className="text-slate-500">
                 Overig inkomen {eur(overigInkomenBox1[activeYear])} is meegenomen: belasting en kortingen zijn het verschil met en zonder winst.
-                Een negatieve heffingskorting betekent dat je door de winst korting verliest die je op het overige inkomen alleen wél had.
+                Een negatieve heffingskorting betekent dat er door de winst korting verloren gaat die er op het overige inkomen alleen wél was.
               </p>
             )}
             <p>
@@ -315,7 +315,7 @@ export default function PersoonlijkeAannamesPanel({
             {(autoStatus?.[activeYear] === "zaak") &&
               autoWizardStatus?.soort === "financial" && (
                 <p className="mt-2 text-xs text-slate-400">
-                  Bij financiële lease vul je de bijtelling/afschrijving in bij de leasegegevens zelf (zie
+                  Bij financiële lease horen de bijtelling/afschrijving bij de leasegegevens zelf (zie
                   het leningen/lease-overzicht), niet hier. De btw-correctie privégebruik rekent de app dan automatisch (forfait) zodra er een bedrag bij "Te betalen BTW" staat.
                 </p>
               )}

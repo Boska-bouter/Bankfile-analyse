@@ -47,7 +47,7 @@ export function useTodoItems({
       if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lease-${idx}`,
-          text: `Je gaf aan dat er een leaseauto is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          text: `Opgegeven is dat er een leaseauto is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
           ref: leasesSectionRef,
           naam: item.naam,
           onRename: (nieuweNaam) => setVerwachteLease((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
@@ -59,7 +59,7 @@ export function useTodoItems({
       if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lease-overig-${idx}`,
-          text: `Je gaf aan dat er een ander leaseobject is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          text: `Opgegeven is dat er een ander leaseobject is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
           ref: leasesSectionRef,
           naam: item.naam,
           onRename: (nieuweNaam) => setVerwachteLeaseOverig((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
@@ -71,7 +71,7 @@ export function useTodoItems({
       if (item && !item.gevonden) {
         items.push({
           key: `verwachte-lening-${idx}`,
-          text: `Je gaf aan dat er een zakelijke lening is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+          text: `Opgegeven is dat er een zakelijke lening is${item.naam ? ` bij "${item.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
           ref: loansSectionRef,
           naam: item.naam,
           onRename: (nieuweNaam) => setVerwachteLening((prev) => (prev || []).map((it, i) => (i === idx ? { ...it, naam: nieuweNaam } : it))),
@@ -82,7 +82,7 @@ export function useTodoItems({
     if (verwachteAOV?.status === "ja" && !verwachteAOV.gevonden) {
       items.push({
         key: "verwachte-aov",
-        text: `Je gaf aan dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
+        text: `Opgegeven is dat er een AOV is${verwachteAOV.naam ? ` bij "${verwachteAOV.naam}"` : ""} — nog niet gevonden/bevestigd in de transacties`,
         naam: verwachteAOV.naam,
         onRename: (nieuweNaam) => setVerwachteAOV((prev) => ({ ...prev, naam: nieuweNaam })),
         onRemove: () => setVerwachteAOV(null),
@@ -97,7 +97,7 @@ export function useTodoItems({
     if (btwAan && (incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd) {
       items.push({
         key: "meerdereTarieven",
-        text: `Je gaf aan dat je omzet onder ${incomeBtwTarieven.length} verschillende BTW-tarieven valt — controleer welke klanten bij welk tarief horen`,
+        text: `Opgegeven is dat de omzet onder ${incomeBtwTarieven.length} verschillende BTW-tarieven valt — controleer welke klanten bij welk tarief horen`,
         ref: incomeRatesSectionRef,
       });
     }

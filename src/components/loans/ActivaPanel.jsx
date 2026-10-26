@@ -37,12 +37,12 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
       {open && (
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-500 mb-3">
-            Machines, gereedschap en inventaris die je hebt gekocht ("Apparatuur & inventaris") mogen niet in
+            Gekochte machines, gereedschap en inventaris ("Apparatuur & inventaris") mogen niet in
             één keer als kosten worden afgetrokken — vul hier de afschrijvingstermijn en restwaarde in, dan berekent
             de app zelf hoeveel er per jaar mag worden afgeschreven.{" "}
             {onOpenHelp && <HelpHint chapter="activa-afschrijving" onOpen={onOpenHelp} />}
           </p>
-          {activaSummary.length === 0 && <p className="text-xs text-slate-500 mb-3">Er zijn nog geen bedrijfsmiddelen. Aankopen uit de bank verschijnen hier vanzelf zodra je ze de categorie "Zakelijk - apparatuur/machines" geeft.</p>}
+          {activaSummary.length === 0 && <p className="text-xs text-slate-500 mb-3">Er zijn nog geen bedrijfsmiddelen. Aankopen uit de bank verschijnen hier vanzelf zodra ze de categorie "Zakelijk - apparatuur/machines" krijgen.</p>}
           <div className="space-y-3">
             {activaSummary.map((activum) => {
               const details = activaDetails[activum.key];

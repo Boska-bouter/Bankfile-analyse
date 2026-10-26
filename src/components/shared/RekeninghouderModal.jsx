@@ -26,8 +26,8 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
         </div>
         <div className="p-5 space-y-3">
           <p className="text-sm text-slate-600">
-            Wat is je eigen naam (en die van je fiscaal partner, indien van toepassing)? Zo herkent de app een
-            overboeking naar/van jezelf als privé, ook als de tegenrekening niet is geladen. Deze naam staat ook
+            Wat is de naam van de rekeninghouder (en van de fiscale partner, indien van toepassing)? Zo herkent de app een
+            overboeking naar/van de rekeninghouder zelf als privé, ook als de tegenrekening niet is geladen. Deze naam staat ook
             bovenin de app en in de bestandsnaam bij "Dossier opslaan".
           </p>
           <input

@@ -45,7 +45,7 @@ const EXTRA_KOLOMMEN = [
 
 // beide-V1R0 — de twee soorten gebruik en de kolommen per soort.
 export const GEBRUIK = { zakelijk: "Zakelijk", prive: "Privé" };
-export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "alleen je eigen huishouden" };
+export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "particulier huishouden, zonder onderneming" };
 const KOLOM = {
   zakelijk: { eenvoudig: "eenvoudig", uitgebreid: "uitgebreid", koppelen: "koppelen", geldigTot: "geldig_tot" },
   prive: { eenvoudig: "prive_eenvoudig", uitgebreid: "prive_uitgebreid", koppelen: "prive_koppelen", geldigTot: "prive_geldig_tot" },
@@ -312,7 +312,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   // nieuw-V5R2 — bevestiging aan de aanvrager, met een korte uitleg van de drie abonnementen.
   const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
     `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij Bankoverzicht, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
-    `Je hebt gekozen voor ${gebruik === "prive" ? "privégebruik (alleen je eigen huishouden)" : "zakelijk gebruik (eenmanszaak, zzp of BV)"}.`,
+    `Je hebt gekozen voor ${gebruik === "prive" ? "privégebruik (particulier huishouden)" : "zakelijk gebruik (eenmanszaak, zzp of BV)"}.`,
     `Ter herinnering, dit zijn de ${Object.keys(plannenVoor(env)).length === 3 ? "drie" : "twee"} abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
   ], null, naam, Object.entries(plannenVoor(env)).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
     "Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt een e-mail zodra hij is goedgekeurd; daarna kun je meteen aan de slag.",

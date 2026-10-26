@@ -46,7 +46,7 @@ function CategoryPercentageRow({ categorie, totaal, raw, standaard, onCommit, ui
           </span>
         )}
         {categorie === "Privé - overige kosten" && (
-          <span className="block text-xs font-normal text-slate-500">Uitgaven vanaf je privérekening die op zakelijke kosten lijken — mogelijk (deels) zakelijk, controleer ze.</span>
+          <span className="block text-xs font-normal text-slate-500">Uitgaven vanaf de privérekening die op zakelijke kosten lijken — mogelijk (deels) zakelijk, controleer ze.</span>
         )}
       </span>
       <span className="text-xs text-slate-400 font-mono">totaal {eur(totaal)}</span>
@@ -167,7 +167,7 @@ export default function CategoryPercentagePanel({
             {onOpenHelp && <HelpHint chapter="categorie-percentage-zakelijk" onOpen={onOpenHelp} />}
           </p>
           <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-lg p-2 mb-3">
-            Heb je een pand (loods/schuur) dat deels zakelijk en deels privé wordt gebruikt? Zet dan bij Huur,
+            Is er een pand (loods/schuur) dat deels zakelijk en deels privé wordt gebruikt? Zet dan bij Huur,
             Energie-water en/of Gemeentelijke kosten het percentage zakelijk voor het jaar. Dit vervangt de
             vroegere aparte categorieën "… (deels zakelijk)"; in oudere dossiers zijn die automatisch omgezet.
           </p>
@@ -233,7 +233,7 @@ export default function CategoryPercentagePanel({
           )}
           {autoOpDeZaakDitJaar && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
-              Je hebt voor {activeYear} "Auto op de zaak" aangegeven — Brandstof en Parkeren staan daarom
+              Voor {activeYear} is "Auto op de zaak" aangegeven — Brandstof en Parkeren staan daarom
               niet (meer) in de lijst hieronder. Het privégebruik daarvan loopt voor dit jaar via de
               bijtelling/onttrekkings-correctie bij de leaseauto-gegevens, niet via dit percentage.
             </p>

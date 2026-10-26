@@ -101,8 +101,8 @@ export default function PriveWizardModal({
         <div className="p-5 overflow-y-auto flex-1 space-y-3">
           {huidig.id === BESTANDEN && (
             <>
-              <p className="text-sm font-medium text-slate-800">Wil je al bankbestand(en) toevoegen?</p>
-              <p className="text-sm text-slate-600">Afschriften van je eigen rekeningen (en die van je partner), per jaar of over meerdere jaren. Je kunt ze ook later laden.</p>
+              <p className="text-sm font-medium text-slate-800">Nu al bankbestand(en) toevoegen?</p>
+              <p className="text-sm text-slate-600">Afschriften van de eigen rekeningen (en die van de partner), per jaar of over meerdere jaren. Later laden kan ook.</p>
               {importBezig && <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">Bestanden worden ingelezen…</p>}
               {!importBezig && importFout && <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 whitespace-pre-line">{importFout}</p>}
               <button type="button" disabled={importBezig} onClick={() => onPickFiles?.()}
@@ -124,16 +124,16 @@ export default function PriveWizardModal({
                   <ul className="rounded-lg border border-slate-200 divide-y divide-slate-100">
                     {loadedFileNames.map((n) => <li key={n} className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700"><Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /><span className="truncate">{n}</span></li>)}
                   </ul>
-                  <p className="text-xs text-slate-600">Heb je meer rekeningen, zoals een spaarrekening, beleggingsrekening, kinderrekening of een rekening van je partner? Voeg die bestanden ook toe met de knop hierboven.</p>
+                  <p className="text-xs text-slate-600">Zijn er meer rekeningen, zoals een spaarrekening, beleggingsrekening, kinderrekening of een rekening van de partner? Voeg die bestanden ook toe met de knop hierboven.</p>
                 </>
               )}
-              <p className="text-xs text-slate-500"><strong>Privacy:</strong> bankgegevens worden lokaal in je browser verwerkt en niet naar een externe server gestuurd voor analyse.</p>
+              <p className="text-xs text-slate-500"><strong>Privacy:</strong> bankgegevens worden lokaal in de browser verwerkt en niet naar een externe server gestuurd voor analyse.</p>
             </>
           )}
           {huidig.id === REKENINGEN && (
             <>
-              <p className="text-sm font-medium text-slate-800">Heb je nog andere eigen rekeningen?</p>
-              <p className="text-sm text-slate-600">Bijvoorbeeld een spaarrekening, beleggingsrekening, kinderrekening, een gezamenlijke rekening of een rekening van je partner. Geef het rekeningnummer op, dan telt geld van en naar die rekening als overboeking tussen je eigen rekeningen en niet als inkomen of uitgave.</p>
+              <p className="text-sm font-medium text-slate-800">Zijn er nog andere eigen rekeningen?</p>
+              <p className="text-sm text-slate-600">Bijvoorbeeld een spaarrekening, beleggingsrekening, kinderrekening, een gezamenlijke rekening of een rekening van de partner. Geef het rekeningnummer op, dan telt geld van en naar die rekening als overboeking tussen eigen rekeningen en niet als inkomen of uitgave.</p>
               {extraRekeningen}
               <button type="button" onClick={() => { if (eigenRekeningenExtra == null) setEigenRekeningenExtra?.([]); volgende(); }} className={KNOP_PRIMAIR_GROOT}>
                 {(eigenRekeningenExtra || []).length > 0 ? "Doorgaan" : "Geen andere rekeningen — doorgaan"}
@@ -149,8 +149,8 @@ export default function PriveWizardModal({
           )}
           {huidig.id === OPSLAAN && (
             <>
-              <p className="text-sm text-slate-700 font-medium">Niet vergeten: sla je dossier op, anders gaan je aanpassingen verloren.</p>
-              <p className="text-sm text-slate-600">Je antwoorden en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als je de browsergegevens wist.</p>
+              <p className="text-sm text-slate-700 font-medium">Niet vergeten: sla het dossier op, anders gaan de aanpassingen verloren.</p>
+              <p className="text-sm text-slate-600">Antwoorden en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als de browsergegevens worden gewist.</p>
               <p className="text-sm text-slate-600">Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een nieuw apparaat of om te bewaren. Sla na elke sessie op.</p>
               {onSaveProject && (
                 <button onClick={onSaveProject} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Dossier nu opslaan</button>

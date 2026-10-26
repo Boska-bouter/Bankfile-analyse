@@ -41,8 +41,8 @@ export default function TegenpartijenPanel({
           {(incomeBtwTarieven?.length || 0) > 1 && !meerdereTarievenBevestigd && (
             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
               <p>
-                Je gaf in de wizard aan dat je omzet onder meerdere BTW-tarieven valt ({incomeBtwTarieven.map((t) => `${t}%`).join(", ")}).
-                Ken hieronder per klant het juiste tarief toe (kolom "BTW-tarief") — klanten die je nog niet apart hebt ingesteld
+                In de wizard is aangegeven dat de omzet onder meerdere BTW-tarieven valt ({incomeBtwTarieven.map((t) => `${t}%`).join(", ")}).
+                Ken hieronder per klant het juiste tarief toe (kolom "BTW-tarief") — klanten die nog niet apart zijn ingesteld
                 vallen op het standaardtarief.
               </p>
               <button

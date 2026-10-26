@@ -160,7 +160,7 @@ export default function AutoOpDeZaakDetailsModal({ soort, details, years, onSave
               </span>
             </label>
             <p className="text-xs text-slate-400 mt-1">
-              Alleen dan moet je btw afdragen voor privégebruik van de auto (laatste btw-aangifte van het jaar). Zonder btw-aftrek
+              Alleen dan moet er btw worden afgedragen voor privégebruik van de auto (laatste btw-aangifte van het jaar). Zonder btw-aftrek
               is er geen correctie.
             </p>
             {form.btwAfgetrokken && (

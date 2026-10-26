@@ -21,7 +21,7 @@ export function maandHtml(jaar, budget) {
   const regels = maandRegels(budget).map((r) => rij(r.maand, [bedrag(r.inkomsten), bedrag(r.uitgaven), bedrag(r.vasteLasten), bedrag(r.sparen), bedrag(r.over)], r.totaal ? "sterk" : "")).join("");
   return document({
     titel: `Maandoverzicht ${jaar}`,
-    sub: `privé · opgesteld ${new Date().toLocaleDateString("nl-NL")} · overboekingen tussen je eigen rekeningen tellen niet mee`,
+    sub: `privé · opgesteld ${new Date().toLocaleDateString("nl-NL")} · overboekingen tussen eigen rekeningen tellen niet mee`,
     inhoud: `<table><tr><th>Maand</th><th class="num">Inkomsten</th><th class="num">Uitgaven</th><th class="num">Waarvan vast</th><th class="num">Sparen</th><th class="num">Over</th></tr>${regels}</table>`,
   });
 }

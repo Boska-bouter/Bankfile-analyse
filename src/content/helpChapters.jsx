@@ -21,12 +21,12 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2.5">
         <p>
           <strong>De route.</strong> De balk onder de kop laat de stappen zien: Import → Controleren → Bedrijfsmiddelen →
-          Instellingen → Advies. Klik op een stap om erheen te gaan. De kaart "Eerstvolgende stap" daaronder zegt wat je nu
-          het best kunt doen, met een knop "Ga naar deze stap"; "Overslaan" zet die stap even opzij.
+          Instellingen → Advies. Klik op een stap om erheen te gaan. De kaart "Eerstvolgende stap" daaronder zegt wat nu
+          de beste volgende stap is, met een knop "Ga naar deze stap"; "Overslaan" zet die stap even opzij.
         </p>
         <p>
           <strong>Drie tabbladen.</strong> <em>Overzicht</em> toont de uitkomst: dossiercontrole, jaaroverzicht, BTW per
-          kwartaal en de details. <em>Controleren</em> is waar je werk doet: import en kwaliteit, herkomst en opschonen,
+          kwartaal en de details. <em>Controleren</em> is waar het werk gebeurt: import en kwaliteit, herkomst en opschonen,
           bedrijfsmiddelen (leningen, lease, activa) en aannames en percentages. <em>Instellingen</em> bevat het
           dossierprofiel en de automatisering (BTW-instellingen, regels, vaste kosten). Bij elk onderdeel in de app staat een
           klein "?" dat naar het juiste hoofdstuk hier springt.
@@ -38,7 +38,7 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           <strong>Zakelijk en privé.</strong> Onder "Overzicht" staat hoeveel bankbestanden zijn geladen en of dat zakelijk,
-          privé of beide zijn. Bij het gekozen jaar staat wat voor dat jaar is geladen. Mist een type, dan zie je dat daar.
+          privé of beide zijn. Bij het gekozen jaar staat wat voor dat jaar is geladen. Mist een type, dan staat dat daar.
         </p>
       </div>
     ),
@@ -87,22 +87,22 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          <strong>Automatisch bewaard.</strong> Je bankgegevens worden lokaal in deze browser verwerkt en bewaard; ze worden niet op
-          een server opgeslagen. De app maakt alleen internetverbinding voor het inloggen, het laden van de app zelf, de controle op een nieuwe versie, de bankkoppeling (als je die gebruikt; de transacties worden alleen doorgegeven) en (alleen als je het zelf verstuurt) je feedback. Bewaar exports en projectbestanden zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten. Met "Dossier opslaan" maak je daarnaast een bestand dat je zelf kunt bewaren en later weer laden.
+          <strong>Automatisch bewaard.</strong> De bankgegevens worden lokaal in deze browser verwerkt en bewaard; ze worden niet op
+          een server opgeslagen. De app maakt alleen internetverbinding voor het inloggen, het laden van de app zelf, de controle op een nieuwe versie, de bankkoppeling (als die wordt gebruikt; de transacties worden alleen doorgegeven) en (alleen als die zelf wordt verstuurd) feedback. Bewaar exports en projectbestanden zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten. "Dossier opslaan" maakt daarnaast een bestand om zelf te bewaren en later weer te laden.
         </p>
         <p>
-          <strong>Met of zonder wachtwoord.</strong> Bij de eerste keer opslaan kies je. Met een
-          wachtwoord wordt het bestand versleuteld en krijg je eerst een <strong>herstelcode</strong> te zien: bewaar die
-          apart van het dossier. Vergeet je het wachtwoord, dan kun je het dossier alleen nog openen via "Wachtwoord kwijt?
+          <strong>Met of zonder wachtwoord.</strong> De keuze volgt bij de eerste keer opslaan. Met een
+          wachtwoord wordt het bestand versleuteld en verschijnt eerst een <strong>herstelcode</strong>: bewaar die
+          apart van het dossier. Is het wachtwoord vergeten, dan is het dossier alleen nog te openen via "Wachtwoord kwijt?
           Herstelcode gebruiken". Er is geen andere manier om het te herstellen. Daarna slaat de app direct op; onder
-          "Dossier opslaan" kun je het wachtwoord wijzigen of verwijderen en de code opnieuw bekijken.
+          "Dossier opslaan" is het wachtwoord te wijzigen of te verwijderen en de code opnieuw te bekijken.
         </p>
         <p>
           <strong>Nieuw dossier starten.</strong> Dit sluit het huidige dossier meteen: bestanden, correcties en
-          instellingen worden leeggemaakt. De app vraagt eerst of je wilt opslaan. Stop je daarna halverwege de wizard, dan
-          houd je een leeg dossier over. Direct na het starten kun je het nog terugdraaien met "Ongedaan maken" in de
+          instellingen worden leeggemaakt. De app vraagt eerst of er moet worden opgeslagen. Wordt de wizard daarna halverwege gestopt, dan
+          blijft er een leeg dossier over. Direct na het starten is dit nog terug te draaien met "Ongedaan maken" in de
           zijbalk. Op het keuzescherm "Vorig dossier gevonden" (bij het opstarten) werkt "Nieuw dossier" anders: daar
-          blijft het oude dossier in de browser bewaard totdat je zelf een nieuw bestand toevoegt.
+          blijft het oude dossier in de browser bewaard totdat er een nieuw bestand wordt toegevoegd.
         </p>
       </div>
     ),
@@ -114,8 +114,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          De kaart bovenaan het Overzicht toont per jaar het aantal <strong>open punten</strong>: wat je nog moet
-          beoordelen (onzekere indelingen, herkomst van inkomsten, overboekingen aan personen, "Overig") plus openstaande
+          De kaart bovenaan het Overzicht toont per jaar het aantal <strong>open punten</strong>: wat nog moet worden
+          beoordeeld (onzekere indelingen, herkomst van inkomsten, overboekingen aan personen, "Overig") plus openstaande
           vragen bij Instellingen. Daaronder staat tussen haakjes de verdeling, bijvoorbeeld "5 controle · 1 instelling".
           Een indeling die al groen is telt niet mee.
         </p>
@@ -131,7 +131,7 @@ export const HELP_CHAPTERS = [
           die nog openstaan (zoals KOR, BTW-verlegd en het beoordelen van personen en "Overig").
         </p>
         <p>
-          Wat er open staat kun je op het tabblad Controleren afhandelen; zie "Herkomst en opschonen". Daar staan ook de
+          Wat er open staat, is op het tabblad Controleren af te handelen; zie "Herkomst en opschonen". Daar staan ook de
           controles op loonheffing, KOR en BTW-verlegd, en signalen zoals boetes bij naheffingen of een factuurdatum in een
           ander kwartaal dan de boeking.
         </p>
@@ -192,7 +192,7 @@ export const HELP_CHAPTERS = [
       <p>
         Rechtsboven in "Details en overzichten" staan vier snelkoppelingen. <strong>Meerjarenoverzicht</strong> zet de
         jaren naast elkaar. <strong>Onderbouwing</strong> toont de transacties achter de bedragen.{" "}
-        <strong>Downloaden</strong> vraagt welk formaat je wilt: <em>PDF</em> (om te bewaren, mailen of printen),{" "}
+        <strong>Downloaden</strong> vraagt welk formaat gewenst is: <em>PDF</em> (om te bewaren, mailen of printen),{" "}
         <em>Excel</em> (alle transacties plus de overzichten) of <em>HTML</em> (opent in elke browser).{" "}
         <strong>Print</strong> drukt het overzicht af. Elk rapport in de app (aangifteberekening, onderbouwing, BTW per
         kwartaal, samenvatting, inkomen per maand) heeft dezelfde knop Downloaden met deze drie keuzes. Op de iPad, waar
@@ -207,14 +207,14 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
       <p>
-        De omzet- en kostenbedragen staan <strong>netto</strong> (excl. BTW, zoals je ze invult bij de aangifte), met
-        het werkelijke bankbedrag (bruto, incl. BTW) er in klein grijs tussen haakjes onder — zo kun je het altijd
-        terugrekenen naar wat er op de bank stond. De BTW-kolommen ernaast laten zien hoeveel dat is, uitgesplitst
+        De omzet- en kostenbedragen staan <strong>netto</strong> (excl. BTW, zoals ze in de aangifte komen), met
+        het werkelijke bankbedrag (bruto, incl. BTW) er in klein grijs tussen haakjes onder — zo is het altijd
+        terug te rekenen naar wat er op de bank stond. De BTW-kolommen ernaast laten zien hoeveel dat is, uitgesplitst
         naar 21% en 9%. 
         </p>
         <p>
           Verschuldigde BTW wordt alleen berekend over de omzet ("Zakelijke inkomsten"). Voorbelasting
-        is de BTW over alle overige zakelijke uitgaven, die je mag aftrekken, behalve van categorieën die je zelf hebt
+        is de BTW over alle overige zakelijke uitgaven, die aftrekbaar is, behalve van categorieën die zelf zijn
         uitgesloten bij de BTW-instellingen. 
         </p>
         <p>
@@ -280,14 +280,14 @@ export const HELP_CHAPTERS = [
         <p>
           Wat deels zakelijk kan zijn staat in twee groepen: <strong>Privé - wonen &amp; vaste lasten</strong> (huur, energie
           en water, gemeentelijke kosten) en <strong>Privé - telecom &amp; abonnementen</strong> (mobiel/internet, overige
-          abonnementen, streaming). Bij die twee kun je de <em>soort</em> nog apart kiezen in het kleine tweede
+          abonnementen, streaming). Bij die twee is de <em>soort</em> nog apart te kiezen in het kleine tweede
           keuzeveld, zodat het zakelijke percentage per soort instelbaar blijft (Persoonlijke aannames).
         </p>
         <p>
           Al het overige — boodschappen, webshops, winkels divers, vrije tijd/uit eten/vakantie, medisch, kinderopvang,
           verzekeringen, hypotheek, toeslagen, alimentatie, overboekingen aan personen, enzovoort — valt onder{" "}
           <strong>Privé kosten algemeen</strong>. De herkenning werkt intern nog op de fijne soort (bijvoorbeeld "Winkels
-          divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten zie je de
+          divers"), dus bestaande dossiers en regels blijven werken; alleen in lijsten en overzichten staat de
           samengevoegde naam. De Excel-export blijft de fijne categorie tonen.
         </p>
         <p>
@@ -295,13 +295,13 @@ export const HELP_CHAPTERS = [
           gemeentelijke kosten, ook de "deels zakelijk"-varianten), Vervoer &amp; auto, Telecom &amp; abonnementen,
           Personeel, Belastingen &amp; heffingen, Interne overboekingen en Inkoop &amp; zakelijke uitgaven (inkoop,
           bankkosten, boekhouder, zakelijke verzekering, onderhoud apparatuur, marketing-website, betaalautomaat). Waar
-          de aangifte een verschil maakt kies je de <em>soort</em> in het kleine tweede keuzeveld. De aangifte, BTW en
+          de aangifte een verschil maakt, kies de <em>soort</em> in het kleine tweede keuzeveld. De aangifte, BTW en
           rubrieken rekenen ongewijzigd op de fijne soort.
         </p>
         <p>
-          Wil je toch alle fijne categorieën zien? Zet het vinkje <strong>fijne categorieën</strong> aan in de
-          tabblad Categorieën onder "Details en overzichten" (Overzicht). Dat geldt voor alle keuzelijsten en overzichten tot je het
-          weer uitzet.
+          Toch alle fijne categorieën zien? Zet het vinkje <strong>fijne categorieën</strong> aan in de
+          tabblad Categorieën onder "Details en overzichten" (Overzicht). Dat geldt voor alle keuzelijsten en overzichten tot het
+          vinkje weer uit staat.
         </p>
       </div>
     ),
@@ -313,7 +313,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Op Controleren staan vier punten die je zelf moet beoordelen: de <strong>herkomst van inkomsten</strong> (zakelijk
+          Op Controleren staan vier punten die zelf beoordeeld moeten worden: de <strong>herkomst van inkomsten</strong> (zakelijk
           of privé), <strong>overboekingen aan personen</strong>, alles wat nog in <strong>"Overig"</strong> staat en
           mogelijke <strong>duplicaten</strong>. Elk punt toont hoeveel er nog te bepalen is; staat er "Niets openstaand",
           dan is het klaar.
@@ -332,7 +332,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 override")}</strong> (je hebt 'm zelf al eens bevestigd,
+          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 override")}</strong> (al eens zelf bevestigd,
           op IBAN of tegenpartij), <strong>{metBolletjes("🟢 keyword")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
           Brandstof), <strong>{metBolletjes("🟡 heuristic")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
           rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 fallback")}</strong> (geen enkele regel matchte
@@ -340,31 +340,31 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           Dit is geen extra classificatiesysteem naast de echte indeling — het is puur een indicatie van hóe die
-          indeling tot stand kwam, zodat je niet alles hoeft na te lopen: de groene transacties zijn met vertrouwen
+          indeling tot stand kwam, zodat niet alles hoeft te worden nagelopen: de groene transacties zijn met vertrouwen
           ingedeeld, de gele/rode transacties zijn de moeite van het bekijken waard.
         </p>
         <p>
           <strong>Hoe het wordt geteld:</strong> de aantallen onder "Nog te controleren" tellen per{" "}
           <em>groep</em> — zelfde tegenpartij, zelfde bedragsrichting (ontvangen of betaald) en zelfde categorie. Dertig
-          pinbetalingen bij dezelfde winkel zijn dus één punt, met erbij hoeveel transacties erachter zitten. Je
-          beoordeelt de groep één keer en dat geldt voor alle bijbehorende transacties.
+          pinbetalingen bij dezelfde winkel zijn dus één punt, met erbij hoeveel transacties erachter zitten. De
+          groep wordt één keer beoordeeld en dat geldt voor alle bijbehorende transacties.
         </p>
         <p>
           <strong>In het controlevenster</strong> (klik op "controleren" of "onduidelijk") staan de groepen gesorteerd op
-          totaalbedrag, zodat de punten met de meeste invloed bovenaan staan; je kunt ook sorteren op aantal of naam. Met
-          het categoriefilter kies je één categorie en keur je die in één keer goed ("Alles in … goedkeuren"). Losse
-          pinbetalingen zonder herkend zoekwoord staan samen in één groep die je kunt uitklappen om per transactie aan te
-          passen. Een opdrachtgever of leverancier die je zelf hebt opgegeven telt als herkend, ook als de bank de naam
+          totaalbedrag, zodat de punten met de meeste invloed bovenaan staan; sorteren op aantal of naam kan ook. Met
+          het categoriefilter is één categorie te kiezen en in één keer goed te keuren ("Alles in … goedkeuren"). Losse
+          pinbetalingen zonder herkend zoekwoord staan samen in één groep die is uit te klappen om per transactie aan te
+          passen. Een opdrachtgever of leverancier die zelf is opgegeven telt als herkend, ook als de bank de naam
           met andere leestekens schrijft.
         </p>
         <p>
           <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah", "plus" of "spar") moeten
           aan het begin van een woord staan en tellen niet mee als ze midden in een ander woord zitten. Zo wordt een
-          bankrekening of winkelnaam niet per ongeluk herkend op een stukje tekst. Zoekwoorden die je zelf toevoegt
+          bankrekening of winkelnaam niet per ongeluk herkend op een stukje tekst. Zelf toegevoegde zoekwoorden
           blijven gewoon op elke plek in de tekst werken.
         </p>
         <p>
-          Klopt een gele of rode indeling bij nazien gewoon? Dan hoef je 'm niet te wijzigen om 'm te bevestigen — het
+          Klopt een gele of rode indeling bij nazien gewoon? Dan hoeft hij niet te worden gewijzigd om hem te bevestigen — het
           "✓ Klopt zo"-knopje (in de detailtabel naast het icoontje, of hier in deze lijst) legt de huidige indeling
           vast als bevestigde regel, zonder iets te veranderen. Vanaf dan is die tegenpartij groen.
         </p>
@@ -379,7 +379,7 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Bij het inlezen deelt de app elke transactie in volgorde in: eigen overboekingen (op IBAN, spaarrekening of
-          eigen naam), jouw eigen zoekwoorden, terugboekingen, dan de standaardcategorieën op trefwoord, daarna een
+          eigen naam), eigen zoekwoorden, terugboekingen, dan de standaardcategorieën op trefwoord, daarna een
           persoon of buitenlandse pinbetaling, winkels zonder IBAN ("Winkels divers") en als laatste "Overig". De eerste
           regel die past wint.
         </p>
@@ -387,7 +387,7 @@ export const HELP_CHAPTERS = [
           <strong>Retour en terugbetaling:</strong> een bijschrijving met een pasvolgnummer is een teruggeboekte
           pinbetaling en komt in dezelfde categorie als de uitgave (bijv. een Jumbo-retour onder Boodschappen). Een
           bijschrijving met "storno", "terugboeking", "restitutie" of "terugbetaling" krijgt de categorie van de
-          partij als die herkend wordt (of van de eerdere afschrijving die je zelf al hebt ingedeeld), anders "Overig"
+          partij als die herkend wordt (of van de eerdere afschrijving die zelf al is ingedeeld), anders "Overig"
           ter beoordeling. 
         </p>
         <p>
@@ -403,7 +403,7 @@ export const HELP_CHAPTERS = [
         <p>
           <strong>Voorbeelden:</strong> woningcorporaties en verhuurders vallen onder Huur, laadpassen (bijv. Eneco
           eMobility) onder Brandstof, "rente buiten limiet" onder Bankkosten, Q-Park en Yellowbrick onder Parkeren en
-          een overboeking naar een spaarrekening onder "Interne overboeking". Mis je een partij? Corrigeer 'm één keer
+          een overboeking naar een spaarrekening onder "Interne overboeking". Ontbreekt een partij? Corrigeer hem één keer
           in de detailtabel of voeg een eigen zoekwoord toe; dat geldt vanaf dan overal.
         </p>
       </div>
@@ -421,44 +421,44 @@ export const HELP_CHAPTERS = [
           hier bewust niets stilzwijgend aan zonder dat zichtbaar te maken.
         </p>
         <p>
-          <strong>Urencriterium / zelfstandigenaftrek</strong> — heb je dat jaar minimaal het gebruikelijke aantal
-          uren (doorgaans 1.225) aan de onderneming besteed? Zolang je hier niets aangeeft, rekent de app zoals
+          <strong>Urencriterium / zelfstandigenaftrek</strong> — is er dat jaar minimaal het gebruikelijke aantal
+          uren (doorgaans 1.225) aan de onderneming besteed? Zolang hier niets is aangegeven, rekent de app zoals
           voorheen mét zelfstandigenaftrek; kies "Onbekend" om beide scenario's (met/zonder) naast elkaar te zien.
         </p>
         <p>
-          <strong>Startersaftrek</strong> — alleen mogelijk als je ook zelfstandigenaftrek krijgt, in minstens 1 van
-          de 5 voorgaande jaren nog geen ondernemer was, en dit niet vaker dan 2x eerder hebt toegepast (max. 3x in
-          de eerste 5 jaar). Vast bedrag, controleer dit zelf. In het stappenplan kies je per jaar of de aftrek van
+          <strong>Startersaftrek</strong> — alleen mogelijk bij recht op zelfstandigenaftrek, als de ondernemer in minstens 1 van
+          de 5 voorgaande jaren nog geen ondernemer was, en de aftrek niet vaker dan 2x eerder is toegepast (max. 3x in
+          de eerste 5 jaar). Vast bedrag, controleer dit zelf. In het stappenplan staat per jaar de keuze of de aftrek van
           toepassing was ("Startersaftrek"); de overige jaren worden op "nee" gezet. Dit blijft per jaar aan te
           passen. Niet voor een BV.
         </p>
         <p>
-          <strong>Auto</strong> — per jaar kies je: geen auto, <em>Auto op de zaak</em> (gekocht, operationele lease of
+          <strong>Auto</strong> — per jaar is de keuze: geen auto, <em>Auto op de zaak</em> (gekocht, operationele lease of
           financiële lease) of <em>Privéauto zakelijk gebruikt</em>. Bij een auto op de zaak tellen de werkelijke
           autokosten mee met een bijtelling voor privégebruik, en vervalt de %-splitsing op Brandstof/Parkeren voor dat
-          jaar. Bij een privéauto vul je de zakelijke kilometers en de vergoeding per km in. Een combinatie van beide
+          jaar. Bij een privéauto worden de zakelijke kilometers en de vergoeding per km ingevuld. Een combinatie van beide
           bestaat niet als keuze; heeft een oud dossier die nog, dan wordt het bij openen omgezet naar "Privéauto
           zakelijk gebruikt" — controleer zo'n jaar even.
         </p>
         <p>
-          <strong>Btw bij privégebruik van een auto op de zaak</strong> — heb je btw op de auto afgetrokken (gekocht incl.
-          btw, of een financiële lease met een bedrag bij "Te betalen BTW"; bij operationele lease alleen als je dat zelf
-          aanvinkt), dan moet je in de laatste btw-aangifte van het jaar btw afdragen voor het privégebruik. De app
+          <strong>Btw bij privégebruik van een auto op de zaak</strong> — is er btw op de auto afgetrokken (gekocht incl.
+          btw, of een financiële lease met een bedrag bij "Te betalen BTW"; bij operationele lease alleen als dat zelf is
+          aangevinkt), dan moet in de laatste btw-aangifte van het jaar btw worden afgedragen voor het privégebruik. De app
           rekent standaard het forfait: 2,7% van de cataloguswaarde (incl. btw en bpm) per jaar, 1,5% vanaf het vijfde
           jaar na de aanschaf, en in het eerste jaar naar rato van de maanden. Het bedrag is nooit hoger dan de btw die
-          je op onderhoud en gebruik hebt afgetrokken plus (tot en met het vierde jaar na aanschaf) 1/5 van de btw bij
-          aanschaf. Je ziet het terug bij Q4 in het btw-overzicht en het aangiftevoorstel. Per jaar kun je kiezen voor
+          op onderhoud en gebruik is afgetrokken plus (tot en met het vierde jaar na aanschaf) 1/5 van de btw bij
+          aanschaf. Het staat bij Q4 in het btw-overzicht en het aangiftevoorstel. Per jaar is te kiezen voor
           werkelijk privégebruik of geen correctie (bij "Auto op de zaak" voor gekocht of operationele lease). Is er bij aanschaf of lease geen btw afgetrokken maar wel op brandstof en onderhoud, dan rekent de app 1,5% van de
           cataloguswaarde per jaar (maximaal die afgetrokken btw op gebruikskosten). Bij een privéauto is er geen correctie. Alleen voor een zzp; bron: Belastingdienst, "Privégebruik
           auto van de zaak".
         </p>
         <p>
-          Gebruik je een pand deels zakelijk? Het percentage zakelijk voor huur, energie-water en gemeentelijke
-          kosten stel je in bij "Percentage zakelijk per categorie" — zie "Huur (deels zakelijk)" voor de uitleg.
+          Wordt een pand deels zakelijk gebruikt? Het percentage zakelijk voor huur, energie-water en gemeentelijke
+          kosten staat bij "Percentage zakelijk per categorie" — zie "Huur (deels zakelijk)" voor de uitleg.
         </p>
         <p>
           <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan
-          uitgaande dat de winst je enige inkomen is, je de AOW-leeftijd nog niet hebt bereikt, en er geen fiscale
+          uitgaande dat de winst het enige inkomen is, de AOW-leeftijd nog niet is bereikt, en er geen fiscale
           partner is om mee te verrekenen — klopt een van die aannames niet, dan is de schatting minder betrouwbaar.
         </p>
         <p>
@@ -481,8 +481,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Gebruik je maar een déél van een gehuurde ruimte zakelijk — bijvoorbeeld een deel van een schuur, magazijn
-          of woning die je ook privé gebruikt? Laat de transacties dan gewoon in <strong>"Huur"</strong> staan en vul
+          Wordt maar een déél van een gehuurde ruimte zakelijk gebruikt — bijvoorbeeld een deel van een schuur, magazijn
+          of woning die ook privé wordt gebruikt? Laat de transacties dan gewoon in <strong>"Huur"</strong> staan en vul
           bij <strong>"Percentage zakelijk per categorie"</strong> per jaar het percentage zakelijk gebruik in. Hetzelfde
           geldt voor "Energie-water" en "Gemeentelijke kosten" van dat pand.
         </p>
@@ -507,8 +507,8 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Voor kosten die deels zakelijk en deels privé zijn, ongeacht van welke rekening ze betaald zijn — bijv.
-          brandstof, telefonie/internet, reiskosten OV of parkeren die je ook privé gebruikt. In tegenstelling tot
-          Net als bij huur hoef je transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
+          brandstof, telefonie/internet, reiskosten OV of parkeren die ook privé worden gebruikt. In tegenstelling tot
+          Net als bij huur hoeven transacties hiervoor niet naar een aparte categorie te verplaatsen: ze
           blijven gewoon in hun eigen categorie (bijv. "Brandstof") staan.
         </p>
         <p>
@@ -533,7 +533,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Een machine, gereedschap of ander bedrijfsmiddel mag je niet in één keer als kosten aftrekken — de aanschaf
+          Een machine, gereedschap of ander bedrijfsmiddel mag niet in één keer als kosten worden afgetrokken — de aanschaf
           moet over de gebruiksduur worden <strong>afgeschreven</strong>. Elke transactie in de categorie{" "}
           "Apparatuur &amp; inventaris" verschijnt hier automatisch als los item (niet per leverancier gegroepeerd,
           want dezelfde leverancier kan op verschillende data totaal verschillende bedrijfsmiddelen leveren).
@@ -545,8 +545,8 @@ export const HELP_CHAPTERS = [
           <strong>lineaire afschrijving</strong> per jaar, het gangbare standaardstelsel.
         </p>
         <p>
-          In het jaar van aanschaf zelf mag je alleen afschrijven naar rato van de resterende maanden (de{" "}
-          <strong>tijdklem</strong>) — kocht je de machine bijvoorbeeld in oktober, dan telt dat jaar nog maar 3 van de
+          In het jaar van aanschaf zelf mag alleen worden afgeschreven naar rato van de resterende maanden (de{" "}
+          <strong>tijdklem</strong>) — is de machine bijvoorbeeld in oktober gekocht, dan telt dat jaar nog maar 3 van de
           12 maanden. De maanden die daardoor in het eerste jaar "gemist" worden, komen aan het einde van de looptijd
           terug als een extra, deels jaar — zodat er in totaal precies aanschafwaarde minus restwaarde wordt
           afgeschreven, niet minder.
@@ -557,7 +557,7 @@ export const HELP_CHAPTERS = [
         </p>
         <p className="text-xs text-slate-400">
           Is een bedrijfsmiddel (auto of machine) via een financieel leasecontract gefinancierd in plaats van
-          rechtstreeks aangeschaft, dan vul je de kapitalisatie/afschrijving daarvoor in bij dat leasecontract zelf
+          rechtstreeks aangeschaft, dan hoort de kapitalisatie/afschrijving daarvoor bij dat leasecontract zelf
           — zie "Lease (financieel)" — niet hier in het Activa-paneel.
         </p>
       </div>
@@ -573,8 +573,8 @@ export const HELP_CHAPTERS = [
           Bij <strong>operationele</strong> lease is de hele termijn gewoon aftrekbaar — in feite huur, geen verdere
           actie nodig. Bij <strong>financiële</strong> lease werkt het fiscaal hetzelfde als een lening: alleen de{" "}
           <strong>rente</strong> in de termijn is aftrekbaar, de rest is aflossing (het object zelf wordt apart
-          afgeschreven). Uit de bank-omschrijving is dat onderscheid vaak niet te zien, dus bevestig je per lease
-          expliciet: operationeel of financieel? Kies je financieel, dan werkt de rente/aflossing-splitsing precies
+          afgeschreven). Uit de bank-omschrijving is dat onderscheid vaak niet te zien, dus wordt per lease
+          expliciet bevestigd: operationeel of financieel? Bij financieel dan werkt de rente/aflossing-splitsing precies
           zoals bij leningen.
         </p>
         <p className="font-medium text-slate-700 pt-1">Kapitalisatie &amp; afschrijving (optioneel)</p>
@@ -609,17 +609,17 @@ export const HELP_CHAPTERS = [
           Bij "Soort: Auto" komt daar de <strong>bijtelling/onttrekking</strong> bovenop bij privégebruik van meer
           dan 500 km per jaar: cataloguswaarde en bijtellingspercentage invullen, en per jaar aanvinken of dat
           privégebruik van toepassing was. Anders dan de standaard werknemers-bijtelling wordt hier de bijtelling
-          afgetopt op de werkelijke totale autokosten dat jaar — je onttrekt nooit meer dan er daadwerkelijk aan
+          afgetopt op de werkelijke totale autokosten dat jaar — er wordt nooit meer onttrokken dan er daadwerkelijk aan
           autokosten is geboekt. In het aangiftevoorstel staat, als de aftopping daadwerkelijk iets afknipt, de
           werkelijke (ongeaftopte) bijtelling er tussen haakjes bij ter controle.
         </p>
         <p>
           <strong>Kenteken</strong> is alleen relevant als hetzelfde leasecontract halverwege de looptijd is
           vervangen of geherfinancierd (bijv. een nieuw contract na een tussentijdse aanpassing), terwijl het nog
-          om dezelfde auto/machine gaat. Je legt dat vast als vervolgsegment van hetzelfde contract, met hetzelfde
+          om dezelfde auto/machine gaat. Dat wordt vastgelegd als vervolgsegment van hetzelfde contract, met hetzelfde
           kenteken als het vorige — de app herkent dat en telt de afschrijving en bijtelling dan maar één keer, in
           plaats van dubbel (eenmaal per contract). Bij een afwijkende cataloguswaarde/bijtellingspercentage tussen
-          gekoppelde segmenten verschijnt een niet-blokkerende waarschuwing, zodat je dat zelf kunt controleren.
+          gekoppelde segmenten verschijnt een niet-blokkerende waarschuwing, zodat dat zelf te controleren is.
         </p>
         <p className="font-medium text-slate-700 pt-1">Automatisch samenvoegen van leasebetalingen</p>
         <p>
@@ -640,12 +640,12 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Categorie "Leningen" is altijd 0% BTW — een lening is geen omzet of kost waar BTW op zit. De{" "}
-          <strong>rente</strong> die je over een lening betaalt, is wél aftrekbaar van de winst voor de
+          <strong>rente</strong> die over een lening wordt betaald, is wél aftrekbaar van de winst voor de
           inkomstenbelasting; de <strong>aflossing</strong> van de hoofdsom niet. 
         </p>
         <p>
           Bij "Rentepercentage per lening"
-          kun je per lening de volledige gegevens invullen: leningbedrag (het oorspronkelijk geleende bedrag),
+          zijn per lening de volledige gegevens in te vullen: leningbedrag (het oorspronkelijk geleende bedrag),
           startdatum en rentepercentage per jaar. Zodra die drie bekend zijn, rekent de app voor elke betaling terug
           hoeveel rente was en hoeveel aflossing — startend vanaf het leningbedrag op de startdatum, en steeds het
           nog openstaande bedrag bijwerkend na elke betaling. 
@@ -657,8 +657,8 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           Twee velden zijn optioneel, puur ter controle: <strong>al afgelost tot nu</strong> en{" "}
-          <strong>totale rente al betaald</strong> — vul die in als je dat toevallig al weet. Wijkt de berekening van
-          de app meer dan €25 af van wat je zelf hebt opgegeven, dan waarschuwt de app daarvoor.
+          <strong>totale rente al betaald</strong> — vul die in als ze al bekend zijn. Wijkt de berekening van
+          de app meer dan €25 af van wat zelf is opgegeven, dan waarschuwt de app daarvoor.
         </p>
       </div>
     ),
@@ -671,7 +671,7 @@ export const HELP_CHAPTERS = [
       <p>
         Het dossierprofiel bundelt de basisgegevens: de onderneming (rechtsvorm), de rekeninghouder en de rekeningen die
         zijn geladen of extra zijn opgegeven. "Nog niet opgegeven" telt de vragen die nog open staan. Die vragen komen uit
-        het stappenplan; je kunt het stappenplan daar opnieuw openen om basisvragen aan te passen.
+        het stappenplan; het stappenplan is daar opnieuw te openen om basisvragen aan te passen.
       </p>
     ),
   },
@@ -705,7 +705,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
       <p>
-        Elke keer dat je in de detailtabel een categorie of type corrigeert, onthoudt de app dat voortaan voor
+        Elke keer dat in de detailtabel een categorie of type wordt gecorrigeerd, onthoudt de app dat voortaan voor
         diezelfde tegenpartij — in alle jaren. 
         </p>
         <p>
@@ -759,8 +759,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          Het uitgebreide voorstel per jaar, of voor meerdere jaren tegelijk. Je opent het links bij Acties. Eerst zie je
-          de status van het gekozen jaar en de punten die nog openstaan; daarna kies je "Berekening bekijken" of "Ander
+          Het uitgebreide voorstel per jaar, of voor meerdere jaren tegelijk. Het opent links bij Acties. Eerst staan
+          de status van het gekozen jaar en de punten die nog openstaan; daarna volgt de keuze "Berekening bekijken" of "Ander
           jaar/meerdere jaren kiezen". Het is een <strong>onafhankelijke reconstructie</strong>: de bedragen komen
           uitsluitend uit de bankgegevens en de persoonlijke aannames in het dossier.
         </p>
@@ -775,7 +775,7 @@ export const HELP_CHAPTERS = [
           Die bron staat niet in een gedownload of geprint bestand; daarvoor is het onderbouwingsdocument.
         </p>
         <p>
-          <strong>Uitleg meenemen.</strong> Met dit vinkje voeg je de algemene toelichting als bijlage achteraan toe, samen
+          <strong>Uitleg meenemen.</strong> Met dit vinkje komt de algemene toelichting als bijlage achteraan, samen
           met de verwijzingen ernaar in de tekst. Staat het uit (standaard), dan blijft het document korter en staan ook die
           verwijzingen er niet in.
         </p>
@@ -798,7 +798,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          Eén pagina voor de klant. Je opent hem links bij Acties; bij meerdere jaren kies je eerst het jaar of de jaren
+          Eén pagina voor de klant. Hij opent links bij Acties; bij meerdere jaren eerst het jaar of de jaren kiezen
           (dan staan ze naast elkaar in kolommen). De cijfers zijn dezelfde als op het Overzicht en in de indicatieve
           aangifteberekening; er is geen aparte berekening.
         </p>
@@ -809,7 +809,7 @@ export const HELP_CHAPTERS = [
           geladen bankbestanden, BTW-keuzes) en wat er <em>nog openstaat</em>.
         </p>
         <p>
-          <strong>Wanneer gebruik je hem:</strong> om aan de klant te laten zien waar het dossier staat, zonder alle details.
+          <strong>Wanneer te gebruiken:</strong> om aan de klant te laten zien waar het dossier staat, zonder alle details.
           Bedragen kunnen nog veranderen zolang er open punten staan; dat staat er ook bij.
         </p>
         <p className="text-xs text-slate-400">Indicatief en geen aangifte of fiscaal advies.</p>
@@ -823,8 +823,8 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          Een apart document met de <strong>transacties achter de bedragen</strong> in de indicatieve aangifteberekening. Je
-          opent het links bij Acties; bij meerdere jaren kies je eerst het jaar of de jaren.
+          Een apart document met de <strong>transacties achter de bedragen</strong> in de indicatieve aangifteberekening. Het
+          opent links bij Acties; bij meerdere jaren eerst het jaar of de jaren kiezen.
         </p>
         <p>
           <strong>Hoe is het opgebouwd:</strong> per jaar, per rubriek van de aangifte (bijvoorbeeld Opbrengsten of Overige
@@ -837,8 +837,8 @@ export const HELP_CHAPTERS = [
           kan daarom afwijken van het bedrag in het voorstel; dat is geen fout.
         </p>
         <p>
-          <strong>Wanneer gebruik je het:</strong> als iemand (klant, boekhouder, inspecteur) wil nagaan waar een bedrag
-          vandaan komt. Op het scherm kun je bij het voorstel zelf ook op "ⓘ bron" klikken, maar die bron staat niet in een
+          <strong>Wanneer te gebruiken:</strong> als iemand (klant, boekhouder, inspecteur) wil nagaan waar een bedrag
+          vandaan komt. Op het scherm staat bij het voorstel zelf ook "ⓘ bron", maar die bron staat niet in een
           gedownload of geprint voorstel. Dit onderbouwingsdocument is daarvoor de plek.
         </p>
         <p className="text-xs text-slate-400">Indicatief en geen aangifte of fiscaal advies.</p>
@@ -853,15 +853,15 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2.5">
         <p>
           Het vergrootglas onderin links (of Cmd/Ctrl+K) zoekt in alle transacties. Het boek-icoon opent uitleg bij
-          vakbegrippen; onderstreepte begrippen in de tekst tonen die uitleg als je erover gaat of erop tikt.
+          vakbegrippen; onderstreepte begrippen in de tekst tonen die uitleg bij aanwijzen of aantikken.
         </p>
         <ul className="list-disc pl-4 space-y-1">
           <li><strong>WUO</strong> — winst uit onderneming, vóór persoonlijke belastingen (zie Jaaroverzicht).</li>
           <li><strong>Tekort / Over</strong> — wat er overblijft na privé-uitgaven en de nog te betalen belastingen.</li>
-          <li><strong>Open punt</strong> — iets dat je nog moet beoordelen of invullen; de Dossiercontrole telt ze.</li>
+          <li><strong>Open punt</strong> — iets dat nog moet worden beoordeeld of ingevuld; de Dossiercontrole telt ze.</li>
           <li><strong>Aannames</strong> — fiscale keuzes die niet uit de bank blijken (urencriterium, auto, startersaftrek).</li>
           <li><strong>Indicatief</strong> — een reconstructie uit bankgegevens, geen aangifte en geen advies.</li>
-          <li><strong>Aangifte buiten deze app</strong> — of IB, Zvw en BTW al daadwerkelijk zijn ingediend; dat vink je zelf af.</li>
+          <li><strong>Aangifte buiten deze app</strong> — of IB, Zvw en BTW al daadwerkelijk zijn ingediend; dat wordt zelf afgevinkt.</li>
         </ul>
       </div>
     ),

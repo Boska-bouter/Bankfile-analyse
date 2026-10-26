@@ -6,7 +6,7 @@ import UitlegEenvoudigPrive from "../../content/uitlegEenvoudigPrive.jsx";
 const k = (category, t, s) => Object.freeze({ k: `cat:${category}`, t, s, keuze: Object.freeze({ category, type: "Prive" }) });
 
 export const PRIVE_KEUZES_IN = Object.freeze([
-  k("Loon", "Loon of salaris", "van je werkgever"),
+  k("Loon", "Loon of salaris", "van de werkgever"),
   k("Uitkering", "Uitkering", "bijv. WW, bijstand of WIA"),
   k("Pensioen & AOW", "Pensioen of AOW", "van SVB of pensioenfonds"),
   k("Toeslagen", "Toeslag of kinderbijslag", "van Belastingdienst of SVB"),
@@ -16,7 +16,7 @@ export const PRIVE_KEUZES_IN = Object.freeze([
   k("Dividend & rente", "Dividend of rente", "van een bank of belegging"), // beide-V3R3
   k("Ontvangen schenkingen", "Schenking ontvangen", "bijv. van ouders of familie"), // beide-V3R3
   k("Inkomsten", "Ander inkomen", "bijv. verkoop, huur of een prijs"),
-  k("Interne overboeking", "Van mijn eigen rekening", "geld tussen je eigen rekeningen"),
+  k("Interne overboeking", "Van een eigen rekening", "geld tussen eigen rekeningen"),
 ]);
 
 export const PRIVE_KEUZES_UIT = Object.freeze([
@@ -25,8 +25,8 @@ export const PRIVE_KEUZES_UIT = Object.freeze([
   k("Privé - vrijetijd-uitgaan-vakantie & uit eten", "Vrije tijd", "uit eten, uitjes, vakantie"),
   k("Auto & brandstof", "Vervoer", "tanken, parkeren, garage"),
   k("Overboekingen aan personen", "Aan familie of vrienden", "betaald aan een persoon"),
-  k("Interne overboeking: privé sparen", "Sparen", "naar je eigen spaarrekening"),
-  k("Interne overboeking", "Naar mijn eigen rekening", "geld tussen je eigen rekeningen"),
+  k("Interne overboeking: privé sparen", "Sparen", "naar een eigen spaarrekening"),
+  k("Interne overboeking", "Naar een eigen rekening", "geld tussen eigen rekeningen"),
   k("Privé: overig", "Overige privé-uitgaven", "past nergens anders bij"),
 ]);
 
@@ -50,10 +50,10 @@ export const PRIVE_EENVOUDIG = Object.freeze({
   keuzes: priveKeuzes,
   voorstel: priveVoorstel,
   soort: "Prive",
-  vraagKleinePin: "Waaraan gaf je dit uit?",
-  bestandenLeeg: "Er zijn nog geen bankbestanden. Voeg de afschriften van je betaalrekening toe (en die van je partner, als je samen een overzicht wilt); de app leest ze daarna in.",
-  onzeker: "je budgetoverzicht kan daardoor nog verschuiven",
+  vraagKleinePin: "Waaraan is dit uitgegeven?",
+  bestandenLeeg: "Er zijn nog geen bankbestanden. Voeg de afschriften van de betaalrekening toe (en die van de partner, voor een gezamenlijk overzicht); de app leest ze daarna in.",
+  onzeker: "het budgetoverzicht kan daardoor nog verschuiven",
   uitleg: UitlegEenvoudigPrive,
-  eigenRekeningen: "Heb je nog een spaarrekening, een rekening van je partner of een gezamenlijke rekening? Voeg het bankbestand toe met de knop hierboven. Wil je dat niet, geef dan alleen het rekeningnummer op: geld van en naar die rekening telt dan als overboeking tussen je eigen rekeningen, niet als inkomen of uitgave.",
-  uitgebreidTip: "Fijner werk (één boeking apart, vaste lasten, vermogen) doe je in",
+  eigenRekeningen: "Is er nog een spaarrekening, een rekening van de partner of een gezamenlijke rekening? Voeg het bankbestand toe met de knop hierboven, of geef alleen het rekeningnummer op: geld van en naar die rekening telt dan als overboeking tussen eigen rekeningen, niet als inkomen of uitgave.",
+  uitgebreidTip: "Fijner werk (één boeking apart, vaste lasten, vermogen) kan in",
 });

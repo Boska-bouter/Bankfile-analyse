@@ -433,7 +433,7 @@ function buildYearSectionBv(
   }</p>` : ""}
   ${dividendDitJaar > 0 ? `<p class="toelichting">${
     heeftHolding
-      ? `Je gaf aan dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze app niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
+      ? `Opgegeven is dat er een holding boven deze BV staat: een winstuitkering van deze werkmaatschappij naar de holding valt onder de deelnemingsvrijstelling (geen box 2 hierover) — box 2 speelt pas als de holding op haar beurt aan de DGA privé uitkeert, wat deze app niet ziet (die bankmutatie staat niet op dit dossier). Het hieronder getoonde bedrag (<strong>${eur(box2Estimate.belasting)}</strong>) gaat dus uit van een rechtstreekse uitkering aan de DGA privé — controleer of dat hier daadwerkelijk is gebeurd.`
       : `Geschatte box 2-belasting van de DGA over deze dividenduitkering: <strong>${eur(box2Estimate.belasting)}</strong>${box2Estimate.geëxtrapoleerd ? " (box 2-tarief van dit jaar nog niet bekend, benaderd met het dichtstbijzijnde bekende tarief)" : ""} — geen belastingadvies.`
   }</p>` : ""}`;
 
@@ -471,7 +471,7 @@ function buildYearSectionBv(
   <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>
   ${mogelijkeKia > 0 ? `
   <p><strong>* Resultaat vóór Vpb blijft ${eur(summary.winst)} — de KIA is een aftrekpost op de Vpb-grondslag, geen correctie op het bedrijfsresultaat zelf. Vpb vóór mogelijke KIA: ${eur(vpbEstimate.belasting)}. Vpb ná mogelijke KIA: ${eur(vpbEstimateNaKia.belasting)}.</strong></p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat je de KIA toepast.</p>
+  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat de KIA wordt toegepast.</p>
   ` : ""}
   ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
 
@@ -743,13 +743,13 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   <div class="bv-melding">
     <strong>De BV-tak van deze app is nog in ontwikkeling.</strong> Deze reconstructie neemt geen holdingstructuur,
     fiscale eenheid of meerdere aandeelhouders mee, en de balans is beperkt tot rekening-courant en een indicatief
-    eigen-vermogen-verloop (geen volledige jaarrekening). Gebruik dit als hulpmiddel, niet als vervanging van je
+    eigen-vermogen-verloop (geen volledige jaarrekening). Gebruik dit als hulpmiddel, niet als vervanging van een
     boekhouder of accountant.
   </div>
   ${overzichtJarenHtml}
   ${sections}
   <div style="page-break-before: always;"></div>
-  <h2>Lees dit voordat je de cijfers gebruikt</h2>
+  <h2>Lees dit vóór het gebruik van de cijfers</h2>
   <div class="controledoel">
     <strong>Waar is dit voor?</strong> Dit overzicht is een <strong>onafhankelijke reconstructie</strong>: het laat
     zien wat er volgens uitsluitend de bankgegevens van de werkmaatschappij aan resultaat, Vpb en balansmutaties
@@ -764,16 +764,16 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
     <ul>
       <li>Contante ontvangsten en uitgaven</li>
       <li>Openstaande facturen — debiteuren en crediteuren die aan het einde van het jaar nog niet via de bank zijn verwerkt</li>
-      <li>Voorraad — inkoop- en verkoopwaarde van onverkochte goederen${heeftVoorraad ? " (je gaf aan dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""}</li>
-      <li>${heeftHolding ? "De holdingstructuur die je hebt aangegeven — bankmutaties van de holding zelf (kapitaalstorting bij oprichting, doorbetaalde dividenden, eventuele activa) worden hier niet meegenomen, alleen die van de werkmaatschappij hierboven" : "Een eventuele holdingstructuur — bankmutaties van een holding boven deze werkmaatschappij worden hier niet meegenomen"}</li>
+      <li>Voorraad — inkoop- en verkoopwaarde van onverkochte goederen${heeftVoorraad ? " (opgegeven is dat er voorraad is — dat vraagt een eigen registratie, dit overzicht neemt dat niet mee)" : ""}</li>
+      <li>${heeftHolding ? "De opgegeven holdingstructuur — bankmutaties van de holding zelf (kapitaalstorting bij oprichting, doorbetaalde dividenden, eventuele activa) worden hier niet meegenomen, alleen die van de werkmaatschappij hierboven" : "Een eventuele holdingstructuur — bankmutaties van een holding boven deze werkmaatschappij worden hier niet meegenomen"}</li>
       <li>Voorzieningen, langlopende schulden en overige balansposten van een volledige jaarrekening</li>
       <li>Correcties, memoriaalboekingen of suppleties uit een eerdere administratie</li>
     </ul>
   </div>
   <div class="disclaimer">
-    Dit is een <strong>voorstel</strong>, samengesteld uit je eigen bankgegevens en categorie-indeling in deze app —
-    geen officiële aangifte, geen jaarrekening en geen belastingadvies. Controleer de cijfers altijd zelf of met je
-    boekhouder/accountant voordat je aangifte doet.
+    Dit is een <strong>voorstel</strong>, samengesteld uit de eigen bankgegevens en categorie-indeling in deze app —
+    geen officiële aangifte, geen jaarrekening en geen belastingadvies. Controleer de cijfers altijd zelf of met een
+    boekhouder/accountant voordat er aangifte wordt gedaan.
   </div>
   ${opties.aandachtspuntenBlok || ""}
   <!--UITLEG-START-->

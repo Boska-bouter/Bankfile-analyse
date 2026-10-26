@@ -81,7 +81,7 @@ export default function BtwRatesPanel({ classified = [], activeYear, categoryBtw
                 </button>
               </div>
               <p className="text-xs text-slate-400 mb-4">
-                Werk je met sommige klanten met BTW-verlegd en factureer je anderen gewoon met 21%? Dit is dan alleen
+                Wordt er voor sommige klanten met BTW-verlegd gewerkt en voor anderen gewoon met 21% gefactureerd? Dit is dan alleen
                 de standaardwaarde — per klant is dit te verfijnen bij "Zakelijke tegenpartijen (inkomsten)".
               </p>
               <p className="text-xs text-slate-400 mb-2">

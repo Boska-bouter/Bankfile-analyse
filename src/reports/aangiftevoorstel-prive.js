@@ -3,7 +3,7 @@
 // verschil (terug of bijbetalen). Zelfde cijfers als het Overzicht (calc/prive, tax/prive).
 import { esc, bedrag, rij, document } from "./prive/opmaak.js";
 
-const naamVan = (rol, namen) => (rol === "partner" ? namen?.partner || "Partner" : namen?.ondernemer || "Jij");
+const naamVan = (rol, namen) => (rol === "partner" ? namen?.partner || "Partner" : namen?.ondernemer || "Hoofdpersoon");
 
 function persoonTabel(p, namen, metPartner) {
   const regels = [

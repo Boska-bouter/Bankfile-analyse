@@ -34,7 +34,7 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
   const personen = [{ rol: "zelf", ...zelf, aow: isAow(a.inkomen), loonheffing: ingehouden("loonheffing", "brutoInkomen", zelf), brutoOpgegeven: lh("brutoInkomen") }];
   if (metPartner) {
     personen.push({ rol: "partner", ...partner, aow: isAow(a.inkomenPartner), loonheffing: ingehouden("loonheffingPartner", "brutoInkomenPartner", partner), brutoOpgegeven: lh("brutoInkomenPartner") });
-    if (!a.rekeningVan || Object.keys(a.rekeningVan).length === 0) aannames.push("Alle inkomsten zijn aan jou toegerekend: nog niet opgegeven welke rekening van je partner is.");
+    if (!a.rekeningVan || Object.keys(a.rekeningVan).length === 0) aannames.push("Alle inkomsten zijn aan de hoofdpersoon toegerekend: nog niet opgegeven welke rekening van de partner is.");
   }
   // beide-V2R8 — inkomen op de bank is netto: de belasting is al ingehouden. Alleen wat zonder inhouding binnenkwam
   // (wizardvraag), telt als bruto inkomen waarover nog belasting betaald moet worden (bij jezelf).
@@ -44,10 +44,10 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
   // beide-V2R9 — ook voor de partner.
   if (personen[1]) {
     personen[1].zonderInhouding = zonderVan("nettoIngehoudenPartner", "zonderInhoudingPartner");
-    if (a.nettoIngehoudenPartner === "nee" && !personen[1].zonderInhouding) aannames.push("Inkomen van je partner zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
+    if (a.nettoIngehoudenPartner === "nee" && !personen[1].zonderInhouding) aannames.push("Inkomen van de partner zonder ingehouden belasting: het bedrag voor dit jaar is nog niet ingevuld.");
   }
   if (personen.some((p) => p.loonheffing == null && p.loon + p.uitkering + p.pensioen > 0)) {
-    aannames.push("Je inkomen op de bank is netto: de belasting is al ingehouden. Wil je het controleren, vul dan bij Basisvragen het bruto inkomen van je jaaropgave in.");
+    aannames.push("Het inkomen op de bank is netto: de belasting is al ingehouden. Ter controle: vul bij Basisvragen het bruto inkomen van de jaaropgave in.");
   }
 
   const overig = Math.round(Math.max(0, -(budget?.som?.("Inkomsten") || 0)));
@@ -60,7 +60,7 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
     const bank = a.wonen === "koop" ? Math.max(0, budget?.som?.("Hypotheek") || 0) : 0;
     woning = { woz: woz || 0, rente: opgegeven ?? bank, vorm: a.hypotheekVorm || null, startJaar: getal(a.hypotheekStart) };
     if (!woz) aannames.push("WOZ-waarde onbekend: het eigenwoningforfait is niet meegeteld.");
-    if (a.wonen === "koop" && opgegeven == null) aannames.push("Hypotheekrente = alles wat naar de hypotheek ging, dus mogelijk ook aflossing. Vul de rente van je jaaropgave in.");
+    if (a.wonen === "koop" && opgegeven == null) aannames.push("Hypotheekrente = alles wat naar de hypotheek ging, dus mogelijk ook aflossing. Vul de rente van de jaaropgave in.");
   }
 
   const aftrek = {

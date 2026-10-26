@@ -98,7 +98,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
       </button>
       {open && (
         <div className="px-4 pb-4 space-y-4 text-xs text-slate-700">
-          <p className="text-slate-500">Dit zijn suggesties, geen verplichte stappen. "Klopt zo" en "Verdeling laten zoals hij is" laten alles ongewijzigd; de app onthoudt alleen dat je het hebt bekeken.</p>
+          <p className="text-slate-500">Dit zijn suggesties, geen verplichte stappen. "Klopt zo" en "Verdeling laten zoals hij is" laten alles ongewijzigd; de app onthoudt alleen dat het is bekeken.</p>
 
           <div>
             <h4 className="font-semibold text-slate-800 mb-1.5">Dekking per rekening</h4>
@@ -129,7 +129,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
                 {data.eenzijdig.map((e) => (
                   <p key={e.tekst + e.alleen}><strong>{e.tekst}</strong>: alleen {e.alleen} geladen.</p>
                 ))}
-                <p className="mt-1 text-sky-800">In die maanden kan de controle zakelijk ↔ privé overboekingen niet koppelen; ze tellen daar niet als open punt. De indeling in categorieën werkt gewoon. Heb je de afschriften van de andere rekening, laad ze dan ook.</p>
+                <p className="mt-1 text-sky-800">In die maanden kan de controle zakelijk ↔ privé overboekingen niet koppelen; ze tellen daar niet als open punt. De indeling in categorieën werkt gewoon. Zijn de afschriften van de andere rekening er, laad ze dan ook.</p>
               </div>
             )}
             <p className="text-xs text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
@@ -153,7 +153,7 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
           <div className={sprongen.length > 0 ? "rounded-lg border border-slate-200 bg-slate-50 p-3" : ""}>
             <h4 className="font-semibold text-slate-800 mb-1.5">{gatenAlleen ? "Inzicht: mogelijk ontbrekende vaste betalingen" : "Inzicht: grote verschillen tussen jaren (zakelijke kosten)"}</h4>
             {sprongen.length === 0 ? <p className="text-emerald-700">{gatenAlleen ? "Geen vaste betalingen gevonden die in een jaar ontbreken." : "Geen opvallende sprongen tussen volledige jaren."}</p> : (
-              <p className="text-slate-500 mb-2">Alleen ter info — verschillen tussen jaren zijn bij een eigen onderneming normaal (zakelijk en privé lopen vaak door elkaar). Je hoeft hier niets mee.</p>
+              <p className="text-slate-500 mb-2">Alleen ter info — verschillen tussen jaren zijn bij een eigen onderneming normaal (zakelijk en privé lopen vaak door elkaar). Hier hoeft niets mee te gebeuren.</p>
             )}
             {sprongen.map((s) => (
               <div key={s.key} className="rounded-lg bg-white border border-slate-100 p-3 mb-2 flex flex-wrap items-center gap-2">

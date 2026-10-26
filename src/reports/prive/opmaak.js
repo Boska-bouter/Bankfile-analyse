@@ -32,6 +32,6 @@ export function document({ titel, sub, inhoud }) {
 <h1>${esc(titel)}</h1>
 <div class="sub">${sub}</div>
 ${inhoud}
-<div class="disc"><strong>Let op:</strong> dit is een indicatie op basis van je bankgegevens en je antwoorden in dit dossier. Het is geen aangifte en geen fiscaal advies. De aangifte inkomstenbelasting doe je zelf bij de Belastingdienst; de uitkomst daar kan afwijken. Toeslagen worden niet berekend.</div>
+<div class="disc"><strong>Let op:</strong> dit is een indicatie op basis van de bankgegevens en de antwoorden in dit dossier. Het is geen aangifte en geen fiscaal advies. De aangifte inkomstenbelasting zelf gaat via de Belastingdienst; de uitkomst daar kan afwijken. Toeslagen worden niet berekend.</div>
 </body></html>`;
 }

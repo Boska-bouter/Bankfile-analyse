@@ -80,7 +80,7 @@ export default function UncertainTransactionsModal({
         {tx.transferLocked ? (
           <span
             className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-xs font-medium cursor-help"
-            title="Overboeking tussen je eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."
+            title="Overboeking tussen eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."
           >
             <Lock className="h-3 w-3 shrink-0" /> {displayCategory(tx.category)}
           </span>
