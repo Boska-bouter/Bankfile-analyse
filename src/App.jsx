@@ -165,6 +165,7 @@ import ActivaPanel from "./components/loans/ActivaPanel.jsx";
 import PersoonlijkeAannamesPanel from "./components/overview/PersoonlijkeAannamesPanel.jsx";
 import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx";
 import { abonnementRegels, aflopendeAbonnementen } from "./content/abonnement.js";
+import HandleidingVraag from "./components/shared/HandleidingVraag.jsx";
 import CategoryPercentagePanel from "./components/overview/CategoryPercentagePanel.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear, computeAfschrijvingPerJaar, computeInvesteringenForYear } from "./tax/activa.js";
@@ -331,7 +332,32 @@ export default function App() {
   // beide-V1R2 — eerst zakelijk of privé (zie modus/useDossierSoort.jsx), daarna Eenvoudig of Uitgebreid.
   const startNieuwDossierWizard = () => dossierSoortKeuze.startMetSoort((s) =>
     (rechtVoorSoort(rechtenPerSoort, s, "uitgebreid", magUitgebreidAccount) ? setModusKeuzeOpen(true) : kiesModus("eenvoudig")));
-  const kiesModus = (m) => { setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht"); setManualWizardOpen(true); };
+  // beide-V7R6 — vóór het eerste dossier eerst vragen of de handleiding gelezen moet worden (HandleidingVraag.jsx).
+  const [handleidingVraag, setHandleidingVraag] = useState(null); // null | "eenvoudig" | "uitgebreid"
+  const [uitlegVerzoek, setUitlegVerzoek] = useState(0);
+  const [wizardNaHelp, setWizardNaHelp] = useState(false);
+  const kiesModus = (m) => {
+    setModusKeuzeOpen(false); setWeergave(m); setActiveTab("overzicht");
+    const sleutel = `bankoverzicht.handleidingGevraagd${ingelogdAls ? `:${ingelogdAls}` : ""}`;
+    let gevraagd = true;
+    try {
+      gevraagd = !!localStorage.getItem(sleutel);
+      if (!gevraagd) {
+        localStorage.setItem(sleutel, "1");
+        // De uitleg van Eenvoudig opent dan alleen nog als er "Ja" wordt gekozen, niet ook vanzelf.
+        localStorage.setItem(`bankoverzicht.uitlegEenvoudigGezien${ingelogdAls ? `:${ingelogdAls}` : ""}`, "1");
+      }
+    } catch { /* geen opslag: niet vragen */ }
+    if (gevraagd) setManualWizardOpen(true);
+    else setHandleidingVraag(m);
+  };
+  const handleidingJa = () => {
+    const m = handleidingVraag;
+    setHandleidingVraag(null);
+    if (m === "eenvoudig") { setUitlegVerzoek((n) => n + 1); setManualWizardOpen(true); } // de wizard wacht tot de uitleg dicht is
+    else { setWizardNaHelp(true); setShowHelp(true); }
+  };
+  const handleidingNee = () => { setHandleidingVraag(null); setManualWizardOpen(true); };
   // Wizardvraag: zakelijk pand en/of werkruimte in de eigen woning. Alleen een bevestigend antwoord zet een soort (zakelijk pand =
   // zakelijke huisvestingskosten, dus geen verandering in de berekening); "nee/nee" legt alleen vast dat het gevraagd is.
   // release33V4 — het wizard-antwoord (zakelijk pand? werkruimte in de woning?) wordt de standaard voor álle jaren,
@@ -4100,7 +4126,7 @@ export default function App() {
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
-            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen}
+            toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen} uitlegVerzoek={uitlegVerzoek}
             onToegangAanvragen={startAanvraagUitgebreid}
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
@@ -4258,7 +4284,8 @@ export default function App() {
           </div>
         </div>
 
-        {showHelp && <HelpPanel {...helpVoorSoort(modus.soort)} onClose={() => setShowHelp(false)} />}
+        {showHelp && <HelpPanel {...helpVoorSoort(modus.soort)} onClose={() => { setShowHelp(false); if (wizardNaHelp) { setWizardNaHelp(false); setManualWizardOpen(true); } }} />}
+        {handleidingVraag && <HandleidingVraag modus={handleidingVraag} onJa={handleidingJa} onNee={handleidingNee} />}
 
         {helpPopupChapter && <HelpPopupModal chapterKey={helpPopupChapter} chapters={helpVoorSoort(modus.soort).chapters} onClose={() => setHelpPopupChapter(null)} />}
 

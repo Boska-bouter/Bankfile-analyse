@@ -20,9 +20,9 @@ const planNaam = (soort, plan) => `${SOORT[soort] || SOORT.zakelijk} · ${PLAN[p
 // Wat iemand binnen één soort heeft, kort ("Uitgebreid + bankkoppeling"), of null.
 const niveauTekst = (x) => (x?.uitgebreid ? (x.koppelen ? "Uitgebreid + bankkoppeling" : "Uitgebreid") : x?.eenvoudig ? "Eenvoudig" : null);
 const verlopenOp = (x, vandaag) => x?.geldigTot && vandaag && x.geldigTot < vandaag;
-// beide-V6R8 — verloopt binnen 30 dagen (nog niet verlopen).
+// beide-V6R8 — verloopt binnenkort (nog niet verlopen). beide-V7R6 — binnen 10 dagen, gelijk aan de herinneringsmail: een gratis abonnement loopt maar 30 dagen.
 const plusDagen = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const bijnaVerlopen = (x, vandaag) => !!(x?.eenvoudig && x.geldigTot && vandaag && x.geldigTot >= vandaag && x.geldigTot <= plusDagen(vandaag, 30));
+const bijnaVerlopen = (x, vandaag) => !!(x?.eenvoudig && x.geldigTot && vandaag && x.geldigTot >= vandaag && x.geldigTot <= plusDagen(vandaag, 10));
 const NIVEAU_NAAM = ["geen toegang", "Eenvoudig", "Uitgebreid", "Uitgebreid + bankkoppeling"];
 const niveauVan = (x) => (x?.uitgebreid ? (x.koppelen ? 3 : 2) : x?.eenvoudig ? 1 : 0);
 // Rij uit een oudere Worker (zonder soorten) als zakelijk lezen.
@@ -43,7 +43,7 @@ async function api(pad, body) {
 const PER_PAGINA = 50;
 const FILTERS = [
   ["alle", "Alle abonnementen"], ["eenvoudig", "Alleen Eenvoudig"], ["uitgebreid", "Uitgebreid (zonder koppeling)"],
-  ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 30 dagen"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
+  ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 10 dagen"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
 ];
 // beide-V1R0 — filter op soort gebruik (kolom rechten.gebruik).
 const SOORT_FILTERS = [["alle", "Zakelijk en privé"], ["zakelijk", "Zakelijk"], ["prive", "Privé"], ["beide", "Beide"]];

@@ -65,7 +65,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, uitlegVerzoek = 0, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
   teksten = null, uitkomst = null, // beide-V1R8 — privédossier: andere keuzes/teksten (modus/prive/eenvoudig.js) en eigen uitkomst
   extraGegevens = null, // beide-V2R2 — privédossier: eigen rekeningen (spaarrekening) opgeven in stap 1
 }) {
@@ -86,6 +86,8 @@ export default function EenvoudigeApp({
   // nieuw-V7R0 — App laat de wizard pas zien als deze uitleg dicht is (anders stond de wizard eroverheen).
   useEffect(() => { onUitlegZichtbaar?.(!!uitleg); }, [uitleg]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => onUitlegZichtbaar?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // beide-V7R6 — App vraagt de uitleg te openen (antwoord "Ja" op HandleidingVraag).
+  useEffect(() => { if (uitlegVerzoek) setUitleg("eerste"); }, [uitlegVerzoek]);
   const sluitUitleg = () => { try { localStorage.setItem(uitlegSleutel, "1"); } catch { /* geen opslag */ } setUitleg(null); };
   const [toonBoekingen, setToonBoekingen] = useState(false);
   // nieuw-V1R03 — geen vaste volgorde meer: je begint bij Nakijken als er nog vragen zijn, anders direct bij de
