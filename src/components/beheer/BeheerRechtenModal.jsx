@@ -60,7 +60,7 @@ function SoortLabel({ soort }) {
   const kleur = soort === "prive" ? "bg-violet-100 text-violet-800" : soort === "beide" ? "bg-sky-100 text-sky-800" : "bg-teal-100 text-teal-800";
   return <span className={`mr-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold align-middle ${kleur}`}>{tekst}</span>;
 }
-const zoekTekst = (r) => `${r.email} ${r.naam || ""} ${r.notitie || ""} ${r.reden || ""}`.toLowerCase();
+const zoekTekst = (r) => `${r.email} ${r.naam || ""} ${r.organisatie || ""} ${r.notitie || ""} ${r.reden || ""}`.toLowerCase();
 
 function Bladeren({ pagina, totaal, onPagina }) {
   const paginas = Math.max(1, Math.ceil(totaal / PER_PAGINA));
@@ -311,6 +311,12 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                       <p className="font-medium text-slate-800 break-all"><SoortLabel soort={r.aanvraagGebruik || "zakelijk"} />{r.naam ? `${r.naam} · ` : ""}{r.email}</p>
                       <p className="text-xs text-slate-600">vraagt <b>{planNaam(r.aanvraagGebruik, r.aanvraag)}</b>{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}
                         {["zakelijk", "prive"].map((s) => niveauTekst(soortVan(r, s)) && ` · heeft nu ${SOORT[s]}: ${niveauTekst(soortVan(r, s))}`).filter(Boolean).join("")}</p>
+                      {(r.telefoon || r.organisatie) && (
+                        <p className="mt-1 text-sm text-slate-700">
+                          {r.organisatie ? <>Organisatie: <b>{r.organisatie}</b>{r.telefoon ? " · " : ""}</> : null}
+                          {r.telefoon ? <>Telefoon: <a href={`tel:${r.telefoon.replace(/[^\d+]/g, "")}`} className="font-semibold text-teal-800 underline">{r.telefoon}</a> <span className="text-xs text-slate-500">(wordt gewist na goedkeuren of afwijzen)</span></> : null}
+                        </p>
+                      )}
                       <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{r.reden ? `Reden: ${r.reden}` : "Geen reden opgegeven"}</p>
                     </div>
                     <button type="button" disabled={bezig} onClick={() => beslis(r.email, "goedkeuren")} className={`${KNOP_PRIMAIR} disabled:opacity-50`}>Goedkeuren</button>

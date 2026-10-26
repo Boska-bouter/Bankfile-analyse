@@ -42,7 +42,24 @@ const EXTRA_KOLOMMEN = [
   ["prive_uitgebreid", "INTEGER NOT NULL DEFAULT 0"],
   ["prive_koppelen", "INTEGER NOT NULL DEFAULT 0"],
   ["prive_geldig_tot", "TEXT"],
+  // beide-V7R1 — telefoonnummer (verplicht bij aanmelden, alleen om te controleren of de aanvraag echt is; wordt gewist
+  // bij goedkeuren of afwijzen, en na TELEFOON_DAGEN bij een aanvraag die blijft liggen) en organisatie (optioneel).
+  ["telefoon", "TEXT"],
+  ["organisatie", "TEXT"],
 ];
+export const TELEFOON_DAGEN = 30;
+// Telefoonnummers wissen die niet meer nodig zijn: geen open aanvraag meer, of een aanvraag ouder dan TELEFOON_DAGEN.
+export async function wisOudeTelefoons(db, nu = Date.now()) {
+  const grens = new Date(nu - TELEFOON_DAGEN * 86400000).toISOString();
+  await db.prepare("UPDATE rechten SET telefoon = NULL WHERE telefoon IS NOT NULL AND (aanvraag IS NULL OR aangevraagd < ?)").bind(grens).run();
+}
+// Nederlands of buitenlands nummer: cijfers, spaties, streepjes, haakjes en een + vooraan; 10 tot 15 cijfers.
+export function schoonTelefoon(v) {
+  const t = String(v ?? "").trim().slice(0, 30);
+  if (!/^\+?[\d\s\-()]+$/.test(t)) return null;
+  const cijfers = t.replace(/\D/g, "");
+  return cijfers.length >= 10 && cijfers.length <= 15 ? t.replace(/\s+/g, " ") : null;
+}
 
 // beide-V1R0 — de twee soorten gebruik en de kolommen per soort.
 export const GEBRUIK = { zakelijk: "Zakelijk", prive: "Privé" };
@@ -61,14 +78,14 @@ const werkGebruikBij = (db, email) => db.prepare(`UPDATE rechten SET gebruik = $
 // beide-V1R0 — per soort gebruik.
 export const PLAN_UITLEG = {
   zakelijk: {
-    eenvoudig: "in vier stappen je bankbestanden indelen en een indicatie krijgen van je btw en inkomstenbelasting.",
-    uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van je inkomsten en uitgaven.",
-    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
+    eenvoudig: "in vier stappen de bankbestanden indelen en een indicatie krijgen van de btw en inkomstenbelasting.",
+    uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van de inkomsten en uitgaven.",
+    koppelen: "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
   },
   prive: {
-    eenvoudig: "in vier stappen je bankbestanden indelen en een overzicht krijgen van je inkomsten en uitgaven per maand.",
-    uitgebreid: "alle tabbladen: budget per maand en categorie, vaste lasten, sparen en een indicatie van je inkomstenbelasting (ook eigen woning en box 3).",
-    koppelen: "alles van Uitgebreid, en je transacties rechtstreeks bij je bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
+    eenvoudig: "in vier stappen de bankbestanden indelen en een overzicht krijgen van de inkomsten en uitgaven per maand.",
+    uitgebreid: "alle tabbladen: budget per maand en categorie, vaste lasten, sparen en een indicatie van de inkomstenbelasting (ook eigen woning en box 3).",
+    koppelen: "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
   },
 };
 export const PLANNEN = {
@@ -171,6 +188,7 @@ export const rijNaarRecht = (r) => {
     eenvoudig: zakelijk.eenvoudig || prive.eenvoudig, uitgebreid: zakelijk.uitgebreid || prive.uitgebreid, koppelen: zakelijk.koppelen || prive.koppelen,
     geldigTot: zakelijk.geldigTot || null, gebruik: r.gebruik || null, aanvraagGebruik: r.aanvraag ? (r.aanvraag_gebruik || "zakelijk") : null,
     bron: r.bron, notitie: r.notitie || "", gewijzigd: r.gewijzigd, gewijzigdDoor: r.gewijzigd_door || null,
+    telefoon: r.telefoon || null, organisatie: r.organisatie || "",
     aanvraag: r.aanvraag || null, aangevraagd: r.aangevraagd || null, naam: r.naam || "", reden: r.reden || "",
   };
 };
@@ -279,6 +297,10 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const achternaam = schoon(body?.achternaam, 80);
   if (!voornaam || !achternaam) return json({ ok: false, fout: "Vul je voornaam en achternaam in." }, 400);
   const naam = `${voornaam} ${achternaam}`;
+  // beide-V7R1 — telefoonnummer verplicht (om te bellen of de aanvrager echt is), organisatie optioneel.
+  const telefoon = schoonTelefoon(body?.telefoon);
+  if (!telefoon) return json({ ok: false, fout: "Vul een telefoonnummer in waarop je bereikbaar bent (10 tot 15 cijfers)." }, 400);
+  const organisatie = schoon(body?.organisatie, 120);
   const reden = schoonTekst(body?.reden, 1000);
   if (reden.length < MIN_REDEN) return json({ ok: false, fout: `Geef aan waarom je toegang vraagt en waarvoor je de app wilt gebruiken (minimaal ${MIN_REDEN} tekens).` }, 400);
   // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
@@ -296,10 +318,10 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
     await zorgVoorTabel(env.DB);
     const tijd = new Date().toISOString();
     await env.DB.prepare(
-      `INSERT INTO rechten (email, gewijzigd, gewijzigd_door, bron, aanvraag, aanvraag_gebruik, aangevraagd, naam, reden)
-       VALUES (?1, ?2, ?1, 'aanmelding', ?3, ?6, ?2, ?4, ?5)
-       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aanvraag_gebruik = ?6, aangevraagd = ?2, naam = ?4, reden = ?5`
-    ).bind(e, tijd, plan, naam, reden, gebruik).run();
+      `INSERT INTO rechten (email, gewijzigd, gewijzigd_door, bron, aanvraag, aanvraag_gebruik, aangevraagd, naam, reden, telefoon, organisatie)
+       VALUES (?1, ?2, ?1, 'aanmelding', ?3, ?6, ?2, ?4, ?5, ?7, ?8)
+       ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aanvraag_gebruik = ?6, aangevraagd = ?2, naam = ?4, reden = ?5, telefoon = ?7, organisatie = ?8`
+    ).bind(e, tijd, plan, naam, reden, gebruik, telefoon, organisatie || null).run();
     await werkGebruikBij(env.DB, e);
     slotCache.delete(e);
   } catch (err) {
@@ -308,7 +330,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const heeftAl = Object.keys(GEBRUIK).filter((s) => s !== gebruik && niveauVan(nu.soorten?.[s]) > 0 && toegangVerplicht(env))
     .map((s) => `Heeft al: ${planNaam(s, ["", "eenvoudig", "uitgebreid", "koppelen"][niveauVan(nu.soorten[s])])}.`);
   const mail = meldBeheerder(env, `Nieuwe aanmelding: ${planNaam(gebruik, plan)}`,
-    [`${naam || "(geen naam)"} <${e}> vraagt ${PLANNEN[plan]} aan voor ${gebruik === "prive" ? "privégebruik" : "zakelijk gebruik"} (${GEBRUIK_UITLEG[gebruik]}).`,
+    [`${naam || "(geen naam)"}${organisatie ? ` (${organisatie})` : ""} <${e}> vraagt ${PLANNEN[plan]} aan voor ${gebruik === "prive" ? "privégebruik" : "zakelijk gebruik"} (${GEBRUIK_UITLEG[gebruik]}).`,
       ...heeftAl, `Reden:\n${reden}`, "Keur de aanvraag goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk)."].join("\n\n"));
   // nieuw-V5R2 — bevestiging aan de aanvrager, met een korte uitleg van de drie abonnementen.
   const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
@@ -334,6 +356,7 @@ export async function beheerRoute(request, env, url, email) {
   try {
     await zorgVoorTabel(env.DB);
     if (url.pathname === "/api/beheer/rechten" && request.method === "GET") {
+      await wisOudeTelefoons(env.DB);
       const { results } = await env.DB.prepare("SELECT * FROM rechten ORDER BY aanvraag IS NULL, aangevraagd DESC, email").all();
       return json({ ok: true, vandaag: vandaag(), slot: toegangVerplicht(env), rechten: (results || []).map(rijNaarRecht) });
     }
@@ -386,7 +409,7 @@ export async function beheerRoute(request, env, url, email) {
       const n = NIVEAU[plan];
       await env.DB.prepare(
         `UPDATE rechten SET ${k.eenvoudig} = 1, ${k.uitgebreid} = MAX(${k.uitgebreid}, ?2), ${k.koppelen} = MAX(${k.koppelen}, ?3),
-         aanvraag = NULL, aanvraag_gebruik = NULL, gewijzigd = ?4, gewijzigd_door = ?5 WHERE email = ?1`
+         aanvraag = NULL, aanvraag_gebruik = NULL, telefoon = NULL, gewijzigd = ?4, gewijzigd_door = ?5 WHERE email = ?1`
       ).bind(doel, n >= 2 ? 1 : 0, n >= 3 ? 1 : 0, tijd, door).run();
       await werkGebruikBij(env.DB, doel);
       // nieuw-V5R7 — met eigen inlog zit er een inloglink in de mail: de knop logt meteen in en biedt dan de passkey aan.
@@ -403,7 +426,7 @@ export async function beheerRoute(request, env, url, email) {
     }
     if (url.pathname === "/api/beheer/afwijzen" && request.method === "POST") {
       const r = await env.DB.prepare("SELECT aanvraag, aanvraag_gebruik, naam FROM rechten WHERE email = ?").bind(doel).first();
-      await env.DB.prepare("UPDATE rechten SET aanvraag = NULL, aanvraag_gebruik = NULL, reden = NULL, gewijzigd = ?2, gewijzigd_door = ?3 WHERE email = ?1").bind(doel, tijd, door).run();
+      await env.DB.prepare("UPDATE rechten SET aanvraag = NULL, aanvraag_gebruik = NULL, reden = NULL, telefoon = NULL, gewijzigd = ?2, gewijzigd_door = ?3 WHERE email = ?1").bind(doel, tijd, door).run();
       await werkGebruikBij(env.DB, doel);
       // Een rij die alleen uit een aanvraag bestond, heeft geen nut meer.
       await env.DB.prepare(`DELETE FROM rechten WHERE email = ?1 AND eenvoudig = 0 AND uitgebreid = 0 AND koppelen = 0

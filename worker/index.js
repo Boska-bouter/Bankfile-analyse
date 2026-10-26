@@ -9,7 +9,7 @@ import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
 import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
-import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute } from "./rechten.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -28,6 +28,7 @@ export default {
   // beide-V6R8 — geplande taken (alleen met een Cron Trigger in wrangler.jsonc): herinnering tarieven bijwerken.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(tarievenHerinneringMail(env));
+    if (env.DB) ctx.waitUntil(wisOudeTelefoons(env.DB).catch(() => {})); // beide-V7R1 — telefoonnummers niet langer bewaren dan nodig
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);

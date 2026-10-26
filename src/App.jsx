@@ -4059,7 +4059,8 @@ export default function App() {
         )}
         {dossierSoortKeuze.keuze}
         {modusKeuzeOpen && <ModusKeuze soort={soortDossier} onKies={kiesModus} onClose={() => setModusKeuzeOpen(false)} />}
-        {omzetVraag && <OmzettenUitgebreid onJa={() => { const f = omzetVraag; setOmzetVraag(null); f(); }} onNee={() => setOmzetVraag(null)} />}
+        {omzetVraag && <OmzettenUitgebreid soort={soortDossier === "prive" ? "prive" : "zakelijk"} onJa={() => { const f = omzetVraag; setOmzetVraag(null); f(); }} onNee={() => setOmzetVraag(null)}
+          onOpslaan={() => { setOmzetVraag(null); startOpslaan(); }} />}
         {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); if (m === "uitgebreid") naarUitgebreidVanuitEenvoudig(); }} onClose={() => setModusNaLaden(null)} />}
         {basisEenvoudigOpen && eenvoudigActief && (
           <BasisvragenEenvoudig

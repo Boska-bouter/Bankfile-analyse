@@ -4,6 +4,7 @@
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
 import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc } from "./rechten.js";
+import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
 const nlDatum = (iso) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" });
@@ -56,7 +57,7 @@ main{max-width:560px;margin:0 auto;padding:32px 16px;display:flex;flex-direction
 h1{margin:0;font-size:1.4rem}h2{margin:4px 0 0;font-size:1rem}.sub{margin:0;color:var(--muted)}
 form,.melding,.huidig{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 form{display:flex;flex-direction:column;gap:10px}.huidig ul{margin:6px 0 0;padding-left:20px}
-fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}legend{font-weight:600;margin-bottom:8px}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:8px}legend{font-weight:600;margin-bottom:8px}
 .keuze{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .keuze:has(input:checked){border-color:var(--accent)}
 .keuze small{display:block;color:var(--muted)}.prijs{color:var(--accent);font-weight:600;font-size:13px}
@@ -68,6 +69,8 @@ input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);bord
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
 button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#status.err{color:var(--err)}
 [hidden]{display:none!important}a{color:var(--accent)}
+${VERGELIJK_STIJL}
+details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vgl[open] summary{margin-bottom:8px}.klein{font-size:13px;margin:6px 0 0}
 </style></head><body><main>
 <h1>${titel}</h1>
 <p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. ${heeftToegang
@@ -77,9 +80,13 @@ ${huidig.length ? `<div class="huidig"><b>Je abonnementen</b><ul>${huidig.map((h
 ${loopt}
 <form id="f">
 <fieldset><legend>Waarvoor gebruik je Bankoverzicht? (verplicht)</legend><div class="soorten">${soortKeuzes}</div></fieldset>
-<fieldset id="plannen"${kiesSoort ? "" : " hidden"}><legend>Abonnement</legend>${planKeuzes}</fieldset>
+<fieldset id="plannen"${kiesSoort ? "" : " hidden"}><legend>Abonnement</legend>${planKeuzes}
+<details class="vgl"><summary>Abonnementen vergelijken</summary>${vergelijkTabel(welkomSoorten(env))}</details></fieldset>
 <div class="namen"><label>Voornaam<br><input type="text" name="voornaam" required maxlength="60" autocomplete="given-name" value="${esc(voornaam || "")}" style="width:100%;box-sizing:border-box"></label>
 <label>Achternaam<br><input type="text" name="achternaam" required maxlength="80" autocomplete="family-name" value="${esc(achternaam)}" style="width:100%;box-sizing:border-box"></label></div>
+<div class="namen"><label>Telefoonnummer (verplicht)<br><input type="tel" name="telefoon" required maxlength="30" autocomplete="tel" inputmode="tel" style="width:100%;box-sizing:border-box"></label>
+<label>Organisatie (optioneel)<br><input type="text" name="organisatie" maxlength="120" autocomplete="organization" placeholder="bijv. bewindvoerderskantoor of instelling" style="width:100%;box-sizing:border-box"></label></div>
+<small class="hint">Het telefoonnummer is alleen om te kunnen nagaan of de aanvraag echt is. Het wordt gewist zodra de aanvraag is beoordeeld, en uiterlijk na 30 dagen.</small>
 <label>Waarom vraag je toegang aan? (verplicht)<br><textarea name="reden" required minlength="${MIN_REDEN}" maxlength="1000" rows="4" style="width:100%;box-sizing:border-box"></textarea>
 <small class="hint">Vertel kort wie je bent en waarvoor je de app wilt gebruiken. Zonder duidelijke reden kan ik je aanvraag niet goedkeuren.</small></label>
 <button type="submit">${heeftToegang ? "Aanvraag versturen" : "Aanmelding versturen"}</button>
@@ -97,7 +104,7 @@ for(const r of f.querySelectorAll("input[name=gebruik]"))r.addEventListener("cha
 soortGekozen();
 f.addEventListener("submit",async(e)=>{e.preventDefault();if(!T[f.gebruik.value]){st.className="err";st.textContent="Kies eerst zakelijk of privé.";return}
 const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
-try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({gebruik:f.gebruik.value,plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,reden:f.reden.value})});
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({gebruik:f.gebruik.value,plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,telefoon:f.telefoon.value,organisatie:f.organisatie.value,reden:f.reden.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
 if(d.alActief){st.textContent=d.melding||"Dit abonnement heb je al.";return}
 st.textContent=TOEGANG?"Je aanvraag is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.":"Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld. Je kunt dit tabblad daarna sluiten.";setTimeout(()=>location.reload(),2500)}
