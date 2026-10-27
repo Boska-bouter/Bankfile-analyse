@@ -1,3 +1,5 @@
+import { eur } from "../../utils/amounts.js";
+import { kmMaxVoorJaar } from "../../tax/kmVergoeding.js";
 import { useEffect, useState } from "react";
 import { TONE } from "./SectionCard.jsx";
 import { toetsStartersaftrek } from "../../tax/startersaftrekToets.js";
@@ -118,6 +120,12 @@ export default function AannamesKaart({
             onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(year, "zakelijkeKilometers", v); }}
             className={`${veldCls} ${normaal}`} />
         </Rij>
+      )}
+      {autoStatus?.[year] === "prive" && Number(kmVergoeding?.zakelijkeKilometers) > 0 && (
+        <p className="text-klein text-slate-500">
+          Aftrek: {Number(kmVergoeding.zakelijkeKilometers).toLocaleString("nl-NL")} km × € {(Number(kmVergoeding?.vergoedingPerKm) > 0 ? Math.min(Number(kmVergoeding.vergoedingPerKm), kmMaxVoorJaar(year)) : kmMaxVoorJaar(year)).toFixed(2).replace(".", ",")} = <b>{eur(Number(kmVergoeding.zakelijkeKilometers) * (Number(kmVergoeding?.vergoedingPerKm) > 0 ? Math.min(Number(kmVergoeding.vergoedingPerKm), kmMaxVoorJaar(year)) : kmMaxVoorJaar(year)))}</b>
+          {Number(kmVergoeding?.vergoedingPerKm) > kmMaxVoorJaar(year) && <span className="text-amber-700"> (ingevuld € {Number(kmVergoeding.vergoedingPerKm).toFixed(2).replace(".", ",")}; aftrekbaar is hooguit het fiscale maximum)</span>}
+        </p>
       )}
       {!isBv && (
         <Rij label="Overig inkomen box 1 (€/jaar)">

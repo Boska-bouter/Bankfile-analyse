@@ -1,3 +1,4 @@
+import { kmMaxVoorJaar } from "../../tax/kmVergoeding.js";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -344,13 +345,17 @@ export default function PersoonlijkeAannamesPanel({
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
                   </label>
-                  {kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers > 0 && kmVergoedingDetails?.[activeYear]?.vergoedingPerKm > 0 && (
-                    <div className="text-xs text-slate-500">
-                      Aftrekbaar: <strong className="text-slate-800">
-                        {eur(kmVergoedingDetails[activeYear].zakelijkeKilometers * kmVergoedingDetails[activeYear].vergoedingPerKm)}
-                      </strong>
-                    </div>
-                  )}
+                  {kmVergoedingDetails?.[activeYear]?.zakelijkeKilometers > 0 && (() => {
+                    // beide-V8R4 — leeg = fiscaal maximum; meer dan het maximum is niet aftrekbaar (zie tax/kmVergoeding.js).
+                    const km = Number(kmVergoedingDetails[activeYear].zakelijkeKilometers), max = kmMaxVoorJaar(activeYear);
+                    const inv = Number(kmVergoedingDetails[activeYear].vergoedingPerKm);
+                    const tarief = inv > 0 ? Math.min(inv, max) : max;
+                    return (
+                      <div className="text-xs text-slate-500">
+                        Aftrekbaar: <strong className="text-slate-800">{eur(km * tarief)}</strong> ({km.toLocaleString("nl-NL")} km × € {tarief.toFixed(2).replace(".", ",")}{inv > max ? `; ingevuld € ${inv.toFixed(2).replace(".", ",")} is meer dan het fiscale maximum` : !(inv > 0) ? ", fiscaal maximum" : ""})
+                      </div>
+                    );
+                  })()}
                 </div>
                 <p className="mt-2 text-xs text-slate-400">
                   Controleer zelf het voor {activeYear} geldende fiscale maximum onbelast per kilometer — dit

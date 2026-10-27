@@ -182,9 +182,12 @@ export function normalizeIban(raw) {
 // rekeningnummer zonder landcode/bankcode (zoals het :25:-veld van sommige MT940-bestanden, bijv.
 // "107975432" i.p.v. "NL13ABNA0107975432") — zodat "is dit dezelfde rekening" ook werkt tussen
 // bestanden van verschillende bankformaten.
+// beide-V8R6 — sommige MT940-bestanden zetten de BIC achter het IBAN ("NL27KNAB0775942480/BIC/KNABNL2H"). Voor de vergelijking
+// telt alleen het deel vóór de "/" (ibanKey blijft ongewijzigd, zodat bestaande keuzes op IBAN blijven gelden).
+const zonderBic = (n) => n.replace(/\/.*$/, "");
 export function ibansMatch(a, b) {
-  const na = normalizeIban(a);
-  const nb = normalizeIban(b);
+  const na = zonderBic(normalizeIban(a));
+  const nb = zonderBic(normalizeIban(b));
   if (!na || !nb || na.length < 6 || nb.length < 6) return false;
   if (na === nb) return true;
   const shorter = na.length <= nb.length ? na : nb;
