@@ -26,11 +26,11 @@ export default function MogelijkeEigenRekeningen({ kandidaten = [], soort = "zak
       <div className="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl" style={{ maxHeight: "calc(100dvh - 2rem)" }}>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h2 className="text-lg font-bold">Mogelijke eigen rekeningen</h2>
-          <button type="button" onClick={onClose} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" /> Later</button>
+          <button type="button" onClick={onClose} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" /> {kandidaten.length ? "Later" : "Sluiten"}</button>
         </div>
         <div className="overflow-y-auto px-5 py-3">
           <p className="mb-3 text-sm text-slate-600">Deze rekeningen lijken op eigen rekeningen die niet zijn opgegeven. Is dat zo, kies dan de soort: overboekingen ermee tellen dan als geld tussen eigen rekeningen, niet als inkomsten of uitgaven.</p>
-          {kandidaten.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Geen mogelijke eigen rekeningen (meer) gevonden.</p>}
+          {kandidaten.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Alle gevonden rekeningen zijn afgehandeld.</p>}
           {kandidaten.map((k) => (
             <div key={k.iban} className="border-b border-slate-100 py-3 last:border-0">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -47,6 +47,11 @@ export default function MogelijkeEigenRekeningen({ kandidaten = [], soort = "zak
               </div>
             </div>
           ))}
+        </div>
+        {/* beide-V8R8 — knop onderaan (melding Boska 27-10: na het afhandelen geen "Klaar"). */}
+        <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-5 py-3">
+          <span className="text-xs text-slate-500">{kandidaten.length ? `Nog ${kandidaten.length} te bekijken; kan ook later.` : "Klaar met de eigen rekeningen."}</span>
+          <button type="button" onClick={onClose} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800">{kandidaten.length ? "Later verder" : "Klaar"}</button>
         </div>
       </div>
     </div>
