@@ -18,6 +18,7 @@ import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { overlapBestandKoppeling } from "./importers/overlapKoppeling.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
+import { overrideSleutel } from "./classification/classify.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import { loadPersistedParsedFiles, persistParsedFiles, loadPersistedSettings, persistSettings } from "./storage/projectStorage.js";
 import { useDashboardCards } from "./cards/useDashboardCards.jsx";
@@ -1861,11 +1862,11 @@ export default function App() {
     const per = {};
     for (const tx of classified) {
       if (tx.isMirror) continue;
-      const k = keyForTx(tx);
-      if (!k || !overridesByCounterparty[k]) continue;
+      const k = overrideSleutel(tx, overridesByCounterparty); // beide-V8R3 — zelfde sleutel als de indeling (IBAN of naam)
+      if (!k) continue;
       const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, boekingen: [] });
       g.aantal += 1;
-      g.boekingen.push({ datum: tx.date, bedrag: tx.amount }); // beide-V8R2 — zoeken op bedrag of datum (MijnAntwoorden)
+      g.boekingen.push({ datum: tx.date, jaar: tx.year, bedrag: tx.amount }); // beide-V8R2 — zoeken op bedrag of datum (MijnAntwoorden)
       if (tx.year === activeYear) g.bedragJaar += tx.amount;
     }
     return Object.entries(overridesByCounterparty)

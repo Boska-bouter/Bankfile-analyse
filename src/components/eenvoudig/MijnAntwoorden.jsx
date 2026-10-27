@@ -15,20 +15,30 @@ const typeVan = (cat) => (/^Privé/.test(mainCategoryOf(cat)) || /^Privé/.test(
 export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onWijzig, onWis, onClose }) {
   const [zoek, setZoek] = useState("");
   const [alles, setAlles] = useState(gekozenKeys.length === 0);
+  // beide-V8R3 — jaarkeuze (wens Boska 27-10): telling, bedrag en zoeken op bedrag/datum alleen in dat jaar; namen zonder
+  // boekingen in dat jaar vallen weg. "Alle jaren" laat ook keuzes zien waarvoor geen boeking (meer) in het dossier staat.
+  const jaren = useMemo(() => [...new Set(lijst.flatMap((r) => (r.boekingen || []).map((b) => b.jaar)).filter(Boolean))].sort((a, b) => b - a), [lijst]);
+  const [kiesJaar, setKiesJaar] = useState(() => (jaren.includes(jaar) ? String(jaar) : "alle"));
   const rijen = useMemo(() => {
     const volgorde = new Map(gekozenKeys.map((k, i) => [k, i]));
     // beide-V8R2 — zoeken op naam, categorie, bedrag of datum (zie calc/zoekAntwoord.js); bij bedrag/datum staat de
     // gevonden boeking erbij.
     const term = soortZoekterm(zoek);
     return lijst
-      .map((r) => { const t = zoekAntwoord(r, term); return t ? { ...r, treffer: t.boeking } : null; })
+      .map((r) => {
+        const boekingen = kiesJaar === "alle" ? r.boekingen || [] : (r.boekingen || []).filter((b) => String(b.jaar) === kiesJaar);
+        if (kiesJaar !== "alle" && boekingen.length === 0) return null;
+        const t = zoekAntwoord({ ...r, boekingen }, term);
+        const bedrag = Math.round(boekingen.reduce((s, b) => s + (Number(b.bedrag) || 0), 0) * 100) / 100;
+        return t ? { ...r, aantal: boekingen.length, bedrag, treffer: t.boeking } : null;
+      })
       .filter((r) => r && (alles || term || volgorde.has(r.key)))
       .sort((a, b) => {
         const ia = volgorde.has(a.key) ? volgorde.get(a.key) : Infinity, ib = volgorde.has(b.key) ? volgorde.get(b.key) : Infinity;
         if (ia !== ib) return ia - ib;
-        return Math.abs(b.bedragJaar) - Math.abs(a.bedragJaar);
+        return Math.abs(b.bedrag) - Math.abs(a.bedrag);
       });
-  }, [lijst, gekozenKeys, zoek, alles]);
+  }, [lijst, gekozenKeys, zoek, alles, kiesJaar]);
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="flex w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl" style={{ maxHeight: "calc(100dvh - 2rem)" }}>
@@ -39,19 +49,23 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
         <div className="border-b border-slate-100 px-5 py-3">
           <p className="mb-2 text-xs text-slate-500">Een wijziging geldt voor alle boekingen met die naam, ook in andere jaren. De uitkomst rekent direct mee.</p>
           <div className="flex flex-wrap items-center gap-3">
+            <select value={kiesJaar} onChange={(e) => setKiesJaar(e.target.value)} aria-label="Jaar" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="alle">Alle jaren</option>
+              {jaren.map((j) => <option key={j} value={String(j)}>{j}</option>)}
+            </select>
             <input value={zoek} onChange={(e) => setZoek(e.target.value)} type="search" placeholder="Zoek op naam, categorie, bedrag (40,02) of datum (12-03-2026)…" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
             <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={alles} onChange={(e) => setAlles(e.target.checked)} /> ook keuzes van eerder of uit Uitgebreid</label>
           </div>
         </div>
         <div className="overflow-y-auto px-5 py-2">
-          {rijen.length === 0 && <p className="py-6 text-center text-sm text-slate-500">{zoek ? "Niets gevonden." : "Je hebt in deze sessie nog niets beantwoord. Zet het vinkje aan om alle keuzes te zien."}</p>}
+          {rijen.length === 0 && <p className="py-6 text-center text-sm text-slate-500">{zoek ? (kiesJaar === "alle" ? "Niets gevonden." : `Niets gevonden in ${kiesJaar}. Kies eventueel "Alle jaren".`) : "Je hebt in deze sessie nog niets beantwoord. Zet het vinkje aan om alle keuzes te zien."}</p>}
           {rijen.slice(0, 200).map((r) => {
             const opties = [["bedrijf", "Bedrijf"], ["prive", "Privé"], ["eigen", "Eigen rekening"]].map(([k, t]) => [k, t, categorieVoorAntwoord(k, r.teken, r.rekening)]);
             return (
               <div key={r.key} className="border-b border-slate-100 py-2.5 last:border-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="min-w-0 font-semibold text-slate-900">{r.naam}</span>
-                  <span className="text-xs text-slate-500">{r.aantal} {r.aantal === 1 ? "boeking" : "boekingen"}{r.bedragJaar ? <> · <b className="font-mono text-slate-700">{eur(r.bedragJaar)}</b> in {jaar}</> : null} · {r.rekening === "Zakelijk" ? "zakelijke" : "privé"}rekening</span>
+                  <span className="text-xs text-slate-500">{r.aantal === 0 ? "geen boekingen in dit dossier" : <>{r.aantal} {r.aantal === 1 ? "boeking" : "boekingen"}{r.bedrag ? <> · <b className="font-mono text-slate-700">{eur(r.bedrag)}</b></> : null}{kiesJaar === "alle" ? " in alle jaren" : ` in ${kiesJaar}`}</>} · {r.rekening === "Zakelijk" ? "zakelijke " : "privé"}rekening</span>
                 </div>
                 <p className="mb-1.5 text-xs text-slate-600">Nu: <b>{r.categorie}</b>
                   {r.treffer && <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-900">gevonden: {r.treffer.datum?.toLocaleDateString?.("nl-NL")} · <b className="font-mono">{eur(r.treffer.bedrag)}</b></span>}

@@ -617,6 +617,18 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   return verfijn ? verfijn(auto) : auto;
 }
 
+// beide-V8R3 — onder welke sleutel in overridesByCounterparty staat de keuze die voor deze boeking geldt? Zelfde volgorde als
+// resolveClassification: eerst IBAN, dan naam, dan de oorspronkelijke naam. Voor "Mijn antwoorden": een keuze in Eenvoudig
+// staat vaak op naam, terwijl de boeking ook een IBAN heeft; tellen op alleen de IBAN-sleutel gaf "0 boekingen".
+export function overrideSleutel(tx, overridesByCounterparty = {}) {
+  const ik = ibanKey(tx.counterpartyIban, tx.amount);
+  if (ik && overridesByCounterparty[ik]) return ik;
+  const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+  if (key && overridesByCounterparty[key]) return key;
+  const org = tx.counterpartyOrigineel && counterpartyKey(tx.counterpartyOrigineel, tx.amount);
+  return org && overridesByCounterparty[org] ? org : "";
+}
+
 // V7R6 / beide-V3R0, per boeking € 300 sinds V7R7 / beide-V3R1 — een herkende naam met een bedrag dat er niet bij past,
 // gaat naar "Overig" om na te kijken: meer dan € 300 in één keer past niet in een tank.
 const MAX_BEDRAG = { Brandstof: 300 };
