@@ -58,7 +58,7 @@ export default function AannamesKaart({
   card, year, rechtsvorm,
   zelfstandigenaftrekStatus, onSetZelfstandigenaftrekStatus, zaLegacyJaDefault,
   startersaftrekStatus, onSetStartersaftrekStatus,
-  autoStatus,
+  autoStatus, onSetAutoStatus,
   gedeeldeHuur, huurPct, onSetHuurPct,
   gedeeldeEnergie, energiePct, onSetEnergiePct,
   gedeeldeGemeentelijkeKosten, gemeentePct, onSetGemeentePct,
@@ -101,9 +101,24 @@ export default function AannamesKaart({
           </Rij>
         </>
       )}
-      <Rij label="Auto">
-        <span className={`text-basis font-semibold ${autoStatus?.[year] ? t.text : "text-amber-700"}`}>{autoTekst}</span>
-      </Rij>
+      {onSetAutoStatus ? (
+        // beide-V9R0 — auto direct te kiezen; bij "Privéauto" verschijnt meteen het veld voor de zakelijke km.
+        <Rij label="Auto">
+          <select key={`auto-${year}`} value={autoStatus?.[year] || ""} className={`${veldCls} ${autoStatus?.[year] ? normaal : open}`}
+            onChange={(e) => onSetAutoStatus(year, e.target.value || null)} data-testid="auto-keuze">
+            <option value="">Niet opgegeven</option>
+            <option value="prive">Privéauto (km)</option>
+            <option value="zaak">Auto van de zaak</option>
+          </select>
+        </Rij>
+      ) : (
+        <Rij label="Auto">
+          <span className={`text-basis font-semibold ${autoStatus?.[year] ? t.text : "text-amber-700"}`}>{autoTekst}</span>
+        </Rij>
+      )}
+      {onSetAutoStatus && !autoStatus?.[year] && (
+        <p className="text-klein text-slate-500 -mt-1">Zakelijke ritten met de eigen (privé)auto? Kies dan bij Auto "Privéauto (km)" en vul de kilometers in.</p>
+      )}
       {autoStatus?.[year] === "zaak" && privegebruikAutos.length > 0 && (
         <Rij label={privegebruikAutos.every((a) => a.bron === "lease") ? "Privégebruik leaseauto?" : "Privégebruik auto?"}>
           <select key={`p500-${year}-${pgWaarde}`} value={pgWaarde} className={`${veldCls} ${normaal}`}
@@ -115,8 +130,8 @@ export default function AannamesKaart({
         </Rij>
       )}
       {autoStatus?.[year] === "prive" && (
-        <Rij label="Zakelijke kilometers">
-          <input key={`zkm-${year}`} type="text" inputMode="decimal" placeholder="km per jaar" value={kmVergoeding?.zakelijkeKilometers ?? ""}
+        <Rij label={<>Zakelijke km met privéauto<span className="block text-xs text-slate-400">in {year}, ritten voor het bedrijf</span></>}>
+          <input key={`zkm-${year}`} data-testid="zakelijke-km" type="text" inputMode="decimal" placeholder="km per jaar" value={kmVergoeding?.zakelijkeKilometers ?? ""}
             onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(year, "zakelijkeKilometers", v); }}
             className={`${veldCls} ${normaal}`} />
         </Rij>
