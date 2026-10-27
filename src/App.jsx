@@ -2569,6 +2569,17 @@ export default function App() {
     (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) - (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0) +
     (kmVergoedingForActiveYear?.bedrag || 0) + (activaAfschrijvingForYear?.totaalAfschrijving || 0) +
     (bvLeaseAutoWinstCorrectieActiveYear || 0);
+  // beide-V8R9 — uitsplitsing van "Overige posten" voor Eenvoudig (vraag Boska 27-10: wat is dat, waar na te kijken?).
+  // Teken zoals op de kaart: negatief verlaagt de winst.
+  const overigeDelen = [
+    kmVergoedingForActiveYear && { label: `Km-vergoeding privéauto: ${Number(kmVergoedingForActiveYear.zakelijkeKilometers).toLocaleString("nl-NL")} km × € ${kmVergoedingForActiveYear.vergoedingPerKm.toFixed(2).replace(".", ",")}`, bedrag: -kmVergoedingForActiveYear.bedrag, km: true },
+    activaAfschrijvingForYear?.totaalAfschrijving && { label: "Afschrijving bedrijfsmiddelen", bedrag: -activaAfschrijvingForYear.totaalAfschrijving },
+    leaseAutoKostenForActiveYear?.winstCorrectie && { label: "Lease-auto of -machine (afschrijving min privégebruik)", bedrag: -leaseAutoKostenForActiveYear.winstCorrectie },
+    bvLeaseAutoWinstCorrectieActiveYear && { label: "Lease (afschrijving)", bedrag: -bvLeaseAutoWinstCorrectieActiveYear },
+    renteAftrekbaarActiveYear && { label: "Rente op leningen en lease", bedrag: -renteAftrekbaarActiveYear },
+    ((gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0)) &&
+      { label: "Niet-aftrekbaar deel huur, energie en gemeentelijke kosten", bedrag: (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0) },
+  ].filter((d) => d && Math.abs(d.bedrag) >= 0.5);
   const yearlySummary = useMemo(
     () => (activeYear ? computeYearlySummary(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed) : null),
     [classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, renteAftrekbaarActiveYear, winstCorrectieActiveYear, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed]
@@ -3964,6 +3975,7 @@ export default function App() {
             jaarKeuze={<YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} />}
             onOpslaan={startOpslaan} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null}
             gezien={activeYear ? eenvoudigGezien[activeYear] || null : null} onGezien={() => setEenvoudigGezien((p) => { const n = { ...p }; delete n[activeYear]; return n; })}
+            overigeDelen={overigeDelen}
             fiscaal={activeYear ? fiscaalVoorJaar(activeYear) : null} jaarSummary={activeYear ? yearlySummaries[activeYear] : null} isBV={rechtsvorm === "bv"}
           />
         )}

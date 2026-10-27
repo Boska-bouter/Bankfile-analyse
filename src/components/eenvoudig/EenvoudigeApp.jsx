@@ -75,6 +75,7 @@ export default function EenvoudigeApp({
   onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, uitlegVerzoek = 0, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
   teksten = null, uitkomst = null, // beide-V1R8 — privédossier: andere keuzes/teksten (modus/prive/eenvoudig.js) en eigen uitkomst
   extraGegevens = null, // beide-V2R2 — privédossier: eigen rekeningen (spaarrekening) opgeven in stap 1
+  overigeDelen = [], // beide-V8R9 — uitsplitsing "Overige posten" (km-vergoeding, afschrijving, rente …)
   openVragen = [], onOpenVragen = null, // beide-V8R4 — open basisvragen in "Hoe zeker is de uitkomst?"
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
@@ -385,7 +386,18 @@ export default function EenvoudigeApp({
               <p className="my-1 text-3xl font-extrabold">{r0(jaarSummary?.winst)}</p>
               <Rij label="Ontvangen van klanten" waarde={r0(jaarSummary?.zakelijkeInkomstenNetto)} />
               <Rij label="Kosten van het bedrijf" waarde={`− ${r0(jaarSummary?.zakelijkeKostenNetto)}`} />
-              {Math.abs(overigeWinst) >= 1 && <Rij label="Overige posten (bijv. afschrijving, rente)" waarde={`${overigeWinst < 0 ? "− " : ""}${r0(Math.abs(overigeWinst))}`} />}
+              {Math.abs(overigeWinst) >= 1 && <Rij label={overigeDelen.length === 1 ? "Overige aftrek" : "Overige posten"} waarde={`${overigeWinst < 0 ? "− " : ""}${r0(Math.abs(overigeWinst))}`} />}
+              {/* beide-V8R9 — waar de overige posten uit bestaan, met een link om het na te kijken. */}
+              {Math.abs(overigeWinst) >= 1 && overigeDelen.length > 0 && (
+                <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
+                  {overigeDelen.map((d) => (
+                    <li key={d.label} className="flex justify-between gap-2">
+                      <span>{d.label}{d.km && onBasisvragen && <> · <button type="button" onClick={onBasisvragen} style={{ minHeight: 0 }} className="underline">aanpassen</button></>}</span>
+                      <span className="shrink-0 font-mono">{d.bedrag < 0 ? "− " : ""}{r0(Math.abs(d.bedrag))}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="mt-2 text-xs text-slate-500">{metBegrippen("Dit is de winst: wat overblijft na de kosten, zonder BTW.")}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
