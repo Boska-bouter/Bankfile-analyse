@@ -23,9 +23,14 @@ export default defineConfig({
     react(),
     {
       name: "write-version-file",
-      writeBundle(options) {
+      writeBundle(options, bundle) {
         const outDir = options.dir || "dist";
         fs.writeFileSync(path.join(outDir, "version.json"), JSON.stringify({ buildId }));
+        // beide-V7R9 — noodmodus: service worker met deze build en de lijst met app-bestanden (zie src/noodmodus/sw.js).
+        const bestanden = Object.keys(bundle).filter((f) => f.startsWith("assets/") && !f.endsWith(".map")).sort();
+        const sw = fs.readFileSync(path.resolve("src/noodmodus/sw.js"), "utf8")
+          .replace('"__BUILD_ID__"', JSON.stringify(buildId)).replace("__BESTANDEN__", JSON.stringify(bestanden));
+        fs.writeFileSync(path.join(outDir, "sw.js"), sw);
       },
     },
   ],

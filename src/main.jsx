@@ -19,6 +19,12 @@ document.addEventListener("keydown", (e) => {
   vensters[vensters.length - 1].click();
 });
 
+// beide-V7R9 — noodmodus: de service worker bewaart de app op het apparaat, zodat die ook opent als de server
+// (Cloudflare) even niet bereikbaar is (zie src/noodmodus/sw.js en dossier/useNoodmodus.jsx). Niet bij lokaal ontwikkelen.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => { /* dan zonder noodmodus */ }); });
+}
+
 // beide-V6R7 — eerst het tarievenbestand van de server (hooguit 2,5 seconde), zodat alles meteen met de nieuwste
 // tarieven rekent. Mislukt het, dan start de app gewoon met de bewaarde of ingebouwde tarieven.
 laadTarieven().finally(() => {

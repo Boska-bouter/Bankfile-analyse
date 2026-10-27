@@ -72,5 +72,5 @@ export async function exportExcel(groups, categoryBtwRates, btwVerlegd) {
     const ws2 = XLSX.utils.json_to_sheet(summaryRows);
     XLSX.utils.book_append_sheet(wb, ws2, `${g.label} - Samenvatting`.slice(0, 31));
   }
-  XLSX.writeFile(wb, "Bankoverzicht_Zakelijk_Prive.xlsx");
+  XLSX.writeFile(wb, "Bankoverzicht_controlebestand.xlsx"); // beide-V8R0 — heet in de app "Controlebestand (Excel)"
 }
