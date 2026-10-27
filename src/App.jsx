@@ -837,11 +837,16 @@ export default function App() {
   };
   // V58 — wizardvraag: de aangevinkte jaren krijgen "ja", alle andere jaren "nee" (zodat de vraag niet
   // opnieuw komt en "Persoonlijke aannames" geen "nog niet opgegeven" toont).
-  const seedStartersaftrekStatus = (yearsList, jaYears) => {
+  // beide-V8R1 — eerdereJaren: jaren vóór het dossier waarin de startersaftrek al is gebruikt. Die staan als "ja" in
+  // dezelfde lijst, zodat de toets (tax/startersaftrekToets.js) ze meetelt voor "maximaal 3 keer binnen 5 jaar".
+  const seedStartersaftrekStatus = (yearsList, jaYears, eerdereJaren = []) => {
     if (!yearsList || yearsList.length === 0) return;
     snapshotBeforeAction("Startersaftrek ingesteld (wizard)");
+    const eerste = Math.min(...yearsList.map(Number));
     setStartersaftrekStatusState((prev) => {
       const next = { ...prev };
+      for (const k of Object.keys(next)) if (Number(k) < eerste) delete next[k];
+      for (const y of eerdereJaren) next[y] = "ja";
       for (const y of yearsList) next[y] = (jaYears || []).includes(y) ? "ja" : "nee";
       return next;
     });
@@ -1858,8 +1863,9 @@ export default function App() {
       if (tx.isMirror) continue;
       const k = keyForTx(tx);
       if (!k || !overridesByCounterparty[k]) continue;
-      const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1 });
+      const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, boekingen: [] });
       g.aantal += 1;
+      g.boekingen.push({ datum: tx.date, bedrag: tx.amount }); // beide-V8R2 — zoeken op bedrag of datum (MijnAntwoorden)
       if (tx.year === activeYear) g.bedragJaar += tx.amount;
     }
     return Object.entries(overridesByCounterparty)
@@ -1867,7 +1873,7 @@ export default function App() {
       .map(([k, o]) => ({
         key: k, naam: o.displayName || k, categorie: o.category,
         teken: per[k]?.teken ?? (o.sign === "pos" ? 1 : -1), rekening: per[k]?.rekening || (o.type === "Zakelijk" ? "Zakelijk" : "Prive"),
-        aantal: per[k]?.aantal || 0, bedragJaar: Math.round((per[k]?.bedragJaar || 0) * 100) / 100,
+        aantal: per[k]?.aantal || 0, bedragJaar: Math.round((per[k]?.bedragJaar || 0) * 100) / 100, boekingen: per[k]?.boekingen || [],
       }));
   }, [eenvoudigActief, classified, overridesByCounterparty, activeYear]); // eslint-disable-line react-hooks/exhaustive-deps
   const wijzigAntwoord = (key, patch) => {

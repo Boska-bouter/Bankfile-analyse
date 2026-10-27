@@ -52,3 +52,17 @@ export function effectieveStartersaftrekStatus(startersaftrekStatus = {}, zelfst
   for (const j of toegepast) uit[j] = "ja";
   return uit;
 }
+
+// beide-V8R1 — wizardvraag in twee stappen (wens Boska 27-10): eerst in welke jaren vóór het dossier de startersaftrek al
+// is gebruikt, dan voor welke dossierjaren nog. Mag dossierjaar `jaar` er nog bij, gegeven de eerdere en al gekozen jaren?
+// Regels als hierboven: samen maximaal 3 keer, en alles binnen 5 opeenvolgende kalenderjaren (gerekend vanaf de eerste
+// toepassing, omdat de startdatum van de onderneming niet bekend is).
+export const STARTERS_MAX = 3;
+export function starterJaarMogelijk(jaar, eerdereJaren = [], gekozen = []) {
+  const alle = [...eerdereJaren, ...gekozen].map(Number);
+  if (alle.includes(Number(jaar))) return { mag: true };
+  if (alle.length >= STARTERS_MAX) return { mag: false, reden: `al ${STARTERS_MAX} keer gebruikt` };
+  const met = [...alle, Number(jaar)];
+  if (Math.max(...met) - Math.min(...met) > 4) return { mag: false, reden: "buiten de eerste 5 jaar" };
+  return { mag: true };
+}

@@ -8,6 +8,8 @@ import DossierProfielLijst from "../shared/DossierProfielLijst.jsx";
 
 import { KNOP_PRIMAIR_GROOT, KNOP_SECUNDAIR_KLEIN } from "../ui/stijl.js";
 import { PRIVACY_KORT } from "../../content/privacy.jsx";
+import { starterJaarMogelijk, STARTERS_MAX } from "../../tax/startersaftrekToets.js";
+import { startersaftrekBedrag } from "../../tax/incomeTax.js";
 // V65 — de wizard is herindeeld van 17 losse vragen naar 7 schermen. Elk scherm bundelt vragen die bij
 // elkaar horen; de antwoorden worden met één "Doorgaan" vastgelegd via exact dezelfde setters als voorheen.
 //   20 Bankbestanden laden            (alleen bij een leeg dossier)
@@ -1236,6 +1238,13 @@ function Scherm36({
   const toonKwartalen = needs.kwartalen && korRegeling !== true && kwartalenLijst.length > 0;
   const starterJaren = typedNow.starterJaren || [];
   const starterNee = typedNow.starterNee === true && starterJaren.length === 0;
+  // beide-V8R1 — eerst: al eerder gebruikt (vóór het eerste dossierjaar)? Dan pas: voor welke dossierjaren nog.
+  const eersteJaar = years.length ? Math.min(...years.map(Number)) : null;
+  const eerdereKeuze = eersteJaar ? [1, 2, 3, 4].map((n) => eersteJaar - n).reverse() : [];
+  const starterEerder = typedNow.starterEerder ?? null; // null = nog niet beantwoord, false = nee, true = ja
+  const starterEerdereJaren = starterEerder ? (typedNow.starterEerdereJaren || []) : [];
+  const starterDossierJaren = years.filter((y) => startersaftrekBedrag(Number(y)) > 0);
+  const starterGeenRuimte = starterDossierJaren.every((y) => !starterJaarMogelijk(y, starterEerdereJaren, []).mag);
   const toonWerkruimte = needs.werkruimte && years.length > 0;
   const werkPand = typedNow.werkPand === true;
   const werkPandNee = typedNow.werkPand === false;
@@ -1243,7 +1252,7 @@ function Scherm36({
   // "Doorgaan" werkt pas als alle vragen op dit scherm beantwoord zijn (de BTW-kwartalen tellen niet mee: die zijn niet nodig voor de berekening).
   const overigBeantwoord = overigNee || (overigJa && Object.values(overigBedragen).some((v) => Number(v) > 0));
   const klaar =
-    (!toonStarters || starterNee || starterJaren.length > 0) &&
+    (!toonStarters || (starterEerder === false || (starterEerder && starterEerdereJaren.length > 0)) && (starterNee || starterJaren.length > 0 || starterGeenRuimte)) &&
     (!toonOverig || overigBeantwoord) &&
     (!toonWerkruimte || ((werkPand || werkPandNee) && werkWoning !== null));
   return (
@@ -1275,31 +1284,70 @@ function Scherm36({
 
       {toonStarters && (
         <Sectie
-          titel="In welke jaren is startersaftrek toegepast?"
-          uitleg="Alleen voor starters: maximaal 3 keer in de eerste 5 jaar van de onderneming, bovenop de zelfstandigenaftrek (en alleen als aan het urencriterium is voldaan). Geen enkel jaar aangevinkt = geen startersaftrek."
+          titel={`Is de startersaftrek al eerder gebruikt, vóór ${eersteJaar}?`}
+          uitleg="De startersaftrek mag maximaal 3 keer, in de eerste 5 jaar van de onderneming, en alleen als aan het urencriterium is voldaan. Of en wanneer hij al is gebruikt, staat in de eerdere aangiftes inkomstenbelasting."
         >
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => zet({ starterJaren: [], starterNee: true })}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${starterNee ? KNOP_AAN : KNOP_UIT}`}
-            >
-              Geen startersaftrek
-            </button>
-            {years.map((y) => {
-              const aan = starterJaren.includes(y);
-              return (
-                <button
-                  key={y}
-                  type="button"
-                  onClick={() => zet({ starterNee: false, starterJaren: aan ? starterJaren.filter((j) => j !== y) : [...starterJaren, y] })}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? KNOP_AAN : KNOP_UIT}`}
-                >
-                  {y}
-                </button>
-              );
-            })}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => zet({ starterEerder: false, starterEerdereJaren: [] })} className={`${KNOP} ${starterEerder === false ? KNOP_AAN : KNOP_UIT}`}>Nee</button>
+            <button type="button" onClick={() => zet({ starterEerder: true })} className={`${KNOP} ${starterEerder === true ? KNOP_AAN : KNOP_UIT}`}>Ja</button>
           </div>
+          {starterEerder === true && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-slate-500">In welke jaren? (maximaal 3)</p>
+              <div className="flex flex-wrap gap-2">
+                {eerdereKeuze.map((y) => {
+                  const aan = starterEerdereJaren.includes(y);
+                  const kan = aan || starterEerdereJaren.length < STARTERS_MAX;
+                  return (
+                    <button key={y} type="button" disabled={!kan}
+                      onClick={() => zet({ starterEerdereJaren: aan ? starterEerdereJaren.filter((j) => j !== y) : [...starterEerdereJaren, y], starterJaren: [], starterNee: false })}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? KNOP_AAN : KNOP_UIT} ${kan ? "" : "opacity-40"}`}>
+                      {y}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Sectie>
+      )}
+
+      {toonStarters && (starterEerder === false || starterEerdereJaren.length > 0) && (
+        <Sectie
+          titel={years.length === 1 ? `Wordt de startersaftrek over ${years[0]} gebruikt?` : "Voor welke jaren in dit dossier wordt de startersaftrek gebruikt?"}
+          uitleg={starterEerdereJaren.length
+            ? `Al gebruikt in ${[...starterEerdereJaren].sort().join(", ")}; nog ${Math.max(0, STARTERS_MAX - starterEerdereJaren.length)} keer mogelijk, uiterlijk tot en met ${Math.min(...starterEerdereJaren) + 4}.`
+            : "Nog niet eerder gebruikt: maximaal 3 jaren binnen 5 opeenvolgende jaren."}
+        >
+          {starterGeenRuimte ? (
+            <p className="text-sm text-slate-600">Voor de jaren in dit dossier is geen startersaftrek meer mogelijk. De berekening rekent zonder.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => zet({ starterJaren: [], starterNee: true })}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${starterNee ? KNOP_AAN : KNOP_UIT}`}
+              >
+                {years.length === 1 ? "Nee" : "Geen enkel jaar"}
+              </button>
+              {starterDossierJaren.map((y) => {
+                const aan = starterJaren.includes(y);
+                const { mag, reden } = starterJaarMogelijk(y, starterEerdereJaren, starterJaren);
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    disabled={!mag}
+                    title={mag ? undefined : `Niet mogelijk: ${reden}`}
+                    onClick={() => zet({ starterNee: false, starterJaren: aan ? starterJaren.filter((j) => j !== y) : [...starterJaren, y] })}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${aan ? KNOP_AAN : KNOP_UIT} ${mag ? "" : "opacity-40"}`}
+                  >
+                    {years.length === 1 ? "Ja" : y}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </Sectie>
       )}
 
@@ -1365,7 +1413,7 @@ function Scherm36({
         disabled={!klaar}
         onClick={() => {
           if (toonWerkruimte) onSeedWerkruimteStatus?.(years, { pand: werkPand, woning: werkWoning });
-          if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren);
+          if (toonStarters) onSeedStartersaftrekStatus(years, starterJaren, starterEerdereJaren);
           // release21V3 — ook "Nee" vastleggen (0 per jaar): een lege lijst gold als "nooit beantwoord",
           // waardoor de vraag bleef terugkomen in de wizard en op de kaart "Nog niet beantwoord".
           if (toonOverig && (overigJa || overigNee)) onSetOverigInkomenBox1(Object.fromEntries(years.map((y) => [y, overigJa ? Number(overigBedragen[y]) || 0 : 0])));

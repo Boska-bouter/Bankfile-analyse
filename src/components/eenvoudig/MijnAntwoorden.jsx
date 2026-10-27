@@ -4,6 +4,7 @@ import { eur } from "../../utils/amounts.js";
 import { mainCategoryOf } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { categorieVoorAntwoord } from "../../calc/eenvoudig.js";
+import { soortZoekterm, zoekAntwoord } from "../../calc/zoekAntwoord.js";
 
 // nieuw-V3R1 — "Mijn antwoorden": alle keuzes per tegenpartij, om een vergissing te herstellen. Eerst wat in deze sessie
 // in Eenvoudig is beantwoord, daarna de rest op bedrag in het gekozen jaar. Een wijziging geldt voor alle boekingen
@@ -16,9 +17,12 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
   const [alles, setAlles] = useState(gekozenKeys.length === 0);
   const rijen = useMemo(() => {
     const volgorde = new Map(gekozenKeys.map((k, i) => [k, i]));
-    const z = zoek.trim().toLowerCase();
+    // beide-V8R2 — zoeken op naam, categorie, bedrag of datum (zie calc/zoekAntwoord.js); bij bedrag/datum staat de
+    // gevonden boeking erbij.
+    const term = soortZoekterm(zoek);
     return lijst
-      .filter((r) => (alles || z || volgorde.has(r.key)) && (!z || String(r.naam).toLowerCase().includes(z)))
+      .map((r) => { const t = zoekAntwoord(r, term); return t ? { ...r, treffer: t.boeking } : null; })
+      .filter((r) => r && (alles || term || volgorde.has(r.key)))
       .sort((a, b) => {
         const ia = volgorde.has(a.key) ? volgorde.get(a.key) : Infinity, ib = volgorde.has(b.key) ? volgorde.get(b.key) : Infinity;
         if (ia !== ib) return ia - ib;
@@ -35,7 +39,7 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
         <div className="border-b border-slate-100 px-5 py-3">
           <p className="mb-2 text-xs text-slate-500">Een wijziging geldt voor alle boekingen met die naam, ook in andere jaren. De uitkomst rekent direct mee.</p>
           <div className="flex flex-wrap items-center gap-3">
-            <input value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op naam…" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+            <input value={zoek} onChange={(e) => setZoek(e.target.value)} type="search" placeholder="Zoek op naam, categorie, bedrag (40,02) of datum (12-03-2026)…" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
             <label className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={alles} onChange={(e) => setAlles(e.target.checked)} /> ook keuzes van eerder of uit Uitgebreid</label>
           </div>
         </div>
@@ -49,7 +53,9 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
                   <span className="min-w-0 font-semibold text-slate-900">{r.naam}</span>
                   <span className="text-xs text-slate-500">{r.aantal} {r.aantal === 1 ? "boeking" : "boekingen"}{r.bedragJaar ? <> · <b className="font-mono text-slate-700">{eur(r.bedragJaar)}</b> in {jaar}</> : null} · {r.rekening === "Zakelijk" ? "zakelijke" : "privé"}rekening</span>
                 </div>
-                <p className="mb-1.5 text-xs text-slate-600">Nu: <b>{r.categorie}</b></p>
+                <p className="mb-1.5 text-xs text-slate-600">Nu: <b>{r.categorie}</b>
+                  {r.treffer && <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-900">gevonden: {r.treffer.datum?.toLocaleDateString?.("nl-NL")} · <b className="font-mono">{eur(r.treffer.bedrag)}</b></span>}
+                </p>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {opties.map(([k, t, patch]) => (
                     <button key={k} type="button" onClick={() => onWijzig(r.key, patch)} style={{ minHeight: 0 }}
