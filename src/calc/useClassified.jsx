@@ -6,6 +6,7 @@ import { detectOwnAccountTransfer, resolveClassification } from "../classificati
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
 import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
+import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 
 export function useClassified(p) {
   const {
@@ -16,7 +17,7 @@ export function useClassified(p) {
 
   return useMemo(() => {
     // release32V4 — zelfde percentages als de aangifte, dus ook "soort ruimte = privé / niet zelfstandig" telt als 0%.
-    const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
+    const pctEff = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus, [...new Set(transactions.map((tx) => tx.year))]);
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
     const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
@@ -46,7 +47,8 @@ export function useClassified(p) {
     });
     // beide-V5R1 — privé: dezelfde eigen rekening in beide richtingen dezelfde soort (sparen/beleggen), zie herkenning.js.
     const vasteSoortIbans = new Set(Object.values(ownAccountsElsewhereByFile).flat().filter((o) => o?.soort).map((o) => String(o.iban).replace(/\s+/g, "").toUpperCase()));
-    const base0 = herkenning?.samenhang ? herkenning.samenhang(base00, { vasteSoortIbans }) : base00;
+    const base0a = herkenTerugbetalingen(base00); // beide-V8R4 — terugbetaling is geen omzet
+    const base0 = herkenning?.samenhang ? herkenning.samenhang(base0a, { vasteSoortIbans }) : base0a;
     // Een geladen privérekening die geld krijgt van/stuurt naar een opgegeven maar niet geladen ándere
     // eigen privérekening wordt herkend als "Interne overboeking" (twee privérekeningen onderling). Staat er
     // aan de zakelijke kant een opname/terugboeking met hetzelfde bedrag, dezelfde tegenrekening en een

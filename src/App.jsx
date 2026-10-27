@@ -174,6 +174,9 @@ const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(B
 
 // V46 — zie `classified`: categorieën die in een privé-only dossier aan de zakelijke kant gespiegeld worden.
 // Alle %-splitsbare kostencategorieën behalve de auto-categorieën (die volgen de wizard).
+// Basisvragen die de verkorte wizard in Eenvoudig niet stelt (zie SetupWizardModal); die horen niet in de zekerheidsmeter.
+const NIET_IN_EENVOUDIG = ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"];
+const MOBIEL_CAT = "Zakelijk mobiel/internet"; // beide-V8R4 — zie openBasisvragen / BasisvragenEenvoudig
 const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
   "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel/internet", "Reiskosten (OV)", "Streaming diensten",
   "Software & Online diensten", "Boekhouder, accountant & administratie",
@@ -1859,11 +1862,21 @@ export default function App() {
   // nieuw-V3R1 — "Mijn antwoorden" in de eenvoudige weergave: alle keuzes per tegenpartij, met bedrag in het gekozen jaar.
   const eenvoudigAntwoordenLijst = useMemo(() => {
     if (!eenvoudigActief) return [];
-    const per = {};
+    const per = {}, auto = {};
     for (const tx of classified) {
       if (tx.isMirror) continue;
       const k = overrideSleutel(tx, overridesByCounterparty); // beide-V8R3 — zelfde sleutel als de indeling (IBAN of naam)
-      if (!k) continue;
+      if (!k) {
+        // beide-V8R4 — ook automatisch ingedeelde namen zijn vindbaar (wens Boska 27-10: KPN, Centraal Beheer); een wijziging
+        // wordt dan een gewone keuze op dezelfde sleutel als bij "Nakijken".
+        const ak = keyForTx(tx);
+        if (!ak) continue;
+        const a = (auto[ak] ||= { naam: tx.counterparty || tx.description || ak, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, cats: {}, boekingen: [], bedragJaar: 0 });
+        a.cats[tx.category] = (a.cats[tx.category] || 0) + 1;
+        a.boekingen.push({ datum: tx.date, jaar: tx.year, bedrag: tx.amount });
+        if (tx.year === activeYear) a.bedragJaar += tx.amount;
+        continue;
+      }
       const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, boekingen: [] });
       g.aantal += 1;
       g.boekingen.push({ datum: tx.date, jaar: tx.year, bedrag: tx.amount }); // beide-V8R2 — zoeken op bedrag of datum (MijnAntwoorden)
@@ -1875,6 +1888,14 @@ export default function App() {
         key: k, naam: o.displayName || k, categorie: o.category,
         teken: per[k]?.teken ?? (o.sign === "pos" ? 1 : -1), rekening: per[k]?.rekening || (o.type === "Zakelijk" ? "Zakelijk" : "Prive"),
         aantal: per[k]?.aantal || 0, bedragJaar: Math.round((per[k]?.bedragJaar || 0) * 100) / 100, boekingen: per[k]?.boekingen || [],
+      }))
+      .concat(Object.entries(auto).map(([k, a]) => {
+        const cats = Object.entries(a.cats).sort((x, y) => y[1] - x[1]);
+        return {
+          key: k, naam: a.naam, categorie: cats[0][0], categorieen: cats.length > 1 ? cats.map(([c]) => c) : null, automatisch: true,
+          basis: { displayName: a.naam, sign: a.teken > 0 ? "pos" : "neg" }, teken: a.teken, rekening: a.rekening,
+          aantal: a.boekingen.length, bedragJaar: Math.round(a.bedragJaar * 100) / 100, boekingen: a.boekingen,
+        };
       }));
   }, [eenvoudigActief, classified, overridesByCounterparty, activeYear]); // eslint-disable-line react-hooks/exhaustive-deps
   const wijzigAntwoord = (key, patch) => {
@@ -2396,7 +2417,7 @@ export default function App() {
   }, [accountTypeByFile]);
   const categoryZakelijkPercentageEff = useMemo(() => {
     // release20V3: een jaar met "werkruimte niet zelfstandig" telt huur/energie/gemeentelijke lasten voor 0% mee.
-    const basis = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus);
+    const basis = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus, [...new Set(classified.map((tx) => tx.year))]);
     if (!priveOnlyDossier) return basis;
     const jaren = [...new Set(classified.map((tx) => tx.year))];
     const result = { ...basis };
@@ -3108,6 +3129,8 @@ export default function App() {
   // release21V1 — basisvragen uit de wizard die nog openstaan (null = nooit beantwoord). Zelfde regels
   // als de wizard: vragen per jaar pas als er jaren zijn, en zzp-vragen (uren, starters, overig inkomen,
   // KOR) niet bij een BV. Telt mee in de Instellingen-badge en de routebalk.
+  const mobielOpenJaren = [...new Set(classified.filter((tx) => !tx.isMirror && tx.category === MOBIEL_CAT).map((tx) => tx.year))]
+    .filter((y) => categoryZakelijkPercentage?.[MOBIEL_CAT]?.[y] == null).sort();
   const openBasisvragen = (() => {
     const isBV = rechtsvorm === "bv";
     const heeftJaren = years.length > 0;
@@ -3119,6 +3142,8 @@ export default function App() {
     const voeg = (key, label, open, onderdeel = "omzet") => { if (open && (onderdeel === null || aan(onderdeel))) lijst.push({ key, label }); };
     voeg("naam", "Naam rekeninghouder", eigenNamen === null && !modus.wizard, null);
     voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
+    // beide-V8R4 — eigen rekeningen elders (ook in Eenvoudig, zie SetupWizardModal).
+    voeg("andere", "Eigen rekeningen", !modus.wizard && parsedFiles.length > 0 && eigenRekeningenExtra === null, null);
     // nieuw-V6R9 — ook beantwoord als de auto per jaar is ingevuld (Persoonlijke aannames), zoals in oudere dossiers.
     voeg("auto", "Auto (zaak/privé)", autoWizardStatus === null && leeg(autoStatus), "auto");
     voeg("lease", "Leaseauto", verwachteLease === null, "lease");
@@ -3131,6 +3156,8 @@ export default function App() {
     voeg("starters", "Startersaftrek", heeftJaren && !isBV && leeg(startersaftrekStatus), "ondernemersaftrek");
     voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
+    // beide-V8R4 — Eenvoudig: welk deel van telefoon/internet is zakelijk? Zonder antwoord telde het voor 100%.
+    if (eenvoudigActief && !modus.wizard && mobielOpenJaren.length > 0) lijst.push({ key: "mobiel", label: `Telefoon en internet: zakelijk deel (${mobielOpenJaren.join(", ")})` });
     // beide-V1R7 — de vragen van de privéwizard (alleen in een privédossier).
     if (modus.wizard) lijst.push(...modus.wizard.openVragen(priveAntwoorden, { eigenNamen, jaren: years, bestanden: parsedFiles.map((f) => f.fileName) }, { eenvoudig: eenvoudigActief }));
     return lijst;
@@ -3883,6 +3910,8 @@ export default function App() {
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
+            mobiel={activeYear && classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === MOBIEL_CAT) ? categoryZakelijkPercentage?.[MOBIEL_CAT]?.[activeYear] ?? null : undefined}
+            onMobiel={(v) => { for (const y of new Set([activeYear, ...mobielOpenJaren])) setCategoryZakelijkPercentage(MOBIEL_CAT, y, v); }}
             onUitgebreid={magUitgebreid ? () => naarUitgebreidVanuitEenvoudig(() => { setBasisEenvoudigOpen(false); setActiveTab("instellingen"); }) : null}
             onClose={() => setBasisEenvoudigOpen(false)}
           />
@@ -3901,6 +3930,8 @@ export default function App() {
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
+            openVragen={basisvragenNietGestart ? [] : openBasisvragen.filter((v) => !NIET_IN_EENVOUDIG.includes(v.key))}
+            onOpenVragen={() => (modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => v.key !== "mobiel" && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen} uitlegVerzoek={uitlegVerzoek}
             onToegangAanvragen={startAanvraagUitgebreid}

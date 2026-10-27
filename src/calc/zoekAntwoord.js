@@ -16,7 +16,7 @@ export function soortZoekterm(z) {
 
 export function zoekAntwoord(rij, term) {
   if (!term) return { boeking: null };
-  const tekstTreffer = String(rij.naam || "").toLowerCase().includes(term.t) || String(rij.categorie || "").toLowerCase().includes(term.t);
+  const tekstTreffer = String(rij.naam || "").toLowerCase().includes(term.t) || String(rij.categorieen ? rij.categorieen.join(" ") : rij.categorie || "").toLowerCase().includes(term.t);
   if (term.soort === "tekst") return tekstTreffer ? { boeking: null } : null;
   const boekingen = rij.boekingen || [];
   const b = term.soort === "bedrag"

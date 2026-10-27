@@ -34,7 +34,7 @@ function Balk({ b, groot = false }) {
   );
 }
 
-function Zekerheid({ b, compact = false, nogVragen = null, onzekerTekst = null }) {
+function Zekerheid({ b, compact = false, nogVragen = null, onzekerTekst = null, openVragen = [], onOpenVragen = null }) {
   const o = OORDEEL[b.oordeel];
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -52,7 +52,14 @@ function Zekerheid({ b, compact = false, nogVragen = null, onzekerTekst = null }
       {b.oordeel !== "geen" && (
         <p className="mt-2 text-xs text-slate-600">{b.onzeker > 0 ? <>Nog <b>{r0(b.onzeker)}</b> onzeker; {onzekerTekst ? `${onzekerTekst}.` : <>de belasting kan daardoor ongeveer <b>{r0(b.belastingAfwijking)}</b> afwijken.</>}</> : "Niets meer onzeker."}</p>
       )}
-      {nogVragen != null && b.oordeel !== "betrouwbaar" && b.oordeel !== "geen" && (
+      {/* beide-V8R4 — open basisvragen (bijv. werkruimte, startersaftrek) tellen mee: zonder antwoord rekent de app voorzichtig. */}
+      {openVragen.length > 0 && b.oordeel !== "geen" && (
+        <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Nog niet beantwoord: <b>{openVragen.map((v) => v.label).join(", ")}</b>. De uitkomst kan daardoor nog veranderen.
+          {onOpenVragen && <> <button type="button" onClick={onOpenVragen} style={{ minHeight: 0 }} className="font-semibold underline">Nu beantwoorden</button></>}
+        </div>
+      )}
+      {nogVragen != null && !(openVragen.length > 0 && nogVragen === 0) && b.oordeel !== "betrouwbaar" && b.oordeel !== "geen" && (
         <p className="mt-1 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar (hooguit {r0(b.grens.betrouwbaar)} onzeker).</> : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
       )}
     </div>
@@ -68,6 +75,7 @@ export default function EenvoudigeApp({
   onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, uitlegVerzoek = 0, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
   teksten = null, uitkomst = null, // beide-V1R8 — privédossier: andere keuzes/teksten (modus/prive/eenvoudig.js) en eigen uitkomst
   extraGegevens = null, // beide-V2R2 — privédossier: eigen rekeningen (spaarrekening) opgeven in stap 1
+  openVragen = [], onOpenVragen = null, // beide-V8R4 — open basisvragen in "Hoe zeker is de uitkomst?"
 }) {
   // nieuw-V3R1 — corrigeren: "← Vorige vraag" (geschiedenis van deze sessie) en "Mijn antwoorden" (alle keuzes).
   const [geschiedenis, setGeschiedenis] = useState([]); // [{ vraag, keuze }]
@@ -99,7 +107,11 @@ export default function EenvoudigeApp({
   const [anders, setAnders] = useState("");
   const bevestigd = useMemo(() => maakBevestigd(reviewedOverigKeys, reviewedPersonKeys), [reviewedOverigKeys, reviewedPersonKeys]);
   const omzet = jaarSummary?.zakelijkeInkomstenNetto || 0;
-  const b = useMemo(() => berekenBetrouwbaarheid(classified, jaar, bevestigd, omzet), [classified, jaar, bevestigd, omzet]);
+  // beide-V8R4 — met open basisvragen nooit "Betrouwbaar": die antwoorden kunnen de uitkomst nog flink veranderen.
+  const b = useMemo(() => {
+    const r = berekenBetrouwbaarheid(classified, jaar, bevestigd, omzet);
+    return openVragen.length > 0 && r.oordeel === "betrouwbaar" ? { ...r, oordeel: "redelijk" } : r;
+  }, [classified, jaar, bevestigd, omzet, openVragen.length]);
   const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
   const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
@@ -252,7 +264,7 @@ export default function EenvoudigeApp({
             {extraGegevens && <div className="mt-4">{extraGegevens}</div>}
             {bestanden.length > 0 && <button type="button" onClick={() => setStap(2)} className="mt-4 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 2: Nakijken →</button>}
           </div>
-          <Zekerheid b={b} compact onzekerTekst={teksten?.onzeker} />
+          <Zekerheid b={b} compact onzekerTekst={teksten?.onzeker} openVragen={openVragen} onOpenVragen={onOpenVragen} />
         </div>
       )}
 
@@ -358,7 +370,7 @@ export default function EenvoudigeApp({
             <div className="mt-5"><button type="button" onClick={() => setStap(3)} className="rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800">Naar stap 3: Uitkomst →</button></div>
           </div>
           <div className="space-y-3">
-            <Zekerheid b={b} compact nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
+            <Zekerheid b={b} compact nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} openVragen={openVragen} onOpenVragen={onOpenVragen} />
             <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">Stoppen kan altijd: de antwoorden worden direct bewaard. {onUitgebreid ? <>{teksten?.uitgebreidTip || "Fijner werk (percentages, één boeking apart) kan in"} <button type="button" onClick={onUitgebreid} className="underline">Uitgebreid</button>.</> : "Twijfel over een boeking? Sla hem over of vraag het een adviseur."}</p>
           </div>
         </div>
@@ -366,7 +378,7 @@ export default function EenvoudigeApp({
 
       {stap === 3 && (
         <div className="space-y-4">
-          <Zekerheid b={b} nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} />
+          <Zekerheid b={b} nogVragen={nogVragen} onzekerTekst={teksten?.onzeker} openVragen={openVragen} onOpenVragen={onOpenVragen} />
           {uitkomst ? uitkomst({ bruikbaar, naarNakijken: () => setStap(2) }) : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs text-slate-500">Wat heeft het bedrijf verdiend?</p>
