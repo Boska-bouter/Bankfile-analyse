@@ -21,7 +21,12 @@ export default function BasisvragenEenvoudig({
 }) {
   const [naam, setNaam] = useState(eigenNamen?.ondernemer || "");
   useEffect(() => setNaam(eigenNamen?.ondernemer || ""), [eigenNamen?.ondernemer]);
-  const bewaarNaam = () => { const n = naam.trim(); if (n !== (eigenNamen?.ondernemer || "")) setEigenNamen({ ...(eigenNamen || {}), ondernemer: n }); };
+  const [bedrijf, setBedrijf] = useState(eigenNamen?.bedrijf || ""); // beide-V8R7 — herkenningspunt voor eigen rekeningen
+  useEffect(() => setBedrijf(eigenNamen?.bedrijf || ""), [eigenNamen?.bedrijf]);
+  const bewaarNaam = () => {
+    const n = naam.trim(), b = bedrijf.trim();
+    if (n !== (eigenNamen?.ondernemer || "") || b !== (eigenNamen?.bedrijf || "")) setEigenNamen({ ...(eigenNamen || {}), ondernemer: n, bedrijf: b || null });
+  };
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
       <div className="relative flex w-full max-w-xl flex-col rounded-2xl bg-white shadow-xl" style={{ maxHeight: "calc(100dvh - 2rem)" }}>
@@ -34,6 +39,9 @@ export default function BasisvragenEenvoudig({
           <h3 className="mt-1 text-sm font-bold text-slate-900">Over de ondernemer en het bedrijf</h3>
           <Rij label="Naam ondernemer">
             <input value={naam} onChange={(e) => setNaam(e.target.value)} onBlur={bewaarNaam} className={veld} placeholder="naam" />
+          </Rij>
+          <Rij label="Bedrijfsnaam" uitleg="Helpt eigen rekeningen te herkennen">
+            <input value={bedrijf} onChange={(e) => setBedrijf(e.target.value)} onBlur={bewaarNaam} className={veld} placeholder="handelsnaam" />
           </Rij>
           <Rij label="Soort bedrijf">
             <select value={rechtsvorm || ""} onChange={(e) => setRechtsvorm(e.target.value || null)} className={veld}>
