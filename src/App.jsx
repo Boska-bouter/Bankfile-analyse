@@ -101,6 +101,8 @@ import EenvoudigeApp from "./components/eenvoudig/EenvoudigeApp.jsx";
 import ModusKeuze from "./components/eenvoudig/ModusKeuze.jsx";
 import OmzettenUitgebreid from "./components/eenvoudig/OmzettenUitgebreid.jsx";
 import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.jsx";
+import MogelijkeEigenRekeningen from "./components/shared/MogelijkeEigenRekeningen.jsx";
+import { vindMogelijkeEigenRekeningen } from "./classification/mogelijkeEigenRekeningen.js";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
@@ -1898,6 +1900,26 @@ export default function App() {
         };
       }));
   }, [eenvoudigActief, classified, overridesByCounterparty, activeYear]); // eslint-disable-line react-hooks/exhaustive-deps
+  // beide-V8R7 — mogelijke eigen rekeningen (wens Boska 27-10). "Nee" staat in bevestigdeControles.eigenRekeningenNee.
+  const eigenKandidaten = useMemo(() => (parsedFiles.length === 0 ? [] : vindMogelijkeEigenRekeningen(classified, {
+    eigenIbans: [...eigenRekeningenGeladen, ...(eigenRekeningenExtra || [])].map((r) => r?.iban).filter(Boolean),
+    eigenNamen, afgewezen: bevestigdeControles?.eigenRekeningenNee || [],
+  })), [classified, eigenRekeningenGeladen, eigenRekeningenExtra, eigenNamen, bevestigdeControles, parsedFiles.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [eigenKandidatenOpen, setEigenKandidatenOpen] = useState(false);
+  const kiesEigenKandidaat = (iban, patch) => {
+    snapshotBeforeAction("Eigen rekening toegevoegd");
+    setEigenRekeningenExtra((prev) => [...(prev || []).filter((r) => r?.iban !== iban), { iban, ...patch }]);
+  };
+  const neeEigenKandidaat = (iban) => {
+    snapshotBeforeAction("Geen eigen rekening");
+    setBevestigdeControles((prev) => ({ ...(prev || {}), eigenRekeningenNee: [...new Set([...(prev?.eigenRekeningenNee || []), iban])] }));
+  };
+  // Na de wizard die bij het laden van een bankbestand opengaat: het overzicht vanzelf tonen als er iets gevonden is.
+  const wizardWasOpen = useRef(false);
+  useEffect(() => {
+    if (wizardWasOpen.current && !showSetupWizard && eigenKandidaten.length > 0) setEigenKandidatenOpen(true);
+    wizardWasOpen.current = showSetupWizard;
+  }, [showSetupWizard]); // eslint-disable-line react-hooks/exhaustive-deps
   const wijzigAntwoord = (key, patch) => {
     snapshotBeforeAction("Categorie/type aangepast");
     setOverridesByCounterparty((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
@@ -3904,6 +3926,10 @@ export default function App() {
         {omzetVraag && <OmzettenUitgebreid soort={soortDossier === "prive" ? "prive" : "zakelijk"} onJa={() => { const f = omzetVraag; setOmzetVraag(null); f(); }} onNee={() => setOmzetVraag(null)}
           onOpslaan={() => { setOmzetVraag(null); startOpslaan(); }} />}
         {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); if (m === "uitgebreid") naarUitgebreidVanuitEenvoudig(); }} onClose={() => setModusNaLaden(null)} />}
+        {eigenKandidatenOpen && !(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && (
+          <MogelijkeEigenRekeningen kandidaten={eigenKandidaten} soort={modus.berekening === "prive" ? "prive" : "zakelijk"}
+            onKies={kiesEigenKandidaat} onNee={neeEigenKandidaat} onClose={() => setEigenKandidatenOpen(false)} />
+        )}
         {basisEenvoudigOpen && eenvoudigActief && (
           <BasisvragenEenvoudig
             jaar={activeYear} eigenNamen={eigenNamen} setEigenNamen={(v) => { snapshotBeforeAction("Eigen naam ingevuld"); setEigenNamen(v); }}
@@ -3930,8 +3956,8 @@ export default function App() {
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
-            openVragen={basisvragenNietGestart ? [] : openBasisvragen.filter((v) => !NIET_IN_EENVOUDIG.includes(v.key))}
-            onOpenVragen={() => (modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => v.key !== "mobiel" && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
+            openVragen={[...(eigenKandidaten.length ? [{ key: "eigenKandidaten", label: `Mogelijke eigen rekeningen (${eigenKandidaten.length})` }] : []), ...(basisvragenNietGestart ? [] : openBasisvragen.filter((v) => !NIET_IN_EENVOUDIG.includes(v.key)))]}
+            onOpenVragen={() => (eigenKandidaten.length ? setEigenKandidatenOpen(true) : modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => v.key !== "mobiel" && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen} uitlegVerzoek={uitlegVerzoek}
             onToegangAanvragen={startAanvraagUitgebreid}
@@ -4017,6 +4043,12 @@ export default function App() {
           {parsedFiles.length > 0 && <OnzekerhedenPanel heeftVoorraad={heeftVoorraad} />}
 
           {parsedFiles.length > 0 && <RouteBalk stappen={routeStappen} onKies={kiesRouteStap} />}
+          {parsedFiles.length > 0 && eigenKandidaten.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span>De app vond <b>{eigenKandidaten.length}</b> {eigenKandidaten.length === 1 ? "rekening die lijkt" : "rekeningen die lijken"} op een eigen rekening die niet is opgegeven.</span>
+              <button type="button" onClick={() => setEigenKandidatenOpen(true)} className="rounded-lg border border-amber-400 bg-white px-3 py-1 font-semibold hover:bg-amber-100">Bekijken</button>
+            </div>
+          )}
           {parsedFiles.length > 0 && !(showSetupWizard || manualWizardOpen || openVragenWizard) && (
             <OpenBasisvragenCard vragen={openBasisvragen} nietGestart={basisvragenNietGestart} onBeantwoorden={() => setOpenVragenWizard(true)} onderwerpen={modus.wizard?.teksten?.onderwerpen} />
           )}

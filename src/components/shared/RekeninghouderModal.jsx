@@ -9,9 +9,10 @@ import { X } from "lucide-react";
 export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
   const [ondernemer, setOndernemer] = useState(eigenNamen?.ondernemer || "");
   const [partner, setPartner] = useState(eigenNamen?.partner || "");
+  const [bedrijf, setBedrijf] = useState(eigenNamen?.bedrijf || ""); // beide-V8R7
 
   const save = () => {
-    onSave({ ondernemer: ondernemer.trim() || null, partner: partner.trim() || null });
+    onSave({ ...(eigenNamen || {}), ondernemer: ondernemer.trim() || null, partner: partner.trim() || null, bedrijf: bedrijf.trim() || null });
     onClose();
   };
 
@@ -42,6 +43,13 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
             value={partner}
             onChange={(e) => setPartner(e.target.value)}
             placeholder="Naam fiscaal partner (optioneel)"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={bedrijf}
+            onChange={(e) => setBedrijf(e.target.value)}
+            placeholder="Bedrijfsnaam / handelsnaam (optioneel)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <div className="flex justify-end gap-2 pt-1">

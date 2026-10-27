@@ -598,6 +598,7 @@ function Scherm31({
     (!toonHolding || heeftHolding != null);
   const naamO = typedNow.eigenNaamOndernemer ?? eigenNamen?.ondernemer ?? "";
   const naamP = typedNow.eigenNaamPartner ?? eigenNamen?.partner ?? "";
+  const naamB = typedNow.eigenNaamBedrijf ?? eigenNamen?.bedrijf ?? "";
   return (
     <div className="space-y-4">
       {sessionFiles.length > 0 && (
@@ -626,7 +627,7 @@ function Scherm31({
       )}
 
       {needs.naam && (
-        <Sectie titel="Naam ondernemer (en die van de fiscale partner)" uitleg="Zo herkent de app overboekingen naar/van de ondernemer zelf als privé. Optioneel.">
+        <Sectie titel="Naam ondernemer, fiscale partner en bedrijf" uitleg="Zo herkent de app overboekingen naar/van de ondernemer zelf en tussen eigen rekeningen. Optioneel.">
           <input
             type="text"
             value={naamO}
@@ -639,6 +640,14 @@ function Scherm31({
             value={naamP}
             onChange={(e) => zet({ eigenNaamPartner: e.target.value })}
             placeholder="Naam fiscaal partner (optioneel)"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+          {/* beide-V8R7 — bedrijfsnaam: extra herkenningspunt voor eigen rekeningen (wens Boska 27-10). */}
+          <input
+            type="text"
+            value={naamB}
+            onChange={(e) => zet({ eigenNaamBedrijf: e.target.value })}
+            placeholder="Bedrijfsnaam / handelsnaam (optioneel)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </Sectie>
@@ -689,7 +698,7 @@ function Scherm31({
         disabled={!klaar}
         onClick={() => {
           if (needs.naam) {
-            setEigenNamen({ ondernemer: naamO.trim() || null, partner: naamP.trim() || null });
+            setEigenNamen({ ondernemer: naamO.trim() || null, partner: naamP.trim() || null, bedrijf: naamB.trim() || null });
           }
           goNext();
         }}

@@ -518,7 +518,8 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     // zijn géén overboeking tussen twee rekeningen.
     if (!tx.ownAccount || ibansMatch(tx.counterpartyIban, tx.ownAccount)) return null;
     // beide-V3R3 — privé: bij een opgegeven (niet geladen) rekening staat de soort erbij (wens Boska 23-10).
-    if (matchedOwn.soort === "spaar") return { category: "Interne overboeking: privé sparen", type };
+    // beide-V8R6 — een zakelijke spaarrekening is zakelijk sparen (was altijd "privé sparen", melding Boska 27-10).
+    if (matchedOwn.soort === "spaar") return { category: matchedOwn.accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
     if (matchedOwn.soort === "beleggen") return { category: "Beleggen", type };
     return { category: "Interne overboeking", type };
   }
