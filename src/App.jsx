@@ -3745,7 +3745,7 @@ export default function App() {
                 year={activeYear} rechtsvorm={rechtsvorm}
                 zelfstandigenaftrekStatus={zelfstandigenaftrekStatus} onSetZelfstandigenaftrekStatus={setZelfstandigenaftrekStatus} zaLegacyJaDefault={zaLegacyJaDefault}
                 startersaftrekStatus={startersaftrekStatus} onSetStartersaftrekStatus={setStartersaftrekStatus}
-                autoStatus={autoStatus}
+                autoStatus={autoStatus} onSetAutoStatus={setAutoStatus}
                 privegebruikAutos={lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus })}
                 privegebruikBron={{ leaseDetails, autoActivaDetails }}
                 kmVergoeding={kmVergoedingDetails?.[activeYear]} onSetKmVergoedingField={setKmVergoedingField}
