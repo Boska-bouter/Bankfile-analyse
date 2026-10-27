@@ -225,7 +225,7 @@ export const DEFAULT_RULES = [
   { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente", "inzake rente", "inzake aflossing", "leningdeel"] },
   { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
-    "bedrijfsaansprakelijkheid", "zakelijke verzekering", "movir", "de goudse", "klaverblad", "chubb", "voogd",
+    "bedrijfsaansprakelijkheid", "zakelijke verzekering", "bedrijfsverzekering", "beroepsaansprakelijkheid", "movir", "de goudse", "klaverblad", "chubb", "voogd",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
     "arag", " das ", "bovemij", "turien & co", "vivat", "aon", "surebusiness",
   ],

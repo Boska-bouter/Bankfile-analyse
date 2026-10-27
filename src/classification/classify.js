@@ -13,12 +13,15 @@ export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|len
 const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
 const HEEL_WOORD = new Set(["boss"]);
+// beide-V9R1 — merknamen die ook midden in een ander woord staan: "athlon" (lease) in "Decathlon" (vergelijking Houtman 27-10).
+const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet"]);
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
   let i = text.indexOf(kw);
   if (i < 0) return false;
   const trimmed = kw.trim();
+  if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${trimmed}`).test(text);
   if (kw !== trimmed || trimmed.length > 5 || !DEFAULT_KEYWORD_SET.has(kw)) return true;
   // "apk" staat in de praktijk vaak vastgeplakt aan de garagenaam ("APKFriezenkamp") — daar geen eindgrens eisen.
   // "cafe" zit vrijwel altijd als achtervoegsel in een samenstelling ("Grandcafe", "Eetcafe", "Cafetaria") — geen beginsgrens eisen.
@@ -480,6 +483,8 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   if (rule.name === "Bankkosten" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   // Geld op een eigen rekening bij een andere bank zetten ("top-up via bunq") is ook geen bankkosten.
   if (rule.name === "Bankkosten" && /\btop-?up\b|opwaarderen/.test(text)) return true;
+  // beide-V9R1 — "Rowdy … via bunq" is een betaling aan een persoon via de bank-app, geen bankkosten.
+  if (rule.name === "Bankkosten" && /\bvia ?(bunq|knab|ing|rabobank|abn amro|asn|sns|revolut|n26|triodos)\b/.test(text)) return true;
   // Op een zakelijke rekening is rente aan de bank zonder het woord hypotheek eerder een zakelijke lening: nakijken.
   if (rule.name === "Hypotheek" && accountType === "Zakelijk" && !/hypothe/.test(text)) return true;
   // "Boekhouder, accountant & administratie" herkent het boekhoudpakket AFAS op het kale woord
@@ -580,7 +585,7 @@ function hoortBijAndereRekening(override, accountType) {
 
 // beide-V1R6 — `verfijn` (optioneel, alleen in een privédossier) past alleen de automatische uitkomst aan, nooit
 // een eigen keuze van de gebruiker. Zonder verfijn is alles zoals het was.
-export function resolveClassification(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = [], verfijn = null) {
+function resolveClassificationBasis(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = [], verfijn = null) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
   if (lockedTransfer) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
@@ -616,6 +621,17 @@ export function resolveClassification(tx, rules, businessKeywords, businessExpen
   }
   const auto = nietAannemelijk(tx, autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere, eigenNamen, zakelijkeSpaarKeywords), accountType);
   return verfijn ? verfijn(auto) : auto;
+}
+
+// beide-V9R1 — een autoverzekering blijft Verzekering: Auto, ook als de verzekeraar (bijv. Centraal Beheer) als geheel op zakelijk
+// staat. Zo valt hij bij een privéauto met km-aftrek niet alsnog als zakelijke kosten mee (vergelijking Houtman 27-10, besluit Boska).
+// Een keuze voor één boeking gaat voor.
+const AUTOVERZ_NAAR_AUTO = new Set(["Verzekering: Zakelijk", "Verzekeringen", "Zakelijke inkoop/uitgaven", "Zakelijk overige abonnementen"]);
+export function resolveClassification(tx, ...rest) {
+  const uitkomst = resolveClassificationBasis(tx, ...rest);
+  const overridesByRow = rest[5] || {};
+  if (!uitkomst || overridesByRow[tx.id] || !AUTOVERZ_NAAR_AUTO.has(uitkomst.category)) return uitkomst;
+  return /auto ?verzekering/i.test(`${tx.description || ""} ${tx.counterparty || ""}`) ? { ...uitkomst, category: "Verzekering: Auto" } : uitkomst;
 }
 
 // beide-V8R3 — onder welke sleutel in overridesByCounterparty staat de keuze die voor deze boeking geldt? Zelfde volgorde als

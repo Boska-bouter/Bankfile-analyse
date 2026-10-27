@@ -139,6 +139,9 @@ export function rekeningVan(tx) {
 
 export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false, tx = null) {
   if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus)) return 0;
+  // beide-V9R1 — bij een privéauto met km-aftrek zit de autoverzekering in de vergoeding per km; ook als de boeking zelf
+  // (per regel) op een zakelijke categorie staat, telt hij niet als kosten (vergelijking Houtman 27-10, besluit Boska).
+  if (tx && isPriveAutoJaar(year, autoStatus) && /auto ?verzekering/i.test(`${tx.description || ""} ${tx.counterparty || ""}`)) return 0;
   if (!isSplitsbareCategorie(category)) return defaultZakelijkPercentage(category);
   if (AUTO_SPLIT_UITSLUITING.includes(category) && (autoOpDeZaak(year, autoStatus) || heeftLeaseAuto)) {
     return defaultZakelijkPercentage(category);
