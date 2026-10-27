@@ -126,13 +126,14 @@ import EigenRekeningenPanel from "./components/settings/EigenRekeningenPanel.jsx
 import { abonnementRegels, aflopendeAbonnementen } from "./content/abonnement.js";
 import HandleidingVraag from "./components/shared/HandleidingVraag.jsx";
 import { useRapporten } from "./reports/useRapporten.jsx";
+import { useNoodmodus, NoodmodusBalk, nietBeschikbaar } from "./dossier/useNoodmodus.jsx";
 import { useDossierBestand } from "./dossier/useDossierBestand.jsx";
 import ActivaDetailsModal from "./components/loans/ActivaDetailsModal.jsx";
 import { computeActivaSummary, computeActivaAfschrijvingForYear } from "./tax/activa.js";
 import RawFileReviewModal from "./components/upload/RawFileReviewModal.jsx";
 import { exportExcel, exportCsv } from "./reports/excelExport.js";
 import { computeBvWinstInvoer } from "./reports/aangiftevoorstel-bv.js";
-import { printReport, printHtmlDocument, buildReportHtml } from "./reports/printReport.js";
+import { printHtmlDocument } from "./reports/printReport.js";
 import { downloadRapport } from "./reports/download.js";
 import { computeLoanRenteForYear, computeLeaseRenteForYear, suggestLeaseMerges, leaseKeyVanTx } from "./tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "./tax/financialLease.js";
@@ -272,7 +273,11 @@ export default function App() {
   // beide-V7R3 — melding als een abonnement binnen 10 dagen afloopt, met de knop om te verlengen (wegklikken = deze sessie).
   const aflopend = useMemo(() => aflopendeAbonnementen(rechtenPerSoort, { beheerder: isBeheerder }), [rechtenPerSoort, isBeheerder]);
   const [aflopendWeg, setAflopendWeg] = useState(false);
-  const naarAbonnementen = () => { window.location.href = "/aanmelden"; };
+  // beide-V7R9 — noodmodus: server (Cloudflare) niet bereikbaar? Dan opent de app uit de bewaarde kopie (src/noodmodus/sw.js)
+  // en meldt dat met een balk; wat de server nodig heeft, geeft dan een korte uitleg in plaats van een foutpagina.
+  const nood = useNoodmodus();
+  const naarServer = (url, wat) => { if (nood.weg) setDialog(nietBeschikbaar(wat)); else window.location.href = url; };
+  const naarAbonnementen = () => naarServer("/aanmelden", "Aanmelden");
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
@@ -3318,7 +3323,7 @@ export default function App() {
       setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van Bankoverzicht.\n\nReden: " });
       return;
     }
-    window.location.href = `/aanmelden?soort=${encodeURIComponent(soortDossier)}&plan=${encodeURIComponent(plan)}`;
+    naarServer(`/aanmelden?soort=${encodeURIComponent(soortDossier)}&plan=${encodeURIComponent(plan)}`, "Aanmelden");
   };
   const startAanvraagUitgebreid = () => setDialog({
     title: "Uitgebreid aanvragen",
@@ -3336,6 +3341,7 @@ export default function App() {
   // een melding: met recht op Uitgebreid kan de gebruiker overstappen, anders is een uitgebreid account nodig.
   // nieuw-V4R3 — daarnaast moet het recht "koppelen" aan staan (Gebruikers en rechten, of AccessAll/BEHEERDERS).
   const startKoppelen = () => {
+    if (nood.weg) { setDialog(nietBeschikbaar("De bankkoppeling")); return; }
     if (magUitgebreid && !magKoppelen) {
       setDialog({
         title: "Bankkoppeling",
@@ -3437,15 +3443,14 @@ export default function App() {
         if (priveOverzicht) exportPriveExcel({ jaren: years, overzicht: priveOverzicht, transacties: classified, label: categorieLabel });
         else exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
-      // beide-V4R1 — Downloaden als PDF of HTML: hetzelfde rapport als Printen.
+      // beide-V4R1 — Downloaden als PDF of HTML: hetzelfde rapport als Printen. beide-V8R0 — alleen nog privé (budgetoverzicht);
+      // het zakelijke geldstroomoverzicht is weg (wens Boska 27-10), zakelijk heeft alleen het controlebestand (Excel).
       case "pdf":
       case "html":
         if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Budgetoverzicht_${years.join("-")}` });
-        else if (groups.length) downloadRapport({ soort: target, html: metRapportKop(buildReportHtml(groups)), naam: "Bankoverzicht_Zakelijk_Prive" });
         break;
       case "print":
         if (priveOverzicht) printHtmlDocument(metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years));
-        else printReport(groups);
         break;
       case "aangifte":
         setShowAangifteMeerdereJaren(false);
@@ -3538,7 +3543,9 @@ export default function App() {
     const nieuwStarten = () => { startEmpty(); setActiveTab("overzicht"); setWeergave("uitgebreid"); startNieuwDossierWizard(); };
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full rounded-paneel border border-slate-200 bg-white p-6 shadow-lg">
+        <div className="max-w-md w-full space-y-4">
+        <NoodmodusBalk nood={nood} />
+        <div className="rounded-paneel border border-slate-200 bg-white p-6 shadow-lg">
           <h1 className="text-lg font-semibold mb-1">{heeftBewaard ? "Vorig dossier gevonden" : "Bankoverzicht"}</h1>
           <p className="text-sm text-slate-500 mb-3">
             {heeftBewaard
@@ -3614,7 +3621,9 @@ export default function App() {
             <br />
             <button type="button" className="underline" onClick={() => setShowFeedback(true)}>Vraag of opmerking? Stuur een bericht</button>
           </p>
-          {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
+          {showFeedback && nood.weg && <ConfirmDialog dialog={nietBeschikbaar("Hulpvraag of feedback")} onClose={() => setShowFeedback(false)} />}
+          {showFeedback && !nood.weg && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
+        </div>
         </div>
       </div>
     );
@@ -3777,9 +3786,11 @@ export default function App() {
           onClose={sluitBankKoppeling}
         />
       )}
-      {showBeheer && <BeheerRechtenModal eigenEmail={ingelogdAls} onAanvragen={zetAanvragen} onClose={() => setShowBeheer(false)} />}
+      {showBeheer && nood.weg && <ConfirmDialog dialog={nietBeschikbaar("Beheer")} onClose={() => setShowBeheer(false)} />}
+      {showBeheer && !nood.weg && <BeheerRechtenModal eigenEmail={ingelogdAls} onAanvragen={zetAanvragen} onClose={() => setShowBeheer(false)} />}
       {showCategoryOverview && <CategoryOverviewModal rechtsvorm={rechtsvorm} onClose={() => setShowCategoryOverview(false)} />}
-      {showFeedback && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
+      {showFeedback && nood.weg && <ConfirmDialog dialog={nietBeschikbaar("Hulpvraag of feedback")} onClose={() => setShowFeedback(false)} />}
+      {showFeedback && !nood.weg && <FeedbackModal voorinvullen={typeof showFeedback === "object" ? showFeedback : null} onClose={() => setShowFeedback(false)} />}
 
       {/* v270 — Meerjarenoverzicht als pop-up i.p.v. permanent uitgeklapt onder de kaarten. */}
       {showMultiYearModal && (
@@ -3834,6 +3845,7 @@ export default function App() {
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && !eenvoudigActief && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
+        <NoodmodusBalk nood={nood} />
         <SessieBalk sessie={sessie} onOpslaan={startOpslaan} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
         <OpslaanHerinneringBalk herinnering={opslaanHerinnering} onOpslaan={startOpslaan} />
         {aflopend.length > 0 && !aflopendWeg && (
@@ -3842,7 +3854,7 @@ export default function App() {
               {aflopend.map((a) => <span key={a.soort} className="block">Abonnement <b>{a.tekst}</b> loopt af op {a.datum}{a.dagen === 0 ? " (vandaag)" : a.dagen === 1 ? " (morgen)" : ` (over ${a.dagen} dagen)`}.</span>)}
               <span className="block text-xs text-amber-800">Dossiers blijven bewaard als bestand. Verlengen kost één knop.</span>
             </span>
-            <button type="button" onClick={() => { window.location.href = `/aanmelden?verlengen=${aflopend[0].soort}`; }} className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-800">Verlengen</button>
+            <button type="button" onClick={() => naarServer(`/aanmelden?verlengen=${aflopend[0].soort}`, "Verlengen")} className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-800">Verlengen</button>
             <button type="button" onClick={() => setAflopendWeg(true)} className="rounded-lg px-2 py-1.5 text-xs text-amber-800 underline">Later</button>
           </div>
         )}

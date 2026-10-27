@@ -19,7 +19,12 @@ const leesExtra = () => { try { const x = JSON.parse(localStorage.getItem(EXTRA_
 // Eerst de bewaarde rechten wissen, zodat na inloggen met een ander adres niet even de oude rechten gelden.
 export function uitloggen() {
   try { [SLEUTEL, EMAIL_SLEUTEL, EXTRA_SLEUTEL].forEach((k) => localStorage.removeItem(k)); } catch { /* geen opslag */ }
-  window.location.href = "/uitloggen";
+  // beide-V7R9 — ook de bewaarde app (noodmodus) vergeten: na uitloggen opent de app niet meer zonder server.
+  try { navigator.serviceWorker?.controller?.postMessage("vergeet"); } catch { /* geen service worker */ }
+  const weg = typeof caches !== "undefined"
+    ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("bankoverzicht-")).map((k) => caches.delete(k)))).catch(() => {})
+    : Promise.resolve();
+  weg.finally(() => { window.location.href = "/uitloggen"; });
 }
 
 // Geeft { mag, email, status, koppelen, beheerder, geldigTot }: email = het adres waarmee via Cloudflare Access is ingelogd (null als onbekend).

@@ -193,3 +193,7 @@ wrangler.jsonc op het hoogste niveau (en/of in `previews` voor DEV):
     "triggers": { "crons": ["0 7 1,15 12,1,2,3 *"] }
 
 Dan mailt de Worker op de 1e en 15e van december t/m maart de adressen in BEHEERDERS, alleen als er iets bij te werken is.
+
+## Noodmodus (beide-V7R9)
+
+Is de server (Cloudflare) niet bereikbaar, dan opent de app toch, uit een kopie op het apparaat (service worker `/sw.js`, gemaakt bij `npm run build` uit `src/noodmodus/sw.js`). Dat geldt alleen voor wie de afgelopen 7 dagen nog gewoon via de server is binnengekomen; na uitloggen of een verlopen sessie wordt de kopie vergeten. Rekenen, dossiers en rapporten werken dan gewoon. Aanmelden en verlengen, beheer, bankkoppeling en hulpvraag/feedback geven een korte uitleg. De Worker hoeft hiervoor niets te doen: `/sw.js` is een gewoon app-bestand achter de inlog. Geen wijziging in wrangler.jsonc.

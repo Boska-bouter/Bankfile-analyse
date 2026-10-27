@@ -199,13 +199,13 @@ export const HELP_CHAPTERS = [
     titel: "Meerjarenoverzicht, Downloaden en Print",
     inhoud: (
       <p>
-        Rechtsboven in "Details en overzichten" staan vier snelkoppelingen. <strong>Meerjarenoverzicht</strong> zet de
+        Rechtsboven in "Details en overzichten" staan drie snelkoppelingen. <strong>Meerjarenoverzicht</strong> zet de
         jaren naast elkaar. <strong>Onderbouwing</strong> toont de transacties achter de bedragen.{" "}
-        <strong>Downloaden</strong> vraagt welk formaat gewenst is: <em>PDF</em> (om te bewaren, mailen of printen),{" "}
-        <em>Excel</em> (alle transacties plus de overzichten) of <em>HTML</em> (opent in elke browser).{" "}
-        <strong>Print</strong> drukt het overzicht af. Elk rapport in de app (aangifteberekening, onderbouwing, BTW per
-        kwartaal, samenvatting, inkomen per maand) heeft dezelfde knop Downloaden met deze drie keuzes. Op de iPad, waar
-        printen vanuit de app op het beginscherm niet lukt, is PDF de handigste keuze.
+        <strong>Controlebestand (Excel)</strong> geeft alle boekingen van alle jaren, met per boeking de categorie, het
+        btw-bedrag en zakelijk of privé, plus de totalen per jaar: om de indeling na te lopen of aan een boekhouder te geven.
+        Elk rapport in de app (aangifteberekening, onderbouwing, BTW per kwartaal, samenvatting, inkomen per maand) heeft een
+        knop Downloaden met de keuze PDF, Excel of HTML. Op de iPad, waar printen vanuit de app op het beginscherm niet lukt,
+        is PDF de handigste keuze.
       </p>
     ),
   },
