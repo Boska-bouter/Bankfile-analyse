@@ -126,7 +126,9 @@ export default function SetupWizardModal({
     if (Array.isArray(alleenVragen)) for (const k of Object.keys(n)) n[k] = n[k] && alleenVragen.includes(k);
     // nieuw-V1R02 — verkorte wizard in de eenvoudige weergave: alleen wat nodig is voor winst, belasting en BTW.
     // Overgeslagen vragen blijven open (null) en komen in Uitgebreid terug als open punt bij Instellingen.
-    if (eenvoudig) for (const k of ["andere", "spaar", "spaarPrive", "klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"]) n[k] = false;
+    // beide-V8R4 — eigen rekeningen (andere, spaar) worden ook in Eenvoudig gevraagd: zonder die vraag telden overboekingen naar
+    // een eigen rekening elders als privé opname (vergelijking Eenvoudig ↔ Uitgebreid, wens Boska 27-10).
+    if (eenvoudig) for (const k of ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"]) n[k] = false;
     return n;
   });
   // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt

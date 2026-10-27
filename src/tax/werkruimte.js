@@ -59,10 +59,23 @@ export function werkruimteSoorten(werkruimteStatus, year) {
 
 // Maakt van de ingestelde percentages de "effectieve": voor een rekening met een niet-aftrekbare soort tellen huur, energie-water en
 // gemeentelijke kosten (ook de privé-varianten) voor 0% mee. De ingevulde percentages zelf blijven in het dossier staan.
-export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus) {
+// beide-V8R4 — `dossierJaren`: jaren met boekingen. Een jaar zonder antwoord op de werkruimtevraag (en zonder standaard) telt
+// voorzichtig: huur, energie-water en gemeentelijke kosten voor 0%, tenzij er voor die categorie en dat jaar zelf een percentage
+// is ingevuld. De vraag blijft open staan (openBasisvragen). Voorheen telden ze dan volledig als kosten (wens Boska 27-10,
+// vergelijking Eenvoudig ↔ Uitgebreid: ± € 6.000 te veel kosten in een dossier zonder antwoord).
+export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus, dossierJaren = []) {
   const jaren = Object.keys(werkruimteStatus || {}).filter((k) => k !== WERKRUIMTE_STANDAARD);
-  if (jaren.length === 0) return categoryZakelijkPercentage;
+  const std = werkruimteStatus?.[WERKRUIMTE_STANDAARD];
+  const onbeantwoord = std ? [] : (dossierJaren || []).map(String).filter((y) => !jaren.includes(y) || (() => { const s = werkruimteSoorten(werkruimteStatus, y); return !s.zakelijk && !s.prive; })());
+  if (jaren.length === 0 && onbeantwoord.length === 0) return categoryZakelijkPercentage;
   const result = { ...(categoryZakelijkPercentage || {}) };
+  for (const y of onbeantwoord) {
+    for (const cat of ["Huur", "Energie-water", "Gemeentelijke kosten"]) {
+      const eigen = result[cat] || {};
+      if (eigen[y] != null || eigen[`${y}:zakelijk`] != null || eigen[`${y}:prive`] != null) continue;
+      result[cat] = { ...eigen, [y]: 0 };
+    }
+  }
   for (const y of jaren) {
     const soorten = werkruimteSoorten(werkruimteStatus, y);
     for (const rek of ["zakelijk", "prive"]) {

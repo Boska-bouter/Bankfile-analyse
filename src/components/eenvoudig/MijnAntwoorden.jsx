@@ -32,7 +32,8 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
         const bedrag = Math.round(boekingen.reduce((s, b) => s + (Number(b.bedrag) || 0), 0) * 100) / 100;
         return t ? { ...r, aantal: boekingen.length, bedrag, treffer: t.boeking } : null;
       })
-      .filter((r) => r && (alles || term || volgorde.has(r.key)))
+      // beide-V8R4 — automatisch ingedeelde namen alleen bij zoeken (anders wordt de lijst te lang).
+      .filter((r) => r && (r.automatisch ? !!term : alles || term || volgorde.has(r.key)))
       .sort((a, b) => {
         const ia = volgorde.has(a.key) ? volgorde.get(a.key) : Infinity, ib = volgorde.has(b.key) ? volgorde.get(b.key) : Infinity;
         if (ia !== ib) return ia - ib;
@@ -67,16 +68,17 @@ export default function MijnAntwoorden({ lijst = [], gekozenKeys = [], jaar, onW
                   <span className="min-w-0 font-semibold text-slate-900">{r.naam}</span>
                   <span className="text-xs text-slate-500">{r.aantal === 0 ? "geen boekingen in dit dossier" : <>{r.aantal} {r.aantal === 1 ? "boeking" : "boekingen"}{r.bedrag ? <> · <b className="font-mono text-slate-700">{eur(r.bedrag)}</b></> : null}{kiesJaar === "alle" ? " in alle jaren" : ` in ${kiesJaar}`}</>} · {r.rekening === "Zakelijk" ? "zakelijke " : "privé"}rekening</span>
                 </div>
-                <p className="mb-1.5 text-xs text-slate-600">Nu: <b>{r.categorie}</b>
+                <p className="mb-1.5 text-xs text-slate-600">Nu: <b>{r.categorieen ? r.categorieen.join(" / ") : r.categorie}</b>
+                  {r.automatisch && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">automatisch ingedeeld</span>}
                   {r.treffer && <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-900">gevonden: {r.treffer.datum?.toLocaleDateString?.("nl-NL")} · <b className="font-mono">{eur(r.treffer.bedrag)}</b></span>}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {opties.map(([k, t, patch]) => (
-                    <button key={k} type="button" onClick={() => onWijzig(r.key, patch)} style={{ minHeight: 0 }}
-                      className={`${KNOP} ${patch.category === r.categorie ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}>{t}</button>
+                    <button key={k} type="button" onClick={() => onWijzig(r.key, r.automatisch ? { ...r.basis, ...patch } : patch)} style={{ minHeight: 0 }}
+                      className={`${KNOP} ${!r.categorieen && patch.category === r.categorie ? "border-teal-600 bg-teal-50 text-teal-800" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}>{t}</button>
                   ))}
-                  <CategorieSelect value={r.categorie} onChange={(v) => onWijzig(r.key, { category: v, type: typeVan(v) })} className="max-w-[14rem] rounded-lg border border-slate-300 px-2 py-1 text-xs" />
-                  <button type="button" onClick={() => onWis(r.key)} style={{ minHeight: 0 }} className="ml-auto text-xs text-slate-500 underline hover:text-slate-800">Terug naar de vragen</button>
+                  <CategorieSelect value={r.categorie} onChange={(v) => onWijzig(r.key, { ...(r.automatisch ? r.basis : {}), category: v, type: typeVan(v) })} className="max-w-[14rem] rounded-lg border border-slate-300 px-2 py-1 text-xs" />
+                  {!r.automatisch && <button type="button" onClick={() => onWis(r.key)} style={{ minHeight: 0 }} className="ml-auto text-xs text-slate-500 underline hover:text-slate-800">Terug naar de vragen</button>}
                 </div>
               </div>
             );
