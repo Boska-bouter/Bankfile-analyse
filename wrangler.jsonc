@@ -13,6 +13,7 @@
   "d1_databases": [{ "binding": "DB", "database_name": "bankoverzicht-rechten", "database_id": "391e8408-d381-46bc-af6a-f49bb03f7a7e" }],
 "mtls_certificates": [{ "binding": "PONTO_CERT", "certificate_id": "6f3106bd-cc5a-4f62-a89e-259188482c97" }],
   "vars": {
+    "APP_URL": "https://bankafschriftentool.app"
     "BANK_AANBIEDER": "ponto",
     "BANKKOPPELING": "beheerders",
     "BEHEERDERS": "paul@paulgerits.eu",
