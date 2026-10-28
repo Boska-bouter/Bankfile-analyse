@@ -89,7 +89,7 @@ import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal
 import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
-import { leaseGroepen, autoJaren, autoPriveMarkering, leaseWaarschuwingen } from "./tax/eenvoudigLease.js";
+import { leaseGroepen, autoJaren, autoPriveMarkering, leaseWaarschuwingen, registreerEenvoudigLease } from "./tax/eenvoudigLease.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -2461,6 +2461,7 @@ export default function App() {
   const leaseGroepenEenv = useMemo(() => leaseGroepen(leaseSummary, eenvoudigLease), [leaseSummary, eenvoudigLease]);
   const autoExactIngevuld = useMemo(() => lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus }).length > 0,
     [leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus]);
+  registreerEenvoudigLease({ groepen: leaseGroepenEenv, antwoorden: eenvoudigLease, exact: autoExactIngevuld }); // btw-correctie (tax/btwPrivegebruikAuto.js)
   const categoryZakelijkPercentageEff = useMemo(() => {
     const m = autoPriveMarkering(leaseGroepenEenv, eenvoudigLease, autoStatus, autoExactIngevuld);
     return m ? { ...categoryZakelijkPercentageEff0, __eenvoudigAutoPrive: m } : categoryZakelijkPercentageEff0;
@@ -2492,7 +2493,7 @@ export default function App() {
   // Btw-correctie privégebruik auto (alleen zzp) — zie tax/btwPrivegebruikAuto.js.
   const btwPrivegebruikAutoActiefJaar = useMemo(
     () => (activeYear ? computeBtwPrivegebruikAuto(activeYear, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }) : null),
-    [activeYear, leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, effectiveCategoryBtwRates, btwVerlegd, rechtsvorm]
+    [activeYear, leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, effectiveCategoryBtwRates, btwVerlegd, rechtsvorm, eenvoudigLease, leaseGroepenEenv, autoExactIngevuld]
   );
   const quarterlyBtwData = useMemo(
     () => (activeYear ? computeQuarterlyBtwForYear(classified, activeYear, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, btwPrivegebruikAutoActiefJaar) : []),
@@ -3976,6 +3977,20 @@ export default function App() {
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
+            werkruimte={activeYear ? (() => {
+              // beide-V9R8 — werkplek ook in Eenvoudig aan te passen (wens Boska 28-10); zelfde vertaling als de wizard (werkruimteUitWizard).
+              const s = werkruimteSoorten(werkruimteStatus, String(activeYear));
+              const waarde = s.zakelijk === "bedrijfsruimte" ? (s.prive === "zelfstandig" ? "pand_zelfstandig" : "pand") : s.zakelijk === "prive" ? "geen" : s.zakelijk || "";
+              const open = years.map(String).filter((y) => { const x = werkruimteSoorten(werkruimteStatus, y); return !x.zakelijk && !x.prive; });
+              return {
+                waarde, open: open.filter((y) => y !== String(activeYear)),
+                onKies: (k) => {
+                  const std = werkruimteUitWizard({ pand: k.startsWith("pand"), woning: k === "pand_zelfstandig" ? "zelfstandig" : k === "zelfstandig" || k === "niet_zelfstandig" ? k : null });
+                  snapshotBeforeAction("Werkplek aangepast (Eenvoudig)");
+                  setWerkruimteStatusState((prev) => { const next = { ...prev }; for (const y of new Set([String(activeYear), ...open])) next[y] = { ...std }; return next; });
+                },
+              };
+            })() : null}
             lease={(() => {
               const jaren = autoJaren(leaseGroepenEenv, autoStatus);
               const ditJaar = activeYear && jaren.includes(String(activeYear));
@@ -3985,6 +4000,7 @@ export default function App() {
                 waarde: ditJaar ? eenvoudigLease?.prive500?.[String(activeYear)] ?? null : null,
                 onKies: (v) => { for (const j of new Set([...(ditJaar ? [String(activeYear)] : []), ...open])) zetEenvoudigLease("prive500", j, v); },
               };
+              if (p500) p500.auto = { catalogus: eenvoudigLease?.auto?.catalogus ?? "", sinds: eenvoudigLease?.auto?.sinds ?? "", onZet: (veld, v) => zetEenvoudigLease("auto", veld, v) };
               return { soorten: leaseGroepenEenv.map((g) => ({ key: g.key, name: g.name, soort: g.soort, herkend: g.herkend, onSoort: (v) => zetEenvoudigLease("soort", g.key, v) })), prive500: p500 };
             })()}
             mobiel={activeYear ? MOBIEL_CATS.map((cat) => {
@@ -4016,7 +4032,7 @@ export default function App() {
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
-            waarschuwingen={activeYear ? leaseWaarschuwingen(leaseGroepenEenv.filter((g) => !(leaseDetails?.[g.key] && !leaseDetails[g.key].onbekend) && !(autoExactIngevuld && g.soort === "auto")), autoExactIngevuld ? {} : autoStatus, activeYear) : []}
+            waarschuwingen={activeYear ? leaseWaarschuwingen(leaseGroepenEenv.filter((g) => !(leaseDetails?.[g.key] && !leaseDetails[g.key].onbekend) && !(autoExactIngevuld && g.soort === "auto")), autoExactIngevuld ? {} : autoStatus, activeYear, eenvoudigLease) : []}
             openVragen={[...(eigenKandidaten.length ? [{ key: "eigenKandidaten", label: `Mogelijke eigen rekeningen (${eigenKandidaten.length})` }] : []), ...(basisvragenNietGestart ? [] : openBasisvragen.filter((v) => !NIET_IN_EENVOUDIG.includes(v.key)))]}
             onOpenVragen={() => (eigenKandidaten.length ? setEigenKandidatenOpen(true) : modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => !BASISVRAGEN_EENVOUDIG_KEYS.includes(v.key) && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}

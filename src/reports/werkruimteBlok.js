@@ -65,11 +65,15 @@ export function werkruimteBlokHtml(year, classified, categoryZakelijkPercentage,
 
 // release33V3 — in de indicatieve aangifteberekening alleen nog een korte regel, en alleen als er echt een zakelijk deel
 // van huur/energie/gemeentelijke lasten meetelt. De volledige tabel per rekening staat in de Onderbouwing.
-export function werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus) {
+// beide-V10R0: ook het bedrag excl. btw, zodat de regel aansluit op de bedragen onder 4 (die staan excl. btw).
+export function werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus, categoryBtwRates = null) {
   const { regels } = werkruimteRegelsVoorJaar(year, classified, categoryZakelijkPercentage, werkruimteStatus);
   const metDeel = regels.filter((r) => Math.abs(r.zakelijk) >= 0.005);
   if (metDeel.length === 0) return "";
-  const naam = (c) => c.replace(/^Privé - /, "").replace(/^./, (x) => x.toUpperCase());
-  const tekst = metDeel.map((r) => `${naam(r.categorie)} — ${REK_LABEL[r.rekening].toLowerCase()}${r.soort ? `, ${WERKRUIMTE_LABELS[r.soort].toLowerCase()}` : ", soort ruimte niet aangegeven"}: ${r.percentage}% van ${eur(r.bedrag)} = ${eur(r.zakelijk)}`).join("; ");
+  const exclBtw = (r) => {
+    const tarief = categoryBtwRates?.[r.categorie];
+    return tarief ? ` (excl. btw ${eur(r.zakelijk / (1 + tarief / 100))})` : "";
+  };
+  const tekst = metDeel.map((r) => `${r.categorie} — ${REK_LABEL[r.rekening].toLowerCase()}${r.soort ? `, ${WERKRUIMTE_LABELS[r.soort].toLowerCase()}` : ", soort ruimte niet aangegeven"}: ${r.percentage}% van ${eur(r.bedrag)} = ${eur(r.zakelijk)}${exclBtw(r)}`).join("; ");
   return `<p class="toelichting"><strong>Huisvesting, zakelijk deel ${year}:</strong> ${tekst}. Volledige verantwoording per rekening: zie Onderbouwing.</p>`;
 }

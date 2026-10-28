@@ -47,14 +47,53 @@ export function autoPriveMarkering(groepen, antwoorden, autoStatus, exact) {
 }
 
 // Waarschuwingen voor "Hoe zeker is de uitkomst?" in een jaar.
-export function leaseWaarschuwingen(groepen, autoStatus, jaar) {
+export function leaseWaarschuwingen(groepen, autoStatus, jaar, antwoorden = null) {
   const j = String(jaar);
   const uit = [];
   if (autoJaren(groepen, autoStatus).includes(j)) {
-    uit.push("Auto van de zaak / leaseauto: Eenvoudig rekent vereenvoudigd (bij meer dan 500 km privé vallen de autokosten weg tegen de bijtelling) en de btw-correctie voor privégebruik is niet meegerekend. In Uitgebreid kan dit volledig worden uitgewerkt.");
+    const ja = antwoorden?.prive500?.[j] === true;
+    const btw = !ja ? "" : Number(antwoorden?.auto?.catalogus) > 0
+      ? " De btw-correctie voor privégebruik is met het forfait berekend (kwartaal 4)."
+      : " De btw-correctie voor privégebruik is nog niet meegerekend: vul de cataloguswaarde in bij Basisvragen.";
+    uit.push(`Auto van de zaak / leaseauto: Eenvoudig rekent vereenvoudigd (bij meer dan 500 km privé vallen de autokosten weg tegen de bijtelling).${btw} In Uitgebreid kan dit volledig worden uitgewerkt.`);
   }
   if (groepen.some((g) => g.category === "Lease (financieel)" && g.jaren.includes(j))) {
     uit.push("Financiële lease: afschrijving en rente in plaats van de termijnen staan alleen in Uitgebreid.");
   }
   return uit;
+}
+
+// beide-V9R8 — btw-correctie privégebruik voor de auto in Eenvoudig (wens Boska 28-10). Uitgebreid rekent dit met de autogegevens
+// (tax/btwPrivegebruikAuto.js); zonder die gegevens gebruikt die functie de Eenvoudig-antwoorden die App hier elke render registreert:
+// antwoorden.auto = { catalogus, sinds } (cataloguswaarde incl. btw en bpm, jaar van ingebruikname).
+let _reg = null;
+export function registreerEenvoudigLease(r) { _reg = r; }
+
+// Forfait: 2,7% van de cataloguswaarde; 1,5% vanaf het vijfde jaar na het jaar van ingebruikname, of als er op de leasetermijnen
+// geen btw is afgetrokken (alleen btw op gebruikskosten). Nooit meer dan de afgetrokken btw op de autokosten van dat jaar.
+export function eenvoudigBtwPrivegebruik(year, { autoStatus, btwOp }, reg = _reg) {
+  if (!reg || reg.exact) return null;
+  const j = String(year);
+  const { groepen = [], antwoorden = null } = reg;
+  if (antwoorden?.prive500?.[j] !== true || !autoJaren(groepen, autoStatus).includes(j)) return null;
+  const catalogus = Number(antwoorden?.auto?.catalogus) || 0;
+  const sinds = Number(antwoorden?.auto?.sinds) || null;
+  const meldingen = [];
+  if (!(catalogus > 0)) {
+    meldingen.push("Cataloguswaarde (incl. btw en bpm) ontbreekt: vul die in bij Basisvragen.");
+    return { year: Number(year), methode: "forfait", bedrag: 0, onvolledig: true, items: [{ naam: "Auto (Eenvoudig)", bron: "eenvoudig", methode: "forfait", onvolledig: true, pct: null, fractie: 1, catalogus: 0, berekend: 0, maximum: null, bedrag: 0, afgetopt: false, meldingen }] };
+  }
+  const autoLeaseIds = new Set(groepen.filter((g) => g.soort === "auto").flatMap((g) => [...g.txIds]));
+  const leaseBtw = btwOp((tx) => autoLeaseIds.has(tx.id));
+  const gebruik = btwOp(null);
+  const zonderLeaseBtw = autoLeaseIds.size > 0 && !(leaseBtw > 0.004);
+  const oud = sinds && Number(year) >= sinds + 5;
+  const pct = zonderLeaseBtw || oud ? 1.5 : 2.7;
+  if (zonderLeaseBtw) meldingen.push("Geen btw op de leasetermijnen afgetrokken: 1,5% van de cataloguswaarde.");
+  else if (oud) meldingen.push(`Vanaf het vijfde jaar na ingebruikname (${sinds}): 1,5% van de cataloguswaarde.`);
+  if (!sinds) meldingen.push("Jaar van ingebruikname ontbreekt: 2,7% gerekend.");
+  if (sinds && Number(year) === sinds) meldingen.push("Jaar van ingebruikname: het forfait geldt naar rato van de maanden; hier voor het hele jaar gerekend.");
+  const berekend = catalogus * pct / 100;
+  const bedrag = Math.min(berekend, gebruik);
+  return { year: Number(year), methode: "forfait", bedrag, onvolledig: false, items: [{ naam: "Auto (Eenvoudig)", bron: "eenvoudig", route: zonderLeaseBtw ? "gebruik" : "aanschaf", methode: "forfait", onvolledig: false, pct, fractie: 1, catalogus, berekend, maximum: gebruik, bedrag, afgetopt: berekend > gebruik, meldingen }] };
 }

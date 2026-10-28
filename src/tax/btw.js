@@ -35,6 +35,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Leningen",
   "Leningen (privé)",
   "Gemeentelijke kosten", // gemeentelijke heffingen (bijv. OZB) zijn belastingen, geen met-BTW-belaste dienst
+  "Privé - huur", "Privé - gemeentelijke kosten", // beide-V10R0: net als Huur/Gemeentelijke kosten zonder BTW — het zakelijke deel (werkruimte) stond anders op 21%
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
   "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
@@ -78,7 +79,10 @@ export const DEFAULT_VOORBELASTING_EXCLUDED = [
 export const EMPTY_BTW_RATES = {};
 
 // Ophoging bij elke wijziging in welke categorieën standaard 0% BTW hebben — zie mergeBtwRates.
-export const BTW_RATES_VERSION = 9;
+export const BTW_RATES_VERSION = 10;
+// Nieuw op 0% per versie: bij een ophoging alleen deze op 0 zetten, zodat een bewust gekozen tarief elders
+// (bijv. 21% op Huur bij btw-belaste verhuur) blijft staan.
+const NIEUW_NUL_PER_VERSIE = { 10: ["Privé - huur", "Privé - gemeentelijke kosten"] };
 
 export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
   const migratedSaved = {};
@@ -86,7 +90,9 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
     migratedSaved[migrateLegacyCategoryName(key)] = val;
   }
   const merged = { ...DEFAULT_BTW_RATES, ...migratedSaved };
-  if (!savedVersion || savedVersion < BTW_RATES_VERSION) {
+  if (savedVersion && savedVersion >= 9 && savedVersion < BTW_RATES_VERSION) {
+    for (const [v, cats] of Object.entries(NIEUW_NUL_PER_VERSIE)) if (savedVersion < Number(v)) for (const c of cats) merged[c] = 0;
+  } else if (!savedVersion || savedVersion < BTW_RATES_VERSION) {
     for (const c of ZERO_BTW_CATEGORIES) merged[c] = 0;
     // "Inhuur personeel" veranderde in versie 7 van standaard 0% naar standaard 21% — een oudere,
     // expliciet opgeslagen 0%-waarde voor deze categorie zou anders altijd blijven "winnen" boven

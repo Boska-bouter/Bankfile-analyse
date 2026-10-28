@@ -1,7 +1,7 @@
 import { fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw } from "./btw.js";
 import { AUTOKOSTEN_CATEGORIEN } from "./autoBijtelling.js";
-import { effectiveZakelijkPercentage } from "./categorySplit.js";
+import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./gedeeldeHuur.js";
 
 // Koppeling naar de aangifte inkomstenbelasting (winst uit onderneming, eenmanszaak/zzp) — in
@@ -17,7 +17,9 @@ const RUBRIEK_INKOOP = ["Zakelijke inkoop/uitgaven", "Inhuur personeel"];
 // (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en daarom een eigen plek
 // onder Overige bedrijfskosten houden.
 const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)"];
-const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten"];
+// beide-V9R9 — ook het zakelijke deel van huur/energie/gemeentelijke lasten dat vanaf privé is betaald (de privé-tegenhangers met
+// een percentage); die telden al mee in de winst (yearlySummary.js) maar ontbraken hier, waardoor rubriek 4 niet aansloot op de uitleg.
+const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten"];
 // De "(deels zakelijk)"-categorieën staan NIET in de gewone rubrieken: alleen het zakelijke deel is
 // aftrekbaar en dat wordt als aparte regel in "Huisvestingskosten" opgenomen (zie computeIbBoxMapping).
 // Eerder stond "Huur (deels zakelijk)" hier wél in tegen 100% én kwam het zakelijke deel er nog eens
@@ -26,6 +28,7 @@ const RUBRIEK_HUISVESTING_DEELS = ["Huur (deels zakelijk)", "Energie-water (deel
 const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
   "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel/internet",
+  "Privé - mobiel/internet", "Privé - streaming diensten", "Privé overige abonnementen", "Privé - bankkosten", // beide-V9R9 — zakelijk deel vanaf privé
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
@@ -51,6 +54,13 @@ const AL_APART_BEHANDELD = ["Zakelijk - apparatuur/machines", "Verkoop activa", 
 // mechanisme bestond), dan is elke factor hieronder exact 1 — 100% backwards compatible.
 const eur0 = (n) => `€ ${Number(n || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// beide-V9R9 — de boekingen die in de winst-en-verliesrekening meetellen: alles behalve privé, plus privé-categorieën met een
+// zakelijk percentage > 0 (bijv. "Privé - energie-water" 10% bij een zelfstandige werkruimte), net als yearlySummary.js.
+export function zakItemsVoorIb(classified, year, categoryZakelijkPercentage = null, autoStatus = null) {
+  return classified.filter((tx) => !tx.isMirror && tx.year === year && (fiscalTreatmentOf(tx.category) !== "geen"
+    || effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, false, tx) > 0));
+}
+
 export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYear, activaAfschrijvingForYear, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear = null, year = null, categoryZakelijkPercentage = null, autoStatus = null, kmVergoedingForYear = null, gedeeldeStatus = null) {
   // leaseAutoKostenForYear is hier al berekend als combineAutoKosten(...) van financial-lease-
   // en koop/operational-lease-autokosten (zie autoActiva.js) — dus niet-null zodra één van de drie
@@ -60,6 +70,8 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // ook hier uit te sluiten van de generieke %-splitsing.
   const heeftLeaseAuto = !!leaseAutoKostenForYear;
   const factorFor = (category, tx = null) => {
+    // beide-V9R9 — privé-categorie met een zakelijk percentage: alleen dat deel (zelfde als yearlySummary.js).
+    if (year != null && fiscalTreatmentOf(category) === "geen") return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) / 100;
     if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
     return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) / 100;
   };
@@ -75,7 +87,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   // correctie die elders al gebeurt (summary.winst in yearlySummary.js, en de netto-kolom van het
   // categorieoverzicht in het aangiftevoorstel zelf), nu ook toegepast op de rubrieken hieronder
   // zodat de losse regels van deze winst-en-verliesrekening optellen tot hetzelfde resultaat.
-  const nettoOf = (tx) => (tx.amount - computeBtw(tx, categoryBtwRates || {}, btwVerlegd)) * factorFor(tx.category, tx);
+  const nettoOf = (tx) => (tx.amount - (fiscalTreatmentOf(tx.category) === "geen" ? rawBtw(tx, categoryBtwRates || {}, btwVerlegd) : computeBtw(tx, categoryBtwRates || {}, btwVerlegd))) * factorFor(tx.category, tx);
   const sumCatNetto = (cats) => Math.abs(zakItems.filter((tx) => cats.includes(tx.category)).reduce((a, tx) => a + nettoOf(tx), 0));
   // 15V5: voor KOSTEN-categorieën met per saldo een teruggave (bijv. een netto creditboeking op Brandstof):
   // geen abs, want de winst telt zo'n teruggave als opbrengst — met abs() telde ze in de rubrieken als kosten.
