@@ -137,8 +137,12 @@ export function rekeningVan(tx) {
   return tx && tx.type === "Zakelijk" ? "zakelijk" : "prive";
 }
 
-export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false, tx = null) {
+export function effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto = false, tx = null, voorBtw = false) {
   if (PRIVEAUTO_UITGESLOTEN.includes(category) && isPriveAutoJaar(year, autoStatus)) return 0;
+  // beide-V9R7 — Eenvoudig: auto van de zaak/leaseauto > 500 km privé → de autokosten vallen weg tegen de bijtelling (tax/eenvoudigLease.js).
+  // Alleen voor de winst; de btw (voorbelasting) blijft zoals hij was.
+  const ea = categoryZakelijkPercentage?.__eenvoudigAutoPrive;
+  if (ea && !voorBtw && ea.jaren.has(String(year)) && (PRIVEAUTO_UITGESLOTEN.includes(category) || (tx && ea.txIds.has(tx.id)))) return 0;
   // beide-V9R1 — bij een privéauto met km-aftrek zit de autoverzekering in de vergoeding per km; ook als de boeking zelf
   // (per regel) op een zakelijke categorie staat, telt hij niet als kosten (vergelijking Houtman 27-10, besluit Boska).
   if (tx && isPriveAutoJaar(year, autoStatus) && /auto ?verzekering/i.test(`${tx.description || ""} ${tx.counterparty || ""}`)) return 0;

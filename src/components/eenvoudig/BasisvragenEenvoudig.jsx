@@ -17,6 +17,7 @@ function Rij({ label, uitleg, children }) {
 export default function BasisvragenEenvoudig({
   jaar, eigenNamen, setEigenNamen, rechtsvorm, setRechtsvorm, korRegeling, setKorRegeling,
   jaarKeuzes, onOpenVragen, onUitgebreid, onClose,
+  lease = null, // beide-V9R7 — { soorten: [{ key, name, soort, herkend, onSoort }], prive500: { jaren, waarde, onKies } | null }
   mobiel = [], // beide-V8R4/V9R4 — zakelijk deel telefoon/internet, per rekening: [{ cat, label, waarde, onKies }] (leeg = geen boekingen in dit jaar)
 }) {
   const [naam, setNaam] = useState(eigenNamen?.ondernemer || "");
@@ -59,9 +60,33 @@ export default function BasisvragenEenvoudig({
               </select>
             </Rij>
           )}
+          {lease?.soorten?.length > 0 && (
+            <>
+              <h3 className="mt-4 mb-1 text-sm font-bold text-slate-900">Lease</h3>
+              {lease.soorten.map((g) => (
+                <Rij key={g.key} label={g.name} uitleg={g.herkend && g.soort === g.herkend ? "Herkend aan de leasemaatschappij" : "Waar is deze lease voor?"}>
+                  <select value={g.soort || ""} onChange={(e) => e.target.value && g.onSoort(e.target.value)} className={veld}>
+                    <option value="">nog niet ingevuld</option>
+                    <option value="auto">Auto</option>
+                    <option value="apparatuur">Apparatuur / machines</option>
+                  </select>
+                </Rij>
+              ))}
+            </>
+          )}
           {jaar && (
             <>
               <h3 className="mt-4 mb-1 text-sm font-bold text-slate-900">Keuzes voor {jaar}</h3>
+              {lease?.prive500 && (
+                <Rij label={`Auto van de zaak / leaseauto: meer dan 500 km per jaar privé?${lease.prive500.jaren ? ` (${lease.prive500.jaren.join(", ")})` : ""}`}
+                  uitleg="Ja: de autokosten vallen weg tegen de bijtelling. Nee: de autokosten tellen volledig. In Uitgebreid kan dit precies.">
+                  <select value={lease.prive500.waarde == null ? "" : lease.prive500.waarde ? "ja" : "nee"} onChange={(e) => e.target.value && lease.prive500.onKies(e.target.value === "ja")} className={veld} data-testid="lease-500">
+                    <option value="">nog niet ingevuld</option>
+                    <option value="ja">Ja, meer dan 500 km</option>
+                    <option value="nee">Nee, 500 km of minder</option>
+                  </select>
+                </Rij>
+              )}
               {mobiel.map((m) => (
                 <Rij key={m.cat} label={`${m.label}: zakelijk deel`} uitleg="Voor privé én zakelijk gebruikt? Kies het zakelijke deel. Geldt ook voor andere jaren zonder antwoord.">
                   <select value={m.waarde == null ? "" : String(m.waarde)} onChange={(e) => e.target.value !== "" && m.onKies(Number(e.target.value))} className={veld}>
