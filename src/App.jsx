@@ -89,6 +89,7 @@ import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal
 import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
 import MultiYearModal from "./components/modals/MultiYearModal.jsx";
 import { lijstPrivegebruikAutos, zetPrivegebruikKeuze } from "./tax/privegebruikAuto500.js";
+import { leaseGroepen, autoJaren, autoPriveMarkering, leaseWaarschuwingen } from "./tax/eenvoudigLease.js";
 import JaarKeuzelijsten from "./components/dashboard/JaarKeuzelijsten.jsx";
 import QuarterlyBtwModal from "./components/modals/QuarterlyBtwModal.jsx";
 import { computeRekeningCourantVerloop, computeEigenVermogenVerloop, computeBvSignalering } from "./tax/bv.js";
@@ -178,6 +179,7 @@ const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(B
 // Alle %-splitsbare kostencategorieën behalve de auto-categorieën (die volgen de wizard).
 // Basisvragen die de verkorte wizard in Eenvoudig niet stelt (zie SetupWizardModal); die horen niet in de zekerheidsmeter.
 const NIET_IN_EENVOUDIG = ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"];
+const BASISVRAGEN_EENVOUDIG_KEYS = ["mobiel", "leaseSoort", "lease500"]; // beide-V9R7 — beantwoorden in Basisvragen (Eenvoudig), niet in de wizard
 const MOBIEL_CAT = "Zakelijk mobiel/internet"; // beide-V8R4 — zie openBasisvragen / BasisvragenEenvoudig
 // beide-V9R4 — Eenvoudig vraagt het zakelijk deel per rekening: betaald vanaf zakelijk en vanaf privé hebben elk een eigen percentage
 // (wens Boska 28-10: apart zichtbaar, niet automatisch voor beide).
@@ -2441,7 +2443,7 @@ export default function App() {
     const types = Object.values(accountTypeByFile);
     return types.includes("Prive") && !types.includes("Zakelijk");
   }, [accountTypeByFile]);
-  const categoryZakelijkPercentageEff = useMemo(() => {
+  const categoryZakelijkPercentageEff0 = useMemo(() => {
     // release20V3: een jaar met "werkruimte niet zelfstandig" telt huur/energie/gemeentelijke lasten voor 0% mee.
     const basis = percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteStatus, [...new Set(classified.map((tx) => tx.year))]);
     if (!priveOnlyDossier) return basis;
@@ -2454,6 +2456,22 @@ export default function App() {
     }
     return result;
   }, [priveOnlyDossier, categoryZakelijkPercentage, classified, werkruimteStatus]);
+  // beide-V9R7 — lease in Eenvoudig (tax/eenvoudigLease.js): auto of apparatuur, en > 500 km privé → autokosten vallen weg.
+  const eenvoudigLease = bevestigdeControles?.eenvoudigLease || null;
+  const leaseGroepenEenv = useMemo(() => leaseGroepen(leaseSummary, eenvoudigLease), [leaseSummary, eenvoudigLease]);
+  const autoExactIngevuld = useMemo(() => lijstPrivegebruikAutos({ leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus }).length > 0,
+    [leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus]);
+  const categoryZakelijkPercentageEff = useMemo(() => {
+    const m = autoPriveMarkering(leaseGroepenEenv, eenvoudigLease, autoStatus, autoExactIngevuld);
+    return m ? { ...categoryZakelijkPercentageEff0, __eenvoudigAutoPrive: m } : categoryZakelijkPercentageEff0;
+  }, [categoryZakelijkPercentageEff0, leaseGroepenEenv, eenvoudigLease, autoStatus, autoExactIngevuld]);
+  const zetEenvoudigLease = (veld, sleutel, waarde) => {
+    snapshotBeforeAction("Lease-antwoord ingevuld");
+    setBevestigdeControles((prev) => {
+      const oud = prev?.eenvoudigLease || {};
+      return { ...(prev || {}), eenvoudigLease: { ...oud, [veld]: { ...(oud[veld] || {}), [sleutel]: waarde } } };
+    });
+  };
   const heeftLeaseAutoDossierBreed = useMemo(
     () => heeftGeregistreerdeAutoOpDeZaak(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus),
     [leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus]
@@ -3195,6 +3213,12 @@ export default function App() {
     voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
     // beide-V8R4 — Eenvoudig: welk deel van telefoon/internet is zakelijk? Zonder antwoord telde het voor 100%.
+    // beide-V9R7 — lease in Eenvoudig: soort onbekend, en > 500 km privé per jaar met een auto van de zaak/leaseauto.
+    if (eenvoudigActief && !modus.wizard && aan("lease")) {
+      for (const g of leaseGroepenEenv) if (!g.soort) lijst.push({ key: "leaseSoort", label: `Lease ${g.name}: auto of apparatuur?` });
+      const open500 = autoExactIngevuld ? [] : autoJaren(leaseGroepenEenv, autoStatus).filter((j) => eenvoudigLease?.prive500?.[j] == null);
+      if (open500.length) lijst.push({ key: "lease500", label: `Auto meer dan 500 km privé? (${open500.join(", ")})` });
+    }
     if (eenvoudigActief && !modus.wizard) for (const m of mobielOpen) lijst.push({ key: "mobiel", label: `${MOBIEL_LABEL[m.cat]}: zakelijk deel (${m.jaren.join(", ")})` });
     // beide-V1R7 — de vragen van de privéwizard (alleen in een privédossier).
     if (modus.wizard) lijst.push(...modus.wizard.openVragen(priveAntwoorden, { eigenNamen, jaren: years, bestanden: parsedFiles.map((f) => f.fileName) }, { eenvoudig: eenvoudigActief }));
@@ -3952,6 +3976,17 @@ export default function App() {
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
+            lease={(() => {
+              const jaren = autoJaren(leaseGroepenEenv, autoStatus);
+              const ditJaar = activeYear && jaren.includes(String(activeYear));
+              const open = jaren.filter((j) => eenvoudigLease?.prive500?.[j] == null);
+              const p500 = autoExactIngevuld || (!ditJaar && !open.length) ? null : {
+                jaren: ditJaar ? null : open,
+                waarde: ditJaar ? eenvoudigLease?.prive500?.[String(activeYear)] ?? null : null,
+                onKies: (v) => { for (const j of new Set([...(ditJaar ? [String(activeYear)] : []), ...open])) zetEenvoudigLease("prive500", j, v); },
+              };
+              return { soorten: leaseGroepenEenv.map((g) => ({ key: g.key, name: g.name, soort: g.soort, herkend: g.herkend, onSoort: (v) => zetEenvoudigLease("soort", g.key, v) })), prive500: p500 };
+            })()}
             mobiel={activeYear ? MOBIEL_CATS.map((cat) => {
               // beide-V9R5 — ook tonen als alleen ándere jaren nog open staan (anders opende "Nu beantwoorden" een scherm zonder de vraag).
               const ditJaar = classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === cat);
@@ -3981,8 +4016,9 @@ export default function App() {
             uitkomst={priveOverzicht ? ({ bruikbaar, naarNakijken }) => <PriveUitkomstEenvoudig overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear} bruikbaar={bruikbaar} onNakijken={naarNakijken} onVragen={() => setManualWizardOpen(true)} onUitgebreid={magUitgebreid ? naarUitgebreidVanuitEenvoudig : null} /> : null}
             opgeslagen={changesSinceExport === 0 && !!lastExportAt}
             onDossierLaden={startLoadProject} onNieuwDossier={clearAllData}
+            waarschuwingen={activeYear ? leaseWaarschuwingen(leaseGroepenEenv.filter((g) => !(leaseDetails?.[g.key] && !leaseDetails[g.key].onbekend) && !(autoExactIngevuld && g.soort === "auto")), autoExactIngevuld ? {} : autoStatus, activeYear) : []}
             openVragen={[...(eigenKandidaten.length ? [{ key: "eigenKandidaten", label: `Mogelijke eigen rekeningen (${eigenKandidaten.length})` }] : []), ...(basisvragenNietGestart ? [] : openBasisvragen.filter((v) => !NIET_IN_EENVOUDIG.includes(v.key)))]}
-            onOpenVragen={() => (eigenKandidaten.length ? setEigenKandidatenOpen(true) : modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => v.key !== "mobiel" && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
+            onOpenVragen={() => (eigenKandidaten.length ? setEigenKandidatenOpen(true) : modus.wizard ? setManualWizardOpen(true) : openBasisvragen.some((v) => !BASISVRAGEN_EENVOUDIG_KEYS.includes(v.key) && !NIET_IN_EENVOUDIG.includes(v.key)) ? setOpenVragenWizard(true) : setBasisEenvoudigOpen(true))}
             antwoordenLijst={eenvoudigAntwoordenLijst} onWijzigAntwoord={wijzigAntwoord} onWisAntwoord={wisAntwoord} onRijAntwoord={rijAntwoord}
             toegangInfo={{ email: ingelogdAls, status: rolStatus }} onUitloggen={uitloggen} abonnement={ingelogdAls || import.meta.env?.DEV ? abonnement : null} onAbonnementen={ingelogdAls ? naarAbonnementen : null} onUitlegZichtbaar={setEenvoudigUitlegOpen} uitlegVerzoek={uitlegVerzoek}
             onToegangAanvragen={startAanvraagUitgebreid}
