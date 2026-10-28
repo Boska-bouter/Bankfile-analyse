@@ -34,7 +34,7 @@ export function useControlerenCardGroups(p) {
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
     reviewedOverigKeys, reviewedPersonKeys,
     priGroupForYear, priGroupShown, privateLoanSummary, priveOnlyDossier, priveRekeningGeladen,
-    removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
+    removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, requestSetRekeningPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
@@ -294,7 +294,7 @@ export function useControlerenCardGroups(p) {
               onSetWerkruimte={(rekening, waarde) => setWerkruimteStatus(activeYear, rekening, waarde)}
               andereJarenWerkruimte={(years || []).filter((y) => y !== activeYear).map((y) => ({ jaar: y, ...werkruimteSoorten(werkruimteStatus, y) }))}
               onSetWerkruimteJaren={setWerkruimteVoorJaren}
-              onSetRekeningPercentage={(categorie, rekening, percentage) => setCategoryZakelijkPercentage(categorie, `${activeYear}:${rekening}`, percentage)}
+              onSetRekeningPercentage={requestSetRekeningPercentage}
               werkruimteBetaling={activeYear ? betaaldPerRekening(classified, activeYear) : {}}
               autoOpDeZaakDitJaar={!!activeYear && (autoStatus?.[activeYear] === "zaak")}
               onOpenHelp={setHelpPopupChapter}

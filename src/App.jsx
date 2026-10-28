@@ -1000,8 +1000,33 @@ export default function App() {
       toonPending(item);
     }
   };
+  // beide-V10R4 — dezelfde jarenvraag voor percentages die niet als één categorie/jaar worden opgeslagen (percentage per rekening
+  // in Uitgebreid, deel van de woning in Eenvoudig): `apply(jaren)` voert de wijziging uit (wens Boska 28-10).
+  const requestPercentageScope = ({ category, percentage, activeYear: jaar, apply }) => {
+    if (percentage == null || percentage === "" || years.length <= 1) { apply([jaar]); return; }
+    const item = { category, percentage: Number(percentage), activeYear: jaar, years, apply };
+    if (pendingHuidigRef.current) {
+      pendingQueueRef.current = [...pendingQueueRef.current.filter((p) => !(p.category === category && p.activeYear === jaar)), item];
+    } else toonPending(item);
+  };
+  const zetRekeningPercentageVoorJaren = (categorieen, reks, jaren, percentage) => {
+    setCategoryZakelijkPercentageState((prev) => {
+      const next = { ...prev };
+      for (const c of categorieen) {
+        const perJaar = { ...(next[c] || {}) };
+        for (const y of jaren) for (const rek of reks) { if (percentage == null || percentage === "") delete perJaar[`${y}:${rek}`]; else perJaar[`${y}:${rek}`] = Number(percentage); }
+        if (Object.keys(perJaar).length) next[c] = perJaar; else delete next[c];
+      }
+      return next;
+    });
+  };
+  const requestSetRekeningPercentage = (categorie, rekening, percentage) => requestPercentageScope({
+    category: `${categorie} (${rekening === "prive" ? "privérekening" : "zakelijke rekening"})`, percentage, activeYear,
+    apply: (jaren) => { snapshotBeforeAction("Percentage zakelijk per rekening aangepast"); zetRekeningPercentageVoorJaren([categorie], [rekening], jaren, percentage); },
+  });
   const applyCategoryPercentageToYears = (yearsToApply) => {
     if (!pendingCategoryPercentage || yearsToApply.length === 0) return;
+    if (pendingCategoryPercentage.apply) { pendingCategoryPercentage.apply(yearsToApply); volgendePending(); return; }
     const { category, percentage } = pendingCategoryPercentage;
     snapshotBeforeAction("Percentage zakelijk per categorie aangepast (meerdere jaren)");
     setCategoryZakelijkPercentageState((prev) => {
@@ -3120,7 +3145,7 @@ export default function App() {
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
     reviewedOverigKeys, reviewedPersonKeys,
     priGroupForYear, priGroupShown, privateLoanSummary, priveOnlyDossier, priveRekeningGeladen,
-    removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, restoreDuplicateGroup,
+    removeDuplicateGroup, removeDuplicates, removeFile, requestSetCategoryZakelijkPercentage, requestSetRekeningPercentage, restoreDuplicateGroup,
     setActivaDetailsModalKey, setAutoStatus, setDismissedDuplicateNotice, setDuplicateDetailGroup, setEnergieZakelijkPercentageStatus,
     setGemeentelijkeKostenZakelijkPercentageStatus, setHelpPopupChapter, setHuurZakelijkPercentageStatus, setIncomeSearch, setKmVergoedingField,
     setLeaseDetailsModalKey, openLeaseWizard, addManualLease, removeManualLease, koppelBetalingen, wijsKandidatenAf, behandelAlsLease, wijsZoekAf, verwachteLeaseOverig, setLoanDetailsModalKey, setOpenConfidenceLevel, setOverigSearch, setPersonSearch,
@@ -3989,18 +4014,10 @@ export default function App() {
               const pctWaarde = WERKRUIMTE_CATEGORIEEN.map((c) => categoryZakelijkPercentage?.[c]?.[`${y0}:prive`] ?? categoryZakelijkPercentage?.[c]?.[y0]).find((v) => v != null) ?? null;
               const pct = reks.length === 0 ? null : {
                 waarde: pctWaarde,
-                onZet: (n) => {
-                  snapshotBeforeAction("Deel van de woning zakelijk aangepast (Eenvoudig)");
-                  setCategoryZakelijkPercentageState((prev) => {
-                    const next = { ...prev };
-                    for (const c of WERKRUIMTE_CATEGORIEEN) {
-                      const perJaar = { ...(next[c] || {}) };
-                      for (const rek of reks) { if (n == null) delete perJaar[`${y0}:${rek}`]; else perJaar[`${y0}:${rek}`] = n; }
-                      if (Object.keys(perJaar).length) next[c] = perJaar; else delete next[c];
-                    }
-                    return next;
-                  });
-                },
+                onZet: (n) => requestPercentageScope({
+                  category: "deel van de woning (huur, energie-water, gemeentelijke kosten)", percentage: n, activeYear,
+                  apply: (jaren) => { snapshotBeforeAction("Deel van de woning zakelijk aangepast (Eenvoudig)"); zetRekeningPercentageVoorJaren(WERKRUIMTE_CATEGORIEEN, reks, jaren, n); },
+                }),
               };
               return {
                 pct, waarde, open: open.filter((y) => y !== String(activeYear)),
@@ -4240,6 +4257,7 @@ export default function App() {
           <CategoryPercentageScopeModal
             pending={pendingCategoryPercentage}
             onApplyActiveYear={() => {
+              if (pendingCategoryPercentage.apply) { pendingCategoryPercentage.apply([pendingCategoryPercentage.activeYear]); volgendePending(); return; }
               setCategoryZakelijkPercentage(pendingCategoryPercentage.category, pendingCategoryPercentage.activeYear, pendingCategoryPercentage.percentage);
               volgendePending();
             }}

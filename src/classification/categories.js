@@ -843,6 +843,8 @@ export function categorieZichtbaar(c, huidige = null) { return _rechtsvorm === "
 // release30V6 — één keuzelijst met groepen: per hoofdcategorie direct alle soorten (bijv. onder "Inkoop &
 // zakelijke uitgaven" meteen "Verzekering: Zakelijk"), zodat je niet eerst een groep en dan een soort hoeft
 // te kiezen. Privé kosten algemeen blijft één keuze (geen fiscaal verschil tussen de 17 leden).
+// beide-V10R4 — in de keuzelijst staat de groep (bijv. "Privé") al als kop; herhaal dan niet steeds de volle groepsnaam (wens Boska 28-10).
+const KORTE_GROEPNAAM = { [PRIVE_WONEN]: "Wonen", [PRIVE_TELECOM]: "Telecom & abonnementen" };
 export function keuzeGroepen(huidige = null) {
   if (_cp) return _cp.keuzeGroepen(huidige);
   return MAIN_CATEGORY_ORDER.map((main) => {
@@ -858,7 +860,7 @@ export function keuzeGroepen(huidige = null) {
       if (w) {
         const leden = CATEGORIE_GROEPEN[w];
         const lid = leden.find((l) => l.key === c);
-        const label = leden.length > 1 ? (w === main ? lid.label : `${w} – ${lid.label}`) : w;
+        const label = leden.length > 1 ? (w === main ? lid.label : `${KORTE_GROEPNAAM[w] || w} – ${lid.label}`) : w;
         opties.push({ value: c, label });
       } else opties.push({ value: c, label: c });
     }
