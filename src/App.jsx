@@ -179,6 +179,10 @@ const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(B
 // Basisvragen die de verkorte wizard in Eenvoudig niet stelt (zie SetupWizardModal); die horen niet in de zekerheidsmeter.
 const NIET_IN_EENVOUDIG = ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"];
 const MOBIEL_CAT = "Zakelijk mobiel/internet"; // beide-V8R4 — zie openBasisvragen / BasisvragenEenvoudig
+// beide-V9R4 — Eenvoudig vraagt het zakelijk deel per rekening: betaald vanaf zakelijk en vanaf privé hebben elk een eigen percentage
+// (wens Boska 28-10: apart zichtbaar, niet automatisch voor beide).
+const MOBIEL_CATS = [MOBIEL_CAT, "Privé - mobiel/internet"];
+const MOBIEL_LABEL = { [MOBIEL_CAT]: "Telefoon en internet, betaald vanaf de zakelijke rekening", "Privé - mobiel/internet": "Telefoon en internet, betaald vanaf de privérekening" };
 const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
   "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel/internet", "Reiskosten (OV)", "Streaming diensten",
   "Software & Online diensten", "Boekhouder, accountant & administratie",
@@ -3162,8 +3166,9 @@ export default function App() {
   // release21V1 — basisvragen uit de wizard die nog openstaan (null = nooit beantwoord). Zelfde regels
   // als de wizard: vragen per jaar pas als er jaren zijn, en zzp-vragen (uren, starters, overig inkomen,
   // KOR) niet bij een BV. Telt mee in de Instellingen-badge en de routebalk.
-  const mobielOpenJaren = [...new Set(classified.filter((tx) => !tx.isMirror && tx.category === MOBIEL_CAT).map((tx) => tx.year))]
-    .filter((y) => categoryZakelijkPercentage?.[MOBIEL_CAT]?.[y] == null).sort();
+  const mobielOpenJarenVan = (cat) => [...new Set(classified.filter((tx) => !tx.isMirror && tx.category === cat).map((tx) => tx.year))]
+    .filter((y) => categoryZakelijkPercentage?.[cat]?.[y] == null).sort();
+  const mobielOpen = MOBIEL_CATS.map((cat) => ({ cat, jaren: mobielOpenJarenVan(cat) })).filter((m) => m.jaren.length > 0);
   const openBasisvragen = (() => {
     const isBV = rechtsvorm === "bv";
     const heeftJaren = years.length > 0;
@@ -3190,7 +3195,7 @@ export default function App() {
     voeg("werkruimte", "Werkruimte / huur", heeftJaren && leeg(werkruimteStatus));
     voeg("overig", "Overig inkomen box 1", heeftJaren && !isBV && leeg(overigInkomenBox1));
     // beide-V8R4 — Eenvoudig: welk deel van telefoon/internet is zakelijk? Zonder antwoord telde het voor 100%.
-    if (eenvoudigActief && !modus.wizard && mobielOpenJaren.length > 0) lijst.push({ key: "mobiel", label: `Telefoon en internet: zakelijk deel (${mobielOpenJaren.join(", ")})` });
+    if (eenvoudigActief && !modus.wizard) for (const m of mobielOpen) lijst.push({ key: "mobiel", label: `${MOBIEL_LABEL[m.cat]}: zakelijk deel (${m.jaren.join(", ")})` });
     // beide-V1R7 — de vragen van de privéwizard (alleen in een privédossier).
     if (modus.wizard) lijst.push(...modus.wizard.openVragen(priveAntwoorden, { eigenNamen, jaren: years, bestanden: parsedFiles.map((f) => f.fileName) }, { eenvoudig: eenvoudigActief }));
     return lijst;
@@ -3947,8 +3952,10 @@ export default function App() {
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
-            mobiel={activeYear && classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === MOBIEL_CAT) ? categoryZakelijkPercentage?.[MOBIEL_CAT]?.[activeYear] ?? null : undefined}
-            onMobiel={(v) => { for (const y of new Set([activeYear, ...mobielOpenJaren])) setCategoryZakelijkPercentage(MOBIEL_CAT, y, v); }}
+            mobiel={activeYear ? MOBIEL_CATS.filter((cat) => classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === cat)).map((cat) => ({
+              cat, label: MOBIEL_LABEL[cat], waarde: categoryZakelijkPercentage?.[cat]?.[activeYear] ?? null,
+              onKies: (v) => { for (const y of new Set([activeYear, ...mobielOpenJarenVan(cat)])) setCategoryZakelijkPercentage(cat, y, v); },
+            })) : []}
             onUitgebreid={magUitgebreid ? () => naarUitgebreidVanuitEenvoudig(() => { setBasisEenvoudigOpen(false); setActiveTab("instellingen"); }) : null}
             onClose={() => setBasisEenvoudigOpen(false)}
           />

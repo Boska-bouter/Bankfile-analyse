@@ -2,10 +2,10 @@
 // tekst herkent; `uitleg` is bewust kort en neutraal ("indicatief", geen fiscaal advies).
 export const BEGRIPPEN = [
   { id: "kor", term: "KOR", zoek: "Kleineondernemersregeling|KOR", uitleg: "Kleineondernemersregeling: onder een omzetgrens van €20.000 per jaar kan de ondernemer vrijstelling van BTW vragen. Er wordt dan geen BTW gerekend en geen BTW afgetrokken." },
-  { id: "urencriterium", term: "Urencriterium", zoek: "Urencriterium", uitleg: "Voorwaarde voor ondernemersaftrek: minstens 1.225 uur per jaar aan de onderneming, en meer dan de helft van de werktijd." },
+  { id: "urencriterium", term: "Urencriterium", zoek: "Urencriterium", uitleg: "Voorwaarde voor zelfstandigenaftrek en startersaftrek: minstens 1.225 uur per jaar aan de onderneming, en meer dan de helft van de werktijd." },
   { id: "zelfstandigenaftrek", term: "Zelfstandigenaftrek", zoek: "Zelfstandigenaftrek", uitleg: "Vaste aftrek op de winst voor ondernemers die aan het urencriterium voldoen. Het bedrag verschilt per jaar." },
   { id: "startersaftrek", term: "Startersaftrek", zoek: "Startersaftrek", uitleg: "Extra aftrek bovenop de zelfstandigenaftrek in de eerste jaren van de onderneming (maximaal drie keer, binnen de eerste vijf jaar)." },
-  { id: "mkb", term: "MKB-winstvrijstelling", zoek: "MKB-winstvrijstelling|MKB-vrijstelling", uitleg: "Een percentage van de winst na ondernemersaftrek is vrijgesteld van belasting. Deze gaat automatisch mee in de aangifte." },
+  { id: "mkb", term: "MKB-winstvrijstelling", zoek: "MKB-winstvrijstelling|MKB-vrijstelling", uitleg: "Een percentage van de winst na zelfstandigen- en startersaftrek is vrijgesteld van belasting. Deze gaat automatisch mee in de aangifte." },
   { id: "verlegd", term: "BTW-verlegd", zoek: "BTW-verlegd|BTW verlegd|verlegde BTW", uitleg: "De BTW is naar de afnemer verlegd: de factuur gaat zonder BTW en de afnemer geeft de BTW aan. Komt voor bij bepaalde diensten, bijv. aan buitenlandse klanten of in de bouw." },
   { id: "zvw", term: "Zvw", zoek: "Zvw", uitleg: "Zorgverzekeringswet: over de winst is een inkomensafhankelijke bijdrage verschuldigd (Zvw-bijdrage), die de Belastingdienst apart oplegt." },
   { id: "financiele-lease", term: "financiële lease", zoek: "financiële (auto)?lease|financiële machinelease|financiële", uitleg: "De ondernemer is economisch eigenaar van het object: het staat op de balans (activa) en de lening ernaast. Er wordt afgeschreven en de rente is aftrekbaar; de aflossing is geen kosten." },

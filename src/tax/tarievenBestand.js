@@ -15,7 +15,7 @@ export const TARIEVEN_FORMAAT = 1;
 
 // Per groep: losse getallen (velden), plus eventueel schijven (brackets) of de opbouw van de arbeidskorting.
 export const TARIEF_GROEPEN = {
-  ib: { titel: "Box 1: schijven en ondernemersaftrek", brackets: true, velden: ["zelfstandigenaftrek", "mkbPct", "aftrekBeperkingPct"] },
+  ib: { titel: "Box 1: schijven en zelfstandigenaftrek", brackets: true, velden: ["zelfstandigenaftrek", "mkbPct", "aftrekBeperkingPct"] },
   zvw: { titel: "Zvw-bijdrage", velden: ["pct", "maxBijdrageInkomen"] },
   ahk: { titel: "Algemene heffingskorting", velden: ["max", "afbouwGrens", "afbouwPct"] },
   ak: { titel: "Arbeidskorting", opbouw: true, velden: ["max", "afbouwVanaf", "afbouwPct"] },
