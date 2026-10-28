@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { combineAutoKosten, computeAutoActivaKostenVoorJaar } from "../tax/autoActiva.js";
 import { computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeFinancialLeaseRate, computeOnbetaaldGedeelteKoop } from "../tax/financialLease.js";
-import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { computeIbBoxMapping, zakItemsVoorIb } from "../tax/boxMapping.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeLeaseAutoKostenVoorJaar } from "../tax/autoBijtelling.js";
 import { computeLeaseRenteForYear, computeLoanRenteForYear } from "../tax/loanAmortization.js";
@@ -20,7 +20,7 @@ export function useKostenTotaalByYear(p) {
   return useMemo(() => {
     const map = {};
     for (const y of years) {
-      const zakItemsVoorJaar = classified.filter((tx) => !tx.isMirror && tx.year === y && fiscalTreatmentOf(tx.category) !== "geen");
+      const zakItemsVoorJaar = zakItemsVoorIb(classified, y, categoryZakelijkPercentageEff, autoStatus);
       const loanRente = computeLoanRenteForYear(loanSummary, loanDetails, y);
       const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);

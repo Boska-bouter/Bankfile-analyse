@@ -7,7 +7,7 @@ import {
   estimateZvwMetOndernemersaftrek, estimateHeffingskortingenMetOndernemersaftrek, startersaftrekBedrag,
   resolveZelfstandigenaftrekStatusForYear, computeBelastbareWinstUitsplitsing,
 } from "../tax/incomeTax.js";
-import { computeIbBoxMapping } from "../tax/boxMapping.js";
+import { computeIbBoxMapping, zakItemsVoorIb } from "../tax/boxMapping.js";
 import { werkruimteRegelHtml } from "./werkruimteBlok.js";
 import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { classifyContinuityGap } from "../importers/transactions.js";
@@ -187,7 +187,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // Route B: gebaseerd op de categorie (fiscalTreatmentOf), niet op tx.type — een privé-uitgave
   // betaald vanaf de zakelijke rekening hoort hier niet in, en een zakelijke uitgave betaald
   // vanaf de privérekening juist wél.
-  const zakItems = classified.filter((tx) => !tx.isMirror && tx.year === year && fiscalTreatmentOf(tx.category) !== "geen");
+  const zakItems = zakItemsVoorIb(classified, year, categoryZakelijkPercentage, autoStatus);
   BRON_CTX = { classified, year };
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
@@ -652,7 +652,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // zodra er dit jaar daadwerkelijk transacties in die categorie zijn (computeGedeelde...VoorJaar
   // geeft anders null terug). Zelfde stijl als de financiële-lease-auto-uitsplitsing hierboven.
   // De zakelijke delen van de "(deels zakelijk)"-categorieën staan sinds 14V8 als regel in rubriek 4 (zie boxMapping.js).
-  const gedeeldeHuisvestingHtml = werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus);
+  const gedeeldeHuisvestingHtml = werkruimteRegelHtml(year, classified, categoryZakelijkPercentage, werkruimteStatus, categoryBtwRates);
 
   const priveHtml =
     ib.priveOnttrekkingen.totaal > 0 || ib.priveStortingen.totaal > 0

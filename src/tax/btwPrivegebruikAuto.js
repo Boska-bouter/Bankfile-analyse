@@ -14,6 +14,7 @@
 // De correctie hoort in de laatste btw-aangifte van het jaar (Q4, rubriek privégebruik).
 import { AUTOKOSTEN_CATEGORIEN, groupSegmentenOpKenteken } from "./autoBijtelling.js";
 import { rawBtw } from "./categorySplit.js";
+import { eenvoudigBtwPrivegebruik } from "./eenvoudigLease.js";
 
 const GEBRUIK_CATEGORIEEN = [...AUTOKOSTEN_CATEGORIEN, "Lease (operationeel)"];
 export const BTW_PRIVE_METHODES = ["forfait", "werkelijk", "geen"];
@@ -87,7 +88,12 @@ export function computeBtwPrivegebruikAuto(year, ctx) {
   const status = autoStatus?.[year];
   if (status === "prive" || status === "geen") return null;
   const autos = verzamelAutos(leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus);
-  if (autos.length === 0) return null;
+  if (autos.length === 0) {
+    // beide-V9R8 — geen autogegevens (Eenvoudig): forfait met de antwoorden uit Basisvragen (tax/eenvoudigLease.js).
+    const btwOp = (filter) => Math.max(0, (classified || []).reduce((a, tx) => (!tx.isMirror && tx.year === Number(year)
+      && (filter ? filter(tx) : GEBRUIK_CATEGORIEEN.includes(tx.category)) ? a - rawBtw(tx, categoryBtwRates || {}, btwVerlegd) : a), 0));
+    return eenvoudigBtwPrivegebruik(year, { autoStatus, btwOp });
+  }
 
   const instelling = autoActivaDetails?.btwPrivegebruikPerJaar?.[year] || {};
   const methode = BTW_PRIVE_METHODES.includes(instelling.methode) ? instelling.methode : "forfait";

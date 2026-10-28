@@ -17,6 +17,7 @@ function Rij({ label, uitleg, children }) {
 export default function BasisvragenEenvoudig({
   jaar, eigenNamen, setEigenNamen, rechtsvorm, setRechtsvorm, korRegeling, setKorRegeling,
   jaarKeuzes, onOpenVragen, onUitgebreid, onClose,
+  werkruimte = null, // beide-V9R8 — { waarde, open: [jaren zonder antwoord], onKies(sleutel) }
   lease = null, // beide-V9R7 — { soorten: [{ key, name, soort, herkend, onSoort }], prive500: { jaren, waarde, onKies } | null }
   mobiel = [], // beide-V8R4/V9R4 — zakelijk deel telefoon/internet, per rekening: [{ cat, label, waarde, onKies }] (leeg = geen boekingen in dit jaar)
 }) {
@@ -77,6 +78,18 @@ export default function BasisvragenEenvoudig({
           {jaar && (
             <>
               <h3 className="mt-4 mb-1 text-sm font-bold text-slate-900">Keuzes voor {jaar}</h3>
+              {werkruimte && (
+                <Rij label="Werkplek" uitleg={`Bepaalt of huur, energie en gemeentelijke lasten meetellen.${werkruimte.open.length ? ` Geldt ook voor ${werkruimte.open.join(", ")} (nog zonder antwoord).` : ""}`}>
+                  <select value={werkruimte.waarde} onChange={(e) => e.target.value && werkruimte.onKies(e.target.value)} className={veld} data-testid="werkplek">
+                    <option value="">nog niet ingevuld</option>
+                    <option value="geen">Geen werkplek / alles privé</option>
+                    <option value="niet_zelfstandig">Kamer of hoek thuis (niet zelfstandig)</option>
+                    <option value="zelfstandig">Zelfstandige werkruimte thuis (eigen ingang en voorzieningen)</option>
+                    <option value="pand">Gehuurd bedrijfspand</option>
+                    <option value="pand_zelfstandig">Bedrijfspand én zelfstandige werkruimte thuis</option>
+                  </select>
+                </Rij>
+              )}
               {lease?.prive500 && (
                 <Rij label={`Auto van de zaak / leaseauto: meer dan 500 km per jaar privé?${lease.prive500.jaren ? ` (${lease.prive500.jaren.join(", ")})` : ""}`}
                   uitleg="Ja: de autokosten vallen weg tegen de bijtelling. Nee: de autokosten tellen volledig. In Uitgebreid kan dit precies.">
@@ -86,6 +99,18 @@ export default function BasisvragenEenvoudig({
                     <option value="nee">Nee, 500 km of minder</option>
                   </select>
                 </Rij>
+              )}
+              {lease?.prive500?.waarde === true && lease.prive500.auto && (
+                <>
+                  <Rij label="Cataloguswaarde auto (€)" uitleg="Incl. btw en bpm, zie het kentekenbewijs of de leaseovereenkomst. Nodig voor de btw-correctie privégebruik.">
+                    <input type="text" inputMode="numeric" placeholder="bijv. 42000" value={lease.prive500.auto.catalogus} className={veld} data-testid="lease-catalogus"
+                      onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, ""); lease.prive500.auto.onZet("catalogus", v); }} />
+                  </Rij>
+                  <Rij label="Auto in gebruik sinds (jaar)" uitleg="Vanaf het vijfde jaar daarna geldt 1,5% in plaats van 2,7%.">
+                    <input type="text" inputMode="numeric" placeholder="bijv. 2022" maxLength={4} value={lease.prive500.auto.sinds} className={veld} data-testid="lease-sinds"
+                      onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, "").slice(0, 4); lease.prive500.auto.onZet("sinds", v); }} />
+                  </Rij>
+                </>
               )}
               {mobiel.map((m) => (
                 <Rij key={m.cat} label={`${m.label}: zakelijk deel`} uitleg="Voor privé én zakelijk gebruikt? Kies het zakelijke deel. Geldt ook voor andere jaren zonder antwoord.">

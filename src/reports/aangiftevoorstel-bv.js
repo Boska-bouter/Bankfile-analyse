@@ -364,7 +364,7 @@ function buildYearSectionBv(
     ${kerncijfersHtml}
   </div>
   ${btwKaartHtml}
-  ${werkruimteRegelHtml(year, classified, opties.categoryZakelijkPercentage, opties.werkruimteStatus)}
+  ${werkruimteRegelHtml(year, classified, opties.categoryZakelijkPercentage, opties.werkruimteStatus, categoryBtwRates)}
   ${jaarTotaalHtml}
   <div class="status-kaart ${STATUS_KAART_CLASS[yearStatus]}">
     <p><strong>Dossierstatus: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]}</strong></p>
