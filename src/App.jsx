@@ -3952,10 +3952,17 @@ export default function App() {
             rechtsvorm={rechtsvorm} setRechtsvorm={setRechtsvormWithUndo} korRegeling={korRegeling} setKorRegeling={setKorRegelingWithUndo}
             jaarKeuzes={activeYear ? jaarKeuzelijsten({ title: `Persoonlijke keuzes ${activeYear}`, tone: "neutral" }) : null}
             onOpenVragen={() => { setBasisEenvoudigOpen(false); setManualWizardOpen(true); }}
-            mobiel={activeYear ? MOBIEL_CATS.filter((cat) => classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === cat)).map((cat) => ({
-              cat, label: MOBIEL_LABEL[cat], waarde: categoryZakelijkPercentage?.[cat]?.[activeYear] ?? null,
-              onKies: (v) => { for (const y of new Set([activeYear, ...mobielOpenJarenVan(cat)])) setCategoryZakelijkPercentage(cat, y, v); },
-            })) : []}
+            mobiel={activeYear ? MOBIEL_CATS.map((cat) => {
+              // beide-V9R5 — ook tonen als alleen ándere jaren nog open staan (anders opende "Nu beantwoorden" een scherm zonder de vraag).
+              const ditJaar = classified.some((tx) => !tx.isMirror && tx.year === activeYear && tx.category === cat);
+              const open = mobielOpenJarenVan(cat);
+              if (!ditJaar && open.length === 0) return null;
+              return {
+                cat, label: ditJaar ? MOBIEL_LABEL[cat] : `${MOBIEL_LABEL[cat]} (${open.join(", ")})`,
+                waarde: ditJaar ? categoryZakelijkPercentage?.[cat]?.[activeYear] ?? null : null,
+                onKies: (v) => { for (const y of new Set([...(ditJaar ? [activeYear] : []), ...open])) setCategoryZakelijkPercentage(cat, y, v); },
+              };
+            }).filter(Boolean) : []}
             onUitgebreid={magUitgebreid ? () => naarUitgebreidVanuitEenvoudig(() => { setBasisEenvoudigOpen(false); setActiveTab("instellingen"); }) : null}
             onClose={() => setBasisEenvoudigOpen(false)}
           />
