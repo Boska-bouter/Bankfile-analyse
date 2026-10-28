@@ -79,6 +79,15 @@ export function percentagesMetWerkruimte(categoryZakelijkPercentage, werkruimteS
   for (const y of jaren) {
     const soorten = werkruimteSoorten(werkruimteStatus, y);
     for (const rek of ["zakelijk", "prive"]) {
+      // beide-V10R3 — zelfstandige werkruimte zonder ingevuld percentage: woonlasten tellen voor 0% (niet 100%) tot er
+      // een deel van de woning is opgegeven (vergelijking Eenvoudig ↔ Uitgebreid R. Meijer 28-10: anders ± € 15.000 te veel kosten).
+      if (soorten[rek] === "zelfstandig") {
+        for (const cat of WERKRUIMTE_CATEGORIEEN) {
+          const eigen = result[cat] || {};
+          if (eigen[y] == null && eigen[`${y}:${rek}`] == null) result[cat] = { ...eigen, [`${y}:${rek}`]: 0 };
+        }
+        continue;
+      }
       if (!WERKRUIMTE_NIET_AFTREKBAAR.includes(soorten[rek])) continue;
       for (const cat of WERKRUIMTE_CATEGORIEEN) {
         result[cat] = { ...(result[cat] || {}), [`${y}:${rek}`]: 0 };
