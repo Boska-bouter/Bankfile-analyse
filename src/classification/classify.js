@@ -640,7 +640,8 @@ function telecomSoort(tx) {
 // beide-V10R7 — een uitgaande betaling vanaf de zakelijke rekening met een factuurnummer ("Fac. Nr. 238604", "factuur 2024-12",
 // "Db. Nr.") is bijna altijd een leverancier. Zonder herkenning bleef die in "Overig" of "personen" en telde niet als kosten
 // (test Koenders 28-10: € 55.000–220.000 per jaar). Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
-export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr/i;
+// beide-V10R8 — ook "FCT 2026…", "F236112", "klantnr./klant nr." (wens Boska 28-10). Kale nummers en datums bewust niet.
+export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr|\bfct\b|\bF\d{4,}\b|\bklant ?nr\b|\bklant ?nummer\b/i;
 const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?verzekering/i;

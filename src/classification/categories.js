@@ -81,7 +81,9 @@ export const DEFAULT_RULES = [
     "jongerius gerechtsdeurwaarders", "via optima", "likifin", "armaere", "gerechtsdeurwaarders noord nederland",
     "stam gerechtsdeurwaarders", "bjk gerechtsdeurwaarders",
   ] },
-  { name: "Inhuur personeel", color: "bg-indigo-200 text-indigo-900", keywords: ["randstad", "adecco", "tempo-team", "tempo team", "yacht", "uitzendbureau", "detachering"] },
+  { name: "Inhuur personeel", color: "bg-indigo-200 text-indigo-900", keywords: ["randstad", "adecco", "tempo-team", "tempo team", "yacht", "uitzendbureau", "detachering",
+    // beide-V10R8 — een loonbedrijf/loonwerker is een aannemer (uitbesteed werk), geen loon (test Koenders 28-10).
+    "loonbedrijf", "loonwerk", "loon- en", "loon-spuit", "loonspuit", "loonwerker"] },
   { name: "Toeslagen", color: "bg-emerald-50 text-emerald-700", keywords: ["kindertoeslag", "huurtoeslag", "zorgtoeslag", "kinderopvangtoeslag", "belastingdienst/toeslagen", "toeslagen"],
     description: "Ontvangen toeslagen van de Belastingdienst — kindertoeslag, huurtoeslag, zorgtoeslag en overige toeslagen. Persoonlijk inkomen, geen zakelijke omzet." },
   { name: "Leningen", color: "bg-orange-200 text-orange-900", keywords: [
