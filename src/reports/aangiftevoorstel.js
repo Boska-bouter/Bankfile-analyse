@@ -425,7 +425,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </div>
     <p class="kerncijfers-voetnoot">Urencriterium onbekend — twee scenario's, zie "Aannames/onzekerheden" hiernaast.</p>
     <table class="samenvatting-scenarios">
-      <thead><tr><th>Urencriterium onbekend</th><th>Ondernemersaftrek</th><th>Belastbare winst</th><th>Indicatieve IB*</th><th>Indicatieve Zvw</th></tr></thead>
+      <thead><tr><th>Urencriterium onbekend</th><th>Zelfstandigen- en startersaftrek</th><th>Belastbare winst</th><th>Indicatieve IB*</th><th>Indicatieve Zvw</th></tr></thead>
       <tbody>
         <tr><td>Mét zelfstandigenaftrek</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.ondernemersaftrekBedrag)}</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.metZelfstandigenaftrek.ib.belasting - zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
         <tr><td>Zonder zelfstandigenaftrek</td><td class="num">€ 0</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.winstUitsplitsing.belastbaar)}</td><td class="num">${eur(Math.max(0, zaScenarios.zonderZelfstandigenaftrek.ib.belasting - zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</td><td class="num">${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</td></tr>
@@ -443,7 +443,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <div><span>Zakelijke kosten</span><span>- ${eur(kostenTotaal)}</span></div>
     </div>
     <div class="kerncijfers-stappen">
-      <div><span>Mogelijke ondernemersaftrek</span><span>- ${eur(ondernemersaftrekBedrag)}</span></div>
+      ${(() => {
+        // beide-V9R3 — zelfde woorden als op het scherm (kaart Indicatieve aangifte): zelfstandigenaftrek en startersaftrek apart.
+        const sta = ondernemersaftrekVoorJaar ? ondernemersaftrekVoorJaar.startersaftrekBedrag : 0;
+        return `<div><span>Zelfstandigenaftrek</span><span>- ${eur(ondernemersaftrekBedrag - sta)}</span></div>${sta > 0 ? `<div><span>Startersaftrek</span><span>- ${eur(sta)}</span></div>` : ""}`;
+      })()}
       <div><span>MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span>- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
       <div class="tussentotaal"><span>Indicatieve belastbare winst</span><span>${eur(winstUitsplitsing.belastbaar)}</span></div>
     </div>
@@ -727,7 +731,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
   ` : `
   ${ondernemersaftrekVoorJaar ? `
-  <p class="toelichting">Toegepaste ondernemersaftrek: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
+  <p class="toelichting">Toegepast: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
       ondernemersaftrekVoorJaar.verrekendUitReserve > 0
         ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend uit eerdere jaren)`
         : ""

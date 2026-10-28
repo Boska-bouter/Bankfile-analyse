@@ -17,7 +17,7 @@ function Rij({ label, uitleg, children }) {
 export default function BasisvragenEenvoudig({
   jaar, eigenNamen, setEigenNamen, rechtsvorm, setRechtsvorm, korRegeling, setKorRegeling,
   jaarKeuzes, onOpenVragen, onUitgebreid, onClose,
-  mobiel, onMobiel, // beide-V8R4 — zakelijk deel telefoon/internet (undefined = geen boekingen in dit jaar)
+  mobiel = [], // beide-V8R4/V9R4 — zakelijk deel telefoon/internet, per rekening: [{ cat, label, waarde, onKies }] (leeg = geen boekingen in dit jaar)
 }) {
   const [naam, setNaam] = useState(eigenNamen?.ondernemer || "");
   useEffect(() => setNaam(eigenNamen?.ondernemer || ""), [eigenNamen?.ondernemer]);
@@ -62,9 +62,9 @@ export default function BasisvragenEenvoudig({
           {jaar && (
             <>
               <h3 className="mt-4 mb-1 text-sm font-bold text-slate-900">Keuzes voor {jaar}</h3>
-              {mobiel !== undefined && (
-                <Rij label="Telefoon en internet: zakelijk deel" uitleg="Voor privé én zakelijk gebruikt? Kies het zakelijke deel. Geldt ook voor andere jaren zonder antwoord.">
-                  <select value={mobiel == null ? "" : String(mobiel)} onChange={(e) => e.target.value !== "" && onMobiel(Number(e.target.value))} className={veld}>
+              {mobiel.map((m) => (
+                <Rij key={m.cat} label={`${m.label}: zakelijk deel`} uitleg="Voor privé én zakelijk gebruikt? Kies het zakelijke deel. Geldt ook voor andere jaren zonder antwoord.">
+                  <select value={m.waarde == null ? "" : String(m.waarde)} onChange={(e) => e.target.value !== "" && m.onKies(Number(e.target.value))} className={veld}>
                     <option value="">nog niet ingevuld</option>
                     <option value="100">Alles zakelijk</option>
                     <option value="75">Ongeveer 75%</option>
@@ -73,7 +73,7 @@ export default function BasisvragenEenvoudig({
                     <option value="0">Alles privé</option>
                   </select>
                 </Rij>
-              )}
+              ))}
               <div className="rounded-xl border border-slate-200 p-2">{jaarKeuzes}</div>
               <p className="mt-1 text-xs text-slate-400">Andere jaren staan bovenaan in de jaarkeuze.</p>
             </>
