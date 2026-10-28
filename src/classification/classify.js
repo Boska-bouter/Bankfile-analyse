@@ -637,6 +637,11 @@ function telecomSoort(tx) {
   if (/\bmobiel|\bsim\b|sim-?only|\bgsm\b/i.test(tekst)) return "mobiel";
   return INTERNET_TV.test(tekst) ? "internet" : null;
 }
+// beide-V10R7 — een uitgaande betaling vanaf de zakelijke rekening met een factuurnummer ("Fac. Nr. 238604", "factuur 2024-12",
+// "Db. Nr.") is bijna altijd een leverancier. Zonder herkenning bleef die in "Overig" of "personen" en telde niet als kosten
+// (test Koenders 28-10: € 55.000–220.000 per jaar). Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
+export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr/i;
+const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?verzekering/i;
 export function resolveClassification(tx, ...rest) {
@@ -649,6 +654,10 @@ export function resolveClassification(tx, ...rest) {
   // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
   const naar = !eigenKeuze && TELECOM_SOORT[uitkomst.category]?.[telecomSoort(tx)];
   if (naar) return { ...uitkomst, category: naar };
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()
+    && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+    return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
+  }
   // beide-V10R4 — een verzekeraar (bijv. Centraal Beheer) is niet altijd zakelijk; staat in de omschrijving dat het een zakelijke
   // verzekering is ("MKB", "zakelijke verzekering", "bedrijfsverzekering"), dan Verzekering: Zakelijk (vergelijking R. Meijer, Boska 28-10).
   if (PRIVE_VERZEKERING.has(uitkomst.category) && !getCategorieProfiel() && ZAKELIJKE_VERZEKERING.test(tx.description || "")) {
