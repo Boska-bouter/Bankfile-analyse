@@ -16,7 +16,7 @@ export function useYearlySummaries(p) {
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, energieZakelijkPercentageStatus,
     fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, kmVergoedingDetails,
-    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm, eenvoudigLease = null,
     voorbelastingExcluded, years,
   } = p;
 
@@ -53,5 +53,6 @@ export function useYearlySummaries(p) {
       map[y] = computeYearlySummary(classified, y, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, INCOME_TRANSFER_CATEGORIES, voorbelastingExcluded, renteAftrekbaar, winstCorrectie, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaSummary, activaDetails]);
+  // eenvoudigLease: de opgegeven leaserente (beide-V10R5) wordt via tax/eenvoudigLease.js gelezen
+  }, [eenvoudigLease, years, classified, effectiveCategoryBtwRates, btwVerlegd, fixedCategories, voorbelastingExcluded, loanSummary, loanDetails, leaseSummary, leaseDetails, rechtsvorm, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, activaSummary, activaDetails]);
 }

@@ -1,4 +1,4 @@
-import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -627,12 +627,28 @@ function resolveClassificationBasis(tx, rules, businessKeywords, businessExpense
 // staat. Zo valt hij bij een privéauto met km-aftrek niet alsnog als zakelijke kosten mee (vergelijking Houtman 27-10, besluit Boska).
 // Een keuze voor één boeking gaat voor.
 const AUTOVERZ_NAAR_AUTO = new Set(["Verzekering: Zakelijk", "Verzekeringen", "Zakelijke inkoop/uitgaven", "Zakelijk overige abonnementen"]);
+const TELECOM_SOORT = {
+  "Zakelijk mobiel": { internet: "Zakelijk internet/TV" }, "Privé - mobiel": { internet: "Privé - internet/TV" },
+  "Zakelijk internet/TV": { mobiel: "Zakelijk mobiel" }, "Privé - internet/TV": { mobiel: "Privé - mobiel" },
+};
+// "mobiel", "internet" of null (niets in de tekst dat het zegt). Een mobiel-woord gaat voor ("Ziggo mobiel").
+function telecomSoort(tx) {
+  const tekst = `${tx.counterparty || ""} ${tx.description || ""}`;
+  if (/\bmobiel|\bsim\b|sim-?only|\bgsm\b/i.test(tekst)) return "mobiel";
+  return INTERNET_TV.test(tekst) ? "internet" : null;
+}
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?verzekering/i;
 export function resolveClassification(tx, ...rest) {
   const uitkomst = resolveClassificationBasis(tx, ...rest);
   const overridesByRow = rest[5] || {};
   if (!uitkomst || overridesByRow[tx.id]) return uitkomst;
+  const eigenKeuze = !!overrideSleutel(tx, rest[4] || {});
+  // beide-V10R6 — herkende OV-reizen standaard privé (wens Boska 28-10); zakelijk alleen als iemand zelf "Reiskosten (OV)" kiest.
+  if (!eigenKeuze && uitkomst.category === "Reiskosten (OV)") return { ...uitkomst, category: "Privé - openbaar vervoer" };
+  // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
+  const naar = !eigenKeuze && TELECOM_SOORT[uitkomst.category]?.[telecomSoort(tx)];
+  if (naar) return { ...uitkomst, category: naar };
   // beide-V10R4 — een verzekeraar (bijv. Centraal Beheer) is niet altijd zakelijk; staat in de omschrijving dat het een zakelijke
   // verzekering is ("MKB", "zakelijke verzekering", "bedrijfsverzekering"), dan Verzekering: Zakelijk (vergelijking R. Meijer, Boska 28-10).
   if (PRIVE_VERZEKERING.has(uitkomst.category) && !getCategorieProfiel() && ZAKELIJKE_VERZEKERING.test(tx.description || "")) {

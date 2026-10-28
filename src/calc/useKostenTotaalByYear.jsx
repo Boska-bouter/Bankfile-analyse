@@ -13,7 +13,7 @@ export function useKostenTotaalByYear(p) {
   const {
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, kmVergoedingDetails,
-    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm, eenvoudigLease = null,
     years, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
   } = p;
 
@@ -45,5 +45,6 @@ export function useKostenTotaalByYear(p) {
         (ib.leaseAutoKosten?.onttrekking || 0);
     }
     return map;
-  }, [years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]);
+  // eenvoudigLease: de opgegeven leaserente (beide-V10R5) wordt via tax/eenvoudigLease.js gelezen
+  }, [eenvoudigLease, years, classified, effectiveCategoryBtwRates, btwVerlegd, loanSummary, loanDetails, leaseSummary, leaseDetails, activaSummary, activaDetails, rechtsvorm, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus]);
 }

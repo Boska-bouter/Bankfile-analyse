@@ -288,7 +288,7 @@ export const HELP_CHAPTERS = [
         </p>
         <p>
           Wat deels zakelijk kan zijn staat in twee groepen: <strong>Privé - wonen &amp; vaste lasten</strong> (huur, energie
-          en water, gemeentelijke kosten) en <strong>Privé - telecom &amp; abonnementen</strong> (mobiel/internet, overige
+          en water, gemeentelijke kosten) en <strong>Privé - telecom &amp; abonnementen</strong> (mobiel, internet &amp; tv, overige
           abonnementen, streaming). Bij die twee is de <em>soort</em> nog apart te kiezen in het kleine tweede
           keuzeveld, zodat het zakelijke percentage per soort instelbaar blijft (Persoonlijke aannames).
         </p>

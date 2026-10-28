@@ -1,4 +1,5 @@
 import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen, stripExtraBedrag1eTermijnUitTransacties } from "./financialLease.js";
+import { eenvoudigLeaseRente } from "./eenvoudigLease.js";
 
 // Een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek klant") corrigeert vrijwel altijd
 // een eerdere betaling (een deel van een eerder geïncasseerde
@@ -213,6 +214,7 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
   let totaalAflossing = 0;
   let onvolledig = 0;
   let renteNietBerekenbaar = 0;
+  let metContract = 0;
   for (const lease of leaseSummary) {
     if (lease.category !== "Lease (financieel)") continue;
     const details = leaseDetails[lease.key];
@@ -226,7 +228,10 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
       totaalRente += jaarData.rente;
       totaalAflossing += jaarData.aflossing;
     }
+    metContract++;
   }
+  // beide-V10R5 — Eenvoudig: zonder contractgegevens telt de in Basisvragen opgegeven rente (tax/eenvoudigLease.js).
+  if (metContract === 0) totaalRente += eenvoudigLeaseRente(year);
   return { totaalRente, totaalAflossing, onvolledig, renteNietBerekenbaar };
 }
 

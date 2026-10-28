@@ -1,5 +1,5 @@
 // Migraties bij het inladen van oudere dossierbestanden/instellingen (uit App.jsx gehaald).
-import { migrateLegacyCategoryName } from "../classification/categories.js";
+import { migrateLegacyCategoryName, TELECOM_SPLITSING, INTERNET_TV } from "../classification/categories.js";
 
 // Bepaalt de rechtsvorm bij het inladen van bestaande instellingen/een dossierbestand. Ontbreekt
 // het veld helemaal (een bestand/instellingen van vóór deze functie bestond) dan is dat altijd een
@@ -45,9 +45,13 @@ export function migrateOverridesCategories(overrides) {
     // (zie classify.js), zodat de twee kanten van deze boeking niet meer dezelfde naam delen. De
     // generieke migrateLegacyCategoryName hieronder kan deze migratie niet doen (die kent geen
     // `type`), dus dit specifieke geval eerst, vóór de generieke hernoeming.
+    // beide-V10R6 — "mobiel/internet" is gesplitst: een keuze voor een internet-/tv-aanbieder (bijv. Ziggo) gaat naar internet/TV.
+    const splitsing = TELECOM_SPLITSING[val.category];
     const category = val.category === "Terugboeking van privé" && val.type === "Prive"
       ? "Terugboeking naar zakelijk"
-      : migrateLegacyCategoryName(val.category);
+      : splitsing && !/mobiel|\bsim\b/i.test(`${val.displayName || ""} ${key}`) && INTERNET_TV.test(`${val.displayName || ""} ${key}`)
+        ? splitsing[1]
+        : migrateLegacyCategoryName(val.category);
     out[key] = { ...val, category };
   }
   return out;
@@ -105,5 +109,18 @@ export function migreerGedeeldeHuisvesting(categoryZakelijkPercentage, statussen
 // categorie bevatten; zet ze om en haal dubbelen weg.
 export function migreerCategorieLijst(lijst) {
   if (!Array.isArray(lijst)) return lijst;
-  return [...new Set(lijst.map((n) => (typeof n === "string" ? migrateLegacyCategoryName(n) : n)))];
+  return [...new Set(lijst.flatMap((n) => (typeof n !== "string" ? [n] : TELECOM_SPLITSING[n] || [migrateLegacyCategoryName(n)])))];
+}
+
+// beide-V10R6 — percentage zakelijk van een gesplitste categorie ("Zakelijk mobiel/internet") gaat naar alle opvolgers
+// (mobiel én internet/TV); een al ingesteld percentage bij een opvolger blijft staan.
+export function migreerPercentageSplitsing(categoryZakelijkPercentage) {
+  if (!categoryZakelijkPercentage || typeof categoryZakelijkPercentage !== "object") return categoryZakelijkPercentage || {};
+  const result = { ...categoryZakelijkPercentage };
+  for (const [oud, nieuw] of Object.entries(TELECOM_SPLITSING)) {
+    if (!result[oud]) continue;
+    for (const naar of nieuw) result[naar] = { ...result[oud], ...(result[naar] || {}) };
+    delete result[oud];
+  }
+  return result;
 }

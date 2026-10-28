@@ -1,4 +1,4 @@
-import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE } from "../classification/categories.js";
+import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE, TELECOM_SPLITSING } from "../classification/categories.js";
 import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
@@ -46,6 +46,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
 
 export const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
 DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage BTW-tarief
+DEFAULT_BTW_RATES["Privé - openbaar vervoer"] = 9;
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
@@ -67,7 +68,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
-  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel/internet", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
+  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel", "Privé - internet/TV", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
   // v288 — zelfde standaard-uitsluiting als de andere "Privé - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
   // de BTW erover wordt hier standaard niet als voorbelasting geclaimd — desgewenst per dossier aan
@@ -88,6 +89,8 @@ export function mergeBtwRates(saved, savedVersion, migrateLegacyCategoryName) {
   const migratedSaved = {};
   for (const [key, val] of Object.entries(saved || {})) {
     migratedSaved[migrateLegacyCategoryName(key)] = val;
+    // beide-V10R6 — het tarief van een gesplitste categorie geldt voor alle opvolgers.
+    for (const naar of TELECOM_SPLITSING[key] || []) if (!(naar in (saved || {}))) migratedSaved[naar] = val;
   }
   const merged = { ...DEFAULT_BTW_RATES, ...migratedSaved };
   if (savedVersion && savedVersion >= 9 && savedVersion < BTW_RATES_VERSION) {

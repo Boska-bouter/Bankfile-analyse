@@ -4,7 +4,7 @@ import { readProjectFile } from "../storage/projectFile.js";
 import { clearPersistedData, clearPersistedSettings } from "../storage/projectStorage.js";
 import { DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES } from "../classification/categories.js";
 import { DEFAULT_BTW_RATES, mergeBtwRates, DEFAULT_VOORBELASTING_EXCLUDED } from "../tax/btw.js";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst, migreerPercentageSplitsing } from "./dossierMigraties.js";
 
 export async function laadDossierBestand(file, c) {
   const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTariefOverridesState, setOverigInkomenBox1State, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
@@ -99,7 +99,7 @@ export async function laadDossierBestand(file, c) {
     setHuurZakelijkPercentageStatusState({});
     setEnergieZakelijkPercentageStatusState({});
     setGemeentelijkeKostenZakelijkPercentageStatusState({});
-    setCategoryZakelijkPercentageState(gedeeldeMig.categoryZakelijkPercentage);
+    setCategoryZakelijkPercentageState(migreerPercentageSplitsing(gedeeldeMig.categoryZakelijkPercentage));
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
     setLoadedProjectFileName(file.name);
     c.setDossierHerstelcode?.(project.__herstelcode || null);

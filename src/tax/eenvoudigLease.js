@@ -58,7 +58,9 @@ export function leaseWaarschuwingen(groepen, autoStatus, jaar, antwoorden = null
     uit.push(`Auto van de zaak / leaseauto: Eenvoudig rekent vereenvoudigd (bij meer dan 500 km privé vallen de autokosten weg tegen de bijtelling).${btw} In Uitgebreid kan dit volledig worden uitgewerkt.`);
   }
   if (groepen.some((g) => g.category === "Lease (financieel)" && g.jaren.includes(j))) {
-    uit.push("Financiële lease: afschrijving en rente in plaats van de termijnen staan alleen in Uitgebreid.");
+    uit.push(eenvoudigLeaseRente(j, { antwoorden })
+      ? "Financiële lease: de opgegeven rente telt mee als kosten; de afschrijving staat alleen in Uitgebreid."
+      : "Financiële lease: de rente telt nog niet mee. Vul bij Basisvragen de rente van dit jaar in (jaaroverzicht van de leasemaatschappij); de afschrijving staat alleen in Uitgebreid.");
   }
   return uit;
 }
@@ -68,6 +70,13 @@ export function leaseWaarschuwingen(groepen, autoStatus, jaar, antwoorden = null
 // antwoorden.auto = { catalogus, sinds } (cataloguswaarde incl. btw en bpm, jaar van ingebruikname).
 let _reg = null;
 export function registreerEenvoudigLease(r) { _reg = r; }
+// beide-V10R5 — rente financiële lease per jaar, opgegeven in Basisvragen Eenvoudig (antwoorden.rente = { [jaar]: bedrag }). Uitgebreid
+// rekent de rente uit het contract; dit telt alleen als er geen contractgegevens zijn (zie computeLeaseRenteForYear).
+export function eenvoudigLeaseRente(year, reg = _reg) {
+  if (!reg || reg.exact) return 0;
+  const v = Number(String(reg.antwoorden?.rente?.[String(year)] ?? "").replace(",", "."));
+  return v > 0 ? v : 0;
+}
 
 // Forfait: 2,7% van de cataloguswaarde; 1,5% vanaf het vijfde jaar na het jaar van ingebruikname, of als er op de leasetermijnen
 // geen btw is afgetrokken (alleen btw op gebruikskosten). Nooit meer dan de afgetrokken btw op de autokosten van dat jaar.

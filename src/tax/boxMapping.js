@@ -28,8 +28,8 @@ const HUISVESTING_SOORTEN = [["Huur", ["Huur", "Privé - huur"]], ["Energie-wate
 const RUBRIEK_HUISVESTING_DEELS = ["Huur (deels zakelijk)", "Energie-water (deels zakelijk)", "Gemeentelijke kosten (deels zakelijk)"];
 const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
-  "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel/internet",
-  "Privé - mobiel/internet", "Privé - streaming diensten", "Privé overige abonnementen", "Privé - bankkosten", // beide-V9R9 — zakelijk deel vanaf privé
+  "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel", "Zakelijk internet/TV",
+  "Privé - mobiel", "Privé - internet/TV", "Privé - streaming diensten", "Privé overige abonnementen", "Privé - bankkosten", // beide-V9R9 — zakelijk deel vanaf privé
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",

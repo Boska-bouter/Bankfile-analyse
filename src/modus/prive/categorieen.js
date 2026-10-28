@@ -64,7 +64,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Kinderen: school & sport", "Kinderen", { label: "School, clubs & sport kinderen", nieuw: true, kleur: "bg-rose-50 text-rose-700" }),
   c("Kinderalimentatie", "Kinderen", { vast: true }),
 
-  c("Privé - mobiel/internet", "Abonnementen", { label: "Telefoon & internet", vast: true }),
+  c("Privé - mobiel", "Abonnementen", { label: "Mobiel", vast: true }),
+  c("Privé - internet/TV", "Abonnementen", { label: "Internet & tv", vast: true }),
   c("Privé overige abonnementen", "Abonnementen", { label: "Streaming & overige abonnementen", vast: true }),
 
   c("Privé - vrijetijd-uitgaan-vakantie & uit eten", "Vrije tijd", { label: "Uitgaan, vakantie & uit eten" }),
@@ -185,10 +186,8 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
     "bsgw", "gemeentebelasting", "gemeentelijke belasting", "waterschapsbelasting", "afvalstoffenheffing", "rioolheffing",
     " ozb", "hoogheemraadschap", "cocensus", "gbt ", "gbhu", "abg ", "noordenveld belasting",
   ],
-  "Zakelijk mobiel/internet": [
-    "ben nederland", "lyca", "freedom internet", "kpn mobiel", "jonaz", "tweak", "canaldigitaal", "canal digitaal",
-    "m7 group", "glasvezel", "fiber nederland", "tele2 mobiel", "odido mobiel",
-  ],
+  "Zakelijk mobiel": ["ben nederland", "lyca", "kpn mobiel", "tele2 mobiel", "odido mobiel"],
+  "Zakelijk internet/TV": ["freedom internet", "jonaz", "tweak", "canaldigitaal", "canal digitaal", "m7 group", "glasvezel", "fiber nederland"],
   "Privé overige abonnementen": [
     "disney", "nlziet", "max.com", "apple.com/bill", "google play", "playstation", "xbox", "nintendo", "audible",
     "kobo", "bookbeat", "patreon", "ad abonnement", "dpg media", "mediahuis", "persgroep", "volkskrant", "trouw abonnement",
@@ -249,12 +248,12 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Privé opnames": "Contant geld",
   "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",
   "Lease (operationeel)": "Private lease", "Lease (financieel)": "Private lease", "Belastingen: MRB": "Auto & brandstof",
-  "Reiskosten (OV)": "Openbaar vervoer",
+  "Reiskosten (OV)": "Openbaar vervoer", "Privé - openbaar vervoer": "Openbaar vervoer",
   "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
   "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",
   "Huur (deels zakelijk)": "Privé - huur", "Energie-water (deels zakelijk)": "Privé - energie-water",
   "Gemeentelijke kosten (deels zakelijk)": "Privé - gemeentelijke kosten",
-  "Zakelijk mobiel/internet": "Privé - mobiel/internet", "Bankkosten": "Privé - bankkosten", "Leningen": "Leningen (privé)",
+  "Zakelijk mobiel": "Privé - mobiel", "Zakelijk internet/TV": "Privé - internet/TV", "Bankkosten": "Privé - bankkosten", "Leningen": "Leningen (privé)",
   "Zakelijk overige abonnementen": "Privé overige abonnementen", "Streaming diensten": "Privé overige abonnementen",
   "Privé - streaming diensten": "Privé overige abonnementen", "Software & Online diensten": "Privé overige abonnementen",
   "Zakelijke inkoop/uitgaven": "Privé: overig",
