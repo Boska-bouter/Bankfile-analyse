@@ -42,20 +42,22 @@ import { fiscalTreatmentOf } from "../classification/categories.js";
 // gewoon bruikbaar.
 export const SPLITSBARE_CATEGORIEEN = [
   "Brandstof",
-  "Zakelijk mobiel/internet",
-  // Het privé-tegenhangster van "Zakelijk mobiel/internet" — anders dan "Brandstof" (dat op BEIDE
+  "Zakelijk mobiel",
+  // Het privé-tegenhangster van "Zakelijk mobiel" — anders dan "Brandstof" (dat op BEIDE
   // rekeningen gewoon dezelfde categorienaam houdt, zie SPLIT_CATEGORY_NAMES in categories.js)
   // krijgt een mobiel/internet-abonnement dat vanaf de privérekening wordt betaald een eigen naam
-  // ("Privé - mobiel/internet") zodra het niet als bevestigde zakelijke uitgave herkend is — zonder
+  // ("Privé - mobiel") zodra het niet als bevestigde zakelijke uitgave herkend is — zonder
   // deze regel viel zo'n transactie dus BUITEN dit paneel, en kon een deels-zakelijk telefoon-/
   // internetabonnement dat toevallig vanaf privé betaald is nooit een percentage zakelijk krijgen.
-  "Privé - mobiel/internet",
+  "Privé - mobiel",
+  "Zakelijk internet/TV", // beide-V10R6 — mobiel en internet/tv apart
+  "Privé - internet/TV",
   "Reiskosten (OV)",
   "Parkeren",
   "Huur",
   "Streaming diensten",
   // v288 — privé-tegenhanger van "Streaming diensten" hierboven (zie categories.js), zelfde reden
-  // als "Privé - mobiel/internet": zonder eigen entry hier zou een streamingabonnement dat je onder
+  // als "Privé - mobiel": zonder eigen entry hier zou een streamingabonnement dat je onder
   // hoofdcategorie "Privé" indeelt nooit een instelbaar percentage zakelijk gebruik kunnen krijgen.
   "Privé - streaming diensten",
   "Software & Online diensten",

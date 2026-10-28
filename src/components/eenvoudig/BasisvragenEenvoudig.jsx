@@ -18,7 +18,7 @@ export default function BasisvragenEenvoudig({
   jaar, eigenNamen, setEigenNamen, rechtsvorm, setRechtsvorm, korRegeling, setKorRegeling,
   jaarKeuzes, onOpenVragen, onUitgebreid, onClose,
   werkruimte = null, // beide-V9R8 — { waarde, open: [jaren zonder antwoord], onKies(sleutel), pct: { waarde, onZet(pct) } | null (beide-V10R3) }
-  lease = null, // beide-V9R7 — { soorten: [{ key, name, soort, herkend, onSoort }], prive500: { jaren, waarde, onKies } | null }
+  lease = null, // beide-V9R7 — { soorten: [{ key, name, soort, herkend, onSoort }], prive500: { jaren, waarde, onKies } | null, rente: { waarde, onZet } | null (beide-V10R5) }
   mobiel = [], // beide-V8R4/V9R4 — zakelijk deel telefoon/internet, per rekening: [{ cat, label, waarde, onKies }] (leeg = geen boekingen in dit jaar)
 }) {
   const [naam, setNaam] = useState(eigenNamen?.ondernemer || "");
@@ -118,6 +118,13 @@ export default function BasisvragenEenvoudig({
                       onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, "").slice(0, 4); lease.prive500.auto.onZet("sinds", v); }} />
                   </Rij>
                 </>
+              )}
+              {lease?.rente && (
+                <Rij label={`Rente financiële lease ${jaar} (€)`} uitleg="Staat op het jaaroverzicht van de leasemaatschappij. De rente is aftrekbaar; de termijnen zelf niet.">
+                  <input key={`lrente-${jaar}`} type="text" inputMode="decimal" placeholder="bijv. 850" defaultValue={lease.rente.waarde} className={veld} data-testid="lease-rente"
+                    onBlur={(e) => { const v = e.target.value.replace(/[^\d,\.]/g, ""); if (v !== String(lease.rente.waarde ?? "")) lease.rente.onZet(v); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+                </Rij>
               )}
               {mobiel.map((m) => (
                 <Rij key={m.cat} label={`${m.label}: zakelijk deel`} uitleg="Voor privé én zakelijk gebruikt? Kies het zakelijke deel. Geldt ook voor andere jaren zonder antwoord.">

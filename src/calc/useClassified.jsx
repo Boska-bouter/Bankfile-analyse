@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { SPLIT_CATEGORY_NAMES } from "../classification/categories.js";
 import { ibansMatch } from "../utils/normalization.js";
-import { detectOwnAccountTransfer, resolveClassification } from "../classification/classify.js";
+import { detectOwnAccountTransfer, resolveClassification, overrideSleutel } from "../classification/classify.js";
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
 import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
@@ -13,6 +13,7 @@ export function useClassified(p) {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
+    leaseSoortWizard = null, // beide-V10R5 — "financial": automatisch herkende lease wordt financiële lease
   } = p;
 
   return useMemo(() => {
@@ -27,6 +28,11 @@ export function useClassified(p) {
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
         herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules, herkenCtx) : null
       );
+      // beide-V10R5 — in de wizard "financiële lease" gekozen: een leasemaatschappij die alleen op naam als lease is herkend (geen eigen
+      // keuze) telt als financiële lease (test R. Meijer 28-10: Volkswagen Pon Financial Services werd operationeel, VWPFS financieel).
+      if (leaseSoortWizard === "financial" && resolved.category === "Lease (operationeel)" && !overridesByRow[tx.id] && !overrideSleutel(tx, overridesByCounterparty)) {
+        resolved = { ...resolved, category: "Lease (financieel)" };
+      }
       const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
       if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id], vastgezet: transferLocked, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
@@ -120,5 +126,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning, leaseSoortWizard]);
 }

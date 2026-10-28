@@ -43,7 +43,7 @@ import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByF
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
 import { percentagesMetWerkruimte, WERKRUIMTE_CATEGORIEEN, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
-import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
+import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst, migreerPercentageSplitsing } from "./dossier/dossierMigraties.js";
 import { OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
 import { dossierWaardenLijst, zetDossierTerug, NIET_GETELD } from "./dossier/dossierVelden.js";
@@ -180,13 +180,17 @@ const leesBankDossier = () => { try { return JSON.parse(sessionStorage.getItem(B
 // Basisvragen die de verkorte wizard in Eenvoudig niet stelt (zie SetupWizardModal); die horen niet in de zekerheidsmeter.
 const NIET_IN_EENVOUDIG = ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"];
 const BASISVRAGEN_EENVOUDIG_KEYS = ["mobiel", "leaseSoort", "lease500"]; // beide-V9R7 — beantwoorden in Basisvragen (Eenvoudig), niet in de wizard
-const MOBIEL_CAT = "Zakelijk mobiel/internet"; // beide-V8R4 — zie openBasisvragen / BasisvragenEenvoudig
+const MOBIEL_CAT = "Zakelijk mobiel"; // beide-V8R4 — zie openBasisvragen / BasisvragenEenvoudig
 // beide-V9R4 — Eenvoudig vraagt het zakelijk deel per rekening: betaald vanaf zakelijk en vanaf privé hebben elk een eigen percentage
 // (wens Boska 28-10: apart zichtbaar, niet automatisch voor beide).
-const MOBIEL_CATS = [MOBIEL_CAT, "Privé - mobiel/internet"];
-const MOBIEL_LABEL = { [MOBIEL_CAT]: "Telefoon en internet, betaald vanaf de zakelijke rekening", "Privé - mobiel/internet": "Telefoon en internet, betaald vanaf de privérekening" };
+// beide-V10R6 — mobiel en internet/tv apart (wens Boska 28-10).
+const MOBIEL_CATS = [MOBIEL_CAT, "Privé - mobiel", "Zakelijk internet/TV", "Privé - internet/TV"];
+const MOBIEL_LABEL = {
+  [MOBIEL_CAT]: "Mobiele telefoon, betaald vanaf de zakelijke rekening", "Privé - mobiel": "Mobiele telefoon, betaald vanaf de privérekening",
+  "Zakelijk internet/TV": "Internet en tv, betaald vanaf de zakelijke rekening", "Privé - internet/TV": "Internet en tv, betaald vanaf de privérekening",
+};
 const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
-  "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel/internet", "Reiskosten (OV)", "Streaming diensten",
+  "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel", "Zakelijk internet/TV", "Reiskosten (OV)", "Streaming diensten",
   "Software & Online diensten", "Boekhouder, accountant & administratie",
 ];
 const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven"];
@@ -784,7 +788,7 @@ export default function App() {
     setHuurZakelijkPercentageStatusState({});
     setEnergieZakelijkPercentageStatusState({});
     setGemeentelijkeKostenZakelijkPercentageStatusState({});
-    setCategoryZakelijkPercentageState(gedeeldeMig.categoryZakelijkPercentage);
+    setCategoryZakelijkPercentageState(migreerPercentageSplitsing(gedeeldeMig.categoryZakelijkPercentage));
     setOpeningBalanceCorrections(settings.openingBalanceCorrections && typeof settings.openingBalanceCorrections === "object" ? settings.openingBalanceCorrections : {});
   };
   const setKwartaalStatusField = (key, field, value) => {
@@ -1512,6 +1516,7 @@ export default function App() {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
+    leaseSoortWizard: autoWizardStatus?.soort || null,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -2555,7 +2560,7 @@ export default function App() {
   );
   const leaseRenteForYear = useMemo(
     () => (activeYear ? computeLeaseRenteForYear(leaseSummary, leaseDetails, activeYear, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate) : null),
-    [leaseSummary, leaseDetails, activeYear]
+    [leaseSummary, leaseDetails, activeYear, eenvoudigLease]
   );
   const renteAftrekbaarActiveYear = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
   // Financiële-lease-auto/machine kapitalisatie + afschrijving (en bij een auto met privégebruik
@@ -2650,7 +2655,7 @@ export default function App() {
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, energieZakelijkPercentageStatus,
     fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, kmVergoedingDetails,
-    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm, eenvoudigLease,
     voorbelastingExcluded, years,
   });
   // v237 — Zelfde reserve-keten (niet-gerealiseerde zelfstandigenaftrek over de jaren heen) en
@@ -2709,7 +2714,7 @@ export default function App() {
   const kostenTotaalByYear = useKostenTotaalByYear({
     activaDetails, activaSummary, autoActivaDetails, autoStatus, autoWizardStatus,
     btwVerlegd, categoryZakelijkPercentageEff, classified, effectiveCategoryBtwRates, kmVergoedingDetails,
-    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm,
+    leaseDetails, leaseSummary, loanDetails, loanSummary, rechtsvorm, eenvoudigLease,
     years, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
   });
   // BV-specifiek: alleen berekend/gebruikt als rechtsvorm === "bv" (zie Meerjarenoverzicht BV en het
@@ -4038,7 +4043,11 @@ export default function App() {
                 onKies: (v) => { for (const j of new Set([...(ditJaar ? [String(activeYear)] : []), ...open])) zetEenvoudigLease("prive500", j, v); },
               };
               if (p500) p500.auto = { catalogus: eenvoudigLease?.auto?.catalogus ?? "", sinds: eenvoudigLease?.auto?.sinds ?? "", onZet: (veld, v) => zetEenvoudigLease("auto", veld, v) };
-              return { soorten: leaseGroepenEenv.map((g) => ({ key: g.key, name: g.name, soort: g.soort, herkend: g.herkend, onSoort: (v) => zetEenvoudigLease("soort", g.key, v) })), prive500: p500 };
+              // beide-V10R5 — rente financiële lease voor dit jaar (Eenvoudig kent het contract niet).
+              const y0 = String(activeYear);
+              const rente = !autoExactIngevuld && activeYear && leaseGroepenEenv.some((g) => g.category === "Lease (financieel)" && g.jaren.includes(y0))
+                ? { waarde: eenvoudigLease?.rente?.[y0] ?? "", onZet: (v) => zetEenvoudigLease("rente", y0, v) } : null;
+              return { soorten: leaseGroepenEenv.map((g) => ({ key: g.key, name: g.name, soort: g.soort, herkend: g.herkend, onSoort: (v) => zetEenvoudigLease("soort", g.key, v) })), prive500: p500, rente };
             })()}
             mobiel={activeYear ? MOBIEL_CATS.map((cat) => {
               // beide-V9R5 — ook tonen als alleen ándere jaren nog open staan (anders opende "Nu beantwoorden" een scherm zonder de vraag).
