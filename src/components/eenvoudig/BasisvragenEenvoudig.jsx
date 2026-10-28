@@ -17,7 +17,7 @@ function Rij({ label, uitleg, children }) {
 export default function BasisvragenEenvoudig({
   jaar, eigenNamen, setEigenNamen, rechtsvorm, setRechtsvorm, korRegeling, setKorRegeling,
   jaarKeuzes, onOpenVragen, onUitgebreid, onClose,
-  werkruimte = null, // beide-V9R8 — { waarde, open: [jaren zonder antwoord], onKies(sleutel) }
+  werkruimte = null, // beide-V9R8 — { waarde, open: [jaren zonder antwoord], onKies(sleutel), pct: { waarde, onZet(pct) } | null (beide-V10R3) }
   lease = null, // beide-V9R7 — { soorten: [{ key, name, soort, herkend, onSoort }], prive500: { jaren, waarde, onKies } | null }
   mobiel = [], // beide-V8R4/V9R4 — zakelijk deel telefoon/internet, per rekening: [{ cat, label, waarde, onKies }] (leeg = geen boekingen in dit jaar)
 }) {
@@ -88,6 +88,13 @@ export default function BasisvragenEenvoudig({
                     <option value="pand">Gehuurd bedrijfspand</option>
                     <option value="pand_zelfstandig">Bedrijfspand én zelfstandige werkruimte thuis</option>
                   </select>
+                </Rij>
+              )}
+              {werkruimte?.pct && (
+                <Rij label="Deel van de woning zakelijk (%)" uitleg={`Bijv. 10 als de werkruimte 10% van de woning is. Geldt voor huur, energie-water en gemeentelijke kosten van de woning.${werkruimte.pct.waarde == null ? " Zolang dit leeg is, tellen die kosten niet mee." : ""}`}>
+                  <input key={`wpct-${jaar}-${werkruimte.pct.waarde ?? ""}`} type="text" inputMode="numeric" placeholder="bijv. 10" defaultValue={werkruimte.pct.waarde ?? ""} className={veld} data-testid="werkplek-pct"
+                    onBlur={(e) => { const v = e.target.value.replace(/[^\d]/g, ""); const n = v === "" ? null : Math.min(100, Number(v)); if (n !== (werkruimte.pct.waarde ?? null)) werkruimte.pct.onZet(n); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
                 </Rij>
               )}
               {lease?.prive500 && (

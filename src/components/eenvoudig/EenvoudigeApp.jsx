@@ -64,7 +64,9 @@ function Zekerheid({ b, compact = false, nogVragen = null, onzekerTekst = null, 
         <p key={w} className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">⚠ {w}</p>
       ))}
       {nogVragen != null && !(openVragen.length > 0 && nogVragen === 0) && b.oordeel !== "betrouwbaar" && b.oordeel !== "geen" && (
-        <p className="mt-1 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar (hooguit {r0(b.grens.betrouwbaar)} onzeker).</> : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
+        <p className="mt-1 text-xs text-slate-500">{nogVragen > 0 ? <>Nog ongeveer <b>{nogVragen} vra{nogVragen === 1 ? "ag" : "gen"}</b> tot Betrouwbaar (hooguit {r0(b.grens.betrouwbaar)} onzeker).</> : openVragen.length === 0 && waarschuwingen.length > 0
+          ? "Alle vragen zijn beantwoord. Door de vereenvoudiging hierboven blijft de uitkomst op Redelijk; in Uitgebreid kan dit volledig worden uitgewerkt."
+          : "Beantwoord de overgeslagen vragen om verder te komen."}</p>
       )}
     </div>
   );

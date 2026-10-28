@@ -24,6 +24,7 @@ const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten", "P
 // aftrekbaar en dat wordt als aparte regel in "Huisvestingskosten" opgenomen (zie computeIbBoxMapping).
 // Eerder stond "Huur (deels zakelijk)" hier wél in tegen 100% én kwam het zakelijke deel er nog eens
 // bij als aparte regel — de rubrieken telden dan niet op tot de winst.
+const HUISVESTING_SOORTEN = [["Huur", ["Huur", "Privé - huur"]], ["Energie-water", ["Energie-water", "Privé - energie-water"]], ["Gemeentelijke kosten", ["Gemeentelijke kosten", "Privé - gemeentelijke kosten"]]];
 const RUBRIEK_HUISVESTING_DEELS = ["Huur (deels zakelijk)", "Energie-water (deels zakelijk)", "Gemeentelijke kosten (deels zakelijk)"];
 const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
@@ -126,7 +127,9 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
 
   const overigeBedrijfskosten = [
     rubriekNetto("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
-    rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING),
+    // beide-V10R1: huur/energie/gemeentelijk en hun privé-variant als één regel per kostensoort (wens Boska 28-10).
+    { ...rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING), perCategorie: HUISVESTING_SOORTEN
+      .map(([naam, cats]) => ({ categorie: naam, totaal: sumCatNetto(cats), bronCats: cats })).filter((r) => r.totaal > 0) },
     ...gedeeldeRegels,
     rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
     rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),

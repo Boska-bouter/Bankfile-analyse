@@ -42,7 +42,7 @@ import { useAlleStappen } from "./calc/useAlleStappen.jsx";
 import { useOwnAccountsElsewhereByFile } from "./calc/useOwnAccountsElsewhereByFile.jsx";
 import { useDashboardVpbBreakdown } from "./calc/useDashboardVpbBreakdown.jsx";
 import { useOndernemersaftrekPerJaar } from "./calc/useOndernemersaftrekPerJaar.jsx";
-import { percentagesMetWerkruimte, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
+import { percentagesMetWerkruimte, WERKRUIMTE_CATEGORIEEN, werkruimteSoorten, werkruimteUitWizard, vulWerkruimteJaren, WERKRUIMTE_STANDAARD } from "./tax/werkruimte.js";
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst } from "./dossier/dossierMigraties.js";
 import { OpslaanHerinneringBalk } from "./dossier/useOpslaanHerinnering.jsx";
 import { SessieBalk } from "./dossier/useSessieWaarschuwing.jsx";
@@ -3982,8 +3982,28 @@ export default function App() {
               const s = werkruimteSoorten(werkruimteStatus, String(activeYear));
               const waarde = s.zakelijk === "bedrijfsruimte" ? (s.prive === "zelfstandig" ? "pand_zelfstandig" : "pand") : s.zakelijk === "prive" ? "geen" : s.zakelijk || "";
               const open = years.map(String).filter((y) => { const x = werkruimteSoorten(werkruimteStatus, y); return !x.zakelijk && !x.prive; });
+              // beide-V10R3 — percentage van de woning (wens Boska 28-10): per rekening op alle huisvestingscategorieën. Bij alleen
+              // een zelfstandige werkruimte ook voor woonlasten vanaf de zakelijke rekening; naast een bedrijfspand alleen privé.
+              const reks = waarde === "zelfstandig" ? ["prive", "zakelijk"] : waarde === "pand_zelfstandig" ? ["prive"] : [];
+              const y0 = String(activeYear);
+              const pctWaarde = WERKRUIMTE_CATEGORIEEN.map((c) => categoryZakelijkPercentage?.[c]?.[`${y0}:prive`] ?? categoryZakelijkPercentage?.[c]?.[y0]).find((v) => v != null) ?? null;
+              const pct = reks.length === 0 ? null : {
+                waarde: pctWaarde,
+                onZet: (n) => {
+                  snapshotBeforeAction("Deel van de woning zakelijk aangepast (Eenvoudig)");
+                  setCategoryZakelijkPercentageState((prev) => {
+                    const next = { ...prev };
+                    for (const c of WERKRUIMTE_CATEGORIEEN) {
+                      const perJaar = { ...(next[c] || {}) };
+                      for (const rek of reks) { if (n == null) delete perJaar[`${y0}:${rek}`]; else perJaar[`${y0}:${rek}`] = n; }
+                      if (Object.keys(perJaar).length) next[c] = perJaar; else delete next[c];
+                    }
+                    return next;
+                  });
+                },
+              };
               return {
-                waarde, open: open.filter((y) => y !== String(activeYear)),
+                pct, waarde, open: open.filter((y) => y !== String(activeYear)),
                 onKies: (k) => {
                   const std = werkruimteUitWizard({ pand: k.startsWith("pand"), woning: k === "pand_zelfstandig" ? "zelfstandig" : k === "zelfstandig" || k === "niet_zelfstandig" ? k : null });
                   snapshotBeforeAction("Werkplek aangepast (Eenvoudig)");
