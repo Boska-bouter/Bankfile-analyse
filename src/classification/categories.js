@@ -818,6 +818,7 @@ export const ZAK_GROEPEN = {
 export const CATEGORIE_GROEPEN = { ...PRIVE_GROEPEN, ...ZAK_GROEPEN };
 // Privé-algemeen is een bak zonder soortkeuze (17 leden, geen fiscaal verschil).
 const GEEN_SOORT = new Set([PRIVE_ALGEMEEN]);
+const PRIVE_ALGEMEEN_LABEL = { "Inkomsten": "Inkomsten (privé)" };
 
 const FIJN_NAAR_WEERGAVE = (() => {
   const m = {};
@@ -876,10 +877,9 @@ export function keuzeGroepen(huidige = null) {
     const gezien = new Set();
     for (const c of fijn) {
       const w = _toonFijn ? null : FIJN_NAAR_WEERGAVE[c];
-      if (w && GEEN_SOORT.has(w)) {
-        if (!gezien.has(w)) { gezien.add(w); opties.push({ value: STANDAARD_FIJN[w], label: w }); }
-        continue;
-      }
+      // beide-V10R9 — ook de soorten van "Privé kosten algemeen" los kiesbaar (Boska 29-10: o.a. inkomsten en
+      // overboeking van bekenden ontbraken in de keuzelijst); er is hier geen tweede keuzeveld voor de soort.
+      if (w && GEEN_SOORT.has(w)) { opties.push({ value: c, label: PRIVE_ALGEMEEN_LABEL[c] || c }); continue; }
       if (w) {
         const leden = CATEGORIE_GROEPEN[w];
         const lid = leden.find((l) => l.key === c);
@@ -892,9 +892,7 @@ export function keuzeGroepen(huidige = null) {
 }
 // Welke optie hoort bij de huidige categorie (voor privé-algemeen: de standaardsoort van die groep).
 export function keuzeWaarde(category) {
-  if (_cp) return category;
-  const w = _toonFijn ? null : FIJN_NAAR_WEERGAVE[category];
-  return w && GEEN_SOORT.has(w) ? STANDAARD_FIJN[w] : category;
+  return category; // beide-V10R9 — elke soort heeft een eigen optie
 }
 
 // Keuzes voor het subtype-keuzeveld.

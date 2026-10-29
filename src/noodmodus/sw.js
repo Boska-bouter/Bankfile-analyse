@@ -26,6 +26,19 @@ async function laatsteBezoek() {
   const r = await (await caches.open(META)).match("/__laatste-bezoek");
   return r ? Number(await r.text()) || 0 : 0;
 }
+// beide-V10R10 — einddatum van het abonnement (YYYY-MM-DD, of leeg = geen einddatum), doorgegeven door de app (dossier/useRol.js).
+// Zonder server werkt de bewaarde app tot en met die dag, ook als het laatste bezoek nog geen NOOD_DAGEN geleden is.
+async function zetEinddatum(d) {
+  const c = await caches.open(META);
+  await c.put("/__einddatum", new Response(d ? String(d).slice(0, 10) : ""));
+}
+async function einddatumVoorbij() {
+  const r = await (await caches.open(META)).match("/__einddatum");
+  const d = r ? await r.text() : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const eind = new Date(`${d}T23:59:59`);
+  return !isNaN(+eind) && Date.now() > +eind;
+}
 async function vergeet() {
   await caches.delete(META);
   for (const k of await caches.keys()) if (k.startsWith("bankoverzicht-app-")) await caches.delete(k);
@@ -53,6 +66,7 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("message", (e) => {
   if (e.data === "vergeet") e.waitUntil(vergeet()); // bij uitloggen (dossier/useRol.js)
+  else if (e.data && typeof e.data === "object" && "einddatum" in e.data) e.waitUntil(zetEinddatum(e.data.einddatum));
 });
 
 function metTijdslimiet(p) {
@@ -86,7 +100,7 @@ async function startpagina(request) {
   } catch { /* geen verbinding of te traag */ }
   const bewaard = await caches.match("/", { cacheName: CACHE }) || await caches.match("/");
   const recent = Date.now() - (await laatsteBezoek()) < NOOD_DAGEN * 86_400_000;
-  if (bewaard && recent) return bewaard;
+  if (bewaard && recent && !(await einddatumVoorbij())) return bewaard;
   return pagina("Bankoverzicht is even niet bereikbaar",
     "De server is op dit moment niet bereikbaar. Probeer het over een paar minuten opnieuw. Dossiers staan als bestand op dit apparaat en gaan niet verloren.",
     "Opnieuw proberen");

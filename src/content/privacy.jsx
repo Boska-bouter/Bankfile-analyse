@@ -20,6 +20,10 @@ export const PRIVACY_BLOKKEN = [
     titel: "Bankkoppeling",
     tekst: "Loopt via Ponto en de server van de app. De boekingen worden direct doorgegeven aan deze browser en niet op de server bewaard. Alleen om het koppelen af te ronden staan de namen en nummers van de rekeningen hooguit 2 uur op de server. De koppelcode staat versleuteld in het dossier; de app kan alleen lezen, nooit betalen.",
   },
+  {
+    titel: "Zonder verbinding",
+    tekst: "Is de server even niet bereikbaar, dan opent de laatst gebruikte versie van de app op dit apparaat: hooguit 7 dagen na het laatste bezoek en nooit na de einddatum van het abonnement. Na uitloggen is die bewaarde versie weg.",
+  },
 ];
 
 export function PrivacyBlokken() {

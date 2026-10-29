@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "node tests/e2e/hoofdroutes.e2e.mjs",
-    "test:noodmodus": "node tests/e2e/noodmodus.e2e.mjs"
+    "test:noodmodus": "node tests/e2e/noodmodus.e2e.mjs",
+    "test:reis": "node tests/e2e/gebruikersreis.e2e.mjs"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
