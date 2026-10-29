@@ -7,7 +7,7 @@ import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKop
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel, aansluitingControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
-import { categorieLabel, DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, setActieveRechtsvorm } from "./classification/categories.js";
+import { categorieLabel, mainCategoryOf, DEFAULT_RULES, mergeCategoryRules, migrateLegacyCategoryName, DEFAULT_FIXED_CATEGORIES, INCOME_TRANSFER_CATEGORIES, MAIN_CATEGORY_ORDER, MAIN_CATEGORY_DEFAULT_SUBTYPE, subtypesForMainCategory, setActieveRechtsvorm } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, mergeBtwRates, BTW_RATES_VERSION, DEFAULT_VOORBELASTING_EXCLUDED, computeQuarterlyBtwForYear, computeQuarterlyCostBreakdown, computeYearlyCostBreakdown, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { computeYearlySummary, computeYearlyOpenOB, computeVolledigeJaren, computeBusinessAdvies } from "./tax/yearlySummary.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "./tax/gedeeldeHuur.js";
@@ -3016,7 +3016,8 @@ export default function App() {
   // release33V7 — bijschrijvingen van één tegenpartij in een kostencategorie naar een andere categorie (bijv. omzet).
   const verplaatsBijschrijvingen = (ids, categorie, naam) => {
     snapshotBeforeAction(`Bijschrijvingen ${naam} → ${categorie}`);
-    setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category: categorie, type: "Zakelijk" }; return next; });
+    const type = mainCategoryOf(categorie) === "Privé" ? "Prive" : "Zakelijk"; // beide-V10R9 — privékeuze is geen zakelijke boeking
+    setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category: categorie, type }; return next; });
   };
   // release22V9 — alle betalingen van deze terugkerende reeks op een zelf gekozen categorie zetten.
   const toepassenTerugkerendAlle = (t, categorie, type) => {
