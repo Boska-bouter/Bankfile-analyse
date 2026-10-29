@@ -14,6 +14,14 @@ const schrijfCache = (v) => { try { localStorage.setItem(SLEUTEL, v ? "1" : "0")
 const EXTRA_SLEUTEL = "bankoverzicht.rechtenExtra";
 const leesExtra = () => { try { const x = JSON.parse(localStorage.getItem(EXTRA_SLEUTEL) || "null"); return x && typeof x === "object" ? x : {}; } catch { return {}; } };
 
+// beide-V10R10 — laatste einddatum over de soorten met toegang; null = geen einddatum (bijv. beheerder of geen datum ingesteld).
+export function einddatumAbonnement(d) {
+  const soorten = d?.soorten && typeof d.soorten === "object" ? Object.values(d.soorten).filter((s) => s && s.eenvoudig) : null;
+  if (!soorten) return d?.geldigTot || null;
+  if (soorten.length === 0 || soorten.some((s) => !s.geldigTot)) return null;
+  return soorten.map((s) => String(s.geldigTot).slice(0, 10)).sort().pop();
+}
+
 // nieuw-V4R4 — uitloggen bij Cloudflare Access (de inlog blijft anders de ingestelde sessieduur geldig, bijv. 24 uur).
 // nieuw-V4R6 — via /uitloggen in de Worker: die beëindigt de eigen sessie, of stuurt door naar Access.
 // Eerst de bewaarde rechten wissen, zodat na inloggen met een ander adres niet even de oude rechten gelden.
@@ -56,6 +64,8 @@ export function useMagUitgebreid() {
           soorten: d?.soorten && typeof d.soorten === "object" ? d.soorten : null, gebruik: d?.gebruik || null, aanvraagGebruik: d?.aanvraagGebruik || null };
         try { localStorage.setItem(EXTRA_SLEUTEL, JSON.stringify(x)); } catch { /* geen opslag */ }
         setExtra(x);
+        // beide-V10R10 — de noodmodus (service worker) werkt niet langer dan het abonnement loopt.
+        try { navigator.serviceWorker?.controller?.postMessage({ einddatum: einddatumAbonnement(d) }); } catch { /* geen service worker */ }
         setStatus(v ? "ok" : !e ? "geenEmail" : d?.lijst === false ? "geenLijst" : "nietOpLijst");
       })
       .catch(() => { if (!weg) setStatus("fout"); /* offline of geen Worker: laatst bekende waarde blijft staan */ });
