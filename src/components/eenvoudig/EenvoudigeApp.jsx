@@ -9,6 +9,7 @@ import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { metBegrippen } from "../shared/Begrip.jsx";
 import {
   berekenBetrouwbaarheid, bouwVragen, categorieVoorAntwoord, voorstelVoor, maakBevestigd,
+  REKENING_TEKST,
 } from "../../calc/eenvoudig.js";
 
 // nieuw-V1R01 — eenvoudige weergave voor niet-deskundigen: vier stappen (Gegevens · Nakijken · Uitkomst · Bewaren),
@@ -78,7 +79,7 @@ function Rij({ label, waarde, sterk = false }) {
 
 export default function EenvoudigeApp({
   klantNaam, jaar, jaren = [], onJaar, bestanden = [], classified, reviewedOverigKeys, reviewedPersonKeys,
-  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, uitlegVerzoek = 0, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord,
+  onAntwoord, onBestandToevoegen, onBasisvragen, onOpslaan, onUitgebreid, fiscaal, jaarSummary, isBV, onAangifte, onSamenvatting, onMaandoverzicht, opgeslagen = false, onDossierLaden, onNieuwDossier, jaarKeuze, gezien = null, onGezien, onToegangAanvragen, toegangInfo = null, onUitloggen = null, abonnement = null, onAbonnementen = null, onUitlegZichtbaar = null, uitlegVerzoek = 0, antwoordenLijst = [], onWijzigAntwoord, onWisAntwoord, onRijAntwoord, onRekeningAntwoord = null, gesplitst = null, onSplitsVraag = null,
   teksten = null, uitkomst = null, // beide-V1R8 — privédossier: andere keuzes/teksten (modus/prive/eenvoudig.js) en eigen uitkomst
   extraGegevens = null, // beide-V2R2 — privédossier: eigen rekeningen (spaarrekening) opgeven in stap 1
   overigeDelen = [], // beide-V8R9 — uitsplitsing "Overige posten" (km-vergoeding, afschrijving, rente …)
@@ -120,7 +121,7 @@ export default function EenvoudigeApp({
     const r = berekenBetrouwbaarheid(classified, jaar, bevestigd, omzet);
     return (openVragen.length > 0 || waarschuwingen.length > 0) && r.oordeel === "betrouwbaar" ? { ...r, oordeel: "redelijk" } : r;
   }, [classified, jaar, bevestigd, omzet, openVragen.length, waarschuwingen.length]);
-  const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd), [classified, jaar, bevestigd]);
+  const alleVragen = useMemo(() => bouwVragen(classified, jaar, bevestigd, gesplitst), [classified, jaar, bevestigd, gesplitst]);
   const wachtrij = useMemo(() => [...alleVragen.filter((v) => !overgeslagen.includes(v.key)), ...alleVragen.filter((v) => overgeslagen.includes(v.key))], [alleVragen, overgeslagen]);
   const stap = gekozenStap ?? (bestanden.length === 0 ? 1 : alleVragen.length > 0 ? 2 : 3);
   const terug = terugIdx != null ? geschiedenis[terugIdx] : null;
@@ -140,6 +141,7 @@ export default function EenvoudigeApp({
     for (const g of v.groepen) {
       const patch = keuze.category ? keuze : categorieVoorAntwoord(keuze, g.teken, g.rekening);
       if (g.perBoeking && onRijAntwoord) onRijAntwoord(g.txs.map((t) => t.id), patch);
+      else if (g.rekeningSoort && onRekeningAntwoord) onRekeningAntwoord(g.txs[0], g.rekeningSoort, patch); // beide-V11R4
       else onAntwoord(g.naam, g.txs[0].amount, patch);
     }
   };
@@ -302,6 +304,18 @@ export default function EenvoudigeApp({
                       ? <>Betaling via een betaaldienst. De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b> van deze partij; het antwoord geldt alleen daarvoor.</>
                       : <>De app kon dit niet zeker herkennen. Het gaat om <b>{vraag.aantal} {vraag.aantal === 1 ? "boeking" : "boekingen"}</b>{vraag.aantal > 1 ? " met dezelfde naam" : ""}; het antwoord geldt voor allemaal, ook in andere jaren.</>}
                 </p>
+                {/* beide-V11R5 — op zakelijk én privé betaald: op verzoek per soort rekening apart beantwoorden (wens Boska 30-10) */}
+                {vraag.beideRekeningen && onSplitsVraag && (
+                  <p className="-mt-1 mb-3 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                    Betaald vanaf de zakelijke rekening ({vraag.beideRekeningen.Zakelijk}x) én de privérekening ({vraag.beideRekeningen.Prive}x). Gaat het om verschillende dingen?{" "}
+                    <button type="button" style={{ minHeight: 0 }} onClick={() => onSplitsVraag(vraag.voorbeeld)} className="font-semibold underline">Apart beantwoorden per rekening</button>
+                  </p>
+                )}
+                {vraag.rekeningSoort && onSplitsVraag && (
+                  <p className="-mt-1 mb-3 text-xs text-slate-500">Alleen de boekingen van de {REKENING_TEKST[vraag.rekeningSoort]}.{" "}
+                    <button type="button" style={{ minHeight: 0 }} onClick={() => onSplitsVraag(vraag.voorbeeld, false)} className="underline">Weer samen beantwoorden</button>
+                  </p>
+                )}
                 {vraag.betaaldienst && !vraag.groepen[0]?.perBoeking && (
                   <p className="-mt-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Dit is een betaaldienst: hierachter kunnen verschillende betalingen zitten, zakelijk en privé. Bij twijfel: kies <b>Weet ik niet</b>; dan kan het in Uitgebreid per boeking worden ingedeeld.</p>
                 )}
@@ -310,7 +324,7 @@ export default function EenvoudigeApp({
                   const nJaar = vraag.groepen.flatMap((g) => g.txs).filter((t) => jaar == null || t.year === jaar).length;
                   return (
                     <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-slate-100 px-4 py-3 text-sm">
-                      <span className="min-w-0 truncate font-semibold">{vraag.naam}</span>
+                      <span className="min-w-0 truncate font-semibold">{vraag.naam}{vraag.rekeningSoort && <span className="ml-1 font-normal text-slate-500">· {REKENING_TEKST[vraag.rekeningSoort]}</span>}</span>
                       <span className="shrink-0 text-right"><b className="block font-mono">{eur(vraag.bedrag)}</b><span className="block text-xs text-slate-500">totaal van {nJaar} {nJaar === 1 ? "boeking" : "boekingen"}{jaar ? ` in ${jaar}` : ""}</span></span>
                     </div>
                   );

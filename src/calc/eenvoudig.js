@@ -1,7 +1,7 @@
 // nieuw-V1R01 — rekenwerk voor de eenvoudige weergave: hoe zeker is de uitkomst (naar bedrag), en welke vragen
 // leveren met zo min mogelijk antwoorden de meeste zekerheid op. Pure functies, los te testen.
 import { counterpartyKey } from "../utils/normalization.js";
-import { sleutelZonderNaam, bevestigdVoor } from "../classification/reviewSummaries.js";
+import { sleutelZonderNaam, bevestigdVoor, rekeningSoortVan } from "../classification/reviewSummaries.js";
 import { betaalSoort } from "../classification/classify.js";
 
 // nieuw-V3R4 — het oordeel hangt af van het onzekere bedrag in euro's, niet van een percentage: wat onzeker is op de
@@ -82,8 +82,18 @@ const KLEIN = 100; // kleine pinbetalingen (per tegenpartij in totaal) gaan same
 
 // Vragen voor "Nakijken": per tegenpartij (alle jaren samen, want het antwoord geldt overal), op volgorde van het
 // onzekere bedrag in het gekozen jaar. Kleine pinbetalingen zonder herkenning worden één groepsvraag.
-export function bouwVragen(classified, jaar, bevestigd) {
+// beide-V11R4/V11R5 — betaalt een tegenpartij van beide soorten rekening (zakelijk en privé), dan kan de vraag per soort worden
+// gesteld (wens Boska 30-10: dezelfde verzekeraar of Tikkie kan zakelijk én privé zijn). Alleen op verzoek (`gesplitst(tx)`, de keuze
+// "Apart beantwoorden per rekening"), niet automatisch: anders kwamen er onnodig vragen bij. Meerdere rekeningen van dezelfde soort
+// blijven samen. `beideRekeningen` op de vraag = { Zakelijk: n, Prive: n } als splitsen kan.
+export function bouwVragen(classified, jaar, bevestigd, gesplitst = null) {
   const groepen = {};
+  const soortenPer = {};
+  for (const tx of classified) {
+    if (tx.isMirror) continue;
+    const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+    if (k) (soortenPer[k] ||= new Set()).add(rekeningSoortVan(tx));
+  }
   for (const tx of classified) {
     if (tx.isMirror || !tx.amount || NIET_MEETELLEN.has(tx.category) || tx.transferLocked) continue;
     if (zekerheidVan(tx, bevestigd) === "herkend") continue;
@@ -91,12 +101,14 @@ export function bouwVragen(classified, jaar, bevestigd) {
     if (!basis) continue; // zonder naam: niet als vraag (blijft voor Uitgebreid)
     const dienst = isBetaaldienst(tx);
     const partij = dienst ? echtePartij(tx) : null;
-    const key = partij ? `${basis}|${partij.sleutel}` : basis;
+    const rekeningSoort = !partij && soortenPer[basis]?.size > 1 && gesplitst?.(tx) ? rekeningSoortVan(tx) : null;
+    const key = partij ? `${basis}|${partij.sleutel}` : rekeningSoort ? `${basis}@${rekeningSoort}` : basis;
     const naam = partij ? `${tx.counterparty} · ${partij.naam}` : tx.counterparty || tx.description;
     // perBoeking: antwoord als keuze per boeking (rij), niet voor de hele naam — anders zou één antwoord alle partijen
     // achter de betaaldienst meenemen.
-    const g = (groepen[key] ||= { key, naam, txs: [], bedragJaar: 0, bedragAlle: 0, rekening: tx.accountType || tx.type, teken: tx.amount >= 0 ? 1 : -1, perBoeking: !!partij, betaaldienst: dienst });
+    const g = (groepen[key] ||= { key, naam, txs: [], bedragJaar: 0, bedragAlle: 0, rekening: tx.accountType || tx.type, teken: tx.amount >= 0 ? 1 : -1, perBoeking: !!partij, betaaldienst: dienst, rekeningSoort });
     g.txs.push(tx);
+    if (!partij && !rekeningSoort && soortenPer[basis]?.size > 1) { const s = rekeningSoortVan(tx); (g.perSoort ||= { Zakelijk: 0, Prive: 0 })[s] += 1; }
     g.bedragAlle += tx.amount;
     if (jaar == null || tx.year === jaar) { g.bedragJaar += tx.amount; g.gewicht = (g.gewicht || 0) + Math.abs(tx.amount) * weging(tx); }
   }
@@ -110,7 +122,7 @@ export function bouwVragen(classified, jaar, bevestigd) {
   losse.sort((a, b) => (b.gewicht || 0) - (a.gewicht || 0)); // zakelijke twijfels eerst (zie weging)
   const vragen = losse.map((g) => ({
     soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100,
-    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], betaaldienst: g.betaaldienst, gewicht: g.gewicht || 0,
+    teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], betaaldienst: g.betaaldienst, gewicht: g.gewicht || 0, rekeningSoort: g.rekeningSoort, beideRekeningen: g.perSoort?.Zakelijk && g.perSoort?.Prive ? g.perSoort : null,
   }));
   if (kleinePin.length >= 3) {
     const bedrag = kleinePin.reduce((a, g) => a + g.bedragJaar, 0);
@@ -123,11 +135,13 @@ export function bouwVragen(classified, jaar, bevestigd) {
     const i = vragen.findIndex((v) => v.gewicht < vraag.gewicht);
     vragen.splice(i < 0 ? vragen.length : i, 0, vraag);
   } else {
-    for (const g of kleinePin) vragen.push({ soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100, teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], gewicht: g.gewicht || 0 });
+    for (const g of kleinePin) vragen.push({ soort: "tegenpartij", key: g.key, naam: g.naam, aantal: g.txs.length, bedrag: Math.round(g.bedragJaar * 100) / 100, teken: g.teken, rekening: g.rekening, voorbeeld: g.txs[0], groepen: [g], gewicht: g.gewicht || 0, rekeningSoort: g.rekeningSoort });
     vragen.sort((a, b) => b.gewicht - a.gewicht);
   }
   return vragen;
 }
+
+export const REKENING_TEKST = { Zakelijk: "zakelijke rekening", Prive: "privérekening" };
 
 // Welke categorie hoort bij een antwoord? keuze: "bedrijf" | "prive" | "eigen".
 export function categorieVoorAntwoord(keuze, teken, rekening) {

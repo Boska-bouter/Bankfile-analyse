@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
+import { REKENING_TEKST } from "../../calc/eenvoudig.js";
 
 // beide-V3R3 / V7R9 — wens Boska 23-10: alle open vragen van Nakijken in één lijst, zodat je de laatste kleine posten
 // in één keer kunt indelen (bijv. allemaal "Overige privé-uitgaven") in plaats van één voor één.
@@ -44,7 +45,7 @@ export default function OpenPostenLijst({ vragen, jaar, keuzesVoor, andersKeuze,
                 <li key={v.key}>
                   <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50">
                     <input type="checkbox" checked={gekozen.has(v.key)} onChange={() => wissel(v.key)} />
-                    <span className="min-w-0 flex-1"><span className="block truncate font-medium">{v.naam}</span><span className="block text-xs text-slate-500">{v.aantal} {v.aantal === 1 ? "boeking" : "boekingen"}{v.voorbeeld?.category ? ` · nu: ${v.voorbeeld.category}` : ""}</span></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate font-medium">{v.naam}{v.rekeningSoort && <span className="font-normal text-slate-500"> · {REKENING_TEKST[v.rekeningSoort]}</span>}</span><span className="block text-xs text-slate-500">{v.aantal} {v.aantal === 1 ? "boeking" : "boekingen"}{v.voorbeeld?.category ? ` · nu: ${v.voorbeeld.category}` : ""}</span></span>
                     <b className="shrink-0 font-mono">{eur(v.bedrag)}</b>
                   </label>
                 </li>

@@ -16,7 +16,7 @@ import { estimateIncomeTax, estimateZvw, registerTariefInstellingen, estimateInc
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { overlapBestandKoppeling } from "./importers/overlapKoppeling.js";
-import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam, bevestigdVoor, rekeningSoortVan } from "./classification/reviewSummaries.js";
+import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam, bevestigdVoor, rekeningSoortVan, rekeningLabelVan } from "./classification/reviewSummaries.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { overrideSleutel, sleutelVoorTegenpartij } from "./classification/classify.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -1754,18 +1754,22 @@ export default function App() {
       return next;
     });
   };
-  const setRekeningKeuze = (item, patch) => {
-    const key = sleutelVoorTegenpartij(item.voorbeeldTx, overridesByCounterparty);
-    if (!key) return;
+  const setRekeningKeuzeOpSleutel = (key, soort, patch, naam, amount) => {
     snapshotBeforeAction("Categorie/type aangepast (per rekening)");
     setOverridesByCounterparty((prev) => {
       const oud = prev[key] || {};
       const per = oud.perRekening || {};
-      return { ...prev, [key]: { ...oud, gesplitst: true, perRekening: { ...per, [item.rekeningSoort]: { ...(per[item.rekeningSoort] || {}), ...patch } } } };
+      return { ...prev, [key]: { ...oud, displayName: oud.displayName || naam, sign: amount >= 0 ? "pos" : "neg", gesplitst: true, perRekening: { ...per, [soort]: { ...(per[soort] || {}), ...patch } } } };
     });
-    const ids = new Set(classified.filter((tx) => keyForTx(tx) === key && rekeningSoortVan(tx) === item.rekeningSoort).map((tx) => tx.id));
+    const ids = new Set(classified.filter((tx) => (keyForTx(tx) === key || sleutelVoorTegenpartij(tx, overridesByCounterparty) === key) && rekeningSoortVan(tx) === soort).map((tx) => tx.id));
     if (ids.size) setOverridesByRow((prev) => (Object.keys(prev).some((id) => ids.has(Number(id)) || ids.has(id)) ? Object.fromEntries(Object.entries(prev).filter(([id]) => !ids.has(Number(id)) && !ids.has(id))) : prev));
   };
+  const setRekeningKeuze = (item, patch) => {
+    const key = sleutelVoorTegenpartij(item.voorbeeldTx, overridesByCounterparty);
+    if (key) setRekeningKeuzeOpSleutel(key, item.rekeningSoort, patch, item.name, item.amount);
+  };
+  // beide-V11R4 — sleutel waaronder de (gesplitste) keuze van deze tegenpartij staat, anders die van de detailtabel.
+  const keuzeSleutel = (tx) => { const k = sleutelVoorTegenpartij(tx, overridesByCounterparty); return overridesByCounterparty[k] ? k : keyForTx(tx); };
   const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo, gesplitst }), [classified, rekeningInfo, gesplitst]);
   const nogTeBekijken = (lijst, bekeken) => lijst.filter((i) => !i.handmatig && !bekeken.includes(i.key) && !bekeken.includes(i.basisKey));
   const pendingPersonReview = useMemo(() => nogTeBekijken(personSummary, reviewedPersonKeys), [personSummary, reviewedPersonKeys]);
@@ -1946,13 +1950,20 @@ export default function App() {
         if (tx.year === activeYear) a.bedragJaar += tx.amount;
         continue;
       }
-      const g = (per[k] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, boekingen: [] });
+      // beide-V11R4 — keuze per rekening (gesplitst): telt onder sleutel@Zakelijk / sleutel@Prive.
+      const kr = overridesByCounterparty[k]?.perRekening?.[rekeningSoortVan(tx)] ? `${k}@${rekeningSoortVan(tx)}` : k;
+      const g = (per[kr] ||= { aantal: 0, bedragJaar: 0, rekening: tx.accountType, teken: tx.amount >= 0 ? 1 : -1, boekingen: [] });
       g.aantal += 1;
       g.boekingen.push({ datum: tx.date, jaar: tx.year, bedrag: tx.amount }); // beide-V8R2 — zoeken op bedrag of datum (MijnAntwoorden)
       if (tx.year === activeYear) g.bedragJaar += tx.amount;
     }
+    const REK = { Zakelijk: "zakelijke rekening", Prive: "privérekening" };
     return Object.entries(overridesByCounterparty)
-      .filter(([, o]) => o && o.category)
+      .flatMap(([k, o]) => (!o ? [] : [
+        ...(o.category ? [[k, o]] : []),
+        ...Object.entries(o.perRekening || {}).filter(([, p]) => p?.category)
+          .map(([soort, p]) => [`${k}@${soort}`, { ...o, ...p, displayName: `${o.displayName || k} · ${REK[soort] || soort}`, type: soort }]),
+      ]))
       .map(([k, o]) => ({
         key: k, naam: o.displayName || k, categorie: o.category,
         teken: per[k]?.teken ?? (o.sign === "pos" ? 1 : -1), rekening: per[k]?.rekening || (o.type === "Zakelijk" ? "Zakelijk" : "Prive"),
@@ -1987,9 +1998,14 @@ export default function App() {
     if (wizardWasOpen.current && !showSetupWizard && eigenKandidaten.length > 0) setEigenKandidatenOpen(true);
     wizardWasOpen.current = showSetupWizard;
   }, [showSetupWizard]); // eslint-disable-line react-hooks/exhaustive-deps
+  // beide-V11R4 — sleutel@Zakelijk / sleutel@Prive = de keuze voor één rekening van een gesplitste tegenpartij.
+  const splitsSleutel = (key) => { const m = /^(.*)@(Zakelijk|Prive)$/.exec(key); return m ? [m[1], m[2]] : [key, null]; };
   const wijzigAntwoord = (key, patch) => {
     snapshotBeforeAction("Categorie/type aangepast");
-    setOverridesByCounterparty((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
+    const [k, soort] = splitsSleutel(key);
+    setOverridesByCounterparty((prev) => (soort
+      ? { ...prev, [k]: { ...(prev[k] || {}), gesplitst: true, perRekening: { ...(prev[k]?.perRekening || {}), [soort]: { ...(prev[k]?.perRekening?.[soort] || {}), ...patch } } } }
+      : { ...prev, [key]: { ...(prev[key] || {}), ...patch } }));
   };
   const rijAntwoord = (ids, patch) => {
     snapshotBeforeAction("Categorie/type aangepast");
@@ -1997,7 +2013,15 @@ export default function App() {
   };
   const wisAntwoord = (key) => {
     snapshotBeforeAction("Tegenpartijregel verwijderd");
-    setOverridesByCounterparty((prev) => { const n = { ...prev }; delete n[key]; return n; });
+    const [k, soort] = splitsSleutel(key);
+    setOverridesByCounterparty((prev) => {
+      const n = { ...prev };
+      if (!soort) { delete n[key]; return n; }
+      const { [soort]: _weg, ...rest } = prev[k]?.perRekening || {};
+      n[k] = { ...prev[k], perRekening: rest };
+      if (!n[k].category && !Object.keys(rest).length) delete n[k];
+      return n;
+    });
   };
   const setRowOverride = (id, patch) => {
     snapshotBeforeAction("Categorie/type aangepast");
@@ -2271,7 +2295,13 @@ export default function App() {
       return;
     }
     const matchYears = [...new Set(matches.map((t) => t.year))].sort((a, b) => a - b);
-    setPendingCategoryChange({ tx, patch, key, matchCount: matches.length, matchYears, viaIban: key.startsWith("IBAN::") });
+    // beide-V11R4 — komt de tegenpartij ook op een andere rekening voor? Dan een waarschuwing en de keuze "alleen deze rekening" (wens Boska 30-10).
+    const soort = rekeningSoortVan(tx);
+    const perLabel = {};
+    for (const t of matches) if (rekeningSoortVan(t) !== soort) { const l = rekeningLabelVan(t, accountTypeByFile, ownAccountByFile); perLabel[l] = (perLabel[l] || 0) + 1; }
+    const andereRekeningen = Object.entries(perLabel).map(([label, n]) => ({ label, n }));
+    const rekening = andereRekeningen.length ? { soort, label: rekeningLabelVan(tx, accountTypeByFile, ownAccountByFile), n: matches.filter((t) => rekeningSoortVan(t) === soort).length, andere: andereRekeningen, gesplitst: !!overridesByCounterparty[keuzeSleutel(tx)]?.gesplitst } : null;
+    setPendingCategoryChange({ tx, patch, key, matchCount: matches.length, matchYears, viaIban: key.startsWith("IBAN::"), rekening });
   };
   const applyPendingToRowOnly = () => {
     const { tx, patch } = pendingCategoryChange;
@@ -2292,9 +2322,24 @@ export default function App() {
     suggestSimilarIfAny(tx, patch);
   };
   const applyPendingToAllYears = () => {
-    const { tx, patch, matchIds } = pendingCategoryChange;
+    const { tx, patch, matchIds, rekening } = pendingCategoryChange;
     if (matchIds) return applyRowsOverride(matchIds, patch, tx);
     setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
+    // beide-V11R4 — "beide rekeningen": een eerdere splitsing per rekening vervalt, anders bleef die voorgaan.
+    if (rekening) {
+      const sleutels = [keyForTx(tx), keuzeSleutel(tx)];
+      setOverridesByCounterparty((prev) => {
+        const next = { ...prev };
+        for (const k of sleutels) if (next[k]?.gesplitst || next[k]?.perRekening) { const { gesplitst: _g, perRekening: _p, ...rest } = next[k]; if (rest.category) next[k] = rest; else delete next[k]; }
+        return next;
+      });
+    }
+    setPendingCategoryChange(null);
+    suggestSimilarIfAny(tx, patch);
+  };
+  const applyPendingToRekening = () => {
+    const { tx, patch, rekening } = pendingCategoryChange;
+    setRekeningKeuzeOpSleutel(keuzeSleutel(tx), rekening.soort, patch, tx.counterparty || tx.description, tx.amount);
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
@@ -4102,6 +4147,8 @@ export default function App() {
             bestanden={parsedFiles.map((f) => ({ naam: f.fileName, type: accountTypeByFile[f.fileName] }))}
             classified={classified} reviewedOverigKeys={reviewedOverigKeys} reviewedPersonKeys={reviewedPersonKeys}
             onAntwoord={(naam, bedrag, patch) => setCounterpartyOverride(naam, bedrag, patch)}
+            onRekeningAntwoord={(tx, soort, patch) => setRekeningKeuzeOpSleutel(keuzeSleutel(tx), soort, patch, tx.counterparty || tx.description, tx.amount)}
+            gesplitst={gesplitst} onSplitsVraag={(tx, aan = true) => splitsRekening({ voorbeeldTx: tx, name: tx.counterparty || tx.description, amount: tx.amount }, aan)}
             onBestandToevoegen={startBankbestandToevoegen} onBasisvragen={() => (modus.wizard ? setManualWizardOpen(true) : setBasisEenvoudigOpen(true))}
             onAangifte={magUitgebreid ? () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); } : null} onSamenvatting={activeYear ? startKlantSamenvatting : null}
             onMaandoverzicht={magUitgebreid && activeYear && !priveOverzicht ? () => setShowInkomenPerMaand(true) : null}
@@ -4289,6 +4336,7 @@ export default function App() {
             pending={pendingCategoryChange}
             onApplyRow={applyPendingToRowOnly}
             onApplyAllYears={applyPendingToAllYears}
+            onApplyRekening={applyPendingToRekening}
             onApplyYears={applyPendingToYears}
             onClose={() => setPendingCategoryChange(null)}
           />
