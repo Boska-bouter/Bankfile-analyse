@@ -76,7 +76,48 @@ function KostenInItem({ k, onBevestig, onVerplaats }) {
   );
 }
 
-export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle, onVerplaatsBijschrijvingen }) {
+// beide-V11R7 — omzet in het factuurjaar (classification/factuurjaar.js): wat er per jaar uit begin volgend jaar bij is gekomen.
+function FactuurjaarBlok({ overzicht, uit, onFactuurjaar, onFactuurjaarBoeking }) {
+  const [toon, setToon] = useState(null);
+  if (!overzicht || overzicht.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sky-900">
+      <h4 className="font-semibold mb-1">Omzet in het jaar van de factuur</h4>
+      <p className="text-sky-800 mb-2">
+        Ontvangsten in januari–juni met een eigen factuurnummer van het jaar ervoor tellen als omzet van dat jaar (factuurstelsel, zoals een accountant
+        rekent; btw in het vierde kwartaal). Alleen als dat jaar ook geladen is.
+      </p>
+      {overzicht.map((r) => (
+        <div key={r.jaar} className="rounded-md bg-white border border-sky-100 p-2 mb-1.5">
+          <p>
+            <strong>{r.jaar}</strong>: {r.aantal} ontvangst{r.aantal === 1 ? "" : "en"} uit {r.jaar + 1}, samen <strong>{eur(r.bedrag)}</strong> (incl. btw), {uit ? "zou" : "telt"} mee in {r.jaar}
+            {r.aantalUit > 0 && !uit && <> · {r.aantalUit} bewust in {r.jaar + 1} gelaten ({eur(r.bedragUit)})</>}
+            {" "}<button type="button" className="underline" onClick={() => setToon(toon === r.jaar ? null : r.jaar)}>{toon === r.jaar ? "verbergen" : "bekijken"}</button>
+          </p>
+          {toon === r.jaar && (
+            <ul className="mt-1 space-y-0.5 text-slate-700">
+              {r.items.map((t) => (
+                <li key={t.id} className="flex flex-wrap items-center gap-2">
+                  <span className="flex-1 min-w-[14rem]">{dat(t.date)} · {eur(t.amount)} · {t.counterparty || "(geen naam)"} · <span className="text-slate-500">{t.description}</span></span>
+                  {!uit && (t.factuurjaarVerschoven
+                    ? <Knop onClick={() => onFactuurjaarBoeking(t.id, true)}>Toch in {r.jaar + 1}</Knop>
+                    : <Knop onClick={() => onFactuurjaarBoeking(t.id, false)}>In {r.jaar} tellen</Knop>)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+      <div className="mt-1.5">
+        {uit
+          ? <Knop primair onClick={() => onFactuurjaar(false)}>Omzet in het factuurjaar tellen</Knop>
+          : <Knop onClick={() => onFactuurjaar(true)}>Alles in het jaar van ontvangst tellen (kasstelsel)</Knop>}
+      </div>
+    </div>
+  );
+}
+
+export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle, onVerplaatsBijschrijvingen, onFactuurjaar, onFactuurjaarBoeking }) {
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
@@ -134,6 +175,8 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
             )}
             <p className="text-xs text-slate-400">Groen = transacties · grijs = geen mutaties (saldo klopt) · amber = controleren · licht = buiten de geladen periode</p>
           </div>
+
+          <FactuurjaarBlok overzicht={data.factuurjaar} uit={data.factuurjaarUit} onFactuurjaar={onFactuurjaar} onFactuurjaarBoeking={onFactuurjaarBoeking} />
 
           <div>
             <h4 className="font-semibold text-slate-800 mb-1.5">Terugkerende betalingen in verschillende categorieën</h4>

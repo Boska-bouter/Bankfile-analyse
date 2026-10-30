@@ -14,7 +14,8 @@ const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map(
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
 const HEEL_WOORD = new Set(["boss"]);
 // beide-V9R1 — merknamen die ook midden in een ander woord staan: "athlon" (lease) in "Decathlon" (vergelijking Houtman 27-10).
-const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam"]);
+// beide-V11R7 — "lening" in "Tim Engelen dienstverlening" (inhuur) maakte er een lening van (vergelijking Koenders 30-10).
+const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam", "lening"]);
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
@@ -658,7 +659,7 @@ const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
 // bijna altijd een leverancier (test Koenders: € 13.000–56.000 per jaar bleef in Overig/personen, bijv. "Houthandel Smetsers",
 // "Container Nederland BV", "Kwekerij Muijderman"). Alleen de naam telt (vóór " via "), niet de omschrijving; banken, verzekeraars,
 // stichtingen en overheid niet. Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
-export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|v\.?o\.?f\.?|holding|gmbh)(?![a-z])|(groothandel|handel|verhuur|bedrijf|diensten|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
+export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|v\.?o\.?f\.?|holding|gmbh)(?![a-z])|(groothandel|handel|verhuur|bedrijf|diensten|dienstverlening|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
 const GEEN_LEVERANCIER = /\bbank\b|verzeker|stichting|gemeente|belasting|waterschap|\bcjib\b|ministerie/i;
 // eigenNamen: namen van ondernemer/partner; een bedrijfsnaam met de eigen achternaam ("Hoveniersbedrijf Paul Koenders") is geen leverancier.
 export function bedrijfsnaamVan(tx, eigenNamen = []) {
@@ -668,7 +669,8 @@ export function bedrijfsnaamVan(tx, eigenNamen = []) {
   return !(eigenNamen || []).some((n) => { const w = String(n || "").toLowerCase().split(/[\s.]+/).filter((x) => x.length >= 4).pop(); return w && laag.includes(w); });
 }
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
-const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?verzekering/i;
+// beide-V11R7 — ook pakketten voor ondernemers (NN "Zekerheidspakket", vergelijking Koenders 30-10: € 6.300–8.700 per jaar als privé).
+const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?(verzekering|pakket)|zekerheidspakket|bedrijfsaansprakelijk|\bavb\b|bedrijfsschade|inventarisverzekering|bedrijfsinventaris/i;
 export function resolveClassification(tx, ...rest) {
   const uitkomst = resolveClassificationBasis(tx, ...rest);
   const overridesByRow = rest[5] || {};

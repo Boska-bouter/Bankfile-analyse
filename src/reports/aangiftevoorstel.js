@@ -1,4 +1,5 @@
 import { fiscalTreatmentOf } from "../classification/categories.js";
+import { factuurjaarRegel } from "../classification/factuurjaar.js";
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
@@ -682,7 +683,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} <span>(gegevenscontrole, geen fiscale beoordeling)</span><br>
     <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span><br>
-    <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>
+    <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>${factuurjaarRegel(classified, year) ? `<br>
+    <span>${factuurjaarRegel(classified, year)}</span>` : ""}
   </p>
   ${samenvattingHtml}
 
