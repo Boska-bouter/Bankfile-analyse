@@ -1,5 +1,5 @@
 import { counterpartyKey } from "../../utils/normalization.js";
-import { sleutelZonderNaam } from "../../classification/reviewSummaries.js";
+import { sleutelZonderNaam, bevestigdVoor } from "../../classification/reviewSummaries.js";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CATEGORY_COLOR, displayCategory } from "../../classification/categories.js";
@@ -25,7 +25,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
   const bevestigd = (tx) => {
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
     const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
-    return (tx.category === "Overig" ? overigSet : personenSet).has(k);
+    return bevestigdVoor(tx.category === "Overig" ? overigSet : personenSet, k, tx);
   };
   const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigd(tx));
   const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx));

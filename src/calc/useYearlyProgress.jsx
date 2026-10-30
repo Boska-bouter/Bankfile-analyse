@@ -5,6 +5,7 @@ import { computeChecklistLikeDataForYear } from "../tax/checklist.js";
 import { computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar, computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { counterpartyKey } from "../utils/normalization.js";
+import { bevestigdVoor } from "../classification/reviewSummaries.js";
 
 export function useYearlyProgress(p) {
   const {
@@ -26,23 +27,30 @@ export function useYearlyProgress(p) {
       const yc = computeChecklistLikeDataForYear(zakItems, priItems, quartersForYear, kwartaalStatus, priveRekeningGeladen);
       const checks = [];
 
-      const personKeysThisYear = new Set(
-        allYearItems.filter((tx) => tx.category === "Overboekingen aan personen" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
-      );
+      // beide-V11R3 — per tegenpartij; na splitsen per rekening telt "Klopt zo" per rekening (bevestigdVoor).
+      const bekeken = (tx, set) => bevestigdVoor(set, counterpartyKey(tx.counterparty || tx.description, tx.amount), tx);
+      const perSleutel = (cat, set) => {
+        const m = new Map();
+        for (const tx of allYearItems) {
+          if (tx.category !== cat || tx.isMirror) continue;
+          const k = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+          if (!k) continue;
+          const sk = `${k}@${tx.type === "Zakelijk" ? "Zakelijk" : "Prive"}`;
+          m.set(sk, bekeken(tx, set));
+        }
+        return m;
+      };
+      const personKeysThisYear = perSleutel("Overboekingen aan personen", new Set(reviewedPersonKeys));
       if (personKeysThisYear.size > 0) {
-        const done = [...personKeysThisYear].filter((k) => reviewedPersonKeys.includes(k)).length;
+        const done = [...personKeysThisYear.values()].filter(Boolean).length;
         checks.push({ frac: done / personKeysThisYear.size });
       }
-      const overigKeysThisYear = new Set(
-        allYearItems.filter((tx) => tx.category === "Overig" && !tx.isMirror).map((tx) => counterpartyKey(tx.counterparty || tx.description, tx.amount)).filter(Boolean)
-      );
+      const overigKeysThisYear = perSleutel("Overig", new Set(reviewedOverigKeys));
       if (overigKeysThisYear.size > 0) {
-        const done = [...overigKeysThisYear].filter((k) => reviewedOverigKeys.includes(k)).length;
+        const done = [...overigKeysThisYear.values()].filter(Boolean).length;
         checks.push({ frac: done / overigKeysThisYear.size });
       }
-      // V90 — "Overig" dat je bewust met "Klopt zo" hebt bevestigd telt als gecategoriseerd (het eigen
-      // Overig-check hierboven bewaakt dat al per tegenpartij); anders bleef dit jaar altijd 1 punt open.
-      const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear].every((k) => reviewedOverigKeys.includes(k));
+      const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear.values()].every(Boolean);
       checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
       checks.push({ frac: korRegeling !== null ? 1 : 0 });
       const kwTotal = quartersForYear.length;

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { displayCategory } from "../../classification/categories.js";
 
-export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onClose }) {
-  const { tx, patch, matchCount, matchYears, viaIban, keywordQuery } = pending;
+export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onApplyRekening, onClose }) {
+  const { tx, patch, matchCount, matchYears, viaIban, keywordQuery, rekening } = pending;
   const [selectedYears, setSelectedYears] = useState(matchYears);
   const isConfirmOnly = patch.category === tx.category && patch.type === tx.type;
 
@@ -34,6 +34,13 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}
             {keywordQuery && <span className="block mt-1 text-xs text-slate-400">Gekozen op je zoekwoord, niet op rekeningnummer.</span>}
           </p>
+          {/* beide-V11R4 — de tegenpartij komt ook op een andere eigen rekening voor (wens Boska 30-10) */}
+          {rekening && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+              <strong>Let op:</strong> deze tegenpartij komt ook voor op {rekening.andere.map((r) => `${r.label} (${r.n}x)`).join(" en ")}.
+              {rekening.gesplitst ? " Hij is gesplitst per rekening: kies hieronder of de wijziging alleen voor deze rekening geldt of voor beide (dan vervalt de splitsing)." : " Gaat het daar om iets anders, kies dan \"Alleen boekingen van deze rekening\"."}
+            </p>
+          )}
           <div className="space-y-2">
             <button
               onClick={onApplyRow}
@@ -45,8 +52,16 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               onClick={onApplyAllYears}
               className="w-full text-left rounded-lg border border-slate-300 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-50"
             >
-              {keywordQuery ? `Alle ${matchCount} transacties met "${keywordQuery}"` : "Deze tegenpartij"} — alle jaren ({matchYears.join(", ")})
+              {keywordQuery ? `Alle ${matchCount} transacties met "${keywordQuery}"` : rekening ? "Deze tegenpartij, beide rekeningen" : "Deze tegenpartij"} — alle jaren ({matchYears.join(", ")})
             </button>
+            {rekening && onApplyRekening && (
+              <button
+                onClick={onApplyRekening}
+                className="w-full text-left rounded-lg border border-slate-300 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-50"
+              >
+                Alleen boekingen van deze rekening ({rekening.label}, {rekening.n}x) — alle jaren
+              </button>
+            )}
           </div>
           {matchYears.length > 1 && (
             <div className="rounded-lg border border-slate-200 p-3">

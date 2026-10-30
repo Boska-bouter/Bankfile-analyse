@@ -28,7 +28,7 @@ export function useControlerenCardGroups(p) {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem,
+    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -123,6 +123,7 @@ export function useControlerenCardGroups(p) {
           personSearch={personSearch}
           onPersonSearch={setPersonSearch}
           onMarkPersonSource={markPersonSource}
+          onSplitsRekening={splitsRekening}
           onConfirmPersonAsIs={confirmPersonAsIs}
           personBulkAction={personBulkAction}
         />
@@ -135,6 +136,7 @@ export function useControlerenCardGroups(p) {
           overigSearch={overigSearch}
           onOverigSearch={setOverigSearch}
           onMarkOverigItem={markOverigItem}
+          onSplitsRekening={splitsRekening}
           onConfirmOverigAsIs={confirmOverigAsIs}
           onBulkMarkOverigAsPriveOpname={bulkMarkOverigAsPriveOpname}
           onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}

@@ -576,6 +576,17 @@ const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
 // krijgt zo'n keuze dus niet over, maar wordt gewoon zelf ingedeeld.
 const ALLEEN_ZAKELIJK = new Set(["Privé opnames", "Terugboeking van privé"]);
 const ALLEEN_PRIVE = new Set(["Ontvangen van zakelijk", "Terugboeking naar zakelijk"]);
+// beide-V11R3 — keuze per rekening (wens Boska 30-10: dezelfde verzekeraar of Tikkie zowel zakelijk als privé). Een tegenpartij die
+// "gesplitst" is, heeft in perRekening een eigen keuze voor de boekingen van de zakelijke en van de privérekening; die gaat voor de
+// gewone keuze. Zonder categorie (alleen gesplitst, nog niets gekozen) telt het niet als eigen keuze.
+export function keuzeVoorRekening(override, accountType) {
+  if (!override) return null;
+  const eigen = override.perRekening?.[accountType === "Zakelijk" ? "Zakelijk" : "Prive"];
+  const { perRekening, gesplitst, ...rest } = override;
+  const uit = eigen ? { ...rest, ...eigen } : rest;
+  return uit.category || !(perRekening || gesplitst) ? uit : null;
+}
+
 function hoortBijAndereRekening(override, accountType) {
   const c = override?.category;
   if (!c || !override.type) return false;
@@ -593,11 +604,11 @@ function resolveClassificationBasis(tx, rules, businessKeywords, businessExpense
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
   // wanneer het bankbestand een tegenrekening-IBAN bevatte.
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
-  const ibanOverride = ik && overridesByCounterparty[ik];
+  const ibanOverride = ik && keuzeVoorRekening(overridesByCounterparty[ik], accountType);
   if (ibanOverride && !isStaleOverigForKnownTransfer(ibanOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(ibanOverride, accountType);
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   // release31V2 — keuzes die vóór het uitlezen van de winkelnaam (ABN "BEA, ...") op de volledige regel zijn gemaakt, blijven gelden.
-  const keyOverride = (key && overridesByCounterparty[key]) || (tx.counterpartyOrigineel && overridesByCounterparty[counterpartyKey(tx.counterpartyOrigineel, tx.amount)]);
+  const keyOverride = keuzeVoorRekening((key && overridesByCounterparty[key]) || (tx.counterpartyOrigineel && overridesByCounterparty[counterpartyKey(tx.counterpartyOrigineel, tx.amount)]), accountType);
   if (keyOverride && !isStaleOverigForKnownTransfer(keyOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) && !hoortBijAndereRekening(keyOverride, accountType)) return withAccountType(keyOverride, accountType);
   // V37 — een storno/terugboeking (bijv. een teruggeboekte incasso, "Reden: Terugboeking op verzoek klant")
   // hoort bij dezelfde categorie als de oorspronkelijke afschrijving van dezelfde tegenpartij (op IBAN).
@@ -649,7 +660,7 @@ export function resolveClassification(tx, ...rest) {
   const uitkomst = resolveClassificationBasis(tx, ...rest);
   const overridesByRow = rest[5] || {};
   if (!uitkomst || overridesByRow[tx.id]) return uitkomst;
-  const eigenKeuze = !!overrideSleutel(tx, rest[4] || {});
+  const eigenKeuze = !!overrideSleutel(tx, rest[4] || {}, rest[3]);
   // beide-V10R6 — herkende OV-reizen standaard privé (wens Boska 28-10); zakelijk alleen als iemand zelf "Reiskosten (OV)" kiest.
   if (!eigenKeuze && uitkomst.category === "Reiskosten (OV)") return { ...uitkomst, category: "Privé - openbaar vervoer" };
   // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
@@ -671,13 +682,25 @@ export function resolveClassification(tx, ...rest) {
 // beide-V8R3 — onder welke sleutel in overridesByCounterparty staat de keuze die voor deze boeking geldt? Zelfde volgorde als
 // resolveClassification: eerst IBAN, dan naam, dan de oorspronkelijke naam. Voor "Mijn antwoorden": een keuze in Eenvoudig
 // staat vaak op naam, terwijl de boeking ook een IBAN heeft; tellen op alleen de IBAN-sleutel gaf "0 boekingen".
-export function overrideSleutel(tx, overridesByCounterparty = {}) {
+// beide-V11R3 — accountType (of tx.type van een ingedeelde boeking): een gesplitste keuze telt alleen voor de rekening waarvoor iets is gekozen.
+export function overrideSleutel(tx, overridesByCounterparty = {}, accountType = tx.type) {
+  const geldt = (k) => k && keuzeVoorRekening(overridesByCounterparty[k], accountType);
+  const ik = ibanKey(tx.counterpartyIban, tx.amount);
+  if (geldt(ik)) return ik;
+  const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
+  if (geldt(key)) return key;
+  const org = tx.counterpartyOrigineel && counterpartyKey(tx.counterpartyOrigineel, tx.amount);
+  return geldt(org) ? org : "";
+}
+
+// beide-V11R3 — onder welke sleutel staat (of komt) de keuze voor deze tegenpartij, ook als er nog niets is gekozen.
+export function sleutelVoorTegenpartij(tx, overridesByCounterparty = {}) {
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   if (ik && overridesByCounterparty[ik]) return ik;
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   if (key && overridesByCounterparty[key]) return key;
   const org = tx.counterpartyOrigineel && counterpartyKey(tx.counterpartyOrigineel, tx.amount);
-  return org && overridesByCounterparty[org] ? org : "";
+  return org && overridesByCounterparty[org] ? org : key;
 }
 
 // V7R6 / beide-V3R0, per boeking € 300 sinds V7R7 / beide-V3R1 — een herkende naam met een bedrag dat er niet bij past,
