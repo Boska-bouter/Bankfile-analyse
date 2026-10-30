@@ -1698,7 +1698,7 @@ export default function App() {
 
   // ---- Inkomstenbronnen-review ----
   // beide-V3R0 — "Wie zijn je zakelijke klanten?" bestaat niet in een privédossier (daar geen omzet).
-  const incomeSummary = useMemo(() => (modus.onderdelen.omzet === false ? [] : computeIncomeSummary(classified, accountTypeByFile, businessKeywords)), [classified, accountTypeByFile, businessKeywords, modus.onderdelen.omzet]);
+  const incomeSummary = useMemo(() => (modus.onderdelen.omzet === false ? [] : computeIncomeSummary(classified, accountTypeByFile, businessKeywords, ownAccountByFile)), [classified, accountTypeByFile, businessKeywords, modus.onderdelen.omzet, ownAccountByFile]);
   const pendingIncomeReview = useMemo(() => incomeSummary.filter((i) => !reviewedIncomeKeys.includes(i.key)), [incomeSummary, reviewedIncomeKeys]);
   // beide-V3R0 — opruimen in een privédossier: antwoorden op de (daar ten onrechte getoonde) vraag "Wie zijn je
   // zakelijke klanten?" zetten bijschrijvingen op "Overig" of "Zakelijke inkomsten". Die keuzes gaan weg, zodat de
@@ -1736,7 +1736,8 @@ export default function App() {
   };
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
-  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true }), [classified]);
+  const rekeningInfo = useMemo(() => ({ accountTypeByFile, ownAccountByFile }), [accountTypeByFile, ownAccountByFile]); // beide-V11R2
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo }), [classified, rekeningInfo]);
   const pendingPersonReview = useMemo(() => personSummary.filter((i) => !i.handmatig && !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
   const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
@@ -1749,7 +1750,7 @@ export default function App() {
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
-  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true }), [classified]);
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true, rekening: rekeningInfo }), [classified, rekeningInfo]);
   const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !i.handmatig && !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
     zetVoorItem(item, { category, type });

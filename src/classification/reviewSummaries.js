@@ -21,7 +21,22 @@ const GEEN_KLANT_CATEGORIES = [
 // klant, of loondienst/privé-inkomen?". Bestanden die op rekeningniveau al als "Zakelijk" zijn
 // aangemerkt slaan deze vraag over (dat is al beantwoord), net als transacties die de classificatie
 // al met zekerheid als eigen-rekening-verschuiving heeft herkend (zie GEEN_KLANT_CATEGORIES).
-export function computeIncomeSummary(classified, accountTypeByFile, businessKeywords = []) {
+// beide-V11R2 — van welke eigen rekening komen de boekingen van een tegenpartij (wens Boska 30-10: in "Wie zijn de zakelijke
+// klanten?" en "Overig opruimen" was niet te zien of het bedrag op de zakelijke of de privérekening stond)? Het soort rekening
+// komt van het bestand (accountTypeByFile), niet van tx.type: dat kan de gebruiker in de lijst zelf veranderen.
+export function rekeningLabelVan(tx, accountTypeByFile = {}, ownAccountByFile = {}) {
+  const soort = accountTypeByFile?.[tx.source] || null;
+  const iban = String(ownAccountByFile?.[tx.source] || "").replace(/\s/g, "");
+  const naam = soort === "Zakelijk" ? "Zakelijke rekening" : soort === "Prive" ? "Privérekening" : "Rekening";
+  return iban ? `${naam} ··${iban.slice(-4)}` : soort ? naam : `Rekening ${tx.source || "onbekend"}`;
+}
+function telRekening(item, tx, rek) {
+  if (!rek) return;
+  const label = rekeningLabelVan(tx, rek.accountTypeByFile, rek.ownAccountByFile);
+  item.rekeningen[label] = (item.rekeningen[label] || 0) + 1;
+}
+
+export function computeIncomeSummary(classified, accountTypeByFile, businessKeywords = [], ownAccountByFile = null) {
   const map = {};
   // V67 — een tegenpartij die je zelf al als opdrachtgever hebt opgegeven (wizard of eerdere bevestiging)
   // hoeft niet nogmaals bevestigd: dezelfde tekstmatch als in classify.js (autoClassify).
@@ -40,8 +55,9 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
     const key = normKey(tx.counterparty || tx.description);
     if (!key) continue;
     if (!map[key]) {
-      map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, source: tx.source, description: "", years: new Set() };
+      map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, source: tx.source, description: "", years: new Set(), rekeningen: {} };
     }
+    telRekening(map[key], tx, { accountTypeByFile, ownAccountByFile });
     map[key].total += tx.amount;
     map[key].count += 1;
     map[key].years.add(tx.year);
@@ -56,7 +72,7 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
 // voorheen stil werden overgeslagen, komen er als losse regel bij (sleutel per transactie). Anders telde
 // "Classificatie zekerheid" ze wel als open, maar waren ze in "Overig opruimen" nergens te vinden.
 export const sleutelZonderNaam = (tx) => `tx::${tx.id}`;
-export function computeCategorySummary(classified, category, { metZonderNaam = false } = {}) {
+export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null } = {}) {
   const map = {};
   for (const tx of classified) {
     if (tx.category !== category || tx.isMirror) continue;
@@ -69,13 +85,14 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     if (!map[key]) {
       map[key] = {
         key, name: zonderNaam ? (String(tx.description || "").trim() || `(geen naam) ${tx.date?.toLocaleDateString?.("nl-NL") || ""}`.trim()) : tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
-        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd,
+        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd, rekeningen: {},
         ...(zonderNaam ? { zonderNaam: true, txId: tx.id } : {}),
       };
     }
     map[key].total += tx.amount;
     map[key].count += 1;
     map[key].years.add(tx.year);
+    telRekening(map[key], tx, rekening);
     map[key].description = tx.fullDescription || tx.description || map[key].description;
     // V7R6 / beide-V3R0 — zelf gekozen (bijv. in Eenvoudig "Aan familie of vrienden"): dan is het al beoordeeld.
     if (tx.confidence?.level === "override") map[key].handmatig = true;
