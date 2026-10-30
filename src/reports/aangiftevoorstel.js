@@ -1,4 +1,5 @@
 import { fiscalTreatmentOf } from "../classification/categories.js";
+import { factuurjaarRegel } from "../classification/factuurjaar.js";
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
@@ -549,13 +550,16 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="toelichting">Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
           ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de app.` : ""
         }${
+          ib.financieleBatenLasten.schattingLease > 0 ? ` ⚠ SCHATTING: bij ${ib.financieleBatenLasten.schattingLeases} financiële lease(s) zonder contractgegevens tellen de betaalde termijnen van dit jaar (${eur(ib.financieleBatenLasten.schattingLease)}) als rente + afschrijving. Vul de contractgegevens in voor de juiste verdeling.` : ""
+        }${
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
         }<!--V--> <span class="toelichting">Zie Bijlage: Toelichtingen voor de algemene uitleg (rente versus aflossing).</span><!--/V--></p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
-    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
+    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease - (ib.financieleBatenLasten.schattingLease || 0) },
+    ...(ib.financieleBatenLasten.schattingLease > 0 ? [{ categorie: "Lease (financieel) zonder contract: GESCHAT (termijnen als rente + afschrijving)", totaal: ib.financieleBatenLasten.schattingLease }] : []),
   ])}`
       : "";
 
@@ -679,7 +683,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${statusTekst(yearStatus, openPunten.length)} <span>(gegevenscontrole, geen fiscale beoordeling)</span><br>
     <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span><br>
-    <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>
+    <span>Uitgangspunten (uit de basisvragen): ${korRegeling ? "valt onder de KOR" : `${btwVerlegd ? "BTW-verlegd" : "gewone BTW-plicht"} · geen KOR`} · urencriterium: ${zaStatus === "ja" ? "ja" : zaStatus === "nee" ? "nee" : "onbekend (beide scenario's getoond)"}${zaStatusRaw == null && zaStatus !== "onbekend" ? " (niet aangegeven)" : ""} · op basis van beschikbare bankgegevens</span>${factuurjaarRegel(classified, year) ? `<br>
+    <span>${factuurjaarRegel(classified, year)}</span>` : ""}
   </p>
   ${samenvattingHtml}
 

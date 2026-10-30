@@ -58,9 +58,8 @@ export function leaseWaarschuwingen(groepen, autoStatus, jaar, antwoorden = null
     uit.push(`Auto van de zaak / leaseauto: Eenvoudig rekent vereenvoudigd (bij meer dan 500 km privé vallen de autokosten weg tegen de bijtelling).${btw} In Uitgebreid kan dit volledig worden uitgewerkt.`);
   }
   if (groepen.some((g) => g.category === "Lease (financieel)" && g.jaren.includes(j))) {
-    uit.push(eenvoudigLeaseRente(j, { antwoorden })
-      ? "Financiële lease: de opgegeven rente telt mee als kosten; de afschrijving staat alleen in Uitgebreid."
-      : "Financiële lease: de rente telt nog niet mee. Vul bij Basisvragen de rente van dit jaar in (jaaroverzicht van de leasemaatschappij); de afschrijving staat alleen in Uitgebreid.");
+    // beide-V11R6 — zonder contract tellen de betaalde termijnen als geschatte kosten (rente + afschrijving), zie computeLeaseRenteForYear.
+    uit.push("Financiële lease: dit is een SCHATTING. De betaalde termijnen van dit jaar tellen als kosten (rente + afschrijving samen). In Uitgebreid kan met de contractgegevens de juiste verdeling worden berekend.");
   }
   return uit;
 }

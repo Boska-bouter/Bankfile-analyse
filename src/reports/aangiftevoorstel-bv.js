@@ -5,6 +5,7 @@
 // rechtsvorm-onafhankelijk (Route B: gebaseerd op fiscalTreatmentOf(categorie), niet op wie de
 // ondernemer is) — en voegt daar de BV-specifieke belastinglaag (Vpb/box 2) en balansmutaties
 // (rekening-courant, kapitaalstorting, dividend) overheen.
+import { factuurjaarRegel } from "../classification/factuurjaar.js";
 import { CATEGORY_ORDER, fiscalTreatmentOf } from "../classification/categories.js";
 import { computeBtw, computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
@@ -390,13 +391,16 @@ function buildYearSectionBv(
   <p class="toelichting">${ib.financieleBatenLasten.toelichting} Aflossing (niet aftrekbaar): ${eur(financieelTotaalAflossing)}.${
           ib.financieleBatenLasten.onvolledig > 0 ? ` ⚠ ${ib.financieleBatenLasten.onvolledig} lening(en)/leasecontract(en) nog niet volledig ingevuld in de app.` : ""
         }${
+          ib.financieleBatenLasten.schattingLease > 0 ? ` ⚠ SCHATTING: bij ${ib.financieleBatenLasten.schattingLeases} financiële lease(s) zonder contractgegevens tellen de betaalde termijnen van dit jaar (${eur(ib.financieleBatenLasten.schattingLease)}) als rente + afschrijving. Vul de contractgegevens in voor de juiste verdeling.` : ""
+        }${
           ib.financieleBatenLasten.renteNietBerekenbaar > 0
             ? ` ⚠ Bij ${ib.financieleBatenLasten.renteNietBerekenbaar} leasecontract(en) kon het rentepercentage niet berekend worden, omdat de ingevulde bedragen niet bij elkaar aansluiten (de opgetelde termijnen dekken de te financieren hoofdsom niet) — controleer de invoer bij dat leasecontract. De rente hierover ontbreekt hierdoor (nog) in dit cijfer.`
             : ""
         }</p>
   ${categorieDetailHtml([
     { categorie: "Rente Leningen", totaal: ib.financieleBatenLasten.renteLeningen },
-    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease },
+    { categorie: "Rente Lease (financieel)", totaal: ib.financieleBatenLasten.renteLease - (ib.financieleBatenLasten.schattingLease || 0) },
+    ...(ib.financieleBatenLasten.schattingLease > 0 ? [{ categorie: "Lease (financieel) zonder contract: GESCHAT (termijnen als rente + afschrijving)", totaal: ib.financieleBatenLasten.schattingLease }] : []),
   ])}`
       : "";
 
@@ -442,7 +446,8 @@ function buildYearSectionBv(
   <p class="subtitle">
     Status: ${STATUS_EMOJI[yearStatus]} ${STATUS_TEKST[yearStatus]} · Gewone BTW-plicht (KOR niet van toepassing voor een BV) ·
     op basis van beschikbare bankgegevens<br>
-    <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span>
+    <span>Indicatieve fiscale uitkomst op basis van de gereconstrueerde bankadministratie en de gekozen aannames — geen werkelijke aangifte.</span>${factuurjaarRegel(classified, year) ? `<br>
+    <span>${factuurjaarRegel(classified, year)}</span>` : ""}
   </p>
   ${samenvattingHtml}
 

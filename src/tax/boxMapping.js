@@ -201,6 +201,9 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
       naam: "Financiële baten en lasten",
       renteLeningen: loanRenteForYear?.totaalRente || 0,
       renteLease: leaseRenteForYear?.totaalRente || 0,
+      // beide-V11R6 — deel van renteLease dat geschat is (lease zonder contractgegevens: termijnen als rente + afschrijving).
+      schattingLease: leaseRenteForYear?.schattingZonderContract || 0,
+      schattingLeases: leaseRenteForYear?.schattingLeases || 0,
       aflossingLeningen: loanRenteForYear?.totaalAflossing || 0,
       aflossingLease: leaseRenteForYear?.totaalAflossing || 0,
       onvolledig: (loanRenteForYear?.onvolledig || 0) + (leaseRenteForYear?.onvolledig || 0),

@@ -1,4 +1,5 @@
 import React from "react";
+import { installStoragePolyfill, loadPersistedParsedFiles, loadPersistedSettings, persistSettings } from "./storage/projectStorage.js";
 
 // v222 — zonder dit ving een render-fout ergens in de app (bijv. een JavaScript-fout in een
 // component) helemaal niets op: React stopt dan gewoon met renderen en je krijgt een volledig wit
@@ -8,11 +9,15 @@ import React from "react";
 // in plaats van niets te laten zien.
 // Noodback-up: de automatisch bewaarde browsergegevens als gewoon dossierbestand downloaden (te laden via
 // "Dossier laden"), zodat er niets verloren gaat als de app niet meer opstart.
-function downloadNoodBackup() {
+// beide-V11R6 — lezen via de gewone opslag (IndexedDB sinds release22V6, terugval localStorage). Voorheen las dit alleen
+// localStorage, waar de gegevens sindsdien niet meer staan: de noodback-up was dan leeg.
+export async function downloadNoodBackup() {
   try {
-    const data = JSON.parse(localStorage.getItem("bankoverzicht:data") || "{}");
-    const settings = JSON.parse(localStorage.getItem("bankoverzicht:settings") || "{}");
-    const project = { type: "bankoverzicht-project", version: 1, savedAt: new Date().toISOString(), noodBackup: true, ...settings, parsedFiles: data.parsedFiles || [] };
+    installStoragePolyfill();
+    const parsedFiles = (await loadPersistedParsedFiles()) || [];
+    const settings = (await loadPersistedSettings()) || {};
+    if (!parsedFiles.length && !Object.keys(settings).length) { alert("Er staat op dit apparaat geen automatisch bewaard dossier."); return; }
+    const project = { type: "bankoverzicht-project", version: 1, savedAt: new Date().toISOString(), noodBackup: true, ...settings, parsedFiles };
     const blob = new Blob([JSON.stringify(project)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -21,14 +26,15 @@ function downloadNoodBackup() {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   } catch (e) { alert("Back-up maken mislukt: " + e); }
 }
-// Herstel: bewaart eerst niets anders dan de lease-/leninggegevens weg uit de opgeslagen instellingen en laadt opnieuw.
-function herstelZonderLease() {
+// Herstel: haalt alleen de lease-/leninggegevens weg uit de opgeslagen instellingen en laadt opnieuw.
+async function herstelZonderLease() {
   if (!window.confirm("Dit wist alleen de ingevulde leasegegevens uit de automatische opslag van dit apparaat (bankbestanden en overige instellingen blijven staan). Download eerst de noodback-up. Doorgaan?")) return;
   try {
-    const settings = JSON.parse(localStorage.getItem("bankoverzicht:settings") || "{}");
+    installStoragePolyfill();
+    const settings = (await loadPersistedSettings()) || {};
     for (const k of ["leaseDetails", "confirmedLeaseTypeKeys", "leaseMergedInto", "verwachteLease", "verwachteLeaseOverig", "autoWizardStatus"]) delete settings[k];
     settings.changesSinceExport = 1;
-    localStorage.setItem("bankoverzicht:settings", JSON.stringify(settings));
+    if (!(await persistSettings(settings))) throw new Error("opslaan lukte niet");
   } catch (e) { alert("Herstel mislukt: " + e); return; }
   window.location.reload();
 }

@@ -190,6 +190,8 @@ export const DEFAULT_RULES = [
     "mercedes-benz financial services", "bmw financial services", "volvo car financial services",
     "renault financial services", "nissan financial services", "ford credit", "rci financial services",
     "opel financial services", "stellantis financial services",
+    // beide-V11R6 — DLL/De Lage Landen, Alfam, namen met alleen "leasing", afgekorte Hiltermann ("HILTERMANN L"), Derks (test Koenders)
+    "leasing", "dll", "de lage landen", "alfam", "hiltermann", "bedrijfswagenlease", "derks financial",
   ] },
   { name: "Lease (financieel)", color: "bg-teal-200 text-teal-900", keywords: [] },
   { name: "Marketing-website", color: "bg-green-100 text-green-800", keywords: ["google ads", "google ireland", "meta ads", "facebook ads", "facebook payments", "mailchimp", "hostnet", "versio", "transip", "strato", "canva", "linkedin ads"] },
@@ -252,7 +254,7 @@ export const DEFAULT_RULES = [
     "vgz", "menzis", "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering", "anderzorg",
     "achmea", "interpolis", "allianz", "independer", "assuradeur", "anwb", "nationale-nederlanden", "nationale nederlanden",
     "ohra", "vereniging eigen huis", "lemonade verzekering", "europeesche verzekeringen", "unigarant",
-    "achmea rechtsbijstand", "a.s.r.",
+    "achmea rechtsbijstand", "a.s.r.", "nh1816", "nh 1816", // beide-V11R6 — "NH 1816 SCHADEVERZEKERIN" (test Koenders)
     "centraal beheer", "aegon", "reaal", "ditzo", "fbto", "univé", "unive", "inshared",
     "opstalverzekering", "inboedelverzekering", "woonverzekering", "woonhuisverzekering",
   ],

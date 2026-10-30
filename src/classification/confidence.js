@@ -15,7 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText, FACTUUR_BETALING } from "./classify.js";
+import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText, FACTUUR_BETALING, bedrijfsnaamVan } from "./classify.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -83,6 +83,10 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   // beide-V10R7 — betaling met factuurnummer vanaf zakelijk (zie FACTUUR_BETALING in classify.js): een schatting, dus nakijken.
   if (resolvedCategory === "Zakelijke inkoop/uitgaven" && tx.amount < 0 && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { level: "heuristic", label: "Geschat: betaling met factuurnummer, waarschijnlijk leverancier" };
+  }
+  // beide-V11R6 — bedrijfsnaam vanaf zakelijk (zie BEDRIJFSNAAM in classify.js).
+  if (resolvedCategory === "Zakelijke inkoop/uitgaven" && tx.amount < 0 && bedrijfsnaamVan(tx)) {
+    return { level: "heuristic", label: "Geschat: bedrijfsnaam, waarschijnlijk leverancier" };
   }
 
   // De twee "laatste redmiddel"-gokken uit autoClassify() (zie classify.js) — geen enkel zoekwoord
