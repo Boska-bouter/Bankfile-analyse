@@ -6,6 +6,7 @@ import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
+import RekeningLabels from "../shared/RekeningLabels.jsx";
 
 function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass }) {
   const [category, setCategory] = useState(item.category || defaultCategory);
@@ -27,7 +28,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
             {item.amount >= 0 ? "ontvangen" : "betaald"}
           </span>
         </p>
-        <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
+        <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)} <RekeningLabels rekeningen={item.rekeningen} /></p>
         {item.description && <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400" />}
       </div>
       {/* release30V6 — één gegroepeerde keuzelijst (groep → soort) i.p.v. eerst groep, dan soort */}

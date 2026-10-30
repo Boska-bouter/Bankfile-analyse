@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import RekeningLabels from "../shared/RekeningLabels.jsx";
 
 export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark }) {
   const filtered = useMemo(() => {
@@ -56,7 +57,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
             <div key={item.key} className="flex flex-wrap items-center gap-3 p-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{item.name}</p>
-                <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)}</p>
+                <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)} <RekeningLabels rekeningen={item.rekeningen} /></p>
                 {item.description && (
                   <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400 mt-0.5" />
                 )}
