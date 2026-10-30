@@ -215,12 +215,22 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
   let onvolledig = 0;
   let renteNietBerekenbaar = 0;
   let metContract = 0;
+  // beide-V11R6 — zonder contractgegevens telden rente en afschrijving niet mee (winst te hoog). Nu een schatting (wens Boska 30-10):
+  // de betaalde termijnen van het jaar als kosten (rente + afschrijving samen). Over de hele looptijd komt dat ongeveer uit op
+  // aankoopprijs + rente; per jaar is het een benadering. Apart teruggegeven (schattingZonderContract), zodat het rapport het als
+  // schatting kan tonen.
+  let schatting = 0;
+  let schattingLeases = 0;
+  const schat = (lease) => {
+    const termijnen = -(lease.transactions || []).filter((t) => t.year === year || t.date?.getFullYear?.() === year).reduce((a, t) => a + (Number(t.amount) || 0), 0);
+    if (termijnen > 0.004) { schatting += termijnen; schattingLeases++; }
+  };
   for (const lease of leaseSummary) {
     if (lease.category !== "Lease (financieel)") continue;
     const details = leaseDetails[lease.key];
-    if (!details || details.onbekend) { onvolledig++; continue; }
+    if (!details || details.onbekend) { onvolledig++; schat(lease); continue; }
     const amortization = computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
-    if (!amortization) { onvolledig++; continue; }
+    if (!amortization) { onvolledig++; schat(lease); continue; }
     if (amortization.onvolledig) onvolledig++;
     if (amortization.renteNietBerekenbaarJaren?.has(year)) renteNietBerekenbaar++;
     const jaarData = groupAmortizationByYear(amortization).find((j) => j.year === year);
@@ -231,8 +241,11 @@ export function computeLeaseRenteForYear(leaseSummary, leaseDetails, year, compu
     metContract++;
   }
   // beide-V10R5 — Eenvoudig: zonder contractgegevens telt de in Basisvragen opgegeven rente (tax/eenvoudigLease.js).
-  if (metContract === 0) totaalRente += eenvoudigLeaseRente(year);
-  return { totaalRente, totaalAflossing, onvolledig, renteNietBerekenbaar };
+  // De opgegeven rente (Eenvoudig) zit binnen de geschatte termijnen; die telt dan niet nog eens.
+  const opgegeven = metContract === 0 ? eenvoudigLeaseRente(year) : 0;
+  const schattingZonderContract = Math.round(Math.max(schatting - opgegeven, 0) * 100) / 100;
+  totaalRente += opgegeven + schattingZonderContract;
+  return { totaalRente, totaalAflossing, onvolledig, renteNietBerekenbaar, schattingZonderContract, schattingLeases };
 }
 
 // Groepeert leningtransacties van één categorie per tegenpartij (niet op teken, zoals bij Overig)

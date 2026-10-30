@@ -14,7 +14,7 @@ const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map(
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
 const HEEL_WOORD = new Set(["boss"]);
 // beide-V9R1 — merknamen die ook midden in een ander woord staan: "athlon" (lease) in "Decathlon" (vergelijking Houtman 27-10).
-const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet"]);
+const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam"]);
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
@@ -654,6 +654,19 @@ function telecomSoort(tx) {
 // beide-V10R8 — ook "FCT 2026…", "F236112", "klantnr./klant nr." (wens Boska 28-10). Kale nummers en datums bewust niet.
 export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr|\bfct\b|\bF\d{4,}\b|\bklant ?nr\b|\bklant ?nummer\b/i;
 const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
+// beide-V11R6 — een tegenpartij met een bedrijfsnaam (rechtsvorm of branchewoord) die vanaf de zakelijke rekening wordt betaald, is
+// bijna altijd een leverancier (test Koenders: € 13.000–56.000 per jaar bleef in Overig/personen, bijv. "Houthandel Smetsers",
+// "Container Nederland BV", "Kwekerij Muijderman"). Alleen de naam telt (vóór " via "), niet de omschrijving; banken, verzekeraars,
+// stichtingen en overheid niet. Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
+export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|v\.?o\.?f\.?|holding|gmbh)(?![a-z])|(groothandel|handel|verhuur|bedrijf|diensten|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
+const GEEN_LEVERANCIER = /\bbank\b|verzeker|stichting|gemeente|belasting|waterschap|\bcjib\b|ministerie/i;
+// eigenNamen: namen van ondernemer/partner; een bedrijfsnaam met de eigen achternaam ("Hoveniersbedrijf Paul Koenders") is geen leverancier.
+export function bedrijfsnaamVan(tx, eigenNamen = []) {
+  const naam = String(tx.counterparty || "").split(/\s+via\s+/i)[0];
+  if (!BEDRIJFSNAAM.test(naam) || GEEN_LEVERANCIER.test(naam)) return false;
+  const laag = naam.toLowerCase();
+  return !(eigenNamen || []).some((n) => { const w = String(n || "").toLowerCase().split(/[\s.]+/).filter((x) => x.length >= 4).pop(); return w && laag.includes(w); });
+}
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?verzekering/i;
 export function resolveClassification(tx, ...rest) {
@@ -668,6 +681,9 @@ export function resolveClassification(tx, ...rest) {
   if (naar) return { ...uitkomst, category: naar };
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()
     && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+    return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
+  }
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && bedrijfsnaamVan(tx, rest[7])) {
     return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
   }
   // beide-V10R4 — een verzekeraar (bijv. Centraal Beheer) is niet altijd zakelijk; staat in de omschrijving dat het een zakelijke

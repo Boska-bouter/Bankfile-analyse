@@ -2705,7 +2705,9 @@ export default function App() {
     activaAfschrijvingForYear?.totaalAfschrijving && { label: "Afschrijving bedrijfsmiddelen", bedrag: -activaAfschrijvingForYear.totaalAfschrijving },
     leaseAutoKostenForActiveYear?.winstCorrectie && { label: "Lease-auto of -machine (afschrijving min privégebruik)", bedrag: -leaseAutoKostenForActiveYear.winstCorrectie },
     bvLeaseAutoWinstCorrectieActiveYear && { label: "Lease (afschrijving)", bedrag: -bvLeaseAutoWinstCorrectieActiveYear },
-    renteAftrekbaarActiveYear && { label: "Rente op leningen en lease", bedrag: -renteAftrekbaarActiveYear },
+    (renteAftrekbaarActiveYear - (leaseRenteForYear?.schattingZonderContract || 0)) && { label: "Rente op leningen en lease", bedrag: -(renteAftrekbaarActiveYear - (leaseRenteForYear?.schattingZonderContract || 0)) },
+    // beide-V11R6 — financiële lease zonder contractgegevens: geschat (termijnen als rente + afschrijving).
+    leaseRenteForYear?.schattingZonderContract && { label: "Financiële lease zonder contract: SCHATTING (termijnen als rente + afschrijving)", bedrag: -leaseRenteForYear.schattingZonderContract },
     ((gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0)) &&
       { label: "Niet-aftrekbaar deel huur, energie en gemeentelijke kosten", bedrag: (gedeeldeHuurForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeEnergieForActiveYear?.nietAftrekbaarBedrag || 0) + (gedeeldeGemeentelijkeKostenForActiveYear?.nietAftrekbaarBedrag || 0) },
   ].filter((d) => d && Math.abs(d.bedrag) >= 0.5);
