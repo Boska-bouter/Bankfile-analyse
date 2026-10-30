@@ -8,7 +8,7 @@ import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import RekeningLabels from "../shared/RekeningLabels.jsx";
 
-function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass }) {
+function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass, onSplits }) {
   const [category, setCategory] = useState(item.category || defaultCategory);
   const [type, setType] = useState(item.type || "Prive");
 
@@ -28,7 +28,15 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
             {item.amount >= 0 ? "ontvangen" : "betaald"}
           </span>
         </p>
-        <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)} <RekeningLabels rekeningen={item.rekeningen} /></p>
+        <p className="text-xs text-slate-400">{item.count}x · totaal {eur(item.total)} <RekeningLabels rekeningen={item.rekeningen} />
+          {/* beide-V11R3 — van beide rekeningen betaald: per rekening apart indelen (wens Boska 30-10) */}
+          {onSplits && !item.rekeningSoort && item.beideRekeningen && (
+            <button type="button" onClick={() => onSplits(item, true)} className="ml-2 text-xs font-medium text-sky-700 underline hover:text-sky-900">Splitsen per rekening</button>
+          )}
+          {onSplits && item.rekeningSoort && (
+            <button type="button" onClick={() => { if (window.confirm(`${item.name}: weer samenvoegen? De keuzes per rekening vervallen; daarna geldt één keuze voor beide rekeningen.`)) onSplits(item, false); }} className="ml-2 text-xs text-slate-500 underline hover:text-slate-700">Samenvoegen</button>
+          )}
+        </p>
         {item.description && <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400" />}
       </div>
       {/* release30V6 — één gegroepeerde keuzelijst (groep → soort) i.p.v. eerst groep, dan soort */}
@@ -60,7 +68,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
 // het overzicht te staan". Nu toont de lijst standaard ALLEEN de nog te bevestigen tegenpartijen
 // (dus leeg zodra alles bevestigd is) — bevestigde tegenpartijen zijn alleen nog zichtbaar via de
 // expliciete "Toon ook bevestigde tegenpartijen"-schakelaar hieronder.
-export default function ReviewStep({ items, allItems, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction }) {
+export default function ReviewStep({ items, allItems, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction, onSplits }) {
   const [showAll, setShowAll] = useState(false);
   const bron = showAll ? allItems : items;
   const filtered = useMemo(() => {
@@ -109,7 +117,7 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
       </div>
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {filtered.map((item) => (
-          <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={onMark} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} />
+          <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={onMark} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} onSplits={onSplits} />
         ))}
         {filtered.length === 0 && (
           <p className="p-4 text-sm text-slate-400 text-center">

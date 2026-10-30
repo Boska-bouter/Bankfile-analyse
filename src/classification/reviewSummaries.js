@@ -72,7 +72,15 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
 // voorheen stil werden overgeslagen, komen er als losse regel bij (sleutel per transactie). Anders telde
 // "Classificatie zekerheid" ze wel als open, maar waren ze in "Overig opruimen" nergens te vinden.
 export const sleutelZonderNaam = (tx) => `tx::${tx.id}`;
-export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null } = {}) {
+// beide-V11R3 — de rekening van een ingedeelde boeking: tx.type volgt het rekeningtype (zie withAccountType in classify.js).
+export const rekeningSoortVan = (tx) => (tx.type === "Zakelijk" ? "Zakelijk" : "Prive");
+// "Klopt zo" geldt voor de hele tegenpartij (sleutel) of, na splitsen, voor één rekening (sleutel@Zakelijk / sleutel@Prive).
+export const bevestigdVoor = (lijst, sleutel, tx) => lijst.has(sleutel) || lijst.has(`${sleutel}@${rekeningSoortVan(tx)}`);
+
+// beide-V11R3 — `gesplitst(tx)`: is voor deze tegenpartij gekozen om de zakelijke en de privérekening apart in te delen (wens Boska
+// 30-10)? Dan komt er per rekening een eigen regel (sleutel@Zakelijk / sleutel@Prive). Anders één regel; `beideRekeningen` zegt dan
+// of splitsen kan.
+export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null, gesplitst = null } = {}) {
   const map = {};
   for (const tx of classified) {
     if (tx.category !== category || tx.isMirror) continue;
@@ -82,22 +90,29 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
       if (!metZonderNaam) continue;
       key = sleutelZonderNaam(tx);
     }
-    if (!map[key]) {
-      map[key] = {
-        key, name: zonderNaam ? (String(tx.description || "").trim() || `(geen naam) ${tx.date?.toLocaleDateString?.("nl-NL") || ""}`.trim()) : tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
-        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd, rekeningen: {},
+    const soort = rekeningSoortVan(tx);
+    const split = !zonderNaam && !!gesplitst?.(tx);
+    const mapKey = split ? `${key}@${soort}` : key;
+    if (!map[mapKey]) {
+      map[mapKey] = {
+        key: mapKey, basisKey: key, name: zonderNaam ? (String(tx.description || "").trim() || `(geen naam) ${tx.date?.toLocaleDateString?.("nl-NL") || ""}`.trim()) : tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
+        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd, rekeningen: {}, soorten: new Set(), voorbeeldTx: tx,
+        ...(split ? { rekeningSoort: soort } : {}),
         ...(zonderNaam ? { zonderNaam: true, txId: tx.id } : {}),
       };
     }
-    map[key].total += tx.amount;
-    map[key].count += 1;
-    map[key].years.add(tx.year);
-    telRekening(map[key], tx, rekening);
-    map[key].description = tx.fullDescription || tx.description || map[key].description;
+    map[mapKey].total += tx.amount;
+    map[mapKey].count += 1;
+    map[mapKey].years.add(tx.year);
+    map[mapKey].soorten.add(soort);
+    telRekening(map[mapKey], tx, rekening);
+    map[mapKey].description = tx.fullDescription || tx.description || map[mapKey].description;
     // V7R6 / beide-V3R0 — zelf gekozen (bijv. in Eenvoudig "Aan familie of vrienden"): dan is het al beoordeeld.
-    if (tx.confidence?.level === "override") map[key].handmatig = true;
+    if (tx.confidence?.level === "override") map[mapKey].handmatig = true;
   }
-  return Object.values(map).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  return Object.values(map)
+    .map((item) => ({ ...item, beideRekeningen: item.soorten.size > 1 }))
+    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 }
 
 // Zelfde soort samenvatting als hierboven, maar dan over de VIER "Zakelijke inkomsten"-categorieën

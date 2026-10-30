@@ -25,6 +25,7 @@ export default function HerkomstVanGeldPanel({
   personSearch,
   onPersonSearch,
   onMarkPersonSource,
+  onSplitsRekening,
   onConfirmPersonAsIs,
   personBulkAction,
 }) {
@@ -69,6 +70,7 @@ export default function HerkomstVanGeldPanel({
           search={personSearch}
           onSearch={onPersonSearch}
           onMark={onMarkPersonSource}
+          onSplits={onSplitsRekening}
           onConfirm={onConfirmPersonAsIs}
           defaultCategory="Overboekingen aan personen"
           bulkAction={personBulkAction}

@@ -17,6 +17,7 @@ export default function OpschonenPanel({
   overigSearch,
   onOverigSearch,
   onMarkOverigItem,
+  onSplitsRekening,
   onConfirmOverigAsIs,
   onBulkMarkOverigAsPriveOpname,
   onBulkMarkOverigAsWinkelsDivers,
@@ -70,6 +71,7 @@ export default function OpschonenPanel({
               search={overigSearch}
               onSearch={onOverigSearch}
               onMark={onMarkOverigItem}
+              onSplits={onSplitsRekening}
               onConfirm={onConfirmOverigAsIs}
               defaultCategory="Overig"
               confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"

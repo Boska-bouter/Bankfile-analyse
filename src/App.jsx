@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, startTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { AlertCircle, Loader2, ListTree, MessageSquare } from "lucide-react";
 
 import { parseFile } from "./importers/detector.js";
@@ -16,9 +16,9 @@ import { estimateIncomeTax, estimateZvw, registerTariefInstellingen, estimateInc
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeDuplicateInfo } from "./importers/duplicates.js";
 import { overlapBestandKoppeling } from "./importers/overlapKoppeling.js";
-import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam } from "./classification/reviewSummaries.js";
+import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam, bevestigdVoor, rekeningSoortVan } from "./classification/reviewSummaries.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
-import { overrideSleutel } from "./classification/classify.js";
+import { overrideSleutel, sleutelVoorTegenpartij } from "./classification/classify.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import { loadPersistedParsedFiles, persistParsedFiles, loadPersistedSettings, persistSettings } from "./storage/projectStorage.js";
 import { useDashboardCards } from "./cards/useDashboardCards.jsx";
@@ -1636,10 +1636,12 @@ export default function App() {
   // V58 — geteld per GROEP (zelfde tegenpartij + teken + categorie) in plaats van per transactie: 30
   // maandelijkse incasso's van dezelfde partij zijn één beslissing, niet dertig. Het aantal
   // transacties staat er apart bij (needsReviewTx) voor wie dat wil weten.
+  const bekekenOverigSet = useMemo(() => new Set(reviewedOverigKeys), [reviewedOverigKeys]);
+  const bekekenPersonenSet = useMemo(() => new Set(reviewedPersonKeys), [reviewedPersonKeys]);
   const bevestigdInBulkVenster = (tx) => {
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
     const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
-    return (tx.category === "Overig" ? reviewedOverigKeys : reviewedPersonKeys).includes(k);
+    return bevestigdVoor(tx.category === "Overig" ? bekekenOverigSet : bekekenPersonenSet, k, tx);
   };
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
@@ -1737,10 +1739,38 @@ export default function App() {
 
   // ---- "Overboekingen aan personen" en "Overig" opruimen ----
   const rekeningInfo = useMemo(() => ({ accountTypeByFile, ownAccountByFile }), [accountTypeByFile, ownAccountByFile]); // beide-V11R2
-  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo }), [classified, rekeningInfo]);
-  const pendingPersonReview = useMemo(() => personSummary.filter((i) => !i.handmatig && !reviewedPersonKeys.includes(i.key)), [personSummary, reviewedPersonKeys]);
+  // beide-V11R3 — tegenpartij per rekening splitsen (wens Boska 30-10): zelfde verzekeraar of Tikkie zakelijk én privé.
+  const gesplitst = useCallback((tx) => !!overridesByCounterparty[sleutelVoorTegenpartij(tx, overridesByCounterparty)]?.gesplitst, [overridesByCounterparty]);
+  const splitsRekening = (item, aan) => {
+    const key = sleutelVoorTegenpartij(item.voorbeeldTx, overridesByCounterparty);
+    if (!key) return;
+    snapshotBeforeAction(aan ? "Gesplitst per rekening" : "Splitsen per rekening ongedaan");
+    setOverridesByCounterparty((prev) => {
+      const oud = prev[key] || {};
+      if (aan) return { ...prev, [key]: { ...oud, gesplitst: true, displayName: oud.displayName || item.name, sign: item.amount >= 0 ? "pos" : "neg" } };
+      const { gesplitst: _g, perRekening: _p, ...rest } = oud;
+      const next = { ...prev };
+      if (rest.category) next[key] = rest; else delete next[key];
+      return next;
+    });
+  };
+  const setRekeningKeuze = (item, patch) => {
+    const key = sleutelVoorTegenpartij(item.voorbeeldTx, overridesByCounterparty);
+    if (!key) return;
+    snapshotBeforeAction("Categorie/type aangepast (per rekening)");
+    setOverridesByCounterparty((prev) => {
+      const oud = prev[key] || {};
+      const per = oud.perRekening || {};
+      return { ...prev, [key]: { ...oud, gesplitst: true, perRekening: { ...per, [item.rekeningSoort]: { ...(per[item.rekeningSoort] || {}), ...patch } } } };
+    });
+    const ids = new Set(classified.filter((tx) => keyForTx(tx) === key && rekeningSoortVan(tx) === item.rekeningSoort).map((tx) => tx.id));
+    if (ids.size) setOverridesByRow((prev) => (Object.keys(prev).some((id) => ids.has(Number(id)) || ids.has(id)) ? Object.fromEntries(Object.entries(prev).filter(([id]) => !ids.has(Number(id)) && !ids.has(id))) : prev));
+  };
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo, gesplitst }), [classified, rekeningInfo, gesplitst]);
+  const nogTeBekijken = (lijst, bekeken) => lijst.filter((i) => !i.handmatig && !bekeken.includes(i.key) && !bekeken.includes(i.basisKey));
+  const pendingPersonReview = useMemo(() => nogTeBekijken(personSummary, reviewedPersonKeys), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
-  const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : setCounterpartyOverride(item.name, item.amount, patch));
+  const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : item.rekeningSoort ? setRekeningKeuze(item, patch) : setCounterpartyOverride(item.name, item.amount, patch));
   const markPersonSource = (item, category, type) => {
     zetVoorItem(item, { category, type });
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -1750,8 +1780,8 @@ export default function App() {
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
-  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true, rekening: rekeningInfo }), [classified, rekeningInfo]);
-  const pendingOverigReview = useMemo(() => overigSummary.filter((i) => !i.handmatig && !reviewedOverigKeys.includes(i.key)), [overigSummary, reviewedOverigKeys]);
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true, rekening: rekeningInfo, gesplitst }), [classified, rekeningInfo, gesplitst]);
+  const pendingOverigReview = useMemo(() => nogTeBekijken(overigSummary, reviewedOverigKeys), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
     zetVoorItem(item, { category, type });
     setReviewedOverigKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -3146,7 +3176,7 @@ export default function App() {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem,
+    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,

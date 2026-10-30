@@ -1,7 +1,7 @@
 // nieuw-V1R01 — rekenwerk voor de eenvoudige weergave: hoe zeker is de uitkomst (naar bedrag), en welke vragen
 // leveren met zo min mogelijk antwoorden de meeste zekerheid op. Pure functies, los te testen.
 import { counterpartyKey } from "../utils/normalization.js";
-import { sleutelZonderNaam } from "../classification/reviewSummaries.js";
+import { sleutelZonderNaam, bevestigdVoor } from "../classification/reviewSummaries.js";
 import { betaalSoort } from "../classification/classify.js";
 
 // nieuw-V3R4 — het oordeel hangt af van het onzekere bedrag in euro's, niet van een percentage: wat onzeker is op de
@@ -32,7 +32,7 @@ export function maakBevestigd(reviewedOverigKeys = [], reviewedPersonKeys = []) 
   return (tx) => {
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
     const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
-    return (tx.category === "Overig" ? overig : personen).has(k);
+    return bevestigdVoor(tx.category === "Overig" ? overig : personen, k, tx);
   };
 }
 
