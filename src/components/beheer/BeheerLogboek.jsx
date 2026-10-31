@@ -54,7 +54,7 @@ export default function BeheerLogboek() {
 
   return (
     <div className="space-y-3">
-      <p className="text-slate-500">Elke wijziging in het beheer: rechten, aanvragen, verwijderen en het tarievenbestand. De nieuwste staat bovenaan.</p>
+      <p className="text-slate-500">Elke wijziging in het beheer (rechten, aanvragen, verwijderen, tarievenbestand) en elke keer dat iemand inlogt. De nieuwste staat bovenaan.</p>
       <div className="flex flex-wrap items-center gap-3">
         <p className={`min-w-0 flex-1 text-sm ${stand && stand.aantal >= stand.grens ? "font-semibold text-amber-800" : "text-slate-600"}`}>
           {stand ? `${stand.aantal} regel${stand.aantal === 1 ? "" : "s"} in het logboek (grens ${stand.grens}${stand.aantal >= stand.grens ? ": exporteer en schoon op" : ""}).` : ""}
@@ -64,6 +64,12 @@ export default function BeheerLogboek() {
       {melding && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">{melding}</p>}
       <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op e-mailadres of actie"
         className={`${VELD_KLEIN} w-full`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken in logboek" />
+      <div className="flex flex-wrap gap-2 text-sm">
+        {[["", "Alles"], ["ingelogd", "Alleen inloggen"]].map(([w, t]) => (
+          <button key={t} type="button" onClick={() => setZoek(w)} aria-pressed={zoek.trim() === w}
+            className={`rounded-full border px-3 py-1 ${zoek.trim() === w ? "border-teal-700 bg-teal-50 text-teal-800" : "border-slate-200 text-slate-600"}`}>{t}</button>
+        ))}
+      </div>
       {fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{fout}</p>}
       {regels === null ? <p className="text-slate-500">Laden…</p> : regels.length === 0 ? (
         <p className="text-slate-500">{zoek ? "Niets gevonden." : "Nog niets in het logboek. Wijzigingen vanaf deze versie komen hier te staan."}</p>

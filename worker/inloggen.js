@@ -17,7 +17,8 @@
 
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
-import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { logBeheer } from "./logboek.js";
+import { welkomInhoud, welkomVeilig, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -96,7 +97,9 @@ export async function wieIsIngelogd(request, env) {
   }
 }
 
-async function maakSessie(env, email) {
+async function maakSessie(env, email, manier = "") {
+  // beide-V12R8 — elke keer inloggen in het beheerlogboek (wens Boska 31-10).
+  await logBeheer(env.DB, { email, actie: "ingelogd", details: manier });
   const token = willekeurig(32);
   await env.DB.prepare("INSERT INTO sessies (hash, email, aangemaakt, verloopt) VALUES (?, ?, ?, ?)")
     .bind(await hashHex(token), email, new Date().toISOString(), nu() + SESSIE_DAGEN * 86400).run();
@@ -324,7 +327,7 @@ ${welkomKop(soorten)}
 <div class="kaart inlogkaart">
   <h2>Ik heb al een account</h2>
   <button id="pk" type="button" class="linkknop">Inloggen met passkey (Face ID of pincode)</button>
-  <div class="scheiding" id="ofpk"></div>
+  <p id="ofpk" class="klein" style="margin:0;padding-top:8px;border-top:1px solid var(--line)">of inloggen met mailadres en wachtwoord:</p>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
@@ -343,7 +346,8 @@ ${welkomKop(soorten)}
   ${welkomNieuw(alleGratis(soorten))}
 </div>
 </aside>
-<div class="uitlegkolom">${welkomInhoud({ soorten })}</div>
+<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false })}</div>
+<div class="veiligrij">${welkomVeilig()}</div>
 </div>`, `
 const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
@@ -506,7 +510,7 @@ export async function inlogRoute(request, env, url, email) {
       const r = await env.DB.prepare("SELECT * FROM inloglinks WHERE hash = ?").bind(hash).first();
       if (!r || r.gebruikt || r.verloopt < nu()) return json({ ok: false, fout: "Deze inloglink is verlopen of al gebruikt." }, 400);
       await env.DB.prepare("UPDATE inloglinks SET gebruikt = 1 WHERE hash = ?").bind(hash).run();
-      const sessie = await maakSessie(env, r.email);
+      const sessie = await maakSessie(env, r.email, "via inloglink");
       return json({ ok: true }, 200, { "Set-Cookie": sessieCookie(sessie, SESSIE_DAGEN * 86400) });
     }
     if (p === "/api/inloggen/wachtwoord") {
@@ -524,7 +528,7 @@ export async function inlogRoute(request, env, url, email) {
         return json({ ok: false, fout: "E-mailadres of wachtwoord klopt niet. Nog geen wachtwoord of vergeten? Gebruik dan de inloglink." }, 400);
       }
       await env.DB.prepare("DELETE FROM inlogpogingen WHERE email = ?").bind(doel).run();
-      const sessie = await maakSessie(env, doel);
+      const sessie = await maakSessie(env, doel, "met wachtwoord");
       return json({ ok: true }, 200, { "Set-Cookie": sessieCookie(sessie, SESSIE_DAGEN * 86400) });
     }
     if (p === "/api/inloggen/passkey/opties") {
@@ -544,7 +548,7 @@ export async function inlogRoute(request, env, url, email) {
       if (!(await controleerHandtekening(pk.alg, JSON.parse(pk.sleutel), data, sig))) throw new Error("Handtekening klopt niet");
       if (ad.teller && pk.teller && ad.teller <= pk.teller) throw new Error("Passkey-teller klopt niet (mogelijk gekopieerd)");
       await env.DB.prepare("UPDATE passkeys SET teller = ?, laatst = ? WHERE id = ?").bind(ad.teller, new Date().toISOString(), pk.id).run();
-      const sessie = await maakSessie(env, pk.email);
+      const sessie = await maakSessie(env, pk.email, "met passkey");
       return json({ ok: true }, 200, { "Set-Cookie": sessieCookie(sessie, SESSIE_DAGEN * 86400) });
     }
     // Vanaf hier alleen voor wie is ingelogd.

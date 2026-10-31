@@ -14,9 +14,9 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
 .kenmerken{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .kenmerken li{font-size:13px;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px}
-.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg"}.kop{grid-area:kop}
+.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
 .inlogkolom{grid-area:inlog;display:flex;flex-direction:column;gap:14px;max-width:520px}.uitlegkolom{grid-area:uitleg;min-width:0}
-@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog";align-items:start;gap:32px 40px}
+@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "veilig veilig";align-items:start;gap:32px 40px}
 .inlogkolom{position:sticky;top:24px}.alleen-smal{display:none}}
 .inlogkaart{gap:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(15,118,110,.07)}
 .inlogkaart h2{margin:0 0 2px;font-size:1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
@@ -111,7 +111,18 @@ export const welkomNieuw = (gratis) => `<ol class="nieuw">
 <li>Kies na het inloggen je abonnement${gratis ? " (voorlopig gratis)" : ""}. Je krijgt een mail zodra het is goedgekeurd.</li>
 <li>Stel een wachtwoord of passkey in; daarna log je zonder mail in.</li></ol>`;
 
-export function welkomInhoud({ soorten, veilig = VEILIG }) {
+// beide-V12R7 — veiligheidsblok los, zodat de inlogpagina het onderaan over de volle breedte kan zetten (wens Boska 31-10).
+export const welkomVeilig = (veilig = VEILIG) => `
+  <section class="veilig">
+    <h2>De veiligheid van jouw gegevens</h2>
+    <div class="kaart">
+      <p style="margin:0">Bankbestanden worden in de eigen browser verwerkt en niet naar een server gestuurd. Het dossier wordt als bestand bewaard, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
+      <p class="let-op">${e(veilig)}</p>
+    </div>
+  </section>
+`;
+
+export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   return `
@@ -140,12 +151,6 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
     <p class="klein">Eenvoudig of Uitgebreid kies je per dossier. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
   </section>
 
-  <section>
-    <h2>De veiligheid van jouw gegevens</h2>
-    <div class="kaart">
-      <p style="margin:0">Bankbestanden worden in de eigen browser verwerkt en niet naar een server gestuurd. Het dossier wordt als bestand bewaard, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
-      <p class="let-op">${e(veilig)}</p>
-    </div>
-  </section>
+${metVeilig ? welkomVeilig(veilig) : ""}
 </div>`;
 }
