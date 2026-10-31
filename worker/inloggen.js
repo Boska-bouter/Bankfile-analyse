@@ -317,8 +317,9 @@ ${VERGELIJK_STIJL}</style>
 <div class="welkom-grid">
 ${welkomKop(soorten)}
 <aside class="inlogkolom">
+<h2 class="inlogkop">Inloggen <span>of account aanvragen</span></h2>
 <div class="kaart inlogkaart">
-  <h2>Log hier in als je al een account hebt</h2>
+  <h2>Ik heb al een account</h2>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
@@ -330,7 +331,7 @@ ${welkomKop(soorten)}
   <p id="status" role="status"></p>
 </div>
 <div class="kaart inlogkaart">
-  <h2>Start hier je aanvraag voor toegang tot RekeningNaarAangifte</h2>
+  <h2>Nieuw? Account aanvragen</h2>
   <form id="a" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="email" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres voor je aanvraag">
     <button type="submit" class="tweede">Stuur inloglink</button>

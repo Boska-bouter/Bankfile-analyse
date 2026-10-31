@@ -9,15 +9,17 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 // Breed scherm (iPad liggend, computer): uitleg links, inloggen rechts en blijft staan bij scrollen. Smal scherm:
 // eerst inloggen, daaronder de uitleg. Eén inlogvak, geen tweede inlogknop onderaan (wens Boska 24-10).
 export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
-.kop h1{font-size:2rem;letter-spacing:-.01em}.kop .sub{font-size:1.05rem;margin-top:6px;max-width:640px}
+.kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
+.merk{display:flex;align-items:center;gap:14px}.merk svg{flex:none}.merk h1 .naar{font-weight:400;color:var(--muted)}.merk h1 .aangifte{color:var(--accent)}.merk .onder{color:var(--muted);font-size:14px}
+.inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
 .kenmerken{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .kenmerken li{font-size:13px;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px}
 .welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg"}.kop{grid-area:kop}
 .inlogkolom{grid-area:inlog;display:flex;flex-direction:column;gap:14px;max-width:520px}.uitlegkolom{grid-area:uitleg;min-width:0}
-@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop inlog" "uitleg inlog";align-items:start;gap:32px 40px}
+@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog";align-items:start;gap:32px 40px}
 .inlogkolom{position:sticky;top:24px}.alleen-smal{display:none}}
 .inlogkaart{gap:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(15,118,110,.07)}
-.inlogkaart h2{margin:0 0 2px;font-size:1.1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
+.inlogkaart h2{margin:0 0 2px;font-size:1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
 #status2{margin:0;color:var(--muted)}#status2.err{color:var(--err)}#status2.ok{color:var(--ok)}
 .inlogkaart .linkknop{align-self:flex-start}.linkknop{background:none;border:0;padding:2px 0;color:var(--accent);font-weight:500;font-size:14px;text-align:left;text-decoration:underline;text-underline-offset:2px}
 .scheiding{border-top:1px solid var(--line);margin:4px 0 0}
@@ -97,7 +99,7 @@ export function welkomKop(soorten) {
   const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     "Bankbestanden blijven in de browser", gratis ? "Voorlopig gratis" : null].filter(Boolean);
   return `<header class="kop">
-<h1 style="display:flex;align-items:center;gap:10px"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" style="flex:none"><rect x="1" y="1" width="32" height="32" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="5" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#1E2A4A">R</text><path d="M14.5 17h5m-2-2.5l2.5 2.5-2.5 2.5" stroke="#0f766e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="21" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#0f766e">A</text></svg>RekeningNaarAangifte</h1>
+<div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="5" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#1E2A4A">R</text><path d="M14.5 17h5m-2-2.5l2.5 2.5-2.5 2.5" stroke="#0f766e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="21" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#0f766e">A</text></svg><div><h1>Rekening<span class="naar">Naar</span><span class="aangifte">Aangifte</span></h1><div class="onder">Inzicht in geldstromen, van rekening naar aangifte</div></div></div>
 <p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie van de belasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
 <ul class="kenmerken">${kenmerken.map((k) => `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
