@@ -58,7 +58,7 @@ export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onB
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
         <p className="flex items-center gap-1.5 text-xs text-slate-500">
-          <Lock className="h-3.5 w-3.5 text-emerald-600" /> Bankgegevens blijven op dit apparaat; er gaat niets naar een server.
+          <Lock className="h-3.5 w-3.5 text-emerald-600" /> Verwerkt op je eigen apparaat; bankbestanden worden niet op een server bewaard.
         </p>
         {onDossierLaden && (
           <button type="button" onClick={onDossierLaden} className="text-xs font-medium text-teal-800 underline decoration-dotted hover:text-teal-950">

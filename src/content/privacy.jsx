@@ -2,7 +2,7 @@
 // De volledige afspraken staan in de gebruiksvoorwaarden, artikel 4 (content/voorwaarden.jsx); dit is de korte uitleg.
 
 // Korte zin voor de zijbalk, de voettekst en de wizards.
-export const PRIVACY_LABEL = "Bankgegevens blijven lokaal";
+export const PRIVACY_LABEL = "Verwerkt op je eigen apparaat"; // beide-V13R2 (wens Boska 31-10)
 export const PRIVACY_KORT = "Bankgegevens en het dossier blijven in deze browser en gaan niet naar een server.";
 export const PRIVACY_TITEL = `${PRIVACY_KORT} Account en inlog staan wel op de server; bij de bankkoppeling worden de boekingen alleen doorgegeven. Zie Help → Privacy, of de voorwaarden artikel 4.`;
 
