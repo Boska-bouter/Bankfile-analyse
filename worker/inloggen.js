@@ -15,6 +15,7 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
+import { uitgebreidExtra, BANKKOPPELING_STATUS } from "../src/content/aanbod.js";
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { logBeheer, inloggenVastleggen } from "./logboek.js";
@@ -275,8 +276,8 @@ async function stuurLink(env, email, link) {
     ],
     lijst: [
       ["Eenvoudig", "in vier stappen de bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van de btw en inkomstenbelasting, privé de inkomsten en uitgaven per maand."],
-      ["Uitgebreid", "alle tabbladen, controles en berekeningen: zakelijk de aangifteberekening, privé het budget, de vaste lasten en een indicatie van de inkomstenbelasting."],
-      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn."]] : []),
+      ["Uitgebreid", `alle tabbladen en controles; zakelijk met ${uitgebreidExtra("zakelijk")}, privé met ${uitgebreidExtra("prive")}.`],
+      ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", `alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is ${BANKKOPPELING_STATUS}.`]] : []),
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },

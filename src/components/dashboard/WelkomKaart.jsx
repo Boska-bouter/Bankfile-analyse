@@ -1,4 +1,5 @@
 import { Check, ClipboardList, Lock, Upload, ListChecks } from "lucide-react";
+import { PRIVACY_KERN } from "../../content/aanbod.js";
 
 // release22V0 — lege staat van Overzicht (nog geen bankbestand). Vervangt de stapel losse blokken
 // (ringmeter "nog geen data", aangifteblok, reconstructielink, routebalk met 5× "nog geen input",
@@ -58,7 +59,7 @@ export default function WelkomKaart({ basisStatus, basisOpen, onBasisvragen, onB
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
         <p className="flex items-center gap-1.5 text-xs text-slate-500">
-          <Lock className="h-3.5 w-3.5 text-emerald-600" /> Bankgegevens blijven op dit apparaat; er gaat niets naar een server.
+          <Lock className="h-3.5 w-3.5 text-emerald-600" /> {PRIVACY_KERN}
         </p>
         {onDossierLaden && (
           <button type="button" onClick={onDossierLaden} className="text-xs font-medium text-teal-800 underline decoration-dotted hover:text-teal-950">

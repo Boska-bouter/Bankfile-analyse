@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { InkomstenUitgavenKaart, UitgavenPerCategorieKaart, BelastingKaart, KAART } from "./PriveKaarten.jsx";
 import PriveMaandModal from "./PriveMaandModal.jsx";
+import { uitgebreidExtra } from "../../content/aanbod.js";
+
+const EXTRA = uitgebreidExtra("prive").replace(/^./, (c) => c.toUpperCase());
 
 export default function PriveUitkomstEenvoudig({ overzicht, jaar, jaren = [], onSelectYear, bruikbaar = true, onNakijken, onVragen, onUitgebreid }) {
   const [maand, setMaand] = useState(false);
@@ -25,7 +28,7 @@ export default function PriveUitkomstEenvoudig({ overzicht, jaar, jaren = [], on
         <UitgavenPerCategorieKaart jaar={jaar} budget={d.budget} />
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
           <p className="mb-2 font-semibold text-slate-800">Meer details?</p>
-          <p>{onUitgebreid ? <>Vaste lasten, sparen, vermogen en het meerjarenoverzicht staan in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : "Vaste lasten, vermogen en meerdere jaren naast elkaar staan in de uitgebreide weergave. "}Twijfel je over iets? Vraag het je adviseur.</p>
+          <p>{onUitgebreid ? <>{EXTRA}: dat staat in <button type="button" onClick={onUitgebreid} className="font-semibold underline">Uitgebreid</button>. </> : `${EXTRA}: dat staat in Uitgebreid. `}Twijfel je over iets? Vraag het je adviseur.</p>
         </div>
       </div>
       {maand && <PriveMaandModal jaar={jaar} jaren={jaren} budget={d.budget} onSelectYear={onSelectYear} onClose={() => setMaand(false)} />}

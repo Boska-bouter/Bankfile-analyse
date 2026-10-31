@@ -28,8 +28,8 @@ export default function PriveOverzicht({ overzicht, jaar, jaren, onSelectYear, o
         {onBerekening && <button type="button" onClick={onBerekening} className={ACTIE}>Berekening inkomstenbelasting</button>}
         {onSamenvatting && <button type="button" onClick={onSamenvatting} className={ACTIE}>Samenvatting</button>}
         {/* beide-V4R1 — was "Excel exporteren": nu één Downloaden met keuze PDF, Excel of HTML */}
-        {onActie && <DownloadKnop onKies={(soort) => onActie(soort)} rechts={false} label="Budgetoverzicht downloaden" knopClassName={`${ACTIE} inline-flex items-center gap-1.5`} />}
-        {onActie && <button type="button" onClick={() => onActie("print")} className={ACTIE}>Print budgetoverzicht</button>}
+        {onActie && <DownloadKnop onKies={(soort) => onActie(soort)} rechts={false} label="Overzicht downloaden" knopClassName={`${ACTIE} inline-flex items-center gap-1.5`} />}
+        {onActie && <button type="button" onClick={() => onActie("print")} className={ACTIE}>Overzicht printen</button>}
       </div>
       {maand && <PriveMaandModal jaar={jaar} jaren={jaren} budget={d.budget} onSelectYear={onSelectYear} onClose={() => setMaand(false)} />}
     </div>

@@ -78,6 +78,6 @@ export function priveBelastingInvoer({ transacties, jaar, budget, antwoorden = {
     if (v && typeof v === "object") vermogen = { sparen: getal(v.sparen) || 0, beleggen: getal(v.beleggen) || 0, schulden: getal(v.schulden) || 0 };
     else aannames.push("Box 3: vermogen op 1 januari nog niet ingevuld, dus niet meegeteld.");
   }
-  if (eenvoudig && a.vermogen === "ja") aannames.push("Box 3 (spaargeld en beleggingen) zit alleen in de uitgebreide weergave.");
+  if (eenvoudig && a.vermogen === "ja") aannames.push("Box 3 (spaargeld en beleggingen) zit alleen in Uitgebreid.");
   return { invoer: { personen, woning, aftrek, vermogen }, aannames };
 }

@@ -3,6 +3,8 @@
 // de rest (opslaan, oplichting, herkenning, regels, begrippen) blijft gelijk. Alleen tekst, geen logica.
 import { HELP_CHAPTERS, HELP_GROEPEN } from "./helpChapters.jsx";
 import { PRIVACY_KORT } from "./privacy.jsx";
+import { uitgebreidExtra } from "./aanbod.js";
+const UITGEBREID_PRIVE = uitgebreidExtra("prive");
 import { VOORWAARDEN_PRIVE_INHOUD } from "./voorwaardenPrive.jsx";
 
 const VERBORGEN_IN_PRIVE = new Set([
@@ -15,9 +17,9 @@ const Li = ({ children }) => <li className="flex gap-2.5"><span className="text-
 export const PRIVE_INTRO = (
   <ol className="space-y-2.5 list-none">
     <Li>Dit is een <strong>privédossier</strong>: een particulier huishouden, zonder onderneming. Het toont de inkomsten, uitgaven, vaste lasten en sparen, en een indicatie van de inkomstenbelasting. BTW, winst en bedrijfsmiddelen komen hier niet voor.</Li>
-    <Li>De wizard (Basisvragen) vraagt naar de naam, een fiscale partner, waar het inkomen vandaan komt, wonen (huur of koop) en spaargeld. In de uitgebreide weergave komen daar onder meer WOZ-waarde, hypotheekrente, vermogen op 1 januari en de loonheffing van de jaaropgave bij.</Li>
+    <Li>De wizard (Basisvragen) vraagt naar de naam, een fiscale partner, waar het inkomen vandaan komt, wonen (huur of koop) en spaargeld. In Uitgebreid komen daar onder meer WOZ-waarde, hypotheekrente, vermogen op 1 januari en de loonheffing van de jaaropgave bij.</Li>
     <Li>Laad de bankbestanden (CSV, Excel, MT940 of CAMT.053). De app deelt de boekingen in categorieën in, zoals Wonen, Boodschappen, Vervoer en Zorg. Klopt een indeling niet? Pas hem aan bij Controleren; dat onthoudt de app voor dezelfde tegenpartij, in alle jaren.</Li>
-    <Li>Het Overzicht toont per jaar het budget en de belastingindicatie. Links bij Acties staan de berekening inkomstenbelasting, de samenvatting en het budgetoverzicht (als PDF, Excel of HTML).</Li>
+    <Li>Het Overzicht toont per jaar de inkomsten en uitgaven en de belastingindicatie. Links bij Acties staan de berekening inkomstenbelasting, de samenvatting en het overzicht van inkomsten en uitgaven (als PDF, Excel of HTML).</Li>
     <Li>{PRIVACY_KORT} Gebruik "Dossier opslaan" voor een back-upbestand.</Li>
   </ol>
 );
@@ -30,8 +32,8 @@ export const PRIVE_HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p><strong>De route.</strong> De balk onder de kop laat de stappen zien: Import → Controleren → Instellingen → Advies. De kaart "Eerstvolgende stap" zegt wat nu de beste volgende stap is.</p>
-        <p><strong>Drie tabbladen.</strong> <em>Overzicht</em> toont het budget en de belastingindicatie. <em>Controleren</em> is de plek om de indeling na te kijken en te zien welke gegevens de belastingberekening nog mist. <em>Instellingen</em> bevat het huishouden, de rekeningen, de categorieregels en de vaste lasten.</p>
-        <p><strong>Eenvoudig of Uitgebreid.</strong> Eenvoudig bestaat uit vier stappen (Gegevens, Nakijken, Uitkomst, Bewaren). Uitgebreid toont alles, met vaste lasten, box 3 en meerdere jaren naast elkaar. Een dossier in Eenvoudig kan één keer worden omgezet naar Uitgebreid; terug kan daarna niet meer.</p>
+        <p><strong>Drie tabbladen.</strong> <em>Overzicht</em> toont de inkomsten en uitgaven en de belastingindicatie. <em>Controleren</em> is de plek om de indeling na te kijken en te zien welke gegevens de belastingberekening nog mist. <em>Instellingen</em> bevat het huishouden, de rekeningen, de categorieregels en de vaste lasten.</p>
+        <p><strong>Eenvoudig of Uitgebreid.</strong> Eenvoudig bestaat uit vier stappen (Gegevens, Nakijken, Uitkomst, Bewaren). Uitgebreid toont alles, met {UITGEBREID_PRIVE}. Een dossier in Eenvoudig kan één keer worden omgezet naar Uitgebreid; terug kan daarna niet meer.</p>
       </div>
     ),
   },
@@ -94,7 +96,7 @@ export const PRIVE_HELP_CHAPTERS = [
     titel: "Box 3: sparen en beleggen",
     inhoud: (
       <div className="space-y-2.5">
-        <p>Box 3 zit alleen in de uitgebreide weergave. Vul per jaar het vermogen op 1 januari in: spaargeld, beleggingen en schulden. De app rekent met het forfaitaire rendement per soort vermogen, trekt het heffingsvrij vermogen af (dubbel met een fiscale partner) en past het tarief van dat jaar toe.</p>
+        <p>Box 3 zit alleen in Uitgebreid. Vul per jaar het vermogen op 1 januari in: spaargeld, beleggingen en schulden. De app rekent met het forfaitaire rendement per soort vermogen, trekt het heffingsvrij vermogen af (dubbel met een fiscale partner) en past het tarief van dat jaar toe.</p>
         <p className="text-xs text-slate-400">De regels voor box 3 veranderen (na het Kerstarrest, en later een stelsel op basis van werkelijk rendement). De uitkomst is daarom extra indicatief.</p>
       </div>
     ),
@@ -106,7 +108,7 @@ export const PRIVE_HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>Een privédossier kent veertien hoofdcategorieën: Inkomen, Wonen, Verzekeringen, Zorg, Boodschappen, Vervoer, Kinderen, Abonnementen, Vrije tijd, Giften, Sparen en beleggen, Aflossingen, Belastingen en Overig.</p>
-        <p>Een paar categorieën tellen mee in de belasting: loon, uitkering en pensioen (inkomen), hypotheek (rente), giften, zorgkosten, lijfrente en partneralimentatie. Toeslagen en kinderbijslag tellen als inkomsten in het budget, maar niet voor de belasting.</p>
+        <p>Een paar categorieën tellen mee in de belasting: loon, uitkering en pensioen (inkomen), hypotheek (rente), giften, zorgkosten, lijfrente en partneralimentatie. Toeslagen en kinderbijslag tellen mee als inkomsten, maar niet voor de belasting.</p>
         <p>"Nog te beoordelen" (Overig) betekent dat de app het niet weet. Deel die boekingen in bij Controleren of in Eenvoudig bij Nakijken.</p>
       </div>
     ),
@@ -132,7 +134,7 @@ export const PRIVE_HELP_CHAPTERS = [
     groep: "overzicht",
     titel: "Downloaden en Print",
     inhoud: (
-      <p><strong>Budgetoverzicht downloaden</strong> vraagt welk formaat gewenst is. <em>PDF</em> en <em>HTML</em> bevatten het budget, uitgaven per categorie, vaste lasten en de maanden. <em>Excel</em> maakt per jaar een tabblad Budget en een tabblad Per maand, plus een tabblad met alle transacties. Elk rapport in de app heeft dezelfde knop Downloaden met de keuze PDF, Excel of HTML. <strong>Print budgetoverzicht</strong> opent een printbare pagina met het budget, uitgaven per categorie, vaste lasten en de maanden. Bewaar deze bestanden zorgvuldig: ze bevatten financiële gegevens.</p>
+      <p><strong>Overzicht downloaden</strong> vraagt welk formaat gewenst is. <em>PDF</em> en <em>HTML</em> bevatten de inkomsten en uitgaven, uitgaven per categorie, vaste lasten en de maanden. <em>Excel</em> maakt per jaar een tabblad Inkomsten en uitgaven en een tabblad Per maand, plus een tabblad met alle transacties. Elk rapport in de app heeft dezelfde knop Downloaden met de keuze PDF, Excel of HTML. <strong>Overzicht printen</strong> opent een printbare pagina met de inkomsten en uitgaven, uitgaven per categorie, vaste lasten en de maanden. Bewaar deze bestanden zorgvuldig: ze bevatten financiële gegevens.</p>
     ),
   },
   {
@@ -148,7 +150,7 @@ export const PRIVE_HELP_CHAPTERS = [
     groep: "documenten",
     titel: "Samenvatting",
     inhoud: (
-      <p>Het budget en de belastingindicatie in één oogopslag, voor één of meer jaren, met de aannames en wat er nog open staat. Handig om te bewaren, te printen of mee te nemen naar een gesprek.</p>
+      <p>De inkomsten en uitgaven en de belastingindicatie in één oogopslag, voor één of meer jaren, met de aannames en wat er nog open staat. Handig om te bewaren, te printen of mee te nemen naar een gesprek.</p>
     ),
   },
   {

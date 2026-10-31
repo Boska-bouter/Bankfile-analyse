@@ -182,11 +182,11 @@ export default function AppSidebar({
         )}
       </div>
 
-      {/* nieuw-V1R01 — wisselen naar de eenvoudige weergave */}
+      {/* nieuw-V1R01 — wisselen naar Eenvoudig */}
       {onEenvoudig && (
         <div className="px-1.5 pb-2.5 mb-2.5 border-b border-white/10">
           {collapsed ? (
-            <button type="button" onClick={onEenvoudig} title="Naar de eenvoudige weergave" style={{ minHeight: 0 }} className="w-full rounded-lg border border-slate-600 px-1 py-0.5 text-[10px] font-semibold text-slate-200 hover:bg-white/5">Eenv.</button>
+            <button type="button" onClick={onEenvoudig} title="Naar Eenvoudig" style={{ minHeight: 0 }} className="w-full rounded-lg border border-slate-600 px-1 py-0.5 text-[10px] font-semibold text-slate-200 hover:bg-white/5">Eenv.</button>
           ) : (
             <div className="flex rounded-full bg-white/10 p-0.5 text-[11px] leading-tight">
               <button type="button" onClick={onEenvoudig} style={{ minHeight: 0 }} className="flex-1 rounded-full px-2 py-0.5 text-slate-300 hover:text-white">Eenvoudig</button>
@@ -358,17 +358,17 @@ export default function AppSidebar({
           </button>
         )}
         {saveState && (
-          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500 leading-snug" title="Automatisch opgeslagen in déze browser — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
+          <div className="sb-label flex items-start gap-1.5 text-[11px] text-slate-500 leading-snug" title="Automatisch opgeslagen op dit apparaat (in de browser) — dat is geen dossierbestand. Gebruik 'Dossier opslaan' voor een bestand.">
             {saveState === "saving" && (
               <>
-                <Loader2 className="h-3 w-3 animate-spin" /> Opslaan in browser…
+                <Loader2 className="h-3 w-3 animate-spin" /> Opslaan op dit apparaat…
               </>
             )}
             {saveState === "saved" && (
               <>
                 <Check className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
                 <span>
-                  Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · browser
+                  Automatisch opgeslagen{lastSavedAt ? ` ${lastSavedAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""} · op dit apparaat
                 </span>
               </>
             )}

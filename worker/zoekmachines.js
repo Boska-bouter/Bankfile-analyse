@@ -12,7 +12,7 @@ export function zoekmachinesWelkom(env, url) {
 }
 
 export const WELKOM_TITEL = "BankafschriftenTool — van bankafschrift naar btw- en IB-aangifte";
-export const WELKOM_BESCHRIJVING = "Bankafschriften inlezen (CSV, MT940, CAMT.053) en automatisch indelen in inkomsten en uitgaven, met een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting. Voor zzp, eenmanszaak, BV en een privé budgetoverzicht.";
+export const WELKOM_BESCHRIJVING = "Bankafschriften inlezen (CSV, MT940, CAMT.053) en automatisch indelen in inkomsten en uitgaven, met een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting. Voor zzp, eenmanszaak, BV en privé (inkomsten en uitgaven van het huishouden).";
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

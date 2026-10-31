@@ -1,3 +1,4 @@
+import { uitgebreidExtra } from "../../content/aanbod.js";
 // beide-V3R2 / V7R8 — Eenvoudig → Uitgebreid gaat maar één kant op (besluit Boska 23-10): heen en weer wisselen gaf
 // open vragen die terugkwamen en posten die opnieuw werden gevraagd. Daarom eerst deze bevestiging.
 // beide-V7R1 — vooraf uitleggen wat blijft, wat verandert en waarom terug niet kan, met een klein voorbeeld (review punt 4).
@@ -10,7 +11,7 @@ const WAT_VERANDERT = {
   ],
   prive: [
     "Alle tabbladen worden zichtbaar: Overzicht, Controleren en Instellingen.",
-    "Er komen vaste lasten, sparen, box 3 en meerdere jaren naast elkaar bij.",
+    `Er komen ${uitgebreidExtra("prive")} bij.`,
     "De wizard stelt de vragen die in Eenvoudig zijn overgeslagen.",
   ],
 };

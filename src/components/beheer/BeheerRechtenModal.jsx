@@ -217,7 +217,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     <ModalShell title="Gebruikers en rechten" onClose={onClose} maxWidth="max-w-3xl">
       <div className="space-y-5 text-sm text-slate-700">
         <p className="text-slate-500">
-          Geef per e-mailadres toegang, apart voor zakelijk en privé: Eenvoudig, de uitgebreide weergave en de bankkoppeling.
+          Geef per e-mailadres toegang, apart voor zakelijk en privé: Eenvoudig, Uitgebreid en de bankkoppeling.
           Zonder einddatum blijft het recht staan.
           {eigenEmail ? <> Jij bent ingelogd als <b>{eigenEmail}</b> en staat als beheerder in de Worker.</> : null}
         </p>
@@ -288,7 +288,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                       <input type="checkbox" checked={x.uitgebreid || x.eenvoudig} disabled={x.uitgebreid} onChange={soortVeld(s, "eenvoudig")} /> Eenvoudig
                     </label>
                     <label className="inline-flex items-center gap-2">
-                      <input type="checkbox" checked={x.uitgebreid} onChange={soortVeld(s, "uitgebreid")} /> Uitgebreide weergave
+                      <input type="checkbox" checked={x.uitgebreid} onChange={soortVeld(s, "uitgebreid")} /> Uitgebreid
                     </label>
                     <label className={`inline-flex items-center gap-2 ${x.uitgebreid ? "" : "opacity-50"}`}>
                       <input type="checkbox" checked={x.uitgebreid && x.koppelen} disabled={!x.uitgebreid} onChange={soortVeld(s, "koppelen")} /> Bankkoppeling

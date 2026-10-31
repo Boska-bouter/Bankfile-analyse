@@ -95,7 +95,7 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          <strong>Automatisch bewaard.</strong> Het dossier wordt automatisch in deze browser bewaard, niet op een server (zie
+          <strong>Automatisch bewaard.</strong> Het dossier wordt automatisch op dit apparaat bewaard (in de browser), niet op een server (zie
           "Privacy: wat blijft lokaal en wat niet"). "Dossier opslaan" maakt daarnaast een bestand om zelf te bewaren en later weer te laden.
           Bewaar dat bestand en exports zorgvuldig: ze kunnen financiële en persoonlijke gegevens bevatten.
         </p>
@@ -111,7 +111,7 @@ export const HELP_CHAPTERS = [
           instellingen worden leeggemaakt. De app vraagt eerst of er moet worden opgeslagen. Wordt de wizard daarna halverwege gestopt, dan
           blijft er een leeg dossier over. Direct na het starten is dit nog terug te draaien met "Ongedaan maken" in de
           zijbalk. Op het keuzescherm "Vorig dossier gevonden" (bij het opstarten) werkt "Nieuw dossier" anders: daar
-          blijft het oude dossier in de browser bewaard totdat er een nieuw bestand wordt toegevoegd.
+          blijft het oude dossier op dit apparaat bewaard totdat er een nieuw bestand wordt toegevoegd.
         </p>
       </div>
     ),
