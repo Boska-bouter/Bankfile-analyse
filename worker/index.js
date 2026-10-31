@@ -9,7 +9,7 @@ import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
 import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
-import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen, logboekControle } from "./rechten.js";
+import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen, logboekControle, registreerGezien } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
 const SOORTEN = ["Hulpvraag", "Feedback"];
@@ -69,6 +69,7 @@ export default {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       const r = await rechtenVan(email, env);
       const aanvragen = r.beheerder ? await telAanvragen(env) : 0;
+      if (email && env.DB) ctx.waitUntil(registreerGezien(env, email).catch((e) => console.error("gezien", e?.message))); // beide-V12R0
       // beide-V7R3 — herinneringen "abonnement loopt af" versturen als de beheerder de app opent (hooguit eens per uur
       // per isolate), zodat er geen Cron Trigger nodig is. Dubbel versturen kan niet: de database onthoudt het per einddatum.
       if (r.beheerder && env.DB && Date.now() - laatsteHerinnering > 3600_000) {
@@ -130,7 +131,7 @@ export default {
     const release = schoon(body?.release, 40);
     if (!bericht) return json({ ok: false, fout: "Bericht is leeg" }, 400);
 
-    const subject = `[Bankoverzicht] ${soort}${onderwerp ? `: ${onderwerp.replace(/[\r\n]+/g, " ")}` : ""}`;
+    const subject = `[RekeningNaarAangifte] ${soort}${onderwerp ? `: ${onderwerp.replace(/[\r\n]+/g, " ")}` : ""}`;
     const regels = [`Van: ${naam || "(geen naam)"} <${email}>`, `App: ${release || "onbekend"}`];
     const text = `${bericht}\n\n—\n${regels.join("\n")}`;
     const html = `<div style="font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap">${esc(bericht)}</div><hr><p style="font-family:Arial,sans-serif;font-size:12px;color:#555">${regels.map(esc).join("<br>")}</p>`;

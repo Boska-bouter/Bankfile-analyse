@@ -13,7 +13,7 @@ export default function VoorwaardenScherm({ soorten = ["zakelijk"], onAkkoord })
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 sm:p-6">
       <div className="max-w-2xl w-full rounded-paneel border border-slate-200 bg-white shadow-lg flex flex-col" style={{ maxHeight: "92dvh" }}>
         <div className="px-6 pt-6 pb-3">
-          <h1 className="text-lg font-semibold">Welkom bij Bankoverzicht</h1>
+          <h1 className="text-lg font-semibold">Welkom bij RekeningNaarAangifte</h1>
           <p className="text-sm text-slate-500 mt-1">Lees eerst waarvoor deze app bedoeld is en waarvoor niet.</p>
         </div>
         <div className="px-6 py-3 overflow-y-auto text-xs text-slate-600 leading-relaxed border-y border-slate-100">{soorten.map((s) => (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import Logo from "../shared/Logo.jsx";
 import { Check, Upload, Download, Save, ClipboardList, ChevronLeft, FileSpreadsheet, FileText, FolderOpen, FolderPlus, ChevronDown, BookOpen, CalendarDays } from "lucide-react";
 import UitlegEenvoudig from "./UitlegEenvoudig.jsx";
 import MijnAntwoorden from "./MijnAntwoorden.jsx";
@@ -197,8 +198,8 @@ export default function EenvoudigeApp({
     <div className="space-y-5" data-eenvoudig>
       {/* Kop: naam, jaar, schakelaar */}
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#0f2a3a] px-5 py-3 text-white">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 font-extrabold text-slate-900">B</span>
-        <div className="leading-tight"><p className="font-bold">Bankoverzicht</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
+        <Logo size={32} />
+        <div className="leading-tight"><p className="font-bold">RekeningNaarAangifte</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="flex min-w-0 flex-1 justify-center">
           <div className="text-center leading-tight">

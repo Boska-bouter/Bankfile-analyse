@@ -94,7 +94,7 @@ export async function controleerLogboekGrootte(env, mail) {
   for (const to of aan) {
     try {
       await mail(to, `het logboek heeft ${aantal} regels`, [
-        `Het beheerlogboek van Bankoverzicht heeft ${aantal} regels; de grens is ${grens}.`,
+        `Het beheerlogboek van RekeningNaarAangifte heeft ${aantal} regels; de grens is ${grens}.`,
         "Exporteer het logboek en schoon het daarna op: Gebruikers en rechten → Logboek → Exporteren. Het bestand opent in Excel.",
       ]);
       verstuurd++;

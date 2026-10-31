@@ -101,7 +101,7 @@ async function startpagina(request) {
   const bewaard = await caches.match("/", { cacheName: CACHE }) || await caches.match("/");
   const recent = Date.now() - (await laatsteBezoek()) < NOOD_DAGEN * 86_400_000;
   if (bewaard && recent && !(await einddatumVoorbij())) return bewaard;
-  return pagina("Bankoverzicht is even niet bereikbaar",
+  return pagina("RekeningNaarAangifte is even niet bereikbaar",
     "De server is op dit moment niet bereikbaar. Probeer het over een paar minuten opnieuw. Dossiers staan als bestand op dit apparaat en gaan niet verloren.",
     "Opnieuw proberen");
 }

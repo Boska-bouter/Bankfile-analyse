@@ -203,7 +203,7 @@ export async function verstuur(env, bericht) {
 
 // nieuw-V5R2 — aanhef en handtekening voor alle mails aan gebruikers. Handtekening aanpasbaar met de variabele
 // MAIL_HANDTEKENING (regels gescheiden door "\n"), anders de standaardtekst hieronder.
-const STANDAARD_HANDTEKENING = "Met vriendelijke groet,\nPaul Gerits\nEigenaar en ontwikkelaar van Bankoverzicht";
+const STANDAARD_HANDTEKENING = "Met vriendelijke groet,\nPaul Gerits\nEigenaar en ontwikkelaar van RekeningNaarAangifte";
 export function opmaakMail(env, { naam = "", zonderNaam = "Hallo,", regels = [], lijst = [], naLijst = [], knop = null, voetnoot = "" }) {
   const aanhef = naam ? `Beste ${naam},` : zonderNaam;
   const handtekening = String(env.MAIL_HANDTEKENING || STANDAARD_HANDTEKENING).replace(/\\n/g, "\n").split("\n");
@@ -266,7 +266,7 @@ async function stuurLink(env, email, link) {
   const { text, html } = opmaakMail(env, nieuw ? {
     zonderNaam: "Beste aanvrager,",
     regels: [
-      "Bedankt voor je interesse in Bankoverzicht, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
+      "Bedankt voor je interesse in RekeningNaarAangifte, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
       "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (particulier huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
@@ -278,11 +278,11 @@ async function stuurLink(env, email, link) {
     knop: { link, tekst: "Inloggen en aanvraag doen" },
     voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
   } : {
-    regels: ["Klik op de knop om in te loggen bij Bankoverzicht."],
+    regels: ["Klik op de knop om in te loggen bij RekeningNaarAangifte."],
     knop: { link, tekst: "Inloggen" },
     voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
   });
-  await verstuur(env, { to: email, from, subject: nieuw ? "Je eerste inloglink voor Bankoverzicht" : "Inloggen bij Bankoverzicht", text, html });
+  await verstuur(env, { to: email, from, subject: nieuw ? "Je eerste inloglink voor RekeningNaarAangifte" : "Inloggen bij RekeningNaarAangifte", text, html });
 }
 
 // ---- pagina's ----
@@ -306,7 +306,7 @@ const kanPasskey=!!(window.PublicKeyCredential&&navigator.credentials);`;
 
 const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "") =>
   new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(titel)} · Bankoverzicht</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
+<title>${esc(titel)} · RekeningNaarAangifte</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
 // beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
@@ -330,7 +330,7 @@ ${welkomKop(soorten)}
   <p id="status" role="status"></p>
 </div>
 <div class="kaart inlogkaart">
-  <h2>Start hier je aanvraag voor toegang tot Bankoverzicht</h2>
+  <h2>Start hier je aanvraag voor toegang tot RekeningNaarAangifte</h2>
   <form id="a" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="email" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres voor je aanvraag">
     <button type="submit" class="tweede">Stuur inloglink</button>
@@ -380,9 +380,9 @@ async function bevestigPagina(env, token, huidig = null) {
     }
   } catch { /* dan de gewone tekst */ }
   const tekst = {
-    nieuw: ["Welkom bij Bankoverzicht", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
-    wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor Bankoverzicht is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
-    gewoon: ["Inloggen bij Bankoverzicht", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
+    nieuw: ["Welkom bij RekeningNaarAangifte", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
+    wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor RekeningNaarAangifte is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
+    gewoon: ["Inloggen bij RekeningNaarAangifte", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
     verlopen: ["Link verlopen", "Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.", "", ""],
   }[soort];
   // nieuw-V5R6 — al ingelogd met een ander adres? Dat zeggen, anders lijkt de link naar het verkeerde account te gaan.
@@ -423,7 +423,7 @@ function passkeyPagina(email, aantal, heeftWachtwoord) {
 </div>
 <p id="status" role="status"></p>
 <div class="kaart" id="beginscherm" hidden>
-  <b>Tip: zet Bankoverzicht op je beginscherm</b>
+  <b>Tip: zet RekeningNaarAangifte op je beginscherm</b>
   <p class="sub" style="margin:0">Dan open je de app met één tik, schermvullend en zonder adresbalk.</p>
   <p class="sub" style="margin:0"><b>iPad of iPhone (Safari):</b> tik op het deelicoon (vierkantje met pijl omhoog) en kies <b>Zet op beginscherm</b>. Log daarna één keer in via het nieuwe icoon; dat gaat het snelst met je passkey. Een dossier dat je in Safari hebt, laad je daar via <b>Dossier laden</b>.</p>
   <p class="sub" style="margin:0"><b>Android (Chrome):</b> menu ⋮ en dan <b>Toevoegen aan startscherm</b>. <b>Computer (Chrome of Edge):</b> het installeer-icoon rechts in de adresbalk.</p>
@@ -561,7 +561,7 @@ export async function inlogRoute(request, env, url, email) {
     if (p === "/api/inloggen/passkey/opties-registratie") {
       const u = await nieuweUitdaging(env, email);
       const { results } = await env.DB.prepare("SELECT id FROM passkeys WHERE email = ?").bind(email).all();
-      return json({ ok: true, id: u.id, uitdaging: u.uitdaging, rp: { id: rpId, name: "Bankoverzicht" },
+      return json({ ok: true, id: u.id, uitdaging: u.uitdaging, rp: { id: rpId, name: "RekeningNaarAangifte" },
         gebruiker: { id: b64u((await sha256(`bankoverzicht:${email}`)).slice(0, 16)), naam: email }, bestaand: (results || []).map((r) => r.id) });
     }
     if (p === "/api/inloggen/passkey/registreer") {

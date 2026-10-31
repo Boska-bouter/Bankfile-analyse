@@ -52,6 +52,8 @@ const EXTRA_KOLOMMEN = [
   ["verlenging", "INTEGER NOT NULL DEFAULT 0"],
   ["herinnerd", "TEXT"],
   ["prive_herinnerd", "TEXT"],
+  // beide-V12R0 — laatste dag dat iemand de app opende (/api/rol), voor "30+ dagen niet ingelogd" in Beheer.
+  ["laatst_gezien", "TEXT"],
 ];
 // beide-V7R3 — een gratis abonnement loopt 30 dagen (besluit Boska 26-10), daarna verlengen met één knop. Afwijken kan
 // met de variabele GRATIS_DAGEN (0 = zonder einddatum, zoals vóór V7R3). HERINNER_DAGEN vóór het einde komt er een mail.
@@ -211,8 +213,21 @@ export const rijNaarRecht = (r) => {
     bron: r.bron, notitie: r.notitie || "", gewijzigd: r.gewijzigd, gewijzigdDoor: r.gewijzigd_door || null,
     telefoon: r.telefoon || null, organisatie: r.organisatie || "", verlenging: !!r.verlenging && !!r.aanvraag,
     aanvraag: r.aanvraag || null, aangevraagd: r.aangevraagd || null, naam: r.naam || "", reden: r.reden || "",
+    laatstGezien: r.laatst_gezien || null,
   };
 };
+
+// beide-V12R0 — onthoud de dag waarop iemand de app opent. Hooguit één keer per dag per adres naar de database
+// (per isolate onthouden), en alleen voor wie al in de lijst staat.
+const gezienVandaag = new Map();
+export async function registreerGezien(env, email) {
+  const e = String(email || "").trim().toLowerCase();
+  const dag = vandaag();
+  if (!e || !env.DB || gezienVandaag.get(e) === dag) return;
+  gezienVandaag.set(e, dag);
+  await zorgVoorTabel(env.DB);
+  await env.DB.prepare("UPDATE rechten SET laatst_gezien = ? WHERE email = ? AND (laatst_gezien IS NULL OR laatst_gezien < ?)").bind(dag, e, dag).run();
+}
 
 // Hoogste niveau binnen één soort: 0 niets, 1 Eenvoudig, 2 Uitgebreid, 3 met bankkoppeling.
 export const niveauVan = (x) => (x?.koppelen ? 3 : x?.uitgebreid ? 2 : x?.eenvoudig ? 1 : 0);
@@ -286,14 +301,14 @@ async function meldAanvrager(env, doel, onderwerp, regels, knop, naam = "", lijs
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
   if ((!env.EMAIL && !env.RESEND_API_KEY) || !from) return "geen afzender ingesteld";
   const { text, html } = opmaakMail(env, { naam, zonderNaam: "Beste aanvrager,", regels, knop, lijst, naLijst });
-  try { await verstuur(env, { to: doel, from, subject: `Bankoverzicht: ${onderwerp}`, text, html }); return null; }
+  try { await verstuur(env, { to: doel, from, subject: `RekeningNaarAangifte: ${onderwerp}`, text, html }); return null; }
   catch (e) { console.error("aanvrager: e-mail mislukt", e?.message); return String(e?.message || e).slice(0, 200); }
 }
 
 async function meldBeheerder(env, onderwerp, tekst) {
   const from = env.INLOG_FROM || env.FEEDBACK_FROM;
   if (!env.EMAIL || !env.FEEDBACK_TO || !from) return;
-  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from, subject: `[Bankoverzicht] ${onderwerp}`, text: tekst }); }
+  try { await env.EMAIL.send({ to: env.FEEDBACK_TO, from, subject: `[RekeningNaarAangifte] ${onderwerp}`, text: tekst }); }
   catch (e) { console.error("aanmelden: e-mail mislukt", e?.message); }
 }
 
@@ -313,7 +328,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   if (!plannenVoor(env)[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
   // beide-V1R0 — verplichte keuze zakelijk of privé.
   const gebruik = geldigGebruik(String(body?.gebruik || ""));
-  if (!gebruik) return json({ ok: false, fout: "Kies of je Bankoverzicht zakelijk of privé gebruikt." }, 400);
+  if (!gebruik) return json({ ok: false, fout: "Kies of je RekeningNaarAangifte zakelijk of privé gebruikt." }, 400);
   // nieuw-V5R4 — voor- en achternaam verplicht (samen opgeslagen in de kolom naam).
   const voornaam = schoon(body?.voornaam, 60);
   const achternaam = schoon(body?.achternaam, 80);
@@ -356,7 +371,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
       ...heeftAl, `Reden:\n${reden}`, "Keur de aanvraag goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk)."].join("\n\n"));
   // nieuw-V5R2 — bevestiging aan de aanvrager, met een korte uitleg van de drie abonnementen.
   const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
-    `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij Bankoverzicht, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
+    `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij RekeningNaarAangifte, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
     `Je hebt gekozen voor ${gebruik === "prive" ? "privégebruik (particulier huishouden)" : "zakelijk gebruik (eenmanszaak, zzp of BV)"}.`,
     `Ter herinnering, dit zijn de ${Object.keys(plannenVoor(env)).length === 3 ? "drie" : "twee"} abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
   ], null, naam, Object.entries(plannenVoor(env)).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
@@ -415,7 +430,7 @@ export async function verloopHerinneringen(env, { nu = vandaag(), origin = null 
       const plan = NIVEAU_PLAN[niveauVan(soortUitRij(r, s))];
       const link = basis ? `${String(basis).replace(/\/+$/, "")}/aanmelden?verlengen=${s}` : null;
       const fout = await meldAanvrager(env, r.email, `je abonnement loopt af op ${datumNl(einde)}`, [
-        `Je abonnement ${planNaam(s, plan)} bij Bankoverzicht loopt af op ${datumNl(einde)}.`,
+        `Je abonnement ${planNaam(s, plan)} bij RekeningNaarAangifte loopt af op ${datumNl(einde)}.`,
         "Wil je de app blijven gebruiken? Vraag dan verlenging aan. Dat is één knop; ik keur het verzoek daarna goed en je krijgt een e-mail.",
         "Je dossiers bewaar je zelf als bestand. Die blijven altijd van jou, ook als het abonnement afloopt.",
       ], link ? { link, tekst: "Verlenging aanvragen" } : null, r.naam || "", [],
@@ -435,7 +450,7 @@ export function logboekControle(env) {
   if ((!env.EMAIL && !env.RESEND_API_KEY) || !from) return Promise.resolve({ gemeld: false });
   return controleerLogboekGrootte(env, async (to, onderwerp, regels) => {
     const { text, html } = opmaakMail(env, { regels });
-    await verstuur(env, { to, from, subject: `Bankoverzicht: ${onderwerp}`, text, html });
+    await verstuur(env, { to, from, subject: `RekeningNaarAangifte: ${onderwerp}`, text, html });
   });
 }
 const datumNl = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
@@ -533,13 +548,13 @@ export async function beheerRoute(request, env, url, email) {
       const totTekst = nieuwEinde ? ` Het abonnement loopt tot en met ${datumNl(nieuwEinde)}; daarna kun je met één knop verlengen.` : "";
       const mailFout = verlenging
         ? await meldAanvrager(env, doel, "je abonnement is verlengd",
-          [`Je abonnement ${planNaam(gebruik, plan)} is verlengd${nieuwEinde ? ` tot en met ${datumNl(nieuwEinde)}` : ""}. Je kunt Bankoverzicht gewoon blijven gebruiken.`],
-          { link: `${url.origin}/`, tekst: "Open Bankoverzicht" }, r?.naam || "")
+          [`Je abonnement ${planNaam(gebruik, plan)} is verlengd${nieuwEinde ? ` tot en met ${datumNl(nieuwEinde)}` : ""}. Je kunt RekeningNaarAangifte gewoon blijven gebruiken.`],
+          { link: `${url.origin}/`, tekst: "Open RekeningNaarAangifte" }, r?.naam || "")
         : await meldAanvrager(env, doel, "je aanmelding is goedgekeurd", link
-        ? [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt Bankoverzicht nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`,
+        ? [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt RekeningNaarAangifte nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`,
           "Klik op de knop om in te loggen. Daarna stel je een wachtwoord in, of maak je een passkey aan zodat je inlogt met Face ID, Touch ID of de pincode van je apparaat."]
-        : [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt Bankoverzicht nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`],
-        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open Bankoverzicht" }, r?.naam || "", [],
+        : [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt RekeningNaarAangifte nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`],
+        { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open RekeningNaarAangifte" }, r?.naam || "", [],
         link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
       await logBeheer(env.DB, { door, email: doel, actie: verlenging ? "verlenging goedgekeurd" : "aanvraag goedgekeurd", details: `${planNaam(gebruik, plan)}${nieuwEinde !== oudEinde ? `; einddatum ${oudEinde || "geen"} → ${nieuwEinde || "geen"}` : ""}${mailFout ? `; mail NIET verstuurd: ${mailFout}` : "; mail verstuurd"}` });
       return json({ ok: true, mailFout, geldigTot: nieuwEinde });
@@ -557,7 +572,7 @@ export async function beheerRoute(request, env, url, email) {
         [`Je verzoek om ${planNaam(geldigGebruik(r.aanvraag_gebruik) || "zakelijk", r.aanvraag)} te verlengen, is op dit moment niet goedgekeurd.`,
           "Heb je vragen? Beantwoord dan gerust deze e-mail. Je dossiers bewaar je zelf als bestand; die blijven van jou."],
         null, r?.naam || "") : await meldAanvrager(env, doel, "over je aanvraag",
-        [`Bedankt voor je aanvraag voor ${planNaam(geldigGebruik(r.aanvraag_gebruik) || "zakelijk", r.aanvraag)} bij Bankoverzicht.`,
+        [`Bedankt voor je aanvraag voor ${planNaam(geldigGebruik(r.aanvraag_gebruik) || "zakelijk", r.aanvraag)} bij RekeningNaarAangifte.`,
           "Helaas kan ik je aanvraag op dit moment niet goedkeuren, omdat er te weinig informatie is gegeven om je toegang tot de app te geven.",
           "Je kunt op deze e-mail reageren met de vraag wat er ontbreekt. Je kunt ook meteen meer informatie sturen over waarom je toegang vraagt en waarvoor je de app wilt gebruiken. Daarna bekijk ik je aanvraag opnieuw."],
         null, r?.naam || "");
