@@ -140,7 +140,7 @@ function terugPagina(gelukt, tekst) {
   const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bankkoppeling</title>
 <style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f8fafc;color:#0f172a}main{max-width:32rem;margin:12vh auto;padding:28px 24px;background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 12px;color:${gelukt ? "#0f766e" : "#b91c1c"}}p{line-height:1.5;color:#334155}a{display:inline-block;margin-top:12px;color:#0f766e}</style></head><body><main>
 <h1>${gelukt ? "Koppeling gelukt" : "Koppeling niet gelukt"}</h1><p>${escHtml(tekst)}</p>
-<p>Ga terug naar de app Bankoverzicht (bijvoorbeeld via het icoon op je beginscherm). ${gelukt ? "De rekeningen verschijnen daar vanzelf in het venster van de bankkoppeling (open het zo nodig opnieuw)." : "Begin daar zo nodig opnieuw met koppelen."} Dit venster mag je sluiten.</p>
+<p>Ga terug naar de app RekeningNaarAangifte (bijvoorbeeld via het icoon op je beginscherm). ${gelukt ? "De rekeningen verschijnen daar vanzelf in het venster van de bankkoppeling (open het zo nodig opnieuw)." : "Begin daar zo nodig opnieuw met koppelen."} Dit venster mag je sluiten.</p>
 <a href="/">Of open de app in deze browser</a></main></body></html>`;
   return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
 }

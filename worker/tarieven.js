@@ -81,13 +81,13 @@ export async function tarievenHerinneringMail(env, nu = new Date()) {
   const aan = String(env.BEHEERDERS || "").split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter((x) => x && !x.startsWith("*@"));
   if ((!env.EMAIL && !env.RESEND_API_KEY) || !from || !aan.length) return { verstuurd: 0, reden: "geen afzender of beheerder" };
   const { text, html } = opmaakMail(env, {
-    regels: [`${h.tekst}. Zolang dat zo is, rekent Bankoverzicht voor ${h.jaar} met voorlopige of benaderde bedragen.`,
+    regels: [`${h.tekst}. Zolang dat zo is, rekent RekeningNaarAangifte voor ${h.jaar} met voorlopige of benaderde bedragen.`,
       "Zet het nieuwe tarievenbestand op de server via Gebruikers en rechten → Tarieven (eerst DEV, dan productie)."],
     voetnoot: "Deze herinnering komt op de 1e en 15e van december tot en met maart, tot de tarieven zijn bijgewerkt.",
   });
   let verstuurd = 0;
   for (const to of aan) {
-    try { await verstuur(env, { to, from, subject: `Bankoverzicht: ${h.tekst.toLowerCase()}`, text, html }); verstuurd++; }
+    try { await verstuur(env, { to, from, subject: `RekeningNaarAangifte: ${h.tekst.toLowerCase()}`, text, html }); verstuurd++; }
     catch (e) { console.error("tarieven: herinnering mislukt", e?.message); }
   }
   return { verstuurd };

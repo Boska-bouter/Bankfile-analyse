@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import Logo from "../shared/Logo.jsx";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
 import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard } from "lucide-react";
@@ -147,18 +148,11 @@ export default function AppSidebar({
     >
       {/* Logo + org */}
       <div className="flex items-center gap-2.5 px-1.5 pb-1.5">
-        <div
-          className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ background: "linear-gradient(135deg, #E8B44C, #C89530)" }}
-        >
-          <span className="font-bold text-[15px]" style={{ color: "#211705" }}>
-            B
-          </span>
-        </div>
+        <Logo size={34} />
         <div className="sb-label flex flex-col min-w-0 flex-grow">
-          <span className="text-[14.5px] font-bold text-white whitespace-nowrap">Bankoverzicht</span>
+          <span className="text-[13px] font-bold text-white whitespace-nowrap tracking-tight">Rekening<span className="font-normal text-slate-300">Naar</span><span className="text-teal-300">Aangifte</span></span>
           {/* release22V1 — copyright en release staan nu onderaan de zijbalk (rustiger kop) */}
-          <span className="text-[11px] text-slate-400 leading-snug">Analyse van bankafschriften</span>
+          <span className="text-[11px] text-slate-400 leading-snug">Inzicht in geldstromen</span>
         </div>
       </div>
       {/* nieuw-V4R8 — uitloggen bovenin naast inklappen; ingeklapt staat hij eronder, dus altijd zichtbaar. */}

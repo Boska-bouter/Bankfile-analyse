@@ -194,8 +194,12 @@ export function checkBalanceConsistency(txForFile, openingBalanceOverride) {
       runningBalance = tx.balance;
     }
   }
+  // beide-V11R9 — beginsaldo van het bestand = saldo vóór de eerste mutatie (saldo na de eerste mutatie min het bedrag).
+  // De aansluiting met het vorige bestand vergeleek eerst het saldo NÁ de eerste mutatie, waardoor bij Koenders elke
+  // jaarovergang precies het bedrag van de eerste boeking "verschil" gaf, terwijl de saldi wel aansloten (31-10).
+  const beginsaldo = Math.round((openingBalance - (Number(first.amount) || 0)) * 100) / 100;
   return {
-    ok, diff, first: openingBalance, fileOpeningBalance: first.balance, last: last.balance,
+    ok, diff, first: openingBalance, fileOpeningBalance: first.balance, beginsaldo, last: last.balance,
     isCorrected: openingBalanceOverride != null && openingBalanceOverride !== first.balance,
     breakpoints: breakpoints.slice(0, 10),
   };
@@ -245,7 +249,7 @@ export function computeFileContinuity(diagnostics, accountTypeByFile) {
       const a = sorted[i];
       const b = sorted[i + 1];
       if (b.from <= a.to) continue; // overlappende periodes — geen zinvol aansluitpunt
-      const bOpening = b.balanceCheck.fileOpeningBalance;
+      const bOpening = b.balanceCheck.beginsaldo ?? b.balanceCheck.fileOpeningBalance;
       const diff = Math.round((bOpening - a.balanceCheck.last) * 100) / 100;
       const ok = Math.abs(diff) < 0.01;
       results.push({

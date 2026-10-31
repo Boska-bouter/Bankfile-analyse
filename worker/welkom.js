@@ -31,7 +31,7 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
 
 // Zelfde tekst als VEILIG_KORT in src/content/veiligheid.jsx (de Worker laadt geen React-bestanden).
-const VEILIG = "Bankoverzicht vraagt je nooit om je rekeningnummer, inlogcodes, wachtwoord of bankbestanden per mail, sms, WhatsApp of telefoon. Krijg je zo'n verzoek, stuur dan niets. Help je iemand anders, vraag dan ook zelf nooit om zulke gegevens op die manier.";
+const VEILIG = "RekeningNaarAangifte vraagt je nooit om je rekeningnummer, inlogcodes, wachtwoord of bankbestanden per mail, sms, WhatsApp of telefoon. Krijg je zo'n verzoek, stuur dan niets. Help je iemand anders, vraag dan ook zelf nooit om zulke gegevens op die manier.";
 
 // beide-V7R2 — abonnementen compact naast elkaar (ChatGPT-review punt 1): per regel wat elk abonnement heeft, plus
 // waar de bankgegevens vandaan komen, wanneer het beschikbaar is en de prijs per soort. Ook op de aanmeldpagina.
@@ -97,7 +97,7 @@ export function welkomKop(soorten) {
   const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     "Bankbestanden blijven in de browser", gratis ? "Voorlopig gratis" : null].filter(Boolean);
   return `<header class="kop">
-<h1>Bankoverzicht</h1>
+<h1 style="display:flex;align-items:center;gap:10px"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" style="flex:none"><rect x="1" y="1" width="32" height="32" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="5" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#1E2A4A">R</text><path d="M14.5 17h5m-2-2.5l2.5 2.5-2.5 2.5" stroke="#0f766e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="21" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#0f766e">A</text></svg>RekeningNaarAangifte</h1>
 <p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie van de belasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
 <ul class="kenmerken">${kenmerken.map((k) => `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
@@ -115,7 +115,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
   return `
 <div class="welkom">
   <section aria-labelledby="wat">
-    <h2 id="wat">Wat doet Bankoverzicht?</h2>
+    <h2 id="wat">Wat doet RekeningNaarAangifte?</h2>
     <div class="stappen">
       <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
       <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>

@@ -23,6 +23,15 @@ const verlopenOp = (x, vandaag) => x?.geldigTot && vandaag && x.geldigTot < vand
 // beide-V6R8 — verloopt binnenkort (nog niet verlopen). beide-V7R6 — binnen 10 dagen, gelijk aan de herinneringsmail: een gratis abonnement loopt maar 30 dagen.
 const plusDagen = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const bijnaVerlopen = (x, vandaag) => !!(x?.eenvoudig && x.geldigTot && vandaag && x.geldigTot >= vandaag && x.geldigTot <= plusDagen(vandaag, 10));
+// beide-V12R0 — laatst gezien (dag waarop de app voor het laatst is geopend); "inactief" = 30 dagen of langer niet.
+const INACTIEF_DAGEN = 30;
+const inactief = (r, vandaag) => !!(vandaag && (r.eenvoudig || r.uitgebreid) && (!r.laatstGezien || r.laatstGezien <= plusDagen(vandaag, -INACTIEF_DAGEN)));
+const dagenGeleden = (iso, vandaag) => Math.round((new Date(`${vandaag}T12:00:00Z`) - new Date(`${iso}T12:00:00Z`)) / 86400000);
+const gezienTekst = (r, vandaag) => {
+  if (!r.laatstGezien) return "nog niet gezien";
+  const n = vandaag ? dagenGeleden(r.laatstGezien, vandaag) : null;
+  return n === 0 ? "vandaag gezien" : n === 1 ? "gisteren gezien" : `laatst gezien ${new Date(`${r.laatstGezien}T12:00:00`).toLocaleDateString("nl-NL")}${n != null ? ` (${n} dagen)` : ""}`;
+};
 const NIVEAU_NAAM = ["geen toegang", "Eenvoudig", "Uitgebreid", "Uitgebreid + bankkoppeling"];
 const niveauVan = (x) => (x?.uitgebreid ? (x.koppelen ? 3 : 2) : x?.eenvoudig ? 1 : 0);
 // Rij uit een oudere Worker (zonder soorten) als zakelijk lezen.
@@ -43,7 +52,7 @@ async function api(pad, body) {
 const PER_PAGINA = 50;
 const FILTERS = [
   ["alle", "Alle abonnementen"], ["eenvoudig", "Alleen Eenvoudig"], ["uitgebreid", "Uitgebreid (zonder koppeling)"],
-  ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 10 dagen"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
+  ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 10 dagen"], ["inactief", "30+ dagen niet ingelogd"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
 ];
 // beide-V1R0 — filter op soort gebruik (kolom rechten.gebruik).
 const SOORT_FILTERS = [["alle", "Zakelijk en privé"], ["zakelijk", "Zakelijk"], ["prive", "Privé"], ["beide", "Beide"]];
@@ -185,6 +194,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
       if (filter === "koppelen") return soorten.some((x) => x.koppelen);
       if (filter === "verlopen") return soorten.some((x) => x.eenvoudig && verlopenOp(x, vandaag));
       if (filter === "bijna") return soorten.some((x) => bijnaVerlopen(x, vandaag));
+      if (filter === "inactief") return inactief(r, vandaag);
       if (filter === "geen") return !r.eenvoudig && !r.uitgebreid;
       return true;
     })
@@ -353,6 +363,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                         {r.aanvraag ? <> · <button type="button" onClick={() => kiesTab("aanvragen")} className="text-amber-700 underline">vraagt {planNaam(r.aanvraagGebruik, r.aanvraag)}</button></> : null}
                         {r.bron && r.bron !== "handmatig" ? ` · via ${r.bron}` : null}
                         {r.notitie ? ` · ${r.notitie}` : null}
+                        {(r.eenvoudig || r.uitgebreid) ? <> · <span className={inactief(r, vandaag) ? "text-amber-700" : ""}>{gezienTekst(r, vandaag)}</span></> : null}
                       </p>
                     </div>
                     <button type="button" disabled={bezig} onClick={() => bewerk(r)} className={KNOP_SECUNDAIR_KLEIN}>Wijzigen</button>
