@@ -108,6 +108,7 @@ input[type=text],input[type=tel]{font:inherit;padding:8px 10px;border:1px solid 
 button{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;align-self:flex-start}
 button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#status.err{color:var(--err)}
 [hidden]{display:none!important}a{color:var(--accent)}
+.naarapp{display:block;text-align:center;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:11px 16px;text-decoration:none}
 ${VERGELIJK_STIJL}
 details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vgl[open] summary{margin-bottom:8px}.klein{font-size:13px;margin:6px 0 0}
 </style></head><body><main>
@@ -133,7 +134,8 @@ ${verlengLijst.length ? `<h2 style="margin-top:8px">Of een ander abonnement aanv
 <button type="submit">${heeftToegang ? "Aanvraag versturen" : "Aanmelding versturen"}</button>
 <p id="status" role="status"></p>
 </form>
-<p class="sub">${heeftToegang ? `<a href="/">Terug naar de app</a> · ` : ""}Ander e-mailadres? <a href="/uitloggen">Uitloggen</a></p>
+${heeftToegang ? `<a class="naarapp" href="/">Naar de app</a>` : ""}
+<p class="sub">Ander e-mailadres? <a href="/uitloggen">Uitloggen</a></p>
 </main><script>
 const T=${JSON.stringify(perSoort).replace(/</g, "\\u003c")},TOEGANG=${heeftToegang ? "true" : "false"};
 const f=document.getElementById("f"),st=document.getElementById("status"),pl=document.getElementById("plannen");

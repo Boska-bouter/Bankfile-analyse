@@ -14,7 +14,7 @@
 // aanmeldpagina (zie aanmeldPagina). Zonder die variabele mag iedereen die via Access binnenkomt Eenvoudig gebruiken.
 
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
-import { logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
+import { inloggenVastleggen, zetInloggenVastleggen, logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
 import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN } from "./peiling.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
@@ -106,7 +106,7 @@ export const PLAN_UITLEG = {
   },
   prive: {
     eenvoudig: "in vier stappen de bankbestanden indelen en een overzicht krijgen van de inkomsten en uitgaven per maand.",
-    uitgebreid: "alle tabbladen: budget per maand en categorie, vaste lasten, sparen en een indicatie van de inkomstenbelasting (ook eigen woning en box 3).",
+    uitgebreid: "alle tabbladen: inkomsten en uitgaven per maand en categorie, vaste lasten, sparen en vermogen (box 3), eigen woning, meerdere jaren en downloaden.",
     koppelen: "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
   },
 };
@@ -476,7 +476,13 @@ export async function beheerRoute(request, env, url, email) {
     }
     // beide-V6R8 — logboek (laatste 200, met zoeken). beide-V7R7 — met het aantal regels en de grens, exporteren en opschonen.
     if (url.pathname === "/api/beheer/logboek" && request.method === "GET") {
-      return json({ ok: true, logboek: await leesLogboek(env.DB, { zoek: url.searchParams.get("zoek") }), aantal: await telLogboek(env.DB), grens: logboekGrens(env) });
+      return json({ ok: true, logboek: await leesLogboek(env.DB, { zoek: url.searchParams.get("zoek") }), aantal: await telLogboek(env.DB), grens: logboekGrens(env), inloggenVastleggen: await inloggenVastleggen(env.DB) });
+    }
+    if (url.pathname === "/api/beheer/logboek/inloggen" && request.method === "POST") {
+      let b;
+      try { b = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
+      await zetInloggenVastleggen(env.DB, !!b?.aan, String(email).toLowerCase());
+      return json({ ok: true, inloggenVastleggen: !!b?.aan });
     }
     if (url.pathname === "/api/beheer/logboek/export" && request.method === "GET") {
       return json({ ok: true, ...(await exporteerLogboek(env.DB)) });

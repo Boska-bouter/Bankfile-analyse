@@ -14,6 +14,16 @@ export default function BeheerLogboek() {
   const [melding, setMelding] = useState("");
   const [bezig, setBezig] = useState(false);
   const [ververs, setVervers] = useState(0);
+  const [vastleggen, setVastleggen] = useState(null); // beide-V12R9 — inloggen vastleggen aan/uit
+  const zetVastleggen = async (aan) => {
+    setFout("");
+    try {
+      const r = await fetch("/api/beheer/logboek/inloggen", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ aan }) });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d?.ok) throw new Error(d?.fout || `Fout ${r.status}`);
+      setVastleggen(d.inloggenVastleggen); setVervers((x) => x + 1);
+    } catch (e) { setFout(e.message); }
+  };
 
   const exporteer = async () => {
     setBezig(true); setFout(""); setMelding("");
@@ -46,7 +56,7 @@ export default function BeheerLogboek() {
         const r = await fetch(`/api/beheer/logboek${zoek.trim() ? `?zoek=${encodeURIComponent(zoek.trim())}` : ""}`, { credentials: "same-origin", cache: "no-store" });
         const d = await r.json().catch(() => null);
         if (!r.ok || !d?.ok) throw new Error(d?.fout || `Fout ${r.status}`);
-        if (!weg) { setRegels(d.logboek); setStand(d.aantal != null ? { aantal: d.aantal, grens: d.grens } : null); setFout(""); }
+        if (!weg) { setRegels(d.logboek); setStand(d.aantal != null ? { aantal: d.aantal, grens: d.grens } : null); if (typeof d.inloggenVastleggen === "boolean") setVastleggen(d.inloggenVastleggen); setFout(""); }
       } catch (e) { if (!weg) { setFout(e.message); setRegels((x) => x || []); } }
     }, zoek ? 300 : 0);
     return () => { weg = true; clearTimeout(t); };
@@ -61,6 +71,12 @@ export default function BeheerLogboek() {
         </p>
         <button type="button" disabled={bezig} onClick={exporteer} className={`${KNOP_SECUNDAIR_KLEIN} disabled:opacity-50`}>Exporteren en opschonen…</button>
       </div>
+      {vastleggen !== null && (
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={vastleggen} onChange={(e) => zetVastleggen(e.target.checked)} className="h-4 w-4 accent-teal-700" />
+          Inloggen vastleggen in het logboek {vastleggen ? "(aan)" : "(uit)"}
+        </label>
+      )}
       {melding && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800">{melding}</p>}
       <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek op e-mailadres of actie"
         className={`${VELD_KLEIN} w-full`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken in logboek" />

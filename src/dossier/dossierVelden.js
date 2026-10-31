@@ -53,3 +53,33 @@ export function zetDossierTerug(momentopname, zetters) {
     zetters[k]((HERSTEL[k] || ((v) => v))(momentopname[k]));
   }
 }
+
+// beide-V13R0 — leesbare namen voor het wijzigingslog: elke wijziging die de teller "N wijzigingen" ophoogt en niet al
+// door een eigen actie in het log staat, komt erin als "Gewijzigd: …" (wens Boska 31-10: teller 1, log leeg).
+export const VELD_LABEL = {
+  parsedFiles: "bankbestanden", accountTypeByFile: "soort rekening", overridesByCounterparty: "indeling per tegenpartij",
+  overridesByRow: "indeling per boeking", categoryRules: "categorieregels", categoryBtwRates: "btw-tarieven per categorie",
+  btwVerlegd: "btw verlegd", korRegeling: "KOR", rechtsvorm: "rechtsvorm", heeftHolding: "holding", holdingBoekingen: "holdingboekingen",
+  excludedDuplicateFingerprints: "duplicaten", dismissedDuplicateNotice: "melding duplicaten", bevestigdeControles: "controles",
+  businessKeywords: "zakelijke zoekwoorden", businessExpenseKeywords: "zoekwoorden zakelijke kosten",
+  reviewedIncomeKeys: "nagekeken inkomsten", reviewedPersonKeys: "nagekeken personen", reviewedOverigKeys: "nagekeken overig",
+  kwartaalStatus: "btw-kwartalen", voorbelastingExcluded: "voorbelasting", periodeQuarterOverrides: "kwartaal per boeking",
+  reviewedPeriodeKeys: "nagekeken periodes", loanDetails: "leningen", leaseDetails: "lease", leaseMergedInto: "lease samengevoegd",
+  activaDetails: "bedrijfsmiddelen", confirmedLeaseTypeKeys: "soort lease", fixedCategories: "vaste lasten",
+  excludedManualFingerprints: "uitgesloten boekingen", transactionNotes: "notities", verwachteLease: "verwachte lease",
+  verwachteLeaseOverig: "verwachte lease", verwachteLening: "verwachte lening", verwachteAOV: "AOV", heeftVoorraad: "voorraad",
+  eigenNamen: "eigen namen", eigenRekeningenExtra: "eigen rekeningen", bankKoppelingen: "bankkoppeling",
+  zakelijkeSpaarRekening: "zakelijke spaarrekening", opdrachtgeversGevraagd: "opdrachtgevers",
+  ibStatus: "urencriterium", zvwStatus: "Zvw", vpbStatus: "Vpb", zelfstandigenaftrekStatus: "zelfstandigenaftrek",
+  zaLegacyJaDefault: "zelfstandigenaftrek", startersaftrekStatus: "startersaftrek", werkruimteStatus: "werkruimte",
+  eenvoudigGezien: "Eenvoudig", tariefOverrides: "tarieven", overigInkomenBox1: "overig inkomen box 1",
+  priveAntwoorden: "privévragen", autoStatus: "auto", autoWizardStatus: "auto", autoActivaDetails: "auto",
+  kmVergoedingDetails: "kilometers", huurZakelijkPercentageStatus: "huur zakelijk %", energieZakelijkPercentageStatus: "energie zakelijk %",
+  gemeentelijkeKostenZakelijkPercentageStatus: "gemeentelijke kosten zakelijk %", categoryZakelijkPercentage: "zakelijk percentage",
+  openingBalanceCorrections: "beginsaldo", incomeBtwTarieven: "btw-tarief omzet", meerdereTarievenBevestigd: "btw-tarieven omzet",
+  verwachteAangeboden: "verwachte posten",
+};
+export const wijzigingsLabel = (velden) => {
+  const namen = [...new Set(velden.map((k) => VELD_LABEL[k] || "dossiergegevens"))];
+  return `Gewijzigd: ${namen.slice(0, 4).join(", ")}${namen.length > 4 ? " …" : ""}`;
+};
