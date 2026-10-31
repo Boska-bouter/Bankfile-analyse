@@ -58,7 +58,7 @@ export const VOORWAARDEN_INHOUD = (
     <section>
       <h3 className="font-semibold text-slate-800">1. Waarvoor is deze app bedoeld</h3>
       <p>
-        RekeningNaarAangifte helpt om uit bankgegevens een administratie te reconstrueren en een <strong>indicatieve</strong>{" "}
+        BankafschriftenTool helpt om uit bankgegevens een administratie te reconstrueren en een <strong>indicatieve</strong>{" "}
         berekening te maken van winst, BTW en belasting. Het is een hulpmiddel voor wie zelf of namens een ander de
         administratie ordent, bijvoorbeeld voor een gesprek, een controle of de voorbereiding van een aangifte.
       </p>

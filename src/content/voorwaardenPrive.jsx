@@ -16,7 +16,7 @@ export const VOORWAARDEN_PRIVE_EIGEN = (
     <section>
       <h3 className="font-semibold text-slate-800">1. Waarvoor is deze app bedoeld (privé)</h3>
       <p>
-        In een privédossier helpt RekeningNaarAangifte om uit je bankgegevens een overzicht te maken van je inkomsten,
+        In een privédossier helpt BankafschriftenTool om uit je bankgegevens een overzicht te maken van je inkomsten,
         uitgaven, vaste lasten en sparen, en een <strong>indicatie</strong> te geven van je inkomstenbelasting (box 1 en
         box 3), ook samen met een fiscale partner. Het is een hulpmiddel voor je eigen huishouden, bijvoorbeeld om je
         budget te bekijken of je aangifte voor te bereiden.

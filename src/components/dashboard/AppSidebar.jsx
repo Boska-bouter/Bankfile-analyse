@@ -150,7 +150,7 @@ export default function AppSidebar({
       <div className="flex items-center gap-2.5 px-1.5 pb-1.5">
         <Logo size={34} />
         <div className="sb-label flex flex-col min-w-0 flex-grow">
-          <span className="text-[13px] font-bold text-white whitespace-nowrap tracking-tight">Rekening<span className="font-normal text-slate-300">Naar</span><span className="text-teal-300">Aangifte</span></span>
+          <span className="text-[13px] font-bold text-white whitespace-nowrap tracking-tight">Bankafschriften<span className="text-teal-300">Tool</span></span>
           {/* release22V1 — copyright en release staan nu onderaan de zijbalk (rustiger kop) */}
           <span className="text-[11px] text-slate-400 leading-snug">Inzicht in geldstromen</span>
         </div>

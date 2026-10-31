@@ -19,7 +19,7 @@ export default function FeedbackModal({ onClose, voorinvullen = null }) {
   const [status, setStatus] = useState("invullen"); // invullen | bezig | verstuurd | mislukt
   const [gekopieerd, setGekopieerd] = useState(false);
 
-  const subject = `[RekeningNaarAangifte] ${soort}${onderwerp.trim() ? `: ${onderwerp.trim()}` : ""}`;
+  const subject = `[BankafschriftenTool] ${soort}${onderwerp.trim() ? `: ${onderwerp.trim()}` : ""}`;
   const body = `${bericht.trim()}\n\n—\n${naam.trim() ? `Van: ${naam.trim()}\n` : ""}App: ${APP_RELEASE}`;
   const kanVersturen = bericht.trim().length > 0 && status !== "bezig";
 

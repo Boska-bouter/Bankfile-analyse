@@ -33,7 +33,7 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
 
 // Zelfde tekst als VEILIG_KORT in src/content/veiligheid.jsx (de Worker laadt geen React-bestanden).
-const VEILIG = "RekeningNaarAangifte vraagt je nooit om je rekeningnummer, inlogcodes, wachtwoord of bankbestanden per mail, sms, WhatsApp of telefoon. Krijg je zo'n verzoek, stuur dan niets. Help je iemand anders, vraag dan ook zelf nooit om zulke gegevens op die manier.";
+const VEILIG = "BankafschriftenTool vraagt je nooit om je rekeningnummer, inlogcodes, wachtwoord of bankbestanden per mail, sms, WhatsApp of telefoon. Krijg je zo'n verzoek, stuur dan niets. Help je iemand anders, vraag dan ook zelf nooit om zulke gegevens op die manier.";
 
 // beide-V7R2 — abonnementen compact naast elkaar (ChatGPT-review punt 1): per regel wat elk abonnement heeft, plus
 // waar de bankgegevens vandaan komen, wanneer het beschikbaar is en de prijs per soort. Ook op de aanmeldpagina.
@@ -99,8 +99,8 @@ export function welkomKop(soorten) {
   const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     "Bankbestanden blijven in de browser", gratis ? "Voorlopig gratis" : null].filter(Boolean);
   return `<header class="kop">
-<div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="5" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#1E2A4A">R</text><path d="M14.5 17h5m-2-2.5l2.5 2.5-2.5 2.5" stroke="#0f766e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="21" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#0f766e">A</text></svg><div><h1>Rekening<span class="naar">Naar</span><span class="aangifte">Aangifte</span></h1><div class="onder">Inzicht in geldstromen, van rekening naar aangifte</div></div></div>
-<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie van de belasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
+<div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift naar aangifte</div></div></div>
+<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
 <ul class="kenmerken">${kenmerken.map((k) => `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
 }
@@ -117,11 +117,11 @@ export function welkomInhoud({ soorten, veilig = VEILIG }) {
   return `
 <div class="welkom">
   <section aria-labelledby="wat">
-    <h2 id="wat">Wat doet RekeningNaarAangifte?</h2>
+    <h2 id="wat">Wat doet BankafschriftenTool?</h2>
     <div class="stappen">
       <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
       <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>
-      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar het geld vandaan komt en heen gaat, per maand en categorie, en indicatieve belastingoverzichten. Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
+      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar het geld vandaan komt en heen gaat, per maand en categorie, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting (IB). Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
     </div>
   </section>
 

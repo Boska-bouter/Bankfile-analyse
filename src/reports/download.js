@@ -14,7 +14,7 @@ export const DOWNLOAD_SOORTEN = {
   html: { label: "HTML", uitleg: "opent in elke browser" },
 };
 
-const veiligeNaam = (naam) => String(naam || "Bankoverzicht").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_");
+const veiligeNaam = (naam) => String(naam || "BankafschriftenTool").replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_");
 
 export function downloadBlob(blob, naam) {
   const url = URL.createObjectURL(blob);

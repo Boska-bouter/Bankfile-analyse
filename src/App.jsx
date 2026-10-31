@@ -3007,7 +3007,7 @@ export default function App() {
   // van dit dossier al klaar. Lokaal (vite dev, geen Worker) zoals voorheen via het feedbackformulier.
   const vraagAan = (plan) => {
     if (import.meta.env?.DEV) {
-      setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van RekeningNaarAangifte.\n\nReden: " });
+      setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van BankafschriftenTool.\n\nReden: " });
       return;
     }
     naarServer(`/aanmelden?soort=${encodeURIComponent(soortDossier)}&plan=${encodeURIComponent(plan)}`, "Aanmelden");
@@ -3233,7 +3233,7 @@ export default function App() {
         <div className="max-w-md w-full space-y-4">
         <NoodmodusBalk nood={nood} />
         <div className="rounded-paneel border border-slate-200 bg-white p-6 shadow-lg">
-          <h1 className="text-lg font-semibold mb-1">{heeftBewaard ? "Vorig dossier gevonden" : "RekeningNaarAangifte"}</h1>
+          <h1 className="text-lg font-semibold mb-1">{heeftBewaard ? "Vorig dossier gevonden" : "BankafschriftenTool"}</h1>
           <p className="text-sm text-slate-500 mb-3">
             {heeftBewaard
               ? "Er staat op dit apparaat nog een eerder dossier klaar. Wil je daarmee verdergaan, of een nieuw dossier starten?"
