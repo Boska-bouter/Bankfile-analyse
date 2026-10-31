@@ -1185,7 +1185,7 @@ export default function App() {
   };
 
   useAutomatischBewaren({
-    parsedFiles, soortDossier, loaded, setSaveState, changesSinceExport, setChangesSinceExport, lastExportAt, suppressChangeCountUntilRef, restoredChangesRef, setLastSavedAt, loadedProjectFileName, skipNextPersistRef, dossierGegevens,
+    parsedFiles, soortDossier, loaded, setSaveState, changesSinceExport, setChangesSinceExport, lastExportAt, suppressChangeCountUntilRef, restoredChangesRef, setLastSavedAt, loadedProjectFileName, skipNextPersistRef, dossierGegevens, setAuditLog,
   });
   const { pendingAccountTypeRef, handleFiles, handleBankImport, sluitBankKoppeling } = useBestandenInlezen({
     setParsedFiles, setAccountTypeByFile, setExpandedCardKeys, setShowSetupWizard, setImportBezig, setImportHerladen, setError, setBankKoppeling,

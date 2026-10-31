@@ -11,7 +11,7 @@ export default function WijzigingslogModal({ log, kanLaatsteTerugdraaien, laatst
           <h3 className="font-bold text-slate-900">Wijzigingslog</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
         </div>
-        <p className="px-5 text-xs text-slate-500">Eigen keuzes en ingrepen in dit dossier, met datum en tijd. Wordt meegeslagen in het dossierbestand. Alleen de laatste actie kan ongedaan worden gemaakt.</p>
+        <p className="px-5 text-xs text-slate-500">Eigen keuzes en ingrepen in dit dossier, met datum en tijd. Wordt mee opgeslagen in het dossierbestand. Alleen de laatste actie kan ongedaan worden gemaakt.</p>
         {kanLaatsteTerugdraaien && (
           <div className="mx-5 mt-3 flex items-center justify-between gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
             <span>Laatste actie: <strong>{laatsteLabel}</strong></span>

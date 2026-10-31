@@ -103,3 +103,27 @@ export async function controleerLogboekGrootte(env, mail) {
   if (verstuurd) await logBeheer(env.DB, { door: "systeem", actie: GEMELD, details: `${aantal} regels, grens ${grens}; mail aan ${verstuurd} beheerder${verstuurd === 1 ? "" : "s"}` });
   return { gemeld: verstuurd > 0, aantal };
 }
+
+// beide-V12R9 — inloggen vastleggen kan de beheerder aan- en uitzetten (Beheer → Logboek, wens Boska 31-10).
+// Tabel beheer_instellingen (sleutel/waarde); de Worker maakt hem zelf aan. Standaard aan.
+const INST_SCHEMA = "CREATE TABLE IF NOT EXISTS beheer_instellingen (sleutel TEXT PRIMARY KEY, waarde TEXT)";
+const instKlaar = new WeakSet();
+async function zorgInst(db) {
+  if (instKlaar.has(db)) return;
+  await db.prepare(INST_SCHEMA).run();
+  instKlaar.add(db);
+}
+export async function inloggenVastleggen(db) {
+  if (!db) return false;
+  try {
+    await zorgInst(db);
+    const r = await db.prepare("SELECT waarde FROM beheer_instellingen WHERE sleutel = 'inloggen_vastleggen'").first();
+    return r?.waarde !== "uit";
+  } catch { return true; }
+}
+export async function zetInloggenVastleggen(db, aan, door) {
+  await zorgInst(db);
+  await db.prepare("INSERT INTO beheer_instellingen (sleutel, waarde) VALUES ('inloggen_vastleggen', ?) ON CONFLICT(sleutel) DO UPDATE SET waarde = excluded.waarde")
+    .bind(aan ? "aan" : "uit").run();
+  await logBeheer(db, { door, actie: aan ? "inloggen vastleggen aangezet" : "inloggen vastleggen uitgezet" });
+}

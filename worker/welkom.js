@@ -29,7 +29,7 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .stappen{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));counter-reset:stap}
 .stap{counter-increment:stap;gap:4px}.stap::before{content:counter(stap);display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px}
 .stap p{margin:0}.duo{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.klein{font-size:13px;color:var(--muted);margin:0}
+.klein{font-size:13px;color:var(--muted);margin:0}.klein.mi{font-weight:600;color:var(--fg);margin-top:4px}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
 
 // Zelfde tekst als VEILIG_KORT in src/content/veiligheid.jsx (de Worker laadt geen React-bestanden).
@@ -44,11 +44,13 @@ const VERGELIJK = [
   { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" } },
   { t: "Samenvatting om te bewaren of printen", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
   { t: "Indicatie belasting", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
-  { t: "Maandoverzicht", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Inkomsten en uitgaven per maand en categorie", alleen: "prive", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
+  { t: "Inkomen per maand", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
   { t: "Meerdere jaren naast elkaar", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
   { t: "Downloaden (PDF, HTML, Excel)", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
-  { t: "Btw per kwartaal en aangifteberekening", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
-  { t: "Budget, vaste lasten en sparen", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Btw per kwartaal", alleen: "zakelijk", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
+  { t: "Aangifteberekening", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Vaste lasten, sparen en box 3", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
   { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" } },
   { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: "in ontwikkeling" } },
 ];
@@ -80,10 +82,16 @@ export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card
 @media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px}.vergelijk table{font-size:12px}}
 .let{color:#b45309}`;
 
-// soorten: [{ soort, naam, voor, kan: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
+// soorten: [{ soort, naam, voor, beide: [..], uitgebreid: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
+// beide-V13R1 — per soort wat er mogelijk is, verdeeld over Eenvoudig en Uitgebreid (wens Boska 31-10: niet beloven
+// dat je alles altijd krijgt).
 const SOORT_UITLEG = {
-  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kan: ["Budget per maand en categorie", "Vaste lasten en sparen", "Indicatie inkomstenbelasting (Uitgebreid ook eigen woning en box 3)"] },
-  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kan: ["Omzet, kosten en winst", "Indicatie btw per kwartaal", "Indicatie inkomstenbelasting en Zvw (Uitgebreid ook de aangifteberekening, activa, leningen en lease)"] },
+  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.",
+    beide: ["Inkomsten en uitgaven per maand en per categorie", "Indicatie van de inkomstenbelasting"],
+    uitgebreid: ["Vaste lasten", "Sparen en vermogen (box 3)", "Eigen woning", "Meerdere jaren naast elkaar", "Overzicht downloaden"] },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.",
+    beide: ["Omzet, kosten en winst", "Btw per kwartaal", "Indicatie van de inkomstenbelasting en Zvw"],
+    uitgebreid: ["Aangifteberekening", "Bedrijfsmiddelen, leningen en lease", "Meerdere jaren naast elkaar", "Inkomen per maand", "Overzichten downloaden"] },
 };
 export function welkomSoorten(env) {
   const pr = prijzen(env);
@@ -139,7 +147,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   <section>
     <h2>${meer ? "Privé of zakelijk" : "Voor wie"}</h2>
     <div class="duo">${soorten.map((s) => `
-      <div class="kaart"><b>${e(s.naam)}</b><p class="klein">${e(s.voor)}</p><ul>${s.kan.map((k) => `<li>${e(k)}</li>`).join("")}</ul></div>`).join("")}
+      <div class="kaart"><b>${e(s.naam)}: mogelijke inzichten</b><p class="klein">${e(s.voor)}</p><p class="klein mi">In Eenvoudig en Uitgebreid</p><ul>${s.beide.map((k) => `<li>${e(k)}</li>`).join("")}</ul><p class="klein mi">Alleen in Uitgebreid</p><ul>${s.uitgebreid.map((k) => `<li>${e(k)}</li>`).join("")}</ul></div>`).join("")}
     </div>
     ${meer ? `<p class="klein">Met één account kun je beide hebben, elk met een eigen dossier.</p>` : ""}
   </section>

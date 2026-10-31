@@ -17,7 +17,7 @@
 
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
-import { logBeheer } from "./logboek.js";
+import { logBeheer, inloggenVastleggen } from "./logboek.js";
 import { welkomInhoud, welkomVeilig, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
@@ -99,7 +99,7 @@ export async function wieIsIngelogd(request, env) {
 
 async function maakSessie(env, email, manier = "") {
   // beide-V12R8 — elke keer inloggen in het beheerlogboek (wens Boska 31-10).
-  await logBeheer(env.DB, { email, actie: "ingelogd", details: manier });
+  if (await inloggenVastleggen(env.DB)) await logBeheer(env.DB, { email, actie: "ingelogd", details: manier }); // V12R9: aan/uit in Beheer
   const token = willekeurig(32);
   await env.DB.prepare("INSERT INTO sessies (hash, email, aangemaakt, verloopt) VALUES (?, ?, ?, ?)")
     .bind(await hashHex(token), email, new Date().toISOString(), nu() + SESSIE_DAGEN * 86400).run();
