@@ -43,7 +43,7 @@ function verlengBlok(lijst) {
 <ul style="margin:0;padding-left:20px">${regels}</ul>
 <p class="sub" style="margin:0">Met één knop vraag je verlenging aan. Je krijgt een e-mail zodra het is verlengd. Je dossiers blijven altijd van jou.</p>
 ${keuze}
-<fieldset><legend>Zou je bereid zijn voor RekeningNaarAangifte te betalen? (vrijwillig)</legend>
+<fieldset><legend>Zou je bereid zijn voor BankafschriftenTool te betalen? (vrijwillig)</legend>
 <div class="peil">${Object.entries(BETALEN).map(([k, t]) => `<label><input type="radio" name="betalen" value="${k}"> ${t}</label>`).join("")}</div>
 <label id="bedragvak">Zo ja, hoeveel per maand ongeveer? <span style="white-space:nowrap">€ <input type="text" name="bedrag" inputmode="decimal" maxlength="8" style="width:6em"></span></label>
 <label>Toelichting (optioneel)<br><textarea name="toelichting" maxlength="500" rows="2" style="width:100%;box-sizing:border-box"></textarea></label>
@@ -84,9 +84,9 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
       ? "Bijvoorbeeld: ik wil inzicht in de uitgaven van ons huishouden en een indicatie van onze inkomstenbelasting."
       : "Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte.",
   }]));
-  const titel = heeftToegang ? "Abonnementen" : "Aanmelden voor RekeningNaarAangifte";
+  const titel = heeftToegang ? "Abonnementen" : "Aanmelden voor BankafschriftenTool";
   return new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${heeftToegang ? "Abonnementen" : "Aanmelden"} · RekeningNaarAangifte</title>
+<title>${heeftToegang ? "Abonnementen" : "Aanmelden"} · BankafschriftenTool</title>
 <style>
 :root{--bg:#f6f8f7;--fg:#0f172a;--muted:#475569;--card:#fff;--line:#d8e2de;--accent:#0f766e;--ok:#065f46;--okbg:#ecfdf5;--err:#b42318}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1715;--fg:#e4ece9;--muted:#9aaba5;--card:#16211e;--line:#2a3833;--accent:#2fb3a6;--ok:#a7f3d0;--okbg:#0b2b22;--err:#f97066}}
@@ -114,13 +114,13 @@ details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vg
 <h1>${titel}</h1>
 <p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. ${heeftToegang
     ? "Hier zie je je abonnementen en kun je er een aanvragen, bijvoorbeeld privé naast zakelijk. De beheerder keurt de aanvraag goed en je krijgt daarover een e-mail."
-    : "Kies of je RekeningNaarAangifte zakelijk of privé gebruikt, kies een abonnement en vertel kort waarom je toegang vraagt. De beheerder keurt je aanmelding goed en je krijgt daarover een e-mail."}</p>
+    : "Kies of je BankafschriftenTool zakelijk of privé gebruikt, kies een abonnement en vertel kort waarom je toegang vraagt. De beheerder keurt je aanmelding goed en je krijgt daarover een e-mail."}</p>
 ${huidig.length ? `<div class="huidig"><b>Je abonnementen</b><ul>${huidig.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>` : ""}
 ${loopt}
 ${verlengBlok(verlengLijst)}
 ${verlengLijst.length ? `<h2 style="margin-top:8px">Of een ander abonnement aanvragen</h2>` : ""}
 <form id="f">
-<fieldset><legend>Waarvoor gebruik je RekeningNaarAangifte? (verplicht)</legend><div class="soorten">${soortKeuzes}</div></fieldset>
+<fieldset><legend>Waarvoor gebruik je BankafschriftenTool? (verplicht)</legend><div class="soorten">${soortKeuzes}</div></fieldset>
 <fieldset id="plannen"${kiesSoort ? "" : " hidden"}><legend>Abonnement</legend>${planKeuzes}
 <details class="vgl"><summary>Abonnementen vergelijken</summary>${vergelijkTabel(welkomSoorten(env))}</details></fieldset>
 <div class="namen"><label>Voornaam<br><input type="text" name="voornaam" required maxlength="60" autocomplete="given-name" value="${esc(voornaam || "")}" style="width:100%;box-sizing:border-box"></label>

@@ -43,11 +43,12 @@ export async function downloadProjectFile(project, previousFileName, rekeninghou
   // (previousFileName gezet) blijft de bestaande naam + "_vN"-teller intact, zoals al het geval
   // was — die verandert dus niet met terugwerkende kracht als de naam later pas wordt ingevuld.
   const schoneNaam = sanitizeForFilename(rekeninghouderNaam);
+  // beide-V12R4 — een dossier dat nog "Bankoverzicht_…" heet, krijgt bij de volgende keer opslaan de nieuwe naam.
   const filename = previousFileName
-    ? nextVersionedFilename(previousFileName)
+    ? nextVersionedFilename(previousFileName.replace(/^(Bankoverzicht|BankafschriftenTool)_/, "BankafschriftenTool_"))
     : schoneNaam
-      ? `Bankoverzicht_dossier_${schoneNaam}_${stamp}.json`
-      : `Bankoverzicht_dossier_${stamp}.json`;
+      ? `BankafschriftenTool_dossier_${schoneNaam}_${stamp}.json`
+      : `BankafschriftenTool_dossier_${stamp}.json`;
 
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);

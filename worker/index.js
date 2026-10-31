@@ -9,6 +9,7 @@ import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
 import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
+import { zoekmachineRoute } from "./zoekmachines.js";
 import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen, logboekControle, registreerGezien } from "./rechten.js";
 
 const MAX = { naam: 100, onderwerp: 150, bericht: 5000 };
@@ -36,6 +37,9 @@ export default {
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // beide-V12R4 — robots.txt en sitemap.xml, ook zonder inlog (anders stuurt de inlogcontrole zoekmachines door).
+    const zoek = zoekmachineRoute(env, url);
+    if (zoek) return zoek;
     // nieuw-V4R6 — wie is ingelogd? Met INLOG_MODUS = "eigen" uit de eigen sessiecookie (zie inloggen.js), anders
     // van Cloudflare Access. De rest van de Worker leest het adres uit de header Cf-Access-Authenticated-User-Email;
     // bij eigen inlog zetten we die header hier zelf, en gooien we een meegestuurde header weg (anders kan iedereen
@@ -131,7 +135,7 @@ export default {
     const release = schoon(body?.release, 40);
     if (!bericht) return json({ ok: false, fout: "Bericht is leeg" }, 400);
 
-    const subject = `[RekeningNaarAangifte] ${soort}${onderwerp ? `: ${onderwerp.replace(/[\r\n]+/g, " ")}` : ""}`;
+    const subject = `[BankafschriftenTool] ${soort}${onderwerp ? `: ${onderwerp.replace(/[\r\n]+/g, " ")}` : ""}`;
     const regels = [`Van: ${naam || "(geen naam)"} <${email}>`, `App: ${release || "onbekend"}`];
     const text = `${bericht}\n\n—\n${regels.join("\n")}`;
     const html = `<div style="font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap">${esc(bericht)}</div><hr><p style="font-family:Arial,sans-serif;font-size:12px;color:#555">${regels.map(esc).join("<br>")}</p>`;

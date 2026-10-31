@@ -56,7 +56,7 @@ export function huidigeTarieven(versie = new Date().toISOString().slice(0, 10)) 
     }
   }
   for (const veld of Object.keys(TARIEF_LOSSE)) for (const [y, v] of Object.entries(TABEL[veld])) zet(y)[veld] = v;
-  return { formaat: TARIEVEN_FORMAAT, versie, bron: "Bankoverzicht", jaren };
+  return { formaat: TARIEVEN_FORMAAT, versie, bron: "BankafschriftenTool", jaren };
 }
 
 function leesCache() {

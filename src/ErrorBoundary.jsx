@@ -21,7 +21,7 @@ export async function downloadNoodBackup() {
     const blob = new Blob([JSON.stringify(project)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `Bankoverzicht_noodbackup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = url; a.download = `BankafschriftenTool_noodbackup_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   } catch (e) { alert("Back-up maken mislukt: " + e); }
@@ -53,7 +53,7 @@ export class ErrorBoundary extends React.Component {
     this.setState({ info });
     // Ook naar de console loggen, voor het geval iemand wél toegang heeft tot devtools.
     // eslint-disable-next-line no-console
-    console.error("Onverwachte fout in Bankoverzicht:", error, info);
+    console.error("Onverwachte fout in BankafschriftenTool:", error, info);
   }
 
   render() {

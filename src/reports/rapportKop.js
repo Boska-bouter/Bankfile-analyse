@@ -13,8 +13,8 @@ export function registreerRapportKop(bron) { _bron = bron || null; }
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const datum = (d) => (d ? new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }) : "?");
 // Beeldmerk vóór de naam; leeg tot er een logo is gekozen (mockups 31-10).
-// Logo C3 (monogram R→A), keuze Boska 31-10.
-const LOGO = '<svg width="22" height="22" viewBox="0 0 34 34" aria-hidden="true" style="flex:none"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><text x="5" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#fff">R</text><path d="M14.5 17h5m-2-2.5l2.5 2.5-2.5 2.5" stroke="#5eead4" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="21" y="23" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="14" fill="#5eead4">A</text></svg>';
+// Logo B (afschrift met loep), keuze Boska 31-10.
+const LOGO = '<svg width="22" height="22" viewBox="0 0 34 34" aria-hidden="true" style="flex:none"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg>';
 export const INDICATIEF = "Indicatieve berekening op basis van bankgegevens. Geen aangifte en geen fiscaal advies; controleer de cijfers vóór gebruik.";
 
 // jaren: de jaren van dit rapport (getallen of strings); leeg = alle jaren van het dossier.
@@ -45,11 +45,11 @@ export function rapportKopHtml(jaren = null, { vandaag = new Date(), bron = _bro
     ? `<span style="font-size:10.5px;font-weight:bold;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e">Concept · ${aantalOpen} open ${aantalOpen === 1 ? "punt" : "punten"}</span>`
     : `<span style="font-size:10.5px;font-weight:bold;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534">Klaar ter controle</span>`;
   return `<div class="rapportkop" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.45;color:#334155;border:1px solid #cbd5e1;border-radius:6px;padding:8px 12px;margin:0 0 16px;background:#f8fafc">
-<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px">${LOGO}<strong style="font-size:13.5px;color:#1E2A4A">Rekening<span style="color:#64748b;font-weight:400">Naar</span><span style="color:#0f766e">Aangifte</span></strong></span><span style="flex:1"></span>${status}</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px">${LOGO}<strong style="font-size:13.5px;color:#1E2A4A">Bankafschriften<span style="color:#0f766e">Tool</span></strong></span><span style="flex:1"></span>${status}</div>
 ${regel("Dossier", `<strong>${esc(bron.naam || "zonder naam")}</strong> · ${esc(bron.soort || "")}${periode ? ` · periode ${periode}` : ""}`)}
 ${regel("Bankgegevens", dekkingTekst)}
 ${gaten.length ? `<div style="margin:1px 0;color:#b45309">⚠ ${gaten.length === 1 ? "Mogelijk ontbreekt een periode" : `Mogelijk ontbreken ${gaten.length} periodes`}: ${gaten.map((g) => `${datum(g.van)} – ${datum(g.tot)}`).join(", ")}</div>` : ""}
-${regel("Opgesteld", `${datum(vandaag)} · RekeningNaarAangifte ${esc(APP_RELEASE)}${tarieven.length ? ` · tarieven ${tarieven.join(", ")}` : ""}`)}
+${regel("Opgesteld", `${datum(vandaag)} · BankafschriftenTool ${esc(APP_RELEASE)}${tarieven.length ? ` · tarieven ${tarieven.join(", ")}` : ""}`)}
 ${regel("Open punten", aantalOpen ? `<span style="color:#b45309">${aantalOpen}</span> (${open.slice(0, 4).map((p) => `${esc(p.label)}: ${p.count}`).join(", ")}${open.length > 4 ? ", …" : ""})` : "geen")}
 <div style="margin-top:4px;font-weight:bold;color:#0f172a">${INDICATIEF}</div>
 </div>`;

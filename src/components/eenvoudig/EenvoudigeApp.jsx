@@ -199,7 +199,7 @@ export default function EenvoudigeApp({
       {/* Kop: naam, jaar, schakelaar */}
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#0f2a3a] px-5 py-3 text-white">
         <Logo size={32} />
-        <div className="leading-tight"><p className="font-bold">RekeningNaarAangifte</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
+        <div className="leading-tight"><p className="font-bold">BankafschriftenTool</p><p className="text-xs text-slate-300">{klantNaam || "Dossier"}</p></div>
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="flex min-w-0 flex-1 justify-center">
           <div className="text-center leading-tight">

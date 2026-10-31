@@ -15,6 +15,7 @@
 //
 // Tabellen (maakt de Worker zelf aan): sessies, inloglinks, passkeys, uitdagingen, wachtwoorden, inlogpogingen.
 
+import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { welkomInhoud, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
@@ -203,7 +204,7 @@ export async function verstuur(env, bericht) {
 
 // nieuw-V5R2 — aanhef en handtekening voor alle mails aan gebruikers. Handtekening aanpasbaar met de variabele
 // MAIL_HANDTEKENING (regels gescheiden door "\n"), anders de standaardtekst hieronder.
-const STANDAARD_HANDTEKENING = "Met vriendelijke groet,\nPaul Gerits\nEigenaar en ontwikkelaar van RekeningNaarAangifte";
+const STANDAARD_HANDTEKENING = "Met vriendelijke groet,\nPaul Gerits\nEigenaar en ontwikkelaar van BankafschriftenTool";
 export function opmaakMail(env, { naam = "", zonderNaam = "Hallo,", regels = [], lijst = [], naLijst = [], knop = null, voetnoot = "" }) {
   const aanhef = naam ? `Beste ${naam},` : zonderNaam;
   const handtekening = String(env.MAIL_HANDTEKENING || STANDAARD_HANDTEKENING).replace(/\\n/g, "\n").split("\n");
@@ -266,7 +267,7 @@ async function stuurLink(env, email, link) {
   const { text, html } = opmaakMail(env, nieuw ? {
     zonderNaam: "Beste aanvrager,",
     regels: [
-      "Bedankt voor je interesse in RekeningNaarAangifte, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
+      "Bedankt voor je interesse in BankafschriftenTool, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
       "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (particulier huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
@@ -278,11 +279,11 @@ async function stuurLink(env, email, link) {
     knop: { link, tekst: "Inloggen en aanvraag doen" },
     voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
   } : {
-    regels: ["Klik op de knop om in te loggen bij RekeningNaarAangifte."],
+    regels: ["Klik op de knop om in te loggen bij BankafschriftenTool."],
     knop: { link, tekst: "Inloggen" },
     voetnoot: `De link is ${LINK_MINUTEN} minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.`,
   });
-  await verstuur(env, { to: email, from, subject: nieuw ? "Je eerste inloglink voor RekeningNaarAangifte" : "Inloggen bij RekeningNaarAangifte", text, html });
+  await verstuur(env, { to: email, from, subject: nieuw ? "Je eerste inloglink voor BankafschriftenTool" : "Inloggen bij BankafschriftenTool", text, html });
 }
 
 // ---- pagina's ----
@@ -304,13 +305,15 @@ const st=document.getElementById("status");const meld=(t,k)=>{st.className=k||""
 const post=async(p,b)=>{const r=await fetch(p,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(b||{})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));return d};
 const kanPasskey=!!(window.PublicKeyCredential&&navigator.credentials);`;
 
-const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "") =>
+// beide-V12R4 — elke inlogpagina noindex, behalve de welkomstpagina (head uit zoekmachines.js, volledige titel).
+const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "", head = `<meta name="robots" content="noindex, nofollow">`, volleTitel = null) =>
   new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(titel)} · RekeningNaarAangifte</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
+${head}
+<title>${esc(volleTitel || `${titel} · BankafschriftenTool`)}</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
 // beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
-function inlogPagina(env) {
+function inlogPagina(env, url) {
   const soorten = welkomSoorten(env);
   return pagina("Inloggen", `<style>${WELKOM_STIJL}
 ${VERGELIJK_STIJL}</style>
@@ -320,14 +323,14 @@ ${welkomKop(soorten)}
 <h2 class="inlogkop">Inloggen <span>of account aanvragen</span></h2>
 <div class="kaart inlogkaart">
   <h2>Ik heb al een account</h2>
+  <button id="pk" type="button" class="linkknop">Inloggen met passkey (Face ID of pincode)</button>
+  <div class="scheiding" id="ofpk"></div>
   <form id="f" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="username webauthn" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres">
     <input type="password" name="wachtwoord" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">
     <button type="submit">Inloggen</button>
     <button type="button" id="link" class="linkknop">Wachtwoord vergeten of nog geen wachtwoord? Stuur inloglink</button>
   </form>
-  <div class="scheiding" id="ofpk"></div>
-  <button id="pk" type="button" class="linkknop">Inloggen met passkey (Face ID of pincode)</button>
   <p id="status" role="status"></p>
 </div>
 <div class="kaart inlogkaart">
@@ -362,7 +365,7 @@ fa.addEventListener("submit",async e=>{e.preventDefault();const k=fa.querySelect
  catch(x){st2.className="err";st2.textContent=x.message}finally{k.disabled=false}});
 lk.addEventListener("click",async()=>{if(!f.email.reportValidity())return;lk.disabled=true;meld("Bezig…");
  try{await post("/api/inloggen/link",{email:f.email.value});meld("Als dit adres bekend is of nieuw is, staat er binnen een minuut een inloglink in je mailbox. Kijk ook in je spam. Je kunt dit venster nu sluiten: de link in de mail opent de app.","ok")}
- catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`, {}, WELKOM_ACHTERGROND);
+ catch(x){meld(x.message,"err")}finally{lk.disabled=false}});`, {}, WELKOM_ACHTERGROND, welkomHead(env, url), WELKOM_TITEL);
 }
 
 // nieuw-V5R3 — de bevestigpagina zegt voor wie en waarvoor de link is: nieuwe aanvrager, lopende aanvraag of gewoon inloggen.
@@ -381,9 +384,9 @@ async function bevestigPagina(env, token, huidig = null) {
     }
   } catch { /* dan de gewone tekst */ }
   const tekst = {
-    nieuw: ["Welkom bij RekeningNaarAangifte", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
-    wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor RekeningNaarAangifte is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
-    gewoon: ["Inloggen bij RekeningNaarAangifte", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
+    nieuw: ["Welkom bij BankafschriftenTool", `Je hebt een eerste inloglink aangevraagd voor <b>${esc(email)}</b>. Na het inloggen kies je welke versie je wilt gebruiken (${bankkoppelingAan(env) ? "Eenvoudig, Uitgebreid of Uitgebreid met bankkoppeling" : "Eenvoudig of Uitgebreid"}) en vertel je kort waarom je toegang vraagt. Daarna beoordeel ik je aanvraag en krijg je een e-mail.`, "Inloggen en aanvraag doen", "/"],
+    wacht: ["Je aanvraag is in behandeling", `Je logt in als <b>${esc(email)}</b>. Je aanvraag voor BankafschriftenTool is nog niet beoordeeld. Na het inloggen zie je de stand van zaken en kun je eventueel een andere versie kiezen.`, "Inloggen", "/"],
+    gewoon: ["Inloggen bij BankafschriftenTool", `${email ? `Je logt in als <b>${esc(email)}</b>. ` : ""}Klik op de knop om in te loggen op dit apparaat.`, "Inloggen", "/inloggen/passkey"],
     verlopen: ["Link verlopen", "Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.", "", ""],
   }[soort];
   // nieuw-V5R6 — al ingelogd met een ander adres? Dat zeggen, anders lijkt de link naar het verkeerde account te gaan.
@@ -424,7 +427,7 @@ function passkeyPagina(email, aantal, heeftWachtwoord) {
 </div>
 <p id="status" role="status"></p>
 <div class="kaart" id="beginscherm" hidden>
-  <b>Tip: zet RekeningNaarAangifte op je beginscherm</b>
+  <b>Tip: zet BankafschriftenTool op je beginscherm</b>
   <p class="sub" style="margin:0">Dan open je de app met één tik, schermvullend en zonder adresbalk.</p>
   <p class="sub" style="margin:0"><b>iPad of iPhone (Safari):</b> tik op het deelicoon (vierkantje met pijl omhoog) en kies <b>Zet op beginscherm</b>. Log daarna één keer in via het nieuwe icoon; dat gaat het snelst met je passkey. Een dossier dat je in Safari hebt, laad je daar via <b>Dossier laden</b>.</p>
   <p class="sub" style="margin:0"><b>Android (Chrome):</b> menu ⋮ en dan <b>Toevoegen aan startscherm</b>. <b>Computer (Chrome of Edge):</b> het installeer-icoon rechts in de adresbalk.</p>
@@ -468,7 +471,7 @@ export async function inlogRoute(request, env, url, email) {
   await zorgVoorTabellen(env.DB);
 
   if (request.method === "GET") {
-    if (p === "/inloggen") return email ? Response.redirect(`${url.origin}/`, 302) : inlogPagina(env);
+    if (p === "/inloggen") return email ? Response.redirect(`${url.origin}/`, 302) : inlogPagina(env, url);
     if (p === "/inloggen/link") return bevestigPagina(env, url.searchParams.get("t"), email);
     if (p === "/inloggen/passkey") {
       if (!email) return Response.redirect(`${url.origin}/inloggen`, 302);
@@ -562,7 +565,7 @@ export async function inlogRoute(request, env, url, email) {
     if (p === "/api/inloggen/passkey/opties-registratie") {
       const u = await nieuweUitdaging(env, email);
       const { results } = await env.DB.prepare("SELECT id FROM passkeys WHERE email = ?").bind(email).all();
-      return json({ ok: true, id: u.id, uitdaging: u.uitdaging, rp: { id: rpId, name: "RekeningNaarAangifte" },
+      return json({ ok: true, id: u.id, uitdaging: u.uitdaging, rp: { id: rpId, name: "BankafschriftenTool" },
         gebruiker: { id: b64u((await sha256(`bankoverzicht:${email}`)).slice(0, 16)), naam: email }, bestaand: (results || []).map((r) => r.id) });
     }
     if (p === "/api/inloggen/passkey/registreer") {

@@ -25,7 +25,7 @@ export function exportCsv(groups, categoryBtwRates, btwVerlegd) {
   const tekst = [kop.join(";"), ...rijen.map((r) => kop.map((k) => cel(r[k])).join(";"))].join("\r\n");
   const blob = new Blob(["\uFEFF" + tekst], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "Bankoverzicht_transacties.csv";
+  a.href = URL.createObjectURL(blob); a.download = "BankafschriftenTool_transacties.csv";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -72,5 +72,5 @@ export async function exportExcel(groups, categoryBtwRates, btwVerlegd) {
     const ws2 = XLSX.utils.json_to_sheet(summaryRows);
     XLSX.utils.book_append_sheet(wb, ws2, `${g.label} - Samenvatting`.slice(0, 31));
   }
-  XLSX.writeFile(wb, "Bankoverzicht_controlebestand.xlsx"); // beide-V8R0 — heet in de app "Controlebestand (Excel)"
+  XLSX.writeFile(wb, "BankafschriftenTool_controlebestand.xlsx"); // beide-V8R0 — heet in de app "Controlebestand (Excel)"
 }
