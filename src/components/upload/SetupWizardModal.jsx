@@ -350,7 +350,7 @@ export default function SetupWizardModal({
                 Niet vergeten: sla het dossier op, anders gaan de correcties en aanpassingen verloren.
               </p>
               <p className="text-sm text-slate-600">
-                Instellingen en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als de browsergegevens of websitegegevens worden gewist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
+                Instellingen en correcties worden automatisch bewaard op dit apparaat (in de browser). Ze gaan verloren als de browsergegevens of websitegegevens worden gewist (in veel browsers is dat dezelfde knop als de surfgeschiedenis).
               </p>
               <p className="text-sm text-slate-600">
                 Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een cache-wis, een nieuw apparaat of delen met een boekhouder. Sla na elke sessie op.

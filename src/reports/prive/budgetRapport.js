@@ -24,7 +24,7 @@ function jaarBudget(jaar, d) {
 
 export function buildBudgetRapportHtml({ jaren, overzicht, namen = null, vandaag = new Date() }) {
   return document({
-    titel: `Budgetoverzicht ${jaren.join(", ")}`,
+    titel: `Inkomsten en uitgaven ${jaren.join(", ")}`,
     sub: `${namen?.ondernemer ? `${esc(namen.ondernemer)} · ` : ""}privé · opgesteld ${vandaag.toLocaleDateString("nl-NL")}`,
     inhoud: jaren.filter((j) => overzicht?.perJaar?.[j]).map((j) => jaarBudget(j, overzicht.perJaar[j])).join(""),
   });
@@ -38,7 +38,7 @@ export function buildPriveSamenvattingHtml({ jaren, overzicht, namen = null, ope
   const tot = (j) => d(j).budget.totaal;
   const perHoofd = (j, h) => d(j).budget.uitgavenPerHoofd.find((x) => x.hoofd === h)?.bedrag || 0;
   const hoofden = [...new Set(js.flatMap((j) => d(j).budget.uitgavenPerHoofd.map((h) => h.hoofd)))];
-  const inhoud = `<h2>Budget</h2><table>${kopRij(js)}
+  const inhoud = `<h2>Inkomsten en uitgaven</h2><table>${kopRij(js)}
 ${r("Inkomsten", (j) => metTeken(tot(j).inkomsten))}
 ${r("Uitgaven", (j) => metTeken(tot(j).uitgaven, true))}
 ${hoofden.map((h) => r(hoofdLabel(h, js.map((j) => perHoofd(j, h))), (j) => metTeken(perHoofd(j, h), true), "sub")).join("")}
@@ -88,7 +88,7 @@ export async function exportPriveExcel({ jaren, overzicht, transacties, label })
       ]),
       { Post: "Terug (−) of bij (+)", Bedrag: d.belasting.verschil },
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(regels), `Budget ${j}`);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(regels), `Inkomsten en uitgaven ${j}`);
     const maand = b.perMaand.map((m, i) => ({ Maand: MAANDEN[i], Inkomsten: m.inkomsten, Uitgaven: m.uitgaven, "Vaste lasten": m.vasteLasten, Sparen: m.sparen, Over: m.over }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(maand), `Per maand ${j}`);
   }
@@ -96,5 +96,5 @@ export async function exportPriveExcel({ jaren, overzicht, transacties, label })
     Jaar: t.year, Datum: t.date.toLocaleDateString("nl-NL"), Bedrag: t.amount, Categorie: label(t.category), Tegenpartij: t.counterparty, Omschrijving: t.description, Bron: t.source,
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rijen), "Transacties");
-  XLSX.writeFile(wb, `Budgetoverzicht_${jaren.join("-")}.xlsx`);
+  XLSX.writeFile(wb, `Inkomsten_en_uitgaven_${jaren.join("-")}.xlsx`);
 }

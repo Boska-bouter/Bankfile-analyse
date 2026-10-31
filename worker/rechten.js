@@ -16,6 +16,7 @@
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
 import { inloggenVastleggen, zetInloggenVastleggen, logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
 import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN } from "./peiling.js";
+import { uitgebreidExtra, BANKKOPPELING_STATUS, GRATIS_KORT } from "../src/content/aanbod.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
   email TEXT PRIMARY KEY,
@@ -98,16 +99,18 @@ const werkGebruikBij = (db, email) => db.prepare(`UPDATE rechten SET gebruik = $
 
 // nieuw-V5R2 — korte uitleg per abonnement, voor de aanmeldpagina en de bevestigingsmail.
 // beide-V1R0 — per soort gebruik.
+// beide-V13R3 — wat Uitgebreid extra biedt komt uit src/content/aanbod.js (zelfde lijst als welkomstpagina en app).
+export const KOPPELEN_UITLEG = `alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is ${BANKKOPPELING_STATUS}.`;
 export const PLAN_UITLEG = {
   zakelijk: {
-    eenvoudig: "in vier stappen de bankbestanden indelen en een indicatie krijgen van de btw en inkomstenbelasting.",
-    uitgebreid: "alle tabbladen, controles, de aangifteberekening en het maandoverzicht van de inkomsten en uitgaven.",
-    koppelen: "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
+    eenvoudig: "in vier stappen de bankbestanden indelen en een indicatie krijgen van de btw, de inkomstenbelasting en de Zvw.",
+    uitgebreid: `alle tabbladen en controles, met ${uitgebreidExtra("zakelijk")}.`,
+    koppelen: KOPPELEN_UITLEG,
   },
   prive: {
-    eenvoudig: "in vier stappen de bankbestanden indelen en een overzicht krijgen van de inkomsten en uitgaven per maand.",
-    uitgebreid: "alle tabbladen: inkomsten en uitgaven per maand en categorie, vaste lasten, sparen en vermogen (box 3), eigen woning, meerdere jaren en downloaden.",
-    koppelen: "alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is nog in ontwikkeling en komt beschikbaar zodra er genoeg gebruikers zijn.",
+    eenvoudig: "in vier stappen de bankbestanden indelen en een overzicht krijgen van de inkomsten en uitgaven per maand, met een indicatie van de inkomstenbelasting.",
+    uitgebreid: `alle tabbladen en controles, met ${uitgebreidExtra("prive")}.`,
+    koppelen: KOPPELEN_UITLEG,
   },
 };
 export const PLANNEN = {
@@ -147,7 +150,7 @@ export function prijzen(env) {
   vul(p.prive, x.prive && typeof x.prive === "object" ? x.prive : {});
   return p;
 }
-export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : "€ 0,00 · voorlopig gratis");
+export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : `€ 0,00 · ${GRATIS_KORT.toLowerCase()}`);
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });

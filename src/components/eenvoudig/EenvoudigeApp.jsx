@@ -203,15 +203,15 @@ export default function EenvoudigeApp({
         {jaarKeuze && <div className="ml-2">{jaarKeuze}</div>}
         <div className="flex min-w-0 flex-1 justify-center">
           <div className="text-center leading-tight">
-              <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudige weergave</span>
+              <span className="inline-block rounded-full border border-amber-300/60 bg-amber-400/15 px-3 py-1 text-sm font-semibold text-amber-200">Eenvoudig</span>
               {!onUitgebreid && <>
-              <p className="mt-1 text-[11px] text-slate-300">U heeft geen toegang tot de uitgebreide versie{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">toegang aanvragen</button></>}</p>
+              <p className="mt-1 text-[11px] text-slate-300">Uitgebreid zit niet in dit abonnement{onToegangAanvragen && <> · <button type="button" onClick={onToegangAanvragen} style={{ minHeight: 0 }} className="underline hover:text-white">Uitgebreid aanvragen</button></>}</p>
               {toegangInfo && <p className="mt-0.5 text-[10px] text-slate-400">{{
                 laden: "toegang wordt gecontroleerd…",
-                geenEmail: "geen inlogadres ontvangen van Cloudflare",
-                geenLijst: `ingelogd als ${toegangInfo.email} · geen toegangslijst gevonden`,
-                nietOpLijst: `ingelogd als ${toegangInfo.email} · geen uitgebreid account`,
-                fout: "toegang kon niet worden gecontroleerd (/api/rol niet bereikbaar)",
+                geenEmail: "inloggen is niet gelukt; log opnieuw in",
+                geenLijst: `ingelogd als ${toegangInfo.email} · er is (nog) geen account voor dit mailadres`,
+                nietOpLijst: `ingelogd als ${toegangInfo.email} · Uitgebreid zit niet in het abonnement`,
+                fout: "het abonnement kon even niet worden gecontroleerd",
               }[toegangInfo.status] || ""}</p>}
               </>}
               {abonnement?.length > 0 && <p className="mt-0.5 text-[10px] text-slate-300">Abonnement: {abonnement.join(" · ")}{onAbonnementen && <> · <button type="button" onClick={onAbonnementen} style={{ minHeight: 0 }} className="underline hover:text-white">bekijken of wijzigen</button></>}</p>}
@@ -462,7 +462,7 @@ export default function EenvoudigeApp({
       {stap === 4 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-lg font-bold">Bewaren</h2>
-          <p className="mb-3 text-sm text-slate-600">Het werk staat al in deze browser. Voor bewaren op een andere plek of later verder werken op een ander apparaat: sla het dossier op als bestand.</p>
+          <p className="mb-3 text-sm text-slate-600">Het werk staat al op dit apparaat. Voor bewaren op een andere plek of later verder werken op een ander apparaat: sla het dossier op als bestand.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onOpslaan} className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"><Save className="h-4 w-4" /> Dossier opslaan</button>
             <button type="button" onClick={() => setStap(3)} className="inline-flex items-center gap-1 rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:underline"><ChevronLeft className="h-4 w-4" /> Terug naar de uitkomst</button>

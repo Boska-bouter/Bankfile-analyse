@@ -10,7 +10,7 @@ export default function HandleidingVraag({ modus, onJa, onNee }) {
         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-teal-50 text-teal-700"><BookOpen className="h-5 w-5" /></div>
         <h2 id="handleiding-titel" className="text-xl font-bold text-slate-900">Eerst de handleiding lezen?</h2>
         <p className="mt-2 text-sm text-slate-600">
-          Voordat het dossier wordt aangemaakt: de handleiding legt in een paar minuten uit hoe {modus === "eenvoudig" ? "Eenvoudig" : "de uitgebreide weergave"} werkt
+          Voordat het dossier wordt aangemaakt: de handleiding legt in een paar minuten uit hoe {modus === "eenvoudig" ? "Eenvoudig" : "Uitgebreid"} werkt
           en wat er nodig is. Daarna start het dossier vanzelf. De handleiding is later ook altijd te openen via {modus === "eenvoudig" ? "de knop Uitleg" : "het vraagteken onderin de zijbalk"}.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row-reverse">

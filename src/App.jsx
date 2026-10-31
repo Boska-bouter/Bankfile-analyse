@@ -3007,7 +3007,7 @@ export default function App() {
   // van dit dossier al klaar. Lokaal (vite dev, geen Worker) zoals voorheen via het feedbackformulier.
   const vraagAan = (plan) => {
     if (import.meta.env?.DEV) {
-      setShowFeedback({ onderwerp: "Toegang tot de uitgebreide versie", bericht: "Graag wil ik toegang tot de uitgebreide versie van BankafschriftenTool.\n\nReden: " });
+      setShowFeedback({ onderwerp: "Uitgebreid aanvragen", bericht: "Graag wil ik Uitgebreid in mijn abonnement van BankafschriftenTool.\n\nReden: " });
       return;
     }
     naarServer(`/aanmelden?soort=${encodeURIComponent(soortDossier)}&plan=${encodeURIComponent(plan)}`, "Aanmelden");
@@ -3041,12 +3041,12 @@ export default function App() {
     setDialog(magUitgebreid
       ? {
           title: "Bankkoppeling",
-          message: <p>Een bank koppelen of ontkoppelen kan alleen in de uitgebreide weergave. In de eenvoudige weergave kunnen wel bankbestanden (CSV, MT940 of CAMT) worden toegevoegd.</p>,
-          actions: [{ label: "Naar de uitgebreide weergave en koppelen", variant: "primary", onClick: () => naarUitgebreidVanuitEenvoudig(() => setBankKoppeling({})) }],
+          message: <p>Een bank koppelen of ontkoppelen kan alleen in Uitgebreid. In Eenvoudig kunnen wel bankbestanden (CSV, MT940 of CAMT) worden toegevoegd.</p>,
+          actions: [{ label: "Naar Uitgebreid en koppelen", variant: "primary", onClick: () => naarUitgebreidVanuitEenvoudig(() => setBankKoppeling({})) }],
         }
       : {
           title: "Bankkoppeling",
-          message: <p>Een bank rechtstreeks koppelen kan alleen met een uitgebreid account. Voeg in de eenvoudige weergave de bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
+          message: <p>Een bank rechtstreeks koppelen kan alleen met Uitgebreid in het abonnement. Voeg in Eenvoudig de bankbestanden (CSV, MT940 of CAMT) toe; die werken net zo goed.</p>,
           actions: [],
         });
   };
@@ -3134,7 +3134,7 @@ export default function App() {
       // het zakelijke geldstroomoverzicht is weg (wens Boska 27-10), zakelijk heeft alleen het controlebestand (Excel).
       case "pdf":
       case "html":
-        if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Budgetoverzicht_${years.join("-")}` });
+        if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Inkomsten_en_uitgaven_${years.join("-")}` });
         break;
       case "print":
         if (priveOverzicht) printHtmlDocument(metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years));
@@ -3297,9 +3297,9 @@ export default function App() {
           </div>
           {heeftBewaard && (
             <p className="text-xs text-slate-400 mt-4">
-              "Nieuw dossier" verwijdert niets: het vorige dossier blijft in deze browser bewaard en dit keuzescherm
+              "Nieuw dossier" verwijdert niets: het vorige dossier blijft op dit apparaat bewaard en dit keuzescherm
               verschijnt de volgende keer weer, totdat je zelf een nieuw bestand toevoegt — pas dán wordt het
-              oude dossier in deze browser overschreven.
+              oude dossier op dit apparaat overschreven.
             </p>
           )}
           <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950"><strong>Pas op voor oplichting.</strong> {VEILIG_KORT}</p>

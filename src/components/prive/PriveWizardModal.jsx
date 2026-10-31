@@ -151,7 +151,7 @@ export default function PriveWizardModal({
           {huidig.id === OPSLAAN && (
             <>
               <p className="text-sm text-slate-700 font-medium">Niet vergeten: sla het dossier op, anders gaan de aanpassingen verloren.</p>
-              <p className="text-sm text-slate-600">Antwoorden en correcties worden automatisch bewaard in déze browser op dit apparaat. Ze gaan verloren als de browsergegevens worden gewist.</p>
+              <p className="text-sm text-slate-600">Antwoorden en correcties worden automatisch bewaard op dit apparaat (in de browser). Ze gaan verloren als de browsergegevens worden gewist.</p>
               <p className="text-sm text-slate-600">Een <strong>dossier opslaan</strong> maakt een apart bestand, los van de browser: veilig bij een nieuw apparaat of om te bewaren. Sla na elke sessie op.</p>
               {onSaveProject && (
                 <button onClick={onSaveProject} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Dossier nu opslaan</button>

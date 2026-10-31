@@ -3,6 +3,7 @@
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
+import { INZICHTEN, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS } from "../src/content/aanbod.js";
 
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -50,9 +51,9 @@ const VERGELIJK = [
   { t: "Downloaden (PDF, HTML, Excel)", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
   { t: "Btw per kwartaal", alleen: "zakelijk", w: { eenvoudig: V, uitgebreid: V, koppelen: V } },
   { t: "Aangifteberekening", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
-  { t: "Vaste lasten, sparen en box 3", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
+  { t: "Vaste lasten, sparen, box 3 en eigen woning", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V } },
   { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" } },
-  { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: "in ontwikkeling" } },
+  { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: BANKKOPPELING_STATUS } },
 ];
 const SOORT_NAAM = { zakelijk: "zakelijk", prive: "privé" };
 
@@ -85,13 +86,10 @@ export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card
 // soorten: [{ soort, naam, voor, beide: [..], uitgebreid: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
 // beide-V13R1 — per soort wat er mogelijk is, verdeeld over Eenvoudig en Uitgebreid (wens Boska 31-10: niet beloven
 // dat je alles altijd krijgt).
+// beide-V13R3 — de lijsten zelf staan in src/content/aanbod.js (ook gebruikt door de app).
 const SOORT_UITLEG = {
-  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.",
-    beide: ["Inkomsten en uitgaven per maand en per categorie", "Indicatie van de inkomstenbelasting"],
-    uitgebreid: ["Vaste lasten", "Sparen en vermogen (box 3)", "Eigen woning", "Meerdere jaren naast elkaar", "Overzicht downloaden"] },
-  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.",
-    beide: ["Omzet, kosten en winst", "Btw per kwartaal", "Indicatie van de inkomstenbelasting en Zvw"],
-    uitgebreid: ["Aangifteberekening", "Bedrijfsmiddelen, leningen en lease", "Meerdere jaren naast elkaar", "Inkomen per maand", "Overzichten downloaden"] },
+  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", ...INZICHTEN.prive },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", ...INZICHTEN.zakelijk },
 };
 export function welkomSoorten(env) {
   const pr = prijzen(env);
@@ -105,7 +103,7 @@ export const alleGratis = (soorten) => soorten.every((s) => s.plannen.every((p) 
 export function welkomKop(soorten) {
   const gratis = alleGratis(soorten);
   const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
-    { tekst: "Verwerkt op je eigen apparaat", href: "#veilig" }, gratis ? "Voorlopig gratis" : null].filter(Boolean);
+    { tekst: PRIVACY_LABEL, href: "#veilig" }, gratis ? GRATIS_KORT : null].filter(Boolean);
   return `<header class="kop">
 <div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift naar aangifte</div></div></div>
 <p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
@@ -116,7 +114,7 @@ export function welkomKop(soorten) {
 // In het aanvraagvak: in drie korte stappen hoe je begint (stond eerst dubbel, boven én onder de uitleg).
 export const welkomNieuw = (gratis) => `<ol class="nieuw">
 <li>Vul je e-mailadres in en kies <b>Stuur inloglink</b>.</li>
-<li>Kies na het inloggen je abonnement${gratis ? " (voorlopig gratis)" : ""}. Je krijgt een mail zodra het is goedgekeurd.</li>
+<li>Kies na het inloggen je abonnement. Je krijgt een mail zodra het is goedgekeurd.${gratis ? ` ${e(GRATIS_UITLEG)}` : ""}</li>
 <li>Stel een wachtwoord of passkey in; daarna log je zonder mail in.</li></ol>`;
 
 // beide-V12R7 — veiligheidsblok los, zodat de inlogpagina het onderaan over de volle breedte kan zetten (wens Boska 31-10).
@@ -124,7 +122,7 @@ export const welkomVeilig = (veilig = VEILIG) => `
   <section class="veilig">
     <h2 id="veilig">De veiligheid van jouw gegevens</h2>
     <div class="kaart">
-      <p style="margin:0">Bankbestanden worden in de eigen browser verwerkt en niet naar een server gestuurd. Het dossier wordt als bestand bewaard, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
+      <p style="margin:0">${e(PRIVACY_KERN)} ${e(PRIVACY_SERVER)} Een eigen kopie van het dossier kan als bestand worden opgeslagen, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
       <p class="let-op">${e(veilig)}</p>
     </div>
   </section>
@@ -138,7 +136,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   <section aria-labelledby="wat">
     <h2 id="wat">Wat doet BankafschriftenTool?</h2>
     <div class="stappen">
-      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? " of via de automatische bankkoppeling (in ontwikkeling)" : ""}. Ook van meerdere rekeningen en jaren.</p></div>
+      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? ` of via de automatische bankkoppeling (${BANKKOPPELING_STATUS})` : ""}. Ook van meerdere rekeningen en jaren.</p></div>
       <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>
       <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar het geld vandaan komt en heen gaat, per maand en categorie, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting (IB). Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
     </div>

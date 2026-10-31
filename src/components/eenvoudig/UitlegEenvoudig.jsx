@@ -59,7 +59,7 @@ export default function UitlegEenvoudig({ onClose, eersteKeer = false, Inhoud = 
             <Keuze titel="Hoeveel belasting ongeveer?">Een schatting van de inkomstenbelasting en de Zvw-bijdrage over die winst, na de kortingen waar recht op is. Wat dit jaar al via de bank aan de Belastingdienst is betaald, gaat eraf. "Per maand opzij zetten" helpt om te sparen voor de aanslag.</Keuze>
             <Keuze titel="BTW per kwartaal">Hoeveel BTW er per kwartaal betaald moet worden of terugkomt. Is een kwartaal nog niet aangegeven, dan moet die aangifte nog gedaan worden.</Keuze>
           </ul>
-          <P><b>Samenvatting</b> maakt een document van één pagina om te bewaren, te printen of aan een adviseur te geven; bovenaan staat hoe zeker de cijfers zijn. Met toegang tot de uitgebreide versie zijn er ook <b>Maandoverzicht</b> en <b>Indicatieve aangifteberekening</b>. Alles is een schatting op basis van de bankgegevens, geen officiële aangifte.</P>
+          <P><b>Samenvatting</b> maakt een document van één pagina om te bewaren, te printen of aan een adviseur te geven; bovenaan staat hoe zeker de cijfers zijn. Met Uitgebreid in het abonnement zijn er ook <b>Maandoverzicht</b> en <b>Indicatieve aangifteberekening</b>. Alles is een schatting op basis van de bankgegevens, geen officiële aangifte.</P>
 
           <H>Stap 4 · Bewaren</H>
           <P>Het werk staat al op dit apparaat. <b>Dossier opslaan</b> maakt een bestand om ergens anders te bewaren of op een ander apparaat weer te openen (via Dossier → Dossier laden). Doe dat regelmatig, zeker voor het begin van een nieuw dossier.</P>

@@ -52,7 +52,7 @@ export const PRIVE_EENVOUDIG = Object.freeze({
   soort: "Prive",
   vraagKleinePin: "Waaraan is dit uitgegeven?",
   bestandenLeeg: "Er zijn nog geen bankbestanden. Voeg de afschriften van de betaalrekening toe (en die van de partner, voor een gezamenlijk overzicht); de app leest ze daarna in.",
-  onzeker: "het budgetoverzicht kan daardoor nog verschuiven",
+  onzeker: "het overzicht van inkomsten en uitgaven kan daardoor nog verschuiven",
   uitleg: UitlegEenvoudigPrive,
   eigenRekeningen: "Is er nog een spaarrekening, een rekening van de partner of een gezamenlijke rekening? Voeg het bankbestand toe met de knop hierboven, of geef alleen het rekeningnummer op: geld van en naar die rekening telt dan als overboeking tussen eigen rekeningen, niet als inkomen of uitgave.",
   uitgebreidTip: "Fijner werk (één boeking apart, vaste lasten, vermogen) kan in",
