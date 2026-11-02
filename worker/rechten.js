@@ -177,8 +177,24 @@ export function prijzen(env) {
   const hb = x.huishoudboekje;
   if (hb !== null && hb !== "" && typeof hb !== "object" && Number.isFinite(+hb) && +hb >= 0) p.huishoudboekje = { eenvoudig: +hb, uitgebreid: +hb, koppelen: +hb };
   else vul(p.huishoudboekje, hb && typeof hb === "object" ? hb : {});
+  // huishoudboekje-V1R3 — korting voor wie al Uitgebreid (zakelijk of privé) heeft (wens Boska 2-11):
+  // {"huishoudboekje":{"uitgebreid":3.95,"metUitgebreid":1.95}}. Niet opgegeven = geen korting.
+  const k = hb && typeof hb === "object" ? hb.metUitgebreid : null;
+  p.huishoudboekjeMetUitgebreid = k !== null && k !== "" && k !== undefined && Number.isFinite(+k) && +k >= 0 ? +k : null;
   return p;
 }
+// huishoudboekje-V1R3 — heeft dit account een actief Uitgebreid-abonnement (zakelijk of privé)? `rechten` = uitkomst van
+// rechtenVan/rechtenUitRij (met soorten).
+export const heeftUitgebreidElders = (rechten) => ["zakelijk", "prive"].some((s) => !!rechten?.soorten?.[s]?.uitgebreid);
+// Prijs van het Huishoudboekje voor dit account: met korting als die is ingesteld en het account al Uitgebreid heeft.
+export function huishoudPrijsVoor(env, rechten, plan = Object.keys(plannenVoor(env, "huishoudboekje"))[0]) {
+  const p = prijzen(env);
+  const gewoon = Number(p.huishoudboekje[plan]) || 0;
+  const korting = p.huishoudboekjeMetUitgebreid;
+  if (korting !== null && korting < gewoon && heeftUitgebreidElders(rechten)) return { bedrag: korting, gewoon, korting: true };
+  return { bedrag: gewoon, gewoon, korting: false };
+}
+const prijsVoor = (env, gebruik, plan, rechten) => (gebruik === "huishoudboekje" ? huishoudPrijsVoor(env, rechten, plan).bedrag : prijzen(env)[gebruik][plan]);
 export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : `€ 0,00 · ${GRATIS_KORT.toLowerCase()}`);
 
 const json = (data, status = 200) =>
@@ -375,7 +391,8 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const reden = schoonTekst(body?.reden, 1000);
   if (reden.length < MIN_REDEN) return json({ ok: false, fout: `Geef aan waarom je toegang vraagt en waarvoor je de app wilt gebruiken (minimaal ${MIN_REDEN} tekens).` }, 400);
   // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
-  if (prijzen(env)[gebruik][plan] > 0) {
+  // huishoudboekje-V1R3 — het Huishoudboekje met korting als het account al Uitgebreid heeft.
+  if (prijsVoor(env, gebruik, plan, await rechtenVan(e, env)) > 0) {
     // Hier komt de Mollie-betaling: /api/betaal/start maakt een betaling en stuurt de gebruiker naar Mollie; de webhook
     // zet daarna de rechten. Zolang dat er niet is, kan een betaald abonnement niet worden aangevraagd.
     return json({ ok: false, betalen: true, fout: "Betalen is nog niet beschikbaar. Neem contact op met de beheerder." }, 402);
@@ -579,7 +596,7 @@ export async function beheerRoute(request, env, url, email) {
       const verlenging = !!r.verlenging;
       // beide-V7R3 — einddatum: gratis abonnement GRATIS_DAGEN vanaf vandaag, of bij verlengen vanaf de huidige einddatum
       // als die nog in de toekomst ligt. Een latere einddatum die er al stond, blijft staan. Betaald: einddatum ongewijzigd.
-      const dagen = prijzen(env)[gebruik][plan] > 0 ? 0 : gratisDagen(env);
+      const dagen = prijsVoor(env, gebruik, plan, rechtenUitRij(r)) > 0 ? 0 : gratisDagen(env);
       const oudEinde = r[k.geldigTot] || null;
       const start = verlenging && oudEinde && oudEinde > vandaag() ? oudEinde : vandaag();
       // Verlengen van een abonnement zonder einddatum maakt het niet korter.

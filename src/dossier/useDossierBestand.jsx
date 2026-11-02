@@ -9,6 +9,7 @@ import { useDossierDialogen } from "./useDossierDialogen.jsx";
 import { useOpslaanHerinnering } from "./useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing } from "./useSessieWaarschuwing.jsx";
 import { useState } from "react";
+import { naarHuishoudboekje } from "./naarHuishoudboekje.js";
 import HerstelcodeModal from "../components/shared/HerstelcodeModal.jsx";
 import OpslaanModal, { BEHOUD } from "../components/shared/OpslaanModal.jsx";
 import WachtwoordModal from "../components/shared/WachtwoordModal.jsx";
@@ -112,6 +113,25 @@ export function useDossierBestand({
     setZvwStatus,
   };
   const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
+  // huishoudboekje-V1R3 — van dit dossier een Huishoudboekje maken (wens Boska 2-11): een nieuw dossierbestand met alleen
+  // de privérekeningen wordt gedownload en meteen geopend. Het huidige dossier verandert niet; staat het nog niet in een
+  // bestand, dan vraagt het venster eerst om op te slaan (zie HuishoudboekjeMakenModal). Een wachtwoord gaat mee.
+  const maakHuishoudboekje = async () => {
+    const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
+    const hb = naarHuishoudboekje(project, { van: soortDossier === "prive" ? "een privédossier" : "een zakelijk dossier" });
+    if (!hb.parsedFiles.length) { setError("Dit dossier heeft geen privérekeningen. Een Huishoudboekje heeft minstens één privérekening nodig."); return false; }
+    snapshotBeforeAction("Huishoudboekje gemaakt");
+    let naam;
+    try {
+      naam = await downloadProjectFile(hb, null, eigenNamen?.ondernemer, dossierWachtwoord || null, dossierWachtwoord ? dossierHerstelcode : null, "huishoudboekje");
+    } catch (e) {
+      setError(e.message || "Opslaan mislukt.");
+      return false;
+    }
+    const inGeheugen = { ...hb, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
+    await laadDossierBestand(new File([JSON.stringify(inGeheugen)], naam, { type: "application/json" }), dossierCtx);
+    return true;
+  };
   const doClearAllData = (askWizard = false) => wisDossier(dossierCtx, askWizard);
   const dossierSoortKeuze = useDossierSoort({
     soorten: rechtenPerSoort, soortDossier, setSoortDossier, heeftDossier: parsedFiles.length > 0 || !!loadedProjectFileName,
@@ -182,7 +202,7 @@ export function useDossierBestand({
   return {
     dossierVensters, setHerstelcodeToon, setWachtwoordModal,
     clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
-    sessie, setResumeHint,
+    sessie, setResumeHint, maakHuishoudboekje,
     startLoadProject, startOpslaan,
   };
 }

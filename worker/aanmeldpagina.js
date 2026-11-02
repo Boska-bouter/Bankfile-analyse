@@ -3,7 +3,7 @@
 // - Op /aanmelden ziet iedereen die is ingelogd zijn abonnementen en kan een abonnement aanvragen, ook een tweede
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
-import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
+import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, huishoudPrijsVoor, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
 import { BETALEN, KOPPELING, KOPPELING_VRAAG } from "./peiling.js";
 import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL } from "./welkom.js";
 
@@ -64,6 +64,9 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   const kiesSoort = GEBRUIK[soort] ? soort : null;
   const kiesPlan = plannenVoor(env)[plan] ? plan : "eenvoudig";
   const hbPlan = Object.keys(plannenVoor(env, "huishoudboekje"))[0]; // huishoudboekje-V1R0 — één abonnement
+  // huishoudboekje-V1R3 — met korting als je al Uitgebreid (zakelijk of privé) hebt.
+  const hbPrijs = huishoudPrijsVoor(env, slot ? r : null, hbPlan);
+  const hbPrijsTekst = hbPrijs.korting ? `${prijsTekst(hbPrijs.bedrag)} (korting omdat je Uitgebreid hebt, normaal ${prijsTekst(hbPrijs.gewoon)})` : prijsTekst(hbPrijs.bedrag);
   const [voornaam, ...rest] = String(r?.naam || "").trim().split(/\s+/);
   const achternaam = rest.join(" ");
   const soortKeuzes = Object.entries(GEBRUIK).map(([k, v]) => {
@@ -75,7 +78,7 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
     <label class="keuze plan"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
       <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("")
     // huishoudboekje-V1R0 — het Huishoudboekje heeft één abonnement: geen keuze, wel prijs en inhoud.
-    + `<div class="keuze hbplan" hidden><span><b>${esc(planNaam("huishoudboekje", hbPlan))}</b> <span class="prijs">${esc(prijsTekst(prijs.huishoudboekje[hbPlan]))}</span><small>${esc(PLAN_UITLEG.huishoudboekje[hbPlan].replace(/^./, (c) => c.toUpperCase()))}</small></span></div>`;
+    + `<div class="keuze hbplan" hidden><span><b>${esc(planNaam("huishoudboekje", hbPlan))}</b> <span class="prijs">${esc(hbPrijsTekst)}</span><small>${esc(PLAN_UITLEG.huishoudboekje[hbPlan].replace(/^./, (c) => c.toUpperCase()))}</small></span></div>`;
   const verlengLijst = slot ? teVerlengen(r, verlengen) : [];
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag] && r.verlenging
     ? `<p class="melding">Je verzoek om <b>${esc(planNaam(r.aanvraagGebruik || "zakelijk", r.aanvraag))}</b> te verlengen is ontvangen${r.aangevraagd ? ` op ${esc(nlDatum(r.aangevraagd))}` : ""}. Je krijgt een e-mail zodra het is verlengd${heeftToegang ? "" : ". Je kunt dit tabblad nu sluiten"}.</p>`

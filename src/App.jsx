@@ -99,6 +99,8 @@ import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus, isParticulier } from "./modus/index.js";
 import HuishoudboekjeOverzicht from "./components/huishoudboekje/HuishoudboekjeOverzicht.jsx";
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
+import HuishoudboekjeMakenModal from "./components/huishoudboekje/HuishoudboekjeMakenModal.jsx";
+import { telRekeningen } from "./dossier/naarHuishoudboekje.js";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -291,6 +293,13 @@ export default function App() {
   const naarServer = (url, wat) => { if (nood.weg) setDialog(nietBeschikbaar(wat)); else window.location.href = url; };
   const naarAbonnementen = () => naarServer("/aanmelden", "Aanmelden");
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
+  // huishoudboekje-V1R3 — wie ook het Huishoudboekje heeft, ziet een privédossier desgewenst als Huishoudboekje en kan van
+  // een zakelijk of privédossier een Huishoudboekje maken (wens Boska 2-11).
+  const magHuishoudboekje = rechtVoorSoort(rechtenPerSoort, "huishoudboekje", "eenvoudig", false);
+  const [alsHuishoudboekje, setAlsHuishoudboekjeState] = useState(() => { try { return localStorage.getItem("weergave-huishoudboekje") === "1"; } catch { return false; } });
+  const setAlsHuishoudboekje = (v) => { setAlsHuishoudboekjeState(v); try { localStorage.setItem("weergave-huishoudboekje", v ? "1" : "0"); } catch { /* geen opslag */ } };
+  const hbWeergave = soortDossier === "prive" && magHuishoudboekje && alsHuishoudboekje;
+  const [hbMakenOpen, setHbMakenOpen] = useState(false);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
   const [basisEenvoudigOpen, setBasisEenvoudigOpen] = useState(false);
@@ -1359,6 +1368,7 @@ export default function App() {
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
     leaseSoortWizard: autoWizardStatus?.soort || null,
     factuurjaar: bevestigdeControles?.factuurjaar || null,
+    eigenRekeningAanpasbaar: huishoudboekje,
   });
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
@@ -3193,7 +3203,7 @@ export default function App() {
   const {
     dossierVensters, setHerstelcodeToon, setWachtwoordModal,
     clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
-    sessie, setResumeHint,
+    sessie, setResumeHint, maakHuishoudboekje,
     startLoadProject, startOpslaan,
   } = useDossierBestand({
     activeTab, activeYear, auditLog, basisvragenNietGestart, changesSinceExport, dossierGegevens, dossierHerstelcode,
@@ -3433,6 +3443,7 @@ export default function App() {
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
+        onMaakHuishoudboekje={!huishoudboekje && parsedFiles.length > 0 ? () => setHbMakenOpen(true) : null}
         onClearAll={clearAllData}
         canClearAll
         onToggleHelp={() => setShowHelp((v) => !v)}
@@ -3786,7 +3797,14 @@ export default function App() {
           {/* v273 — ook dit paneel toont nu altijd, met DetailsPanel zelf een lege-staat renderend
               wanneer er nog geen activeYear is. */}
           <div ref={checklistSectionRef}>
-            {activeYear && priveOverzicht && (
+            {/* huishoudboekje-V1R3 — privédossier: kiezen tussen het jaaroverzicht en de weergave als Huishoudboekje */}
+            {soortDossier === "prive" && magHuishoudboekje && parsedFiles.length > 0 && (
+              <div role="tablist" aria-label="Weergave" className="mb-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" role="tab" aria-selected={!hbWeergave} onClick={() => setAlsHuishoudboekje(false)} className={`rounded-lg px-3 py-1.5 font-medium ${!hbWeergave ? "bg-white text-teal-800 shadow-sm" : "text-slate-600"}`}>Jaaroverzicht</button>
+                <button type="button" role="tab" aria-selected={hbWeergave} onClick={() => setAlsHuishoudboekje(true)} className={`rounded-lg px-3 py-1.5 font-medium ${hbWeergave ? "bg-white text-teal-800 shadow-sm" : "text-slate-600"}`}>Huishoudboekje</button>
+              </div>
+            )}
+            {activeYear && priveOverzicht && !hbWeergave && (
               <PriveOverzicht
                 overzicht={priveOverzicht} jaar={activeYear} jaren={years} onSelectYear={setActiveYear}
                 onVasteLasten={() => { openVasteLastenPaneel(); jumpToSection(automatiseringSectionRef); }}
@@ -3797,7 +3815,7 @@ export default function App() {
               />
             )}
             {/* huishoudboekje-V1R0 — eigen overzicht per maand/week, zonder belasting */}
-            {huishoudboekje && parsedFiles.length > 0 && (
+            {(huishoudboekje || hbWeergave) && parsedFiles.length > 0 && (
               <HuishoudboekjeOverzicht
                 transacties={classified} vasteCategorieen={fixedCategories} antwoorden={priveAntwoorden}
                 budgetten={priveAntwoorden?.budgetten || {}}
@@ -4400,6 +4418,13 @@ export default function App() {
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
       {dossierVensters}
+      {hbMakenOpen && (
+        <HuishoudboekjeMakenModal
+          soortDossier={soortDossier} aantal={telRekeningen(parsedFiles, accountTypeByFile)} mag={magHuishoudboekje}
+          opgeslagen={changesSinceExport === 0 && !!lastExportAt} metWachtwoord={!!dossierWachtwoord}
+          onOpslaan={startOpslaan} onMaak={maakHuishoudboekje} onClose={() => setHbMakenOpen(false)}
+        />
+      )}
       {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
       {showBegrippen && <BegrippenModal onClose={() => setShowBegrippen(false)} />}
       {showLog && (

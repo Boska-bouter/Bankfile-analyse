@@ -10,7 +10,7 @@ const normIban = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
 const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/;
 // beide-V3R3 — privé: soort van een opgegeven rekening (wens Boska 23-10). Spaar → "Sparen", beleggen → "Beleggen",
 // betaal → "Interne overboeking" (zie detectOwnAccountTransfer).
-const SOORTEN = [["betaal", "Betaalrekening"], ["spaar", "Spaarrekening"], ["beleggen", "Beleggingsrekening"]];
+const SOORTEN = [["betaal", "Betaalrekening"], ["spaar", "Spaarrekening"], ["beleggen", "Beleggingsrekening"], ["bedrijf", "Rekening eigen bedrijf"]];
 // beide-V5R1 — staat er (nog) geen soort, dan zeggen we dat (oranje) in plaats van stil "Betaalrekening" te tonen.
 const SoortKeuze = ({ value, onChange, className, open = false }) => (
   <select value={value || ""} onChange={(e) => onChange(e.target.value)} aria-label="Soort rekening" className={`${className} ${open && !value ? "border-amber-400 bg-amber-50 text-amber-900" : ""}`}>
@@ -102,7 +102,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
           </ul>
         )}
         {vasteSoort && lijst.some((r) => r.iban && !r.soort) && (
-          <p className="mt-1.5 text-xs text-amber-800">Kies bij elke rekening de soort. Overboekingen naar een spaar- of beleggingsrekening tellen dan als sparen of beleggen, naar een betaalrekening als overboeking eigen rekening. Zolang de soort ontbreekt, kijkt de app naar de omschrijving (bijv. "sparen" of "deposito").</p>
+          <p className="mt-1.5 text-xs text-amber-800">Kies bij elke rekening de soort. Overboekingen naar een spaar- of beleggingsrekening tellen dan als sparen of beleggen, naar een betaalrekening als overboeking eigen rekening. Bij de rekening van je eigen bedrijf telt wat binnenkomt als inkomen. Zolang de soort ontbreekt, kijkt de app naar de omschrijving (bijv. "sparen" of "deposito").</p>
         )}
       </div>
 

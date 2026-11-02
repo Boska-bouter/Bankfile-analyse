@@ -39,6 +39,7 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Kinderbijslag", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   // beide-V3R3 — wens Boska 23-10. Geen box 1-inkomen: telt mee in het budget, niet in de IB-indicatie.
   c("Dividend & rente", "Inkomen", { soort: "inkomen", label: "Ontvangen dividend & rente", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Inkomen uit eigen bedrijf", "Inkomen", { soort: "inkomen", label: "Inkomen uit eigen bedrijf", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }), // huishoudboekje-V1R2
   c("Ontvangen schenkingen", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
 

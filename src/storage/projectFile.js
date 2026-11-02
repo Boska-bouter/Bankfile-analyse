@@ -32,7 +32,7 @@ function sanitizeForFilename(naam) {
   return (naam || "").trim().replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
 }
 
-export async function downloadProjectFile(project, previousFileName, rekeninghouderNaam, wachtwoord = null, herstelcode = null) {
+export async function downloadProjectFile(project, previousFileName, rekeninghouderNaam, wachtwoord = null, herstelcode = null, soortInNaam = "dossier") {
   // De herstelcode gaat versleuteld mee in het dossier zelf, zodat hij bij een volgende keer opslaan gelijk blijft.
   let json = JSON.stringify(wachtwoord && herstelcode ? { ...project, herstelcode } : project, null, 2);
   if (wachtwoord) json = JSON.stringify(await versleutelTekst(json, wachtwoord, herstelcode));
@@ -47,8 +47,8 @@ export async function downloadProjectFile(project, previousFileName, rekeninghou
   const filename = previousFileName
     ? nextVersionedFilename(previousFileName.replace(/^(Bankoverzicht|BankafschriftenTool)_/, "BankafschriftenTool_"))
     : schoneNaam
-      ? `BankafschriftenTool_dossier_${schoneNaam}_${stamp}.json`
-      : `BankafschriftenTool_dossier_${stamp}.json`;
+      ? `BankafschriftenTool_${soortInNaam}_${schoneNaam}_${stamp}.json`
+      : `BankafschriftenTool_${soortInNaam}_${stamp}.json`;
 
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);

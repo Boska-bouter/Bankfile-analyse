@@ -123,7 +123,9 @@ export const HUISHOUDBOEKJE = {
 export function huishoudPrijs(env) {
   const plan = Object.keys(plannenVoor(env, "huishoudboekje"))[0];
   const bedrag = Number(prijzen(env).huishoudboekje[plan]) || 0;
-  return { tekst: bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")}/mnd` : HUISHOUDBOEKJE.prijs, gratis: !bedrag };
+  const korting = prijzen(env).huishoudboekjeMetUitgebreid; // huishoudboekje-V1R3
+  const metKorting = bedrag > 0 && korting !== null && korting < bedrag ? ` · met Uitgebreid € ${korting.toFixed(2).replace(".", ",")}/mnd` : "";
+  return { tekst: bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")}/mnd${metKorting}` : HUISHOUDBOEKJE.prijs, gratis: !bedrag };
 }
 export function welkomSoorten(env) {
   const pr = prijzen(env);

@@ -23,6 +23,15 @@ export function keywordInText(text, keyword) {
   if (i < 0) return false;
   const trimmed = kw.trim();
   if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${trimmed}`).test(text);
+  // huishoudboekje-V1R2 — een kort zoekwoord met alleen een spatie vooraan (" izz", " dsw", " uwv") moet ook als woord
+  // eindigen: " izz" (zorgverzekeraar IZZ) ving "Helal Slagerij Izzet" (melding Boska 2-11).
+  if (kw.startsWith(" ") && !kw.endsWith(" ") && trimmed.length <= 3 && /^[a-z0-9]+$/.test(trimmed)) {
+    while (i >= 0) {
+      if (!ALNUM_RE.test(text[i + kw.length] || " ")) return true;
+      i = text.indexOf(kw, i + 1);
+    }
+    return false;
+  }
   if (kw !== trimmed || trimmed.length > 5 || !DEFAULT_KEYWORD_SET.has(kw)) return true;
   // "apk" staat in de praktijk vaak vastgeplakt aan de garagenaam ("APKFriezenkamp") — daar geen eindgrens eisen.
   // "cafe" zit vrijwel altijd als achtervoegsel in een samenstelling ("Grandcafe", "Eetcafe", "Cafetaria") — geen beginsgrens eisen.
@@ -527,6 +536,9 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     // beide-V8R6 — een zakelijke spaarrekening is zakelijk sparen (was altijd "privé sparen", melding Boska 27-10).
     if (matchedOwn.soort === "spaar") return { category: matchedOwn.accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
     if (matchedOwn.soort === "beleggen") return { category: "Beleggen", type };
+    // huishoudboekje-V1R2 — rekening van je eigen bedrijf (wens Boska 2-11): wat binnenkomt is inkomen, wat ernaartoe gaat
+    // een overboeking tussen eigen rekeningen.
+    if (matchedOwn.soort === "bedrijf") return { category: tx.amount > 0 ? "Inkomen uit eigen bedrijf" : "Interne overboeking", type };
     return { category: "Interne overboeking", type };
   }
   const isIncome = tx.amount > 0;
@@ -534,6 +546,15 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     return isIncome ? { category: "Terugboeking van privé", type } : { category: "Privé opnames", type };
   }
   return isIncome ? { category: "Ontvangen van zakelijk", type } : { category: "Terugboeking naar zakelijk", type };
+}
+
+// huishoudboekje-V1R2 — ligt de categorie van een herkende overboeking tussen eigen rekeningen echt vast? Niet als die
+// rekening als `aanpasbaar` is gemarkeerd: in een Huishoudboekje een opgegeven, niet geladen rekening. Daar is geen
+// tegenboeking die moet blijven kloppen, dus je kunt de categorie zelf kiezen (bijv. inkomen uit je eigen bedrijf).
+export function eigenRekeningVast(tx, accountType, ownAccountsElsewhere = []) {
+  if (!detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere)) return false;
+  const matched = ownAccountsElsewhere.find((o) => ibansMatch(tx.counterpartyIban, o.iban));
+  return !matched?.aanpasbaar;
 }
 
 function isStaleOverigForKnownTransfer(override, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules) {
@@ -599,7 +620,7 @@ function hoortBijAndereRekening(override, accountType) {
 // een eigen keuze van de gebruiker. Zonder verfijn is alles zoals het was.
 function resolveClassificationBasis(tx, rules, businessKeywords, businessExpenseKeywords, accountType, overridesByCounterparty, overridesByRow, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = [], verfijn = null) {
   const lockedTransfer = detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere);
-  if (lockedTransfer) return lockedTransfer;
+  if (lockedTransfer && eigenRekeningVast(tx, accountType, ownAccountsElsewhere)) return lockedTransfer;
   const rowOverride = overridesByRow[tx.id];
   if (rowOverride && !isStaleOverigForKnownTransfer(rowOverride, tx, accountType, zakelijkeSpaarKeywords, ownAccountsElsewhere, rules)) return withAccountType(rowOverride, accountType);
   // IBAN is stabieler dan de naam (die per bank-export kan wisselen) — dus die heeft voorrang
