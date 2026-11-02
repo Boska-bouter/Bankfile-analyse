@@ -3737,6 +3737,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             zonderAangifte={huishoudboekje}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4009,6 +4010,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             zonderAangifte={huishoudboekje}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4242,6 +4244,7 @@ export default function App() {
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
             zonderAangifte={huishoudboekje}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
