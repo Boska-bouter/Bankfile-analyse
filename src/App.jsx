@@ -292,6 +292,10 @@ export default function App() {
   const naarServer = (url, wat) => { if (nood.weg) setDialog(nietBeschikbaar(wat)); else window.location.href = url; };
   const naarAbonnementen = () => naarServer("/aanmelden", "Aanmelden");
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
+  // huishoudboekje-V1R5 — kleur per soort dossier: data-soort op <html> stuurt de actiekleur (src/index.css).
+  useEffect(() => {
+    try { document.documentElement.dataset.soort = soortDossier === "prive" || soortDossier === "huishoudboekje" ? soortDossier : "zakelijk"; } catch { /* geen document */ }
+  }, [soortDossier]);
   // huishoudboekje-V1R3 — wie ook het Huishoudboekje heeft, ziet een privédossier desgewenst als Huishoudboekje en kan van
   // een zakelijk of privédossier een Huishoudboekje maken (wens Boska 2-11).
   const magHuishoudboekje = rechtVoorSoort(rechtenPerSoort, "huishoudboekje", "eenvoudig", false);
@@ -3556,6 +3560,8 @@ export default function App() {
       {/* Tabblad-pijlen in de marge naast de inhoud (alleen waar die marge breed genoeg is): één tik naar het
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && !eenvoudigActief && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
+      {/* huishoudboekje-V1R5 — smalle band in de kleur van de soort dossier, zodat je ziet waar je bent */}
+      {parsedFiles.length > 0 && <div aria-hidden="true" className="h-1.5 w-full shrink-0 bg-teal-600" />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <NoodmodusBalk nood={nood} />
         <SessieBalk sessie={sessie} onOpslaan={startOpslaan} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />

@@ -9,6 +9,10 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 
 // Breed scherm (iPad liggend, computer): uitleg links, inloggen rechts en blijft staan bij scrollen. Smal scherm:
 // eerst inloggen, daaronder de uitleg. Eén inlogvak, geen tweede inlogknop onderaan (wens Boska 24-10).
+// huishoudboekje-V1R5 — kleur per soort (akkoord Boska 2-11), gelijk aan de app (src/index.css): klassen s-zakelijk,
+// s-prive en s-hb zetten --accent op het element (kaarten op welkomst- en aanmeldpagina, kolom in de vergelijking).
+export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}.s-hb,.s-huishoudboekje{--accent:#8a3b7c}
+@media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}.s-hb,.s-huishoudboekje{--accent:#cf86c0}}`;
 export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
@@ -35,6 +39,8 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .soortkaarten{display:grid;gap:12px;grid-template-columns:1fr}
 .soortkaart{display:grid;grid-row:span 7;grid-template-rows:subgrid;row-gap:8px;align-content:start}.soortkaart h3{margin:0;font-size:1.1rem}
 .soortkaart .kies{margin:0;font-size:14px;line-height:1.4}.soortkaart .kies span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:700;margin-bottom:2px}
+.soortkaart{border-top:6px solid var(--accent)}.soortkaart h3{color:var(--accent)}
+${SOORT_KLEUR_STIJL}
 .soortkaart .klein.mi{margin-top:6px}.soortkaart ul.lang{grid-row:span 3}
 @media (min-width:600px){.soortkaarten{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
@@ -78,11 +84,11 @@ export function vergelijkTabel(soorten, { metHuishoudboekje = true } = {}) {
   const plan = (s, k) => s.plannen.find((p) => p.sleutel === k) || {};
   const cel = (w, k = "") => `<td class="${[w === V ? "ja" : w === N ? "nee" : "", k].filter(Boolean).join(" ")}">${e(w ?? "")}</td>`;
   const regels = VERGELIJK.filter((r) => !r.alleen || soortSleutels.includes(r.alleen)).map((r) =>
-    `<tr><th scope="row">${e(r.t)}${r.alleen && meer ? ` <span class="soort">(${SOORT_NAAM[r.alleen]})</span>` : ""}</th>${sleutels.map((k) => cel(r.w[k])).join("")}${hb ? cel(r.hb ?? N, "hbk") : ""}</tr>`);
+    `<tr><th scope="row">${e(r.t)}${r.alleen && meer ? ` <span class="soort">(${SOORT_NAAM[r.alleen]})</span>` : ""}</th>${sleutels.map((k) => cel(r.w[k])).join("")}${hb ? cel(r.hb ?? N, "hbk s-hb") : ""}</tr>`);
   const prijs = (s, k) => (plan(s, k).gratis ? "gratis" : String(plan(s, k).prijs).replace(" per maand", "/mnd"));
   const prijzen = soorten.map((s, i) =>
-    `<tr class="prijsregel"><th scope="row">Prijs${meer ? ` ${e(SOORT_NAAM[s.soort])}` : ""}</th>${sleutels.map((k) => `<td>${e(prijs(s, k))}</td>`).join("")}${hb && i === 0 ? `<td class="hbk" rowspan="${soorten.length}">${e(soorten.hbPrijs || HUISHOUDBOEKJE.prijs)}</td>` : ""}</tr>`);
-  const groep = hb ? `<tr class="groep"><th></th><th scope="colgroup" colspan="${sleutels.length}">Zakelijk en privé</th><th scope="col" class="hbk" rowspan="2">Huishoud&shy;boekje<span>één abonnement</span></th></tr>` : "";
+    `<tr class="prijsregel"><th scope="row">Prijs${meer ? ` ${e(SOORT_NAAM[s.soort])}` : ""}</th>${sleutels.map((k) => `<td>${e(prijs(s, k))}</td>`).join("")}${hb && i === 0 ? `<td class="hbk s-hb" rowspan="${soorten.length}">${e(soorten.hbPrijs || HUISHOUDBOEKJE.prijs)}</td>` : ""}</tr>`);
+  const groep = hb ? `<tr class="groep"><th></th><th scope="colgroup" colspan="${sleutels.length}">Zakelijk en privé</th><th scope="col" class="hbk s-hb" rowspan="2">Huishoud&shy;boekje<span>één abonnement</span></th></tr>` : "";
   return `<div class="vergelijk"><table>
 <thead>${groep}<tr><th></th>${sleutels.map((k) => `<th scope="col">${e(plan(soorten[0], k).naam)}</th>`).join("")}</tr></thead>
 <tbody>${regels.join("")}${prijzen.join("")}</tbody></table></div>${hb ? `<p class="klein">* Bankkoppeling via Ponto: ${e(BANKKOPPELING_STATUS)}.</p>` : ""}${sleutels.includes("koppelen")
@@ -96,7 +102,7 @@ export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card
 .vergelijk td.ja{color:var(--accent);font-weight:700}.vergelijk td.nee{color:var(--muted)}
 .vergelijk .prijsregel td{color:var(--accent);font-weight:600}
 .vergelijk .groep th{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);padding-bottom:0}
-.vergelijk .hbk{border-left:2px solid var(--line)}.vergelijk thead .hbk{vertical-align:bottom;color:var(--fg)}
+.vergelijk .hbk{border-left:3px solid var(--accent)}.vergelijk thead th.hbk{border-top:4px solid var(--accent)}.vergelijk thead .hbk{vertical-align:bottom;color:var(--fg)}
 .vergelijk thead .hbk span{display:block;font-weight:400;font-size:11px;color:var(--muted)}
 .vergelijk .prijsregel td.hbk{vertical-align:middle}
 @media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px 4px !important;font-size:11px;hyphens:auto}.vergelijk tbody th{width:32%}.vergelijk thead .hbk{font-size:11px}}
@@ -171,7 +177,7 @@ export const welkomVeilig = (veilig = VEILIG) => `
 
 // huishoudboekje-V1R0 — de soortkaarten staan op dezelfde regels (subgrid): naam, waarom kiezen, voor wie, eerste lijst, tweede lijst.
 const soortKaart = (naam, kies, voor, lijsten, extra = "") => `
-      <div class="kaart soortkaart ${extra}"><h3>${e(naam)}</h3><p class="kies"><span>Kies dit voor</span>${e(kies)}</p><p class="klein">${e(voor)}</p>${lijsten.map(([kop, l], i) =>
+      <div class="kaart soortkaart s-${extra || "zakelijk"}"><h3>${e(naam)}</h3><p class="kies"><span>Kies dit voor</span>${e(kies)}</p><p class="klein">${e(voor)}</p>${lijsten.map(([kop, l], i) =>
     `<p class="klein mi">${e(kop)}</p><ul${lijsten.length === 1 ? ` class="lang"` : ""}>${l.map((k) => `<li>${e(k)}</li>`).join("")}</ul>`).join("")}</div>`;
 
 export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
@@ -190,7 +196,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
 
   <section>
     <h2>${meer ? "Zakelijk, privé of huishoudboekje" : "Voor wie"}</h2>
-    <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]])).join("")}
+    <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
       ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eén abonnement, alles erin", HUISHOUDBOEKJE.alles]], "hb")}
     </div>
     ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p>` : ""}

@@ -5,7 +5,7 @@
 // Op zichzelf staand (geen app-bestanden nodig).
 import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, huishoudPrijsVoor, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
 import { BETALEN, KOPPELING, KOPPELING_VRAAG } from "./peiling.js";
-import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL } from "./welkom.js";
+import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
 const nlDatum = (iso) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" });
@@ -71,14 +71,14 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   const achternaam = rest.join(" ");
   const soortKeuzes = Object.entries(GEBRUIK).map(([k, v]) => {
     const n = slot ? niveauVan(r?.soorten?.[k]) : 0;
-    return `<label class="keuze"><input type="radio" name="gebruik" value="${k}" required${kiesSoort === k ? " checked" : ""}>
+    return `<label class="keuze s-${k}"><input type="radio" name="gebruik" value="${k}" required${kiesSoort === k ? " checked" : ""}>
       <span><b>${v}</b><small>${esc(GEBRUIK_UITLEG[k])}${n ? ` · je hebt nu ${esc(k === "huishoudboekje" ? planNaam(k, NIVEAU_PLAN[n]) : PLANNEN[NIVEAU_PLAN[n]])}` : ""}</small></span></label>`;
   }).join("");
   const planKeuzes = Object.keys(plannenVoor(env)).map((k) => `
     <label class="keuze plan"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
       <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("")
     // huishoudboekje-V1R0 — het Huishoudboekje heeft één abonnement: geen keuze, wel prijs en inhoud.
-    + `<div class="keuze hbplan" hidden><span><b>${esc(planNaam("huishoudboekje", hbPlan))}</b> <span class="prijs">${esc(hbPrijsTekst)}</span><small>${esc(PLAN_UITLEG.huishoudboekje[hbPlan].replace(/^./, (c) => c.toUpperCase()))}</small></span></div>`;
+    + `<div class="keuze hbplan s-hb" hidden><span><b>${esc(planNaam("huishoudboekje", hbPlan))}</b> <span class="prijs">${esc(hbPrijsTekst)}</span><small>${esc(PLAN_UITLEG.huishoudboekje[hbPlan].replace(/^./, (c) => c.toUpperCase()))}</small></span></div>`;
   const verlengLijst = slot ? teVerlengen(r, verlengen) : [];
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag] && r.verlenging
     ? `<p class="melding">Je verzoek om <b>${esc(planNaam(r.aanvraagGebruik || "zakelijk", r.aanvraag))}</b> te verlengen is ontvangen${r.aangevraagd ? ` op ${esc(nlDatum(r.aangevraagd))}` : ""}. Je krijgt een e-mail zodra het is verlengd${heeftToegang ? "" : ". Je kunt dit tabblad nu sluiten"}.</p>`
@@ -123,6 +123,8 @@ button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#sta
 [hidden]{display:none!important}a{color:var(--accent)}
 .naarapp{display:block;text-align:center;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:11px 16px;text-decoration:none}
 ${VERGELIJK_STIJL}
+${SOORT_KLEUR_STIJL}
+.keuze.s-zakelijk,.keuze.s-prive,.keuze.s-huishoudboekje,.keuze.s-hb{border-left:5px solid var(--accent)}.keuze[class*=" s-"] input{accent-color:var(--accent)}.keuze.s-zakelijk b,.keuze.s-prive b,.keuze.s-huishoudboekje b{color:var(--accent)}
 details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vgl[open] summary{margin-bottom:8px}.klein{font-size:13px;margin:6px 0 0}
 </style></head><body><main>
 <h1>${titel}</h1>

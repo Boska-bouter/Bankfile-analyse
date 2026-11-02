@@ -22,8 +22,8 @@ export default function SoortKeuze({ beschikbaar, onKies, onClose }) {
           {Object.entries(KAARTEN).map(([soort, k]) => {
             const mag = beschikbaar.includes(soort);
             return mag ? (
-              <button key={soort} type="button" onClick={() => onKies(soort)} className="flex-1 rounded-2xl border-2 border-slate-300 bg-white p-5 text-left hover:border-teal-600 hover:bg-teal-50">
-                <span className="block text-lg font-bold text-slate-900">{k.titel}</span>
+              <button key={soort} type="button" data-soort={soort} onClick={() => onKies(soort)} className="flex-1 rounded-2xl border-2 border-t-[6px] border-slate-300 border-t-teal-600 bg-white p-5 text-left hover:border-teal-600 hover:bg-teal-50">
+                <span className="block text-lg font-bold text-teal-800">{k.titel}</span>
                 <span className="mt-1 block text-sm text-slate-600">{k.tekst}</span>
                 <ul className="mt-3 space-y-1 text-xs text-slate-500">{k.punten.map((p) => <li key={p}>• {p}</li>)}</ul>
               </button>
