@@ -100,7 +100,6 @@ import { useModus, isParticulier } from "./modus/index.js";
 import HuishoudboekjeOverzicht from "./components/huishoudboekje/HuishoudboekjeOverzicht.jsx";
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import HuishoudboekjeMakenModal from "./components/huishoudboekje/HuishoudboekjeMakenModal.jsx";
-import { telRekeningen } from "./dossier/naarHuishoudboekje.js";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
@@ -4417,14 +4416,17 @@ export default function App() {
       )}
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
-      {dossierVensters}
+      {/* huishoudboekje-V1R3/V1R4 — vóór de dossiervensters, zodat het opslaanvenster er bovenop komt */}
       {hbMakenOpen && (
         <HuishoudboekjeMakenModal
-          soortDossier={soortDossier} aantal={telRekeningen(parsedFiles, accountTypeByFile)} mag={magHuishoudboekje}
+          soortDossier={soortDossier} mag={magHuishoudboekje} huidigBestand={loadedProjectFileName}
+          bestanden={parsedFiles.map((f) => ({ naam: f.fileName, zakelijk: accountTypeByFile[f.fileName] === "Zakelijk" }))}
           opgeslagen={changesSinceExport === 0 && !!lastExportAt} metWachtwoord={!!dossierWachtwoord}
           onOpslaan={startOpslaan} onMaak={maakHuishoudboekje} onClose={() => setHbMakenOpen(false)}
         />
       )}
+      {dossierVensters}
+
       {showZoek && <ZoekAllesModal transacties={classified} jaren={years} onClose={() => setShowZoek(false)} onGaNaarJaar={(j) => { setActiveYear(j); setShowZoek(false); }} />}
       {showBegrippen && <BegrippenModal onClose={() => setShowBegrippen(false)} />}
       {showLog && (

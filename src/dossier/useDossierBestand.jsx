@@ -4,7 +4,7 @@ import { useDossierSoort } from "../modus/useDossierSoort.jsx";
 import { maakHerstelcode } from "../storage/herstelcode.js";
 import { buildProjectFile, downloadProjectFile } from "../storage/projectFile.js";
 import { BTW_RATES_VERSION } from "../tax/btw.js";
-import { laadDossierBestand, wisDossier } from "./dossierLaden.jsx";
+import { laadDossierBestand, pasDossierToe, wisDossier } from "./dossierLaden.jsx";
 import { useDossierDialogen } from "./useDossierDialogen.jsx";
 import { useOpslaanHerinnering } from "./useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing } from "./useSessieWaarschuwing.jsx";
@@ -114,22 +114,35 @@ export function useDossierBestand({
   };
   const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
   // huishoudboekje-V1R3 — van dit dossier een Huishoudboekje maken (wens Boska 2-11): een nieuw dossierbestand met alleen
-  // de privérekeningen wordt gedownload en meteen geopend. Het huidige dossier verandert niet; staat het nog niet in een
-  // bestand, dan vraagt het venster eerst om op te slaan (zie HuishoudboekjeMakenModal). Een wachtwoord gaat mee.
+  // de privérekeningen wordt opgeslagen (gedownload) en meteen geopend. Het huidige dossier verandert niet; het venster
+  // (HuishoudboekjeMakenModal) laat eerst opslaan als er nog wijzigingen buiten het dossierbestand zijn. Een wachtwoord gaat mee.
+  // huishoudboekje-V1R4 — direct toepassen in plaats van via een nagemaakt bestand (gaf op de iPad "Kon het dossierbestand
+  // niet lezen"), en geen "Ongedaan maken": het nieuwe bestand is al opgeslagen. Wel een melding met beide bestandsnamen.
   const maakHuishoudboekje = async () => {
+    const origineel = loadedProjectFileName;
     const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
     const hb = naarHuishoudboekje(project, { van: soortDossier === "prive" ? "een privédossier" : "een zakelijk dossier" });
     if (!hb.parsedFiles.length) { setError("Dit dossier heeft geen privérekeningen. Een Huishoudboekje heeft minstens één privérekening nodig."); return false; }
-    snapshotBeforeAction("Huishoudboekje gemaakt");
     let naam;
     try {
       naam = await downloadProjectFile(hb, null, eigenNamen?.ondernemer, dossierWachtwoord || null, dossierWachtwoord ? dossierHerstelcode : null, "huishoudboekje");
+      const inGeheugen = { ...hb, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
+      pasDossierToe(inGeheugen, { naam, lastModified: Date.now() }, dossierCtx);
     } catch (e) {
-      setError(e.message || "Opslaan mislukt.");
+      setError(e.message || "Het Huishoudboekje maken is mislukt.");
       return false;
     }
-    const inGeheugen = { ...hb, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
-    await laadDossierBestand(new File([JSON.stringify(inGeheugen)], naam, { type: "application/json" }), dossierCtx);
+    setDialog({
+      title: "Je Huishoudboekje staat open",
+      message: (
+        <div className="space-y-2">
+          <p>Het nieuwe dossier is opgeslagen als <b className="break-all">{naam}</b>, met {hb.parsedFiles.length === 1 ? "dit bankbestand" : "deze bankbestanden"}: {hb.parsedFiles.map((f) => f.fileName).join(", ")}.</p>
+          <p>{origineel ? <>Je vorige dossier staat ongewijzigd in <b className="break-all">{origineel}</b>.</> : "Je vorige dossier is niet gewijzigd."} Wil je daar weer mee verder, open het dan via <b>Dossier laden</b>.</p>
+        </div>
+      ),
+      actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
+      zonderAnnuleren: true,
+    });
     return true;
   };
   const doClearAllData = (askWizard = false) => wisDossier(dossierCtx, askWizard);

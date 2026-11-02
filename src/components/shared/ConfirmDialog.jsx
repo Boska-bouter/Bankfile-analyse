@@ -38,12 +38,13 @@ export default function ConfirmDialog({ dialog, onClose }) {
               {a.label}
             </button>
           ))}
-          <button
+          {/* huishoudboekje-V1R4 — een melding (alleen OK) heeft geen Annuleren: dialog.zonderAnnuleren */}
+          {!dialog.zonderAnnuleren && <button
             onClick={onClose}
             className="w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50"
           >
             Annuleren
-          </button>
+          </button>}
         </div>
       </section>
     </div>
