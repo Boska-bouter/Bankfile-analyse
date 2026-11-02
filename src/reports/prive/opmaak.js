@@ -13,7 +13,9 @@ export const metTeken = (n, uit = false) => {
 };
 export const kopRij = (jaren) => `<tr><th></th>${jaren.map((j) => `<th class="num">${esc(j)}</th>`).join("")}</tr>`;
 
-export function document({ titel, sub, inhoud }) {
+// huishoudboekje-V1R0 — eigen slottekst mogelijk (een Huishoudboekje heeft niets met aangifte te maken).
+const STANDAARD_DISCLAIMER = "<strong>Let op:</strong> dit is een indicatie op basis van de bankgegevens en de antwoorden in dit dossier. Het is geen aangifte en geen fiscaal advies. De aangifte inkomstenbelasting zelf gaat via de Belastingdienst; de uitkomst daar kan afwijken. Toeslagen worden niet berekend.";
+export function document({ titel, sub, inhoud, disclaimer = STANDAARD_DISCLAIMER }) {
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>${esc(titel)}</title>
 <style>
  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:12px;line-height:1.4}
@@ -27,11 +29,12 @@ export function document({ titel, sub, inhoud }) {
  .uitkomst{font-size:15px;font-weight:bold;margin:6px 0} .terug{color:#047857} .bij{color:#b91c1c}
  .aannames{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-top:8px} .aannames ul{margin:4px 0 0;padding-left:16px}
  .disc{margin-top:22px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#475569;font-size:10.5px}
+ .groen{color:#047857} .oranje{color:#b45309} .rood{color:#b91c1c}
  .jaar{break-before:page} .jaar:first-of-type{break-before:auto} @media print{body{padding:0}}
 </style></head><body>
 <h1>${esc(titel)}</h1>
 <div class="sub">${sub}</div>
 ${inhoud}
-<div class="disc"><strong>Let op:</strong> dit is een indicatie op basis van de bankgegevens en de antwoorden in dit dossier. Het is geen aangifte en geen fiscaal advies. De aangifte inkomstenbelasting zelf gaat via de Belastingdienst; de uitkomst daar kan afwijken. Toeslagen worden niet berekend.</div>
+<div class="disc">${disclaimer}</div>
 </body></html>`;
 }

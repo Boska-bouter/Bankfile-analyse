@@ -6,6 +6,7 @@ import { PRIVACY_KORT } from "./privacy.jsx";
 import { uitgebreidExtra } from "./aanbod.js";
 const UITGEBREID_PRIVE = uitgebreidExtra("prive");
 import { VOORWAARDEN_PRIVE_INHOUD } from "./voorwaardenPrive.jsx";
+import { HUISHOUD_HELP_CHAPTERS, HUISHOUD_INTRO, VERBORGEN_IN_HUISHOUDBOEKJE } from "./helpHuishoudboekje.jsx";
 
 const VERBORGEN_IN_PRIVE = new Set([
   "jaaroverzicht", "btw-aangifte-kwartaal", "categorieen-overzicht", "persoonlijke-aannames", "huur-deels-zakelijk",
@@ -170,6 +171,16 @@ export const PRIVE_HELP_CHAPTERS = [
 // Hoofdstukken voor een soort dossier: zakelijk ongewijzigd; privé = gedeelde hoofdstukken, met privéversies op hun
 // plek (zelfde sleutel) en nieuwe privéhoofdstukken achteraan in hun groep.
 export function helpVoorSoort(soort) {
+  // huishoudboekje-V1R0 — de privéhoofdstukken zonder belasting, met de eigen hoofdstukken op hun plek.
+  if (soort === "huishoudboekje") {
+    const prive = helpVoorSoort("prive");
+    const vervang = new Map(HUISHOUD_HELP_CHAPTERS.map((c) => [c.key, c]));
+    const basis = prive.chapters.filter((c) => !VERBORGEN_IN_HUISHOUDBOEKJE.has(c.key)).map((c) => vervang.get(c.key) || c);
+    const bekend = new Set(basis.map((c) => c.key));
+    const nieuw = HUISHOUD_HELP_CHAPTERS.filter((c) => !bekend.has(c.key));
+    const chapters = HELP_GROEPEN.flatMap((g) => [...basis, ...nieuw].filter((c) => c.groep === g.key));
+    return { intro: HUISHOUD_INTRO, chapters, groepen: HELP_GROEPEN };
+  }
   if (soort !== "prive") return { intro: undefined, chapters: HELP_CHAPTERS, groepen: HELP_GROEPEN };
   const vervang = new Map(PRIVE_HELP_CHAPTERS.map((c) => [c.key, c]));
   const basis = HELP_CHAPTERS.filter((c) => !VERBORGEN_IN_PRIVE.has(c.key)).map((c) => vervang.get(c.key) || c);

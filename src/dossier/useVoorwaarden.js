@@ -14,7 +14,8 @@ export const VOORWAARDEN_PER_SOORT = {
 const lees = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 
 export function useVoorwaarden({ email, rolStatus, soorten, server = {} }) {
-  const nodig = useMemo(() => beschikbareSoorten(soorten), [soorten]);
+  // huishoudboekje-V1R0 — het Huishoudboekje valt onder de privévoorwaarden.
+  const nodig = useMemo(() => [...new Set(beschikbareSoorten(soorten).map((s) => (s === "huishoudboekje" ? "prive" : s)))], [soorten]);
   const sleutel = (soort) => (email ? `${VOORWAARDEN_PER_SOORT[soort].sleutel}:${email}` : VOORWAARDEN_PER_SOORT[soort].sleutel);
   const [tik, setTik] = useState(0);
   const [akkoordNu, setAkkoordNu] = useState([]);

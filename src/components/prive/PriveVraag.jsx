@@ -13,15 +13,15 @@ export function leesBedrag(tekst) {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function Bedrag({ waarde, onChange, label }) {
+function Bedrag({ waarde, onChange, label, placeholder = "€", breed = false }) {
   return (
     <label className="flex items-center gap-2 text-xs text-slate-600">
-      {label && <span className="w-24 shrink-0">{label}</span>}
+      {label && <span className={`${breed ? "w-40" : "w-24"} shrink-0`}>{label}</span>}
       <input
         inputMode="decimal"
         defaultValue={waarde ?? ""}
         onChange={(e) => onChange(leesBedrag(e.target.value))}
-        placeholder="€"
+        placeholder={placeholder}
         className={`${INVOER} max-w-[10rem] text-right`}
       />
     </label>
@@ -30,7 +30,7 @@ function Bedrag({ waarde, onChange, label }) {
 
 const zonderLeeg = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && !(v && typeof v === "object" && Object.keys(v).length === 0)));
 
-export default function PriveVraag({ vraag, waarde, onChange, jaren = [], bestanden = [] }) {
+export default function PriveVraag({ vraag, waarde, onChange, jaren = [], bestanden = [], antwoorden = {} }) {
   const v = vraag;
   let invoer = null;
   if (v.type === "keuze") {
@@ -49,6 +49,20 @@ export default function PriveVraag({ vraag, waarde, onChange, jaren = [], bestan
         {v.opties.map((o) => (
           <button key={o.waarde} type="button" aria-pressed={lijst.includes(o.waarde)} onClick={() => wissel(o.waarde)} className={`${KNOP} ${lijst.includes(o.waarde) ? AAN : UIT}`}>{o.label}</button>
         ))}
+      </div>
+    );
+  } else if (v.type === "bedrag") {
+    // huishoudboekje-V1R1 — één bedrag (bijv. spaardoel per maand); v.suggestie(antwoorden) geeft een voorbeeldbedrag.
+    const s = v.suggestie?.(antwoorden);
+    invoer = <Bedrag waarde={waarde} onChange={onChange} placeholder={s ? `bijv. € ${Math.round(s)}` : "€"} />;
+  } else if (v.type === "bedragen") {
+    // huishoudboekje-V1R1 — een bedrag per veld (bijv. budget per categorie). Andere sleutels in het antwoord blijven staan.
+    const per = waarde && typeof waarde === "object" ? waarde : {};
+    const sug = v.suggestie?.(antwoorden) || {};
+    invoer = (
+      <div className="space-y-1.5">
+        {v.velden.map((f) => <Bedrag key={f.key} breed label={f.label} waarde={per[f.key]} placeholder={sug[f.key] ? `± € ${Math.round(sug[f.key])}` : "€"}
+          onChange={(n) => onChange(zonderLeeg({ ...per, [f.key]: n > 0 ? n : undefined }))} />)}
       </div>
     );
   } else if (v.type === "naam") {

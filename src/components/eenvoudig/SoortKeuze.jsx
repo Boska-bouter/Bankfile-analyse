@@ -1,21 +1,24 @@
 import { X } from "lucide-react";
 
+// huishoudboekje-V1R0 — drie soorten: zakelijk, privé en Huishoudboekje.
 // beide-V1R2 — eerste vraag bij een nieuw dossier, vóór Eenvoudig/Uitgebreid: is dit dossier zakelijk of privé?
 // Alleen soorten waarvoor het account een abonnement heeft, zijn te kiezen; de andere wijst naar de abonnementenpagina.
 // De keuze ligt daarna vast voor dit dossier.
 const KAARTEN = {
   zakelijk: { titel: "Zakelijk", tekst: "Voor een eenmanszaak, zzp of BV.", punten: ["Omzet, kosten en btw", "Indicatie inkomstenbelasting of vennootschapsbelasting"] },
   prive: { titel: "Privé", tekst: "Voor particulieren en hun huishouden, zonder onderneming.", punten: ["Inkomsten en uitgaven per maand", "Vaste lasten en sparen", "Indicatie inkomstenbelasting"] },
+  // huishoudboekje-V1R0 — derde soort, zonder belasting.
+  huishoudboekje: { titel: "Huishoudboekje", tekst: "Voor wie per week en per maand wil zien waar het geld blijft.", punten: ["Vaste lasten en variabele uitgaven", "Budget per categorie", "Past het bij je inkomen, waar kun je besparen"] },
 };
 
 export default function SoortKeuze({ beschikbaar, onKies, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <button type="button" onClick={onClose} className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /> Sluiten</button>
         <h2 className="text-xl font-bold">Nieuw dossier</h2>
-        <p className="mb-4 text-sm text-slate-600">Is dit dossier zakelijk of privé? Dit is later niet meer te wijzigen. Voor allebei: maak een tweede dossier.</p>
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <p className="mb-4 text-sm text-slate-600">Wat voor dossier wordt dit? Dit is later niet meer te wijzigen. Voor meer soorten: maak nog een dossier.</p>
+        <div className="flex flex-col gap-3 md:flex-row">
           {Object.entries(KAARTEN).map(([soort, k]) => {
             const mag = beschikbaar.includes(soort);
             return mag ? (

@@ -19,7 +19,7 @@ export function useDossierSoort({ soorten, soortDossier, setSoortDossier, heeftD
   const beschikbaar = useMemo(() => beschikbareSoorten(soorten), [soorten]);
   const [verder, setVerder] = useState(null); // wat er na de keuze gebeurt (Eenvoudig/Uitgebreid kiezen)
 
-  // Nieuw dossier: met één soort meteen door, met twee eerst de vraag.
+  // Nieuw dossier: met één soort meteen door, met meer eerst de vraag.
   const startMetSoort = (daarna) => {
     if (beschikbaar.length === 1) { setSoortDossier(beschikbaar[0]); daarna(beschikbaar[0]); return; }
     setVerder(() => daarna);
@@ -38,7 +38,7 @@ export function useDossierSoort({ soorten, soortDossier, setSoortDossier, heeftD
     const naam = SOORTEN[soortDossier].toLowerCase();
     setDialog({
       title: `Dit is een ${naam} dossier`,
-      message: <p>Je account heeft (nog) geen abonnement voor {naam} gebruik, dus dit dossier kun je hier niet gebruiken. Vraag een abonnement aan, of start een nieuw dossier.</p>,
+      message: <p>Je account heeft (nog) geen abonnement voor {soortDossier === "huishoudboekje" ? "het Huishoudboekje" : `${naam} gebruik`}, dus dit dossier kun je hier niet gebruiken. Vraag een abonnement aan, of start een nieuw dossier.</p>,
       actions: [
         { label: "Abonnement aanvragen", variant: "primary", onClick: () => { window.location.href = `/aanmelden?soort=${soortDossier}`; } },
         { label: "Nieuw dossier starten", onClick: onNieuwDossier },

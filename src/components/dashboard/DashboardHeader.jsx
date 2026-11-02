@@ -9,7 +9,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
+  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", zonderAangifte = false, openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
   const aangiftesRef = useRef(null);
@@ -38,7 +38,7 @@ export default function DashboardHeader({
   // eventuele "Werkelijke aangifte"-regel daarin (uit dashboardCards "yearStatus") niet dubbel
   // verschijnt naast de nieuwe rechterkaart.
   const dossierLines = (statusLines || []).filter(
-    (l) => l.label !== "Werkelijke aangifte" && !(openPoints != null && l.label === "Dossiercontrole")
+    (l) => l.label !== "Werkelijke aangifte" && !(zonderAangifte && /aangifte|belasting/i.test(String(l.label))) && !(openPoints != null && l.label === "Dossiercontrole")
       // "Geen aannames" zegt niets: alleen tonen als er wél aannames zijn.
       && !(l.label === "Indicatieve aangifte" && /geen aannames/i.test(String(l.value)))
   );
@@ -175,8 +175,9 @@ export default function DashboardHeader({
           )}
           {/* V81 — "Werkelijke aangifte" staat als derde kolom in dezelfde kaart (zelfde kleurstelling als de rest),
               blijft inhoudelijk los van de Dossiercontrole: eigen kop, eigen stip. */}
-          <div className="w-px self-stretch bg-slate-200" />
-          <div ref={aangiftesRef} className="relative flex flex-col justify-center gap-1 min-w-0 shrink">
+          {/* huishoudboekje-V1R0 — een Huishoudboekje kent geen aangifte */}
+          {!zonderAangifte && <div className="w-px self-stretch bg-slate-200" />}
+          {!zonderAangifte && <div ref={aangiftesRef} className="relative flex flex-col justify-center gap-1 min-w-0 shrink">
             <button
               type="button"
               onClick={() => (werkelijkItems?.length ? setToonAangiftes((v) => !v) : null)}
@@ -211,7 +212,7 @@ export default function DashboardHeader({
                 </ul>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

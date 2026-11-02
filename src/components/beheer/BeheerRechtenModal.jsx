@@ -11,14 +11,18 @@ import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 // Let op: wie de app wil openen moet ook in Cloudflare Access binnen mogen; dit scherm regelt alleen wat iemand mag.
 
 // beide-V1R0 — rechten per soort gebruik: zakelijk en privé zijn aparte abonnementen, elk met een eigen einddatum.
-const SOORT = { zakelijk: "Zakelijk", prive: "Privé" };
+// huishoudboekje-V1R0 — derde soort, met één abonnement (intern niveau Uitgebreid) en eventueel de bankkoppeling.
+const SOORT = { zakelijk: "Zakelijk", prive: "Privé", huishoudboekje: "Huishoudboekje" };
+const SOORTEN = Object.keys(SOORT);
 const GEEN_SOORT = { eenvoudig: false, uitgebreid: false, koppelen: false, geldigTot: "" };
-const LEEG = { email: "", zakelijk: { eenvoudig: true, uitgebreid: true, koppelen: false, geldigTot: "" }, prive: GEEN_SOORT, notitie: "" };
+const LEEG = { email: "", zakelijk: { eenvoudig: true, uitgebreid: true, koppelen: false, geldigTot: "" }, prive: GEEN_SOORT, huishoudboekje: GEEN_SOORT, notitie: "" };
 // nieuw-V4R5 — aanmeldingen: wat iemand heeft aangevraagd.
 const PLAN = { eenvoudig: "Eenvoudig", uitgebreid: "Uitgebreid", koppelen: "Uitgebreid met bankkoppeling" };
-const planNaam = (soort, plan) => `${SOORT[soort] || SOORT.zakelijk} · ${PLAN[plan] || plan}`;
+const planNaam = (soort, plan) => (soort === "huishoudboekje" ? `Huishoudboekje${plan === "koppelen" ? " met bankkoppeling" : ""}` : `${SOORT[soort] || SOORT.zakelijk} · ${PLAN[plan] || plan}`);
 // Wat iemand binnen één soort heeft, kort ("Uitgebreid + bankkoppeling"), of null.
-const niveauTekst = (x) => (x?.uitgebreid ? (x.koppelen ? "Uitgebreid + bankkoppeling" : "Uitgebreid") : x?.eenvoudig ? "Eenvoudig" : null);
+const niveauTekst = (x, soort = "zakelijk") => (soort === "huishoudboekje"
+  ? (x?.uitgebreid || x?.eenvoudig ? (x.koppelen ? "ja, met bankkoppeling" : "ja") : null)
+  : x?.uitgebreid ? (x.koppelen ? "Uitgebreid + bankkoppeling" : "Uitgebreid") : x?.eenvoudig ? "Eenvoudig" : null);
 const verlopenOp = (x, vandaag) => x?.geldigTot && vandaag && x.geldigTot < vandaag;
 // beide-V6R8 — verloopt binnenkort (nog niet verlopen). beide-V7R6 — binnen 10 dagen, gelijk aan de herinneringsmail: een gratis abonnement loopt maar 30 dagen.
 const plusDagen = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -55,19 +59,21 @@ const FILTERS = [
   ["koppelen", "Met bankkoppeling"], ["bijna", "Verloopt binnen 10 dagen"], ["inactief", "30+ dagen niet ingelogd"], ["verlopen", "Verlopen"], ["geen", "Nog geen toegang"],
 ];
 // beide-V1R0 — filter op soort gebruik (kolom rechten.gebruik).
-const SOORT_FILTERS = [["alle", "Zakelijk en privé"], ["zakelijk", "Zakelijk"], ["prive", "Privé"], ["beide", "Beide"]];
+const SOORT_FILTERS = [["alle", "Alle soorten"], ["zakelijk", "Zakelijk"], ["prive", "Privé"], ["huishoudboekje", "Huishoudboekje"], ["beide", "Meer dan één soort"]];
 const gebruikVan = (r) => r.gebruik || (r.aanvraag ? r.aanvraagGebruik || "zakelijk" : r.eenvoudig || r.uitgebreid ? "zakelijk" : null);
 const pastBijSoort = (r, f, tab) => {
   if (f === "alle") return true;
   if (tab === "aanvragen") return (r.aanvraagGebruik || "zakelijk") === f;
   const g = gebruikVan(r);
-  return f === "beide" ? g === "beide" : g === f || g === "beide";
+  if (f === "beide") return g === "beide";
+  // huishoudboekje-V1R0 — bij meer soorten kijken of deze soort erbij zit.
+  return g === f || (g === "beide" && niveauVan(soortVan(r, f)) > 0);
 };
 // Badge met de soort gebruik.
 function SoortLabel({ soort }) {
   if (!soort) return null;
-  const tekst = soort === "beide" ? "Zakelijk + privé" : SOORT[soort] || soort;
-  const kleur = soort === "prive" ? "bg-violet-100 text-violet-800" : soort === "beide" ? "bg-sky-100 text-sky-800" : "bg-teal-100 text-teal-800";
+  const tekst = soort === "beide" ? "Meer soorten" : SOORT[soort] || soort;
+  const kleur = soort === "prive" ? "bg-violet-100 text-violet-800" : soort === "huishoudboekje" ? "bg-amber-100 text-amber-900" : soort === "beide" ? "bg-sky-100 text-sky-800" : "bg-teal-100 text-teal-800";
   return <span className={`mr-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold align-middle ${kleur}`}>{tekst}</span>;
 }
 const zoekTekst = (r) => `${r.email} ${r.naam || ""} ${r.organisatie || ""} ${r.notitie || ""} ${r.reden || ""}`.toLowerCase();
@@ -137,7 +143,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
         });
         if (minder.length && !window.confirm(`Rechten van ${email} intrekken?\n\n${minder.join("\n")}`)) { setBezig(false); return; }
       }
-      await api("rechten", { email, zakelijk: schoon(form.zakelijk), prive: schoon(form.prive), notitie: form.notitie });
+      await api("rechten", { email, zakelijk: schoon(form.zakelijk), prive: schoon(form.prive), huishoudboekje: schoon(form.huishoudboekje), notitie: form.notitie });
       setMelding(`${email} is opgeslagen.`);
       setForm(LEEG); setBewerkt(null); setFormOpen(false);
       await laad();
@@ -173,7 +179,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
 
   const bewerk = (r) => {
     const vul = (x) => ({ eenvoudig: !!x?.eenvoudig, uitgebreid: !!x?.uitgebreid, koppelen: !!x?.koppelen, geldigTot: x?.geldigTot || "" });
-    setForm({ email: r.email, zakelijk: vul(soortVan(r, "zakelijk")), prive: vul(soortVan(r, "prive")), notitie: r.notitie || "" });
+    setForm({ email: r.email, zakelijk: vul(soortVan(r, "zakelijk")), prive: vul(soortVan(r, "prive")), huishoudboekje: vul(soortVan(r, "huishoudboekje")), notitie: r.notitie || "" });
     setBewerkt(r.email); setMelding(""); setFout(""); setFormOpen(true);
     if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("beheer-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 0);
   };
@@ -188,7 +194,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     .filter((r) => pastBijSoort(r, soortFilter, "gebruikers"))
     .filter((r) => {
       // Abonnementfilter: past als minstens één soort (binnen het soortfilter) eraan voldoet.
-      const soorten = ["zakelijk", "prive"].filter((s) => soortFilter === "alle" || soortFilter === "beide" || soortFilter === s).map((s) => soortVan(r, s));
+      const soorten = SOORTEN.filter((s) => soortFilter === "alle" || soortFilter === "beide" || soortFilter === s).map((s) => soortVan(r, s));
       if (filter === "eenvoudig") return soorten.some((x) => x.eenvoudig && !x.uitgebreid);
       if (filter === "uitgebreid") return soorten.some((x) => x.uitgebreid && !x.koppelen);
       if (filter === "koppelen") return soorten.some((x) => x.koppelen);
@@ -201,7 +207,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     .filter((r) => !zoekWoord || zoekTekst(r).includes(zoekWoord))
     .sort((a, b) => String(b.gewijzigd || "").localeCompare(String(a.gewijzigd || ""))), [lijst, filter, soortFilter, zoekWoord, vandaag]); // nieuwste eerst
   const totaalAanvragen = (lijst || []).filter((r) => r.aanvraag).length;
-  const aantalBijna = (lijst || []).filter((r) => ["zakelijk", "prive"].some((k) => bijnaVerlopen(soortVan(r, k), vandaag))).length;
+  const aantalBijna = (lijst || []).filter((r) => SOORTEN.some((k) => bijnaVerlopen(soortVan(r, k), vandaag))).length;
   const tariefHerinnering = useMemo(() => tarievenHerinnering(), []);
   const totaalGebruikers = (lijst || []).filter((r) => r.eenvoudig || r.uitgebreid || !r.aanvraag).length;
   const huidige = tab === "aanvragen" ? aanvragen : gebruikers;
@@ -217,7 +223,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
     <ModalShell title="Gebruikers en rechten" onClose={onClose} maxWidth="max-w-3xl">
       <div className="space-y-5 text-sm text-slate-700">
         <p className="text-slate-500">
-          Geef per e-mailadres toegang, apart voor zakelijk en privé: Eenvoudig, Uitgebreid en de bankkoppeling.
+          Geef per e-mailadres toegang, apart voor zakelijk, privé en het Huishoudboekje: Eenvoudig, Uitgebreid en de bankkoppeling (het Huishoudboekje heeft één abonnement).
           Zonder einddatum blijft het recht staan.
           {eigenEmail ? <> Jij bent ingelogd als <b>{eigenEmail}</b> en staat als beheerder in de Worker.</> : null}
         </p>
@@ -283,6 +289,16 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
               return (
                 <div key={s} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titel}</p>
+                  {s === "huishoudboekje" ? (
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <label className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={x.uitgebreid || x.eenvoudig} onChange={(e) => setForm((f) => ({ ...f, huishoudboekje: { ...f.huishoudboekje, eenvoudig: e.target.checked, uitgebreid: e.target.checked, koppelen: e.target.checked && f.huishoudboekje.koppelen } }))} /> Huishoudboekje
+                    </label>
+                    <label className={`inline-flex items-center gap-2 ${x.uitgebreid ? "" : "opacity-50"}`}>
+                      <input type="checkbox" checked={x.uitgebreid && x.koppelen} disabled={!x.uitgebreid} onChange={soortVeld(s, "koppelen")} /> Bankkoppeling
+                    </label>
+                  </div>
+                  ) : (
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                     <label className={`inline-flex items-center gap-2 ${x.uitgebreid ? "opacity-50" : ""}`}>
                       <input type="checkbox" checked={x.uitgebreid || x.eenvoudig} disabled={x.uitgebreid} onChange={soortVeld(s, "eenvoudig")} /> Eenvoudig
@@ -294,6 +310,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                       <input type="checkbox" checked={x.uitgebreid && x.koppelen} disabled={!x.uitgebreid} onChange={soortVeld(s, "koppelen")} /> Bankkoppeling
                     </label>
                   </div>
+                  )}
                   <label className="block max-w-xs">
                     <span className="block text-xs text-slate-500 mb-1">Geldig tot en met (leeg = altijd)</span>
                     <input type="date" value={x.geldigTot} onChange={soortVeld(s, "geldigTot")} className={`${VELD_KLEIN} w-full`} />
@@ -324,7 +341,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
                       <p className="font-medium text-slate-800 break-all"><SoortLabel soort={r.aanvraagGebruik || "zakelijk"} />{r.naam ? `${r.naam} · ` : ""}{r.email}</p>
                       <p className="text-xs text-slate-600">{r.verlenging ? <>vraagt <b>verlenging</b> van </> : "vraagt "}<b>{planNaam(r.aanvraagGebruik, r.aanvraag)}</b>
                         {r.verlenging && soortVan(r, r.aanvraagGebruik || "zakelijk").geldigTot ? ` (einddatum ${new Date(`${soortVan(r, r.aanvraagGebruik || "zakelijk").geldigTot}T12:00:00`).toLocaleDateString("nl-NL")})` : ""}{r.aangevraagd ? ` · ${new Date(r.aangevraagd).toLocaleDateString("nl-NL")}` : ""}
-                        {["zakelijk", "prive"].map((s) => niveauTekst(soortVan(r, s)) && ` · heeft nu ${SOORT[s]}: ${niveauTekst(soortVan(r, s))}`).filter(Boolean).join("")}</p>
+                        {SOORTEN.map((s) => niveauTekst(soortVan(r, s), s) && ` · heeft nu ${SOORT[s]}: ${niveauTekst(soortVan(r, s), s)}`).filter(Boolean).join("")}</p>
                       {(r.telefoon || r.organisatie) && (
                         <p className="mt-1 text-sm text-slate-700">
                           {r.organisatie ? <>Organisatie: <b>{r.organisatie}</b>{r.telefoon ? " · " : ""}</> : null}
@@ -349,8 +366,8 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
           <>
             <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200">
               {zichtbaar.map((r) => {
-                const delen = ["zakelijk", "prive"].map((s) => {
-                  const x = soortVan(r, s), n = niveauTekst(x);
+                const delen = SOORTEN.map((s) => {
+                  const x = soortVan(r, s), n = niveauTekst(x, s);
                   if (!n) return null;
                   return <span key={s}>{SOORT[s]}: {n}{x.geldigTot ? <> ({verlopenOp(x, vandaag) ? <span className="text-red-700">verlopen op {nlDatum(x.geldigTot)}</span> : `tot en met ${nlDatum(x.geldigTot)}`})</> : null}</span>;
                 }).filter(Boolean);

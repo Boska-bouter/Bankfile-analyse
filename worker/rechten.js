@@ -15,7 +15,7 @@
 
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
 import { inloggenVastleggen, zetInloggenVastleggen, logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
-import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN } from "./peiling.js";
+import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN, KOPPELING } from "./peiling.js";
 import { uitgebreidExtra, BANKKOPPELING_STATUS, GRATIS_KORT } from "../src/content/aanbod.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
@@ -55,6 +55,12 @@ const EXTRA_KOLOMMEN = [
   ["prive_herinnerd", "TEXT"],
   // beide-V12R0 — laatste dag dat iemand de app opende (/api/rol), voor "30+ dagen niet ingelogd" in Beheer.
   ["laatst_gezien", "TEXT"],
+  // huishoudboekje-V1R0 — derde soort, eigen abonnement (één vorm) met eigen einddatum.
+  ["hb_eenvoudig", "INTEGER NOT NULL DEFAULT 0"],
+  ["hb_uitgebreid", "INTEGER NOT NULL DEFAULT 0"],
+  ["hb_koppelen", "INTEGER NOT NULL DEFAULT 0"],
+  ["hb_geldig_tot", "TEXT"],
+  ["hb_herinnerd", "TEXT"],
 ];
 // beide-V7R3 — een gratis abonnement loopt 30 dagen (besluit Boska 26-10), daarna verlengen met één knop. Afwijken kan
 // met de variabele GRATIS_DAGEN (0 = zonder einddatum, zoals vóór V7R3). HERINNER_DAGEN vóór het einde komt er een mail.
@@ -85,16 +91,22 @@ export function schoonTelefoon(v) {
 }
 
 // beide-V1R0 — de twee soorten gebruik en de kolommen per soort.
-export const GEBRUIK = { zakelijk: "Zakelijk", prive: "Privé" };
-export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "particulier huishouden, zonder onderneming" };
+// huishoudboekje-V1R0 — derde soort: het Huishoudboekje (geen belasting, één abonnementsvorm).
+export const GEBRUIK = { zakelijk: "Zakelijk", prive: "Privé", huishoudboekje: "Huishoudboekje" };
+export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "particulier huishouden, zonder onderneming", huishoudboekje: "zien waar je geld blijft, per week en per maand" };
+// Voor in zinnen.
+export const GEBRUIK_ZIN = { zakelijk: "zakelijk gebruik", prive: "privégebruik", huishoudboekje: "het Huishoudboekje" };
+export const GEBRUIK_LANG = { zakelijk: "zakelijk gebruik (eenmanszaak, zzp of BV)", prive: "privégebruik (particulier huishouden)", huishoudboekje: "het Huishoudboekje (inkomsten en uitgaven per week en per maand)" };
+const GEBRUIK_NU = { zakelijk: "zakelijk", prive: "privé", huishoudboekje: "als huishoudboekje" };
 const KOLOM = {
   zakelijk: { eenvoudig: "eenvoudig", uitgebreid: "uitgebreid", koppelen: "koppelen", geldigTot: "geldig_tot", herinnerd: "herinnerd" },
   prive: { eenvoudig: "prive_eenvoudig", uitgebreid: "prive_uitgebreid", koppelen: "prive_koppelen", geldigTot: "prive_geldig_tot", herinnerd: "prive_herinnerd" },
+  huishoudboekje: { eenvoudig: "hb_eenvoudig", uitgebreid: "hb_uitgebreid", koppelen: "hb_koppelen", geldigTot: "hb_geldig_tot", herinnerd: "hb_herinnerd" },
 };
 const heeftSoort = (s) => `(${KOLOM[s].eenvoudig} = 1 OR ${KOLOM[s].uitgebreid} = 1)`;
-// "gebruik" volgt uit de rechten; wie (nog) niets heeft, krijgt de soort van de aanvraag.
-const GEBRUIK_SQL = `CASE WHEN ${heeftSoort("zakelijk")} AND ${heeftSoort("prive")} THEN 'beide'
-  WHEN ${heeftSoort("prive")} THEN 'prive' WHEN ${heeftSoort("zakelijk")} THEN 'zakelijk' ELSE aanvraag_gebruik END`;
+// "gebruik" volgt uit de rechten; wie (nog) niets heeft, krijgt de soort van de aanvraag. Twee of meer soorten = 'beide'.
+const GEBRUIK_SQL = `CASE WHEN (${Object.keys(KOLOM).map(heeftSoort).join(" + ")}) > 1 THEN 'beide'
+  WHEN ${heeftSoort("prive")} THEN 'prive' WHEN ${heeftSoort("huishoudboekje")} THEN 'huishoudboekje' WHEN ${heeftSoort("zakelijk")} THEN 'zakelijk' ELSE aanvraag_gebruik END`;
 const werkGebruikBij = (db, email) => db.prepare(`UPDATE rechten SET gebruik = ${GEBRUIK_SQL} WHERE email = ?`).bind(email).run();
 
 // nieuw-V5R2 — korte uitleg per abonnement, voor de aanmeldpagina en de bevestigingsmail.
@@ -112,6 +124,11 @@ export const PLAN_UITLEG = {
     uitgebreid: `alle tabbladen en controles, met ${uitgebreidExtra("prive")}.`,
     koppelen: KOPPELEN_UITLEG,
   },
+  // huishoudboekje-V1R0 — één abonnement; met de bankkoppeling aan zit die erin (prijs inclusief koppeling).
+  huishoudboekje: {
+    uitgebreid: "per week en per maand zien waar je geld blijft: vaste lasten, variabele uitgaven, budget per categorie, of het past bij je inkomen en waar je kunt besparen. Zonder belasting of aangifte.",
+    koppelen: `per week en per maand zien waar je geld blijft, met de transacties rechtstreeks van de bank. De bankkoppeling is ${BANKKOPPELING_STATUS}.`,
+  },
 };
 export const PLANNEN = {
   eenvoudig: "Eenvoudig",
@@ -128,13 +145,21 @@ const schakelaar = (env) => String(env?.BANKKOPPELING || "").trim().toLowerCase(
 export const bankkoppelingAan = (env) => schakelaar(env) === "aan";
 export const bankkoppelingVoor = (env, beheerder) => bankkoppelingAan(env) || (schakelaar(env) === "beheerders" && !!beheerder);
 export const bankkoppelingHelemaalUit = (env) => !bankkoppelingAan(env) && schakelaar(env) !== "beheerders";
-export const plannenVoor = (env) => (bankkoppelingAan(env) ? PLANNEN : { eenvoudig: PLANNEN.eenvoudig, uitgebreid: PLANNEN.uitgebreid });
+// huishoudboekje-V1R0 — per soort: het Huishoudboekje heeft één abonnement (intern niveau Uitgebreid, of met bankkoppeling
+// zodra die aan staat). Zonder soort: de plannen van zakelijk en privé.
+export const HUISHOUD_PLAN_NAAM = "Huishoudboekje";
+export const plannenVoor = (env, soort = null) => {
+  if (soort === "huishoudboekje") return bankkoppelingAan(env) ? { koppelen: HUISHOUD_PLAN_NAAM } : { uitgebreid: HUISHOUD_PLAN_NAAM };
+  return bankkoppelingAan(env) ? PLANNEN : { eenvoudig: PLANNEN.eenvoudig, uitgebreid: PLANNEN.uitgebreid };
+};
 function zonderKoppelen(r, env) {
   if (!r || bankkoppelingVoor(env, r.beheerder)) return r;
   const soorten = r.soorten ? Object.fromEntries(Object.entries(r.soorten).map(([s, x]) => [s, { ...x, koppelen: false }])) : r.soorten;
   return { ...r, koppelen: false, soorten };
 }
-export const planNaam = (gebruik, plan) => `${GEBRUIK[gebruik] || GEBRUIK.zakelijk} · ${PLANNEN[plan] || plan}`;
+export const planNaam = (gebruik, plan) => (gebruik === "huishoudboekje"
+  ? `${HUISHOUD_PLAN_NAAM}${plan === "koppelen" ? " met bankkoppeling" : ""}`
+  : `${GEBRUIK[gebruik] || GEBRUIK.zakelijk} · ${PLANNEN[plan] || plan}`);
 const geldigGebruik = (g) => (GEBRUIK[g] ? g : null);
 
 // nieuw-V4R6 — prijzen per abonnement in euro per maand (inclusief btw). Voorlopig alles €0: aanmelden is gratis en
@@ -142,12 +167,16 @@ const geldigGebruik = (g) => (GEBRUIK[g] ? g : null);
 // Is de prijs hoger dan 0, dan gaat de aanmelding via de betaalstap (Mollie, nog te bouwen) in plaats van direct.
 // beide-V1R0 — prijzen per soort: {"zakelijk":{...},"prive":{...}}. De oude vorm zonder soort geldt voor zakelijk.
 export function prijzen(env) {
-  const p = { zakelijk: { eenvoudig: 0, uitgebreid: 0, koppelen: 0 }, prive: { eenvoudig: 0, uitgebreid: 0, koppelen: 0 } };
+  const p = { zakelijk: { eenvoudig: 0, uitgebreid: 0, koppelen: 0 }, prive: { eenvoudig: 0, uitgebreid: 0, koppelen: 0 }, huishoudboekje: { eenvoudig: 0, uitgebreid: 0, koppelen: 0 } };
   let x = {};
   try { x = JSON.parse(env.PRIJZEN || "{}") || {}; } catch { /* standaard */ }
   const vul = (doel, bron) => { for (const k of Object.keys(doel)) if (bron && Number.isFinite(+bron[k]) && +bron[k] >= 0 && bron[k] !== null && bron[k] !== "") doel[k] = +bron[k]; };
   vul(p.zakelijk, x.zakelijk && typeof x.zakelijk === "object" ? x.zakelijk : x);
   vul(p.prive, x.prive && typeof x.prive === "object" ? x.prive : {});
+  // huishoudboekje-V1R0 — {"huishoudboekje":{"uitgebreid":2.5,"koppelen":3.5}}; één bedrag mag ook: {"huishoudboekje":3.5}.
+  const hb = x.huishoudboekje;
+  if (hb !== null && hb !== "" && typeof hb !== "object" && Number.isFinite(+hb) && +hb >= 0) p.huishoudboekje = { eenvoudig: +hb, uitgebreid: +hb, koppelen: +hb };
+  else vul(p.huishoudboekje, hb && typeof hb === "object" ? hb : {});
   return p;
 }
 export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : `€ 0,00 · ${GRATIS_KORT.toLowerCase()}`);
@@ -207,11 +236,12 @@ const ALLES = { eenvoudig: true, uitgebreid: true, koppelen: true, geldigTot: nu
 const NIETS = { eenvoudig: false, uitgebreid: false, koppelen: false, geldigTot: null, verlopen: false };
 
 export const rijNaarRecht = (r) => {
-  const zakelijk = soortUitRij(r, "zakelijk"), prive = soortUitRij(r, "prive");
+  const zakelijk = soortUitRij(r, "zakelijk"), prive = soortUitRij(r, "prive"), huishoudboekje = soortUitRij(r, "huishoudboekje");
+  const alle = [zakelijk, prive, huishoudboekje];
   return {
-    email: r.email, zakelijk, prive,
-    // Samen over beide soorten (voor wie alleen wil weten of iemand iets heeft).
-    eenvoudig: zakelijk.eenvoudig || prive.eenvoudig, uitgebreid: zakelijk.uitgebreid || prive.uitgebreid, koppelen: zakelijk.koppelen || prive.koppelen,
+    email: r.email, zakelijk, prive, huishoudboekje,
+    // Samen over alle soorten (voor wie alleen wil weten of iemand iets heeft).
+    eenvoudig: alle.some((x) => x.eenvoudig), uitgebreid: alle.some((x) => x.uitgebreid), koppelen: alle.some((x) => x.koppelen),
     geldigTot: zakelijk.geldigTot || null, gebruik: r.gebruik || null, aanvraagGebruik: r.aanvraag ? (r.aanvraag_gebruik || "zakelijk") : null,
     bron: r.bron, notitie: r.notitie || "", gewijzigd: r.gewijzigd, gewijzigdDoor: r.gewijzigd_door || null,
     telefoon: r.telefoon || null, organisatie: r.organisatie || "", verlenging: !!r.verlenging && !!r.aanvraag,
@@ -239,17 +269,17 @@ export const niveauVan = (x) => (x?.koppelen ? 3 : x?.uitgebreid ? 2 : x?.eenvou
 // beide-V1R0 — per soort (zakelijk, prive) in "soorten"; toegang/uitgebreid/koppelen bovenaan gelden voor "minstens één soort".
 export function rechtenUitRij(r, { open = false, nu = vandaag() } = {}) {
   const leegSoort = open ? { ...NIETS, eenvoudig: true } : NIETS;
-  if (!r) return { toegang: open, uitgebreid: false, koppelen: false, beheerder: false, geldigTot: null, bron: null, aanvraag: null, aanvraagGebruik: null, gebruik: null, soorten: { zakelijk: leegSoort, prive: leegSoort } };
+  if (!r) return { toegang: open, uitgebreid: false, koppelen: false, beheerder: false, geldigTot: null, bron: null, aanvraag: null, aanvraagGebruik: null, gebruik: null, soorten: Object.fromEntries(Object.keys(GEBRUIK).map((s) => [s, leegSoort])) };
   const soorten = {};
   for (const s of Object.keys(GEBRUIK)) {
     const x = soortActief(r, s, nu);
     soorten[s] = open && !x.eenvoudig ? { ...x, eenvoudig: true } : x; // zonder slot mag iedereen Eenvoudig
   }
-  const z = soorten.zakelijk, p = soorten.prive;
-  const hadIets = soortUitRij(r, "zakelijk").eenvoudig || soortUitRij(r, "prive").eenvoudig;
+  const alle = Object.values(soorten);
+  const hadIets = Object.keys(GEBRUIK).some((s) => soortUitRij(r, s).eenvoudig);
   return {
-    toegang: open || z.eenvoudig || p.eenvoudig, uitgebreid: z.uitgebreid || p.uitgebreid, koppelen: z.koppelen || p.koppelen, beheerder: false,
-    geldigTot: z.geldigTot || p.geldigTot || null, bron: r.bron, verlopen: hadIets && !z.eenvoudig && !p.eenvoudig && (z.verlopen || p.verlopen),
+    toegang: open || alle.some((x) => x.eenvoudig), uitgebreid: alle.some((x) => x.uitgebreid), koppelen: alle.some((x) => x.koppelen), beheerder: false,
+    geldigTot: alle.map((x) => x.geldigTot).find(Boolean) || null, bron: r.bron, verlopen: hadIets && !alle.some((x) => x.eenvoudig) && alle.some((x) => x.verlopen),
     aanvraag: r.aanvraag || null, aanvraagGebruik: r.aanvraag ? (r.aanvraag_gebruik || "zakelijk") : null, aangevraagd: r.aangevraagd || null,
     verlenging: !!r.verlenging && !!r.aanvraag, gebruik: r.gebruik || null, naam: r.naam || "", organisatie: r.organisatie || "", soorten,
   };
@@ -265,7 +295,7 @@ async function rechtenZonderSchakelaar(email, env) {
   if (!e) return { ...rechtenUitRij(null), toegang: false };
   const beheerder = opLijst(e, env.BEHEERDERS);
   if (beheerder || opLijst(e, env.AccessAll)) {
-    return { toegang: true, uitgebreid: true, koppelen: true, beheerder, geldigTot: null, bron: beheerder ? "beheerder" : "AccessAll", aanvraag: null, aanvraagGebruik: null, gebruik: "beide", soorten: { zakelijk: ALLES, prive: ALLES } };
+    return { toegang: true, uitgebreid: true, koppelen: true, beheerder, geldigTot: null, bron: beheerder ? "beheerder" : "AccessAll", aanvraag: null, aanvraagGebruik: null, gebruik: "beide", soorten: Object.fromEntries(Object.keys(GEBRUIK).map((s) => [s, ALLES])) };
   }
   if (!env.DB) return leeg;
   try {
@@ -327,11 +357,12 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
   if (body?.verlengen === true) return verlengRoute(env, e, body, ctx);
-  const plan = String(body?.plan || "");
-  if (!plannenVoor(env)[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
-  // beide-V1R0 — verplichte keuze zakelijk of privé.
+  // beide-V1R0 — verplichte keuze zakelijk of privé. huishoudboekje-V1R0 — of het Huishoudboekje (één abonnement, dat
+  // vanzelf gekozen is).
   const gebruik = geldigGebruik(String(body?.gebruik || ""));
-  if (!gebruik) return json({ ok: false, fout: "Kies of je BankafschriftenTool zakelijk of privé gebruikt." }, 400);
+  if (!gebruik) return json({ ok: false, fout: "Kies of je BankafschriftenTool zakelijk, privé of als huishoudboekje gebruikt." }, 400);
+  const plan = gebruik === "huishoudboekje" ? Object.keys(plannenVoor(env, gebruik))[0] : String(body?.plan || "");
+  if (!plannenVoor(env, gebruik)[plan]) return json({ ok: false, fout: "Kies een abonnement" }, 400);
   // nieuw-V5R4 — voor- en achternaam verplicht (samen opgeslagen in de kolom naam).
   const voornaam = schoon(body?.voornaam, 60);
   const achternaam = schoon(body?.achternaam, 80);
@@ -370,14 +401,16 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const heeftAl = Object.keys(GEBRUIK).filter((s) => s !== gebruik && niveauVan(nu.soorten?.[s]) > 0 && toegangVerplicht(env))
     .map((s) => `Heeft al: ${planNaam(s, ["", "eenvoudig", "uitgebreid", "koppelen"][niveauVan(nu.soorten[s])])}.`);
   const mail = meldBeheerder(env, `Nieuwe aanmelding: ${planNaam(gebruik, plan)}`,
-    [`${naam || "(geen naam)"}${organisatie ? ` (${organisatie})` : ""} <${e}> vraagt ${PLANNEN[plan]} aan voor ${gebruik === "prive" ? "privégebruik" : "zakelijk gebruik"} (${GEBRUIK_UITLEG[gebruik]}).`,
+    [`${naam || "(geen naam)"}${organisatie ? ` (${organisatie})` : ""} <${e}> vraagt ${gebruik === "huishoudboekje" ? `het ${planNaam(gebruik, plan)} aan` : `${PLANNEN[plan]} aan voor ${GEBRUIK_ZIN[gebruik]}`} (${GEBRUIK_UITLEG[gebruik]}).`,
       ...heeftAl, `Reden:\n${reden}`, "Keur de aanvraag goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk)."].join("\n\n"));
   // nieuw-V5R2 — bevestiging aan de aanvrager, met een korte uitleg van de drie abonnementen.
+  const plannen = plannenVoor(env, gebruik);
+  const aantalPlannen = Object.keys(plannen).length;
   const bevestiging = meldAanvrager(env, e, "je aanvraag is ontvangen", [
-    `Bedankt voor je aanvraag voor ${PLANNEN[plan]} bij BankafschriftenTool, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
-    `Je hebt gekozen voor ${gebruik === "prive" ? "privégebruik (particulier huishouden)" : "zakelijk gebruik (eenmanszaak, zzp of BV)"}.`,
-    `Ter herinnering, dit zijn de ${Object.keys(plannenVoor(env)).length === 3 ? "drie" : "twee"} abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
-  ], null, naam, Object.entries(plannenVoor(env)).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
+    `Bedankt voor je aanvraag voor ${gebruik === "huishoudboekje" ? `het ${planNaam(gebruik, plan)}` : PLANNEN[plan]} bij BankafschriftenTool, de app die je inzicht geeft in je bankgegevens en overzichten maakt van je inkomsten en uitgaven.`,
+    `Je hebt gekozen voor ${GEBRUIK_LANG[gebruik]}.`,
+    aantalPlannen === 1 ? "Dit zit erin:" : `Ter herinnering, dit zijn de ${aantalPlannen === 3 ? "drie" : "twee"} abonnementen voor ${gebruik === "prive" ? "privé" : "zakelijk"}:`,
+  ], null, naam, Object.entries(plannen).map(([k, v]) => [v, PLAN_UITLEG[gebruik][k]]), [
     "Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt een e-mail zodra hij is goedgekeurd; daarna kun je meteen aan de slag.",
     "Heb je vragen? Beantwoord dan gerust deze e-mail.",
   ]);
@@ -396,7 +429,8 @@ async function verlengRoute(env, e, body, ctx) {
   const r = await env.DB.prepare("SELECT * FROM rechten WHERE email = ?").bind(e).first();
   const n = r ? niveauVan(soortUitRij(r, gebruik)) : 0;
   if (!n) return json({ ok: false, fout: `Er is geen abonnement ${GEBRUIK[gebruik].toLowerCase()} om te verlengen. Vraag een nieuw abonnement aan.` }, 400);
-  const plan = plannenVoor(env)[NIVEAU_PLAN[n]] ? NIVEAU_PLAN[n] : "uitgebreid";
+  const pv = plannenVoor(env, gebruik);
+  const plan = pv[NIVEAU_PLAN[n]] ? NIVEAU_PLAN[n] : pv.uitgebreid ? "uitgebreid" : Object.keys(pv)[0];
   const antwoord = schoonPeiling(body?.peiling);
   const tijd = new Date().toISOString();
   try {
@@ -408,7 +442,7 @@ async function verlengRoute(env, e, body, ctx) {
     return json({ ok: false, fout: "Databasefout", detail: String(err?.message || err).slice(0, 300) }, 500);
   }
   const einde = soortUitRij(r, gebruik).geldigTot;
-  const peilTekst = antwoord ? `Betalen voor de app: ${BETALEN[antwoord.betalen]}${antwoord.bedrag != null ? `, € ${antwoord.bedrag.toFixed(2).replace(".", ",")} per maand` : ""}${antwoord.toelichting ? `\nToelichting: ${antwoord.toelichting}` : ""}` : "Peilvraag niet beantwoord.";
+  const peilTekst = antwoord ? `Betalen voor de app: ${BETALEN[antwoord.betalen] || "niet beantwoord"}${antwoord.bedrag != null ? `, € ${antwoord.bedrag.toFixed(2).replace(".", ",")} per maand` : ""}${antwoord.koppeling ? `\nExtra betalen voor de bankkoppeling: ${KOPPELING[antwoord.koppeling]}` : ""}${antwoord.toelichting ? `\nToelichting: ${antwoord.toelichting}` : ""}` : "Peilvraag niet beantwoord.";
   const mail = meldBeheerder(env, `Verlenging: ${planNaam(gebruik, plan)}`,
     [`${r.naam || "(geen naam)"}${r.organisatie ? ` (${r.organisatie})` : ""} <${e}> vraagt verlenging van ${planNaam(gebruik, plan)}${einde ? ` (einddatum ${einde})` : ""}.`,
       peilTekst, "Keur de verlenging goed in de app: Gebruikers en rechten (personen-icoon onderin de zijbalk)."].join("\n\n"));
@@ -506,10 +540,11 @@ export async function beheerRoute(request, env, url, email) {
     if (url.pathname === "/api/beheer/rechten" && request.method === "POST") {
       // beide-V1R0 — rechten per soort: body.zakelijk en body.prive, elk {eenvoudig, uitgebreid, koppelen, geldigTot}.
       // Een bericht zonder soorten (oude app) geldt alleen voor zakelijk; privé blijft dan zoals het was.
+      // huishoudboekje-V1R0 — ook body.huishoudboekje; ontbreekt die (oudere app), dan blijft het Huishoudboekje zoals het was.
       const bestaand = await env.DB.prepare("SELECT * FROM rechten WHERE email = ?").bind(doel).first();
       const waarden = {};
       for (const s of Object.keys(GEBRUIK)) {
-        const x = body?.[s] && typeof body[s] === "object" ? body[s] : s === "zakelijk" && !body?.prive ? body : bestaand ? soortUitRij(bestaand, s) : {};
+        const x = body?.[s] && typeof body[s] === "object" ? body[s] : s === "zakelijk" && !body?.prive && !body?.huishoudboekje ? body : bestaand ? soortUitRij(bestaand, s) : {};
         const geldigTot = x?.geldigTot ? String(x.geldigTot) : null;
         if (geldigTot && !DATUM_RE.test(geldigTot)) return json({ ok: false, fout: "Einddatum moet JJJJ-MM-DD zijn" }, 400);
         const uitgebreid = x?.uitgebreid ? 1 : 0;
@@ -517,11 +552,13 @@ export async function beheerRoute(request, env, url, email) {
       }
       const notitie = schoon(body?.notitie, 300);
       await env.DB.prepare(
-        `INSERT INTO rechten (email, eenvoudig, uitgebreid, koppelen, geldig_tot, prive_eenvoudig, prive_uitgebreid, prive_koppelen, prive_geldig_tot, bron, notitie, gewijzigd, gewijzigd_door)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'handmatig', ?10, ?11, ?12)
+        `INSERT INTO rechten (email, eenvoudig, uitgebreid, koppelen, geldig_tot, prive_eenvoudig, prive_uitgebreid, prive_koppelen, prive_geldig_tot, bron, notitie, gewijzigd, gewijzigd_door,
+           hb_eenvoudig, hb_uitgebreid, hb_koppelen, hb_geldig_tot)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'handmatig', ?10, ?11, ?12, ?13, ?14, ?15, ?16)
          ON CONFLICT(email) DO UPDATE SET eenvoudig = ?2, uitgebreid = ?3, koppelen = ?4, geldig_tot = ?5,
-           prive_eenvoudig = ?6, prive_uitgebreid = ?7, prive_koppelen = ?8, prive_geldig_tot = ?9, notitie = ?10, gewijzigd = ?11, gewijzigd_door = ?12`
-      ).bind(doel, ...waarden.zakelijk, ...waarden.prive, notitie, tijd, door).run();
+           prive_eenvoudig = ?6, prive_uitgebreid = ?7, prive_koppelen = ?8, prive_geldig_tot = ?9, notitie = ?10, gewijzigd = ?11, gewijzigd_door = ?12,
+           hb_eenvoudig = ?13, hb_uitgebreid = ?14, hb_koppelen = ?15, hb_geldig_tot = ?16`
+      ).bind(doel, ...waarden.zakelijk, ...waarden.prive, notitie, tijd, door, ...waarden.huishoudboekje).run();
       await werkGebruikBij(env.DB, doel);
       const naarSoort = (w) => ({ eenvoudig: !!w[0], uitgebreid: !!w[1], koppelen: !!w[2], geldigTot: w[3] });
       const oud = bestaand ? Object.fromEntries(Object.keys(GEBRUIK).map((x) => [x, soortUitRij(bestaand, x)])) : {};
@@ -537,7 +574,8 @@ export async function beheerRoute(request, env, url, email) {
       if (!PLANNEN[plan]) return json({ ok: false, fout: "Geen openstaande aanvraag" }, 404);
       const gebruik = geldigGebruik(r.aanvraag_gebruik) || "zakelijk";
       const k = KOLOM[gebruik];
-      const n = NIVEAU[plan];
+      // huishoudboekje-V1R0 — het Huishoudboekje heeft één abonnement: altijd minstens niveau Uitgebreid.
+      const n = gebruik === "huishoudboekje" ? Math.max(NIVEAU[plan], NIVEAU.uitgebreid) : NIVEAU[plan];
       const verlenging = !!r.verlenging;
       // beide-V7R3 — einddatum: gratis abonnement GRATIS_DAGEN vanaf vandaag, of bij verlengen vanaf de huidige einddatum
       // als die nog in de toekomst ligt. Een latere einddatum die er al stond, blijft staan. Betaald: einddatum ongewijzigd.
@@ -560,9 +598,9 @@ export async function beheerRoute(request, env, url, email) {
           [`Je abonnement ${planNaam(gebruik, plan)} is verlengd${nieuwEinde ? ` tot en met ${datumNl(nieuwEinde)}` : ""}. Je kunt BankafschriftenTool gewoon blijven gebruiken.`],
           { link: `${url.origin}/`, tekst: "Open BankafschriftenTool" }, r?.naam || "")
         : await meldAanvrager(env, doel, "je aanmelding is goedgekeurd", link
-        ? [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt BankafschriftenTool nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`,
+        ? [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt BankafschriftenTool nu ${GEBRUIK_NU[gebruik]} gebruiken.${totTekst}`,
           "Klik op de knop om in te loggen. Daarna stel je een wachtwoord in, of maak je een passkey aan zodat je inlogt met Face ID, Touch ID of de pincode van je apparaat."]
-        : [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt BankafschriftenTool nu ${gebruik === "prive" ? "privé" : "zakelijk"} gebruiken.${totTekst}`],
+        : [`Goed nieuws: je aanmelding voor ${planNaam(gebruik, plan)} is goedgekeurd. Je kunt BankafschriftenTool nu ${GEBRUIK_NU[gebruik]} gebruiken.${totTekst}`],
         { link: link || `${url.origin}/`, tekst: link ? "Inloggen en wachtwoord instellen" : "Open BankafschriftenTool" }, r?.naam || "", [],
         link ? [`De knop is ${GOEDKEUR_LINK_UREN / 24} dagen geldig en werkt één keer. Daarna vraag je op de inlogpagina een nieuwe inloglink aan.`] : []);
       await logBeheer(env.DB, { door, email: doel, actie: verlenging ? "verlenging goedgekeurd" : "aanvraag goedgekeurd", details: `${planNaam(gebruik, plan)}${nieuwEinde !== oudEinde ? `; einddatum ${oudEinde || "geen"} → ${nieuwEinde || "geen"}` : ""}${mailFout ? `; mail NIET verstuurd: ${mailFout}` : "; mail verstuurd"}` });
@@ -576,7 +614,7 @@ export async function beheerRoute(request, env, url, email) {
       await werkGebruikBij(env.DB, doel);
       // Een rij die alleen uit een aanvraag bestond, heeft geen nut meer.
       await env.DB.prepare(`DELETE FROM rechten WHERE email = ?1 AND eenvoudig = 0 AND uitgebreid = 0 AND koppelen = 0
-        AND prive_eenvoudig = 0 AND prive_uitgebreid = 0 AND prive_koppelen = 0 AND aanvraag IS NULL`).bind(doel).run();
+        AND prive_eenvoudig = 0 AND prive_uitgebreid = 0 AND prive_koppelen = 0 AND hb_eenvoudig = 0 AND hb_uitgebreid = 0 AND hb_koppelen = 0 AND aanvraag IS NULL`).bind(doel).run();
       const mailFout = !PLANNEN[r?.aanvraag] ? null : verlenging ? await meldAanvrager(env, doel, "over je verzoek om te verlengen",
         [`Je verzoek om ${planNaam(geldigGebruik(r.aanvraag_gebruik) || "zakelijk", r.aanvraag)} te verlengen, is op dit moment niet goedgekeurd.`,
           "Heb je vragen? Beantwoord dan gerust deze e-mail. Je dossiers bewaar je zelf als bestand; die blijven van jou."],
@@ -634,7 +672,7 @@ export async function voorwaardenRoute(request, env, url, email) {
   try { body = await request.json(); } catch { /* leeg */ }
   const versie = schoon(body?.versie, 10);
   if (!versie) return json({ ok: false, fout: "Versie ontbreekt" }, 400);
-  const prive = body?.soort === "prive";
+  const prive = body?.soort === "prive" || body?.soort === "huishoudboekje"; // huishoudboekje-V1R0 — zelfde voorwaarden als privé
   await zorgVoorVoorwaarden(env.DB);
   const nu = new Date().toISOString(), adres = String(email).toLowerCase();
   // Een rij moet een zakelijke versie hebben (NOT NULL); wie alleen privé akkoord gaf, krijgt daar een lege waarde.

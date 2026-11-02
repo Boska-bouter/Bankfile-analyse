@@ -142,7 +142,7 @@ export default function PriveWizardModal({
             </>
           )}
           {vragen.map((v) => (
-            <PriveVraag key={v.key} vraag={v} waarde={waardeVan(v)} jaren={years} bestanden={loadedFileNames}
+            <PriveVraag key={v.key} vraag={v} waarde={waardeVan(v)} jaren={years} bestanden={loadedFileNames} antwoorden={huidigeAntwoorden}
               onChange={(w) => setConcept((c) => ({ ...c, [v.key]: w }))} />
           ))}
           {huidig.vragen && (

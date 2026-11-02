@@ -64,6 +64,7 @@ import PriveOverzicht from "./components/prive/PriveOverzicht.jsx";
 import PriveUitkomstEenvoudig from "./components/prive/PriveUitkomstEenvoudig.jsx";
 import { PRIVE_EENVOUDIG } from "./modus/prive/eenvoudig.js";
 import { buildBudgetRapportHtml, exportPriveExcel } from "./reports/prive/budgetRapport.js";
+import { buildHuishoudRapportHtml, exportHuishoudExcel } from "./reports/huishoudboekje/huishoudRapport.js";
 import { voorladenExcel } from "./importers/excel.js";
 import { periodesPerSoort, gezamenlijkePeriode } from "./calc/periodeDekking.js";
 import OpenBasisvragenCard from "./components/dashboard/OpenBasisvragenCard.jsx";
@@ -95,7 +96,8 @@ import BasisvragenEenvoudig from "./components/eenvoudig/BasisvragenEenvoudig.js
 import MogelijkeEigenRekeningen from "./components/shared/MogelijkeEigenRekeningen.jsx";
 import { vindMogelijkeEigenRekeningen } from "./classification/mogelijkeEigenRekeningen.js";
 import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
-import { useModus } from "./modus/index.js";
+import { useModus, isParticulier } from "./modus/index.js";
+import HuishoudboekjeOverzicht from "./components/huishoudboekje/HuishoudboekjeOverzicht.jsx";
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
 import { useToonFijn } from "./utils/useToonFijn.js";
@@ -204,6 +206,9 @@ export default function App() {
   // beide-V1R0 — soort van het dossier: "zakelijk" of "prive" (ligt vast bij het aanmaken). Zie src/modus/.
   const [soortDossier, setSoortDossier] = useState("zakelijk");
   const modus = useModus(soortDossier);
+  // huishoudboekje-V1R0 — privé en Huishoudboekje delen de privérekeningen en eigen rekeningen; alleen privé rekent belasting.
+  const particulier = isParticulier(soortDossier);
+  const huishoudboekje = modus.berekening === "huishoudboekje";
   // beide-V1R7 (fase 4) — antwoorden uit de privéwizard (modus/prive/wizard.js), één object per dossier.
   const [priveAntwoorden, setPriveAntwoorden] = useState({});
   setActieveRechtsvorm(rechtsvorm); // release30V6 — BV-categorieën alleen in keuzelijsten bij een BV
@@ -295,8 +300,9 @@ export default function App() {
   const [omzetVraag, setOmzetVraag] = useState(null); // beide-V3R2 — bevestiging Eenvoudig → Uitgebreid (eenrichting)
   const [modusNaLaden, setModusNaLaden] = useState(null); // na "Dossier laden": weergave zoals opgeslagen, ter keuze
   // beide-V1R2 — eerst zakelijk of privé (zie modus/useDossierSoort.jsx), daarna Eenvoudig of Uitgebreid.
+  // huishoudboekje-V1R0 — een Huishoudboekje heeft één weergave: geen keuze Eenvoudig/Uitgebreid.
   const startNieuwDossierWizard = () => dossierSoortKeuze.startMetSoort((s) =>
-    (rechtVoorSoort(rechtenPerSoort, s, "uitgebreid", magUitgebreidAccount) ? setModusKeuzeOpen(true) : kiesModus("eenvoudig")));
+    (s === "huishoudboekje" ? kiesModus("uitgebreid") : rechtVoorSoort(rechtenPerSoort, s, "uitgebreid", magUitgebreidAccount) ? setModusKeuzeOpen(true) : kiesModus("eenvoudig")));
   // beide-V7R6 — vóór het eerste dossier eerst vragen of de handleiding gelezen moet worden (HandleidingVraag.jsx).
   const [handleidingVraag, setHandleidingVraag] = useState(null); // null | "eenvoudig" | "uitgebreid"
   const [uitlegVerzoek, setUitlegVerzoek] = useState(0);
@@ -694,7 +700,7 @@ export default function App() {
   // unmounten (zie de kop van dit blok hierboven).
   // Zonder recht op Uitgebreid altijd de eenvoudige weergave (ook zonder bankbestanden); de opgeslagen keuze blijft staan.
   // nieuw-V2R4 — ook zonder bankbestanden: wie Eenvoudig koos en de wizard afbreekt, blijft in Eenvoudig (stap Gegevens).
-  const eenvoudigActief = !magUitgebreid || weergave === "eenvoudig";
+  const eenvoudigActief = !modus.eenWeergave && (!magUitgebreid || weergave === "eenvoudig");
   const sectionTabStyle = (tabKey) => ({ display: activeTab === tabKey && !eenvoudigActief ? undefined : "none" });
   // Wordt gezet door jumpToSection zodra er eerst nog van tabblad gewisseld moet worden — de
   // daadwerkelijke scrollIntoView gebeurt pas ná die tabwissel (zie de useEffect hieronder), anders
@@ -2921,7 +2927,7 @@ export default function App() {
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.
   registreerRapportKop({
     naam: [eigenNamen?.ondernemer, eigenNamen?.partner].filter(Boolean).join(" en "),
-    soort: soortDossier === "prive" ? "Privé" : rechtsvorm === "bv" ? "Zakelijk · BV" : "Zakelijk · eenmanszaak / zzp",
+    soort: soortDossier === "prive" ? "Privé" : huishoudboekje ? "Huishoudboekje" : rechtsvorm === "bv" ? "Zakelijk · BV" : "Zakelijk · eenmanszaak / zzp",
     jaren: years,
     dekking: (importDiagnostics || []).filter((d) => d.from && d.to).map((d) => ({ label: d.fileName, type: accountTypeByFile?.[d.fileName] || null, van: d.from, tot: d.to })),
     gaten: (fileContinuity || []).filter((g) => !g.ok && classifyContinuityGap(g.diff) === "rood").map((g) => ({ van: g.aTo, tot: g.bFrom })),
@@ -2997,8 +3003,14 @@ export default function App() {
         ...(bankkoppelingAan ? [{ label: "Rechtstreeks koppelen met de bank (in ontwikkeling)", onClick: startKoppelen }] : []),
       ],
     });
+  // huishoudboekje-V1R0 — rapport van de getoonde maand of week (of de laatste volledige), zonder belasting.
+  const startHuishoudRapport = (doel = "pdf", { soort = "maand", periode = null } = {}) => {
+    const html = metRapportKop(buildHuishoudRapportHtml({ transacties: classified, vasteCategorieen: fixedCategories, antwoorden: priveAntwoorden, budgetten: priveAntwoorden?.budgetten || {}, soort, periode, label: categorieLabel, namen: eigenNamen }), years);
+    if (doel === "print") printHtmlDocument(html);
+    else downloadRapport({ soort: doel === "download" ? "pdf" : doel, html, naam: `Huishoudboekje_${periode || years.join("-")}` });
+  };
   // beide-V2R2/V2R4 — privé: andere eigen rekeningen (alleen het rekeningnummer); in Eenvoudig stap 1, de wizard en Instellingen.
-  const priveEigenRekeningen = modus.berekening === "prive" ? (
+  const priveEigenRekeningen = particulier ? (
     <EigenRekeningenPanel vasteSoort="Prive" uitleg={PRIVE_EENVOUDIG.eigenRekeningen} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra}
       onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} />
   ) : null;
@@ -3127,17 +3139,20 @@ export default function App() {
         exportCsv(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
       case "excel":
-        if (priveOverzicht) exportPriveExcel({ jaren: years, overzicht: priveOverzicht, transacties: classified, label: categorieLabel });
+        if (huishoudboekje) exportHuishoudExcel({ transacties: classified, vasteCategorieen: [...new Set([...fixedCategories, ...(Array.isArray(priveAntwoorden?.vasteLasten) ? priveAntwoorden.vasteLasten : [])])], label: categorieLabel });
+        else if (priveOverzicht) exportPriveExcel({ jaren: years, overzicht: priveOverzicht, transacties: classified, label: categorieLabel });
         else exportExcel(groups, effectiveCategoryBtwRates, btwVerlegd);
         break;
       // beide-V4R1 — Downloaden als PDF of HTML: hetzelfde rapport als Printen. beide-V8R0 — alleen nog privé (budgetoverzicht);
       // het zakelijke geldstroomoverzicht is weg (wens Boska 27-10), zakelijk heeft alleen het controlebestand (Excel).
       case "pdf":
       case "html":
-        if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Inkomsten_en_uitgaven_${years.join("-")}` });
+        if (huishoudboekje) startHuishoudRapport(target);
+        else if (priveOverzicht) downloadRapport({ soort: target, html: metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years), naam: `Inkomsten_en_uitgaven_${years.join("-")}` });
         break;
       case "print":
-        if (priveOverzicht) printHtmlDocument(metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years));
+        if (huishoudboekje) startHuishoudRapport("print");
+        else if (priveOverzicht) printHtmlDocument(metRapportKop(buildBudgetRapportHtml({ jaren: years, overzicht: priveOverzicht, namen: eigenNamen }), years));
         break;
       case "aangifte":
         setShowAangifteMeerdereJaren(false);
@@ -3426,9 +3441,9 @@ export default function App() {
         projectStatus={{ hasData: parsedFiles.length > 0, changes: changesSinceExport, lastExportAt, loadedName: loadedProjectFileName }}
         showActies={years.length > 0 && !!activeYear}
         onEditBasisvragen={() => setManualWizardOpen(true)}
-        onKlantSamenvatting={activeYear ? startKlantSamenvatting : null}
-        onInkomenPerMaand={activeYear ? () => setShowInkomenPerMaand(true) : null}
-        onOpenAangifteberekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
+        onKlantSamenvatting={activeYear && !huishoudboekje ? startKlantSamenvatting : null}
+        onInkomenPerMaand={activeYear && !huishoudboekje ? () => setShowInkomenPerMaand(true) : null}
+        onOpenAangifteberekening={huishoudboekje ? null : () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
         lastActionSnapshot={lastActionSnapshot && isBigUndoLabel(lastActionSnapshot.label) ? lastActionSnapshot : null}
         onUndoLastAction={undoLastAction}
         onDismissLastAction={() => setLastActionSnapshot(null)}
@@ -3558,7 +3573,7 @@ export default function App() {
           onOpslaan={() => { setOmzetVraag(null); startOpslaan(); }} />}
         {modusNaLaden && <ModusKeuze geladen soort={soortDossier} huidig={modusNaLaden} onKies={(m) => { setModusNaLaden(null); if (m === "uitgebreid") naarUitgebreidVanuitEenvoudig(); }} onClose={() => setModusNaLaden(null)} />}
         {eigenKandidatenOpen && !(showSetupWizard || manualWizardOpen || openVragenWizard) && !(eenvoudigActief && eenvoudigUitlegOpen) && (
-          <MogelijkeEigenRekeningen kandidaten={eigenKandidaten} soort={modus.berekening === "prive" ? "prive" : "zakelijk"}
+          <MogelijkeEigenRekeningen kandidaten={eigenKandidaten} soort={particulier ? "prive" : "zakelijk"}
             onKies={kiesEigenKandidaat} onNee={neeEigenKandidaat} onClose={() => setEigenKandidatenOpen(false)} />
         )}
         {basisEenvoudigOpen && eenvoudigActief && (
@@ -3705,6 +3720,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            zonderAangifte={huishoudboekje}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -3780,7 +3796,19 @@ export default function App() {
                 ibGedaan={!!ibStatus[activeYear]?.gedaan} onIbGedaan={(v) => setIbGedaan(activeYear, v)}
               />
             )}
-            {activeYear && !priveOverzicht && <DetailsPanel
+            {/* huishoudboekje-V1R0 — eigen overzicht per maand/week, zonder belasting */}
+            {huishoudboekje && parsedFiles.length > 0 && (
+              <HuishoudboekjeOverzicht
+                transacties={classified} vasteCategorieen={fixedCategories} antwoorden={priveAntwoorden}
+                budgetten={priveAntwoorden?.budgetten || {}}
+                onBudgetten={(b, spaardoel) => { snapshotBeforeAction("Budget aangepast"); setPriveAntwoorden((v) => ({ ...(v || {}), budgetten: b, spaardoel: spaardoel ?? undefined })); }}
+                label={categorieLabel}
+                onVragen={() => setManualWizardOpen(true)}
+                onVasteLasten={() => { openVasteLastenPaneel(); jumpToSection(automatiseringSectionRef); }}
+                onRapport={(k) => startHuishoudRapport("pdf", k)} onPrint={(k) => startHuishoudRapport("print", k)}
+              />
+            )}
+            {activeYear && !priveOverzicht && !huishoudboekje && <DetailsPanel
               year={activeYear}
               years={years}
               onSelectYear={setActiveYear}
@@ -3957,6 +3985,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            zonderAangifte={huishoudboekje}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4005,7 +4034,7 @@ export default function App() {
             importFout={error}
             onSaveProject={startOpslaan}
             onClose={() => { setShowSetupWizard(false); setManualWizardOpen(false); setOpenVragenWizard(false); }}
-            extraRekeningen={modus.berekening === "prive" ? (
+            extraRekeningen={particulier ? (
               <EigenRekeningenPanel vasteSoort="Prive" uitleg={false} loadedAccounts={eigenRekeningenGeladen} eigenRekeningenExtra={eigenRekeningenExtra}
                 onChange={(v) => { snapshotBeforeAction("Eigen rekeningen aangepast"); setEigenRekeningenExtra(v); }} classified={classified} />
             ) : null}
@@ -4189,6 +4218,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            zonderAangifte={huishoudboekje}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4201,7 +4231,7 @@ export default function App() {
             v246, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         {/* beide-V2R4 — privé: extra rekeningen toevoegen (bankbestand of alleen het rekeningnummer), ook in Uitgebreid. */}
-        {modus.berekening === "prive" && parsedFiles.length > 0 && (
+        {particulier && parsedFiles.length > 0 && (
           <div style={sectionTabStyle("instellingen")} className="space-y-2">
             <button type="button" onClick={startBankbestandToevoegen} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Extra bankbestand toevoegen</button>
             {priveEigenRekeningen}

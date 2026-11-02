@@ -272,12 +272,13 @@ async function stuurLink(env, email, link) {
     zonderNaam: "Beste aanvrager,",
     regels: [
       "Bedankt voor je interesse in BankafschriftenTool, de app die bankafschriften omzet in overzichten van inkomsten en uitgaven.",
-      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV) of privé (particulier huishouden) gebruikt, kies je een versie en dien je je aanvraag in:",
+      "Dit is je eerste inloglink. Na het inloggen kies je of je de app zakelijk (eenmanszaak, zzp of BV), privé (particulier huishouden) of als huishoudboekje gebruikt, kies je een versie en dien je je aanvraag in:",
     ],
     lijst: [
       ["Eenvoudig", "in vier stappen de bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van de btw en inkomstenbelasting, privé de inkomsten en uitgaven per maand."],
       ["Uitgebreid", `alle tabbladen en controles; zakelijk met ${uitgebreidExtra("zakelijk")}, privé met ${uitgebreidExtra("prive")}.`],
       ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", `alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is ${BANKKOPPELING_STATUS}.`]] : []),
+      ["Huishoudboekje", "één abonnement: per week en per maand zien waar je geld blijft, met vaste lasten, budget per categorie, een vergelijking met je inkomen en tips om te besparen. Zonder belasting."],
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
