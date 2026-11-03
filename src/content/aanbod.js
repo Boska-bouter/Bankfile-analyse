@@ -15,6 +15,17 @@ export const GRATIS_UITLEG = `Gratis abonnement van ${GRATIS_DAGEN} dagen. Daarn
 // Bankkoppeling: overal dezelfde status.
 export const BANKKOPPELING_STATUS = "in ontwikkeling, nog niet beschikbaar";
 
+// Waarom kies je welke soort (wens Boska 2-11, overgenomen in beide-V13R5): één zin per soort, bovenaan elke kaart.
+export const KEUZE = {
+  zakelijk: "Inzicht in de zakelijke inkomsten en uitgaven, indicaties voor de btw- en IB-aangifte, en inzicht in aftrekposten en afschrijvingen.",
+  prive: "Inzicht in je privégeld en een voorbereiding op de aangifte inkomstenbelasting (indicatie).",
+};
+// Korte regel per soort bovenaan de welkomstpagina.
+export const SOORT_KORT = {
+  zakelijk: "voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.",
+  prive: "voor particulieren: inzicht in je privégeld en voorbereiding op de IB-aangifte.",
+};
+
 // Wat zit in Eenvoudig en wat alleen in Uitgebreid (welkomstpagina, Help, uitleg in de app, beheerdersuitleg).
 export const INZICHTEN = {
   prive: {

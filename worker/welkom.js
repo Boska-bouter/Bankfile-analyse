@@ -3,7 +3,7 @@
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
-import { INZICHTEN, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS } from "../src/content/aanbod.js";
+import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS } from "../src/content/aanbod.js";
 
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -14,7 +14,12 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}
 @media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}}`;
 export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
-.duo .kaart[class*=" s-"]{border-top:6px solid var(--accent)}.duo .kaart[class*=" s-"]>b{color:var(--accent)}
+.drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
+.soortkaarten{display:grid;gap:12px;grid-template-columns:1fr}
+.soortkaart{display:grid;grid-row:span 7;grid-template-rows:subgrid;row-gap:8px;align-content:start;border-top:6px solid var(--accent)}.soortkaart h3{margin:0;font-size:1.1rem;color:var(--accent)}
+.soortkaart .kies{margin:0;font-size:14px;line-height:1.4}.soortkaart .kies span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:700;margin-bottom:2px}
+.soortkaart .klein.mi{margin-top:6px}
+@media (min-width:600px){.soortkaarten{grid-template-columns:repeat(2,minmax(0,1fr))}}
 ${SOORT_KLEUR_STIJL}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
 .merk{display:flex;align-items:center;gap:14px}.merk svg{flex:none}.merk h1 .naar{font-weight:400;color:var(--muted)}.merk h1 .aangifte{color:var(--accent)}.merk .onder{color:var(--muted);font-size:14px}
@@ -94,12 +99,12 @@ export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card
 // dat je alles altijd krijgt).
 // beide-V13R3 — de lijsten zelf staan in src/content/aanbod.js (ook gebruikt door de app).
 const SOORT_UITLEG = {
-  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", ...INZICHTEN.prive },
-  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", ...INZICHTEN.zakelijk },
+  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kies: KEUZE.prive, ...INZICHTEN.prive },
+  zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kies: KEUZE.zakelijk, ...INZICHTEN.zakelijk },
 };
 export function welkomSoorten(env) {
   const pr = prijzen(env);
-  return ["prive", "zakelijk"].map((s) => ({
+  return ["zakelijk", "prive"].map((s) => ({ // beide-V13R5: zakelijk eerst (als huishoudboekje-V1R6)
     soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
     plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
   }));
@@ -108,11 +113,13 @@ export const alleGratis = (soorten) => soorten.every((s) => s.plannen.every((p) 
 
 export function welkomKop(soorten) {
   const gratis = alleGratis(soorten);
-  const kenmerken = [soorten.length > 1 ? "Privé en zakelijk" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
+  const kenmerken = [soorten.length > 1 ? "Zakelijk en privé" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     { tekst: PRIVACY_LABEL, href: "#veilig" }, gratis ? GRATIS_KORT : null].filter(Boolean);
   return `<header class="kop">
 <div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift naar aangifte</div></div></div>
-<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>
+${soorten.length > 1 ? `<p class="sub">Bankafschriften vanzelf ingedeeld, voor twee soorten gebruik:</p>
+<ul class="drie">${soorten.map((s, i) => `<li><b>${e(s.naam)}</b> ${e(SOORT_KORT[s.soort])}${i === soorten.length - 1 ? `<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span>` : ""}</li>`).join("")}</ul>`
+  : `<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>`}
 <ul class="kenmerken">${kenmerken.map((k) => k.href ? `<li><a href="${k.href}">${e(k.tekst)}</a></li>` : `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
 }
@@ -134,6 +141,11 @@ export const welkomVeilig = (veilig = VEILIG) => `
   </section>
 `;
 
+// beide-V13R5 (uit huishoudboekje-V1R0) — de soortkaarten staan op dezelfde regels (subgrid): naam, waarom kiezen, voor wie, lijsten.
+const soortKaart = (naam, kies, voor, lijsten, soort) => `
+      <div class="kaart soortkaart s-${soort}"><h3>${e(naam)}</h3><p class="kies"><span>Kies dit voor</span>${e(kies)}</p><p class="klein">${e(voor)}</p>${lijsten.map(([kop, l]) =>
+    `<p class="klein mi">${e(kop)}</p><ul>${l.map((k) => `<li>${e(k)}</li>`).join("")}</ul>`).join("")}</div>`;
+
 export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
@@ -149,9 +161,8 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   </section>
 
   <section>
-    <h2>${meer ? "Privé of zakelijk" : "Voor wie"}</h2>
-    <div class="duo">${soorten.map((s) => `
-      <div class="kaart s-${s.soort}"><b>${e(s.naam)}: mogelijke inzichten</b><p class="klein">${e(s.voor)}</p><p class="klein mi">In Eenvoudig en Uitgebreid</p><ul>${s.beide.map((k) => `<li>${e(k)}</li>`).join("")}</ul><p class="klein mi">Alleen in Uitgebreid</p><ul>${s.uitgebreid.map((k) => `<li>${e(k)}</li>`).join("")}</ul></div>`).join("")}
+    <h2>${meer ? "Zakelijk of privé" : "Voor wie"}</h2>
+    <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
     </div>
     ${meer ? `<p class="klein">Met één account kun je beide hebben, elk met een eigen dossier.</p>` : ""}
   </section>
