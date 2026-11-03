@@ -4,12 +4,12 @@
 
 // Privacy: steeds "apparaat" en "niet op een server opgeslagen".
 export const PRIVACY_LABEL = "Verwerkt op je eigen apparaat";
-export const PRIVACY_KERN = "Bankbestanden en het dossier worden op het eigen apparaat verwerkt en bewaard, niet op een server.";
+export const PRIVACY_KERN = "Bankbestanden en het dossier worden op het eigen apparaat verwerkt en bewaard. Voor de analyse en de berekeningen is geen server nodig.";
 export const PRIVACY_SERVER = "Op de server staan alleen het account (mailadres, abonnement) en het logboek van de beheerder.";
 
 // Abonnement (zelfde termijn als voorwaarden artikel 5).
 export const GRATIS_DAGEN = 30;
-export const GRATIS_KORT = `Gratis, ${GRATIS_DAGEN} dagen per aanvraag`;
+export const GRATIS_KORT = `Gratis, ${GRATIS_DAGEN} dagen na goedkeuring`;
 export const GRATIS_UITLEG = `Gratis abonnement van ${GRATIS_DAGEN} dagen. Daarna kan verlenging worden aangevraagd; vooraf komt een herinnering.`;
 
 // Bankkoppeling: overal dezelfde status.
@@ -17,8 +17,8 @@ export const BANKKOPPELING_STATUS = "in ontwikkeling, nog niet beschikbaar";
 
 // Waarom kies je welke soort (wens Boska 2-11, overgenomen in beide-V13R5): één zin per soort, bovenaan elke kaart.
 export const KEUZE = {
-  zakelijk: "Inzicht in de zakelijke inkomsten en uitgaven, indicaties voor de btw- en IB-aangifte, en inzicht in aftrekposten en afschrijvingen.",
-  prive: "Inzicht in je privégeld en een voorbereiding op de aangifte inkomstenbelasting (indicatie).",
+  zakelijk: "Zakelijke inkomsten en uitgaven, aftrekposten en afschrijvingen, met een indicatie voor de btw- en IB-aangifte.",
+  prive: "Inzicht in je privégeld, met een indicatie voor de aangifte inkomstenbelasting.",
 };
 // Korte regel per soort bovenaan de welkomstpagina.
 export const SOORT_KORT = {
@@ -29,12 +29,12 @@ export const SOORT_KORT = {
 // Wat zit in Eenvoudig en wat alleen in Uitgebreid (welkomstpagina, Help, uitleg in de app, beheerdersuitleg).
 export const INZICHTEN = {
   prive: {
-    beide: ["Inkomsten en uitgaven per maand en per categorie", "Indicatie van de inkomstenbelasting", "Samenvatting om te bewaren of printen"],
-    uitgebreid: ["Vaste lasten", "Sparen en vermogen (box 3)", "Eigen woning", "Meerdere jaren naast elkaar", "Overzichten downloaden (PDF, HTML, Excel)"],
+    beide: ["Inkomsten en uitgaven per maand", "Indicatie inkomstenbelasting", "Samenvatting om te bewaren of printen"],
+    uitgebreid: ["Vaste lasten", "Sparen en vermogen (box 3)", "Eigen woning", "Meerdere jaren naast elkaar", "Downloaden in PDF, HTML of Excel"],
   },
   zakelijk: {
-    beide: ["Omzet, kosten en winst", "Btw per kwartaal", "Indicatie van de inkomstenbelasting en Zvw", "Samenvatting om te bewaren of printen"],
-    uitgebreid: ["Aangifteberekening", "Inkomen per maand", "Bedrijfsmiddelen en leningen (ook lease)", "Meerdere jaren naast elkaar", "Overzichten downloaden (PDF, HTML, Excel)"],
+    beide: ["Omzet, kosten en winst", "Btw per kwartaal", "Indicatie inkomstenbelasting en Zvw", "Samenvatting om te bewaren of printen"],
+    uitgebreid: ["Aangifteberekening", "Inkomen per maand", "Bedrijfsmiddelen, leningen en lease", "Meerdere jaren naast elkaar", "Downloaden in PDF, HTML of Excel"],
   },
 };
 

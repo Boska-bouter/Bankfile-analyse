@@ -3,7 +3,7 @@
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
-import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS, OMZETTEN, OMZETTEN_KORTING, OMZETTEN_WELKOM, OMZETTEN_WELKOM_KORTING } from "../src/content/aanbod.js";
+import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, GRATIS_DAGEN, BANKKOPPELING_STATUS, OMZETTEN, OMZETTEN_KORTING, OMZETTEN_WELKOM, OMZETTEN_WELKOM_KORTING } from "../src/content/aanbod.js";
 
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -19,7 +19,7 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .soortkaarten{display:grid;gap:12px;grid-template-columns:1fr}
 .soortkaart{display:grid;grid-row:span 7;grid-template-rows:subgrid;row-gap:8px;align-content:start;border-top:6px solid var(--accent)}.soortkaart h3{margin:0;font-size:1.1rem;color:var(--accent)}
 .soortkaart .kies{margin:0;font-size:14px;line-height:1.4}.soortkaart .kies span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:700;margin-bottom:2px}
-.soortkaart .klein.mi{margin-top:6px}
+.soortkaart .klein.mi{margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}.soortkaart ul{font-size:14px}
 @media (min-width:600px){.soortkaarten{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .omzetband{margin:12px 0 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;background:var(--card);font-size:14px}
 ${SOORT_KLEUR_STIJL}
@@ -43,7 +43,7 @@ ${SOORT_KLEUR_STIJL}
 .stappen{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));counter-reset:stap}
 .stap{counter-increment:stap;gap:4px}.stap::before{content:counter(stap);display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:13px}
 .stap p{margin:0}.duo{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.klein{font-size:13px;color:var(--muted);margin:0}.klein.mi{font-weight:600;color:var(--fg);margin-top:4px}
+.klein{font-size:14px;color:var(--muted);margin:0}.klein.mi{font-weight:600;color:var(--fg);margin-top:4px}
 .let-op{margin:0;padding:10px 12px;border-radius:8px;border-left:4px solid #d97706;background:rgba(217,119,6,.08);font-size:14px}`;
 
 // Zelfde tekst als VEILIG_KORT in src/content/veiligheid.jsx (de Worker laadt geen React-bestanden).
@@ -129,7 +129,7 @@ export const VERGELIJK_STIJL = `.vergelijk-lijst{display:grid;column-gap:16px;ro
 // dat je alles altijd krijgt).
 // beide-V13R3 — de lijsten zelf staan in src/content/aanbod.js (ook gebruikt door de app).
 const SOORT_UITLEG = {
-  prive: { voor: "Voor particulieren en hun huishouden, eventueel met partner.", kies: KEUZE.prive, ...INZICHTEN.prive },
+  prive: { voor: "Voor particulieren, eventueel met partner.", kies: KEUZE.prive, ...INZICHTEN.prive },
   zakelijk: { voor: "Voor zzp, eenmanszaak of BV.", kies: KEUZE.zakelijk, ...INZICHTEN.zakelijk },
 };
 export function welkomSoorten(env) {
@@ -146,7 +146,7 @@ export function welkomKop(soorten) {
   const kenmerken = [soorten.length > 1 ? "Zakelijk en Privé" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     { tekst: PRIVACY_LABEL, href: "#veilig" }, gratis ? GRATIS_KORT : null].filter(Boolean);
   return `<header class="kop">
-<div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift naar aangifte</div></div></div>
+<div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift tot indicatie voor de aangifte</div></div></div>
 ${soorten.length > 1 ? `<p class="sub">Bankafschriften vanzelf ingedeeld, voor twee soorten gebruik:</p>
 <ul class="drie">${soorten.map((s, i) => `<li><b>${e(s.naam)}</b> ${e(SOORT_KORT[s.soort])}${i === soorten.length - 1 ? `<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span>` : ""}</li>`).join("")}</ul>`
   : `<p class="sub">Bankafschriften vanzelf ingedeeld: wat er binnenkomt, wat er uitgaat, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></p>`}
@@ -156,16 +156,17 @@ ${soorten.length > 1 ? `<p class="sub">Bankafschriften vanzelf ingedeeld, voor t
 
 // In het aanvraagvak: in drie korte stappen hoe je begint (stond eerst dubbel, boven én onder de uitleg).
 export const welkomNieuw = (gratis) => `<ol class="nieuw">
-<li>Vul je e-mailadres in en kies <b>Stuur inloglink</b>.</li>
-<li>Kies na het inloggen je abonnement. Je krijgt een mail zodra het is goedgekeurd.${gratis ? ` ${e(GRATIS_UITLEG)}` : ""}</li>
-<li>Stel een wachtwoord of passkey in; daarna log je zonder mail in.</li></ol>`;
+<li>Vul je e-mailadres in en kies <b>Account aanvragen</b>. Je krijgt een mail met een inloglink.</li>
+<li>Log in met die link en kies je abonnement: Zakelijk of Privé, Eenvoudig of Uitgebreid.</li>
+<li>De beheerder beoordeelt de aanvraag. Na goedkeuring krijg je een mail${gratis ? `; vanaf dan loopt het gratis abonnement van ${GRATIS_DAGEN} dagen` : ""}.</li>
+<li>Stel een wachtwoord of passkey in. Daarna log je zonder mail in.</li></ol>`;
 
 // beide-V12R7 — veiligheidsblok los, zodat de inlogpagina het onderaan over de volle breedte kan zetten (wens Boska 31-10).
 export const welkomVeilig = (veilig = VEILIG) => `
   <section class="veilig">
-    <h2 id="veilig">De veiligheid van jouw gegevens</h2>
+    <h2 id="veilig">Je gegevens blijven op je eigen apparaat</h2>
     <div class="kaart">
-      <p style="margin:0">${e(PRIVACY_KERN)} ${e(PRIVACY_SERVER)} Een eigen kopie van het dossier kan als bestand worden opgeslagen, desgewenst met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
+      <p style="margin:0">${e(PRIVACY_KERN)} ${e(PRIVACY_SERVER)} Een kopie van het dossier kun je als bestand opslaan, als je wilt met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
       <p class="let-op">${e(veilig)}</p>
     </div>
   </section>
@@ -194,9 +195,9 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAb
   <section aria-labelledby="wat">
     <h2 id="wat">Wat doet BankafschriftenTool?</h2>
     <div class="stappen">
-      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Als bestand van de bank (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? ` of via de automatische bankkoppeling (${BANKKOPPELING_STATUS})` : ""}. Ook van meerdere rekeningen en jaren.</p></div>
-      <div class="kaart stap"><b>Indelen en begeleiden</b><p class="klein">De app deelt de boekingen zelf in en helpt je met de rest: wat hij niet zeker weet, vraagt hij je, één voor één of in een lijst.</p></div>
-      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Waar het geld vandaan komt en heen gaat, per maand en categorie, en een indicatie voor de btw-aangifte en de aangifte inkomstenbelasting (IB). Te downloaden in PDF, HTML of Excel, en te printen.</p></div>
+      <div class="kaart stap"><b>Bankgegevens inlezen</b><p class="klein">Lees de bestanden van de bank in (CSV/XLS, MT940 of CAMT.053)${sleutels.includes("koppelen") ? ` of gebruik de bankkoppeling (${BANKKOPPELING_STATUS})` : ""}, ook van meerdere rekeningen en jaren.</p></div>
+      <div class="kaart stap"><b>Indelen en controleren</b><p class="klein">De app deelt de boekingen zelf in. Wat niet zeker is, vraagt hij je, één voor één of in een lijst.</p></div>
+      <div class="kaart stap"><b>Overzichten en rapportages</b><p class="klein">Inkomsten en uitgaven per maand en categorie, met een indicatie voor de btw- en IB-aangifte. Te downloaden (PDF, HTML, Excel) en te printen. De aangifte zelf doe je bij de Belastingdienst.</p></div>
     </div>
   </section>
 
