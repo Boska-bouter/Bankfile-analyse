@@ -8,7 +8,8 @@ import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERV
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // Breed scherm (iPad liggend, computer): uitleg links, inloggen rechts en blijft staan bij scrollen. Smal scherm:
-// eerst inloggen, daaronder de uitleg. Eén inlogvak, geen tweede inlogknop onderaan (wens Boska 24-10).
+// eerst inloggen, daaronder de uitleg. beide-V13R8: inloggen blijft niet meer staan bij scrollen (dan vielen de abonnementen
+// eronder weg, melding Boska 3-11). Eén inlogvak, geen tweede inlogknop onderaan (wens Boska 24-10).
 // beide-V13R4 (uit huishoudboekje-V1R5) — kleur per soort, gelijk aan de app (src/index.css): klassen s-zakelijk en
 // s-prive zetten --accent op het element (kaarten op welkomst- en aanmeldpagina).
 export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}
@@ -26,10 +27,10 @@ ${SOORT_KLEUR_STIJL}
 .inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
 .kenmerken{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .kenmerken a{color:inherit;text-decoration:underline;text-underline-offset:2px}.kenmerken li{font-size:13px;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px}
-.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "abon" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.abonrij{grid-area:abon;min-width:0}.abonrij section{display:flex;flex-direction:column;gap:12px}.abonrij h2{margin:0;font-size:1.2rem}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
+.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
 .inlogkolom{grid-area:inlog;display:flex;flex-direction:column;gap:14px;max-width:520px}.uitlegkolom{grid-area:uitleg;min-width:0}
-@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "abon abon" "veilig veilig";align-items:start;gap:32px 40px}
-.inlogkolom{position:sticky;top:24px}.alleen-smal{display:none}}
+@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "veilig veilig";align-items:start;gap:32px 40px}
+.alleen-smal{display:none}}
 .inlogkaart{gap:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(15,118,110,.07)}
 .inlogkaart h2{margin:0 0 2px;font-size:1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
 #status2{margin:0;color:var(--muted)}#status2.err{color:var(--err)}#status2.ok{color:var(--ok)}
@@ -68,40 +69,56 @@ const NIET_IN = {
   zakelijk: "Niet in Zakelijk: box 3 (sparen en beleggen) en eigen woning. Die horen bij Privé.",
   prive: "Niet in Privé: btw, aangifteberekening voor een onderneming, bedrijfsmiddelen en afschrijvingen. Die horen bij Zakelijk.",
 };
+// beide-V13R9 (uit huishoudboekje-V1R9) — de abonnementen staan in één gedeeld raster (CSS subgrid): gelijke regels (Eerste inzicht,
+// Werkwijze, Bankgegevens, Beschikbaar, Prijs, "Niet in …") staan in alle tabellen op dezelfde hoogte, ook als een
+// tabel minder regels heeft of een tekst over meer regels loopt (wens Boska 3-11). Elke kaart heeft dezelfde 9 rijen;
+// de kenmerken staan per kaart in één blok, zodat een kortere lijst lege ruimte onderaan dat blok krijgt.
 export function vergelijkTabel(soorten) {
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   const meer = soorten.length > 1;
-  const cel = (w) => `<td class="${w === V ? "ja" : w === N ? "nee" : ""}">${e(w)}</td>`;
-  const rij = (t, w) => `<tr><th scope="row">${e(t)}</th>${sleutels.map((k) => cel(w[k])).join("")}</tr>`;
+  const cel = (w) => `<span role="cell" class="${w === V ? "ja" : w === N ? "nee" : ""}">${w === V ? '<span aria-label="ja">✓</span>' : w === N ? '<span aria-label="nee">–</span>' : e(w)}</span>`;
+  const rij = (t, w, ks, kl = "") => `<div role="row" class="vr${kl}"><span role="rowheader">${e(t)}</span>${ks.map((k) => cel(w[k])).join("")}</div>`;
   const alle = (w) => Object.fromEntries(sleutels.map((k) => [k, w(k)]));
-  const tabel = (s) => {
+  const kaarten = [];
+  for (const s of soorten) {
     const plan = (k) => s.plannen.find((p) => p.sleutel === k) || {};
-    const regels = [
-      ...ALGEMEEN_BOVEN.map((r) => rij(r.t, r.w)),
-      ...s.beide.map((t) => rij(t, alle(() => V))),
-      ...s.uitgebreid.map((t) => rij(t, alle((k) => (k === "eenvoudig" ? N : V)))),
-      ...ALGEMEEN_ONDER.map((r) => rij(r.t, r.w)),
-      `<tr class="prijsregel"><th scope="row">Prijs</th>${sleutels.map((k) => `<td>${e(plan(k).gratis ? "gratis" : String(plan(k).prijs).replace(" per maand", "/mnd"))}</td>`).join("")}</tr>`,
-    ];
-    return `<div class="vergelijk s-${s.soort}"><table>
-<caption>${e(s.naam)}</caption>
-<thead><tr><th></th>${sleutels.map((k) => `<th scope="col">${e(plan(k).naam)}</th>`).join("")}</tr></thead>
-<tbody>${regels.join("")}</tbody></table>${meer && NIET_IN[s.soort] ? `<p class="niet-in">${e(NIET_IN[s.soort])}</p>` : ""}</div>`;
-  };
-  return `<div class="vergelijk-lijst">${soorten.map(tabel).join("")}</div>${sleutels.includes("koppelen")
+    kaarten.push({
+      soort: s.soort, naam: s.naam, ks: sleutels,
+      kop: sleutels.map((k) => plan(k).naam),
+      boven: ALGEMEEN_BOVEN.map((r) => [r.t, r.w]),
+      kenmerken: [...s.beide.map((t) => [t, alle(() => V)]), ...s.uitgebreid.map((t) => [t, alle((k) => (k === "eenvoudig" ? N : V))])],
+      onder: ALGEMEEN_ONDER.map((r) => [r.t, r.w]),
+      prijs: alle((k) => (plan(k).gratis ? "gratis" : String(plan(k).prijs).replace(" per maand", "/mnd"))),
+    });
+  }
+  // Rijen: naam, kop, 2× boven, blok kenmerken, 2× onder, prijs, niet-in.
+  const rijen = 9;
+  const kaart = (k) => `<div class="vergelijk s-${k.soort}" role="table" aria-label="${e(k.naam)}" style="grid-row:span ${rijen};grid-template-columns:${k.ks.length === 1 ? "62% minmax(0,1fr)" : `42% repeat(${k.ks.length},minmax(0,1fr))`}">
+<div class="vnaam">${e(k.naam)}</div>
+<div role="row" class="vr vkop"><span role="columnheader"></span>${k.kop.map((t) => `<span role="columnheader">${e(t)}</span>`).join("")}</div>
+${k.boven.map(([t, w]) => rij(t, w, k.ks)).join("")}
+<div role="rowgroup" class="vken">${k.kenmerken.map(([t, w]) => rij(t, w, k.ks)).join("")}</div>
+${k.onder.map(([t, w]) => rij(t, w, k.ks)).join("")}
+${rij("Prijs", k.prijs, k.ks, " prijsregel")}
+<p class="niet-in">${meer && NIET_IN[k.soort] ? e(NIET_IN[k.soort]) : ""}</p></div>`;
+  return `<div class="vergelijk-lijst">${kaarten.map(kaart).join("")}</div>${sleutels.includes("koppelen")
     ? `<p class="klein let">De bankkoppeling krijgt straks extra kosten, vanwege de koppeling met de bank en de extra beveiliging die daarvoor nodig is.</p>` : ""}`;
 }
-export const VERGELIJK_STIJL = `.vergelijk-lijst{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start}
-.vergelijk{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px}
-.vergelijk caption{text-align:left;padding:10px 10px 6px;font-weight:700;font-size:1.05rem;color:var(--accent)}
-.vergelijk .niet-in{margin:0;padding:8px 10px 10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
-.vergelijk table{width:100%;border-collapse:collapse;font-size:13px}
-.vergelijk th,.vergelijk td{padding:8px 10px;text-align:center;vertical-align:top;border-top:1px solid var(--line)}
-.vergelijk thead th{border-top:0;color:var(--fg);font-weight:600;background:var(--bg)}
-.vergelijk tbody th{text-align:left;font-weight:500;color:var(--muted)}.vergelijk .soort{font-weight:400}
-.vergelijk td.ja{color:var(--accent);font-weight:700}.vergelijk td.nee{color:var(--muted)}
-.vergelijk .prijsregel td{color:var(--accent);font-weight:600}
-@media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px}.vergelijk table{font-size:12px}}
+export const VERGELIJK_STIJL = `.vergelijk-lijst{display:grid;column-gap:16px;row-gap:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.vergelijk{display:grid;grid-template-rows:subgrid;align-content:start;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;font-size:13px;overflow:hidden}
+.vergelijk>*{grid-column:1/-1}
+.vergelijk .vr{grid-column:1/-1;display:grid;grid-template-columns:subgrid;border-top:1px solid var(--line)}
+.vergelijk .vken{display:grid;grid-template-columns:subgrid;align-content:start}
+.vergelijk .vr>span{padding:8px 10px;text-align:center;overflow-wrap:normal;hyphens:auto;-webkit-hyphens:auto}
+.vergelijk .vr>span[role=rowheader]{text-align:left;font-weight:500;color:var(--muted)}
+.vergelijk .vnaam{padding:10px 10px 6px;font-weight:700;font-size:1.05rem;color:var(--accent)}
+.vergelijk .vkop{border-top:0;background:var(--bg);align-items:end}.vergelijk .vkop>span{color:var(--fg);font-weight:600}
+.vergelijk .ja{color:var(--accent);font-weight:700}.vergelijk .nee{color:var(--muted)}
+.vergelijk .prijsregel>span:not([role=rowheader]){color:var(--accent);font-weight:600}
+.vergelijk .niet-in{margin:0;padding:8px 10px 10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);background:var(--bg)}
+.vergelijk .niet-in:empty{display:none}
+@media (max-width:1180px){.vergelijk{font-size:12.5px}.vergelijk .vr>span{padding:7px 6px}}
+@media (max-width:520px){.vergelijk{font-size:12px}.vergelijk .vr>span{padding:6px 4px}}
 .let{color:#b45309}`;
 
 // soorten: [{ soort, naam, voor, beide: [..], uitgebreid: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
