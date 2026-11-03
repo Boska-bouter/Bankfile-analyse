@@ -19,7 +19,7 @@ import { uitgebreidExtra, BANKKOPPELING_STATUS } from "../src/content/aanbod.js"
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { logBeheer, inloggenVastleggen } from "./logboek.js";
-import { welkomInhoud, welkomVeilig, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { welkomInhoud, welkomVeilig, welkomAbonnementen, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -347,7 +347,8 @@ ${welkomKop(soorten)}
   ${welkomNieuw(alleGratis(soorten))}
 </div>
 </aside>
-<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false })}</div>
+<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false })}</div>
+<div class="abonrij welkom">${welkomAbonnementen(soorten)}</div>
 <div class="veiligrij">${welkomVeilig()}</div>
 </div>`, `
 const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
