@@ -7,13 +7,24 @@ import { DEFAULT_BTW_RATES, mergeBtwRates, DEFAULT_VOORBELASTING_EXCLUDED } from
 import { migrateOverridesCategories, resolveRechtsvorm, resolveHeeftHolding, resolveDossierSoort, normalizeAutoStatus, normalizeAutoWizard, migreerGedeeldeHuisvesting, migreerCategorieLijst, migreerPercentageSplitsing } from "./dossierMigraties.js";
 
 export async function laadDossierBestand(file, c) {
-  const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTariefOverridesState, setOverigInkomenBox1State, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
   try {
     const project = await readProjectFile(file, c.vraagWachtwoord);
+    pasDossierToe(project, { naam: file.name, lastModified: file.lastModified }, c);
+  } catch (e) {
+    if (e.code === "GEANNULEERD") return;
+    c.setError(e.message || String(e));
+  }
+}
+
+// huishoudboekje-V1R4 — een al gelezen dossierobject toepassen (ook voor "Maak er een Huishoudboekje van", zonder
+// eerst een bestand te maken en terug te lezen: dat gaf op de iPad "Kon het dossierbestand niet lezen").
+export function pasDossierToe(project, { naam = null, lastModified = null } = {}, c) {
+  const { setAccountTypeByFile, setActivaDetails, setActiveTab, setAutoActivaDetails, setAutoStatusState, setAutoWizardStatus, setBtwVerlegd, setBusinessExpenseKeywords, setBusinessKeywords, setCategoryBtwRates, setCategoryRules, setCategoryZakelijkPercentageState, setConfirmedLeaseTypeKeys, setDismissedDuplicateNotice, setEigenNamen, setEigenRekeningenExtra, setEnergieZakelijkPercentageStatusState, setError, setExcludedDuplicateFingerprints, setExcludedManualFingerprints, setExpandedCardKeys, setFixedCategories, setGemeentelijkeKostenZakelijkPercentageStatusState, setHeeftHolding, setHeeftVoorraad, setHoldingBoekingen, setHuurZakelijkPercentageStatusState, setIbStatus, setIncomeBtwTarieven, setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setMaxStappen, setMeerdereTarievenBevestigd, setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setRechtsvorm, setResumeHint, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys, setReviewedPersonKeys, setStartersaftrekStatusState, setTariefOverridesState, setOverigInkomenBox1State, setTransactionNotes, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVoorbelastingExcluded, setVpbStatus, setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus, suppressChangeCount } = c;
+  {
     suppressChangeCount();
     // nieuw-V6R6 — een geladen dossierbestand ís bewaard: tijdstip van opslaan uit het bestand (anders de
     // bestandsdatum), zodat stap 4 "Bewaren" en de sessiebalk het dossier direct als opgeslagen tonen.
-    const bewaardOp = new Date(project.savedAt || file.lastModified || Date.now());
+    const bewaardOp = new Date(project.savedAt || lastModified || Date.now());
     setLastExportAt(isNaN(+bewaardOp) ? new Date() : bewaardOp);
     setParsedFiles(Array.isArray(project.parsedFiles) ? project.parsedFiles : []);
     setAccountTypeByFile(project.accountTypeByFile || {});
@@ -101,7 +112,7 @@ export async function laadDossierBestand(file, c) {
     setGemeentelijkeKostenZakelijkPercentageStatusState({});
     setCategoryZakelijkPercentageState(migreerPercentageSplitsing(gedeeldeMig.categoryZakelijkPercentage));
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
-    setLoadedProjectFileName(file.name);
+    setLoadedProjectFileName(naam);
     c.setDossierHerstelcode?.(project.__herstelcode || null);
     c.setDossierWachtwoord?.(project.__wachtwoord || null); // een beveiligd dossier blijft bij opslaan beveiligd
     c.setBevestigdeControles?.(project.bevestigdeControles && typeof project.bevestigdeControles === "object" ? project.bevestigdeControles : {});
@@ -117,9 +128,6 @@ export async function laadDossierBestand(file, c) {
     setOvergeslagenStappen(Array.isArray(project.overgeslagenStappen) ? project.overgeslagenStappen : []);
     setMaxStappen(0);
     c.naDossierLaden?.(project.weergave === "eenvoudig" ? "eenvoudig" : "uitgebreid"); // nieuw-V1R08 — vraag in welke weergave
-  } catch (e) {
-    if (e.code === "GEANNULEERD") return;
-    setError(e.message || String(e));
   }
 }
 
