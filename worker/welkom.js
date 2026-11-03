@@ -174,7 +174,7 @@ export const alleGratis = (soorten) => soorten.every((s) => s.plannen.every((p) 
 
 export function welkomKop(soorten) {
   const gratis = alleGratis(soorten);
-  const kenmerken = [soorten.length > 1 ? "Zakelijk, privé en huishoudboekje" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
+  const kenmerken = [soorten.length > 1 ? "Zakelijk, Privé en Huishoudboekje" : `Voor ${soorten[0]?.naam.toLowerCase() || "zakelijk"} gebruik`,
     { tekst: PRIVACY_LABEL, href: "#veilig" }, gratis ? GRATIS_KORT : null].filter(Boolean);
   return `<header class="kop">
 <div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift naar aangifte</div></div></div>
@@ -217,7 +217,7 @@ export const welkomAbonnementen = (soorten) => `
   </section>
 `;
 
-export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAbonnementen = true }) {
+export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAbonnementen = true, abonKnop = false }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   return `
@@ -232,7 +232,8 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAb
   </section>
 
   <section>
-    <h2>${meer ? "Zakelijk, privé of huishoudboekje" : "Voor wie"}</h2>
+    ${abonKnop ? `<div class="soortkop"><h2>${meer ? "Zakelijk, Privé of Huishoudboekje" : "Voor wie"}</h2><button type="button" id="abonknop" class="tweede abonknop" aria-haspopup="dialog">Abonnementen vergelijken</button></div>` // beide-V14R4: knop naast de kop (wens Boska 3-11)
+      : `<h2>${meer ? "Zakelijk, Privé of Huishoudboekje" : "Voor wie"}</h2>`}
     <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
       ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eén abonnement, alles erin", HUISHOUDBOEKJE.alles]], "hb")}
     </div>
