@@ -302,7 +302,7 @@ button,.knop{font:inherit;font-weight:600;background:var(--accent);color:#fff;bo
 button.tweede,.knop.tweede{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 button[disabled]{opacity:.6}#status{margin:0;min-height:1.3em;color:var(--muted)}#status.err{color:var(--err)}#status.ok{color:var(--ok)}
 .of{text-align:center;color:var(--muted);font-size:13px}
-.abonknop{width:100%}
+.soortkop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}.soortkop h2{margin:0}.abonknop{padding:8px 14px;font-size:14px}
 .abonvenster{width:min(1180px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);box-sizing:border-box;margin:auto;padding:16px 20px 20px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);overflow:auto}
 .abonvenster::backdrop{background:rgb(15 23 42 / .55)}
 .abonbalk{position:sticky;top:-16px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-16px -20px 12px;padding:12px 20px;background:var(--bg);border-bottom:1px solid var(--line)}.abonbalk h2{margin:0;font-size:1.2rem}
@@ -353,9 +353,8 @@ ${welkomKop(soorten)}
   <p id="status2" role="status"></p>
   ${welkomNieuw(alleGratis(soorten))}
 </div>
-<button type="button" id="abonknop" class="tweede abonknop" aria-haspopup="dialog">Abonnementen vergelijken</button>
 </aside>
-<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false })}</div>
+<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false, abonKnop: true })}</div>
 <dialog id="abonvenster" class="abonvenster" aria-label="Abonnementen vergelijken"><div class="abonbalk"><h2>Abonnementen</h2><button type="button" id="abondicht" class="abondicht">Sluiten</button></div><div class="welkom">${welkomAbonnementen(soorten)}</div></dialog>
 <div class="veiligrij">${welkomVeilig()}</div>
 </div>`, `
