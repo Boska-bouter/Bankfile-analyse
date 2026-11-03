@@ -53,10 +53,10 @@ function TabItem({ tabKey, active, badge, onClick }) {
       onClick={onClick}
       title={TAB_LABELS[tabKey]}
       className={`sb-btn relative w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${
-        active ? "bg-sky-400/10 border-l-[3px] border-sky-400" : "border-l-[3px] border-transparent hover:bg-white/5"
+        active ? "bg-teal-400/15 border-l-[3px] border-teal-400" : "border-l-[3px] border-transparent hover:bg-white/5"
       }`}
     >
-      <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "#7DD3FC" : "#8992B4" }} />
+      <Icon className="h-4 w-4 shrink-0" style={{ color: active ? "rgb(var(--soort-300))" : "#8992B4" }} />
       <span className={`sb-label text-[13px] flex-grow ${active ? "font-bold text-white" : "font-medium text-slate-400"}`}>{TAB_LABELS[tabKey]}</span>
       {!!badge && (
         <span className="sb-badge text-[11px] font-bold rounded-full px-1.5 py-0.5 bg-amber-400 text-amber-950 shrink-0" title="Open punten">{badge}</span>
@@ -150,7 +150,7 @@ export default function AppSidebar({
       <div className="flex items-center gap-2.5 px-1.5 pb-1.5">
         <Logo size={34} />
         <div className="sb-label flex flex-col min-w-0 flex-grow">
-          <span className="text-[13px] font-bold text-white whitespace-nowrap tracking-tight">Bankafschriften<span className="text-teal-300">Tool</span></span>
+          <span className="text-[13px] font-bold text-white whitespace-nowrap tracking-tight">Bankafschriften<span className="text-[#5eead4]">Tool</span></span>
           {/* release22V1 — copyright en release staan nu onderaan de zijbalk (rustiger kop) */}
           <span className="text-[11px] text-slate-400 leading-snug">Inzicht in geldstromen</span>
         </div>
@@ -166,7 +166,7 @@ export default function AppSidebar({
 
       {/* Rekeninghouder — v270: groter gemaakt op verzoek, was nauwelijks leesbaar. */}
       <div className="sb-label px-1.5 pb-4 pt-2 mb-4 border-b border-white/10 text-[13px]">
-        {dossierSoortNaam && <span className="mb-2 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-200">{dossierSoortNaam}</span>}
+        {dossierSoortNaam && <span className="mb-2 inline-block rounded-full bg-teal-600 px-2 py-0.5 text-[11px] font-semibold text-white">{dossierSoortNaam}</span>}
         {rekeninghouderNaam ? (
           <div className="flex flex-col gap-0.5">
             <span className="text-slate-400 text-xs">Rekeninghouder</span>

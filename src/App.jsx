@@ -285,6 +285,10 @@ export default function App() {
   const nood = useNoodmodus();
   const naarServer = (url, wat) => { if (nood.weg) setDialog(nietBeschikbaar(wat)); else window.location.href = url; };
   const naarAbonnementen = () => naarServer("/aanmelden", "Aanmelden");
+  // beide-V13R4 (uit huishoudboekje-V1R5) — kleur per soort dossier: data-soort op <html> stuurt de actiekleur (src/index.css).
+  useEffect(() => {
+    try { document.documentElement.dataset.soort = soortDossier === "prive" ? "prive" : "zakelijk"; } catch { /* geen document */ }
+  }, [soortDossier]);
   const magKoppelen = rechtVoorSoort(rechtenPerSoort, soortDossier, "koppelen", magKoppelenAccount);
   // nieuw-V1R02 — bij een nieuw dossier eerst kiezen: eenvoudig of uitgebreid (zie ModusKeuze.jsx).
   const [modusKeuzeOpen, setModusKeuzeOpen] = useState(false);
@@ -3531,6 +3535,8 @@ export default function App() {
       {/* Tabblad-pijlen in de marge naast de inhoud (alleen waar die marge breed genoeg is): één tik naar het
           vorige/volgende hoofdtabblad. Blijft op halve schermhoogte staan terwijl je scrolt. */}
       {tabsVisible && !eenvoudigActief && <TabPijlen activeTab={activeTab} onSelect={setActiveTab} />}
+      {/* beide-V13R4 — smalle band in de kleur van de soort dossier, zodat je ziet waar je bent */}
+      {parsedFiles.length > 0 && <div aria-hidden="true" className="h-1.5 w-full shrink-0 bg-teal-600" />}
       <main className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-12 py-8 pb-24 space-y-6" style={{ flex: "1 0 auto", width: "100%" }}>
         <NoodmodusBalk nood={nood} />
         <SessieBalk sessie={sessie} onOpslaan={startOpslaan} kanOpslaan={parsedFiles.length > 0} opgeslagenOm={changesSinceExport === 0 ? lastExportAt : null} />
@@ -3705,6 +3711,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -3957,6 +3964,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />
@@ -4189,6 +4197,7 @@ export default function App() {
             werkelijkAangifteItems={activeYear ? yearlyProgress[activeYear]?.werkelijkAangifteItems : null}
             onOpenAangifteItem={(doel) => (doel === "btw" ? setShowQuarterlyBtwModal(true) : doel === "ib" ? null : setShowMultiYearModal(true))}
             aangifteSoorten={modus.berekening === "prive" ? "IB" : undefined}
+            soortLabel={parsedFiles.length > 0 ? `${modus.naam} dossier` : null}
             yearControl={
               years.length > 1 && (
                 <YearDropdown yearPeriod={yearPeriod} years={years} activeYear={activeYear} onSelectYear={setActiveYear} yearlyProgress={yearlyProgress} zakelijkYears={zakelijkYearsCount} priveYears={priveYearsCount} showBreakdown={priveRekeningGeladen} yearCoverage={yearCoverage} />

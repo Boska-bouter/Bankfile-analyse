@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* huishoudboekje-V1R5 — kleur per soort dossier (zie tailwind.config.js, "teal"). RGB-waarden zonder komma's. */
+:root, [data-soort="zakelijk"] {
+  --soort-50: 240 253 250; --soort-100: 204 251 241; --soort-200: 153 246 228; --soort-300: 94 234 212; --soort-400: 45 212 191;
+  --soort-500: 20 184 166; --soort-600: 13 148 136; --soort-700: 15 118 110; --soort-800: 17 94 89; --soort-900: 19 78 74; --soort-950: 4 47 46;
+}
+[data-soort="prive"] {
+  --soort-50: 238 244 252; --soort-100: 217 230 248; --soort-200: 181 205 240; --soort-300: 139 176 230; --soort-400: 93 141 216;
+  --soort-500: 58 114 200; --soort-600: 43 98 182; --soort-700: 36 86 159; --soort-800: 30 71 133; --soort-900: 27 60 108; --soort-950: 16 38 74;
+}
+
 /* v230 — professionelere typografie (mockup-stijl): IBM Plex Sans voor lopende tekst (in plaats van
    het systeemlettertype dat Tailwinds `font-sans` standaard gebruikt), Sora voor koppen. Fonts zelf
    worden geladen via de <link>-tags in index.html. */

@@ -9,7 +9,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
   title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
-  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", openPoints, openBreakdown, yearRing, compact = false, dossierInfo,
+  werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", openPoints, openBreakdown, yearRing, compact = false, dossierInfo, soortLabel = null,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
   const aangiftesRef = useRef(null);
@@ -55,7 +55,8 @@ export default function DashboardHeader({
     return (
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>{title}</h1>
+          {/* huishoudboekje-V1R5 — soort dossier naast de titel (wens Boska 2-11) */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>{title}</h1>{soortLabel && <span data-testid="soort-label" className="rounded-full bg-teal-100 px-2.5 py-0.5 text-sm font-semibold text-teal-800">{soortLabel}</span>}</div>
           <p className="mt-1 text-sm text-slate-500 flex flex-wrap items-center gap-x-2">
             <span>{subtitle}</span>
             {pct != null && openPoints != null && (
@@ -76,9 +77,12 @@ export default function DashboardHeader({
   return (
     <div className="flex flex-col 2xl:flex-row 2xl:items-start 2xl:justify-between gap-4">
       <div className="2xl:max-w-[17rem] shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>
-          {title}
-        </h1>
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "inherit" }}>
+            {title}
+          </h1>
+          {soortLabel && <span data-testid="soort-label" className="rounded-full bg-teal-100 px-2.5 py-0.5 text-sm font-semibold text-teal-800">{soortLabel}</span>}
+        </div>
         {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
         {dossierInfo && <p className="mt-0.5 text-xs text-slate-400">{dossierInfo}</p>}
       </div>

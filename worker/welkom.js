@@ -9,7 +9,13 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 
 // Breed scherm (iPad liggend, computer): uitleg links, inloggen rechts en blijft staan bij scrollen. Smal scherm:
 // eerst inloggen, daaronder de uitleg. Eén inlogvak, geen tweede inlogknop onderaan (wens Boska 24-10).
+// beide-V13R4 (uit huishoudboekje-V1R5) — kleur per soort, gelijk aan de app (src/index.css): klassen s-zakelijk en
+// s-prive zetten --accent op het element (kaarten op welkomst- en aanmeldpagina).
+export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}
+@media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}}`;
 export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
+.duo .kaart[class*=" s-"]{border-top:6px solid var(--accent)}.duo .kaart[class*=" s-"]>b{color:var(--accent)}
+${SOORT_KLEUR_STIJL}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
 .merk{display:flex;align-items:center;gap:14px}.merk svg{flex:none}.merk h1 .naar{font-weight:400;color:var(--muted)}.merk h1 .aangifte{color:var(--accent)}.merk .onder{color:var(--muted);font-size:14px}
 .inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
@@ -145,7 +151,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
   <section>
     <h2>${meer ? "Privé of zakelijk" : "Voor wie"}</h2>
     <div class="duo">${soorten.map((s) => `
-      <div class="kaart"><b>${e(s.naam)}: mogelijke inzichten</b><p class="klein">${e(s.voor)}</p><p class="klein mi">In Eenvoudig en Uitgebreid</p><ul>${s.beide.map((k) => `<li>${e(k)}</li>`).join("")}</ul><p class="klein mi">Alleen in Uitgebreid</p><ul>${s.uitgebreid.map((k) => `<li>${e(k)}</li>`).join("")}</ul></div>`).join("")}
+      <div class="kaart s-${s.soort}"><b>${e(s.naam)}: mogelijke inzichten</b><p class="klein">${e(s.voor)}</p><p class="klein mi">In Eenvoudig en Uitgebreid</p><ul>${s.beide.map((k) => `<li>${e(k)}</li>`).join("")}</ul><p class="klein mi">Alleen in Uitgebreid</p><ul>${s.uitgebreid.map((k) => `<li>${e(k)}</li>`).join("")}</ul></div>`).join("")}
     </div>
     ${meer ? `<p class="klein">Met één account kun je beide hebben, elk met een eigen dossier.</p>` : ""}
   </section>
