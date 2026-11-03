@@ -42,3 +42,16 @@ const opsomming = (l) => (l.length < 2 ? l.join("") : `${l.slice(0, -1).join(", 
 const klein = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 // Lopende zin: "vaste lasten, sparen en vermogen (box 3), eigen woning, … en overzichten downloaden (…)".
 export const uitgebreidExtra = (soort) => opsomming(INZICHTEN[soort === "prive" ? "prive" : "zakelijk"].uitgebreid.map(klein));
+
+// beide-V14R0 — omzetten naar de andere soort (wens Boska 3-11): tekst onder de abonnemententabel en op de
+// welkomstpagina. De zin over korting alleen als er een korting is ingesteld (PRIJZEN.korting); zolang alles gratis is niet.
+export const OMZETTEN = {
+  zakelijk: "Ook privérekeningen opgegeven? Maak met één knop een privédossier van je zakelijke dossier, zonder alles opnieuw in te voeren.",
+  prive: "Een bedrijf gestart? Maak met één knop een zakelijk dossier van je privédossier: personen, rekeningen en boekingen gaan mee.",
+};
+export const OMZETTEN_KORTING = {
+  zakelijk: (pct) => `Met een zakelijk abonnement krijg je ${pct}% korting op een privéabonnement.`,
+  prive: (pct) => `Met een privéabonnement krijg je ${pct}% korting op een zakelijk abonnement.`,
+};
+export const OMZETTEN_WELKOM = "Zakelijk én privé? Je hoeft niets dubbel in te voeren: een dossier zet je met één knop om naar de andere soort.";
+export const OMZETTEN_WELKOM_KORTING = (pct) => `Heb je al een abonnement, dan krijg je ${pct}% korting op het abonnement van de andere soort.`;

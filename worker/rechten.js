@@ -148,7 +148,23 @@ export function prijzen(env) {
   const vul = (doel, bron) => { for (const k of Object.keys(doel)) if (bron && Number.isFinite(+bron[k]) && +bron[k] >= 0 && bron[k] !== null && bron[k] !== "") doel[k] = +bron[k]; };
   vul(p.zakelijk, x.zakelijk && typeof x.zakelijk === "object" ? x.zakelijk : x);
   vul(p.prive, x.prive && typeof x.prive === "object" ? x.prive : {});
+  // beide-V14R0 — korting in procenten op elk abonnement van de andere soort, voor wie al een abonnement heeft (wens
+  // Boska 3-11): {"korting":25,"zakelijk":{...},"prive":{...}}. Niet opgegeven = geen korting.
+  const k = x.korting;
+  p.korting = k !== null && k !== "" && k !== undefined && Number.isFinite(+k) && +k > 0 && +k < 100 ? +k : null;
   return p;
+}
+const ANDERE_SOORT = { zakelijk: "prive", prive: "zakelijk" };
+// beide-V14R0 — heeft dit account een actief abonnement van de andere soort? `rechten` = uitkomst van rechtenVan/rechtenUitRij.
+export const heeftAndereSoort = (rechten, soort) => !!ANDERE_SOORT[soort] && !!rechten?.soorten?.[ANDERE_SOORT[soort]]?.eenvoudig;
+// Prijs van één abonnement voor dit account: met korting als die is ingesteld en het account de andere soort al heeft.
+export function prijsVoorSoort(env, rechten, soort, plan) {
+  const p = prijzen(env);
+  const gewoon = Number(p[soort]?.[plan]) || 0;
+  if (p.korting && gewoon > 0 && heeftAndereSoort(rechten, soort)) {
+    return { bedrag: Math.round(gewoon * (100 - p.korting)) / 100, gewoon, korting: true };
+  }
+  return { bedrag: gewoon, gewoon, korting: false };
 }
 export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : `€ 0,00 · ${GRATIS_KORT.toLowerCase()}`);
 
@@ -344,7 +360,7 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
   const reden = schoonTekst(body?.reden, 1000);
   if (reden.length < MIN_REDEN) return json({ ok: false, fout: `Geef aan waarom je toegang vraagt en waarvoor je de app wilt gebruiken (minimaal ${MIN_REDEN} tekens).` }, 400);
   // nieuw-V4R6 — betaalstap. Bij prijs 0 (zoals nu) gaat de aanvraag direct naar de beheerder.
-  if (prijzen(env)[gebruik][plan] > 0) {
+  if (prijsVoorSoort(env, await rechtenVan(e, env), gebruik, plan).bedrag > 0) {
     // Hier komt de Mollie-betaling: /api/betaal/start maakt een betaling en stuurt de gebruiker naar Mollie; de webhook
     // zet daarna de rechten. Zolang dat er niet is, kan een betaald abonnement niet worden aangevraagd.
     return json({ ok: false, betalen: true, fout: "Betalen is nog niet beschikbaar. Neem contact op met de beheerder." }, 402);
@@ -541,7 +557,7 @@ export async function beheerRoute(request, env, url, email) {
       const verlenging = !!r.verlenging;
       // beide-V7R3 — einddatum: gratis abonnement GRATIS_DAGEN vanaf vandaag, of bij verlengen vanaf de huidige einddatum
       // als die nog in de toekomst ligt. Een latere einddatum die er al stond, blijft staan. Betaald: einddatum ongewijzigd.
-      const dagen = prijzen(env)[gebruik][plan] > 0 ? 0 : gratisDagen(env);
+      const dagen = prijsVoorSoort(env, rechtenUitRij(r), gebruik, plan).bedrag > 0 ? 0 : gratisDagen(env);
       const oudEinde = r[k.geldigTot] || null;
       const start = verlenging && oudEinde && oudEinde > vandaag() ? oudEinde : vandaag();
       // Verlengen van een abonnement zonder einddatum maakt het niet korter.
