@@ -60,7 +60,7 @@ const V = "✓", N = "–";
 // "uitgebreid" = alleen in Uitgebreid. Elke tabel in de kleur van zijn soort.
 const ALGEMEEN_BOVEN = [
   { t: "Eerste inzicht", w: { eenvoudig: "± 30 min", uitgebreid: "± 60-90 min", koppelen: "± 60-90 min" } },
-  { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" } },
+  { t: "Werkwijze", w: { eenvoudig: "begeleid, één vraag tegelijk", uitgebreid: "alle overzichten en controles, in je eigen volgorde", koppelen: "alle overzichten en controles, in je eigen volgorde" } },
 ];
 const ALGEMEEN_ONDER = [
   { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" } },
@@ -78,7 +78,10 @@ export function vergelijkTabel(soorten) {
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   const meer = soorten.length > 1;
   const cel = (w) => `<span role="cell" class="${w === V ? "ja" : w === N ? "nee" : ""}">${w === V ? '<span aria-label="ja">✓</span>' : w === N ? '<span aria-label="nee">–</span>' : e(w)}</span>`;
-  const rij = (t, w, ks, kl = "") => `<div role="row" class="vr${kl}"><span role="rowheader">${e(t)}</span>${ks.map((k) => cel(w[k])).join("")}</div>`;
+  // beide-V14R7 (uit huishoudboekje-V2R6) — zachte afbreekstreepjes in lange woorden, zodat een smalle kolom (iPad) niet
+  // midden in een woord afbreekt ("Aangifteberekenin g"); zonder hyphens:auto, dat in Safari de regelhoogte verstoorde.
+  const zacht = (t) => e(t).replace(/(Aangifte|inkomsten|Bedrijfs|vermogen)(berekening|belasting|middelen)/gi, "$1&shy;$2");
+  const rij = (t, w, ks, kl = "") => `<div role="row" class="vr${kl}"><span role="rowheader">${zacht(t)}</span>${ks.map((k) => cel(w[k])).join("")}</div>`;
   const alle = (w) => Object.fromEntries(sleutels.map((k) => [k, w(k)]));
   const kaarten = [];
   for (const s of soorten) {
@@ -89,12 +92,12 @@ export function vergelijkTabel(soorten) {
       boven: ALGEMEEN_BOVEN.map((r) => [r.t, r.w]),
       kenmerken: [...s.beide.map((t) => [t, alle(() => V)]), ...s.uitgebreid.map((t) => [t, alle((k) => (k === "eenvoudig" ? N : V))])],
       onder: ALGEMEEN_ONDER.map((r) => [r.t, r.w]),
-      prijs: alle((k) => (plan(k).gratis ? "gratis" : String(plan(k).prijs).replace(" per maand", "/mnd"))),
+      prijs: alle((k) => (plan(k).gratis ? `${GRATIS_DAGEN} dagen gratis` : String(plan(k).prijs).replace(" per maand", "/mnd"))),
     });
   }
   // Rijen: naam, kop, 2× boven, blok kenmerken, 2× onder, prijs, niet-in.
   const rijen = 9;
-  const kaart = (k) => `<div class="vergelijk s-${k.soort}" role="table" aria-label="${e(k.naam)}" style="grid-row:span ${rijen};grid-template-columns:${k.ks.length === 1 ? "62% minmax(0,1fr)" : `42% repeat(${k.ks.length},minmax(0,1fr))`}">
+  const kaart = (k) => `<div class="vergelijk s-${k.soort}" role="table" aria-label="${e(k.naam)}" style="grid-row:span ${rijen};--kol:${k.ks.length === 1 ? "62% minmax(0,1fr)" : `42% repeat(${k.ks.length},minmax(0,1fr))`}">
 <div class="vnaam">${e(k.naam)}</div>
 <div role="row" class="vr vkop"><span role="columnheader"></span>${k.kop.map((t) => `<span role="columnheader">${e(t)}</span>`).join("")}</div>
 ${k.boven.map(([t, w]) => rij(t, w, k.ks)).join("")}
@@ -105,16 +108,18 @@ ${rij("Prijs", k.prijs, k.ks, " prijsregel")}
   return `<div class="vergelijk-lijst">${kaarten.map(kaart).join("")}</div>${sleutels.includes("koppelen")
     ? `<p class="klein let">De bankkoppeling krijgt straks extra kosten, vanwege de koppeling met de bank en de extra beveiliging die daarvoor nodig is.</p>` : ""}`;
 }
+// beide-V14R6 — kolommen per regel via --kol i.p.v. subgrid in subgrid: Safari (iPad) berekende de regelhoogte
+// dan verkeerd, waardoor regels over elkaar vielen (melding Boska 3-11). De rijen blijven subgrid (gelijke hoogte).
 export const VERGELIJK_STIJL = `.vergelijk-lijst{display:grid;column-gap:16px;row-gap:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
-.vergelijk{display:grid;grid-template-rows:subgrid;align-content:start;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;font-size:13px;overflow:hidden}
+.vergelijk{display:grid;grid-template-rows:subgrid;grid-template-columns:var(--kol);align-content:start;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;font-size:13px;overflow:hidden}
 .vergelijk>*{grid-column:1/-1}
-.vergelijk .vr{grid-column:1/-1;display:grid;grid-template-columns:subgrid;border-top:1px solid var(--line)}
-.vergelijk .vken{display:grid;grid-template-columns:subgrid;align-content:start}
-.vergelijk .vr>span{padding:8px 10px;text-align:center;overflow-wrap:normal;hyphens:auto;-webkit-hyphens:auto}
+.vergelijk .vr{grid-column:1/-1;display:grid;grid-template-columns:var(--kol);border-top:1px solid var(--line)}
+.vergelijk .vken{display:flex;flex-direction:column}
+.vergelijk .vr>span{padding:8px 10px;text-align:center;overflow-wrap:break-word}
 .vergelijk .vr>span[role=rowheader]{text-align:left;font-weight:500;color:var(--muted)}
 .vergelijk .vnaam{padding:10px 10px 6px;font-weight:700;font-size:1.05rem;color:var(--accent)}
 .vergelijk .vkop{border-top:0;background:var(--bg);align-items:end}.vergelijk .vkop>span{color:var(--fg);font-weight:600}
-.vergelijk .ja{color:var(--accent);font-weight:700}.vergelijk .nee{color:var(--muted)}
+.vergelijk .ja{color:var(--accent);font-weight:700}.vergelijk .nee{color:var(--muted)}.vergelijk .ja>span,.vergelijk .nee>span{font-size:16px;line-height:1}.legenda .ja{color:var(--accent);font-weight:700}.legenda .nee{font-weight:700}
 .vergelijk .prijsregel>span:not([role=rowheader]){color:var(--accent);font-weight:600}
 .vergelijk .niet-in{margin:0;padding:8px 10px 10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);background:var(--bg)}
 .vergelijk .niet-in:empty{display:none}
@@ -182,8 +187,9 @@ export const welkomAbonnementen = (soorten) => `
   <section>
     <h2>Abonnementen</h2>
     ${vergelijkTabel(soorten)}
-    <p class="klein">De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
-    <p class="klein">Eenvoudig of Uitgebreid kies je per dossier. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
+    <p class="klein legenda"><span class="ja">✓</span> inbegrepen · <span class="nee">–</span> niet inbegrepen</p>
+    <p class="klein">Eenvoudig of Uitgebreid kies je per dossier. De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
+    <p class="let-op">Let op: een dossier kun je één keer van Eenvoudig naar Uitgebreid omzetten. Terug naar Eenvoudig kan niet.</p>
   </section>
 `;
 

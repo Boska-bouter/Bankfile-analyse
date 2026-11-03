@@ -46,8 +46,8 @@ export const uitgebreidExtra = (soort) => opsomming(INZICHTEN[soort === "prive" 
 // beide-V14R0 — omzetten naar de andere soort (wens Boska 3-11): tekst onder de abonnemententabel en op de
 // welkomstpagina. De zin over korting alleen als er een korting is ingesteld (PRIJZEN.korting); zolang alles gratis is niet.
 export const OMZETTEN = {
-  zakelijk: "Wil je van je zakelijke dossier ook een privédossier maken, bijvoorbeeld voor box 3 en de eigen woning? Dat kan met één druk op de knop. Daarna vul je alleen nog de extra privégegevens in. Hiervoor heb je naast Zakelijk ook een privéabonnement nodig.",
-  prive: "Wil je van je privédossier een zakelijk dossier maken, bijvoorbeeld omdat je een bedrijf bent gestart? Dat kan met één druk op de knop. Daarna voeg je de zakelijke rekening en de gegevens van het bedrijf toe. Hiervoor heb je naast Privé ook een zakelijk abonnement nodig.",
+  zakelijk: "Ook box 3 of de eigen woning? Met één druk op de knop maak je van je zakelijke dossier een privédossier. Daarvoor heb je naast Zakelijk ook Privé nodig.",
+  prive: "Een eigen onderneming gestart? Met één druk op de knop maak je van je privédossier een zakelijk dossier. Daarvoor heb je naast Privé ook Zakelijk nodig.",
 };
 export const OMZETTEN_KORTING = {
   zakelijk: (pct) => `Met een zakelijk abonnement krijg je ${pct}% korting op een privéabonnement.`,
