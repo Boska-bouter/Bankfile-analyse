@@ -349,7 +349,7 @@ ${welkomKop(soorten)}
   <h2>Nieuw? Account aanvragen</h2>
   <form id="a" style="display:flex;flex-direction:column;gap:10px">
     <input type="email" name="email" required autocomplete="email" placeholder="naam@voorbeeld.nl" aria-label="E-mailadres voor je aanvraag">
-    <button type="submit" class="tweede">Stuur inloglink</button>
+    <button type="submit" class="tweede">Account aanvragen</button>
   </form>
   <p id="status2" role="status"></p>
   ${welkomNieuw(alleGratis(soorten))}
