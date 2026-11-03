@@ -52,15 +52,15 @@ export const uitgebreidExtra = (soort) => opsomming(INZICHTEN[soort === "prive" 
 // beide-V14R0 — omzetten naar de andere soort (wens Boska 3-11): tekst onder de abonnemententabel en op de
 // welkomstpagina. De zin over korting alleen als er een korting is ingesteld (PRIJZEN.korting); zolang alles gratis is niet.
 export const OMZETTEN = {
-  zakelijk: "Ook box 3 en de eigen woning berekenen? Maak met één knop een privédossier van je zakelijke dossier. De privérekeningen die je al hebt opgegeven gaan mee, zodat je niets opnieuw hoeft in te voeren.",
-  prive: "Een bedrijf gestart? Maak met één knop een zakelijk dossier van je privédossier: personen, rekeningen en boekingen gaan mee.",
+  zakelijk: "Ook box 3 en de eigen woning berekenen? Dan is ook een privéabonnement nodig. Daarmee maak je met één knop een privédossier van je zakelijke dossier; de privérekeningen die je al hebt opgegeven gaan mee.",
+  prive: "Een bedrijf gestart? Dan is ook een zakelijk abonnement nodig. Daarmee maak je met één knop een zakelijk dossier van je privédossier: personen, rekeningen en boekingen gaan mee.",
   // huishoudboekje-V2R0 — het Huishoudboekje maak je ook met één knop van een zakelijk of privédossier.
-  huishoudboekje: "Al een zakelijk of privédossier? Maak er met één knop een Huishoudboekje van: de privérekeningen en je keuzes gaan mee.",
+  huishoudboekje: "Al een zakelijk of privédossier? Dan is ook een Huishoudboekje-abonnement nodig. Daarmee maak je er met één knop een Huishoudboekje van: de privérekeningen en je keuzes gaan mee.",
 };
 export const OMZETTEN_KORTING = {
   zakelijk: (pct) => `Met een zakelijk abonnement krijg je ${pct}% korting op een privéabonnement.`,
   prive: (pct) => `Met een privéabonnement krijg je ${pct}% korting op een zakelijk abonnement.`,
 };
-export const OMZETTEN_WELKOM = "Meer dan één soort? Je hoeft niets dubbel in te voeren: een dossier zet je met één knop om naar een andere soort.";
+export const OMZETTEN_WELKOM = "Meer dan één soort? Daarvoor heb je voor elke soort een eigen abonnement nodig. Heb je die, dan hoef je niets dubbel in te voeren: een dossier zet je met één knop om naar een andere soort.";
 // huishoudboekje-V2R0 — met drie soorten: de procentkorting geldt tussen Zakelijk en Privé.
 export const OMZETTEN_WELKOM_KORTING = (pct) => `Heb je al Zakelijk of Privé, dan krijg je ${pct}% korting op de andere van die twee.`;
