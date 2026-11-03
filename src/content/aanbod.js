@@ -46,12 +46,12 @@ export const uitgebreidExtra = (soort) => opsomming(INZICHTEN[soort === "prive" 
 // beide-V14R0 — omzetten naar de andere soort (wens Boska 3-11): tekst onder de abonnemententabel en op de
 // welkomstpagina. De zin over korting alleen als er een korting is ingesteld (PRIJZEN.korting); zolang alles gratis is niet.
 export const OMZETTEN = {
-  zakelijk: "Ook box 3 en de eigen woning berekenen? Dan is ook een privéabonnement nodig. Daarmee maak je met één knop een privédossier van je zakelijke dossier; de privérekeningen die je al hebt opgegeven gaan mee.",
-  prive: "Een bedrijf gestart? Dan is ook een zakelijk abonnement nodig. Daarmee maak je met één knop een zakelijk dossier van je privédossier: personen, rekeningen en boekingen gaan mee.",
+  zakelijk: "Wil je van je zakelijke dossier ook een privédossier maken, bijvoorbeeld voor box 3 en de eigen woning? Dat kan met één druk op de knop. Daarna vul je alleen nog de extra privégegevens in. Hiervoor heb je naast Zakelijk ook een privéabonnement nodig.",
+  prive: "Wil je van je privédossier een zakelijk dossier maken, bijvoorbeeld omdat je een bedrijf bent gestart? Dat kan met één druk op de knop. Daarna voeg je de zakelijke rekening en de gegevens van het bedrijf toe. Hiervoor heb je naast Privé ook een zakelijk abonnement nodig.",
 };
 export const OMZETTEN_KORTING = {
   zakelijk: (pct) => `Met een zakelijk abonnement krijg je ${pct}% korting op een privéabonnement.`,
   prive: (pct) => `Met een privéabonnement krijg je ${pct}% korting op een zakelijk abonnement.`,
 };
-export const OMZETTEN_WELKOM = "Zakelijk én privé? Daarvoor heb je voor elke soort een eigen abonnement nodig. Heb je ze allebei, dan hoef je niets dubbel in te voeren: een dossier zet je met één knop om naar de andere soort.";
-export const OMZETTEN_WELKOM_KORTING = (pct) => `Heb je al een abonnement, dan krijg je ${pct}% korting op het abonnement van de andere soort.`;
+export const OMZETTEN_WELKOM = "Wil je een zakelijk dossier omzetten naar een privédossier, of andersom? Dat kan met één druk op de knop. Daarna vul je alleen nog de extra gegevens in die bij het nieuwe dossier horen. Hiervoor heb je wel een abonnement voor allebei nodig: Zakelijk én Privé. Heb je er nu één, dan vraag je het andere erbij aan.";
+export const OMZETTEN_WELKOM_KORTING = (pct) => `Op dat tweede abonnement krijg je ${pct}% korting.`;
