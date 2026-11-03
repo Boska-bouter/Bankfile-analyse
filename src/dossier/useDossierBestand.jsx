@@ -5,11 +5,13 @@ import { maakHerstelcode } from "../storage/herstelcode.js";
 import { buildProjectFile, downloadProjectFile } from "../storage/projectFile.js";
 import { BTW_RATES_VERSION } from "../tax/btw.js";
 import { laadDossierBestand, pasDossierToe, wisDossier } from "./dossierLaden.jsx";
+import { naarZakelijk } from "./naarZakelijk.js";
 import { useDossierDialogen } from "./useDossierDialogen.jsx";
 import { useOpslaanHerinnering } from "./useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing } from "./useSessieWaarschuwing.jsx";
 import { useState } from "react";
 import { naarHuishoudboekje } from "./naarHuishoudboekje.js";
+import { naarPrive } from "./naarPrive.js";
 import HerstelcodeModal from "../components/shared/HerstelcodeModal.jsx";
 import OpslaanModal, { BEHOUD } from "../components/shared/OpslaanModal.jsx";
 import WachtwoordModal from "../components/shared/WachtwoordModal.jsx";
@@ -118,6 +120,37 @@ export function useDossierBestand({
   // (HuishoudboekjeMakenModal) laat eerst opslaan als er nog wijzigingen buiten het dossierbestand zijn. Een wachtwoord gaat mee.
   // huishoudboekje-V1R4 — direct toepassen in plaats van via een nagemaakt bestand (gaf op de iPad "Kon het dossierbestand
   // niet lezen"), en geen "Ongedaan maken": het nieuwe bestand is al opgeslagen. Wel een melding met beide bestandsnamen.
+  // beide-V13R7 — van dit zakelijke dossier een privédossier maken (wens Boska 3-11), zoals "Maak er een Huishoudboekje
+  // van" (huishoudboekje-V1R3/V1R4): een nieuw dossierbestand met alleen de privérekeningen wordt opgeslagen (gedownload)
+  // en meteen geopend, direct toegepast (niet via een nagemaakt bestand). Het zakelijke dossier verandert niet. Een
+  // wachtwoord gaat mee.
+  const maakPrivedossier = async ({ weergave = "uitgebreid" } = {}) => {
+    const origineel = loadedProjectFileName;
+    const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
+    const prive = naarPrive(project, { weergave });
+    if (!prive.parsedFiles.length) { setError("Dit dossier heeft geen privérekeningen. Een privédossier heeft minstens één privérekening nodig."); return false; }
+    let naam;
+    try {
+      naam = await downloadProjectFile(prive, null, eigenNamen?.ondernemer, dossierWachtwoord || null, dossierWachtwoord ? dossierHerstelcode : null, "prive");
+      const inGeheugen = { ...prive, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
+      pasDossierToe(inGeheugen, { naam, lastModified: Date.now() }, dossierCtx);
+    } catch (e) {
+      setError(e.message || "Het privédossier maken is mislukt.");
+      return false;
+    }
+    setDialog({
+      title: "Het privédossier staat open",
+      message: (
+        <div className="space-y-2">
+          <p>Het nieuwe dossier is opgeslagen als <b className="break-all">{naam}</b>, met {prive.parsedFiles.length === 1 ? "dit bankbestand" : "deze bankbestanden"}: {prive.parsedFiles.map((f) => f.fileName).join(", ")}.</p>
+          <p>{origineel ? <>Het zakelijke dossier staat ongewijzigd in <b className="break-all">{origineel}</b>.</> : "Het zakelijke dossier is niet gewijzigd."} Om daar weer mee verder te gaan: <b>Dossier laden</b>.</p>
+          <p>Vul via <b>Basisvragen bewerken</b> de eigen woning en het vermogen (box 3) aan.</p>
+        </div>
+      ),
+      actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
+    });
+    return true;
+  };
   const maakHuishoudboekje = async () => {
     const origineel = loadedProjectFileName;
     const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
@@ -142,6 +175,34 @@ export function useDossierBestand({
       ),
       actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
       zonderAnnuleren: true,
+    });
+    return true;
+  };
+  // beide-V14R0 — de omgekeerde weg: van dit privédossier een zakelijk dossier maken (wens Boska 3-11). Alle bestanden
+  // gaan mee als privérekening; het bankbestand van de zakelijke rekening voegt de gebruiker daarna toe.
+  const maakZakelijkdossier = async ({ weergave = "uitgebreid" } = {}) => {
+    const origineel = loadedProjectFileName;
+    const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
+    const zak = naarZakelijk(project, { weergave });
+    let naam;
+    try {
+      naam = await downloadProjectFile(zak, null, eigenNamen?.ondernemer, dossierWachtwoord || null, dossierWachtwoord ? dossierHerstelcode : null, "zakelijk");
+      const inGeheugen = { ...zak, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
+      pasDossierToe(inGeheugen, { naam, lastModified: Date.now() }, dossierCtx);
+    } catch (e) {
+      setError(e.message || "Het zakelijke dossier maken is mislukt.");
+      return false;
+    }
+    setDialog({
+      title: "Het zakelijke dossier staat open",
+      message: (
+        <div className="space-y-2">
+          <p>Het nieuwe dossier is opgeslagen als <b className="break-all">{naam}</b>{zak.parsedFiles.length ? <>, met {zak.parsedFiles.length === 1 ? "dit bankbestand" : "deze bankbestanden"} als privérekening: {zak.parsedFiles.map((f) => f.fileName).join(", ")}</> : ""}.</p>
+          <p>{origineel ? <>Het privédossier staat ongewijzigd in <b className="break-all">{origineel}</b>.</> : "Het privédossier is niet gewijzigd."} Om daar weer mee verder te gaan: <b>Dossier laden</b>.</p>
+          <p>Voeg nu het bankbestand van de <b>zakelijke rekening</b> toe en vul via <b>Basisvragen bewerken</b> de gegevens van de onderneming in.</p>
+        </div>
+      ),
+      actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
     });
     return true;
   };
@@ -215,7 +276,7 @@ export function useDossierBestand({
   return {
     dossierVensters, setHerstelcodeToon, setWachtwoordModal,
     clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
-    sessie, setResumeHint, maakHuishoudboekje,
+    sessie, setResumeHint, maakHuishoudboekje, maakPrivedossier, maakZakelijkdossier,
     startLoadProject, startOpslaan,
   };
 }

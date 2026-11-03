@@ -181,6 +181,10 @@ export function prijzen(env) {
   // {"huishoudboekje":{"uitgebreid":3.95,"metUitgebreid":1.95}}. Niet opgegeven = geen korting.
   const k = hb && typeof hb === "object" ? hb.metUitgebreid : null;
   p.huishoudboekjeMetUitgebreid = k !== null && k !== "" && k !== undefined && Number.isFinite(+k) && +k >= 0 ? +k : null;
+  // beide-V14R0 — korting in procenten op elk abonnement van de andere soort, voor wie al een abonnement heeft (wens
+  // Boska 3-11): {"korting":25,"zakelijk":{...},"prive":{...}}. Niet opgegeven = geen korting.
+  const kp = x.korting;
+  p.korting = kp !== null && kp !== "" && kp !== undefined && Number.isFinite(+kp) && +kp > 0 && +kp < 100 ? +kp : null;
   return p;
 }
 // huishoudboekje-V1R3 — heeft dit account een actief Uitgebreid-abonnement (zakelijk of privé)? `rechten` = uitkomst van
@@ -194,7 +198,20 @@ export function huishoudPrijsVoor(env, rechten, plan = Object.keys(plannenVoor(e
   if (korting !== null && korting < gewoon && heeftUitgebreidElders(rechten)) return { bedrag: korting, gewoon, korting: true };
   return { bedrag: gewoon, gewoon, korting: false };
 }
-const prijsVoor = (env, gebruik, plan, rechten) => (gebruik === "huishoudboekje" ? huishoudPrijsVoor(env, rechten, plan).bedrag : prijzen(env)[gebruik][plan]);
+const ANDERE_SOORT = { zakelijk: "prive", prive: "zakelijk" };
+// beide-V14R0 — heeft dit account een actief abonnement van de andere soort? `rechten` = uitkomst van rechtenVan/rechtenUitRij.
+export const heeftAndereSoort = (rechten, soort) => !!ANDERE_SOORT[soort] && !!rechten?.soorten?.[ANDERE_SOORT[soort]]?.eenvoudig;
+// Prijs van één abonnement voor dit account: met korting als die is ingesteld en het account de andere soort al heeft.
+export function prijsVoorSoort(env, rechten, soort, plan) {
+  const p = prijzen(env);
+  const gewoon = Number(p[soort]?.[plan]) || 0;
+  if (p.korting && gewoon > 0 && heeftAndereSoort(rechten, soort)) {
+    return { bedrag: Math.round(gewoon * (100 - p.korting)) / 100, gewoon, korting: true };
+  }
+  return { bedrag: gewoon, gewoon, korting: false };
+}
+// Huishoudboekje: eigen korting (metUitgebreid); zakelijk/privé: korting op de andere soort.
+const prijsVoor = (env, gebruik, plan, rechten) => (gebruik === "huishoudboekje" ? huishoudPrijsVoor(env, rechten, plan).bedrag : prijsVoorSoort(env, rechten, gebruik, plan).bedrag);
 export const prijsTekst = (bedrag) => (bedrag > 0 ? `€ ${bedrag.toFixed(2).replace(".", ",")} per maand` : `€ 0,00 · ${GRATIS_KORT.toLowerCase()}`);
 
 const json = (data, status = 200) =>

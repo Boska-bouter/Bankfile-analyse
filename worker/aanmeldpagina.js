@@ -3,7 +3,7 @@
 // - Op /aanmelden ziet iedereen die is ingelogd zijn abonnementen en kan een abonnement aanvragen, ook een tweede
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
-import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, planNaam, huishoudPrijsVoor, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
+import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, prijsVoorSoort, planNaam, huishoudPrijsVoor, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
 import { BETALEN, KOPPELING, KOPPELING_VRAAG } from "./peiling.js";
 import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
 
@@ -88,7 +88,11 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   // Teksten per soort voor het script (prijs, uitleg, voorbeeld bij de reden).
   const perSoort = Object.fromEntries(Object.keys(GEBRUIK).map((s) => [s, {
     een: s === "huishoudboekje",
-    prijs: s === "huishoudboekje" ? {} : Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, prijsTekst(prijs[s][k])])),
+    // beide-V14R0 — korting op de andere soort voor wie al een abonnement heeft
+    prijs: s === "huishoudboekje" ? {} : Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => {
+      const x = prijsVoorSoort(env, slot ? r : null, s, k);
+      return [k, x.korting ? `${prijsTekst(x.bedrag)} (${prijs.korting}% korting omdat je al ${s === "prive" ? "Zakelijk" : "Privé"} hebt, normaal ${prijsTekst(x.gewoon)})` : prijsTekst(x.bedrag)];
+    })),
     uitleg: s === "huishoudboekje" ? {} : Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, PLAN_UITLEG[s][k].replace(/^./, (c) => c.toUpperCase())])),
     voorbeeld: s === "prive"
       ? "Bijvoorbeeld: ik wil inzicht in de uitgaven van ons huishouden en een indicatie van onze inkomstenbelasting."

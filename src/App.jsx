@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
+import PriveMakenModal from "./components/prive/PriveMakenModal.jsx";
+import ZakelijkMakenModal from "./components/prive/ZakelijkMakenModal.jsx";
 import { AlertCircle, Loader2, ListTree, MessageSquare } from "lucide-react";
 import BeheerRechtenModal from "./components/beheer/BeheerRechtenModal.jsx";
 import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKoppelingModal.jsx";
@@ -570,6 +572,8 @@ export default function App() {
   const [bevestigdeControles, setBevestigdeControles] = useState({}); // C — { sleutel: true } voor 'klopt zo' bij aanvullende controles
   const [showLog, setShowLog] = useState(false);
   const [showZoek, setShowZoek] = useState(false);
+  const [priveMakenOpen, setPriveMakenOpen] = useState(false); // beide-V13R7 — Maak er een privédossier van
+  const [zakelijkMakenOpen, setZakelijkMakenOpen] = useState(false); // beide-V14R0 — Maak er een zakelijk dossier van
   const [showBegrippen, setShowBegrippen] = useState(false);
   // D2 — Ctrl/Cmd+K opent het zoekveld over alle transacties.
   useEffect(() => {
@@ -3206,7 +3210,7 @@ export default function App() {
   const {
     dossierVensters, setHerstelcodeToon, setWachtwoordModal,
     clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
-    sessie, setResumeHint, maakHuishoudboekje,
+    sessie, setResumeHint, maakHuishoudboekje, maakPrivedossier, maakZakelijkdossier,
     startLoadProject, startOpslaan,
   } = useDossierBestand({
     activeTab, activeYear, auditLog, basisvragenNietGestart, changesSinceExport, dossierGegevens, dossierHerstelcode,
@@ -3446,7 +3450,9 @@ export default function App() {
         logAantal={auditLog.length}
         canSaveProject={parsedFiles.length > 0}
         onLoadProject={startLoadProject}
+        onMaakPrive={soortDossier === "zakelijk" && parsedFiles.length > 0 ? () => setPriveMakenOpen(true) : null}
         onMaakHuishoudboekje={!huishoudboekje && parsedFiles.length > 0 ? () => setHbMakenOpen(true) : null}
+        onMaakZakelijk={soortDossier === "prive" && parsedFiles.length > 0 ? () => setZakelijkMakenOpen(true) : null}
         onClearAll={clearAllData}
         canClearAll
         onToggleHelp={() => setShowHelp((v) => !v)}
@@ -4426,12 +4432,33 @@ export default function App() {
 
       <ConfirmDialog dialog={dialog} onClose={() => setDialog(null)} />
       {/* huishoudboekje-V1R3/V1R4 — vóór de dossiervensters, zodat het opslaanvenster er bovenop komt */}
+      {/* beide-V13R7 — vóór de dossiervensters, zodat het opslaanvenster er bovenop komt */}
+      {priveMakenOpen && (
+        <PriveMakenModal
+          mag={rechtVoorSoort(rechtenPerSoort, "prive", "eenvoudig", true)} magUitgebreid={rechtVoorSoort(rechtenPerSoort, "prive", "uitgebreid", magUitgebreidAccount)}
+          huidigBestand={loadedProjectFileName}
+          bestanden={parsedFiles.map((f) => ({ naam: f.fileName, zakelijk: accountTypeByFile[f.fileName] === "Zakelijk" }))}
+          opgeslagen={changesSinceExport === 0 && !!lastExportAt} metWachtwoord={!!dossierWachtwoord}
+          onOpslaan={startOpslaan} onClose={() => setPriveMakenOpen(false)}
+          onMaak={() => maakPrivedossier({ weergave: rechtVoorSoort(rechtenPerSoort, "prive", "uitgebreid", magUitgebreidAccount) ? "uitgebreid" : "eenvoudig" })}
+        />
+      )}
       {hbMakenOpen && (
         <HuishoudboekjeMakenModal
           soortDossier={soortDossier} mag={magHuishoudboekje} huidigBestand={loadedProjectFileName}
           bestanden={parsedFiles.map((f) => ({ naam: f.fileName, zakelijk: accountTypeByFile[f.fileName] === "Zakelijk" }))}
           opgeslagen={changesSinceExport === 0 && !!lastExportAt} metWachtwoord={!!dossierWachtwoord}
           onOpslaan={startOpslaan} onMaak={maakHuishoudboekje} onClose={() => setHbMakenOpen(false)}
+        />
+      )}
+      {zakelijkMakenOpen && (
+        <ZakelijkMakenModal
+          mag={rechtVoorSoort(rechtenPerSoort, "zakelijk", "eenvoudig", true)} magUitgebreid={rechtVoorSoort(rechtenPerSoort, "zakelijk", "uitgebreid", magUitgebreidAccount)}
+          huidigBestand={loadedProjectFileName}
+          bestanden={parsedFiles.map((f) => ({ naam: f.fileName }))}
+          opgeslagen={changesSinceExport === 0 && !!lastExportAt} metWachtwoord={!!dossierWachtwoord}
+          onOpslaan={startOpslaan} onClose={() => setZakelijkMakenOpen(false)}
+          onMaak={() => maakZakelijkdossier({ weergave: rechtVoorSoort(rechtenPerSoort, "zakelijk", "uitgebreid", magUitgebreidAccount) ? "uitgebreid" : "eenvoudig" })}
         />
       )}
       {dossierVensters}

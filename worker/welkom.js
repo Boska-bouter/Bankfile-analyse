@@ -3,7 +3,7 @@
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
-import { INZICHTEN, KEUZE, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS } from "../src/content/aanbod.js";
+import { INZICHTEN, KEUZE, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, BANKKOPPELING_STATUS, OMZETTEN, OMZETTEN_KORTING, OMZETTEN_WELKOM, OMZETTEN_WELKOM_KORTING } from "../src/content/aanbod.js";
 
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -15,15 +15,16 @@ export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent
 @media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}.s-hb,.s-huishoudboekje{--accent:#cf86c0}}`;
 export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
+.omzetband{margin:12px 0 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;background:var(--card);font-size:14px}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
 .merk{display:flex;align-items:center;gap:14px}.merk svg{flex:none}.merk h1 .naar{font-weight:400;color:var(--muted)}.merk h1 .aangifte{color:var(--accent)}.merk .onder{color:var(--muted);font-size:14px}
 .inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
 .kenmerken{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .kenmerken a{color:inherit;text-decoration:underline;text-underline-offset:2px}.kenmerken li{font-size:13px;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px}
-.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
+.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.abonrij{grid-area:abon;min-width:0}.abonrij section{display:flex;flex-direction:column;gap:12px}.abonrij h2{margin:0;font-size:1.2rem}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
 .inlogkolom{grid-area:inlog;display:flex;flex-direction:column;gap:14px;max-width:520px}.uitlegkolom{grid-area:uitleg;min-width:0}
 @media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "veilig veilig";align-items:start;gap:32px 40px}
-.inlogkolom{position:sticky;top:24px}.alleen-smal{display:none}}
+.alleen-smal{display:none}}
 .inlogkaart{gap:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(15,118,110,.07)}
 .inlogkaart h2{margin:0 0 2px;font-size:1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
 #status2{margin:0;color:var(--muted)}#status2.err{color:var(--err)}#status2.ok{color:var(--ok)}
@@ -52,61 +53,86 @@ const VEILIG = "BankafschriftenTool vraagt je nooit om je rekeningnummer, inlogc
 // waar de bankgegevens vandaan komen, wanneer het beschikbaar is en de prijs per soort. Ook op de aanmeldpagina.
 // "alleen" = alleen bij die soort dossier; de soort komt erachter als beide soorten op de pagina staan.
 const V = "✓", N = "–";
-const VERGELIJK = [
-  { t: "Eerste inzicht", w: { eenvoudig: "± 30 min", uitgebreid: "± 60-90 min", koppelen: "± 60-90 min" }, hb: "± 15-30 min" },
-  { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" }, hb: "één overzicht per maand of week" },
-  { t: "Samenvatting om te bewaren of printen", w: { eenvoudig: V, uitgebreid: V, koppelen: V }, hb: V },
-  { t: "Indicatie belasting", w: { eenvoudig: V, uitgebreid: V, koppelen: V }, hb: N },
-  { t: "Inkomsten en uitgaven per maand en categorie", alleen: "prive", w: { eenvoudig: V, uitgebreid: V, koppelen: V }, hb: V },
-  { t: "Inkomen per maand", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V }, hb: N },
-  { t: "Meerdere jaren naast elkaar", w: { eenvoudig: N, uitgebreid: V, koppelen: V }, hb: "verloop 12 maanden" },
-  { t: "Downloaden (PDF, HTML, Excel)", w: { eenvoudig: N, uitgebreid: V, koppelen: V }, hb: "PDF" },
-  { t: "Btw per kwartaal", alleen: "zakelijk", w: { eenvoudig: V, uitgebreid: V, koppelen: V }, hb: N },
-  { t: "Aangifteberekening", alleen: "zakelijk", w: { eenvoudig: N, uitgebreid: V, koppelen: V }, hb: N },
-  { t: "Vaste lasten, sparen, box 3 en eigen woning", alleen: "prive", w: { eenvoudig: N, uitgebreid: V, koppelen: V }, hb: "vaste lasten en sparen" },
-  { t: "Per week, en hoger of lager dan vorige maand", w: { eenvoudig: N, uitgebreid: N, koppelen: N }, hb: V },
-  { t: "Eigen budget per categorie met waarschuwing", w: { eenvoudig: N, uitgebreid: N, koppelen: N }, hb: V },
-  { t: "Past het bij je inkomen (Nibud, CBS)", w: { eenvoudig: N, uitgebreid: N, koppelen: N }, hb: V },
-  { t: "Waar je het meest kunt besparen", w: { eenvoudig: N, uitgebreid: N, koppelen: N }, hb: V },
-  { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" }, hb: "bestand of bankkoppeling*" },
-  { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: BANKKOPPELING_STATUS }, hb: "na goedkeuring" },
-];
-const SOORT_NAAM = { zakelijk: "zakelijk", prive: "privé" };
 
-// soorten: zie welkomSoorten. Geeft de tabel met de abonnementen als kolommen.
-// huishoudboekje-V1R0 (wens Boska 2-11) — Huishoudboekje als eigen kolom naast Eenvoudig en Uitgebreid.
-// Het heeft één abonnement, dus één kolom; regels die alleen voor privé of zakelijk gelden krijgen daar een streepje.
+// soorten: zie welkomSoorten. Geeft de tabellen met de abonnementen als kolommen.
+// beide-V13R6 (overgenomen in huishoudboekje-V1R7) — één tabel per soort (wens Boska 3-11: zakelijk heeft geen box 3,
+// privé geen btw). De regels komen uit dezelfde lijst als de soortkaarten (INZICHTEN in src/content/aanbod.js): "beide" =
+// in Eenvoudig en Uitgebreid, "uitgebreid" = alleen in Uitgebreid. Elke tabel in de kleur van zijn soort.
+// huishoudboekje-V1R7 — het Huishoudboekje is een derde tabel (pruim) met één kolom, in plaats van de vroegere hb-kolom.
+const ALGEMEEN_BOVEN = [
+  { t: "Eerste inzicht", w: { eenvoudig: "± 30 min", uitgebreid: "± 60-90 min", koppelen: "± 60-90 min" } },
+  { t: "Werkwijze", w: { eenvoudig: "4 stappen, één vraag tegelijk", uitgebreid: "alle overzichten en controles", koppelen: "alle overzichten en controles" } },
+];
+const ALGEMEEN_ONDER = [
+  { t: "Bankgegevens", w: { eenvoudig: "bestand van de bank", uitgebreid: "bestand van de bank", koppelen: "bestand of bankkoppeling" } },
+  { t: "Beschikbaar", w: { eenvoudig: "na goedkeuring", uitgebreid: "na goedkeuring", koppelen: BANKKOPPELING_STATUS } },
+];
+const NIET_IN = {
+  zakelijk: "Niet in Zakelijk: box 3 (sparen en beleggen) en eigen woning. Die horen bij Privé.",
+  prive: "Niet in Privé: btw, aangifteberekening voor een onderneming, bedrijfsmiddelen en afschrijvingen. Die horen bij Zakelijk.",
+  huishoudboekje: "Niet in het Huishoudboekje: belasting, btw en aangifte. Die horen bij Zakelijk en Privé.",
+};
+// huishoudboekje-V1R9 — de abonnementen staan in één gedeeld raster (CSS subgrid): gelijke regels (Eerste inzicht,
+// Werkwijze, Bankgegevens, Beschikbaar, Prijs, "Niet in …") staan in alle tabellen op dezelfde hoogte, ook als een
+// tabel minder regels heeft of een tekst over meer regels loopt (wens Boska 3-11). Elke kaart heeft dezelfde 9 rijen;
+// de kenmerken staan per kaart in één blok, zodat een kortere lijst lege ruimte onderaan dat blok krijgt.
 export function vergelijkTabel(soorten, { metHuishoudboekje = true } = {}) {
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
-  const soortSleutels = soorten.map((s) => s.soort);
-  const meer = soorten.length > 1;
-  const hb = metHuishoudboekje;
-  const plan = (s, k) => s.plannen.find((p) => p.sleutel === k) || {};
-  const cel = (w, k = "") => `<td class="${[w === V ? "ja" : w === N ? "nee" : "", k].filter(Boolean).join(" ")}">${e(w ?? "")}</td>`;
-  const regels = VERGELIJK.filter((r) => !r.alleen || soortSleutels.includes(r.alleen)).map((r) =>
-    `<tr><th scope="row">${e(r.t)}${r.alleen && meer ? ` <span class="soort">(${SOORT_NAAM[r.alleen]})</span>` : ""}</th>${sleutels.map((k) => cel(r.w[k])).join("")}${hb ? cel(r.hb ?? N, "hbk s-hb") : ""}</tr>`);
-  const prijs = (s, k) => (plan(s, k).gratis ? "gratis" : String(plan(s, k).prijs).replace(" per maand", "/mnd"));
-  const prijzen = soorten.map((s, i) =>
-    `<tr class="prijsregel"><th scope="row">Prijs${meer ? ` ${e(SOORT_NAAM[s.soort])}` : ""}</th>${sleutels.map((k) => `<td>${e(prijs(s, k))}</td>`).join("")}${hb && i === 0 ? `<td class="hbk s-hb" rowspan="${soorten.length}">${e(soorten.hbPrijs || HUISHOUDBOEKJE.prijs)}</td>` : ""}</tr>`);
-  const groep = hb ? `<tr class="groep"><th></th><th scope="colgroup" colspan="${sleutels.length}">Zakelijk en privé</th><th scope="col" class="hbk s-hb" rowspan="2">Huishoud&shy;boekje<span>één abonnement</span></th></tr>` : "";
-  return `<div class="vergelijk"><table>
-<thead>${groep}<tr><th></th>${sleutels.map((k) => `<th scope="col">${e(plan(soorten[0], k).naam)}</th>`).join("")}</tr></thead>
-<tbody>${regels.join("")}${prijzen.join("")}</tbody></table></div>${hb ? `<p class="klein">* Bankkoppeling via Ponto: ${e(BANKKOPPELING_STATUS)}.</p>` : ""}${sleutels.includes("koppelen")
+  const meer = soorten.length > 1 || metHuishoudboekje;
+  const cel = (w) => `<span role="cell" class="${w === V ? "ja" : w === N ? "nee" : ""}">${w === V ? '<span aria-label="ja">✓</span>' : w === N ? '<span aria-label="nee">–</span>' : e(w)}</span>`;
+  const rij = (t, w, ks, kl = "") => `<div role="row" class="vr${kl}"><span role="rowheader">${e(t)}</span>${ks.map((k) => cel(w[k])).join("")}</div>`;
+  const alle = (w) => Object.fromEntries(sleutels.map((k) => [k, w(k)]));
+  const kaarten = [];
+  for (const s of soorten) {
+    const plan = (k) => s.plannen.find((p) => p.sleutel === k) || {};
+    kaarten.push({
+      soort: s.soort, naam: s.naam, ks: sleutels, korting: s.korting || null,
+      kop: sleutels.map((k) => plan(k).naam),
+      boven: ALGEMEEN_BOVEN.map((r) => [r.t, r.w]),
+      kenmerken: [...s.beide.map((t) => [t, alle(() => V)]), ...s.uitgebreid.map((t) => [t, alle((k) => (k === "eenvoudig" ? N : V))])],
+      onder: ALGEMEEN_ONDER.map((r) => [r.t, r.w]),
+      prijs: alle((k) => (plan(k).gratis ? "gratis" : String(plan(k).prijs).replace(" per maand", "/mnd"))),
+    });
+  }
+  if (metHuishoudboekje) {
+    kaarten.push({
+      soort: "huishoudboekje", naam: HUISHOUDBOEKJE.naam, ks: ["hb"], kop: ["één abonnement"],
+      boven: [["Eerste inzicht", { hb: "± 15-30 min" }], ["Werkwijze", { hb: "één overzicht per maand of week" }]],
+      kenmerken: HUISHOUDBOEKJE.alles.map((t) => [t, { hb: V }]),
+      onder: [["Bankgegevens", { hb: "bestand of bankkoppeling*" }], ["Beschikbaar", { hb: "na goedkeuring" }]],
+      prijs: { hb: soorten.hbPrijs || HUISHOUDBOEKJE.prijs },
+    });
+  }
+  // Rijen: naam, kop, 2× boven, blok kenmerken, 2× onder, prijs, niet-in.
+  const rijen = 9;
+  const kaart = (k) => `<div class="vergelijk s-${k.soort}" role="table" aria-label="${e(k.naam)}" style="grid-row:span ${rijen};grid-template-columns:${k.ks.length === 1 ? "62% minmax(0,1fr)" : `42% repeat(${k.ks.length},minmax(0,1fr))`}">
+<div class="vnaam">${e(k.naam)}</div>
+<div role="row" class="vr vkop"><span role="columnheader"></span>${k.kop.map((t) => `<span role="columnheader">${e(t)}</span>`).join("")}</div>
+${k.boven.map(([t, w]) => rij(t, w, k.ks)).join("")}
+<div role="rowgroup" class="vken">${k.kenmerken.map(([t, w]) => rij(t, w, k.ks)).join("")}</div>
+${k.onder.map(([t, w]) => rij(t, w, k.ks)).join("")}
+${rij("Prijs", k.prijs, k.ks, " prijsregel")}
+<div class="niet-in">${meer && NIET_IN[k.soort] ? `<p>${e(NIET_IN[k.soort])}</p><p class="omzet">${e(OMZETTEN[k.soort])}${k.korting ? ` ${e(OMZETTEN_KORTING[k.soort](k.korting))}` : ""}</p>` : ""}</div></div>`;
+  return `<div class="vergelijk-lijst">${kaarten.map(kaart).join("")}</div>${metHuishoudboekje ? `<p class="klein">* Bankkoppeling via Ponto: ${e(BANKKOPPELING_STATUS)}.</p>` : ""}${sleutels.includes("koppelen")
     ? `<p class="klein let">De bankkoppeling krijgt straks extra kosten, vanwege de koppeling met de bank en de extra beveiliging die daarvoor nodig is.</p>` : ""}`;
 }
-export const VERGELIJK_STIJL = `.vergelijk{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
-.vergelijk table{width:100%;border-collapse:collapse;font-size:13px}
-.vergelijk th,.vergelijk td{padding:8px 10px;text-align:center;vertical-align:top;border-top:1px solid var(--line)}
-.vergelijk thead th{border-top:0;color:var(--fg);font-weight:600;background:var(--bg)}
-.vergelijk tbody th{text-align:left;font-weight:500;color:var(--muted)}.vergelijk .soort{font-weight:400}
-.vergelijk td.ja{color:var(--accent);font-weight:700}.vergelijk td.nee{color:var(--muted)}
-.vergelijk .prijsregel td{color:var(--accent);font-weight:600}
-.vergelijk .groep th{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);padding-bottom:0}
-.vergelijk .hbk{border-left:3px solid var(--accent)}.vergelijk thead th.hbk{border-top:4px solid var(--accent)}.vergelijk thead .hbk{vertical-align:bottom;color:var(--fg)}
-.vergelijk thead .hbk span{display:block;font-weight:400;font-size:11px;color:var(--muted)}
-.vergelijk .prijsregel td.hbk{vertical-align:middle}
-@media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px 4px !important;font-size:11px;hyphens:auto}.vergelijk tbody th{width:32%}.vergelijk thead .hbk{font-size:11px}}
-@media (max-width:520px){.vergelijk th,.vergelijk td{padding:6px}.vergelijk table{font-size:12px}}
+export const VERGELIJK_STIJL = `.vergelijk-lijst{display:grid;column-gap:16px;row-gap:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.vergelijk{display:grid;grid-template-rows:subgrid;align-content:start;margin-bottom:16px;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--accent);border-radius:12px;font-size:13px;overflow:hidden}
+.vergelijk>*{grid-column:1/-1}
+.vergelijk .vr{grid-column:1/-1;display:grid;grid-template-columns:subgrid;border-top:1px solid var(--line)}
+.vergelijk .vken{display:grid;grid-template-columns:subgrid;align-content:start}
+.vergelijk .vr>span{padding:8px 10px;text-align:center;overflow-wrap:normal;hyphens:manual}
+.vergelijk .vr>span[role=rowheader]{text-align:left;font-weight:500;color:var(--muted)}
+.vergelijk .vnaam{padding:10px 10px 6px;font-weight:700;font-size:1.05rem;color:var(--accent)}
+.vergelijk .vkop{border-top:0;background:var(--bg);align-items:end}.vergelijk .vkop>span{color:var(--fg);font-weight:600}
+.vergelijk .ja{color:var(--accent);font-weight:700}.vergelijk .nee{color:var(--muted)}
+.vergelijk .prijsregel>span:not([role=rowheader]){color:var(--accent);font-weight:600}
+.vergelijk .niet-in{margin:0;padding:8px 10px 10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);background:var(--bg)}
+.vergelijk .niet-in:empty{display:none}
+.vergelijk .niet-in p{margin:0}
+.vergelijk .niet-in .omzet{margin-top:6px;color:var(--fg);font-weight:500}
+@media (max-width:1180px){.vergelijk{font-size:12.5px}.vergelijk .vr>span{padding:7px 6px;hyphens:auto;-webkit-hyphens:auto}}
+@media (max-width:520px){.vergelijk{font-size:12px}.vergelijk .vr>span{padding:6px 4px}}
 .let{color:#b45309}`;
 
 // soorten: [{ soort, naam, voor, beide: [..], uitgebreid: [..], plannen: [{ sleutel, naam, prijs, gratis }] }]
@@ -136,7 +162,7 @@ export function huishoudPrijs(env) {
 export function welkomSoorten(env) {
   const pr = prijzen(env);
   const lijst = ["zakelijk", "prive"].map((s) => ({
-    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s],
+    soort: s, naam: GEBRUIK[s], ...SOORT_UITLEG[s], korting: pr.korting, // beide-V14R0
     plannen: Object.keys(plannenVoor(env)).map((k) => ({ sleutel: k, naam: PLANNEN[k], uitleg: PLAN_UITLEG[s][k], prijs: prijsTekst(pr[s][k]), gratis: !Number(pr[s][k]) })),
   }));
   const hb = huishoudPrijs(env);
@@ -180,7 +206,18 @@ const soortKaart = (naam, kies, voor, lijsten, extra = "") => `
       <div class="kaart soortkaart s-${extra || "zakelijk"}"><h3>${e(naam)}</h3><p class="kies"><span>Kies dit voor</span>${e(kies)}</p><p class="klein">${e(voor)}</p>${lijsten.map(([kop, l], i) =>
     `<p class="klein mi">${e(kop)}</p><ul${lijsten.length === 1 ? ` class="lang"` : ""}>${l.map((k) => `<li>${e(k)}</li>`).join("")}</ul>`).join("")}</div>`;
 
-export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
+// beide-V13R6 (overgenomen in huishoudboekje-V1R7) — abonnementen los, zodat de inlogpagina ze over de volle breedte kan
+// zetten (tabellen naast elkaar, wens Boska 3-11).
+export const welkomAbonnementen = (soorten) => `
+  <section>
+    <h2>Abonnementen</h2>
+    ${vergelijkTabel(soorten)}
+    <p class="klein">De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
+    <p class="klein">Eenvoudig of Uitgebreid kies je per dossier bij Privé en Zakelijk. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
+  </section>
+`;
+
+export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAbonnementen = true }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   return `
@@ -199,15 +236,10 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true }) {
     <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
       ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eén abonnement, alles erin", HUISHOUDBOEKJE.alles]], "hb")}
     </div>
-    ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p>` : ""}
+    ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p><p class="omzetband">${e(OMZETTEN_WELKOM)}${soorten[0]?.korting ? ` ${e(OMZETTEN_WELKOM_KORTING(soorten[0].korting))}` : ""}</p>` : ""}
   </section>
 
-  <section>
-    <h2>Abonnementen</h2>
-    ${vergelijkTabel(soorten)}
-    <p class="klein">De tijden gaan uit van medewerking van de cliënt bij de vragen die de app stelt.</p>
-    <p class="klein">Eenvoudig of Uitgebreid kies je per dossier bij Privé en Zakelijk. Een dossier in Eenvoudig kun je later één keer omzetten naar Uitgebreid; terug kan niet.</p>
-  </section>
+${metAbonnementen ? welkomAbonnementen(soorten) : ""}
 
 ${metVeilig ? welkomVeilig(veilig) : ""}
 </div>`;

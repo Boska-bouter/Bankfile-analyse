@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import Logo from "../shared/Logo.jsx";
 import { useEffect, useState } from "react";
 import { APP_RELEASE } from "../../version.js";
-import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard, Wallet } from "lucide-react";
+import { FileText, Search, BookOpen, Upload, Download, FolderPlus, HelpCircle, LayoutGrid, CheckCircle2, Settings, Loader2, Check, AlertCircle, FileSpreadsheet, ClipboardList, X, Lock, ChevronsLeft, ChevronsRight, BarChart3, Users, LogOut, KeyRound, CreditCard, Home, Wallet, Briefcase } from "lucide-react";
 import { PRIVACY_LABEL, PRIVACY_TITEL } from "../../content/privacy.jsx";
 
 // Fase 1 van de dashboard-restyling (zie het bouwvoorstel-document): vervangt de bovenste
@@ -81,7 +81,9 @@ export default function AppSidebar({
   onSaveProject,
   canSaveProject,
   onLoadProject,
+  onMaakPrive = null, // beide-V13R7 — van dit zakelijke dossier een privédossier maken
   onMaakHuishoudboekje = null, // huishoudboekje-V1R3 — van dit dossier een Huishoudboekje maken
+  onMaakZakelijk = null, // beide-V14R0 — van dit privédossier een zakelijk dossier maken
   onClearAll,
   canClearAll,
   onToggleHelp, onZoek, onBegrippen, onBeheer = null, beheerTeller = 0, beheerMelding = null, ingelogdAls = null, onUitloggen = null, onPasskey = null, onAbonnementen = null, abonnement = null,
@@ -250,10 +252,23 @@ export default function AppSidebar({
           <Upload className="h-3.5 w-3.5 text-slate-300 shrink-0" />
           <span className="sb-label text-xs font-semibold text-slate-200">Dossier laden</span>
         </button>
+        {onMaakPrive && (
+          <button onClick={onMaakPrive} title="Maak er een privédossier van" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+            <Home className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className="sb-label text-xs font-semibold text-slate-200">Maak er een privédossier van</span>
+          </button>
+        )}
         {onMaakHuishoudboekje && (
           <button onClick={onMaakHuishoudboekje} title="Maak er een Huishoudboekje van" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
             <Wallet className="h-3.5 w-3.5 text-slate-300 shrink-0" />
             <span className="sb-label text-xs font-semibold text-slate-200">Maak er een Huishoudboekje van</span>
+          </button>
+        )}
+
+        {onMaakZakelijk && (
+          <button onClick={onMaakZakelijk} title="Maak er een zakelijk dossier van" className="sb-btn flex items-center gap-2 bg-[#1E2A4A] border border-[#2C3A61] hover:bg-[#25335A] rounded-xl px-3 py-2 text-left">
+            <Briefcase className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+            <span className="sb-label text-xs font-semibold text-slate-200">Maak er een zakelijk dossier van</span>
           </button>
         )}
 

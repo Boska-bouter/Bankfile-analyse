@@ -19,7 +19,7 @@ import { uitgebreidExtra, BANKKOPPELING_STATUS } from "../src/content/aanbod.js"
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { logBeheer, inloggenVastleggen } from "./logboek.js";
-import { welkomInhoud, welkomVeilig, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { welkomInhoud, welkomVeilig, welkomAbonnementen, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -302,7 +302,14 @@ input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:
 button,.knop{font:inherit;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:11px 16px;cursor:pointer;text-align:center;text-decoration:none}
 button.tweede,.knop.tweede{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 button[disabled]{opacity:.6}#status{margin:0;min-height:1.3em;color:var(--muted)}#status.err{color:var(--err)}#status.ok{color:var(--ok)}
-.of{text-align:center;color:var(--muted);font-size:13px}`;
+.of{text-align:center;color:var(--muted);font-size:13px}
+.abonknop{width:100%}
+.abonvenster{width:min(1180px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);box-sizing:border-box;margin:auto;padding:16px 20px 20px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);overflow:auto}
+.abonvenster::backdrop{background:rgb(15 23 42 / .55)}
+.abonbalk{position:sticky;top:-16px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-16px -20px 12px;padding:12px 20px;background:var(--bg);border-bottom:1px solid var(--line)}.abonbalk h2{margin:0;font-size:1.2rem}
+.abondicht{padding:6px 14px;font-size:13px;background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.abonvenster .welkom section{display:flex;flex-direction:column;gap:12px}.abonvenster .welkom section>h2{display:none}.abonvenster .vergelijk-lijst{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+@media (max-width:520px){.abonvenster{padding:12px}.abonbalk{top:-12px;margin:-12px -12px 12px;padding:10px 12px}}`;
 
 const HULP_JS = `const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
 const vanB64u=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(s+"===".slice((s.length+3)%4)),c=>c.charCodeAt(0))};
@@ -347,10 +354,16 @@ ${welkomKop(soorten)}
   <p id="status2" role="status"></p>
   ${welkomNieuw(alleGratis(soorten))}
 </div>
+<button type="button" id="abonknop" class="tweede abonknop" aria-haspopup="dialog">Abonnementen vergelijken</button>
 </aside>
-<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false })}</div>
+<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false })}</div>
+<dialog id="abonvenster" class="abonvenster" aria-label="Abonnementen vergelijken"><div class="abonbalk"><h2>Abonnementen</h2><button type="button" id="abondicht" class="abondicht">Sluiten</button></div><div class="welkom">${welkomAbonnementen(soorten)}</div></dialog>
 <div class="veiligrij">${welkomVeilig()}</div>
 </div>`, `
+const abv=document.getElementById("abonvenster");
+document.getElementById("abonknop").addEventListener("click",()=>{if(abv.showModal)abv.showModal();else abv.setAttribute("open","")});
+document.getElementById("abondicht").addEventListener("click",()=>abv.close?abv.close():abv.removeAttribute("open"));
+abv.addEventListener("click",(ev)=>{if(ev.target===abv)abv.close()});
 const pk=document.getElementById("pk");if(!kanPasskey){pk.style.display="none";document.getElementById("ofpk").style.display="none"}
 pk.addEventListener("click",async()=>{pk.disabled=true;meld("Bezig…");try{
  const o=await post("/api/inloggen/passkey/opties");
