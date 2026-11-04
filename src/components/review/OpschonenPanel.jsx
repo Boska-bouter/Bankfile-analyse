@@ -127,7 +127,7 @@ export default function OpschonenPanel({
                     Alle {pendingDuplicateCount} nog openstaande verwijderen (bewaar de eerste van elk stel)
                   </button>
                   <button onClick={onDismissDuplicateNotice} className="text-xs text-amber-700 hover:text-amber-900">
-                    Negeren (niet meer noemen bij "Aangifte")
+                    Negeren (niet meer als open punt noemen)
                   </button>
                 </div>
               )}

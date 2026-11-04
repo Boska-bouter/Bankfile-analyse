@@ -44,6 +44,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
 
   c("Privé - huur", "Wonen", { label: "Huur", vast: true }),
+  // huishoudboekje-V3R1 — huur van een apparaat (wasmachine, cv-ketel, geiser) is geen woninghuur (wens Boska 4-11).
+  c("Huur apparaten", "Wonen", { label: "Huur apparaten (wasmachine, ketel, geiser)", vast: true, nieuw: true, kleur: "bg-amber-50 text-amber-700" }),
   c("Hypotheek", "Wonen", { fiscaal: "hypotheekrente", vast: true }),
   c("Privé - energie-water", "Wonen", { label: "Energie & water", vast: true }),
   // huishoudboekje-V1R0 — fijnere indeling voor het Huishoudboekje (wens Boska 2-11). De zoekwoorden staan in
@@ -86,6 +88,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Beleggen", "Sparen en beleggen", { soort: "overboeking", nieuw: true, kleur: "bg-cyan-50 text-cyan-700" }),
   c("Lijfrente", "Sparen en beleggen", { label: "Lijfrente & pensioensparen", fiscaal: "lijfrente", vast: true, nieuw: true, kleur: "bg-cyan-100 text-cyan-800" }),
   c("Interne overboeking", "Sparen en beleggen", { soort: "overboeking", label: "Overboeking eigen rekening" }),
+  // huishoudboekje-V3R1 — geld terug naar de zakelijke rekening (van je eigen bedrijf): geen uitgave (wens Boska 4-11).
+  c("Terugboeking naar zakelijk", "Sparen en beleggen", { soort: "overboeking", label: "Terugboeking naar zakelijke rekening" }),
 
   c("Leningen (privé)", "Aflossingen", { label: "Leningen & studieschuld", vast: true }),
   c("Incasso, juridisch & schulden", "Aflossingen", { label: "Schulden, incasso & juridisch" }),
@@ -105,6 +109,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Overboeking van bekenden", "Overig", { label: "Terugbetaald door bekenden", terugbetaling: true }),
   c("Terugbetalingen & restituties", "Overig", { label: "Terugbetaald door bedrijven en winkels", terugbetaling: true, nieuw: true, kleur: "bg-slate-100 text-slate-700" }),
   c("Privé - bankkosten", "Overig", { label: "Bankkosten", vast: true }),
+  // huishoudboekje-V3R1 — ook privé betaal je soms een boekhouder of belastingadviseur (wens Boska 4-11).
+  c("Boekhouder, accountant & administratie", "Overig", { label: "Boekhouder, accountant & belastingadvies" }),
   c("Partneralimentatie", "Overig", { fiscaal: "partneralimentatie", vast: true }),
   c("Privé - overige kosten", "Overig", { label: "Overige kosten (controleren)" }),
   c("Persoonlijk & vertrouwelijk", "Overig"),
@@ -177,6 +183,11 @@ export const PRIVE_REGELS = Object.freeze([
   ] },
   { naam: "Lijfrente", woorden: ["lijfrente", "banksparen", "pensioensparen", "pensioenbeleggen", "oudedagsvoorziening"] },
   { naam: "Contant geld", woorden: [], leen: ["Privé opnames"] },
+  { naam: "Huur apparaten", woorden: [
+    "bluemovement", "blue movement", "bsh huishoudapparaten", "bsh huishoudappara", "huurketel", "huur cv", "cv-ketel huur",
+    "ketelhuur", "huur ketel", "geiser huur", "huur geiser", "boiler huur", "huur boiler", "warmtepomp huur", "huur warmtepomp",
+    "wasmachine huur", "huur wasmachine", "droger huur", "huur droger", "apparaathuur", "huurapparaat",
+  ] },
   // beide-V2R2 — geld dat terugkomt van een bedrijf of winkel (alleen bijschrijvingen): geen inkomen.
   { naam: "Terugbetalingen & restituties", alleenInkomen: true, woorden: [
     "terugbetaling", "restitutie", "retour", "refund", "storno", "terugstorting", "creditnota", "credit nota", "eindafrekening",
@@ -187,6 +198,7 @@ export const PRIVE_REGELS = Object.freeze([
 // beide-V2R2 — extra zoekwoorden voor bestaande standaardregels, alleen in een privédossier (een zakelijk dossier
 // ziet ze nooit). Bekende Nederlandse leveranciers die de standaardlijst nog miste.
 export const PRIVE_EXTRA_WOORDEN = Object.freeze({
+  "Boekhouder, accountant & administratie": ["belastingadvies", "belastingadviseur", "belastingservice", "aangifteservice", "belastingaangifte"], // huishoudboekje-V3R1
   "Energie-water": [
     "frank energie", "tibber", "nextenergy", "next energy", "energyzero", "vrijopnaam", "het energiebedrijf", "zonneplan", "mega energie", "budget thuis", "nederlandse energie maatschappij", " nle ",
     "innova energie", "coolblue energie", "energiek", "hezelaer", "ennatuurlijk", "warmtelevering", "stadsverwarming",
@@ -253,7 +265,7 @@ export const PRIVE_INKOMEN_VOLGORDE = Object.freeze([
 export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Zakelijke inkomsten": "Inkomsten", "Zakelijke inkomsten 0%": "Inkomsten", "Zakelijke inkomsten 9%": "Inkomsten",
   "Zakelijke inkomsten 21%": "Inkomsten", "Verkoop activa": "Inkomsten",
-  "Ontvangen van zakelijk": "Interne overboeking", "Terugboeking naar zakelijk": "Interne overboeking",
+  "Ontvangen van zakelijk": "Interne overboeking",
   "Terugboeking van privé": "Interne overboeking", "Interne overboeking: zakelijk sparen": "Interne overboeking: privé sparen",
   "Privé opnames": "Contant geld",
   "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",

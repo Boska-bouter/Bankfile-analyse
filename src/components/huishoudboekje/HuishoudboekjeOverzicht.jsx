@@ -3,7 +3,8 @@
 // "Past het bij je inkomen?" en "Waar kun je besparen?". Rekenwerk in src/calc/huishoudboekje/.
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle, PiggyBank, FileDown, Printer, Pencil } from "lucide-react";
-import { huishoudOverzicht, verschilPct, gemiddeldeLaatsteMaanden } from "../../calc/huishoudboekje/overzicht.js";
+import { huishoudOverzicht, gemiddeldeLaatsteMaanden } from "../../calc/huishoudboekje/overzicht.js";
+import { gewoonlijk, vergelijkGewoonlijk, opvallendeUitgaven, GEWOONLIJK_MAANDEN } from "../../calc/huishoudboekje/gewoonlijk.js";
 import { periodeLabel, kortLabel, verschuif } from "../../calc/huishoudboekje/periodes.js";
 import { verhoudingen, fmtPct } from "../../calc/huishoudboekje/verhoudingen.js";
 import { budgetStatus } from "../../calc/huishoudboekje/budget.js";
@@ -17,23 +18,25 @@ const eur2 = (v) => `€\u00a0${(Math.round((v || 0) * 100) / 100).toLocaleStrin
 const KLEUR = { groen: "bg-emerald-100 text-emerald-800", oranje: "bg-amber-100 text-amber-800", rood: "bg-red-100 text-red-800" };
 const KLEUR_TEKST = { groen: "Past", oranje: "Iets hoog", rood: "Hoog" };
 
-// Verschil-label: bij uitgaven is hoger rood; bij inkomsten en "over" is hoger groen.
-function Verschil({ nu, vorig, hogerIsBeter = false, volledig = true, vorigVolledig = true }) {
-  if (!volledig || !vorigVolledig) return <span className="text-xs text-slate-400">onvolledig</span>;
-  const p = verschilPct(nu, vorig);
-  if (p === null) return null;
-  if (p === "nieuw") return <span className="text-xs font-semibold text-slate-500">nieuw</span>;
-  if (Math.abs(p) < 0.5) return <span className="text-xs text-slate-400">gelijk</span>;
-  const goed = hogerIsBeter ? p > 0 : p < 0;
-  return <span className={`text-xs font-semibold ${goed ? "text-emerald-700" : "text-red-700"}`}>{p > 0 ? "▲" : "▼"} {Math.abs(Math.round(p))}%</span>;
+// huishoudboekje-V3R2 — vergelijking met wat gewoonlijk is: het eigen gemiddelde van de laatste zes volledige maanden
+// (besluit Boska 4-11; eerder een % of een bedrag verschil met de vorige periode). Alleen een duidelijke afwijking krijgt
+// een kleur: meer uitgeven oranje, meer inkomen of over groen.
+const GEWOON_TEKST = { gewoon: "zoals gewoonlijk", hoger: "hoger dan gewoonlijk", lager: "lager dan gewoonlijk", nieuw: "niet gebruikelijk" };
+function Gewoon({ nu, gem, soort, hogerIsBeter = false, volledig = true, metBedrag = true }) {
+  if (!volledig) return <span className="text-xs text-slate-400">onvolledig</span>;
+  const v = vergelijkGewoonlijk(nu, gem, soort);
+  if (!v) return null;
+  if (v === "gewoon") return <span className="whitespace-nowrap text-xs text-slate-400">{GEWOON_TEKST.gewoon}</span>;
+  const goed = v === "lager" ? !hogerIsBeter : hogerIsBeter;
+  return <span className={`whitespace-nowrap text-xs font-semibold ${goed ? "text-emerald-700" : "text-amber-700"}`}>{GEWOON_TEKST[v]}{metBedrag && v !== "nieuw" ? <span className="font-normal text-slate-500"> (gem. {eur(gem)})</span> : null}</span>;
 }
 
-function Kpi({ titel, bedrag, vorig, hogerIsBeter, volledig, vorigVolledig, accent }) {
+function Kpi({ titel, bedrag, gem, soort, hogerIsBeter, volledig, accent }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{titel}</div>
       <div className={`mt-1 text-2xl font-bold ${accent || "text-slate-900"}`}>{eur(bedrag)}</div>
-      <div className="mt-1 flex items-center gap-2"><Verschil nu={bedrag} vorig={vorig} hogerIsBeter={hogerIsBeter} volledig={volledig} vorigVolledig={vorigVolledig} /><span className="text-xs text-slate-400">vs. vorige {vorig != null ? eur(vorig) : ""}</span></div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2">{gem != null && <span className="text-xs text-slate-500">gemiddeld {eur(gem)}</span>}<Gewoon nu={bedrag} gem={gem} soort={soort} hogerIsBeter={hogerIsBeter} volledig={volledig} metBedrag={false} /></div>
     </div>
   );
 }
@@ -75,12 +78,11 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
   const [gekozen, setGekozen] = useState(null);
   useEffect(() => { setGekozen(null); }, [soort]);
   const p = gekozen && ov.per.has(gekozen) ? gekozen : standaard;
-  const vorigeP = p ? verschuif(p, -1) : null;
   const nu = p ? ov.per.get(p) : null;
-  const vorig = vorigeP ? ov.per.get(vorigeP) : null;
   const volledig = p ? !!ov.volledig.get(p) : false;
-  const vorigVolledig = vorigeP ? !!ov.volledig.get(vorigeP) : false;
   const idx = ov.periodes.indexOf(p);
+  const gw = useMemo(() => gewoonlijk(maandOv, p, soort), [maandOv, p, soort]);
+  const opvallend = useMemo(() => opvallendeUitgaven(transacties, p, soort, gw, { onregelmatig: ov.onregelmatig }), [transacties, p, soort, gw, ov.onregelmatig]);
 
   const huishouden = huishoudenUit(antwoorden || {});
   const refMaand = p ? (soort === "maand" ? p : null) : null;
@@ -96,12 +98,12 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
     return <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Voeg een bankbestand toe of gebruik de bankkoppeling. Daarna zie je hier per maand en per week waar je geld blijft.</div>;
   }
   const cats = (isVast) => [...nu.perCategorie].filter(([, c]) => c.vast === isVast && Math.abs(c.bedrag) >= 0.5)
-    .map(([naam, c]) => ({ naam, ...c, vorig: vorig?.perCategorie.get(naam)?.bedrag || 0 }))
+    .map(([naam, c]) => ({ naam, ...c, gem: gw ? gw.perCategorie.get(naam) || 0 : null }))
     .sort((a, b) => b.bedrag - a.bedrag);
   const vasteLijst = cats(true), variabelLijst = cats(false);
-  // Nieuwe en verdwenen vaste lasten t.o.v. de vorige periode.
-  const verdwenen = vorig ? [...vorig.perCategorie].filter(([n, c]) => c.vast && c.bedrag > 0.5 && !nu.perCategorie.has(n)).map(([n, c]) => ({ naam: n, vorig: c.bedrag })) : [];
-  const maxVar = Math.max(1, ...variabelLijst.map((c) => Math.max(c.bedrag, c.vorig)));
+  // Vaste lasten die er gewoonlijk zijn (gemiddeld minstens € 5), maar deze periode niet.
+  const verdwenen = gw ? [...gw.perCategorie].filter(([n, b]) => vast.has(n) && b >= 5 && !nu.perCategorie.has(n) && !ov.onregelmatig.has(n)).map(([n, b]) => ({ naam: n, gem: b })) : [];
+  const maxVar = Math.max(1, ...variabelLijst.map((c) => Math.max(c.bedrag, c.gem || 0)));
   const verloop = ov.periodes.slice(Math.max(0, idx - 11), idx + 1).map((x) => ({ p: x, ...ov.per.get(x), volledig: ov.volledig.get(x) }));
   const budgetOver = budget.filter((b) => b.status === "over");
   // huishoudboekje-V1R1 — aangekruiste vaste lasten zonder enige betaling in de laatste drie maanden (of in de hele periode).
@@ -139,11 +141,28 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi titel="Inkomsten" bedrag={nu.inkomsten} vorig={vorig?.inkomsten} hogerIsBeter volledig={volledig} vorigVolledig={vorigVolledig} accent="text-emerald-700" />
-        <Kpi titel="Vaste lasten" bedrag={nu.vasteLasten} vorig={vorig?.vasteLasten} volledig={volledig} vorigVolledig={vorigVolledig} />
-        <Kpi titel="Variabele uitgaven" bedrag={nu.variabel} vorig={vorig?.variabel} volledig={volledig} vorigVolledig={vorigVolledig} />
-        <Kpi titel={nu.over >= 0 ? "Over" : "Tekort"} bedrag={nu.over} vorig={vorig?.over} hogerIsBeter volledig={volledig} vorigVolledig={vorigVolledig} accent={nu.over >= 0 ? "text-teal-800" : "text-red-700"} />
+        <Kpi titel="Inkomsten" bedrag={nu.inkomsten} gem={gw ? gw.inkomsten : null} soort={soort} hogerIsBeter volledig={volledig} accent="text-emerald-700" />
+        <Kpi titel="Vaste lasten" bedrag={nu.vasteLasten} gem={gw ? gw.vasteLasten : null} soort={soort} volledig={volledig} />
+        <Kpi titel="Variabele uitgaven" bedrag={nu.variabel} gem={gw ? gw.variabel : null} soort={soort} volledig={volledig} />
+        <Kpi titel={nu.over >= 0 ? "Over" : "Tekort"} bedrag={nu.over} gem={gw ? gw.over : null} soort={soort} hogerIsBeter volledig={volledig} accent={nu.over >= 0 ? "text-teal-800" : "text-red-700"} />
       </div>
+      <p className="-mt-2 text-xs text-slate-500">{gw
+        ? <>Gemiddeld = wat je gewoonlijk per {soort} hebt: het gemiddelde van {gw.maanden.length === GEWOONLIJK_MAANDEN ? `de laatste ${GEWOONLIJK_MAANDEN}` : `${gw.maanden.length}`} volledige maanden ervoor ({kortLabel(gw.maanden[0])} – {kortLabel(gw.maanden[gw.maanden.length - 1])}). Alleen een duidelijk verschil krijgt een kleur.</>
+        : <>Nog te weinig volledige maanden om met je gewone uitgaven te vergelijken (minstens 2 nodig).</>}</p>
+      {opvallend.length > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <h3 className="font-bold text-amber-900">Opvallende uitgaven deze {soort}</h3>
+          <p className="mb-2 text-xs text-amber-800">Losse betalingen die veel groter zijn dan gewoonlijk voor die categorie, zoals een grote aankoop.</p>
+          <ul className="space-y-1 text-sm">
+            {opvallend.map((o, k) => (
+              <li key={k} className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span><span className="text-slate-500">{o.datum.toLocaleDateString("nl-NL")}</span> · {o.tegenpartij} <button type="button" className="text-xs text-amber-800 underline" onClick={() => onToonCategorie?.(o.categorie, p)}>{label(o.categorie)}</button></span>
+                <span className="font-semibold">{eur(o.bedrag)}{o.gemiddeld >= 0.5 && <span className="ml-1 text-xs font-normal text-slate-500">(gewoonlijk {eur(o.gemiddeld)} per maand)</span>}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {(nu.sparen !== 0 || spaardoel > 0) && <p className="-mt-2 text-xs text-slate-500">{nu.sparen >= 0 ? `Naar sparen en beleggen: ${eur(nu.sparen)}` : `Opgenomen van sparen: ${eur(-nu.sparen)}`} (telt niet als uitgave).{spaardoel > 0 && (() => {
         // huishoudboekje-V1R1 — spaardoel per maand (een week: 12/52 daarvan).
         const doel = soort === "week" ? (spaardoel * 12) / 52 : spaardoel;
@@ -158,12 +177,12 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
           <table className="w-full text-sm"><tbody>
             {vasteLijst.map((c) => (
               <tr key={c.naam} className="border-t border-slate-100">
-                <td className="py-1.5"><button type="button" className="text-left hover:underline" onClick={() => onToonCategorie?.(c.naam, p)}>{label(c.naam)}</button>{c.uitgesmeerd && <span className="ml-1 text-xs text-slate-400">(uitgesmeerd)</span>}{!c.vorig && vorig && !c.uitgesmeerd && <span className="ml-1 rounded bg-sky-100 px-1 text-xs text-sky-800">nieuw</span>}</td>
+                <td className="py-1.5"><button type="button" className="text-left hover:underline" onClick={() => onToonCategorie?.(c.naam, p)}>{label(c.naam)}</button>{c.uitgesmeerd && <span className="ml-1 text-xs text-slate-400">(uitgesmeerd)</span>}</td>
                 <td className="whitespace-nowrap py-1.5 text-right font-medium">{eur(c.bedrag)}</td>
-                <td className="w-16 py-1.5 text-right"><Verschil nu={c.bedrag} vorig={c.vorig} volledig={volledig} vorigVolledig={vorigVolledig} /></td>
+                <td className="py-1.5 pl-2 text-right"><Gewoon nu={c.bedrag} gem={c.gem} soort={soort} volledig={volledig} /></td>
               </tr>
             ))}
-            {verdwenen.map((c) => <tr key={c.naam} className="border-t border-slate-100 text-slate-400"><td className="py-1.5">{label(c.naam)} <span className="rounded bg-slate-100 px-1 text-xs">niet deze {soort}</span></td><td className="py-1.5 text-right">{eur(0)}</td><td className="py-1.5 text-right text-xs">was {eur(c.vorig)}</td></tr>)}
+            {verdwenen.map((c) => <tr key={c.naam} className="border-t border-slate-100 text-slate-400"><td className="py-1.5">{label(c.naam)} <span className="rounded bg-slate-100 px-1 text-xs">niet deze {soort}</span></td><td className="py-1.5 text-right">{eur(0)}</td><td className="py-1.5 pl-2 text-right text-xs">gem. {eur(c.gem)}</td></tr>)}
             {!vasteLijst.length && <tr><td className="py-2 text-slate-500">Geen vaste lasten in deze {soort}.</td></tr>}
           </tbody></table>
           {nietGevonden.length > 0 && (
@@ -171,7 +190,7 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
               <b>Opgegeven, maar niet in je bankgegevens:</b> {nietGevonden.map(label).join(", ")}. Betaal je dit van een andere rekening, voeg die dan toe. Of de app heeft het anders ingedeeld: kijk bij Controleren.
             </p>
           )}
-          <label className="mt-3 flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={uitsmeren} onChange={(e) => setUitsmeren(e.target.checked)} /> Vaste lasten die een paar keer per jaar komen, uitsmeren over de maanden</label>
+                    <label className="mt-3 flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={uitsmeren} onChange={(e) => setUitsmeren(e.target.checked)} /> Vaste lasten die een paar keer per jaar komen, uitsmeren over de maanden</label>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -184,16 +203,16 @@ export default function HuishoudboekjeOverzicht({ transacties, vasteCategorieen:
                 <li key={c.naam}>
                   <div className="flex items-baseline justify-between gap-2 text-sm">
                     <button type="button" className="truncate text-left hover:underline" onClick={() => onToonCategorie?.(c.naam, p)}>{label(c.naam)}</button>
-                    <span className="shrink-0"><span className="font-medium">{eur(c.bedrag)}</span>{b && <span className={`ml-1 text-xs ${b.status === "over" ? "text-red-700 font-semibold" : "text-slate-500"}`}>/ {eur(b.budget)}</span>} <Verschil nu={c.bedrag} vorig={c.vorig} volledig={volledig} vorigVolledig={vorigVolledig} /></span>
+                    <span className="shrink-0"><span className="font-medium">{eur(c.bedrag)}</span>{b && <span className={`ml-1 text-xs ${b.status === "over" ? "text-red-700 font-semibold" : "text-slate-500"}`}>/ {eur(b.budget)}</span>} <Gewoon nu={c.bedrag} gem={c.gem} soort={soort} volledig={volledig} /></span>
                   </div>
                   <div className="mt-1 h-2 rounded bg-slate-100"><div className={`h-2 rounded ${kleur}`} style={{ width: `${Math.max(0, Math.min(100, (c.bedrag / (b ? Math.max(b.budget, c.bedrag) : maxVar)) * 100))}%` }} /></div>
-                  {vorig && <div className="mt-0.5 h-1 rounded bg-slate-100"><div className="h-1 rounded bg-slate-300" style={{ width: `${Math.max(0, Math.min(100, (c.vorig / (b ? Math.max(b.budget, c.bedrag) : maxVar)) * 100))}%` }} title={`Vorige ${soort}: ${eur(c.vorig)}`} /></div>}
+                  {gw && <div className="mt-0.5 h-1 rounded bg-slate-100"><div className="h-1 rounded bg-slate-300" style={{ width: `${Math.max(0, Math.min(100, ((c.gem || 0) / (b ? Math.max(b.budget, c.bedrag) : maxVar)) * 100))}%` }} title={`Gemiddeld per ${soort}: ${eur(c.gem)}`} /></div>}
                 </li>
               );
             })}
             {!variabelLijst.length && <li className="text-sm text-slate-500">Geen variabele uitgaven in deze {soort}.</li>}
           </ul>
-          {vorig && variabelLijst.length > 0 && <p className="mt-2 text-xs text-slate-400">Dunne grijze balk = vorige {soort}.</p>}
+          {gw && variabelLijst.length > 0 && <p className="mt-2 text-xs text-slate-400">Dunne grijze balk = wat je gewoonlijk per {soort} uitgeeft.</p>}
         </section>
       </div>
 

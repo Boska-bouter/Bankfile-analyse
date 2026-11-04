@@ -1,1 +1,1 @@
-export const APP_RELEASE = "huishoudboekje-V3R0";
+export const APP_RELEASE = "huishoudboekje-V3R2";

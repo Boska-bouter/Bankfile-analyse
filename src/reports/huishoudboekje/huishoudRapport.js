@@ -1,20 +1,22 @@
 // huishoudboekje-V1R0 — rapport (PDF/HTML/print) van een Huishoudboekje: één maand of week, met de vorige periode,
 // vaste lasten, variabele uitgaven met budget, "past het bij je inkomen?", besparen en het verloop. Geen belasting.
 import { esc, bedrag, rij, document } from "../prive/opmaak.js";
-import { huishoudOverzicht, verschilPct, gemiddeldeLaatsteMaanden } from "../../calc/huishoudboekje/overzicht.js";
+import { huishoudOverzicht, gemiddeldeLaatsteMaanden } from "../../calc/huishoudboekje/overzicht.js";
+import { gewoonlijk, vergelijkGewoonlijk, opvallendeUitgaven, GEWOONLIJK_MAANDEN } from "../../calc/huishoudboekje/gewoonlijk.js";
 import { periodeLabel, verschuif, kortLabel } from "../../calc/huishoudboekje/periodes.js";
 import { verhoudingen, fmtPct } from "../../calc/huishoudboekje/verhoudingen.js";
 import { budgetStatus } from "../../calc/huishoudboekje/budget.js";
 import { terugkerend, bespaarPlekken } from "../../calc/huishoudboekje/besparen.js";
 import { huishoudenUit } from "../../modus/huishoudboekje/wizard.js";
 
-const pctTekst = (nu, vorig, hogerIsBeter = false) => {
-  const v = verschilPct(nu, vorig);
-  if (v == null) return "";
-  if (v === "nieuw") return "nieuw";
-  if (Math.abs(v) < 0.5) return "gelijk";
-  const goed = hogerIsBeter ? v > 0 : v < 0;
-  return `<span class="${goed ? "groen" : "rood"}">${v > 0 ? "+" : "−"}${Math.round(Math.abs(v))}%</span>`;
+// huishoudboekje-V3R2 — vergelijking met wat gewoonlijk is (gemiddelde laatste zes volledige maanden), besluit Boska 4-11.
+const GEWOON = { gewoon: "zoals gewoonlijk", hoger: "hoger dan gewoonlijk", lager: "lager dan gewoonlijk", nieuw: "niet gebruikelijk" };
+const gewoonTekst = (nu, gem, soort, hogerIsBeter = false) => {
+  const v = vergelijkGewoonlijk(nu, gem, soort);
+  if (!v) return "";
+  if (v === "gewoon") return GEWOON.gewoon;
+  const goed = v === "lager" ? !hogerIsBeter : hogerIsBeter;
+  return `<span class="${goed ? "groen" : "oranje"}">${GEWOON[v]}</span>`;
 };
 
 export const HUISHOUD_DISCLAIMER = "<strong>Let op:</strong> dit overzicht is gemaakt uit je bankgegevens. De vergelijking met wat gebruikelijk is, is een indicatie op basis van gemiddelden van het Nibud en het CBS; jouw situatie kan anders zijn.";
@@ -29,22 +31,24 @@ export function buildHuishoudRapportHtml({ transacties, vasteCategorieen: vasteI
   const sub = `${namen?.ondernemer ? `${esc(namen.ondernemer)} · ` : ""}Huishoudboekje · opgesteld ${vandaag.toLocaleDateString("nl-NL")}`;
   if (!p) return document({ titel: "Huishoudboekje", sub, inhoud: "<p>Er staan nog geen bankgegevens in dit dossier.</p>", disclaimer: HUISHOUD_DISCLAIMER });
   const nu = ov.per.get(p);
-  const vp = verschuif(p, -1);
-  const vorig = ov.per.get(vp) || null;
-  const vw = soort === "week" ? "vorige week" : "vorige maand";
-  const kol = (a, b, hb) => [bedrag(a), vorig ? bedrag(b) : "", vorig ? pctTekst(a, b, hb) : ""];
+  const gw = gewoonlijk(maandOv, p, soort);
+  const volledigP = !!ov.volledig.get(p);
+  const kol = (a, b, hb) => [bedrag(a), gw ? bedrag(b || 0) : "", gw && volledigP ? gewoonTekst(a, b || 0, soort, hb) : ""];
 
-  const kop = `<tr><th></th><th class="num">${esc(periodeLabel(p))}</th><th class="num">${vw}</th><th class="num">verschil</th></tr>`;
-  const samen = `<table>${kop}${rij("Inkomsten", kol(nu.inkomsten, vorig?.inkomsten, true))}${rij("Uitgaven", kol(nu.uitgaven, vorig?.uitgaven))}${rij("waarvan vaste lasten", kol(nu.vasteLasten, vorig?.vasteLasten), "sub")}${rij("waarvan variabel", kol(nu.variabel, vorig?.variabel), "sub")}${rij("Gespaard", kol(nu.sparen, vorig?.sparen, true))}${spaardoel ? rij(`Spaardoel${soort === "week" ? " (deze week)" : ""}`, [bedrag(soort === "week" ? (spaardoel * 12) / 52 : spaardoel), "", nu.sparen >= (soort === "week" ? (spaardoel * 12) / 52 : spaardoel) - 0.5 ? '<span class="groen">gehaald</span>' : '<span class="oranje">niet gehaald</span>'], "sub") : ""}${rij(nu.over >= 0 ? "Over" : "Tekort", kol(nu.over, vorig?.over, true), "sterk")}</table>${ov.volledig.get(p) ? "" : `<p class="sub">Let op: van ${esc(periodeLabel(p))} staan nog niet alle dagen in je bankgegevens.</p>`}`;
+  const kop = `<tr><th></th><th class="num">${esc(periodeLabel(p))}</th><th class="num">gemiddeld</th><th class="num">vergeleken</th></tr>`;
+  const uitlegGem = gw ? `<p class="sub">Gemiddeld = wat je gewoonlijk per ${soort} hebt: het gemiddelde van ${gw.maanden.length === GEWOONLIJK_MAANDEN ? `de laatste ${GEWOONLIJK_MAANDEN}` : gw.maanden.length} volledige maanden ervoor (${esc(kortLabel(gw.maanden[0]))} – ${esc(kortLabel(gw.maanden[gw.maanden.length - 1]))}). Alleen een duidelijk verschil (25% én € ${soort === "week" ? 10 : 25}) telt als hoger of lager.</p>` : "<p class=\"sub\">Nog te weinig volledige maanden om met je gewone uitgaven te vergelijken.</p>";
+  const opv = opvallendeUitgaven(transacties, p, soort, gw, { onregelmatig: ov.onregelmatig });
+  const opvallend = opv.length ? `<h2>Opvallende uitgaven</h2><p class="sub">Losse betalingen die veel groter zijn dan gewoonlijk voor die categorie.</p><table><tr><th>datum</th><th>tegenpartij</th><th>categorie</th><th class="num">bedrag</th></tr>${opv.map((o) => `<tr><td>${o.datum.toLocaleDateString("nl-NL")}</td><td>${esc(o.tegenpartij)}</td><td>${esc(label(o.categorie))}</td><td class="num">${bedrag(o.bedrag)}</td></tr>`).join("")}</table>` : "";
+  const samen = `<table>${kop}${rij("Inkomsten", kol(nu.inkomsten, gw?.inkomsten, true))}${rij("Uitgaven", kol(nu.uitgaven, gw?.uitgaven))}${rij("waarvan vaste lasten", kol(nu.vasteLasten, gw?.vasteLasten), "sub")}${rij("waarvan variabel", kol(nu.variabel, gw?.variabel), "sub")}${rij("Gespaard", kol(nu.sparen, gw?.sparen, true))}${spaardoel ? rij(`Spaardoel${soort === "week" ? " (deze week)" : ""}`, [bedrag(soort === "week" ? (spaardoel * 12) / 52 : spaardoel), "", nu.sparen >= (soort === "week" ? (spaardoel * 12) / 52 : spaardoel) - 0.5 ? '<span class="groen">gehaald</span>' : '<span class="oranje">niet gehaald</span>'], "sub") : ""}${rij(nu.over >= 0 ? "Over" : "Tekort", kol(nu.over, gw?.over, true), "sterk")}</table>${ov.volledig.get(p) ? "" : `<p class="sub">Let op: van ${esc(periodeLabel(p))} staan nog niet alle dagen in je bankgegevens.</p>`}`;
 
   const budget = budgetStatus(nu, budgetten, soort);
   const budgetVan = (c) => budget.find((b) => b.categorie === c);
   const lijst = (isVast) => [...nu.perCategorie].filter(([, c]) => c.vast === isVast && Math.abs(c.bedrag) >= 0.5)
-    .map(([naam, c]) => ({ naam, ...c, vorig: vorig?.perCategorie.get(naam)?.bedrag || 0 })).sort((a, b) => b.bedrag - a.bedrag);
+    .map(([naam, c]) => ({ naam, ...c, gem: gw?.perCategorie.get(naam) || 0 })).sort((a, b) => b.bedrag - a.bedrag);
   const vast = lijst(true), variabel = lijst(false);
-  const vastTabel = vast.length ? `<table>${kop}${vast.map((c) => rij(`${label(c.naam)}${c.uitgesmeerd ? " (uitgesmeerd)" : ""}`, kol(c.bedrag, c.vorig))).join("")}${rij("Totaal vaste lasten", kol(nu.vasteLasten, vorig?.vasteLasten), "sterk")}</table>` : "<p>Geen vaste lasten in deze periode.</p>";
-  const varKop = `<tr><th></th><th class="num">${esc(periodeLabel(p))}</th><th class="num">${vw}</th><th class="num">verschil</th><th class="num">budget</th></tr>`;
-  const varTabel = variabel.length ? `<table>${varKop}${variabel.map((c) => { const b = budgetVan(c.naam); return rij(label(c.naam), [...kol(c.bedrag, c.vorig), b ? `<span class="${b.status === "over" ? "rood" : b.status === "bijna" ? "oranje" : "groen"}">${bedrag(b.budget)}</span>` : ""]); }).join("")}${rij("Totaal variabel", [...kol(nu.variabel, vorig?.variabel), ""], "sterk")}</table>` : "<p>Geen variabele uitgaven in deze periode.</p>";
+  const vastTabel = vast.length ? `<table>${kop}${vast.map((c) => rij(`${label(c.naam)}${c.uitgesmeerd ? " (uitgesmeerd)" : ""}`, kol(c.bedrag, c.gem))).join("")}${rij("Totaal vaste lasten", kol(nu.vasteLasten, gw?.vasteLasten), "sterk")}</table>` : "<p>Geen vaste lasten in deze periode.</p>";
+  const varKop = `<tr><th></th><th class="num">${esc(periodeLabel(p))}</th><th class="num">gemiddeld</th><th class="num">vergeleken</th><th class="num">budget</th></tr>`;
+  const varTabel = variabel.length ? `<table>${varKop}${variabel.map((c) => { const b = budgetVan(c.naam); return rij(label(c.naam), [...kol(c.bedrag, c.gem), b ? `<span class="${b.status === "over" ? "rood" : b.status === "bijna" ? "oranje" : "groen"}">${bedrag(b.budget)}</span>` : ""]); }).join("")}${rij("Totaal variabel", [...kol(nu.variabel, gw?.variabel), ""], "sterk")}</table>` : "<p>Geen variabele uitgaven in deze periode.</p>";
   const over = budget.filter((b) => b.status === "over");
   const budgetMelding = over.length ? `<p class="rood"><strong>Over je budget:</strong> ${over.map((b) => `${esc(label(b.categorie))} (${bedrag(b.besteed)} van ${bedrag(b.budget)})`).join(", ")}.</p>` : "";
 
@@ -65,7 +69,7 @@ export function buildHuishoudRapportHtml({ transacties, vasteCategorieen: vasteI
   const reeks = ov.periodes.slice(Math.max(0, idx - 11), idx + 1);
   const verloop = `<table><tr><th></th><th class="num">Inkomsten</th><th class="num">Uitgaven</th><th class="num">Vast</th><th class="num">Gespaard</th><th class="num">Over</th></tr>${reeks.map((x) => { const d = ov.per.get(x); return rij(`${kortLabel(x)}${ov.volledig.get(x) ? "" : " *"}`, [bedrag(d.inkomsten), bedrag(d.uitgaven), bedrag(d.vasteLasten), bedrag(d.sparen), bedrag(d.over)]); }).join("")}</table>${reeks.some((x) => !ov.volledig.get(x)) ? '<p class="sub">* onvolledige periode</p>' : ""}`;
 
-  const inhoud = `<h2>${esc(periodeLabel(p))} in het kort</h2>${samen}${budgetMelding}
+  const inhoud = `<h2>${esc(periodeLabel(p))} in het kort</h2>${samen}${uitlegGem}${budgetMelding}${opvallend}
 <h2>Vaste lasten</h2>${vastTabel}
 <h2>Variabele uitgaven</h2>${varTabel}
 <h2>Past het bij je inkomen?</h2>${pastBij}

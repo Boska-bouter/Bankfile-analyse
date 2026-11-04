@@ -537,8 +537,8 @@ export function detectOwnAccountTransfer(tx, accountType, ownAccountsElsewhere =
     if (matchedOwn.soort === "spaar") return { category: matchedOwn.accountType === "Zakelijk" ? "Interne overboeking: zakelijk sparen" : "Interne overboeking: privé sparen", type };
     if (matchedOwn.soort === "beleggen") return { category: "Beleggen", type };
     // huishoudboekje-V1R2 — rekening van je eigen bedrijf (wens Boska 2-11): wat binnenkomt is inkomen, wat ernaartoe gaat
-    // een overboeking tussen eigen rekeningen.
-    if (matchedOwn.soort === "bedrijf") return { category: tx.amount > 0 ? "Inkomen uit eigen bedrijf" : "Interne overboeking", type };
+    // een terugboeking naar de zakelijke rekening (huishoudboekje-V3R1, wens Boska 4-11; was "Interne overboeking").
+    if (matchedOwn.soort === "bedrijf") return { category: tx.amount > 0 ? "Inkomen uit eigen bedrijf" : "Terugboeking naar zakelijk", type };
     return { category: "Interne overboeking", type };
   }
   const isIncome = tx.amount > 0;

@@ -139,6 +139,7 @@ export function uitgaveRegels(regels) {
   return regels.some((r) => r.alleenInkomen) ? regels.filter((r) => !r.alleenInkomen) : regels;
 }
 
+const HUUR = new Set(["Huur", "Huur (deels zakelijk)", "Privé - huur"]);
 export function verfijnPrive(tx, uitkomst, regels, ctx = null) {
   const cat = uitkomst?.category;
   if (!cat) return uitkomst;
@@ -193,6 +194,8 @@ export function verfijnPrive(tx, uitkomst, regels, ctx = null) {
     const terug = terugbetaling(tx, regels, ctx);
     if (terug && terug !== TERUG) return { ...uitkomst, category: terug };
   }
+  // huishoudboekje-V3R1 — "huur" onder € 150 is geen woninghuur maar huur van een apparaat (wasmachine, ketel, geiser).
+  if (tx.amount < 0 && Math.abs(tx.amount) < 150 && HUUR.has(cat)) return { ...uitkomst, category: "Huur apparaten" };
   const tegenhanger = ZAKELIJK_NAAR_PRIVE[cat];
   if (tegenhanger) return { ...uitkomst, category: tegenhanger };
   if (isPriveCategorie(cat)) return uitkomst;
