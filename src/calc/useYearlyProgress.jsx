@@ -28,7 +28,9 @@ export function useYearlyProgress(p) {
       const checks = [];
 
       // beide-V11R3 — per tegenpartij; na splitsen per rekening telt "Klopt zo" per rekening (bevestigdVoor).
-      const bekeken = (tx, set) => bevestigdVoor(set, counterpartyKey(tx.counterparty || tx.description, tx.amount), tx);
+      // huishoudboekje-V3R3 — een zelf gekozen categorie (override) is al beoordeeld: Controleren vraagt er ook niet meer naar
+      // (nogTeBekijken slaat "handmatig" over). Anders bleef er een open punt staan dat nergens te controleren was (melding Boska 4-11).
+      const bekeken = (tx, set) => tx.confidence?.level === "override" || bevestigdVoor(set, counterpartyKey(tx.counterparty || tx.description, tx.amount), tx);
       const perSleutel = (cat, set) => {
         const m = new Map();
         for (const tx of allYearItems) {
@@ -52,9 +54,12 @@ export function useYearlyProgress(p) {
       }
       const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear.values()].every(Boolean);
       checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
-      checks.push({ frac: korRegeling !== null ? 1 : 0 });
+      // huishoudboekje-V3R3 — KOR en btw-verlegd horen alleen bij een jaar met zakelijke boekingen; in een privédossier of
+      // Huishoudboekje bleef de KOR-vraag anders altijd een open punt (melding Boska 4-11).
+      const zakelijkJaar = zakItems.length > 0;
+      if (zakelijkJaar) checks.push({ frac: korRegeling !== null ? 1 : 0 });
       const kwTotal = quartersForYear.length;
-      if (korRegeling === false) {
+      if (zakelijkJaar && korRegeling === false) {
         checks.push({ frac: btwVerlegd !== null ? 1 : 0 });
       }
       // avgFrac/pct/openPunten hieronder zijn zuiver DOSSIERCONTROLE (administratief) — of de
