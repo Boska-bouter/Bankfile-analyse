@@ -1430,10 +1430,10 @@ export default function App() {
     }
     setOpdrachtgeversGevraagd(true);
   };
-  const markLoanNotALoan = (loan) => {
-    snapshotBeforeAction("Lening op Overig gezet");
+  const markLoanNotALoan = (loan, category = "Overig") => {
+    snapshotBeforeAction(`Lening op ${category} gezet`);
     for (const tx of loan.transactions) {
-      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Overig", type: tx.type }, tx.counterpartyIban);
+      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: tx.type }, tx.counterpartyIban);
     }
   };
   // De lening zelf is feitelijk PRIVÉ (bijv. een DUO-studieschuld of een privélening van familie) —

@@ -502,7 +502,8 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
 
 // beide-V15R2 — "terugbetaling lening" is een aflossing, geen teruggave van een aankoop. Zonder deze uitzondering telde een eigen
 // keuze "Overig" (knop "Dit is geen lening") niet, omdat het trefwoord "lening" dan als herkende terugbetaling gold (Boska 4-11, M. Dakhlaoui).
-const AFLOSSING_LENING = /\bterug ?betaling\s+(van\s+)?(de\s+|het\s+|mijn\s+)?(lening|geleend|lenen)/i;
+// beide-V15R3 — ook "lening terugbetaling" (n reijnhout): elk woord lening/lenen/geleend naast "terugbetaling" is een aflossing.
+const AFLOSSING_LENING = /\b(lening|leningen|lenen|geleend)\b/i;
 function looksLikeRecognizedRefund(text, rules) {
   if (!/\b(terugbetaling|restitutie|storno|creditnota|credit nota|terugstorting|terugboeking)\b/i.test(text)) return false;
   if (AFLOSSING_LENING.test(text)) return false;
