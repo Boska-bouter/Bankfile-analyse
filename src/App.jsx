@@ -1756,14 +1756,18 @@ export default function App() {
 
   const setCounterpartyOverride = (counterparty, amount, patch, iban) => {
     snapshotBeforeAction("Categorie/type aangepast");
-    const key = (iban && exclusiveIbanKey(iban, amount)) || counterpartyKey(counterparty, amount);
+    // beide-V15R2 — staat er al een keuze op de IBAN, dan gaat die bij het indelen vóór de naam (resolveClassification). Een nieuwe
+    // keuze moet dan ook daar landen, anders verandert er niets (Boska 4-11: "Dit is geen lening" deed niets bij een lening waarvan
+    // de IBAN onder meerdere namen voorkomt, bijv. "S.R. Reijnhout" en "n reijnhout").
+    const ik = iban && ibanKey(iban, amount);
+    const key = (ik && overridesByCounterparty[ik] ? ik : "") || (iban && exclusiveIbanKey(iban, amount)) || counterpartyKey(counterparty, amount);
     if (!key) return;
     setOverridesByCounterparty((prev) => ({
       ...prev,
       [key]: { ...(prev[key] || {}), ...patch, displayName: prev[key]?.displayName || counterparty, sign: amount >= 0 ? "pos" : "neg" },
     }));
     setOverridesByRow((prev) => {
-      const idsToClear = classified.filter((tx) => keyForTx(tx) === key).map((tx) => tx.id);
+      const idsToClear = classified.filter((tx) => keyForTx(tx) === key || ibanKey(tx.counterpartyIban, tx.amount) === key).map((tx) => tx.id);
       if (idsToClear.length === 0) return prev;
       let changed = false;
       const next = { ...prev };
