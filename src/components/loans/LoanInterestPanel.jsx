@@ -3,11 +3,14 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { computeLoanAmortization } from "../../tax/loanAmortization.js";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  // beide-V15R3 — "Dit is geen lening" opent een keuzelijst met categorieën, zodat de boekingen niet eerst via Overig hoeven (wens Boska 4-11).
+  const [kiesVoor, setKiesVoor] = useState(null);
   const sectionRef = useOpenOnJump(setOpen);
   if (loanSummary.length === 0 && privateLoanSummary.length === 0) {
     return (
@@ -36,8 +39,8 @@ export default function LoanInterestPanel({ defaultOpen = false, loanSummary, pr
           <p className="text-xs text-slate-500 mb-3">
             Categorie "Leningen" is altijd 0% BTW; de rente is aftrekbaar, de aflossing niet. Vul de volledige gegevens
             in om de rente/aflossing-splitsing per betaling te laten berekenen. Klopt de indeling niet (bijv. een
-            verzekeraar die toevallig op "lening" trefwoorden matcht, maar het hier feitelijk geen lening betreft)? Zet
-             'm dan op "Overig" om zelf een andere categorie te kiezen. Is de lening zelf feitelijk PRIVÉ (bijv. een
+            verzekeraar die toevallig op "lening" trefwoorden matcht, maar het hier feitelijk geen lening betreft)? Kies
+            dan "Dit is geen lening" en kies de juiste categorie. Is de lening zelf feitelijk PRIVÉ (bijv. een
             DUO-studieschuld of een privélening van familie), ongeacht van/naar welke rekening betaald wordt? Zet 'm
             dan op "Leningen (privé)" — de rente telt dan niet meer mee als aftrekbare bedrijfskosten.{" "}
             {onOpenHelp && <HelpHint chapter="rente-per-lening" onOpen={onOpenHelp} />}
@@ -79,14 +82,27 @@ export default function LoanInterestPanel({ defaultOpen = false, loanSummary, pr
                     )}
                     {onMarkNotALoan && (
                       <button
-                        onClick={() => onMarkNotALoan(loan)}
+                        onClick={() => setKiesVoor((k) => (k === loan.key ? null : loan.key))}
+                        aria-expanded={kiesVoor === loan.key}
                         className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50"
-                        title="Zet deze transactie(s) op 'Overig' om zelf een andere categorie te kiezen"
+                        title="Kies zelf de categorie voor deze transactie(s)"
                       >
                         Dit is geen lening
                       </button>
                     )}
                   </div>
+                  {onMarkNotALoan && kiesVoor === loan.key && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                      <span>Welke categorie is het dan?</span>
+                      <CategorieSelect
+                        value={null}
+                        placeholder="kies categorie…"
+                        onChange={(c) => { setKiesVoor(null); onMarkNotALoan(loan, c); }}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs max-w-[16rem]"
+                      />
+                      <button onClick={() => setKiesVoor(null)} className="text-slate-400 underline">Annuleren</button>
+                    </div>
+                  )}
                   {isOnbekend ? (
                     <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lening wordt niet gesplitst.</p>
                   ) : amortization ? (
