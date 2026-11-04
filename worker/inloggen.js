@@ -19,7 +19,7 @@ import { uitgebreidExtra, BANKKOPPELING_STATUS } from "../src/content/aanbod.js"
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { logBeheer, inloggenVastleggen } from "./logboek.js";
-import { welkomInhoud, welkomVeilig, welkomAbonnementen, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { welkomInhoud, welkomVeilig, welkomAbonnementen, welkomOmzetband, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -354,8 +354,9 @@ ${welkomKop(soorten)}
   ${welkomNieuw(alleGratis(soorten))}
 </div>
 </aside>
-<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false, abonKnop: true })}</div>
+<div class="uitlegkolom">${welkomInhoud({ soorten, metVeilig: false, metAbonnementen: false, abonKnop: true, metOmzetband: false })}</div>
 <dialog id="abonvenster" class="abonvenster" aria-label="Abonnementen vergelijken"><div class="abonbalk"><h2>Abonnementen</h2><button type="button" id="abondicht" class="abondicht">Sluiten</button></div><div class="welkom">${welkomAbonnementen(soorten)}</div></dialog>
+${soorten.length > 1 ? `<div class="omzetrij">${welkomOmzetband(soorten)}</div>` : ""}
 <div class="veiligrij">${welkomVeilig()}</div>
 </div>`, `
 const abv=document.getElementById("abonvenster");
