@@ -5,7 +5,9 @@ import { PRIVE_WEERGAVE, priveSoort, isTerugbetaling } from "../../modus/prive/w
 
 const OVERIG = "Overig";
 const SPAREN = new Set(["Interne overboeking: privé sparen", "Beleggen"]);
-const NIET_MEETELLEN = new Set(["Interne overboeking", "Inkomsten/betalingen niet dit jaar"]);
+// huishoudboekje-V3R1 — een terugboeking naar de zakelijke rekening is ook geld naar een eigen rekening.
+const EIGEN_OVERBOEKING = new Set(["Interne overboeking", "Terugboeking naar zakelijk"]);
+const NIET_MEETELLEN = new Set([...EIGEN_OVERBOEKING, "Inkomsten/betalingen niet dit jaar"]);
 
 // beide-V5R1 — labels die meebewegen met het teken (wens Boska 25-10): geld dat per saldo terugkwam van sparen of
 // uit een uitgavengroep (bijv. een belastingteruggaaf) heet ook zo. Werkt op één bedrag of een lijst (meerdere jaren).
@@ -75,7 +77,7 @@ export function budgetJaar(transacties, jaar, vasteCategorieen = []) {
       totaal.verschoven -= bedrag; verschovenIn.push(t);
     }
     let soort = budgetSoort(t.category);
-    if (t.category === "Interne overboeking") {
+    if (EIGEN_OVERBOEKING.has(t.category)) {
       const m0 = perMaand[(t.date instanceof Date ? t.date : new Date(t.date)).getMonth()] || perMaand[0];
       totaal.eigenBetaal += Number(t.amount) || 0; m0.eigenBetaal += Number(t.amount) || 0;
     }
