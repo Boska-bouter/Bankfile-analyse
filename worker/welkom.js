@@ -21,9 +21,9 @@ export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
 .inlogkop{margin:0 0 -2px;font-size:1.2rem}.inlogkop span{color:var(--muted);font-weight:500}.welkom h2,.inlogkop{line-height:1.3}
 .kenmerken{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0;padding:0;list-style:none}
 .kenmerken a{color:inherit;text-decoration:underline;text-underline-offset:2px}.kenmerken li{font-size:13px;color:var(--accent);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 12px}
-.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "veilig"}.veiligrij{grid-area:veilig;min-width:0}.abonrij{grid-area:abon;min-width:0}.abonrij section{display:flex;flex-direction:column;gap:12px}.abonrij h2{margin:0;font-size:1.2rem}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
+.welkom-grid{display:grid;gap:28px;grid-template-areas:"kop" "inlog" "uitleg" "omzet" "veilig"}.omzetrij{grid-area:omzet;min-width:0}.omzetrij .omzetband{margin:0}.veiligrij{grid-area:veilig;min-width:0}.veiligrij .veilig{display:flex;flex-direction:column;gap:12px}.veiligrij h2{margin:0;font-size:1.2rem;line-height:1.3}.kop{grid-area:kop}
 .inlogkolom{grid-area:inlog;display:flex;flex-direction:column;gap:14px;max-width:520px}.uitlegkolom{grid-area:uitleg;min-width:0}
-@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "veilig veilig";align-items:start;gap:32px 40px}
+@media (min-width:880px){.welkom-grid{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"kop kop" "uitleg inlog" "omzet omzet" "veilig veilig";align-items:start;gap:32px 40px}
 .alleen-smal{display:none}}
 .inlogkaart{gap:10px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(15,118,110,.07)}
 .inlogkaart h2{margin:0 0 2px;font-size:1rem;line-height:1.35}.inlogkaart [role=status]:empty{display:none}
@@ -224,7 +224,11 @@ export const welkomAbonnementen = (soorten) => `
   </section>
 `;
 
-export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAbonnementen = true, abonKnop = false }) {
+// beide-V14R8 — uitleg over omzetten los, zodat de inlogpagina hem over de volle breedte kan zetten (wens Boska 4-11).
+export const welkomOmzetband = (soorten) => soorten.length > 1
+  ? `<p class="omzetband">${e(OMZETTEN_WELKOM)}${soorten[0]?.korting ? ` ${e(OMZETTEN_WELKOM_KORTING(soorten[0].korting))}` : ""}</p>` : "";
+
+export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAbonnementen = true, abonKnop = false, metOmzetband = true }) {
   const meer = soorten.length > 1;
   const sleutels = soorten[0]?.plannen.map((p) => p.sleutel) || [];
   return `
@@ -244,7 +248,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAb
     <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
       ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eén abonnement, alles erin", HUISHOUDBOEKJE.alles]], "hb")}
     </div>
-    ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p><p class="omzetband">${e(OMZETTEN_WELKOM)}${soorten[0]?.korting ? ` ${e(OMZETTEN_WELKOM_KORTING(soorten[0].korting))}` : ""}</p>` : ""}
+    ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p>${metOmzetband ? welkomOmzetband(soorten) : ""}` : ""}
   </section>
 
 ${metAbonnementen ? welkomAbonnementen(soorten) : ""}
