@@ -29,7 +29,7 @@ export const HUISHOUD_HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p><em>Overzicht</em> toont de inkomsten en uitgaven per maand of per week. <em>Controleren</em> is de plek om de indeling na te kijken. <em>Instellingen</em> bevat het huishouden, de rekeningen, de categorieregels en welke categorieën vaste lasten zijn.</p>
-        <p>Er is één abonnement: alles zit erin. Je kiest dus niet tussen Eenvoudig en Uitgebreid.</p>
+        <p>Het Huishoudboekje is een eigen abonnement, zonder Eenvoudig of Uitgebreid.</p>
       </div>
     ),
   },

@@ -93,7 +93,7 @@ export function schoonTelefoon(v) {
 // beide-V1R0 — de twee soorten gebruik en de kolommen per soort.
 // huishoudboekje-V1R0 — derde soort: het Huishoudboekje (geen belasting, één abonnementsvorm).
 export const GEBRUIK = { zakelijk: "Zakelijk", prive: "Privé", huishoudboekje: "Huishoudboekje" };
-export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "particulier huishouden, zonder onderneming", huishoudboekje: "zien waar je geld blijft, per week en per maand" };
+export const GEBRUIK_UITLEG = { zakelijk: "eenmanszaak, zzp of BV", prive: "particulier huishouden, zonder onderneming", huishoudboekje: "zien waar je uitgaven naartoe gaan, per week en per maand" };
 // Voor in zinnen.
 export const GEBRUIK_ZIN = { zakelijk: "zakelijk gebruik", prive: "privégebruik", huishoudboekje: "het Huishoudboekje" };
 export const GEBRUIK_LANG = { zakelijk: "zakelijk gebruik (eenmanszaak, zzp of BV)", prive: "privégebruik (particulier huishouden)", huishoudboekje: "het Huishoudboekje (inkomsten en uitgaven per week en per maand)" };

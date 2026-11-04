@@ -18,14 +18,14 @@ export const BANKKOPPELING_STATUS = "in ontwikkeling, nog niet beschikbaar";
 // Waarom kies je welke soort (wens Boska 2-11): één zin per soort, op de welkomstpagina bovenaan elke kaart.
 export const KEUZE = {
   zakelijk: "Zakelijke inkomsten en uitgaven, aftrekposten en afschrijvingen, met een indicatie voor de btw- en IB-aangifte.",
-  prive: "Inzicht in je privégeld, met een indicatie voor de aangifte inkomstenbelasting.",
-  huishoudboekje: "Per week en per maand zien waar je geld blijft, zonder belasting.",
+  prive: "Inzicht in je privé-inkomsten en -uitgaven, met een indicatie voor je IB-aangifte. Wil je alleen je uitgaven volgen? Kijk dan bij Huishoudboekje.",
+  huishoudboekje: "Per week en per maand zien waar je uitgaven naartoe gaan, voor inzicht in je uitgavenpatroon. Wil je ook een indicatie voor je IB-aangifte? Kijk dan bij Privé.",
 };
 // Korte regel per soort bovenaan de welkomstpagina.
 export const SOORT_KORT = {
   zakelijk: "voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.",
-  prive: "voor particulieren: inzicht in je privégeld en voorbereiding op de IB-aangifte.",
-  huishoudboekje: "voor iedereen: per week en per maand zien waar je geld blijft.",
+  prive: "voor particulieren: inzicht in je privé-inkomsten en -uitgaven en een indicatie voor je IB-aangifte.",
+  huishoudboekje: "voor iedereen: per week en per maand zien waar je uitgaven naartoe gaan.",
 };
 
 // Wat zit in Eenvoudig en wat alleen in Uitgebreid (welkomstpagina, Help, uitleg in de app, beheerdersuitleg).
