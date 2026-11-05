@@ -2,7 +2,7 @@
 // het werk doen; dit verfijnt alleen haar AUTOMATISCHE uitkomst (nooit een eigen keuze van de gebruiker):
 //   - een bijschrijving wordt loon, uitkering, pensioen/AOW, toeslag, kinderbijslag of IB-teruggave;
 //   - een uitkomst die alleen zakelijk bestaat, wordt de privétegenhanger (Brandstof → Auto & brandstof).
-import { ruleMatchesText } from "../../classification/classify.js";
+import { ruleMatchesText, besteRegel } from "../../classification/classify.js";
 import { fiscalTreatmentOf, SPLIT_CATEGORY_NAMES } from "../../classification/categories.js";
 import { counterpartyKey } from "../../utils/normalization.js";
 import { PRIVE_INKOMEN_EXTRA, PRIVE_INKOMEN_VOLGORDE, ZAKELIJK_NAAR_PRIVE } from "./categorieen.js";
@@ -37,11 +37,12 @@ function terugbetaling(tx, regels, ctx) {
   if (tekst.includes("belastingdienst")) return null;
   // beide-V2R3 — alleen echt contant gestort; "storting" alleen zegt niets (Trade Republic "Storting" = beleggen).
   if (/geldmaat|geldautomaat|contant gestort|stortingsautomaat|storting contant/.test(tekst)) return "Contant geld";
-  for (const r of regels) {
-    if (r.alleenInkomen || GEEN_TERUG_REGEL.has(r.name) || !ruleMatchesText(r, tekst)) continue;
-    const naam = SPLIT_CATEGORY_NAMES[r.name] || ZAKELIJK_NAAR_PRIVE[r.name] || r.name;
-    if (isPriveCategorie(naam) && priveSoort(naam) === "uitgave") return naam;
-  }
+  // beide-V15R8 — beste regel (punten, zie besteRegel) i.p.v. de eerste; een match op alleen een betaaldienst ("Stichting Derdengelden
+  // Buckaroo") zegt niets over de leverancier en gaat hieronder naar "Terugbetalingen & restituties" (melding huishoudboekje-thread 5-11).
+  const naamVan = (r) => SPLIT_CATEGORY_NAMES[r.name] || ZAKELIJK_NAAR_PRIVE[r.name] || r.name;
+  const beste = besteRegel(regels, tekst, null, tx, { overslaan: (r) => r.alleenInkomen || GEEN_TERUG_REGEL.has(r.name)
+    || !(isPriveCategorie(naamVan(r)) && priveSoort(naamVan(r)) === "uitgave") });
+  if (beste && beste.niveau > 0) return naamVan(beste.rule);
   const regel = regels.find((r) => r.name === TERUG);
   if ((regel && ruleMatchesText(regel, tekst)) || BETAALDIENST.test(tekst)) return TERUG;
   if (ctx?.betaaldAan?.has(counterpartyKey(tx.counterparty || tx.description, -1))) return TERUG;

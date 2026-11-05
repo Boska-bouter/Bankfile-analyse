@@ -22,7 +22,8 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: Naheffingen IB voorgaande jaren", color: "bg-rose-50 text-rose-700", keywords: ["naheffing inkomstenbelasting", "naheffingsaanslag inkomstenbelasting"] },
   { name: "Belastingen: IB", color: "bg-fuchsia-100 text-fuchsia-800", keywords: ["inkomstenbelasting", " ib "] },
   { name: "Belastingen: IH", color: "bg-purple-300 text-purple-900", keywords: ["inkomstenheffing", " ih "] },
-  { name: "Belastingen: LH", color: "bg-purple-100 text-purple-800", keywords: ["loonheffing", " lh "] },
+  // beide-V15R6 — "Betaling loonaangifte 2022-12 Belastingdienst" ging naar Uitbetalen loon via het woord "loon" (Boska 5-11).
+  { name: "Belastingen: LH", color: "bg-purple-100 text-purple-800", keywords: ["loonheffing", " lh ", "loonaangifte", "aangifte loon", "loonbelasting"] },
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
