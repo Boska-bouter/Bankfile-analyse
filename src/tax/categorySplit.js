@@ -53,6 +53,7 @@ export const SPLITSBARE_CATEGORIEEN = [
   "Zakelijk internet/TV", // beide-V10R6 — mobiel en internet/tv apart
   "Privé - internet/TV",
   "Reiskosten (OV)",
+  "Reiskosten (vliegtickets)", // beide-V16R5
   "Parkeren",
   "Huur",
   "Streaming diensten",

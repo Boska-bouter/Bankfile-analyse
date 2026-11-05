@@ -52,9 +52,9 @@ export function maakLeerModel(keuzes) {
     groepen.add(groep);
   };
   for (const { tx, accountType, auto: auto0, categorie } of keuzes) {
-    // beide-V16R3 — een horeca-/tabakspin die de app alleen daarom als Privé opnames schat, telt hier als onbekend: anders vallen die
+    // beide-V16R3 — een horeca-/tabakspin die de app alleen daarom schat (vrije tijd/boodschappen), telt hier als onbekend: anders vallen die
     // eigen keuzes uit het leren en zakt de gewoonte voor de andere onbekende pinbetalingen onder de drempel (test RG).
-    const auto = auto0 === "Privé opnames" && accountType === "Zakelijk" && horecaPinVan(tx) ? "Overig" : auto0;
+    const auto = accountType === "Zakelijk" && auto0 && horecaPinVan(tx) === auto0 ? "Overig" : auto0;
     if (!categorie || categorie === "Overig" || !LEER_ONBEKEND.has(auto) || leertNiet(tx)) continue; // eigen naam telt wel als bron: één tegenpartij, en weglaten verschoof de verhoudingen (JvS)
     const s = leerSleutel(tx, accountType, auto), g = groepVan(tx);
     if (!g) continue;

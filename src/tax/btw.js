@@ -47,6 +47,9 @@ export const ZERO_BTW_CATEGORIES = new Set([
 export const DEFAULT_BTW_RATES = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ZERO_BTW_CATEGORIES.has(c) ? 0 : 21]));
 DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage BTW-tarief
 DEFAULT_BTW_RATES["Privé - openbaar vervoer"] = 9;
+// beide-V16R5 — internationale vluchten: 0% btw (binnenlandse vluchten zijn zeldzaam).
+DEFAULT_BTW_RATES["Reiskosten (vliegtickets)"] = 0;
+DEFAULT_BTW_RATES["Privé - vliegtickets"] = 0;
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
@@ -68,7 +71,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
-  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel", "Privé - internet/TV", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
+  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel", "Privé - internet/TV", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness", "Privé - vliegtickets",
   // v288 — zelfde standaard-uitsluiting als de andere "Privé - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
   // de BTW erover wordt hier standaard niet als voorbelasting geclaimd — desgewenst per dossier aan

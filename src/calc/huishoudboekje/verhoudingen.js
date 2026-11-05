@@ -4,7 +4,7 @@
 import { RICHTWAARDEN as R } from "./richtwaarden.js";
 
 export const WOONLASTEN = ["Privé - huur", "Hypotheek", "Privé - energie", "Privé - water", "Privé - energie-water", "Privé - gemeentelijke kosten"];
-export const UIT_EN_VRIJE_TIJD = ["Uit eten & afhalen", "Vakantie & dagjes uit", "Cultuur & concerten", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Sport & hobby"];
+export const UIT_EN_VRIJE_TIJD = ["Uit eten & afhalen", "Vakantie & dagjes uit", "Cultuur & concerten", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Sport & hobby", "Vliegtickets"]; // huishoudboekje-V4R7 — vliegtickets (sinds beide-V16R5 onder Vervoer) zijn meestal vakantie: tellen mee bij vrije tijd, zoals vóór de eigen categorie
 const som = (perCategorie, namen) => namen.reduce((a, n) => a + (perCategorie.get(n) || 0), 0);
 
 // Kleur bij "hoger is slechter": groen tot de grens, oranje tot grens + marge, daarna rood.

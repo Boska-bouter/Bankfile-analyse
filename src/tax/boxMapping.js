@@ -16,7 +16,7 @@ const RUBRIEK_INKOOP = ["Zakelijke inkoop/uitgaven", "Inhuur personeel"];
 // "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die dat niet doen ("Lease
 // (operationeel)" is gewoon huur, "Reiskosten (OV)" is geen eigen auto) en daarom een eigen plek
 // onder Overige bedrijfskosten houden.
-const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)"];
+const RUBRIEK_OVERIG_VERVOER = ["Lease (operationeel)", "Reiskosten (OV)", "Reiskosten (vliegtickets)"];
 // beide-V9R9 — ook het zakelijke deel van huur/energie/gemeentelijke lasten dat vanaf privé is betaald (de privé-tegenhangers met
 // een percentage); die telden al mee in de winst (yearlySummary.js) maar ontbraken hier, waardoor rubriek 4 niet aansloot op de uitleg.
 const RUBRIEK_HUISVESTING = ["Huur", "Energie-water", "Gemeentelijke kosten", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten"];

@@ -186,7 +186,7 @@ const MOBIEL_LABEL = {
   "Zakelijk internet/TV": "Internet en tv, betaald vanaf de zakelijke rekening", "Privé - internet/TV": "Internet en tv, betaald vanaf de privérekening",
 };
 const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
-  "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel", "Zakelijk internet/TV", "Reiskosten (OV)", "Streaming diensten",
+  "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel", "Zakelijk internet/TV", "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Streaming diensten",
   "Software & Online diensten", "Boekhouder, accountant & administratie",
 ];
 const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven"];

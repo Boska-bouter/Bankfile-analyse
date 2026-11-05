@@ -67,6 +67,8 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   // beide-V3R0 — ook privé kun je een auto, motor of fiets leasen (private lease): een vaste last.
   c("Private lease", "Vervoer", { label: "Lease (auto, motor, fiets)", nieuw: true, vast: true, kleur: "bg-orange-50 text-orange-700" }),
   c("Openbaar vervoer", "Vervoer", { nieuw: true, kleur: "bg-cyan-100 text-cyan-800" }),
+  // beide-V16R5 — vliegtickets apart (wens Boska 5-11); pakketreizen (TUI, Sunweb, Corendon) blijven bij vrije tijd/vakantie.
+  c("Vliegtickets", "Vervoer", { nieuw: true, kleur: "bg-sky-100 text-sky-800" }),
 
   c("Kinderopvang", "Kinderen", { vast: true }),
   c("Kinderen: school & sport", "Kinderen", { label: "School, clubs & sport kinderen", nieuw: true, kleur: "bg-rose-50 text-rose-700" }),
@@ -154,6 +156,7 @@ export const PRIVE_REGELS = Object.freeze([
     " ns ", " ns-", "ns reizigers", "ns international", "nsinternational", "ns flex", "ov-chipkaart", "ov chipkaart",
     "ovchipkaart", "ov-chip", "ov-fiets", "ovfiets", "db bahn",
   ], leen: ["Reiskosten (OV)"] },
+  { naam: "Vliegtickets", woorden: [], leen: ["Reiskosten (vliegtickets)"] },
   { naam: "Wonen: onderhoud & inrichting", woorden: [
     "ikea", "kwantum", "leen bakker", "jysk", "loods 5", "beter bed", "swiss sense", "eijerkamp", "keukenkampioen",
     "woonboulevard", "gordijnen", "vloerenland", "carpetright", "leenbakker", "gamma", "karwei", "praxis", "hornbach",
@@ -227,11 +230,12 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   ],
   "Webshops & online aankopen": ["marktplaats", "vinted", "etsy", "aliexpress", "temu", "shein", "lidl shop", "action.com"],
   "Privé - vrijetijd-uitgaan-vakantie & uit eten": [
+    "coffee", "koffiebar", "koffiehuis", "koffiecorner", "theehuis", "tearoom", // huishoudboekje-V4R6 — koffie en thee buiten de deur = vrije tijd (wens Boska 5-11)
     "hostellerie", "hotel", "herberg", "restaurant", "brasserie", "bistro", "eetcafe", "eetcafé", "pizzeria", "lunchroom",
     "paviljoen", "airbnb", "natuurhuisje", "booking.com", "landal", "center parcs", "roompot", "camping", "vakantiepark",
     "bungalowpark", "museum", "theater", "schouwburg", "bioscoop", "kinepolis", "vue cinema", "efteling", "dierentuin",
     "pretpark", "horeca", "wijnbar", "taverne", "trattoria", "steakhouse", "sushi", "grand cafe", "grandcafe", "strandpaviljoen",
-    "transavia", "klm", "ryanair", "easyjet", "corendon", "tui ", "sunweb",
+    "corendon", "tui ", "sunweb", // beide-V16R5 — losse vliegtickets (KLM, Transavia, …) staan nu bij Vliegtickets
   ],
   Huur: ["vestia", "de key", "woonpunt", "woonservice", "woonfriesland", "accolade", "dudok wonen", "woongoed", "wonen limburg"],
   Boodschappen: [
@@ -271,6 +275,7 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",
   "Lease (operationeel)": "Private lease", "Lease (financieel)": "Private lease", "Belastingen: MRB": "Auto & brandstof",
   "Reiskosten (OV)": "Openbaar vervoer", "Privé - openbaar vervoer": "Openbaar vervoer",
+  "Reiskosten (vliegtickets)": "Vliegtickets", "Privé - vliegtickets": "Vliegtickets",
   "Privé - sport & fitness": "Sport & hobby",
   "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
   "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",
