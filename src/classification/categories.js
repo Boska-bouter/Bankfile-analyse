@@ -222,6 +222,11 @@ export const DEFAULT_RULES = [
     "cameranu", "hikvision", "dahua", "axis communications", "bosch security", "hanwha vision",
     "saval", "honeywell", "ansul", "somati", "firesense",
   ] },
+  // beide-V15R4 — sportschool/fitness en sportclubs (wens Boska 4-11, Xplor-Anytime Fitness in dossier M. Dakhlaoui). Privé, niet aftrekbaar.
+  { name: "Privé - sport & fitness", color: "bg-teal-50 text-teal-700", keywords: [
+    "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "fit for free", "fitforfree",
+    "david lloyd", "healthcity", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb",
+  ] },
   { name: "Privé - vrijetijd-uitgaan-vakantie & uit eten", color: "bg-teal-50 text-teal-700", keywords: [
     "takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "cinema", "restaurant", "cafe",
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
@@ -336,7 +341,7 @@ export const CATEGORY_ORDER = [
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van privé", "Terugboeking naar zakelijk",
-  "Reiskosten (OV)", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
+  "Reiskosten (OV)", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel", "Zakelijk internet/TV", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -422,7 +427,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
   "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Privé - mobiel": "geen", "Privé - internet/TV": "geen", "Privé - openbaar vervoer": "geen", "Privé - bankkosten": "geen", "Privé - energie-water": "geen", "Privé - gemeentelijke kosten": "geen", "Privé - huur": "geen", "Privé - overige kosten": "geen",
   "Privé opnames": "geen", "Privé overige abonnementen": "geen", "Privé - streaming diensten": "geen", "Terugboeking van privé": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
-  "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Privé - vrijetijd-uitgaan-vakantie & uit eten": "geen",
+  "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Privé - vrijetijd-uitgaan-vakantie & uit eten": "geen", "Privé - sport & fitness": "geen",
   "Privé: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
   // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
@@ -685,6 +690,7 @@ export const SUBTYPE_TO_MAIN = {
   "Uitbetalen loon": "Personeel",
   "Ontvangen van zakelijk": "Privé",
   "Privé - vrijetijd-uitgaan-vakantie & uit eten": "Privé",
+  "Privé - sport & fitness": "Privé",
   "Privé: overig": "Privé",
   "Partneralimentatie": "Privé",
   "Kinderalimentatie": "Privé",
@@ -788,7 +794,7 @@ export const PRIVE_GROEPEN = {
   [PRIVE_ALGEMEEN]: [
     "Boodschappen", "Hypotheek", "Inkomsten", "Kinderopvang", "Medische uitgaven", "Overboekingen aan personen",
     "Overboeking van bekenden", "Privé - bankkosten", "Privé - openbaar vervoer", "Privé - overige kosten",
-    "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
+    "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
     "Toeslagen", "Winkels divers", "Webshops & online aankopen",
   ].map((key) => ({ key, label: key })),
 };

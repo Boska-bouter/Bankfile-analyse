@@ -68,7 +68,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [
   "Lease (operationeel)", "Lease (financieel)", "Gemeentelijke kosten", "Webshops & online aankopen",
-  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel", "Privé - internet/TV", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten",
+  "Kinderopvang", "Privé - huur", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - mobiel", "Privé - internet/TV", "Privé overige abonnementen", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   // v288 — zelfde standaard-uitsluiting als de andere "Privé - ..."-categorieën hierboven: het
   // zakelijke deel telt via het ingestelde percentage (categorySplit.js) al mee als kostenpost, maar
   // de BTW erover wordt hier standaard niet als voorbelasting geclaimd — desgewenst per dossier aan
