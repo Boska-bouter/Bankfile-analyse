@@ -7,6 +7,7 @@ import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import RekeningLabels from "../shared/RekeningLabels.jsx";
+import { vergelijkbareItems } from "../../review/vergelijkbaar.js";
 
 function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass, onSplits }) {
   const [category, setCategory] = useState(item.category || defaultCategory);
@@ -70,7 +71,18 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
 // expliciete "Toon ook bevestigde tegenpartijen"-schakelaar hieronder.
 export default function ReviewStep({ items, allItems, allDone, search, onSearch, onMark, onConfirm, defaultCategory, confirmButtonClass, explanation, bulkAction, onSplits }) {
   const [showAll, setShowAll] = useState(false);
+  // beide-V15R5 — na een keuze: andere (nog open) tegenpartijen die erop lijken, in één keer mee laten zetten (wens Boska 5-11).
+  const [voorstel, setVoorstel] = useState(null);
   const bron = showAll ? allItems : items;
+  const markMetVoorstel = (item, category, type) => {
+    onMark(item, category, type);
+    const andere = vergelijkbareItems(item, items).filter((i) => i.category !== category || (i.type || "Prive") !== type);
+    setVoorstel(andere.length ? { naam: item.name, category, type, items: andere } : null);
+  };
+  const voorstelToepassen = () => {
+    for (const i of voorstel.items) onMark(i, voorstel.category, voorstel.type);
+    setVoorstel(null);
+  };
   const filtered = useMemo(() => {
     if (!search.trim()) return bron;
     const q = search.toLowerCase();
@@ -115,9 +127,24 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
           </button>
         ))}
       </div>
+      {voorstel && (
+        <div className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900" role="status">
+          <p>
+            <strong>{voorstel.items.length}</strong> {voorstel.items.length === 1 ? "tegenpartij lijkt" : "tegenpartijen lijken"} op <strong>{voorstel.naam}</strong>:{" "}
+            {voorstel.items.slice(0, 5).map((i) => i.name).join(", ")}{voorstel.items.length > 5 ? ` en nog ${voorstel.items.length - 5}` : ""}.
+            {" "}Ook op <strong>{displayCategory(voorstel.category)}</strong>{getCategorieProfiel() ? "" : ` (${voorstel.type === "Zakelijk" ? "zakelijk" : "privé"})`} zetten?
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button type="button" onClick={voorstelToepassen} className="rounded-lg bg-sky-700 px-3 py-1.5 font-semibold text-white hover:bg-sky-800">
+              Ja, {voorstel.items.length === 1 ? "die ook" : `alle ${voorstel.items.length}`}
+            </button>
+            <button type="button" onClick={() => setVoorstel(null)} className="rounded-lg border border-sky-300 px-3 py-1.5 hover:bg-sky-100">Nee</button>
+          </div>
+        </div>
+      )}
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {filtered.map((item) => (
-          <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={onMark} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} onSplits={onSplits} />
+          <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={markMetVoorstel} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} onSplits={onSplits} />
         ))}
         {filtered.length === 0 && (
           <p className="p-4 text-sm text-slate-400 text-center">
