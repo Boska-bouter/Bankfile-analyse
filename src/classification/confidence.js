@@ -15,7 +15,8 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText, FACTUUR_BETALING, bedrijfsnaamVan } from "./classify.js";
+import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
+import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -79,7 +80,23 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = rules.find((r) => ruleMatchesText(r, text) && !isKnownFalsePositiveRuleMatch(r, text));
-  if (matchedRule) return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
+  if (matchedRule) {
+    // beide-V15R8 — passen twee categorieën even goed (zie besteRegel in classify.js), dan is het twijfel: controleren.
+    const beste = besteRegel(rules, zonderBetaalmiddel(text), tx.type === "Zakelijk" || tx.type === "Prive" ? tx.type : null, tx);
+    const vanDezeRegel = beste && (resolvedCategory === beste.rule.name || resolvedCategory === SPLIT_CATEGORY_NAMES[beste.rule.name]);
+    if (beste?.twijfel && vanDezeRegel) {
+      return { level: "heuristic", label: `Twijfel: ${displayCategory(beste.rule.name)} of ${displayCategory(beste.twijfel)}?`, twijfel: [beste.rule.name, beste.twijfel] };
+    }
+    return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
+  }
+  // beide-V16R3 — onbekende horeca-/tabakspin vanaf zakelijk als Privé opnames (classify.js): een schatting, dus nakijken.
+  if (resolvedCategory === "Privé opnames" && tx.amount < 0 && horecaPinVan(tx)) {
+    return { level: "heuristic", label: "Geschat: pinbetaling bij horeca/tabak vanaf de zakelijke rekening, waarschijnlijk privé" };
+  }
+  // beide-V16R0 — verhuurder vanaf zakelijk (zie VERHUURDER in classify.js): een schatting, dus nakijken.
+  if (resolvedCategory === "Huur" && tx.amount < 0 && !matchedRule && verhuurderVan(tx)) {
+    return { level: "heuristic", label: "Geschat: verhuurder (vastgoed/makelaar/beheer), waarschijnlijk huur" };
+  }
   // beide-V10R7 — betaling met factuurnummer vanaf zakelijk (zie FACTUUR_BETALING in classify.js): een schatting, dus nakijken.
   if (resolvedCategory === "Zakelijke inkoop/uitgaven" && tx.amount < 0 && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { level: "heuristic", label: "Geschat: betaling met factuurnummer, waarschijnlijk leverancier" };

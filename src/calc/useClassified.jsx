@@ -9,6 +9,7 @@ import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
 import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
+import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
 
 export function useClassified(p) {
   const {
@@ -25,7 +26,7 @@ export function useClassified(p) {
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
     const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
-    const base00 = transactions.map((tx) => {
+    const base00ruw = transactions.map((tx) => {
       let resolved = resolveClassification(
         tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
@@ -54,6 +55,28 @@ export function useClassified(p) {
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
+    // beide-V16R1 — leren van je eigen keuzes (classification/lerenVanKeuzes.js): een onbekende boeking krijgt een voorstel als je bij
+    // vergelijkbare onbekende boekingen (zelfde rekening, richting, pin/overboeking, bedraggroep) meestal hetzelfde koos. Op "nakijken".
+    const base00 = (() => {
+      const eigen = base00ruw.filter((t) => t.confidence?.level === "override" && !t.transferLocked);
+      if (eigen.length < 5) return base00ruw;
+      const perId = new Map(transactions.map((x) => [x.id, x]));
+      const keuzes = eigen.map((t) => {
+        const tx = perId.get(t.id) || t;
+        const auto = resolveClassification(
+          tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source], {}, {},
+          ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,
+          herkenning ? (uitkomst) => herkenning.verfijn(tx, uitkomst, categoryRules, herkenCtx) : null
+        )?.category;
+        return { tx, accountType: accountTypeByFile[tx.source], auto, categorie: t.category };
+      });
+      const model = maakLeerModel(keuzes);
+      return base00ruw.map((t) => {
+        if (t.transferLocked || t.confidence?.level === "override" || !LEER_ONBEKEND.has(t.category)) return t;
+        const v = leerVoorstel(model, t, accountTypeByFile[t.source], t.category, { eigenNamen: eigenNamenKeywords });
+        return v ? { ...t, category: v.categorie, geleerd: v, confidence: { level: "heuristic", label: leerLabel(v, t), geleerd: true } } : t;
+      });
+    })();
     // beide-V5R1 — privé: dezelfde eigen rekening in beide richtingen dezelfde soort (sparen/beleggen), zie herkenning.js.
     const vasteSoortIbans = new Set(Object.values(ownAccountsElsewhereByFile).flat().filter((o) => o?.soort).map((o) => String(o.iban).replace(/\s+/g, "").toUpperCase()));
     const base0a = herkenTerugbetalingen(base00); // beide-V8R4 — terugbetaling is geen omzet

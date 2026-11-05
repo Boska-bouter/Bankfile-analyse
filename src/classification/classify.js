@@ -1,4 +1,4 @@
-import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory } from "./categories.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -45,6 +45,79 @@ export function ruleMatchesText(rule, text, accountType = null) {
     const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
     return !voorkeur || !voorkeur[accountType] || voorkeur[accountType] === rule.name;
   });
+}
+
+// beide-V15R8 — PUNTEN I.P.V. "EERSTE REGEL WINT" (voorstel 5-11, akkoord Boska). Passen trefwoorden van meerdere categorieën, dan
+// wint het meest specifieke trefwoord; bij gelijke stand de volgorde van de regels (zoals vroeger). Niveaus:
+//   0 = betaaldienst (Adyen, Mollie, Buckaroo, pay.nl, …): telt alleen als verder niets past;
+//   1 = algemeen woord dat in veel soorten boekingen staat ("huur", "garage", "plus", "machtiging", "belastingdienst", banknamen);
+//   2 = kort woord (hooguit 4 letters, één woord);
+//   3 = specifiek woord (langer, of meerdere woorden, of een merknaam).
+// Staat het trefwoord in de naam van de echte partij (vóór " via ", " by ", " door ", of na "*" zoals "PAY.nl*HealthCity"), dan +1.
+// Gelijk hoogste niveau bij twee categorieën met elk een eigen trefwoord = twijfel: de boeking komt op "controleren" (confidence.js).
+// Meting vóór/na op alle testdossiers: tests/regressie/trefkans.test.js.
+export const BETAALDIENST_WOORDEN = new Set([
+  "adyen", "mollie", "buckaroo", "pay.nl", "zettle", "izettle", "sumup", "ccv", "worldpay", "ingenico", "sepay", "multisafepay",
+  "stripe", "stichting derdengelden", "derdengelden", "payvision", "ems", "paynl", "online betaalplatform", "ticketing payments",
+  // Het woord "Betaalautomaat" staat bij sommige banken in de omschrijving van élke pinbetaling ("BP VELDHOVEN — Betaalautomaat 08:36").
+  "betaalautomaat",
+]);
+const ALGEMENE_WOORDEN = new Set([
+  "huur", "garage", "plus", "machtiging", "coop", "belastingdienst", "assuradeur", "abn amro", "ing bank", "rabobank", "bunq", "knab",
+  "ticketing", "snack", "cafe",
+]);
+const BETAALDIENST_RE = /\b(adyen|mollie|buckaroo|pay\.?nl|zettle|sumup|ccv|worldpay|ingenico|sepay|multisafepay|stripe|derdengelden)\b/;
+export function heeftBetaaldienst(text) {
+  return BETAALDIENST_RE.test(text);
+}
+// De naam van de echte partij: "Spotify AB by Adyen" → "spotify ab"; "PAY.nl*HealthCity Zuid" → "healthcity zuid".
+export function echtePartij(counterparty) {
+  const cp = ` ${String(counterparty || "").toLowerCase()} `;
+  const ster = cp.indexOf("*");
+  if (ster > 0 && BETAALDIENST_RE.test(cp.slice(0, ster))) return ` ${cp.slice(ster + 1).trim()} `;
+  const m = cp.split(/\s(?:via|by|door)\s/);
+  if (m.length > 1 && BETAALDIENST_RE.test(m.slice(1).join(" "))) return ` ${m[0].trim()} `;
+  return "";
+}
+function trefwoordNiveau(kw) {
+  const t = String(kw).trim().toLowerCase();
+  if (BETAALDIENST_WOORDEN.has(t)) return 0;
+  if (ALGEMENE_WOORDEN.has(t)) return 1;
+  if (t.length <= 4 && !/\s/.test(t)) return 2;
+  return 3;
+}
+// Beste regel voor deze tekst, of null. Geeft { rule, niveau, twijfel } — twijfel = naam van de andere categorie bij een gelijke stand.
+export function besteRegel(rules, text, accountType, tx = null, { overslaan = null } = {}) {
+  const partij = tx ? echtePartij(tx.counterparty) : "";
+  let beste = null;
+  const kandidaten = [];
+  for (const rule of rules) {
+    if (overslaan && overslaan(rule)) continue;
+    if (!ruleMatchesText(rule, text, accountType) || isKnownFalsePositiveRuleMatch(rule, text, accountType)) continue;
+    let niveau = -1, woord = null;
+    if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) { niveau = 3; woord = "hypotheek"; }
+    for (const kw of rule.keywords) {
+      if (!keywordInText(text, kw)) continue;
+      const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
+      if (voorkeur && voorkeur[accountType] && voorkeur[accountType] !== rule.name) continue;
+      let n = trefwoordNiveau(kw);
+      if (n > 0 && partij && keywordInText(partij, kw)) n += 1;
+      if (n > niveau) { niveau = n; woord = String(kw).trim().toLowerCase(); }
+    }
+    if (niveau < 0) continue;
+    kandidaten.push({ rule, niveau, woord });
+    if (!beste || niveau > beste.niveau) beste = { rule, niveau, woord };
+  }
+  if (!beste) return null;
+  const ander = kandidaten.find((k) => k.niveau === beste.niveau && k.rule.name !== beste.rule.name && k.woord !== beste.woord
+    && !gelijkeSoort(k.rule.name, beste.rule.name));
+  return { rule: beste.rule, niveau: beste.niveau, twijfel: ander ? ander.rule.name : null };
+}
+// Zakelijke en privé-variant van hetzelfde (bijv. "Zakelijk overige abonnementen" / "Privé overige abonnementen") is geen twijfel:
+// de rekening beslist daar al.
+function gelijkeSoort(a, b) {
+  const kern = (x) => x.toLowerCase().replace(/^(privé|prive|zakelijke?)\s*[-:]?\s*/, "").replace(/\s*\(.*\)$/, "");
+  return kern(a) === kern(b) || SPLIT_CATEGORY_NAMES[a] === b || SPLIT_CATEGORY_NAMES[b] === a || displayCategory(a) === displayCategory(b);
 }
 
 // Categorieën die per definitie Zakelijk zijn wanneer ze via een snelkoppeling worden gekozen.
@@ -105,7 +178,7 @@ function kanPersoonZijn(tx) {
   return !isCardPaymentTx(tx) && !(tx.heeftIbanKolom && !tx.counterpartyIban);
 }
 
-const zonderBetaalmiddel = (t) => t.replace(/\b(google|apple|samsung|garmin) pay\b|\bbetaalpas\b/g, " ");
+export const zonderBetaalmiddel = (t) => t.replace(/\b(google|apple|samsung|garmin) pay\b|\bbetaalpas\b/g, " ");
 
 // release31V2 — soort betaling, los van de categorie: contante opname, pinbetaling of opwaardering van een
 // betaaldienst. Gebruikt door de classificatie en door de controle zakelijk ↔ privé (die zulke boekingen
@@ -127,6 +200,24 @@ export function looksLikeForeignCardPayment(tx) {
     return !!m && FOREIGN_COUNTRY_CODES.has(m[1]);
   };
   return check(tx.counterparty) || check(tx.description);
+}
+
+// beide-V16R0 — de eigen naam met andere voorletters in de tekst: "Hr JM van Schaik" of "J m van Schaik" bij "J. van Schaik"
+// (trefkans-onderzoek 5-11: 39 boekingen JvS bleven Zakelijke inkomsten i.p.v. Terugboeking van privé). Alleen voorletters
+// (1–3 losse letters) vóór de volledige achternaam en de eerste voorletter gelijk; een voluit geschreven voornaam ("Ricardo
+// Meijer") of andere voorletter ("F Meijer") telt niet, zodat familieleden niet als de ondernemer zelf worden gezien.
+// Alleen voor geld dat binnenkomt: uitgaand naar de eigen naam kiezen ondernemers verschillend (bij een BV vaak loon, test RG).
+export function naamMetVoorletters(haystack, naam) {
+  const delen = String(naam || "").split(" ").filter(Boolean);
+  if (delen.length < 2 || !/^[a-zà-ÿ]{1,3}$/.test(delen[0])) return false;
+  const voorletter = delen[0][0];
+  const achternaam = delen.slice(1).join(" ").replace(/^([a-zà-ÿ]{1,3} )+(?=[a-zà-ÿ]{4,})/, (m) => (/^(van|de|der|den|ter|ten|het|la|le) /.test(m) ? m : ""));
+  if (achternaam.length < 3) return false;
+  const esc = achternaam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^| )((?:[a-zà-ÿ] ?){1,3}|[a-zà-ÿ]{2,3}) ${esc}(?= |$)`);
+  const tekst = ` ${haystack} `.replace(/ (hr|mw|dhr|mr|mevr|de heer|mevrouw)(?= )/g, " ").replace(/\s+/g, " ");
+  const m = tekst.match(re);
+  return !!m && m[1].replace(/ /g, "")[0] === voorletter;
 }
 
 export function autoClassify(tx, rules, businessKeywords, businessExpenseKeywords, accountType, ownAccountsElsewhere = [], eigenNamen = [], zakelijkeSpaarKeywords = []) {
@@ -222,7 +313,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     // tegenpartijnaam leeg is, kijken we nog naar de volledige tekst.
     const cpNorm = String(tx.counterparty || "").toLowerCase().replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ").trim();
     const nameHaystack = cpNorm ? ` ${cpNorm} ` : textForEigenNaam;
-    const matchedNaam = eigenNamen.find((naam) => naam && nameHaystack.includes(naam));
+    const matchedNaam = eigenNamen.find((naam) => naam && (nameHaystack.includes(naam) || (isIncome && naamMetVoorletters(nameHaystack, naam))));
     if (matchedNaam) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van privé", type } : { category: "Privé opnames", type };
@@ -261,7 +352,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       const rule = findRule(name);
       return !!rule && ruleMatchesText(rule, text);
     };
-    if (matchesRule("Leningen")) {
+    // beide-V15R8 — een uitbetaling door een betaaldienst ("Stichting Derdengelden Buckaroo … pin voorschot") is omzet, geen lening
+    // (RG: 224 boekingen met de hand van Leningen naar Zakelijke inkomsten gezet).
+    if (matchesRule("Leningen") && !heeftBetaaldienst(text)) {
       // Zelfde account-gebaseerde standaardgok als bij de uitgavenkant hieronder (SPLIT_CATEGORY_NAMES)
       // — een lening-uitkering op de zakelijke rekening wordt standaard "Leningen" (zakelijk), op de
       // privérekening standaard "Leningen (privé)". Is de lening zelf feitelijk privé (bijv. DUO) maar
@@ -272,6 +365,11 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     if (matchesRule("Verzekering: Zakelijk") || matchesRule("Verzekeringen")) {
       const category = accountType === "Zakelijk" ? "Verzekering: Zakelijk" : "Verzekeringen";
       return { category, type };
+    }
+    // beide-V15R7 — een toeslag (huurtoeslag, zorgtoeslag, …) komt ook van de Belastingdienst, maar is persoonlijk inkomen: eerst
+    // "Toeslagen", dan pas de algemene Belastingdienst-regel (Boska 5-11: "VOORSCHOT HUURTOESLAG" stond op Belastingen: overig).
+    if (matchesRule("Toeslagen")) {
+      return { category: "Toeslagen", type };
     }
     if (text.includes("belastingdienst")) {
       return { category: "Belastingen: overig", type };
@@ -284,8 +382,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       // terugboeking hoort bij dezelfde categorie als de oorspronkelijke uitgave, niet in de
       // generieke "Overig"-controleerlijst. Blijft de tegenpartij onherkend, dan is "Overig" nog
       // steeds de juiste keuze: onduidelijk WAT er precies terugbetaald is, dus bewust niet gokken.
-      for (const rule of rules) {
-        if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+      const gevondenTerug = besteRegel(rules, text, null, tx);
+      for (const rule of gevondenTerug ? [gevondenTerug.rule] : []) {
+        {
           const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
           const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
           return { category: categoryName, type };
@@ -299,9 +398,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // afschrijving): die hoort bij dezelfde categorie als de uitgave (bijv. Jumbo-retour → Boodschappen),
   // niet bij "Inkomsten". Alleen voor trefwoorden uit de standaard-/eigen categorielijsten.
   if (isIncome && isCardPaymentTx(tx)) {
-    for (const rule of rules) {
-      if (rule.name === "Privé opnames") continue; // geldstorting ≠ retour: blijft ter beoordeling
-      if (ruleMatchesText(rule, text) && !isKnownFalsePositiveRuleMatch(rule, text, accountType)) {
+    const gevondenRetour = besteRegel(rules, text, null, tx, { overslaan: (r) => r.name === "Privé opnames" }); // geldstorting ≠ retour
+    for (const rule of gevondenRetour ? [gevondenRetour.rule] : []) {
+      {
         const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
         const categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
         return { category: categoryName, type };
@@ -344,8 +443,10 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // release31V2 — contante opname (geldautomaat, ook ABN "GEA, ..." en betaalwijze "Geldautomaat") → Privé opnames.
   const contantRegel = !tankRegel && betaalSoort(tx) === "contant" ? rules.find((r) => r.name === "Privé opnames") : null;
   const vasteRegel = tankRegel || contantRegel;
-  for (const rule of vasteRegel ? [vasteRegel, ...rules] : rules) {
-    if (rule === vasteRegel || (ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType))) {
+  // beide-V15R8 — de best passende regel (zie besteRegel), niet meer de eerste.
+  const gevonden = vasteRegel ? { rule: vasteRegel } : besteRegel(rules, text, accountType, tx);
+  for (const rule of gevonden ? [gevonden.rule] : []) {
+    {
       const isBizExpense = accountType === "Zakelijk" || businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
       let categoryName = !isBizExpense && SPLIT_CATEGORY_NAMES[rule.name] ? SPLIT_CATEGORY_NAMES[rule.name] : rule.name;
       // V50 — uitgave vanaf een PRIVÉrekening zonder herkenbare zakelijke aanwijzing (geen
@@ -673,6 +774,18 @@ export function bedrijfsnaamVan(tx, eigenNamen = []) {
   const laag = naam.toLowerCase();
   return !(eigenNamen || []).some((n) => { const w = String(n || "").toLowerCase().split(/[\s.]+/).filter((x) => x.length >= 4).pop(); return w && laag.includes(w); });
 }
+// beide-V16R3 — horeca, tabak, kiosk in de naam van de tegenpartij bij een pinbetaling.
+export const HORECA_TABAK = /caf[eé]\b|restaurant|bistro|brasserie|eetcaf|lunchroom|pizz|burger|kebab|d[oö]ner|shoarma|snack|friet|frituur|grill\b|sushi|ijssalon|\bbar\b|\bpub\b|kiosk|quiosk|koffie|coffee|bakker|patisserie|tabak|sigaren|tabac/i;
+export const PINBETALING = /pasvolgnr|\bpas: ?\d|\bterm:/i;
+export function horecaPinVan(tx) {
+  return PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`) && HORECA_TABAK.test(String(tx.counterparty || "").split(/\s+via\s+/i)[0]);
+}
+// beide-V16R0 — verhuurder herkennen aan de naam van de tegenpartij (vóór " via "). Netbeheer (Stedin, Enexis) is energie, geen huur.
+export const VERHUURDER = /vastgoed|makelaar|onroerend ?goed|(?<!net)beheer\s*b\.?\s?v\b/i;
+const VERHUUR_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop/uitgaven"]);
+export function verhuurderVan(tx) {
+  return VERHUURDER.test(String(tx.counterparty || "").split(/\s+via\s+/i)[0]);
+}
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 // beide-V11R7 — ook pakketten voor ondernemers (NN "Zekerheidspakket", vergelijking Koenders 30-10: € 6.300–8.700 per jaar als privé).
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?(verzekering|pakket)|zekerheidspakket|bedrijfsaansprakelijk|\bavb\b|bedrijfsschade|inventarisverzekering|bedrijfsinventaris/i;
@@ -686,6 +799,16 @@ export function resolveClassification(tx, ...rest) {
   // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
   const naar = !eigenKeuze && TELECOM_SOORT[uitkomst.category]?.[telecomSoort(tx)];
   if (naar) return { ...uitkomst, category: naar };
+  // beide-V16R0 — een verhuurder (vastgoed, makelaar, "beheer b.v.", onroerend goed) vanaf de zakelijke rekening is huur, ook met
+  // factuurnummer of bedrijfsnaam (trefkans-onderzoek 5-11: SWF Invest/Gagelhof beheer, BM Vastgoedbeheer, Makelaarskantoor Van der Meeren).
+  if (!eigenKeuze && VERHUUR_VAN.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && verhuurderVan(tx)) {
+    return { ...uitkomst, category: "Huur", type: "Zakelijk" };
+  }
+  // beide-V16R3 — onbekende pinbetaling bij horeca, tabak of kiosk vanaf de zakelijke rekening: in de testdossiers koos iedereen
+  // Privé opnames (68 van 73 keer, Houtman/RG/JvS). Op "nakijken" (confidence.js); een zakelijke lunch kies je zelf.
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx)) {
+    return { ...uitkomst, category: "Privé opnames", type: "Zakelijk" };
+  }
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()
     && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
