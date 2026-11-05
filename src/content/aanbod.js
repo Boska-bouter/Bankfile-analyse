@@ -5,7 +5,9 @@
 // Privacy: steeds "apparaat" en "niet op een server opgeslagen".
 export const PRIVACY_LABEL = "Verwerkt op je eigen apparaat";
 export const PRIVACY_KERN = "Bankbestanden en het dossier worden op het eigen apparaat verwerkt en bewaard. Voor de analyse en de berekeningen is geen server nodig.";
-export const PRIVACY_SERVER = "Op de server staan alleen het account (mailadres, abonnement) en het logboek van de beheerder.";
+// beide-V16R8 — precies wat er op de server staat (ChatGPT-check 5-11): nooit het wachtwoord zelf, alleen een controlewaarde of
+// de openbare helft van de passkey; bij een bankkoppeling tijdelijk de toegangssleutel (bank_wachtend, WACHT_MS = 2 uur).
+export const PRIVACY_SERVER = "Op de server staan alleen je account (mailadres en abonnement), wat nodig is om je inlog te controleren (nooit je wachtwoord zelf) en het logboek van de beheerder. Bij een bankkoppeling staat de toegangssleutel er tijdelijk, maximaal 2 uur.";
 
 // Abonnement (zelfde termijn als voorwaarden artikel 5).
 export const GRATIS_DAGEN = 30;
@@ -19,13 +21,13 @@ export const BANKKOPPELING_STATUS = "in ontwikkeling, nog niet beschikbaar";
 export const KEUZE = {
   zakelijk: "Zakelijke inkomsten en uitgaven, aftrekposten en afschrijvingen, met een indicatie voor de btw- en IB-aangifte.",
   prive: "Inzicht in je privé-inkomsten en -uitgaven, met een indicatie voor je IB-aangifte. Wil je alleen je uitgaven volgen? Kijk dan bij Huishoudboekje.",
-  huishoudboekje: "Per week en per maand zien waar je uitgaven naartoe gaan, voor inzicht in je uitgavenpatroon. Wil je ook een indicatie voor je IB-aangifte? Kijk dan bij Privé.",
+  huishoudboekje: "Per week en per maand zien waar je geld naartoe gaat en ontdekken waar je kunt besparen. Wil je ook een indicatie voor je IB-aangifte? Kijk dan bij Privé.",
 };
 // Korte regel per soort bovenaan de welkomstpagina.
 export const SOORT_KORT = {
   zakelijk: "voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.",
   prive: "voor particulieren: inzicht in je privé-inkomsten en -uitgaven en een indicatie voor je IB-aangifte.",
-  huishoudboekje: "voor iedereen: per week en per maand zien waar je uitgaven naartoe gaan.",
+  huishoudboekje: "voor iedereen: per week en per maand zien waar je geld naartoe gaat.",
 };
 
 // Wat zit in Eenvoudig en wat alleen in Uitgebreid (welkomstpagina, Help, uitleg in de app, beheerdersuitleg).
@@ -38,7 +40,7 @@ export const INZICHTEN = {
   huishoudboekje: {
     alles: [
       "Inkomsten, vaste lasten en uitgaven per week en maand",
-      "Verschil met de vorige maand, in procenten",
+      "Vergelijking met wat je gewoonlijk uitgeeft (gemiddelde van 6 maanden)", // huishoudboekje-V5R0 — sinds V3R2 geen procenten meer
       "Budget per categorie, met een waarschuwing",
       "Woonlasten en vaste lasten naast Nibud- en CBS-cijfers",
       "Waar je het meest kunt besparen",

@@ -13,7 +13,7 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 // s-prive en s-hb zetten --accent op het element (kaarten op welkomst- en aanmeldpagina, kolom in de vergelijking).
 export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}.s-hb,.s-huishoudboekje{--accent:#8a3b7c}
 @media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}.s-hb,.s-huishoudboekje{--accent:#cf86c0}}`;
-export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
+export const WELKOM_STIJL = `main{max-width:1200px;padding-top:48px}
 .drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
 .omzetband{margin:12px 0 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;background:var(--card);font-size:14px}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
@@ -99,7 +99,7 @@ export function vergelijkTabel(soorten, { metHuishoudboekje = true } = {}) {
   }
   if (metHuishoudboekje) {
     kaarten.push({
-      soort: "huishoudboekje", naam: HUISHOUDBOEKJE.naam, ks: ["hb"], kop: ["eigen abonnement"],
+      soort: "huishoudboekje", naam: HUISHOUDBOEKJE.naam, ks: ["hb"], kop: ["één abonnement"],
       boven: [["Eerste inzicht", { hb: "± 15-30 min" }], ["Werkwijze", { hb: "één overzicht per maand of week" }]],
       kenmerken: HUISHOUDBOEKJE.alles.map((t) => [t, { hb: V }]),
       onder: [["Bankgegevens", { hb: "bestand of bankkoppeling*" }], ["Beschikbaar", { hb: "na goedkeuring" }]],
@@ -184,7 +184,7 @@ export function welkomKop(soorten) {
   return `<header class="kop">
 <div class="merk"><svg width="52" height="52" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#1E2A4A"/><rect x="7" y="6" width="15" height="21" rx="2" fill="#fff"/><rect x="10" y="10" width="9" height="1.8" rx=".9" fill="#94a3b8"/><rect x="10" y="14" width="6" height="1.8" rx=".9" fill="#94a3b8"/><circle cx="21" cy="21" r="5" fill="#1E2A4A" stroke="#14b8a6" stroke-width="2.4"/><path d="M24.6 24.6l3.6 3.6" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round"/></svg><div><h1>Bankafschriften<span class="aangifte">Tool</span></h1><div class="onder">Inzicht in geldstromen, van bankafschrift tot indicatie voor de aangifte</div></div></div>
 <p class="sub">Bankafschriften vanzelf ingedeeld, voor drie soorten gebruik:</p>
-<ul class="drie"><li><b>Zakelijk</b> voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.</li><li><b>Privé</b> voor particulieren: inzicht in je privé-inkomsten en -uitgaven en een indicatie voor je IB-aangifte.</li><li><b>Huishoudboekje</b> voor iedereen: per week en per maand zien waar je uitgaven naartoe gaan.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></li></ul>
+<ul class="drie"><li><b>Zakelijk</b> voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.</li><li><b>Privé</b> voor particulieren: inzicht in je privé-inkomsten en -uitgaven en een indicatie voor je IB-aangifte.</li><li><b>Huishoudboekje</b> voor iedereen: per week en per maand zien waar je geld naartoe gaat.<span class="alleen-smal"> <a href="#wat" style="color:var(--accent)">Meer weten</a></span></li></ul>
 <ul class="kenmerken">${kenmerken.map((k) => k.href ? `<li><a href="${k.href}">${e(k.tekst)}</a></li>` : `<li>${e(k)}</li>`).join("")}</ul>
 </header>`;
 }
@@ -193,7 +193,7 @@ export function welkomKop(soorten) {
 export const welkomNieuw = (gratis) => `<ol class="nieuw">
 <li>Vul je e-mailadres in en kies <b>Account aanvragen</b>. Je krijgt een mail met een inloglink.</li>
 <li>Log in met die link en kies je abonnement: Zakelijk, Privé of Huishoudboekje (bij Zakelijk en Privé ook Eenvoudig of Uitgebreid).</li>
-<li>De beheerder beoordeelt de aanvraag. Na goedkeuring krijg je een mail${gratis ? `; vanaf dan loopt het gratis abonnement van ${GRATIS_DAGEN} dagen` : ""}.</li>
+<li>De beheerder beoordeelt je aanvraag. Na goedkeuring ontvang je een e-mail.${gratis ? ` Vanaf dat moment gaat je gratis proefperiode van ${GRATIS_DAGEN} dagen in.` : ""}</li>
 <li>Stel een wachtwoord of passkey in. Daarna log je zonder mail in.</li></ol>`;
 
 // beide-V12R7 — veiligheidsblok los, zodat de inlogpagina het onderaan over de volle breedte kan zetten (wens Boska 31-10).
@@ -246,7 +246,7 @@ export function welkomInhoud({ soorten, veilig = VEILIG, metVeilig = true, metAb
     ${abonKnop ? `<div class="soortkop"><h2>${meer ? "Zakelijk, Privé of Huishoudboekje" : "Voor wie"}</h2><button type="button" id="abonknop" class="tweede abonknop" aria-haspopup="dialog">Abonnementen vergelijken</button></div>` // beide-V14R4: knop naast de kop (wens Boska 3-11)
       : `<h2>${meer ? "Zakelijk, Privé of Huishoudboekje" : "Voor wie"}</h2>`}
     <div class="soortkaarten">${soorten.map((s) => soortKaart(s.naam, s.kies, s.voor, [["In Eenvoudig en Uitgebreid", s.beide], ["Alleen in Uitgebreid", s.uitgebreid]], s.soort)).join("")}
-      ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eigen abonnement", HUISHOUDBOEKJE.alles]] /* huishoudboekje-V2R9 — niet "alles erin" (wens Boska 4-11) */, "hb")}
+      ${soortKaart(HUISHOUDBOEKJE.naam, HUISHOUDBOEKJE.kies, HUISHOUDBOEKJE.voor, [["Eén abonnement", HUISHOUDBOEKJE.alles]] /* huishoudboekje-V5R0 — "Eén abonnement" (ChatGPT-check, akkoord Boska 5-11); niet "alles erin" (4-11) */, "hb")}
     </div>
     ${meer ? `<p class="klein">Met één account kun je ze allemaal hebben, elk met een eigen dossier.</p>${metOmzetband ? welkomOmzetband(soorten) : ""}` : ""}
   </section>

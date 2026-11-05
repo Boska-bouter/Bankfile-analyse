@@ -278,7 +278,7 @@ async function stuurLink(env, email, link) {
       ["Eenvoudig", "in vier stappen de bankbestanden indelen en een eerste overzicht krijgen: zakelijk een indicatie van de btw en inkomstenbelasting, privé de inkomsten en uitgaven per maand."],
       ["Uitgebreid", `alle tabbladen en controles; zakelijk met ${uitgebreidExtra("zakelijk")}, privé met ${uitgebreidExtra("prive")}.`],
       ...(bankkoppelingAan(env) ? [["Uitgebreid met bankkoppeling", `alles van Uitgebreid, en de transacties rechtstreeks bij de bank ophalen in plaats van bestanden te downloaden. De bankkoppeling is ${BANKKOPPELING_STATUS}.`]] : []),
-      ["Huishoudboekje", "eigen abonnement: per week en per maand zien waar je geld blijft, met vaste lasten, budget per categorie, een vergelijking met je inkomen en tips om te besparen. Zonder belasting."],
+      ["Huishoudboekje", "één abonnement: per week en per maand zien waar je geld blijft, met vaste lasten, budget per categorie, een vergelijking met je inkomen en tips om te besparen. Zonder belasting."],
     ],
     naLijst: ["Ik beoordeel je aanvraag zo snel mogelijk. Je krijgt daarover een e-mail."],
     knop: { link, tekst: "Inloggen en aanvraag doen" },
