@@ -55,6 +55,8 @@ export const DEFAULT_RULES = [
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
+    // beide-V16R7 — soortwoorden (wens Boska 5-11: "MAKRO BST TANKEN BEST" is brandstof, geen boodschappen). Die winnen van een winkelnaam (classify.js SOORT_WOORDEN).
+    "tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue",
     // release31V2 — buitenlandse ketens en algemene woorden die in de dossiers als vakantie/winkel eindigden.
     "aral", "agip", "tankstelle", "tankstation", "ok express", "omv ",
     // V58 — laden van een elektrische auto valt onder brandstof (en niet onder huisenergie via "eneco")

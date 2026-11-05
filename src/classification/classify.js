@@ -88,8 +88,13 @@ export function echtePartij(counterparty) {
   if (m.length > 1 && BETAALDIENST_RE.test(m.slice(1).join(" "))) return ` ${m[0].trim()} `;
   return "";
 }
+// beide-V16R7 — soortwoorden zeggen WAT er gekocht is en winnen van de winkelnaam: "Makro tanken" is brandstof, geen boodschappen
+// (wens Boska 5-11). Niveau 4, boven elke merknaam.
+const BETAALKAART = /pasvolgnr|\bterm:|\bbea\b|betaalpas|kaartnr|\bpas: ?\d|apple pay|google pay|betaalautomaat|\bpinnen\b|\bpin\b/i;
+export const SOORT_WOORDEN = new Set(["tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
 function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
+  if (SOORT_WOORDEN.has(t)) return 4;
   if (BETAALDIENST_WOORDEN.has(t)) return 0;
   if (ALGEMENE_WOORDEN.has(t)) return 1;
   if (t.length <= 4 && !/\s/.test(t)) return 2;
@@ -579,6 +584,10 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // dat het geen losstaand "huur" is, dus geen Huur-match. Bij "verhuur" valt de transactie in
   // autoClassify bovendien eerst op "Overig" (zie daar), zodat die bewust wordt beoordeeld.
   if (rule.name === "Huur" && /[a-zà-ÿ]huur/.test(text)) return true;
+  // beide-V16R7 — "benzine"/"tanken" telt alleen bij een (pin)betaling aan een tankpunt, niet in de omschrijving van een overboeking
+  // aan een persoon ("boodschappen en benzine augustus"): daar is het een terugbetaling of opname (test DB/JvS).
+  if (rule.name === "Brandstof" && !BETAALKAART.test(text)
+    && !rule.keywords.some((kw) => !SOORT_WOORDEN.has(String(kw).trim().toLowerCase()) && keywordInText(text, kw))) return true;
   // beide-V16R5 — aankopen aan boord ("TRANSAVIA INFLIGHT SHOP") zijn geen vliegticket.
   if (rule.name === "Reiskosten (vliegtickets)" && /inflight|in-flight|onboard|on board/.test(text)) return true;
   // "Telecom" herkent "ziggo" (provider), maar "Ziggo Dome" is de concertzaal: een uitgaansuitgave.
