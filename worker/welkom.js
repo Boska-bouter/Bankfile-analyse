@@ -163,7 +163,7 @@ ${soorten.length > 1 ? `<p class="sub">Bankafschriften vanzelf ingedeeld, voor t
 export const welkomNieuw = (gratis) => `<ol class="nieuw">
 <li>Vul je e-mailadres in en kies <b>Account aanvragen</b>. Je krijgt een mail met een inloglink.</li>
 <li>Log in met die link en kies je abonnement: Zakelijk of Privé, Eenvoudig of Uitgebreid.</li>
-<li>De beheerder beoordeelt de aanvraag. Na goedkeuring krijg je een mail${gratis ? `; vanaf dan loopt het gratis abonnement van ${GRATIS_DAGEN} dagen` : ""}.</li>
+<li>De beheerder beoordeelt je aanvraag. Na goedkeuring ontvang je een e-mail.${gratis ? ` Vanaf dat moment gaat je gratis proefperiode van ${GRATIS_DAGEN} dagen in.` : ""}</li>
 <li>Stel een wachtwoord of passkey in. Daarna log je zonder mail in.</li></ol>`;
 
 // beide-V12R7 — veiligheidsblok los, zodat de inlogpagina het onderaan over de volle breedte kan zetten (wens Boska 31-10).

@@ -5,7 +5,9 @@
 // Privacy: steeds "apparaat" en "niet op een server opgeslagen".
 export const PRIVACY_LABEL = "Verwerkt op je eigen apparaat";
 export const PRIVACY_KERN = "Bankbestanden en het dossier worden op het eigen apparaat verwerkt en bewaard. Voor de analyse en de berekeningen is geen server nodig.";
-export const PRIVACY_SERVER = "Op de server staan alleen het account (mailadres, abonnement) en het logboek van de beheerder.";
+// beide-V16R8 — precies wat er op de server staat (ChatGPT-check 5-11): nooit het wachtwoord zelf, alleen een controlewaarde of
+// de openbare helft van de passkey; bij een bankkoppeling tijdelijk de toegangssleutel (bank_wachtend, WACHT_MS = 2 uur).
+export const PRIVACY_SERVER = "Op de server staan alleen je account (mailadres en abonnement), wat nodig is om je inlog te controleren (nooit je wachtwoord zelf) en het logboek van de beheerder. Bij een bankkoppeling staat de toegangssleutel er tijdelijk, maximaal 2 uur.";
 
 // Abonnement (zelfde termijn als voorwaarden artikel 5).
 export const GRATIS_DAGEN = 30;
