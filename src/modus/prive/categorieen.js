@@ -261,6 +261,7 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Autokosten": "Auto & brandstof", "Brandstof": "Auto & brandstof", "Parkeren": "Auto & brandstof",
   "Lease (operationeel)": "Private lease", "Lease (financieel)": "Private lease", "Belastingen: MRB": "Auto & brandstof",
   "Reiskosten (OV)": "Openbaar vervoer", "Privé - openbaar vervoer": "Openbaar vervoer",
+  "Privé - sport & fitness": "Sport & hobby",
   "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
   "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",
   "Huur (deels zakelijk)": "Privé - huur", "Energie-water (deels zakelijk)": "Privé - energie-water",
