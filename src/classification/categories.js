@@ -35,6 +35,8 @@ export const DEFAULT_RULES = [
     "snelstart", "moneybird", "e-boekhouden.nl", "rompslomp", "yuki boekhouden", "twinfield", "accountancy gemak"] },
   { name: "Boodschappen", color: "bg-lime-100 text-lime-800", keywords: [
     "jumbo", "albert heijn", " ah ", "ah to go", "dirk", "dirk van den broek", "linders", "jan linders",
+    // beide-V16R4 — tabak, sigaretten, snoep en kiosk (wens Boska 5-11: "Tabak Boschdijk" is boodschappen).
+    "tabak", "tabakshop", "tabakszaak", "tabakswinkel", "sigaret", "sigaretten", "sigaren", "primera", "snoep", "snoepgoed", "kiosk", "quiosk",
     "gall&gall", "gall & gall", "mitra", "drankenhandel", "slijterij",
     "nettorama", "aldi", "lidl", "coop", " plus ", "dekamarkt", "deka markt", "ekoplaza", "spar",
     "kruidvat", "etos", "vomar", "vomar voordeelmarkt", "supersam", "supermarkt", "van cranenbroek",
@@ -152,6 +154,8 @@ export const DEFAULT_RULES = [
   { name: "Privé - internet/TV", color: "bg-indigo-50 text-indigo-700", keywords: [] },
   // beide-V10R6 — herkende OV-reizen zijn standaard privé (wens Boska 28-10); zakelijk = met de hand "Reiskosten (OV)" kiezen.
   { name: "Privé - openbaar vervoer", color: "bg-cyan-50 text-cyan-700", keywords: [] },
+  // beide-V16R5 — vliegtickets (wens Boska 5-11): net als OV standaard privé; zakelijk = zelf "Reiskosten (vliegtickets)" kiezen.
+  { name: "Privé - vliegtickets", color: "bg-sky-50 text-sky-700", keywords: [] },
   // V47 — bankkosten van een privérekening zijn geen zakelijke kosten (zie SPLIT_CATEGORY_NAMES).
   // V56 — heen-en-weer boeken tussen twee eigen rekeningen van hetzelfde type (herkend op IBAN).
   { name: "Interne overboeking", color: "bg-cyan-100 text-cyan-800", keywords: [] },
@@ -203,6 +207,9 @@ export const DEFAULT_RULES = [
     "9292", "syntus", "keolis", "breng", "u-ov", "r-net", "translink", "flixbus", "eurolines",
     "thalys", "eurostar", "ic direct",
   ] },
+  { name: "Reiskosten (vliegtickets)", color: "bg-sky-200 text-sky-900", keywords: [
+    "klm", "transavia", "ryanair", "easyjet", "vueling", "lufthansa", "eurowings", "tui fly", "tuifly", "wizz air", "wizzair", "sunexpress", "pegasus airlines", "turkish airlines", "emirates", "qatar airways", "air france", "airfrance", "brussels airlines", "iberia", "british airways", "norwegian air", "sas scandinavian", "condor", "aegean", "tap air", "air arabia", "royal air maroc", "kenya airways", "delta air lines", "united airlines", "flydubai", "vliegticket", "vliegtickets", "airline",
+  ] },
   // beide-V10R6 — mobiel en internet/tv zijn aparte categorieën (wens Boska 28-10): het zakelijk deel verschilt vaak
   // (bijv. mobiel 50%, internet thuis 100% privé). Aanbieders van beide (KPN, Vodafone, Odido) staan bij mobiel; staat er
   // internet/tv/glasvezel in de omschrijving, dan wordt het internet/TV (zie telecomSoort in classify.js).
@@ -233,6 +240,10 @@ export const DEFAULT_RULES = [
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
     "feelgoods burgers",
+    // beide-V16R4 — koffie en thee onderweg (wens Boska 5-11: "Liempde West Coffee" is vrije tijd). Alleen samenstellingen als trefwoord;
+    // los "coffee"/"koffie"/"thee" alleen in de naam bij een pinbetaling (horecaPinVan in classify.js), anders won het van "esso" en
+    // van koffie die een horecazaak inkoopt.
+    "koffiebar", "koffiehuis", "theehuis", "tearoom",
     // v312 (V33)
     "mc donald", "mcdonalds", "buckaroo", "snack", "ziggo dome", "afas live", "disney", "ticketing payments", "ticketing",
     // Vervoer/vermaak dat bij uitjes hoort, geen eigen-vervoer-/OV-kosten (die staan al bij
@@ -340,9 +351,9 @@ export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
-  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van privé", "Terugboeking naar zakelijk",
-  "Reiskosten (OV)", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
+  "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel", "Zakelijk internet/TV", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -426,7 +437,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   // ongeacht tx.type — dit was precies het gat waardoor "Privé: overig"/"Boodschappen" e.d. op de
   // zakelijke rekening ten onrechte als bedrijfskosten werden meegeteld
   "Boodschappen": "geen", "Hypotheek": "geen", "Incasso, juridisch & schulden": "geen", "Inkomsten": "geen",
-  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Privé - mobiel": "geen", "Privé - internet/TV": "geen", "Privé - openbaar vervoer": "geen", "Privé - bankkosten": "geen", "Privé - energie-water": "geen", "Privé - gemeentelijke kosten": "geen", "Privé - huur": "geen", "Privé - overige kosten": "geen",
+  "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Privé - mobiel": "geen", "Privé - internet/TV": "geen", "Privé - openbaar vervoer": "geen", "Privé - vliegtickets": "geen", "Privé - bankkosten": "geen", "Privé - energie-water": "geen", "Privé - gemeentelijke kosten": "geen", "Privé - huur": "geen", "Privé - overige kosten": "geen",
   "Privé opnames": "geen", "Privé overige abonnementen": "geen", "Privé - streaming diensten": "geen", "Terugboeking van privé": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Privé - vrijetijd-uitgaan-vakantie & uit eten": "geen", "Privé - sport & fitness": "geen",
   "Privé: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
@@ -436,7 +447,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten",
   "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
   "Marketing-website": "kosten", "Onderhoud apparatuur/machines": "kosten", "Parkeren": "kosten",
-  "Betaalautomaat kosten": "kosten", "Reiskosten (OV)": "kosten",
+  "Betaalautomaat kosten": "kosten", "Reiskosten (OV)": "kosten", "Reiskosten (vliegtickets)": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
   "Zakelijk mobiel": "kosten", "Zakelijk internet/TV": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke inkoop/uitgaven": "kosten",
@@ -675,6 +686,7 @@ export const SUBTYPE_TO_MAIN = {
   "Privé - mobiel": "Privé",
   "Privé - internet/TV": "Privé",
   "Privé - openbaar vervoer": "Privé",
+  "Privé - vliegtickets": "Privé",
   "Privé - bankkosten": "Privé",
   "Privé - energie-water": "Privé",
   "Privé - gemeentelijke kosten": "Privé",
@@ -686,6 +698,7 @@ export const SUBTYPE_TO_MAIN = {
   "Terugboeking van privé": "Privé",
   "Terugboeking naar zakelijk": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
+  "Reiskosten (vliegtickets)": "Vervoer & auto",
   "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
   "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
@@ -794,7 +807,7 @@ export const PRIVE_GROEPEN = {
   [PRIVE_VERZEKERINGEN]: [{ key: "Verzekeringen", label: "Verzekeringen" }],
   [PRIVE_ALGEMEEN]: [
     "Boodschappen", "Hypotheek", "Inkomsten", "Kinderopvang", "Medische uitgaven", "Overboekingen aan personen",
-    "Overboeking van bekenden", "Privé - bankkosten", "Privé - openbaar vervoer", "Privé - overige kosten",
+    "Overboeking van bekenden", "Privé - bankkosten", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé - overige kosten",
     "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
     "Toeslagen", "Winkels divers", "Webshops & online aankopen",
   ].map((key) => ({ key, label: key })),
@@ -813,7 +826,7 @@ export const ZAK_GROEPEN = {
   "Apparatuur & inventaris": lid("Zakelijk - apparatuur/machines"),
   "Zakelijke inkomsten": lid("Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"),
   "Huisvesting": lid("Huur", "Energie-water", "Gemeentelijke kosten"),
-  "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)"),
+  "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)", "Reiskosten (vliegtickets)"),
   "Telecom & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel", "Zakelijk internet/TV", "Streaming diensten", "Software & Online diensten"),
   "Personeel": lid("Inhuur personeel", "Uitbetalen loon"),
   "Belastingen & heffingen": lid("Belastingen: overig", "Belastingen: OB", "Belastingen: LH", "Belastingen: IB", "Belastingen: ZVW", "Belastingen: IH", "Belastingen: MRB",

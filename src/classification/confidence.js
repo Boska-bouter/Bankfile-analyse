@@ -90,8 +90,8 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
   }
   // beide-V16R3 — onbekende horeca-/tabakspin vanaf zakelijk als Privé opnames (classify.js): een schatting, dus nakijken.
-  if (resolvedCategory === "Privé opnames" && tx.amount < 0 && horecaPinVan(tx)) {
-    return { level: "heuristic", label: "Geschat: pinbetaling bij horeca/tabak vanaf de zakelijke rekening, waarschijnlijk privé" };
+  if (!matchedRule && tx.amount < 0 && horecaPinVan(tx) === resolvedCategory) {
+    return { level: "heuristic", label: "Geschat: pinbetaling bij horeca/tabak/bakker, waarschijnlijk privé" };
   }
   // beide-V16R0 — verhuurder vanaf zakelijk (zie VERHUURDER in classify.js): een schatting, dus nakijken.
   if (resolvedCategory === "Huur" && tx.amount < 0 && !matchedRule && verhuurderVan(tx)) {

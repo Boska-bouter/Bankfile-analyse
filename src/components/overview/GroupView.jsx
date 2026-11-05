@@ -580,7 +580,15 @@ export function DetailTable({
             ))}
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Geen transacties gevonden voor "{query}".</td>
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                  Geen transacties gevonden{query.trim() ? ` voor "${query}"` : ""}.
+                  {/* beide-V16R6 — een aangeklikt filter (Controleren/Onduidelijk) beperkt ook de zoekopdracht; zeg dat erbij (vraag Boska 5-11). */}
+                  {(filterHeuristic || filterFallback) && (
+                    <> Je kijkt alleen naar {filterHeuristic && filterFallback ? "Controleren en Onduidelijk" : filterHeuristic ? "Controleren" : "Onduidelijk"}.{" "}
+                      <button type="button" onClick={() => { setFilterHeuristic(false); setFilterFallback(false); }} className="font-medium text-teal-700 underline hover:text-teal-900">Zoek in alle boekingen</button>
+                    </>
+                  )}
+                </td>
               </tr>
             )}
             {filteredItems.length > toonAantal && (

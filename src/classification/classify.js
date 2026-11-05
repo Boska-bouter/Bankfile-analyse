@@ -570,6 +570,8 @@ export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
   // dat het geen losstaand "huur" is, dus geen Huur-match. Bij "verhuur" valt de transactie in
   // autoClassify bovendien eerst op "Overig" (zie daar), zodat die bewust wordt beoordeeld.
   if (rule.name === "Huur" && /[a-zà-ÿ]huur/.test(text)) return true;
+  // beide-V16R5 — aankopen aan boord ("TRANSAVIA INFLIGHT SHOP") zijn geen vliegticket.
+  if (rule.name === "Reiskosten (vliegtickets)" && /inflight|in-flight|onboard|on board/.test(text)) return true;
   // "Telecom" herkent "ziggo" (provider), maar "Ziggo Dome" is de concertzaal: een uitgaansuitgave.
   if (text.includes("ziggo dome") && rule.name !== "Privé - vrijetijd-uitgaan-vakantie & uit eten") return true;
   // "Betaalautomaat kosten" herkent o.a. "buckaroo" — op een zakelijke rekening zijn dat servicekosten van de
@@ -775,10 +777,15 @@ export function bedrijfsnaamVan(tx, eigenNamen = []) {
   return !(eigenNamen || []).some((n) => { const w = String(n || "").toLowerCase().split(/[\s.]+/).filter((x) => x.length >= 4).pop(); return w && laag.includes(w); });
 }
 // beide-V16R3 — horeca, tabak, kiosk in de naam van de tegenpartij bij een pinbetaling.
-export const HORECA_TABAK = /caf[eé]\b|restaurant|bistro|brasserie|eetcaf|lunchroom|pizz|burger|kebab|d[oö]ner|shoarma|snack|friet|frituur|grill\b|sushi|ijssalon|\bbar\b|\bpub\b|kiosk|quiosk|koffie|coffee|bakker|patisserie|tabak|sigaren|tabac/i;
+// beide-V16R4 — niet meer Privé opnames maar de soort uitgave (wens Boska 5-11): horeca → vrije tijd/uit eten, tabak/snoep/bakker → boodschappen.
+export const HORECA_TABAK = /caf[eé]\b|restaurant|bistro|brasserie|eetcaf|lunchroom|pizz|burger|kebab|d[oö]ner|shoarma|snack|friet|frituur|grill\b|sushi|ijssalon|\bbar\b|\bpub\b|kiosk|quiosk|koffie|coffee|\bthee\b|theehuis|bakker|patisserie|tabak|sigaren|sigaret|snoep|tabac/i;
+const BOODSCHAPPEN_PIN = /kiosk|quiosk|bakker|patisserie|tabak|sigaren|sigaret|snoep|tabac/i;
 export const PINBETALING = /pasvolgnr|\bpas: ?\d|\bterm:/i;
+export const HORECA_PIN_CATEGORIEEN = new Set(["Boodschappen", "Privé - vrijetijd-uitgaan-vakantie & uit eten"]);
 export function horecaPinVan(tx) {
-  return PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`) && HORECA_TABAK.test(String(tx.counterparty || "").split(/\s+via\s+/i)[0]);
+  const naam = String(tx.counterparty || "").split(/\s+via\s+/i)[0];
+  if (!PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`) || !HORECA_TABAK.test(naam)) return null;
+  return BOODSCHAPPEN_PIN.test(naam) ? "Boodschappen" : "Privé - vrijetijd-uitgaan-vakantie & uit eten";
 }
 // beide-V16R0 — verhuurder herkennen aan de naam van de tegenpartij (vóór " via "). Netbeheer (Stedin, Enexis) is energie, geen huur.
 export const VERHUURDER = /vastgoed|makelaar|onroerend ?goed|(?<!net)beheer\s*b\.?\s?v\b/i;
@@ -796,6 +803,8 @@ export function resolveClassification(tx, ...rest) {
   const eigenKeuze = !!overrideSleutel(tx, rest[4] || {}, rest[3]);
   // beide-V10R6 — herkende OV-reizen standaard privé (wens Boska 28-10); zakelijk alleen als iemand zelf "Reiskosten (OV)" kiest.
   if (!eigenKeuze && uitkomst.category === "Reiskosten (OV)") return { ...uitkomst, category: "Privé - openbaar vervoer" };
+  // beide-V16R5 — vliegtickets net zo: standaard privé, zakelijk alleen als iemand zelf "Reiskosten (vliegtickets)" kiest.
+  if (!eigenKeuze && uitkomst.category === "Reiskosten (vliegtickets)") return { ...uitkomst, category: "Privé - vliegtickets" };
   // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
   const naar = !eigenKeuze && TELECOM_SOORT[uitkomst.category]?.[telecomSoort(tx)];
   if (naar) return { ...uitkomst, category: naar };
@@ -804,11 +813,11 @@ export function resolveClassification(tx, ...rest) {
   if (!eigenKeuze && VERHUUR_VAN.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && verhuurderVan(tx)) {
     return { ...uitkomst, category: "Huur", type: "Zakelijk" };
   }
-  // beide-V16R3 — onbekende pinbetaling bij horeca, tabak of kiosk vanaf de zakelijke rekening: in de testdossiers koos iedereen
-  // Privé opnames (68 van 73 keer, Houtman/RG/JvS). Op "nakijken" (confidence.js); een zakelijke lunch kies je zelf.
-  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx)) {
-    return { ...uitkomst, category: "Privé opnames", type: "Zakelijk" };
-  }
+  // beide-V16R3 — onbekende pinbetaling bij horeca, tabak of kiosk vanaf de zakelijke rekening is privé (testdossiers: 68 van 73 keer).
+  // beide-V16R4 — met de soort uitgave (horeca → vrije tijd/uit eten, tabak/snoep → boodschappen). Op "nakijken"; een zakelijke lunch kies je zelf.
+  //   Ook op de privérekening (dan zonder profiel = zakelijk dossier met privérekening).
+  const horeca = !eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx);
+  if (horeca) return { ...uitkomst, category: horeca };
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()
     && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
