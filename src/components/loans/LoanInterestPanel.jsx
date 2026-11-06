@@ -7,7 +7,50 @@ import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
-export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp }) {
+
+// beide-V17R8 — de boekingen zelf tonen (wens Boska 6-11: "de beschrijving van de banktransactie is niet te zien, dus dan is het een gok?").
+// Zo zie je waarop de herkenning "lening" is gebaseerd, meestal het woord lening in de omschrijving.
+export function kortOmschrijving(t) {
+  return String(t.description || t.fullDescription || "")
+    .replace(/^Naam:.*?(?=Omschrijving:|IBAN:|Kenmerk:|$)/, "")
+    .replace(/Omschrijving:\s*/, "")
+    .replace(/IBAN:\s*\S+\s*/, "")
+    .replace(/(Datum\/Tijd|Valutadatum):.*$/, "")
+    .replace(/Kenmerk:\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+}
+const datum = (d) => (d instanceof Date ? d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }) : "");
+function LeningBoekingen({ loan, transactions = [], nietLening = 0, onOpschonen }) {
+  const [alle, setAlle] = useState(false);
+  if (!transactions.length) return null;
+  const lijst = [...transactions].sort((a, b) => (a.date?.getTime?.() || 0) - (b.date?.getTime?.() || 0));
+  const toon = alle ? lijst : lijst.slice(0, 3);
+  return (
+    <div className="mt-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+      {nietLening > 0 && onOpschonen && (
+        <div className="mb-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-amber-900">
+          {nietLening} van de {transactions.length} boekingen {nietLening === 1 ? "lijkt" : "lijken"} geen lening (geen lening in de omschrijving), maar {nietLening === 1 ? "staat" : "staan"} hier door een keuze op de hele tegenpartij.{" "}
+          <button type="button" onClick={() => onOpschonen(loan)} className="font-semibold underline">Alleen de leningboekingen houden</button>
+        </div>
+      )}
+      {toon.map((t, i) => (
+        <div key={t.id ?? i} className="flex gap-2 py-0.5">
+          <span className="font-mono text-slate-400 shrink-0">{datum(t.date)}</span>
+          <span className="font-mono shrink-0 w-24 text-right">{eur(t.amount)}</span>
+          <span className="min-w-0 break-words">{kortOmschrijving(t) || <em className="text-slate-400">geen omschrijving</em>}</span>
+        </div>
+      ))}
+      {lijst.length > 3 && (
+        <button type="button" onClick={() => setAlle((v) => !v)} className="mt-0.5 text-teal-700 underline">
+          {alle ? "Minder tonen" : `Toon alle ${lijst.length} boekingen`}
+        </button>
+      )}
+    </div>
+  );
+}
+export default function LoanInterestPanel({ defaultOpen = false, loanSummary, privateLoanSummary = [], loanDetails, onOpenModal, onMarkUnknown, onUnmarkUnknown, onMarkNotALoan, onMarkAsPrive, onMarkAsZakelijk, onOpenHelp, onOpschonen, nietLeningAantal }) {
   const [open, setOpen] = useState(!!defaultOpen);
   // beide-V15R3 — "Dit is geen lening" opent een keuzelijst met categorieën, zodat de boekingen niet eerst via Overig hoeven (wens Boska 4-11).
   const [kiesVoor, setKiesVoor] = useState(null);
@@ -103,6 +146,7 @@ export default function LoanInterestPanel({ defaultOpen = false, loanSummary, pr
                       <button onClick={() => setKiesVoor(null)} className="text-slate-400 underline">Annuleren</button>
                     </div>
                   )}
+                  <LeningBoekingen loan={loan} transactions={loan.transactions} nietLening={nietLeningAantal ? nietLeningAantal(loan) : 0} onOpschonen={onOpschonen} />
                   {isOnbekend ? (
                     <p className="mt-2 text-xs text-slate-400">Gegevens onbekend — deze lening wordt niet gesplitst.</p>
                   ) : amortization ? (
@@ -138,6 +182,7 @@ export default function LoanInterestPanel({ defaultOpen = false, loanSummary, pr
                         </button>
                       )}
                     </div>
+                    <LeningBoekingen loan={loan} transactions={loan.transactions} nietLening={nietLeningAantal ? nietLeningAantal(loan) : 0} onOpschonen={onOpschonen} />
                   </div>
                 ))}
               </div>
