@@ -11,6 +11,10 @@
   --soort-50: 238 244 252; --soort-100: 217 230 248; --soort-200: 181 205 240; --soort-300: 139 176 230; --soort-400: 93 141 216;
   --soort-500: 58 114 200; --soort-600: 43 98 182; --soort-700: 36 86 159; --soort-800: 30 71 133; --soort-900: 27 60 108; --soort-950: 16 38 74;
 }
+[data-soort="huishoudboekje"] {
+  --soort-50: 251 243 249; --soort-100: 246 229 242; --soort-200: 237 201 229; --soort-300: 224 163 211; --soort-400: 205 118 186;
+  --soort-500: 181 85 159; --soort-600: 156 69 137; --soort-700: 138 59 124; --soort-800: 113 50 102; --soort-900: 94 45 85; --soort-950: 58 21 51;
+}
 
 /* v230 — professionelere typografie (mockup-stijl): IBM Plex Sans voor lopende tekst (in plaats van
    het systeemlettertype dat Tailwinds `font-sans` standaard gebruikt), Sora voor koppen. Fonts zelf

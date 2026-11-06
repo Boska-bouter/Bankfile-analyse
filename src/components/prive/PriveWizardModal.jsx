@@ -134,7 +134,7 @@ export default function PriveWizardModal({
           {huidig.id === REKENINGEN && (
             <>
               <p className="text-sm font-medium text-slate-800">Zijn er nog andere eigen rekeningen?</p>
-              <p className="text-sm text-slate-600">Bijvoorbeeld een spaarrekening, beleggingsrekening, kinderrekening, een gezamenlijke rekening of een rekening van de partner. Geef het rekeningnummer op, dan telt geld van en naar die rekening als overboeking tussen eigen rekeningen en niet als inkomen of uitgave.</p>
+              <p className="text-sm text-slate-600">Bijvoorbeeld een spaarrekening, beleggingsrekening, kinderrekening, een gezamenlijke rekening, een rekening van de partner of de rekening van je eigen bedrijf. Geef het rekeningnummer op, dan telt geld van en naar die rekening als overboeking tussen eigen rekeningen en niet als inkomen of uitgave. Kies je "Rekening eigen bedrijf", dan telt wat je van je bedrijf ontvangt als inkomen.</p>
               {extraRekeningen}
               <button type="button" onClick={() => { if (eigenRekeningenExtra == null) setEigenRekeningenExtra?.([]); volgende(); }} className={KNOP_PRIMAIR_GROOT}>
                 {(eigenRekeningenExtra || []).length > 0 ? "Doorgaan" : "Geen andere rekeningen — doorgaan"}
@@ -142,7 +142,7 @@ export default function PriveWizardModal({
             </>
           )}
           {vragen.map((v) => (
-            <PriveVraag key={v.key} vraag={v} waarde={waardeVan(v)} jaren={years} bestanden={loadedFileNames}
+            <PriveVraag key={v.key} vraag={v} waarde={waardeVan(v)} jaren={years} bestanden={loadedFileNames} antwoorden={huidigeAntwoorden}
               onChange={(w) => setConcept((c) => ({ ...c, [v.key]: w }))} />
           ))}
           {huidig.vragen && (

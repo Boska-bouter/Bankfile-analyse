@@ -4,16 +4,21 @@
 import { useMemo } from "react";
 import { ZAKELIJK_PROFIEL } from "./zakelijk/profiel.js";
 import { PRIVE_PROFIEL } from "./prive/profiel.js";
+import { HUISHOUD_PROFIEL } from "./huishoudboekje/profiel.js";
 
-export const SOORTEN = Object.freeze({ zakelijk: "Zakelijk", prive: "Privé" });
+export const SOORTEN = Object.freeze({ zakelijk: "Zakelijk", prive: "Privé", huishoudboekje: "Huishoudboekje" });
 
 // Een dossier zonder soort (alles van vóór beide-V1R0) is zakelijk.
+// huishoudboekje-V1R0 — derde soort: "huishoudboekje".
 export function dossierSoort(waarde) {
-  return waarde === "prive" ? "prive" : "zakelijk";
+  return waarde === "prive" || waarde === "huishoudboekje" ? waarde : "zakelijk";
 }
+// Privé of Huishoudboekje: allebei een particulier huishouden met privérekeningen en -categorieën.
+export const isParticulier = (soort) => dossierSoort(soort) !== "zakelijk";
 
 export function kiesProfiel(soort) {
-  return dossierSoort(soort) === "prive" ? PRIVE_PROFIEL : ZAKELIJK_PROFIEL;
+  const s = dossierSoort(soort);
+  return s === "prive" ? PRIVE_PROFIEL : s === "huishoudboekje" ? HUISHOUD_PROFIEL : ZAKELIJK_PROFIEL;
 }
 
 // Kaarten volgens het profiel: null = de lijst ongewijzigd (zelfde object, dus geen extra renders);
@@ -29,4 +34,4 @@ export function useModus(soort) {
   return useMemo(() => kiesProfiel(soort), [soort]);
 }
 
-export { ZAKELIJK_PROFIEL, PRIVE_PROFIEL };
+export { ZAKELIJK_PROFIEL, PRIVE_PROFIEL, HUISHOUD_PROFIEL };

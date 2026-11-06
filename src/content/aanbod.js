@@ -20,15 +20,17 @@ export const GRATIS_UITLEG = `Gratis abonnement van ${GRATIS_DAGEN} dagen. Daarn
 // Bankkoppeling: overal dezelfde status.
 export const BANKKOPPELING_STATUS = "in ontwikkeling, nog niet beschikbaar";
 
-// Waarom kies je welke soort (wens Boska 2-11, overgenomen in beide-V13R5): één zin per soort, bovenaan elke kaart.
+// Waarom kies je welke soort (wens Boska 2-11): één zin per soort, op de welkomstpagina bovenaan elke kaart.
 export const KEUZE = {
   zakelijk: "Zakelijke inkomsten en uitgaven, aftrekposten en afschrijvingen, met een indicatie voor de btw- en IB-aangifte.",
-  prive: "Inzicht in je privé-inkomsten en -uitgaven, met een indicatie voor je IB-aangifte.",
+  prive: "Inzicht in je privé-inkomsten en -uitgaven, met een indicatie voor je IB-aangifte. Wil je alleen je uitgaven volgen? Kijk dan bij Huishoudboekje.",
+  huishoudboekje: "Per week en per maand zien waar je geld naartoe gaat en ontdekken waar je kunt besparen. Wil je ook een indicatie voor je IB-aangifte? Kijk dan bij Privé.",
 };
 // Korte regel per soort bovenaan de welkomstpagina.
 export const SOORT_KORT = {
   zakelijk: "voor zzp, eenmanszaak en BV: winst, aftrekposten, afschrijvingen, indicatie btw- en IB-aangifte.",
   prive: "voor particulieren: inzicht in je privé-inkomsten en -uitgaven en een indicatie voor je IB-aangifte.",
+  huishoudboekje: "voor iedereen: per week en per maand zien waar je geld naartoe gaat.",
 };
 
 // Wat zit in Eenvoudig en wat alleen in Uitgebreid (welkomstpagina, Help, uitleg in de app, beheerdersuitleg).
@@ -36,6 +38,16 @@ export const INZICHTEN = {
   prive: {
     beide: ["Inkomsten en uitgaven per maand", "Indicatie inkomstenbelasting", "Samenvatting om te bewaren of printen"],
     uitgebreid: ["Vaste lasten", "Sparen en vermogen (box 3)", "Eigen woning", "Meerdere jaren naast elkaar", "Downloaden in PDF, HTML of Excel"],
+  },
+  // Huishoudboekje (wens Boska 2-11): één abonnement, geen belasting en geen aangifte.
+  huishoudboekje: {
+    alles: [
+      "Inkomsten, vaste lasten en uitgaven per week en maand",
+      "Vergelijking met wat je gewoonlijk uitgeeft (gemiddelde van 6 maanden)", // huishoudboekje-V5R0 — sinds V3R2 geen procenten meer
+      "Budget per categorie, met een waarschuwing",
+      "Woonlasten en vaste lasten naast Nibud- en CBS-cijfers",
+      "Waar je het meest kunt besparen",
+    ],
   },
   zakelijk: {
     beide: ["Omzet, kosten en winst", "Btw per kwartaal", "Indicatie inkomstenbelasting en Zvw", "Samenvatting om te bewaren of printen"],
@@ -53,10 +65,14 @@ export const uitgebreidExtra = (soort) => opsomming(INZICHTEN[soort === "prive" 
 export const OMZETTEN = {
   zakelijk: "Ook box 3 of de eigen woning? Met één druk op de knop maak je van je zakelijke dossier een privédossier. Daarvoor heb je naast Zakelijk ook Privé nodig.",
   prive: "Een eigen onderneming gestart? Met één druk op de knop maak je van je privédossier een zakelijk dossier. Daarvoor heb je naast Privé ook Zakelijk nodig.",
+  // huishoudboekje-V2R7 — zelfde korte opbouw als zakelijk/privé.
+  huishoudboekje: "Ook zien waar je geld per week en per maand blijft? Met één druk op de knop maak je van je zakelijke of privédossier een Huishoudboekje. Daarvoor heb je ook het Huishoudboekje nodig.",
 };
 export const OMZETTEN_KORTING = {
   zakelijk: (pct) => `Met een zakelijk abonnement krijg je ${pct}% korting op een privéabonnement.`,
   prive: (pct) => `Met een privéabonnement krijg je ${pct}% korting op een zakelijk abonnement.`,
 };
-export const OMZETTEN_WELKOM = "Wil je een zakelijk dossier omzetten naar een privédossier, of andersom? Dat kan met één druk op de knop. Daarna vul je alleen nog de extra gegevens in die bij het nieuwe dossier horen. Hiervoor heb je wel een abonnement voor allebei nodig: Zakelijk én Privé. Heb je er nu één, dan vraag je het andere erbij aan.";
-export const OMZETTEN_WELKOM_KORTING = (pct) => `Op dat tweede abonnement krijg je ${pct}% korting.`;
+// huishoudboekje-V2R3 — met drie soorten (wens Boska 3-11: duidelijk dat omzetten van de abonnementen afhangt).
+export const OMZETTEN_WELKOM = "Wil je een dossier omzetten naar een andere soort, bijvoorbeeld van zakelijk naar privé of naar een Huishoudboekje? Dat kan met één druk op de knop. Daarna vul je alleen nog de extra gegevens in die bij het nieuwe dossier horen. Hiervoor heb je wel een abonnement nodig voor beide soorten. Heb je er nu één, dan vraag je het andere erbij aan.";
+// De procentkorting geldt tussen Zakelijk en Privé.
+export const OMZETTEN_WELKOM_KORTING = (pct) => `Heb je Zakelijk en vraag je Privé erbij aan, of andersom, dan krijg je op dat tweede abonnement ${pct}% korting.`;

@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { SPLIT_CATEGORY_NAMES } from "../classification/categories.js";
 import { ibansMatch } from "../utils/normalization.js";
-import { detectOwnAccountTransfer, resolveClassification, overrideSleutel } from "../classification/classify.js";
+import { detectOwnAccountTransfer, eigenRekeningVast, resolveClassification, overrideSleutel } from "../classification/classify.js";
 import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
 import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
@@ -14,11 +14,16 @@ import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classi
 export function useClassified(p) {
   const {
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
-    eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
+    eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile: ownAccountsElsewhereByFile0, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
     leaseSoortWizard = null, // beide-V10R5 — "financial": automatisch herkende lease wordt financiële lease
     factuurjaar = null, // beide-V11R7 — { uit, niet: [ids] } uit bevestigdeControles (classification/factuurjaar.js)
+    eigenRekeningAanpasbaar = false, // huishoudboekje-V1R2 — opgegeven (niet geladen) eigen rekening ligt niet vast
   } = p;
+  const ownAccountsElsewhereByFile = useMemo(() => {
+    if (!eigenRekeningAanpasbaar) return ownAccountsElsewhereByFile0;
+    return Object.fromEntries(Object.entries(ownAccountsElsewhereByFile0 || {}).map(([f, l]) => [f, (l || []).map((o) => (o.isLoadedFile ? o : { ...o, aanpasbaar: true }))]));
+  }, [ownAccountsElsewhereByFile0, eigenRekeningAanpasbaar]);
 
   return useMemo(() => {
     // release32V4 — zelfde percentages als de aangifte, dus ook "soort ruimte = privé / niet zelfstandig" telt als 0%.
@@ -37,8 +42,9 @@ export function useClassified(p) {
       if (leaseSoortWizard === "financial" && resolved.category === "Lease (operationeel)" && !overridesByRow[tx.id] && !overrideSleutel(tx, overridesByCounterparty)) {
         resolved = { ...resolved, category: "Lease (financieel)" };
       }
-      const transferLocked = !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
-      if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id], vastgezet: transferLocked, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
+      const transferLocked = eigenRekeningVast(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
+      const eigenOverboeking = transferLocked || !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
+      if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id] || (!transferLocked && !!overrideSleutel(tx, overridesByCounterparty)), vastgezet: eigenOverboeking, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
       const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten

@@ -23,7 +23,7 @@ export const PRIVE_VASTE_LASTEN = Object.freeze(PRIVE_CATEGORIEEN.filter((c) => 
 // zakelijke regels doet), daarna zelf toegevoegde privécategorieën. Geeft `regels` zelf terug als er niets
 // verandert, zodat een effect hierop niet blijft herhalen.
 export function metPriveRegels(regels) {
-  const opgeslagen = regels.filter((r) => r.prive);
+  const opgeslagen = regels.filter((r) => r.prive && !r.huishoud); // huishoudboekje-V1R0 — regels van het Huishoudboekje horen hier niet
   // beide-V2R2 — standaardregels met de privé-extra zoekwoorden, en de voorrangsregels vooraan.
   const overig = regels.filter((r) => !r.prive).map(metExtraWoorden);
   overig.sort((a, b) => voorrang(a) - voorrang(b));

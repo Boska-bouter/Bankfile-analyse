@@ -25,7 +25,8 @@ export default {
       colors: {
         merk: { DEFAULT: "#0f766e", donker: "#115e59", licht: "#ccfbf1" },
         // huishoudboekje-V1R5 — kleur per soort dossier (akkoord Boska 2-11): "teal" is de actiekleur van de app en volgt
-        // de soort via CSS-variabelen (src/index.css, data-soort op <html>): zakelijk zeegroen, privé blauw. Betekeniskleuren (emerald/amber/rose) blijven gelijk.
+        // de soort via CSS-variabelen (src/index.css, data-soort op <html>): zakelijk zeegroen, privé blauw,
+        // Huishoudboekje pruim. Betekeniskleuren (emerald/amber/rose) blijven gelijk.
         teal: Object.fromEntries([50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((n) => [n, `rgb(var(--soort-${n}) / <alpha-value>)`])),
         status: { goed: "#047857", let_op: "#b45309", fout: "#be123c" },
       },

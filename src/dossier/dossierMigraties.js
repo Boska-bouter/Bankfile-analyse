@@ -13,7 +13,8 @@ export function resolveRechtsvorm(obj) {
 // beide-V1R0 — soort van het dossier. Een bestand of instellingen van vóór de privémodus heeft geen veld
 // dossierSoort en is altijd zakelijk. Alleen de exacte waarde "prive" maakt een dossier privé.
 export function resolveDossierSoort(obj) {
-  return obj && obj.dossierSoort === "prive" ? "prive" : "zakelijk";
+  // huishoudboekje-V1R0 — derde soort.
+  return obj && (obj.dossierSoort === "prive" || obj.dossierSoort === "huishoudboekje") ? obj.dossierSoort : "zakelijk";
 }
 
 // Zelfde migratie-redenering als resolveRechtsvorm hierboven: ontbreekt het veld helemaal (een

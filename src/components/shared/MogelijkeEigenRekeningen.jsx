@@ -16,6 +16,7 @@ const KEUZES = {
     ["Eigen betaalrekening", { accountType: "Prive", soort: "betaal" }],
     ["Eigen spaarrekening", { accountType: "Prive", soort: "spaar" }],
     ["Eigen beleggingsrekening", { accountType: "Prive", soort: "beleggen" }],
+    ["Rekening van mijn eigen bedrijf", { accountType: "Prive", soort: "bedrijf" }], // huishoudboekje-V1R2
   ],
 };
 

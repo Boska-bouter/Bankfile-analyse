@@ -112,7 +112,7 @@ export function isBeantwoord(v, a, ctx) {
   if (v.type === "naam") return v.optioneel ? ctx.eigenNamen !== null : !!ctx.eigenNamen?.[v.veld];
   const w = a?.[v.key];
   if (v.type === "meerkeuze") return Array.isArray(w) && w.length > 0;
-  if (PER_JAAR.has(v.type) || v.type === "perBestand") return !!w && typeof w === "object" && Object.keys(w).length > 0;
+  if (PER_JAAR.has(v.type) || v.type === "perBestand" || v.type === "bedragen") return !!w && typeof w === "object" && Object.keys(w).length > 0;
   return w !== undefined && w !== null && w !== "";
 }
 

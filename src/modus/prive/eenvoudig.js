@@ -14,6 +14,7 @@ export const PRIVE_KEUZES_IN = Object.freeze([
   k("Overboeking van bekenden", "Terugbetaling door bekenden", "bijv. Tikkie of gedeelde kosten"),
   k("Terugbetalingen & restituties", "Terugbetaling van een bedrijf of winkel", "retour, te veel betaald of eindafrekening"),
   k("Dividend & rente", "Dividend of rente", "van een bank of belegging"), // beide-V3R3
+  k("Inkomen uit eigen bedrijf", "Uit mijn eigen bedrijf", "winst of opname van de zaak"), // huishoudboekje-V1R2
   k("Ontvangen schenkingen", "Schenking ontvangen", "bijv. van ouders of familie"), // beide-V3R3
   k("Inkomsten", "Ander inkomen", "bijv. verkoop, huur of een prijs"),
   k("Interne overboeking", "Van een eigen rekening", "geld tussen eigen rekeningen"),

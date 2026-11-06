@@ -2,7 +2,9 @@
 // kopregel van Eenvoudig. Komt uit /api/rol (useRol.js): per soort (zakelijk, privé) of, zonder soorten, uit de
 // algemene rechten.
 const NIVEAU = ["", "Eenvoudig", "Uitgebreid", "Uitgebreid met bankkoppeling"];
-const SOORT = { zakelijk: "Zakelijk", prive: "Privé" };
+const SOORT = { zakelijk: "Zakelijk", prive: "Privé", huishoudboekje: "Huishoudboekje" };
+// huishoudboekje-V1R0 — één abonnement: alleen de naam, eventueel met bankkoppeling.
+const naamVan = (s, n) => (s === "huishoudboekje" ? `Huishoudboekje${n === 3 ? " met bankkoppeling" : ""}` : `${SOORT[s]}: ${NIVEAU[n]}`);
 const niveau = (x) => (x?.koppelen ? 3 : x?.uitgebreid ? 2 : x?.eenvoudig ? 1 : 0);
 const datum = (iso) => {
   const d = new Date(String(iso).length === 10 ? `${iso}T12:00:00` : iso);
@@ -15,7 +17,7 @@ export function abonnementRegels({ soorten = null, mag = false, koppelen = false
   if (soorten) {
     const regels = Object.keys(SOORT).map((s) => {
       const n = niveau(soorten[s]);
-      return n ? `${SOORT[s]}: ${NIVEAU[n]}${totEnMet(soorten[s]?.geldigTot)}` : null;
+      return n ? `${naamVan(s, n)}${totEnMet(soorten[s]?.geldigTot)}` : null;
     }).filter(Boolean);
     return regels.length ? regels : ["Nog geen abonnement"];
   }
@@ -33,6 +35,6 @@ export function aflopendeAbonnementen(soorten, { vandaag = new Date().toLocaleDa
     const x = soorten[s];
     if (!niveau(x) || !x.geldigTot || x.geldigTot < vandaag || x.geldigTot > g) return null;
     const over = Math.round((new Date(`${x.geldigTot}T12:00:00Z`) - new Date(`${vandaag}T12:00:00Z`)) / 86400000);
-    return { soort: s, tekst: `${SOORT[s]}: ${NIVEAU[niveau(x)]}`, datum: datum(x.geldigTot), dagen: over };
+    return { soort: s, tekst: naamVan(s, niveau(x)), datum: datum(x.geldigTot), dagen: over };
   }).filter(Boolean);
 }

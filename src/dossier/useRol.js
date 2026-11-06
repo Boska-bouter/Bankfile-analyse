@@ -43,7 +43,7 @@ export function useMagUitgebreid() {
   const [status, setStatus] = useState(dev ? "dev" : "laden"); // laden | ok | geenLijst | geenEmail | nietOpLijst | fout
   // beide-V1R2 — lokaal ook beide soorten (zakelijk en privé) met alle rechten.
   const ALLES = { eenvoudig: true, uitgebreid: true, koppelen: true };
-  const [extra, setExtra] = useState(() => (dev ? { koppelen: true, bankkoppeling: true, beheerder: true, soorten: { zakelijk: ALLES, prive: ALLES } } : leesExtra()));
+  const [extra, setExtra] = useState(() => (dev ? { koppelen: true, bankkoppeling: true, beheerder: true, soorten: { zakelijk: ALLES, prive: ALLES, huishoudboekje: ALLES } } : leesExtra()));
   const [email, setEmail] = useState(() => { try { return localStorage.getItem(EMAIL_SLEUTEL) || null; } catch { return null; } });
   useEffect(() => {
     if (dev) return;

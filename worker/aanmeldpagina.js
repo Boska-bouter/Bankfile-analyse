@@ -3,8 +3,8 @@
 // - Op /aanmelden ziet iedereen die is ingelogd zijn abonnementen en kan een abonnement aanvragen, ook een tweede
 //   (zakelijk naast privé of andersom). Vanuit de app: het kaart-icoon onderin de zijbalk.
 // Op zichzelf staand (geen app-bestanden nodig).
-import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, prijsVoorSoort, planNaam, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
-import { BETALEN } from "./peiling.js";
+import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, prijsVoorSoort, planNaam, huishoudPrijsVoor, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
+import { BETALEN, KOPPELING, KOPPELING_VRAAG } from "./peiling.js";
 import { vastStreepje, vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
@@ -49,6 +49,9 @@ ${keuze}
 <label>Toelichting (optioneel)<br><textarea name="toelichting" maxlength="500" rows="2" style="width:100%;box-sizing:border-box"></textarea></label>
 <small class="hint">Met de antwoorden wordt bepaald of en voor welke prijs er later betaalde abonnementen komen. Het antwoord heeft geen invloed op de verlenging.</small>
 </fieldset>
+<fieldset><legend>${esc(KOPPELING_VRAAG)} (vrijwillig)</legend>
+<div class="peil">${Object.entries(KOPPELING).map(([k, t]) => `<label><input type="radio" name="koppeling" value="${k}"> ${esc(t)}</label>`).join("")}</div>
+</fieldset>
 <button type="submit">Verlenging aanvragen</button>
 <p id="vstatus" role="status"></p>
 </form>`;
@@ -60,16 +63,22 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
   const huidig = slot ? huidigeAbonnementen(r) : []; // zonder slot heeft iedereen Eenvoudig; dan niets tonen
   const kiesSoort = GEBRUIK[soort] ? soort : null;
   const kiesPlan = plannenVoor(env)[plan] ? plan : "eenvoudig";
+  const hbPlan = Object.keys(plannenVoor(env, "huishoudboekje"))[0]; // huishoudboekje-V1R0 — één abonnement
+  // huishoudboekje-V1R3 — met korting als je al Uitgebreid (zakelijk of privé) hebt.
+  const hbPrijs = huishoudPrijsVoor(env, slot ? r : null, hbPlan);
+  const hbPrijsTekst = hbPrijs.korting ? `${prijsTekst(hbPrijs.bedrag)} (korting omdat je Uitgebreid hebt, normaal ${prijsTekst(hbPrijs.gewoon)})` : prijsTekst(hbPrijs.bedrag);
   const [voornaam, ...rest] = String(r?.naam || "").trim().split(/\s+/);
   const achternaam = rest.join(" ");
   const soortKeuzes = Object.entries(GEBRUIK).map(([k, v]) => {
     const n = slot ? niveauVan(r?.soorten?.[k]) : 0;
     return `<label class="keuze s-${k}"><input type="radio" name="gebruik" value="${k}" required${kiesSoort === k ? " checked" : ""}>
-      <span><b>${v}</b><small>${esc(GEBRUIK_UITLEG[k])}${n ? ` · je hebt nu ${esc(PLANNEN[NIVEAU_PLAN[n]])}` : ""}</small></span></label>`;
+      <span><b>${v}</b><small>${esc(GEBRUIK_UITLEG[k])}${n ? ` · je hebt nu ${esc(k === "huishoudboekje" ? planNaam(k, NIVEAU_PLAN[n]) : PLANNEN[NIVEAU_PLAN[n]])}` : ""}</small></span></label>`;
   }).join("");
   const planKeuzes = Object.keys(plannenVoor(env)).map((k) => `
-    <label class="keuze"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
-      <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("");
+    <label class="keuze plan"><input type="radio" name="plan" value="${k}"${kiesPlan === k ? " checked" : ""}>
+      <span><b>${PLANNEN[k]}</b> <span class="prijs" data-plan="${k}"></span><small data-uitleg="${k}"></small></span></label>`).join("")
+    // huishoudboekje-V1R0 — het Huishoudboekje heeft één abonnement: geen keuze, wel prijs en inhoud.
+    + `<div class="keuze hbplan s-hb" hidden><span><b>${esc(planNaam("huishoudboekje", hbPlan))}</b> <span class="prijs">${esc(hbPrijsTekst)}</span><small>${esc(PLAN_UITLEG.huishoudboekje[hbPlan].replace(/^./, (c) => c.toUpperCase()))}</small></span></div>`;
   const verlengLijst = slot ? teVerlengen(r, verlengen) : [];
   const loopt = r?.aanvraag && PLANNEN[r.aanvraag] && r.verlenging
     ? `<p class="melding">Je verzoek om <b>${esc(planNaam(r.aanvraagGebruik || "zakelijk", r.aanvraag))}</b> te verlengen is ontvangen${r.aangevraagd ? ` op ${esc(nlDatum(r.aangevraagd))}` : ""}. Je krijgt een e-mail zodra het is verlengd${heeftToegang ? "" : ". Je kunt dit tabblad nu sluiten"}.</p>`
@@ -78,14 +87,17 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
     : "";
   // Teksten per soort voor het script (prijs, uitleg, voorbeeld bij de reden).
   const perSoort = Object.fromEntries(Object.keys(GEBRUIK).map((s) => [s, {
+    een: s === "huishoudboekje",
     // beide-V14R0 — korting op de andere soort voor wie al een abonnement heeft
-    prijs: Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => {
+    prijs: s === "huishoudboekje" ? {} : Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => {
       const x = prijsVoorSoort(env, slot ? r : null, s, k);
       return [k, x.korting ? `${prijsTekst(x.bedrag)} (${prijs.korting}% korting omdat je al ${s === "prive" ? "Zakelijk" : "Privé"} hebt, normaal ${prijsTekst(x.gewoon)})` : prijsTekst(x.bedrag)];
     })),
-    uitleg: Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, PLAN_UITLEG[s][k].replace(/^./, (c) => c.toUpperCase())])),
+    uitleg: s === "huishoudboekje" ? {} : Object.fromEntries(Object.keys(plannenVoor(env)).map((k) => [k, PLAN_UITLEG[s][k].replace(/^./, (c) => c.toUpperCase())])),
     voorbeeld: s === "prive"
       ? "Bijvoorbeeld: ik wil inzicht in de uitgaven van ons huishouden en een indicatie van onze inkomstenbelasting."
+      : s === "huishoudboekje"
+      ? "Bijvoorbeeld: we houden elke maand te weinig over en willen zien waar ons geld blijft."
       : "Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte.",
   }]));
   const titel = heeftToegang ? "Abonnementen" : "Aanmelden voor BankafschriftenTool";
@@ -104,7 +116,8 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:col
 .keuze{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
 .keuze:has(input:checked){border-color:var(--accent)}
 .keuze small{display:block;color:var(--muted)}.prijs{color:var(--accent);font-weight:600;font-size:13px}
-.soorten{display:grid;grid-template-columns:1fr 1fr;gap:8px}@media (max-width:420px){.soorten{grid-template-columns:1fr}}
+.soorten{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}@media (max-width:520px){.soorten{grid-template-columns:1fr}}
+.hbplan{cursor:default;border-color:var(--accent)}
 textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);resize:vertical}
 .namen{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:420px){.namen{grid-template-columns:1fr}}
 .hint{display:block;color:var(--muted);font-size:13px;margin-top:4px}
@@ -115,13 +128,13 @@ button[disabled]{opacity:.6}.melding{background:var(--okbg);color:var(--ok)}#sta
 .naarapp{display:block;text-align:center;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:11px 16px;text-decoration:none}
 ${VERGELIJK_STIJL}
 ${SOORT_KLEUR_STIJL}
-.keuze.s-zakelijk,.keuze.s-prive{border-left:5px solid var(--accent)}.keuze[class*=" s-"] input{accent-color:var(--accent)}.keuze.s-zakelijk b,.keuze.s-prive b{color:var(--accent)}
+.keuze.s-zakelijk,.keuze.s-prive,.keuze.s-huishoudboekje,.keuze.s-hb{border-left:5px solid var(--accent)}.keuze[class*=" s-"] input{accent-color:var(--accent)}.keuze.s-zakelijk b,.keuze.s-prive b,.keuze.s-huishoudboekje b{color:var(--accent)}
 details.vgl summary{cursor:pointer;color:var(--accent);font-size:14px}details.vgl[open] summary{margin-bottom:8px}.klein{font-size:13px;margin:6px 0 0}
 </style></head><body><main>
 <h1>${titel}</h1>
 <p class="sub">Je bent ingelogd als <b>${esc(email)}</b>. ${heeftToegang
-    ? "Hier zie je je abonnementen en kun je er een aanvragen, bijvoorbeeld privé naast zakelijk. De beheerder keurt de aanvraag goed en je krijgt daarover een e-mail."
-    : "Kies of je BankafschriftenTool zakelijk of privé gebruikt, kies een abonnement en vertel kort waarom je toegang vraagt. De beheerder keurt je aanmelding goed en je krijgt daarover een e-mail."}</p>
+    ? "Hier zie je je abonnementen en kun je er een aanvragen, bijvoorbeeld privé of het Huishoudboekje naast zakelijk. De beheerder keurt de aanvraag goed en je krijgt daarover een e-mail."
+    : "Kies of je BankafschriftenTool zakelijk, privé of als huishoudboekje gebruikt, kies een abonnement en vertel kort waarom je toegang vraagt. De beheerder keurt je aanmelding goed en je krijgt daarover een e-mail."}</p>
 ${huidig.length ? `<div class="huidig"><b>Je abonnementen</b><ul>${huidig.map((h) => `<li>${esc(h)}</li>`).join("")}</ul></div>` : ""}
 ${loopt}
 ${verlengBlok(verlengLijst)}
@@ -146,12 +159,13 @@ ${heeftToegang ? `<a class="naarapp" href="/">Naar de app</a>` : ""}
 const T=${JSON.stringify(perSoort).replace(/</g, "\\u003c")},TOEGANG=${heeftToegang ? "true" : "false"};
 const f=document.getElementById("f"),st=document.getElementById("status"),pl=document.getElementById("plannen");
 function soortGekozen(){const s=f.gebruik.value;if(!T[s])return;pl.hidden=false;
-for(const e of f.querySelectorAll("[data-plan]"))e.textContent=T[s].prijs[e.dataset.plan];
-for(const e of f.querySelectorAll("[data-uitleg]"))e.textContent=T[s].uitleg[e.dataset.uitleg];
+for(const e of f.querySelectorAll(".plan"))e.hidden=T[s].een;for(const e of f.querySelectorAll(".hbplan"))e.hidden=!T[s].een;
+if(!T[s].een){for(const e of f.querySelectorAll("[data-plan]"))e.textContent=T[s].prijs[e.dataset.plan];
+for(const e of f.querySelectorAll("[data-uitleg]"))e.textContent=T[s].uitleg[e.dataset.uitleg]}
 f.reden.placeholder=T[s].voorbeeld}
 for(const r of f.querySelectorAll("input[name=gebruik]"))r.addEventListener("change",soortGekozen);
 soortGekozen();
-f.addEventListener("submit",async(e)=>{e.preventDefault();if(!T[f.gebruik.value]){st.className="err";st.textContent="Kies eerst zakelijk of privé.";return}
+f.addEventListener("submit",async(e)=>{e.preventDefault();if(!T[f.gebruik.value]){st.className="err";st.textContent="Kies eerst zakelijk, privé of huishoudboekje.";return}
 const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
 try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({gebruik:f.gebruik.value,plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,telefoon:f.telefoon.value,organisatie:f.organisatie.value,reden:f.reden.value})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
@@ -162,7 +176,7 @@ const vf=document.getElementById("verleng");
 if(vf){const vs=document.getElementById("vstatus"),bv=document.getElementById("bedragvak");
 const toon=()=>{bv.hidden=vf.betalen.value==="nee"};for(const x of vf.querySelectorAll("input[name=betalen]"))x.addEventListener("change",toon);
 vf.addEventListener("submit",async(e)=>{e.preventDefault();const k=vf.querySelector("button");k.disabled=true;vs.className="";vs.textContent="Bezig…";
-try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({verlengen:true,gebruik:vf.vsoort.value,peiling:{betalen:vf.betalen.value||null,bedrag:vf.bedrag.value,toelichting:vf.toelichting.value}})});
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({verlengen:true,gebruik:vf.vsoort.value,peiling:{betalen:vf.betalen.value||null,bedrag:vf.bedrag.value,toelichting:vf.toelichting.value,koppeling:vf.koppeling.value||null}})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
 vs.textContent="Je verzoek om te verlengen is verstuurd. Je krijgt een e-mail zodra het is verlengd.";setTimeout(()=>location.reload(),2500)}
 catch(x){vs.className="err";vs.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}})}

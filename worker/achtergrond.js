@@ -28,7 +28,7 @@ function decor() {
     x.clearRect(0, 0, w, h);
     x.font = "13px ui-monospace,SFMono-Regular,Menlo,monospace";
     // Breed scherm: twee kolommen naast de inhoud. Smal: één vage kolom over de hele breedte.
-    // beide-V17R0 (uit huishoudboekje-V5R1) — ruimte naast de echte inhoud (main), niet een vaste breedte: de pagina kan breder zijn.
+    // huishoudboekje-V5R1 — ruimte naast de echte inhoud (main), niet een vaste 1080px: de pagina kan breder zijn.
     const mainL = document.querySelector("main")?.getBoundingClientRect().left ?? (w - 1080) / 2;
     const zij = mainL - 40, ruim = zij >= 220, f = ruim ? 1 : 0.45, kb0 = Math.min(360, zij);
     const kolommen = ruim ? [[24, kb0], [w - kb0 - 24, kb0]] : [[16, w - 32]];

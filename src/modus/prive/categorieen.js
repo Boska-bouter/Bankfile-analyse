@@ -39,14 +39,19 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Kinderbijslag", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   // beide-V3R3 — wens Boska 23-10. Geen box 1-inkomen: telt mee in het budget, niet in de IB-indicatie.
   c("Dividend & rente", "Inkomen", { soort: "inkomen", label: "Ontvangen dividend & rente", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
+  c("Inkomen uit eigen bedrijf", "Inkomen", { soort: "inkomen", label: "Inkomen uit eigen bedrijf", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }), // huishoudboekje-V1R2
   c("Ontvangen schenkingen", "Inkomen", { soort: "inkomen", nieuw: true, kleur: "bg-emerald-50 text-emerald-700" }),
   c("Inkomsten", "Inkomen", { soort: "inkomen", label: "Overige inkomsten" }),
 
   c("Privé - huur", "Wonen", { label: "Huur", vast: true }),
-  // beide-V15R0 (uit huishoudboekje-V3R1) — huur van een apparaat (wasmachine, cv-ketel, geiser) is geen woninghuur (wens Boska 4-11).
+  // huishoudboekje-V3R1 — huur van een apparaat (wasmachine, cv-ketel, geiser) is geen woninghuur (wens Boska 4-11).
   c("Huur apparaten", "Wonen", { label: "Huur apparaten (wasmachine, ketel, geiser)", vast: true, nieuw: true, kleur: "bg-amber-50 text-amber-700" }),
   c("Hypotheek", "Wonen", { fiscaal: "hypotheekrente", vast: true }),
   c("Privé - energie-water", "Wonen", { label: "Energie & water", vast: true }),
+  // huishoudboekje-V1R0 — fijnere indeling voor het Huishoudboekje (wens Boska 2-11). De zoekwoorden staan in
+  // modus/huishoudboekje/regels.js en gelden alleen in een Huishoudboekje; in een privédossier zijn het gewone keuzes.
+  c("Privé - energie", "Wonen", { label: "Energie (stroom, gas, warmte)", vast: true, nieuw: true, kleur: "bg-amber-100 text-amber-800" }),
+  c("Privé - water", "Wonen", { label: "Water", vast: true, nieuw: true, kleur: "bg-sky-100 text-sky-800" }),
   c("Privé - gemeentelijke kosten", "Wonen", { label: "Gemeentelijke belastingen", vast: true }),
   c("Wonen: onderhoud & inrichting", "Wonen", { label: "Onderhoud & inrichting", nieuw: true, kleur: "bg-amber-50 text-amber-700" }),
 
@@ -56,6 +61,7 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Medische uitgaven", "Zorg", { label: "Zorgkosten (eigen betalingen)", fiscaal: "zorgkosten" }),
 
   c("Boodschappen", "Boodschappen"),
+  c("Drogist & huishouden", "Boodschappen", { label: "Drogist & huishouden (non-food)", nieuw: true, kleur: "bg-lime-50 text-lime-700" }),
 
   c("Auto & brandstof", "Vervoer", { nieuw: true, kleur: "bg-orange-100 text-orange-800" }),
   // beide-V3R0 — ook privé kun je een auto, motor of fiets leasen (private lease): een vaste last.
@@ -73,6 +79,9 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
   c("Privé overige abonnementen", "Abonnementen", { label: "Streaming & overige abonnementen", vast: true }),
 
   c("Privé - vrijetijd-uitgaan-vakantie & uit eten", "Vrije tijd", { label: "Uitgaan, vakantie & uit eten" }),
+  c("Uit eten & afhalen", "Vrije tijd", { nieuw: true, kleur: "bg-sky-100 text-sky-800" }),
+  c("Vakantie & dagjes uit", "Vrije tijd", { nieuw: true, kleur: "bg-sky-50 text-sky-700" }),
+  c("Cultuur & concerten", "Vrije tijd", { label: "Bioscoop, theater & concerten", nieuw: true, kleur: "bg-indigo-100 text-indigo-800" }),
   c("Sport & hobby", "Vrije tijd", { nieuw: true, kleur: "bg-sky-50 text-sky-700" }),
 
   c("Giften", "Giften", { label: "Giften & donaties", fiscaal: "giften", nieuw: true, kleur: "bg-pink-100 text-pink-800" }),
@@ -94,6 +103,7 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
 
   c("Privé: overig", "Overig", { label: "Overige privé-uitgaven" }),
   c("Winkels divers", "Overig", { label: "Winkels" }),
+  c("Kleding & schoenen", "Overig", { nieuw: true, kleur: "bg-fuchsia-50 text-fuchsia-700" }),
   c("Webshops & online aankopen", "Overig", { label: "Webshops" }),
   c("Contant geld", "Overig", { label: "Contant opgenomen", nieuw: true, kleur: "bg-amber-100 text-amber-800" }),
   c("Overboekingen aan personen", "Overig", { label: "Betaald aan personen" }),
@@ -220,7 +230,7 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   ],
   "Webshops & online aankopen": ["marktplaats", "vinted", "etsy", "aliexpress", "temu", "shein", "lidl shop", "action.com"],
   "Privé - vrijetijd-uitgaan-vakantie & uit eten": [
-    "coffee", "koffiebar", "koffiehuis", "koffiecorner", "theehuis", "tearoom", // huishoudboekje-V4R6 — koffie en thee buiten de deur = vrije tijd (wens Boska 5-11)
+    "coffee", "koffiebar", "koffiehuis", "koffiecorner", "theehuis", "tearoom", "pathé", // huishoudboekje-V5R6 — "Pathé Eindhoven" (met accent) werd een overboeking aan personen // huishoudboekje-V4R6 — koffie en thee buiten de deur = vrije tijd (wens Boska 5-11)
     "hostellerie", "hotel", "herberg", "restaurant", "brasserie", "bistro", "eetcafe", "eetcafé", "pizzeria", "lunchroom",
     "paviljoen", "airbnb", "natuurhuisje", "booking.com", "landal", "center parcs", "roompot", "camping", "vakantiepark",
     "bungalowpark", "museum", "theater", "schouwburg", "bioscoop", "kinepolis", "vue cinema", "efteling", "dierentuin",

@@ -5,12 +5,13 @@ import { maakHerstelcode } from "../storage/herstelcode.js";
 import { buildProjectFile, downloadProjectFile } from "../storage/projectFile.js";
 import { BTW_RATES_VERSION } from "../tax/btw.js";
 import { laadDossierBestand, pasDossierToe, wisDossier } from "./dossierLaden.jsx";
-import { naarPrive } from "./naarPrive.js";
 import { naarZakelijk } from "./naarZakelijk.js";
 import { useDossierDialogen } from "./useDossierDialogen.jsx";
 import { useOpslaanHerinnering } from "./useOpslaanHerinnering.jsx";
 import { useSessieWaarschuwing } from "./useSessieWaarschuwing.jsx";
 import { useState } from "react";
+import { naarHuishoudboekje } from "./naarHuishoudboekje.js";
+import { naarPrive } from "./naarPrive.js";
 import HerstelcodeModal from "../components/shared/HerstelcodeModal.jsx";
 import OpslaanModal, { BEHOUD } from "../components/shared/OpslaanModal.jsx";
 import WachtwoordModal from "../components/shared/WachtwoordModal.jsx";
@@ -114,6 +115,11 @@ export function useDossierBestand({
     setZvwStatus,
   };
   const loadProjectFile = (file) => laadDossierBestand(file, dossierCtx);
+  // huishoudboekje-V1R3 — van dit dossier een Huishoudboekje maken (wens Boska 2-11): een nieuw dossierbestand met alleen
+  // de privérekeningen wordt opgeslagen (gedownload) en meteen geopend. Het huidige dossier verandert niet; het venster
+  // (HuishoudboekjeMakenModal) laat eerst opslaan als er nog wijzigingen buiten het dossierbestand zijn. Een wachtwoord gaat mee.
+  // huishoudboekje-V1R4 — direct toepassen in plaats van via een nagemaakt bestand (gaf op de iPad "Kon het dossierbestand
+  // niet lezen"), en geen "Ongedaan maken": het nieuwe bestand is al opgeslagen. Wel een melding met beide bestandsnamen.
   // beide-V13R7 — van dit zakelijke dossier een privédossier maken (wens Boska 3-11), zoals "Maak er een Huishoudboekje
   // van" (huishoudboekje-V1R3/V1R4): een nieuw dossierbestand met alleen de privérekeningen wordt opgeslagen (gedownload)
   // en meteen geopend, direct toegepast (niet via een nagemaakt bestand). Het zakelijke dossier verandert niet. Een
@@ -142,6 +148,33 @@ export function useDossierBestand({
         </div>
       ),
       actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
+    });
+    return true;
+  };
+  const maakHuishoudboekje = async () => {
+    const origineel = loadedProjectFileName;
+    const project = buildProjectFile({ auditLog, ...dossierGegevens, dossierSoort: soortDossier, btwRatesVersion: BTW_RATES_VERSION });
+    const hb = naarHuishoudboekje(project, { van: soortDossier === "prive" ? "een privédossier" : "een zakelijk dossier" });
+    if (!hb.parsedFiles.length) { setError("Dit dossier heeft geen privérekeningen. Een Huishoudboekje heeft minstens één privérekening nodig."); return false; }
+    let naam;
+    try {
+      naam = await downloadProjectFile(hb, null, eigenNamen?.ondernemer, dossierWachtwoord || null, dossierWachtwoord ? dossierHerstelcode : null, "huishoudboekje");
+      const inGeheugen = { ...hb, __wachtwoord: dossierWachtwoord || null, __herstelcode: dossierWachtwoord ? dossierHerstelcode || null : null };
+      pasDossierToe(inGeheugen, { naam, lastModified: Date.now() }, dossierCtx);
+    } catch (e) {
+      setError(e.message || "Het Huishoudboekje maken is mislukt.");
+      return false;
+    }
+    setDialog({
+      title: "Je Huishoudboekje staat open",
+      message: (
+        <div className="space-y-2">
+          <p>Het nieuwe dossier is opgeslagen als <b className="break-all">{naam}</b>, met {hb.parsedFiles.length === 1 ? "dit bankbestand" : "deze bankbestanden"}: {hb.parsedFiles.map((f) => f.fileName).join(", ")}.</p>
+          <p>{origineel ? <>Je vorige dossier staat ongewijzigd in <b className="break-all">{origineel}</b>.</> : "Je vorige dossier is niet gewijzigd."} Wil je daar weer mee verder, open het dan via <b>Dossier laden</b>.</p>
+        </div>
+      ),
+      actions: [{ label: "OK", variant: "primary", onClick: () => setDialog(null) }],
+      zonderAnnuleren: true,
     });
     return true;
   };
@@ -243,7 +276,7 @@ export function useDossierBestand({
   return {
     dossierVensters, setHerstelcodeToon, setWachtwoordModal,
     clearAllData, dossierSoortKeuze, opslaanHerinnering, requestLoadProject, resumeHint,
-    sessie, setResumeHint, maakPrivedossier, maakZakelijkdossier,
+    sessie, setResumeHint, maakHuishoudboekje, maakPrivedossier, maakZakelijkdossier,
     startLoadProject, startOpslaan,
   };
 }
