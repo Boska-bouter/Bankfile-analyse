@@ -82,7 +82,7 @@ export function echtePartij(counterparty) {
 // beide-V16R7 — soortwoorden zeggen WAT er gekocht is en winnen van de winkelnaam: "Makro tanken" is brandstof, geen boodschappen
 // (wens Boska 5-11). Niveau 4, boven elke merknaam.
 const BETAALKAART = /pasvolgnr|\bterm:|\bbea\b|betaalpas|kaartnr|\bpas: ?\d|apple pay|google pay|betaalautomaat|\bpinnen\b|\bpin\b/i;
-export const SOORT_WOORDEN = new Set(["tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
+export const SOORT_WOORDEN = new Set(["tankserv", "tankservice", "tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
 function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
   if (SOORT_WOORDEN.has(t)) return 4;
@@ -533,6 +533,11 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // herkennen tekstpatroon — dit vangt die bekende gevallen af vóórdat een trefwoordmatch wordt
 // geaccepteerd, in plaats van de trefwoordenlijst zelf onveilig smal te maken (v220).
 export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
+  // beide-V17R3 — "CCV SUPERSAM", "SumUp Asn Asianfood": een pinbetaling bij een winkel via een betaalterminal is geen
+  // betaalautomaatkosten (blinde test 6-11). Die kosten komen als factuur/incasso van CCV, SumUp enz., niet als pinbetaling.
+  if (rule.name === "Betaalautomaat kosten" && /pasvolgnr|\bterm:|^(bea|gea)\b|\bpas\s?:?\s?\d{2,3}\b|\bpasnr\b|apple pay|google pay/i.test(text)) return true;
+  // beide-V17R3 — "Kenteken Administratie" (RDW-tenaamstelling) is geen administratiekantoor.
+  if (rule.name === "Boekhouder, accountant & administratie" && /kenteken|tenaamstelling|\brdw\b/i.test(text)) return true;
   // "Betaalautomaat kosten" herkent (onder andere) de merknamen van pinbetaaldiensten (SumUp,
   // Zettle, CCV, Mollie, ...) om de eigen, door de bank in rekening gebrachte servicekosten van
   // zo'n dienst te herkennen. Diezelfde merknamen staan echter OOK op de rekening van de klant die
@@ -770,13 +775,15 @@ function telecomSoort(tx) {
 // "Db. Nr.") is bijna altijd een leverancier. Zonder herkenning bleef die in "Overig" of "personen" en telde niet als kosten
 // (test Koenders 28-10: € 55.000–220.000 per jaar). Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
 // beide-V10R8 — ook "FCT 2026…", "F236112", "klantnr./klant nr." (wens Boska 28-10). Kale nummers en datums bewust niet.
-export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr|\bfct\b|\bF\d{4,}\b|\bklant ?nr\b|\bklant ?nummer\b/i;
+export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfacturen\b|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr|\bfct\b|\bF\d{4,}\b|\bklant ?nr\b|\bklant ?nummer\b/i;
 const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
 // beide-V11R6 — een tegenpartij met een bedrijfsnaam (rechtsvorm of branchewoord) die vanaf de zakelijke rekening wordt betaald, is
 // bijna altijd een leverancier (test Koenders: € 13.000–56.000 per jaar bleef in Overig/personen, bijv. "Houthandel Smetsers",
 // "Container Nederland BV", "Kwekerij Muijderman"). Alleen de naam telt (vóór " via "), niet de omschrijving; banken, verzekeraars,
 // stichtingen en overheid niet. Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
-export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|v\.?o\.?f\.?|holding|gmbh)(?![a-z])|(groothandel|handel|verhuur|bedrijf|diensten|dienstverlening|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
+// beide-V17R2 — ook buitenlandse rechtsvormen (S.A., N.V., Ltd, sp. z o.o., AG, SARL, Inc, LLC, BVBA) en milieustraat/bouwmarkt/
+// aanhangwagens (voorstel trefkans 6-11: o.a. Eko-Okna S.A. en Bouwmat Veldman bleven in Overig).
+export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|n\.\s?v\.?|v\.?o\.?f\.?|holding|gmbh|s\.\s?a\.?|ltd|limited|sp\.?\s?z\.?\s?o\.?\s?o\.?|ag|sarl|s\.r\.l\.?|inc|llc|bvba|a\/s)(?![a-z])|(milieustraat|bouwmat|bouwmarkt|bouwcenter|aanhangwagens?|groothandel|handel|verhuur|bedrijf|diensten|dienstverlening|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
 const GEEN_LEVERANCIER = /\bbank\b|verzeker|stichting|gemeente|belasting|waterschap|\bcjib\b|ministerie/i;
 // eigenNamen: namen van ondernemer/partner; een bedrijfsnaam met de eigen achternaam ("Hoveniersbedrijf Paul Koenders") is geen leverancier.
 export function bedrijfsnaamVan(tx, eigenNamen = []) {
@@ -795,6 +802,14 @@ export function horecaPinVan(tx) {
   const naam = String(tx.counterparty || "").split(/\s+via\s+/i)[0];
   if (!PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`) || !HORECA_TABAK.test(naam)) return null;
   return BOODSCHAPPEN_PIN.test(naam) ? "Boodschappen" : "Privé - vrijetijd-uitgaan-vakantie & uit eten";
+}
+// beide-V17R2 — betaalbedrijven die online casino's afhandelen (gezien in de testdossiers, altijd met een buitenlandse IBAN).
+export const KANSSPEL_VERWERKER = /novatech solutions|revoapps|zephyrion link|verdewich partners|naudapay|privalgo|mersey services|goldwin ltd|letplay/i;
+const KANSSPEL_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop/uitgaven"]);
+export function kansspelVerwerkerVan(tx) {
+  const inTekst = /IBAN:?\s*([A-Z]{2}\d{2}[A-Z0-9]{8,30})/i.exec(`${tx.description || ""} ${tx.fullDescription || ""}`)?.[1];
+  const iban = String(tx.counterpartyIban || inTekst || "").replace(/\s/g, "").toUpperCase();
+  return KANSSPEL_VERWERKER.test(String(tx.counterparty || "")) && !!iban && !iban.startsWith("NL");
 }
 // beide-V16R0 — verhuurder herkennen aan de naam van de tegenpartij (vóór " via "). Netbeheer (Stedin, Enexis) is energie, geen huur.
 export const VERHUURDER = /vastgoed|makelaar|onroerend ?goed|(?<!net)beheer\s*b\.?\s?v\b/i;
@@ -825,6 +840,14 @@ export function resolveClassification(tx, ...rest) {
   // beide-V16R3 — onbekende pinbetaling bij horeca, tabak of kiosk vanaf de zakelijke rekening is privé (testdossiers: 68 van 73 keer).
   // beide-V16R4 — met de soort uitgave (horeca → vrije tijd/uit eten, tabak/snoep → boodschappen). Op "nakijken"; een zakelijke lunch kies je zelf.
   //   Ook op de privérekening (dan zonder profiel = zakelijk dossier met privérekening).
+  // beide-V17R2 — betaalbedrijven van online casino's (buitenlandse IBAN): Persoonlijk & vertrouwelijk, op "nakijken" (voorstel trefkans 6-11).
+  if (!eigenKeuze && KANSSPEL_VAN.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && kansspelVerwerkerVan(tx)) {
+    return { ...uitkomst, category: "Persoonlijk & vertrouwelijk" };
+  }
+  // beide-V17R2 — "boodschappen" in de omschrijving van een overboeking aan een persoon (betaalverzoek, partner): Boodschappen.
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && /\bboodschappen\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+    return { ...uitkomst, category: "Boodschappen" };
+  }
   const horeca = !eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx);
   if (horeca) return { ...uitkomst, category: horeca };
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()

@@ -18,6 +18,7 @@ export function herstelMapping(pf) {
 const BETAALWIJZE_KOLOMMEN = ["Betaalwijze", "Mutatiesoort", "Code", "Transactiecode"];
 // "BEA, GOOGLE PAY    JUMBO BOXTEL,PAS011NR:02101911, 05.06.25/07:25   EINDHOVEN" en de nieuwere vorm
 // "BEA,BETAALPAS    BP EXPRESS EINDHOVENNR:41120687,2025-11-04/08:32   EINDHOVEN,NLD".
+const ABN_PAS_OUD_RE = /^(BEA|GEA)\s+NR:\s*\S+\s+\d{2}\.\d{2}\.\d{2}\/\d{2}[.:]\d{2}\s+(.+?)\s*,\s*PAS\s*\d{2,3}/i;
 const ABN_PAS_RE = /^(BEA|GEA)\s*,\s*(?:[A-Z]+(?: [A-Z]+)?)\s{2,}(.+?)(?:,\s*PAS\s*\d{2,3}\s*NR:|NR:)/i;
 
 // beide-V4R6 — de bron van een transactie moet gelijk zijn aan de bestandsnaam: soort rekening (accountTypeByFile),
@@ -74,6 +75,13 @@ export function buildTransactions(parsedFiles) {
       if (abnPas) {
         counterparty = abnPas[2].trim();
         if (!betaalwijze) betaalwijze = abnPas[1].toUpperCase() === "GEA" ? "Geldautomaat" : "Betaalautomaat";
+      }
+      // beide-V17R3 — oudere ABN AMRO MT940-export (blinde test MS 6-11): naam leeg, de winkel staat alleen in de omschrijving
+      // ("BEA   NR:CT662512 30.01.21/15.53 CCV SUPERSAM EINDHOVEN,PAS021 EINDHOVEN"). Zonder naam herkende de app niets.
+      const abnPasOud = !counterparty && ABN_PAS_OUD_RE.exec(fullDescription || description);
+      if (abnPasOud) {
+        counterparty = abnPasOud[2].trim();
+        if (!betaalwijze || /^\d+$/.test(betaalwijze)) betaalwijze = abnPasOud[1].toUpperCase() === "GEA" ? "Geldautomaat" : "Betaalautomaat";
       }
       fileTx.push({
         id: id++,

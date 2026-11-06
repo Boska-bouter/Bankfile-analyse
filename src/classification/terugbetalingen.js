@@ -5,7 +5,8 @@ import { fiscalTreatmentOf } from "./categories.js";
 // of refund van een partij waaraan ook betaald wordt (Ziggo, Vodafone, Eneco, een webwinkel) werd op zoekwoorden als
 // "factuur" automatisch "Zakelijke inkomsten" en telde dan als omzet mét BTW. Herkend als terugbetaling als:
 //  - dezelfde partij (IBAN of naam) binnen 120 dagen een afschrijving van precies hetzelfde bedrag heeft, of
-//  - de omschrijving een woord als refund/terugbetaling/storno noemt en dezelfde partij ook afschrijvingen heeft.
+//  - de omschrijving een woord als refund/terugbetaling/storno noemt en dezelfde partij ook afschrijvingen heeft, of
+//  - (beide-V17R2) je aan die partij vooral betaalt: minstens 3 afschrijvingen, 80% dezelfde categorie, 3x zo vaak af als bij.
 // De bijschrijving krijgt dan de categorie van die afschrijving en verlaagt zo de kosten. Alleen automatische uitkomsten:
 // een eigen keuze en een opgegeven opdrachtgever blijven zoals ze zijn.
 const DAG = 86400000;
@@ -19,6 +20,12 @@ export function herkenTerugbetalingen(transacties) {
     for (const k of sleutels(t)) { if (!af.has(k)) af.set(k, []); af.get(k).push(t); }
   }
   if (af.size === 0) return transacties;
+  // beide-V17R2 — hoeveel bijschrijvingen per partij (voor de derde regel hieronder).
+  const bij = new Map();
+  for (const t of transacties) {
+    if (t.isMirror || !(t.amount > 0)) continue;
+    for (const k of sleutels(t)) bij.set(k, (bij.get(k) || 0) + 1);
+  }
   let gewijzigd = false;
   const uit = transacties.map((t) => {
     if (t.isMirror || !(t.amount > 0) || t.transferLocked || fiscalTreatmentOf(t.category) !== "omzet") return t;
@@ -36,6 +43,16 @@ export function herkenTerugbetalingen(transacties) {
       for (const a of kandidaten) tel[a.category] = (tel[a.category] || 0) + 1;
       const cat = Object.entries(tel).sort((a, b) => b[1] - a[1])[0][0];
       bron = kandidaten.find((a) => a.category === cat);
+    }
+    // beide-V17R2 — een partij waaraan je vooral betaalt (minstens 3 afschrijvingen, meestal dezelfde categorie, en minstens drie keer
+    // zo vaak afschrijvingen als bijschrijvingen), bijv. Vitens, Stedin of Vodafone: de bijschrijving is een terugbetaling, ook met
+    // een ander bedrag (voorstel trefkans 6-11).
+    if (!bron && kandidaten.length >= 3) {
+      const tel = {};
+      for (const a of kandidaten) tel[a.category] = (tel[a.category] || 0) + 1;
+      const [cat, n] = Object.entries(tel).sort((a, b) => b[1] - a[1])[0];
+      const aantalBij = Math.max(0, ...sleutels(t).map((k) => bij.get(k) || 0));
+      if (n / kandidaten.length >= 0.8 && kandidaten.length >= 3 * aantalBij) bron = kandidaten.find((a) => a.category === cat);
     }
     if (!bron) return t;
     gewijzigd = true;

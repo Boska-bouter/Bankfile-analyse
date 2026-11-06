@@ -1,6 +1,7 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import ReviewStep from "./ReviewStep.jsx";
 import PinBulk from "./PinBulk.jsx";
+import KleineBedragen from "./KleineBedragen.jsx";
 import { getCategorieProfiel } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 
@@ -24,6 +25,7 @@ export default function OpschonenPanel({
   onBulkMarkOverigAsWinkelsDivers,
   overigZakelijkCount = 0,
   overigPriveCount = 0,
+  classified = null,
 
   duplicatesRef,
   duplicateGroups,
@@ -65,6 +67,7 @@ export default function OpschonenPanel({
             {overigOpen ? <ChevronDown className="h-4 w-4 text-amber-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />}
           </button>
           {overigOpen && pendingOverigReview.length > 0 && <PinBulk items={pendingOverigReview} onMark={onMarkOverigItem} />}
+          {overigOpen && pendingOverigReview.length > 0 && !getCategorieProfiel() && <KleineBedragen items={pendingOverigReview} classified={classified} onMark={onMarkOverigItem} />}
           {overigOpen && (
             <ReviewStep
               items={pendingOverigReview}

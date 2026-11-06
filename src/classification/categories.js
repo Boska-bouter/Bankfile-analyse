@@ -27,7 +27,7 @@ export const DEFAULT_RULES = [
   { name: "Belastingen: MRB", color: "bg-fuchsia-300 text-fuchsia-900", keywords: ["motorrijtuigenbelasting", "mrb"] },
   { name: "Belastingen: OB", color: "bg-fuchsia-200 text-fuchsia-900", keywords: ["omzetbelasting", " ob "] },
   { name: "Belastingen: ZVW", color: "bg-purple-200 text-purple-900", keywords: ["zvw", "zorgverzekeringswet"] },
-  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "accountant", "cijfermeester", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
+  { name: "Boekhouder, accountant & administratie", color: "bg-purple-100 text-purple-800", keywords: ["boekhoud", "administratiekant", "administratie", "accountant", "cijfermeester", "adviesbureau", "loonadministratie", "salarisverwerking", "loyalis", "raet", "nmbrs", "visma raet", "adp nederland", "deloitte", "pwc", "ernst & young", " ey ", "kpmg", "bdo", "flynth", "countus", "alfa accountants", "grant thornton", "mazars", "baker tilly",
     "sd worx", "loket.nl", "exact online", "afas software", "salaris compleet", "salarispro", "employes", "unit4",
     "salarisonline", "payroll totaal", "tentoo", "merces", "flexpedia",
     "rsm nederland", "moore drv", "astrium accountants", "accon avm", "abab accountants", "van oers",
@@ -51,7 +51,7 @@ export const DEFAULT_RULES = [
   ] },
   { name: "Brandstof", color: "bg-orange-100 text-orange-800", keywords: [
     "shell", "esso", "esso express", "total", "totalenergies", "total energies", "lukoil", "avia",
-    " bp ", "argos", "tamoil", "tinq", "haan", "texaco", "agri", "firezone", "tango", "gulf", "q8",
+    " bp ", "argos", "tamoil", "tankserv", "tankservice", "tinq", "haan", "texaco", "agri", "firezone", "tango", "gulf", "q8",
     "q8 easy", "greenpoint", "dcb energie", "berkman", "van der sluijs", "autofood", "travelcard",
     "wasstraat", "wasbox", "fastned", "allego", "shell recharge", "vattenfall incharge", "plenty",
     "multi tank card", "multi tankcard",
@@ -112,7 +112,7 @@ export const DEFAULT_RULES = [
   { name: "Persoonlijk & vertrouwelijk", color: "bg-slate-700 text-slate-100", keywords: [
     "holland casino", "jack's casino", "jacks casino", "circus casino", "toto.nl", "nederlandse loterij",
     "staatsloterij", "postcode loterij", "pokerstars", "unibet", "bet365", "betcity", "kansino",
-    "napoleon games", "bingoal",
+    "napoleon games", "bingoal", "igaming", "google play", "app store", "itunes", "tonybet", "leovegas", "711.nl", "zebet", "betmgm",
     "tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn",
     "onlyfans", "coffeeshop",
   ],
@@ -235,13 +235,16 @@ export const DEFAULT_RULES = [
   // beide-V15R4 — sportschool/fitness en sportclubs (wens Boska 4-11, Xplor-Anytime Fitness in dossier M. Dakhlaoui). Privé, niet aftrekbaar.
   { name: "Privé - sport & fitness", color: "bg-teal-50 text-teal-700", keywords: [
     "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "fit for free", "fitforfree",
-    "david lloyd", "healthcity", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb",
+    "david lloyd", "healthcity", "sportcentrum", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb",
   ] },
   { name: "Privé - vrijetijd-uitgaan-vakantie & uit eten", color: "bg-teal-50 text-teal-700", keywords: [
     "takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "cinema", "restaurant", "cafe",
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
-    "feelgoods burgers",
+    "feelgoods burgers", "dominos", "domino's", "new york pizza", "burger king", "starbucks", "deliveroo", "uber eats", "ubereats", "febo",
+    // beide-V17R4 — uitgaan, concerten en games (wens Boska 6-11).
+    "games", "concert", "festival", "arena", "ticketmaster", "eventim", "paylogic", "ticketswap", "ahoy", "gelredome",
+    "poppodium", "paradiso", "melkweg", "theater", "schouwburg", "bioscoop", "kinepolis", "vue cinema", "efteling", "steampowered", "playstation", "nintendo", "xbox",
     // beide-V16R4 — koffie en thee onderweg (wens Boska 5-11: "Liempde West Coffee" is vrije tijd). Alleen samenstellingen als trefwoord;
     // los "coffee"/"koffie"/"thee" alleen in de naam bij een pinbetaling (horecaPinVan in classify.js), anders won het van "esso" en
     // van koffie die een horecazaak inkoopt.
