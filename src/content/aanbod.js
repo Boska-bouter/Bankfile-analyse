@@ -7,7 +7,10 @@ export const PRIVACY_LABEL = "Verwerkt op je eigen apparaat";
 export const PRIVACY_KERN = "Bankbestanden en het dossier worden op het eigen apparaat verwerkt en bewaard. Voor de analyse en de berekeningen is geen server nodig.";
 // beide-V16R8 — precies wat er op de server staat (ChatGPT-check 5-11): nooit het wachtwoord zelf, alleen een controlewaarde of
 // de openbare helft van de passkey; bij een bankkoppeling tijdelijk de toegangssleutel (bank_wachtend, WACHT_MS = 2 uur).
-export const PRIVACY_SERVER = "Op de server staan alleen je account (mailadres en abonnement), wat nodig is om je inlog te controleren (nooit je wachtwoord zelf) en het logboek van de beheerder. Bij een bankkoppeling staat de toegangssleutel er tijdelijk, maximaal 2 uur.";
+// beide-V17R1 — "de server" is de database van de app bij Cloudflare (D1); zo genoemd op verzoek van Boska 6-11.
+export const PRIVACY_SERVER = "In de database van BankafschriftenTool bij Cloudflare staan alleen je account (mailadres en abonnement), wat nodig is om je inlog te controleren (nooit je wachtwoord zelf) en het logboek van de beheerder. Bij een bankkoppeling staat daar tijdelijk de toegangssleutel, maximaal 2 uur.";
+// beide-V17R1 — tekst Boska 6-11 over het dossierbestand.
+export const PRIVACY_DOSSIER = "Een dossier kun je lokaal als bestand opslaan om er later mee verder te gaan. Dat kan met of zonder wachtwoordbeveiliging. Sla nooit een dossier op een openbare computer op.";
 
 // Abonnement (zelfde termijn als voorwaarden artikel 5).
 export const GRATIS_DAGEN = 30;
