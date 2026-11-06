@@ -5,7 +5,7 @@
 // Op zichzelf staand (geen app-bestanden nodig).
 import { PLANNEN, plannenVoor, PLAN_UITLEG, GEBRUIK, GEBRUIK_UITLEG, MIN_REDEN, prijzen, prijsTekst, prijsVoorSoort, planNaam, niveauVan, esc, HERINNER_DAGEN, plusDagen } from "./rechten.js";
 import { BETALEN } from "./peiling.js";
-import { vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
+import { vastStreepje, vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
 const nlDatum = (iso) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" });
@@ -89,7 +89,7 @@ export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, 
       : "Bijvoorbeeld: ik ben zzp'er en wil mijn zakelijke rekening indelen voor de btw-aangifte.",
   }]));
   const titel = heeftToegang ? "Abonnementen" : "Aanmelden voor BankafschriftenTool";
-  return new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return new Response(metVastStreepje(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${heeftToegang ? "Abonnementen" : "Aanmelden"} · BankafschriftenTool</title>
 <style>
 :root{--bg:#f6f8f7;--fg:#0f172a;--muted:#475569;--card:#fff;--line:#d8e2de;--accent:#0f766e;--ok:#065f46;--okbg:#ecfdf5;--err:#b42318}
@@ -166,5 +166,11 @@ try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
 vs.textContent="Je verzoek om te verlengen is verstuurd. Je krijgt een e-mail zodra het is verlengd.";setTimeout(()=>location.reload(),2500)}
 catch(x){vs.className="err";vs.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}})}
-</script></body></html>`, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+</script></body></html>`), { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
+
+// beide-V17R0 — alleen de zichtbare inhoud (tussen <main> en </main>): geen afbreking na het streepje in "IB-aangifte" enz.
+function metVastStreepje(html) {
+  const a = html.indexOf("<main>"), b = html.indexOf("</main>");
+  return a < 0 || b < a ? html : html.slice(0, a) + vastStreepje(html.slice(a, b)) + html.slice(b);
 }

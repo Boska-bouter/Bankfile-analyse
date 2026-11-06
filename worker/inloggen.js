@@ -19,7 +19,7 @@ import { uitgebreidExtra, BANKKOPPELING_STATUS } from "../src/content/aanbod.js"
 import { welkomHead, WELKOM_TITEL } from "./zoekmachines.js";
 import { WELKOM_ACHTERGROND } from "./achtergrond.js";
 import { logBeheer, inloggenVastleggen } from "./logboek.js";
-import { welkomInhoud, welkomVeilig, welkomAbonnementen, welkomOmzetband, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
+import { vastStreepje, welkomInhoud, welkomVeilig, welkomAbonnementen, welkomOmzetband, welkomKop, welkomNieuw, alleGratis, welkomSoorten, WELKOM_STIJL, VERGELIJK_STIJL } from "./welkom.js";
 import { bankkoppelingAan } from "./rechten.js";
 
 const COOKIE = "bo_sessie";
@@ -320,7 +320,7 @@ const kanPasskey=!!(window.PublicKeyCredential&&navigator.credentials);`;
 const pagina = (titel, inhoud, script = "", extraHeaders = {}, achter = "", head = `<meta name="robots" content="noindex, nofollow">`, volleTitel = null) =>
   new Response(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 ${head}
-<title>${esc(volleTitel || `${titel} · BankafschriftenTool`)}</title><style>${STIJL}</style></head><body><main>${inhoud}</main>${achter}
+<title>${esc(volleTitel || `${titel} · BankafschriftenTool`)}</title><style>${STIJL}</style></head><body><main>${vastStreepje(inhoud)}</main>${achter}
 ${script ? `<script>${HULP_JS}\n${script}</script>` : ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extraHeaders } });
 
 // beide-V4R0 — de inlogpagina is ook de welkomstpagina (zie welkom.js): breed uitleg links en inloggen rechts, smal inloggen bovenaan.
