@@ -100,6 +100,7 @@ import { uitloggen, useMagUitgebreid } from "./dossier/useRol.js";
 import { useModus } from "./modus/index.js";
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
+import { setBranche } from "./classification/branche.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import NextStepCard from "./components/dashboard/NextStepCard.jsx";
@@ -1355,6 +1356,8 @@ export default function App() {
 
   // beide-V1R6 — categorie-indeling en herkenning volgens het dossierprofiel (modus/useCategorieProfiel.jsx).
   const herkenning = useCategorieProfiel(modus, setCategoryRules, setFixedCategories, categoryRules);
+  // beide-V17R7 — soort bedrijf uit de wizard (classification/branche.js); verandert eigenNamen, dan ook eigenNamenKeywords en dus de indeling.
+  setBranche(eigenNamen?.branche || null);
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
@@ -2800,6 +2803,8 @@ export default function App() {
     const aan = (k) => modus.onderdelen[k] !== false;
     const voeg = (key, label, open, onderdeel = "omzet") => { if (open && (onderdeel === null || aan(onderdeel))) lijst.push({ key, label }); };
     voeg("naam", "Naam rekeninghouder", eigenNamen === null && !modus.wizard, null);
+    // beide-V17R7 — soort bedrijf (alleen zakelijk dossier): helpt de herkenning, bijv. inkoop bij groothandel en slager voor horeca.
+    voeg("branche", "Soort bedrijf", eigenNamen !== null && !eigenNamen?.branche && !modus.wizard, null);
     voeg("rechtsvorm", "Rechtsvorm", rechtsvorm === null);
     // beide-V8R4 — eigen rekeningen elders (ook in Eenvoudig, zie SetupWizardModal).
     voeg("andere", "Eigen rekeningen", !modus.wizard && parsedFiles.length > 0 && eigenRekeningenExtra === null, null);

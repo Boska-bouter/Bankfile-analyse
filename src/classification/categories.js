@@ -1,7 +1,7 @@
 // Categorieregels — zelfde logica als het manuele werkblad, editable at runtime.
 
 export const DEFAULT_RULES = [
-  { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto"] },
+  { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto", "bandenservice", " rdw "] },
   { name: "Bankkosten", color: "bg-slate-200 text-slate-800", keywords: [
     "kosten betaalpakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie", "betalingsverkeer",
     "abn amro bank n.v.", "abn amro", "ing bank n.v.", "ing bank", "rabobank", "sns bank", "asn bank",
@@ -202,7 +202,7 @@ export const DEFAULT_RULES = [
   ] },
   { name: "Lease (financieel)", color: "bg-teal-200 text-teal-900", keywords: [] },
   { name: "Marketing-website", color: "bg-green-100 text-green-800", keywords: ["google ads", "google ireland", "meta ads", "facebook ads", "facebook payments", "mailchimp", "hostnet", "versio", "transip", "strato", "canva", "linkedin ads"] },
-  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "q-park", "qpark", "q park", "yellowbrick", "mobiliteitsgelden"] },
+  { name: "Parkeren", color: "bg-cyan-100 text-cyan-800", keywords: ["parkingyou", "parking you", "parkeer", "parkeren", "q-park", "qpark", "q park", "yellowbrick", "mobiliteitsgelden"] },
   { name: "Privé opnames", color: "bg-amber-100 text-amber-800", keywords: ["geldautomaat", "pinopname", "contant opgenomen", " atm ", "geldmaat"] },
   { name: "Reiskosten (OV)", color: "bg-cyan-200 text-cyan-900", keywords: [
     "ns.nl", "ns-groep", "ns groep", "ovpay", "gvb", "ret", "htm", "arriva", "connexxion", "qbuzz",
@@ -231,14 +231,16 @@ export const DEFAULT_RULES = [
     "securitas", "verisure", "g4s", "trigion", "adt", "ajax systems", "alarm control", "heras", "kiwa",
     "cameranu", "hikvision", "dahua", "axis communications", "bosch security", "hanwha vision",
     "saval", "honeywell", "ansul", "somati", "firesense",
+    // beide-V17R6 — printerinkt-abonnement (HP Instant Ink via Worldpay; dossier Dakhlaoui 6-11: 86 keer Overig).
+    "instant ink",
   ] },
   // beide-V15R4 — sportschool/fitness en sportclubs (wens Boska 4-11, Xplor-Anytime Fitness in dossier M. Dakhlaoui). Privé, niet aftrekbaar.
   { name: "Privé - sport & fitness", color: "bg-teal-50 text-teal-700", keywords: [
     "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "fit for free", "fitforfree",
-    "david lloyd", "healthcity", "sportcentrum", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb",
+    "david lloyd", "healthcity", "sportcentrum", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb", "gymly", "kickboxing",
   ] },
   { name: "Privé - vrijetijd-uitgaan-vakantie & uit eten", color: "bg-teal-50 text-teal-700", keywords: [
-    "takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "cinema", "restaurant", "cafe",
+    "takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "pathé", "cinema", "restaurant", "cafe",
     "koffiehuisje", "coffeelab", "smullers", "bakhuisje", "ketelhuis", "tea stories", "lucifer coffee", "chaji",
     "soju bar", "zwartwit koffie", "eetcafe", "lunchroom", "grillroom", "snackbar", "cafetaria", "bistro", "brasserie",
     "feelgoods burgers", "dominos", "domino's", "new york pizza", "burger king", "starbucks", "deliveroo", "uber eats", "ubereats", "febo",
@@ -291,7 +293,7 @@ export const DEFAULT_RULES = [
     "klarna", "riverty", "afterpay", "billink", "in3",
   ],
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
-  { name: "Zakelijke inkoop/uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
+  { name: "Zakelijke inkoop/uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["staangeld", "marktgeld", "gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
     description: "Algemene zakelijke kosten die nergens anders onder vallen." },
   // Bewust GEEN zoekwoorden: net als "Huur (deels zakelijk)" wordt dit subtype nooit automatisch
   // toegekend. Streaming-/softwareabonnementen matchen anders via de zoekwoorden bij "Prive overige

@@ -1,3 +1,4 @@
+import { brancheLabel } from "../../classification/branche.js";
 import { ClipboardList, Upload } from "lucide-react";
 
 // release21V4 — lege staat van Controleren en Instellingen zolang er nog geen bankbestand is: toont
@@ -60,6 +61,8 @@ export default function VastgelegdeBasisgegevens({
       titel: "Onderneming",
       rijen: [
         ["Rekeninghouder", rekeninghouder],
+        // beide-V17R7
+        ["Soort bedrijf", eigenNamen === null ? null : brancheLabel(eigenNamen?.branche) || "Niet ingevuld"],
         ["Rechtsvorm", rechtsvorm == null ? null : isBV ? "BV" : "Eenmanszaak/zzp"],
         ...(isBV ? [["Holding", jaNee(heeftHolding, "Ja, holding + werkmaatschappij", "Nee")]] : []),
         ...(!isBV ? [["KOR", jaNee(korRegeling)], ["BTW verlegd", jaNee(btwVerlegd)]] : []),

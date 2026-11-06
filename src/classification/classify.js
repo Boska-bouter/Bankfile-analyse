@@ -1,4 +1,5 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory } from "./categories.js";
+import { brancheCategorie } from "./branche.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -820,6 +821,32 @@ export function verhuurderVan(tx) {
 const PRIVE_VERZEKERING = new Set(["Verzekeringen", "Verzekering: Overig", "Verzekering: Wonen"]);
 // beide-V11R7 — ook pakketten voor ondernemers (NN "Zekerheidspakket", vergelijking Koenders 30-10: € 6.300–8.700 per jaar als privé).
 const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzekering|ondernemers ?(verzekering|pakket)|zekerheidspakket|bedrijfsaansprakelijk|\bavb\b|bedrijfsschade|inventarisverzekering|bedrijfsinventaris/i;
+// beide-V17R5 — soort belasting uit het betalingskenmerk van de Belastingdienst (16 cijfers; specificatie "Betalingskenmerk bepalen"
+// 1.5 van de Belastingdienst). Positie 2-9 = BSN/RSIN, positie 10-11 = middel. Loonheffingen en omzetbelasting: positie 10 = middel
+// (0 naheffing LB, 1 aangifte OB, 5 naheffing OB, 6 aangifte LB), positie 11 = laatste cijfer van het jaar. Anders: 70/71/73
+// inkomstenbelasting (voorlopige aanslag IB/Zvw), 75 Zvw, 23-28 toeslagen, 76/78 houderschapsbelasting (motorrijtuigen).
+// Ook "kenteken + periode … t/m …" is motorrijtuigenbelasting. Wens Boska 6-11 (trefkans voorbij 75%).
+export function belastingSoortUitKenmerk(tx) {
+  const tekst = `${tx.description || ""} ${tx.fullDescription || ""}`;
+  if (/\b[A-Z0-9]{1,3}-[A-Z0-9]{1,3}-[A-Z0-9]{1,3}\b\s+\d{2}-\d{2}-\d{4}\s+t\/m\b/i.test(tekst)) return "Belastingen: MRB";
+  const m = /(?<![\d])(\d{4})[ .]?(\d{4})[ .]?(\d{4})[ .]?(\d{4})(?![\d])/.exec(tekst);
+  if (!m) return null;
+  const k = m.slice(1).join("");
+  const p10 = k[9], p11 = k[10], twee = k.slice(9, 11);
+  const jaarTx = tx.date instanceof Date ? tx.date.getFullYear() : Number(String(tx.month || "").slice(0, 4));
+  // Ouder jaar: het cijfer van het aanslagjaar is niet dat van het jaar van betalen (alleen het laatste cijfer staat in het kenmerk).
+  const voorgaand = () => { const v = ((jaarTx % 10) - Number(p11) + 10) % 10; return !!jaarTx && v !== 0; };
+  if (p10 === "1") return "Belastingen: OB";
+  if (p10 === "5") return voorgaand() ? "Belastingen: Naheffingen OB voorgaande jaren" : "Belastingen: OB";
+  if (p10 === "6") return "Belastingen: LH";
+  if (p10 === "0") return voorgaand() ? "Belastingen: Naheffingen LH voorgaande jaren" : "Belastingen: LH";
+  if (twee === "70" || twee === "71" || twee === "73") return "Belastingen: IH";
+  if (twee === "75") return "Belastingen: ZVW";
+  if (/^2[3-8]$/.test(twee)) return "Toeslagen";
+  if (twee === "76" || twee === "78") return "Belastingen: MRB";
+  return null;
+}
+
 export function resolveClassification(tx, ...rest) {
   const uitkomst = resolveClassificationBasis(tx, ...rest);
   const overridesByRow = rest[5] || {};
@@ -830,6 +857,10 @@ export function resolveClassification(tx, ...rest) {
   // beide-V16R5 — vliegtickets net zo: standaard privé, zakelijk alleen als iemand zelf "Reiskosten (vliegtickets)" kiest.
   if (!eigenKeuze && uitkomst.category === "Reiskosten (vliegtickets)") return { ...uitkomst, category: "Privé - vliegtickets" };
   // beide-V10R6 — KPN/Vodafone/Odido leveren mobiel én internet/tv: de omschrijving beslist.
+  if (!eigenKeuze && uitkomst.category === "Belastingen: overig" && !getCategorieProfiel()) {
+    const soort = belastingSoortUitKenmerk(tx);
+    if (soort) return { ...uitkomst, category: soort };
+  }
   const naar = !eigenKeuze && TELECOM_SOORT[uitkomst.category]?.[telecomSoort(tx)];
   if (naar) return { ...uitkomst, category: naar };
   // beide-V16R0 — een verhuurder (vastgoed, makelaar, "beheer b.v.", onroerend goed) vanaf de zakelijke rekening is huur, ook met
@@ -847,6 +878,13 @@ export function resolveClassification(tx, ...rest) {
   // beide-V17R2 — "boodschappen" in de omschrijving van een overboeking aan een persoon (betaalverzoek, partner): Boodschappen.
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && /\bboodschappen\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Boodschappen" };
+  }
+  // beide-V17R7 — soort bedrijf (wizard): horeca koopt in bij groothandel en speciaalzaken voor eten.
+  const branche = !eigenKeuze && !getCategorieProfiel() && brancheCategorie(tx, uitkomst.category, rest[3]);
+  if (branche) return { ...uitkomst, category: branche, type: "Zakelijk" };
+  // beide-V17R6 — pinbetaling op een NS-station ("NSBest 203 BEST NLD", "NS Eindhv Bkln 202"): openbaar vervoer, standaard privé (besluit 28-10).
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && /^NS ?[A-Z][a-z]/.test(String(tx.counterparty || "")) && /pasvolgnr|\bterm:/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+    return { ...uitkomst, category: "Privé - openbaar vervoer" };
   }
   const horeca = !eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx);
   if (horeca) return { ...uitkomst, category: horeca };

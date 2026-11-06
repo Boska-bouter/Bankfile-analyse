@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { BRANCHES } from "../../classification/branche.js";
 
 // Los, altijd-beschikbaar venster om de rekeninghouder-/fiscaal-partnernaam (eigenNamen) in te
 // vullen of te wijzigen — dezelfde twee velden als stap 10 van de opzet-wizard (SetupWizardModal),
@@ -10,9 +11,10 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
   const [ondernemer, setOndernemer] = useState(eigenNamen?.ondernemer || "");
   const [partner, setPartner] = useState(eigenNamen?.partner || "");
   const [bedrijf, setBedrijf] = useState(eigenNamen?.bedrijf || ""); // beide-V8R7
+  const [branche, setBrancheKeuze] = useState(eigenNamen?.branche || ""); // beide-V17R7
 
   const save = () => {
-    onSave({ ...(eigenNamen || {}), ondernemer: ondernemer.trim() || null, partner: partner.trim() || null, bedrijf: bedrijf.trim() || null });
+    onSave({ ...(eigenNamen || {}), ondernemer: ondernemer.trim() || null, partner: partner.trim() || null, bedrijf: bedrijf.trim() || null, branche: branche || null });
     onClose();
   };
 
@@ -52,6 +54,10 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
             placeholder="Bedrijfsnaam / handelsnaam (optioneel)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
+          <select value={branche} onChange={(e) => setBrancheKeuze(e.target.value)} aria-label="Soort bedrijf" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <option value="">Soort bedrijf (optioneel)</option>
+            {BRANCHES.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
+          </select>
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
               Annuleren
