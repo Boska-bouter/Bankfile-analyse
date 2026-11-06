@@ -1,3 +1,4 @@
+import { BRANCHES } from "../../classification/branche.js";
 import LeaseContractenVraag, { contractenVan, syncContracten } from "./LeaseContractenVraag.jsx";
 import { periodesPerSoort, gezamenlijkePeriode, maandTekst } from "../../calc/periodeDekking.js";
 import LeaseControleScherm from "./LeaseControleScherm.jsx";
@@ -97,6 +98,8 @@ export default function SetupWizardModal({
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
     const n = {
       naam: vol && eigenNamen === null,
+      // beide-V17R7 — soort bedrijf (helpt de herkenning, classification/branche.js).
+      branche: vol && !eigenNamen?.branche,
       rechtsvorm: vol && (rechtsvorm === null || forceRechtsvormStep),
       holding: vol && heeftHolding === null,
       andere: vol && (eigenRekeningenExtra === null || forceRechtsvormStep),
@@ -146,7 +149,7 @@ export default function SetupWizardModal({
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
     if (vol && loadFilesFirst && !Array.isArray(alleenVragen)) list.push(20);
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
-    if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.rechtsvorm || needs.holding) list.push(31);
+    if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.branche || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
     if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
@@ -168,7 +171,7 @@ export default function SetupWizardModal({
     // release21V2 — een scherm alleen tonen als er ook echt een vraag op staat. Voorheen kwam scherm 31
     // leeg in beeld bij een zzp'er (holdingvraag staat open maar hoort alleen bij een BV) en scherm 32 bij
     // een openstaande privé-spaarvraag zonder geladen privérekening — alleen een knop "Doorgaan".
-    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
+    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.branche && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
     if (id === 37 && !leaseControle?.nodig) return false;
     if (id === 32 && !needs.andere && !needs.spaar && !(needs.spaarPrive && sessionFiles.some((f) => typedNow[f] === "Prive"))) return false;
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
@@ -599,6 +602,7 @@ function Scherm31({
   const naamO = typedNow.eigenNaamOndernemer ?? eigenNamen?.ondernemer ?? "";
   const naamP = typedNow.eigenNaamPartner ?? eigenNamen?.partner ?? "";
   const naamB = typedNow.eigenNaamBedrijf ?? eigenNamen?.bedrijf ?? "";
+  const branche = typedNow.branche ?? eigenNamen?.branche ?? null;
   return (
     <div className="space-y-4">
       {sessionFiles.length > 0 && (
@@ -653,6 +657,18 @@ function Scherm31({
         </Sectie>
       )}
 
+      {needs.branche && (
+        <Sectie titel="Wat voor bedrijf is het?" uitleg="Zo herkent de app beter wat zakelijk is. Bijvoorbeeld: bij horeca zijn inkopen bij de groothandel en grotere bedragen bij slager, toko of markt zakelijke inkoop. Later aanpasbaar bij Rekeninghouder.">
+          <div className="flex flex-wrap gap-2">
+            {BRANCHES.map((b) => (
+              <button key={b.key} type="button" onClick={() => zet({ branche: b.key })} className={`${KNOP} ${branche === b.key ? KNOP_AAN : KNOP_UIT}`}>
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </Sectie>
+      )}
+
       {toonRechtsvorm && (
         <Sectie titel="Eenmanszaak/zzp of BV?" uitleg="Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.">
           <div className="flex gap-2">
@@ -697,8 +713,9 @@ function Scherm31({
         type="button"
         disabled={!klaar}
         onClick={() => {
-          if (needs.naam) {
-            setEigenNamen({ ondernemer: naamO.trim() || null, partner: naamP.trim() || null, bedrijf: naamB.trim() || null });
+          if (needs.naam || (needs.branche && branche)) {
+            const basis = needs.naam ? { ...(eigenNamen || {}), ondernemer: naamO.trim() || null, partner: naamP.trim() || null, bedrijf: naamB.trim() || null } : { ...(eigenNamen || {}) };
+            setEigenNamen(branche ? { ...basis, branche } : basis);
           }
           goNext();
         }}

@@ -83,6 +83,11 @@ export function buildTransactions(parsedFiles) {
         counterparty = abnPasOud[2].trim();
         if (!betaalwijze || /^\d+$/.test(betaalwijze)) betaalwijze = abnPasOud[1].toUpperCase() === "GEA" ? "Geldautomaat" : "Betaalautomaat";
       }
+      // beide-V17R5 — OVpay zet een wisselende reiscode vóór de naam ("NLOVLX5MAGXWYMK5WG www.ovpay.nl"): elke rit was een andere
+      // tegenpartij, dus één keuze gold maar voor één rit (meting 6-11: 93 losse keuzes in JvS). Nu één tegenpartij; oude keuzes blijven
+      // gelden via counterpartyOrigineel.
+      const ovpay = /^NLOV[A-Z0-9]{8,}\s+(www\.ovpay\.nl)\b/i.exec(counterparty);
+      if (ovpay) counterparty = "OVpay (www.ovpay.nl)";
       fileTx.push({
         id: id++,
         date,
