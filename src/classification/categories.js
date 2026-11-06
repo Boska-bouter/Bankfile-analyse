@@ -112,7 +112,7 @@ export const DEFAULT_RULES = [
   { name: "Persoonlijk & vertrouwelijk", color: "bg-slate-700 text-slate-100", keywords: [
     "holland casino", "jack's casino", "jacks casino", "circus casino", "toto.nl", "nederlandse loterij",
     "staatsloterij", "postcode loterij", "pokerstars", "unibet", "bet365", "betcity", "kansino",
-    "napoleon games", "bingoal",
+    "napoleon games", "bingoal", "igaming", "tonybet", "leovegas", "711.nl", "zebet", "betmgm",
     "tinder", "bumble", "hinge", "parship", "lexa.nl", "match.com", "grindr", "happn",
     "onlyfans", "coffeeshop",
   ],

@@ -142,6 +142,7 @@ export function useControlerenCardGroups(p) {
           onBulkMarkOverigAsWinkelsDivers={bulkMarkOverigAsWinkelsDivers}
           overigZakelijkCount={overigZakelijkPending.length}
           overigPriveCount={overigPrivePending.length}
+          classified={classified}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
