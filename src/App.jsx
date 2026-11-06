@@ -15,7 +15,7 @@ import { registerTariefInstellingen } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam, bevestigdVoor, rekeningSoortVan } from "./classification/reviewSummaries.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
-import { overrideSleutel, sleutelVoorTegenpartij } from "./classification/classify.js";
+import { overrideSleutel, sleutelVoorTegenpartij, resolveClassification } from "./classification/classify.js";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import { loadPersistedParsedFiles, loadPersistedSettings } from "./storage/projectStorage.js";
 import { useDashboardCards } from "./cards/useDashboardCards.jsx";
@@ -1439,26 +1439,45 @@ export default function App() {
       setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: tx.type }, tx.counterpartyIban);
     }
   };
+  // beide-V17R9 — een keuze in het leningenpaneel geldt alleen voor de boekingen die zelf een lening zijn (de app herkent ze zonder
+  // eigen keuzes als lening, meestal door "lening" in de omschrijving). Voorheen ging de keuze op de hele tegenpartij (IBAN), zodat
+  // ook "voorgeschoten inkopen", "annulering order" en "privé storting" van dezelfde persoon als lening telden (Boska 6-11, Dakhlaoui).
+  const LENING_CATS = new Set(["Leningen", "Leningen (privé)"]);
+  // Besluit Boska 6-11: alleen met "lening" (of iets wat erop lijkt, ook "voorgeschoten") in de omschrijving, of een herkende geldverstrekker.
+  const LENING_WOORD = /lening|leen\b|geleend|uitgeleend|aflossing|voorgeschot|voorschot|voorgeschiet/i;
+  const isLeningBoeking = (tx) => LENING_WOORD.test(`${tx.description || ""} ${tx.fullDescription || ""}`) || LENING_CATS.has(resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords,
+    accountTypeByFile[tx.source], {}, {}, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords)?.category);
+  const nietLeningAantal = (loan) => {
+    const echt = loan.transactions.filter(isLeningBoeking).length;
+    return echt > 0 ? loan.transactions.length - echt : 0;
+  };
+  const zetLening = (loan, category, label) => {
+    const echt = loan.transactions.filter(isLeningBoeking);
+    snapshotBeforeAction(label);
+    if (echt.length === 0) {
+      // Zelf als lening aangewezen (geen lening-woord): zoals voorheen op de tegenpartij.
+      for (const tx of loan.transactions) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: tx.type }, tx.counterpartyIban);
+      return;
+    }
+    // Een keuze op de tegenpartij die alleen een leningcategorie zet, vervalt; de andere boekingen krijgen weer hun eigen indeling.
+    const weg = new Set(loan.transactions.map((tx) => overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source])).filter((k) => k && LENING_CATS.has(overridesByCounterparty[k]?.category)));
+    if (weg.size) setOverridesByCounterparty((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !weg.has(k))));
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const tx of loan.transactions) if (LENING_CATS.has(next[tx.id]?.category)) delete next[tx.id];
+      for (const tx of echt) next[tx.id] = { ...(prev[tx.id] || {}), category, type: tx.type };
+      return next;
+    });
+  };
   // De lening zelf is feitelijk PRIVÉ (bijv. een DUO-studieschuld of een privélening van familie) —
   // ongeacht van/naar welke rekening betaald wordt. "Leningen (privé)" heeft geen fiscale
   // aftrekbaarheid (fiscalTreatmentOf "geen"), in tegenstelling tot "Leningen" waar de rente wél
   // aftrekbaar is — zie categories.js/autoBijtelling.js-achtige toelichting bij SPLIT_CATEGORY_NAMES.
-  const markLoanAsPrive = (loan) => {
-    snapshotBeforeAction("Lening op Leningen (privé) gezet");
-    for (const tx of loan.transactions) {
-      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Leningen (privé)", type: tx.type }, tx.counterpartyIban);
-    }
-  };
-  // Omgekeerde correctie: een eerder als privé gemarkeerde lening blijkt (bijv. na een gesprek met
-  // de cliënt) toch een zakelijke lening te zijn — terug naar "Leningen", zodat de rente weer
-  // meetelt als aftrekbare bedrijfskosten. Kan net zo goed via de algemene categorie-editor, maar
-  // dit maakt het ook rechtstreeks vanuit het leningenpaneel mogelijk (zie privateLoanSummary).
-  const markLoanAsZakelijk = (loan) => {
-    snapshotBeforeAction("Lening op Leningen (zakelijk) gezet");
-    for (const tx of loan.transactions) {
-      setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category: "Leningen", type: tx.type }, tx.counterpartyIban);
-    }
-  };
+  const markLoanAsPrive = (loan) => zetLening(loan, "Leningen (privé)", "Lening op Leningen (privé) gezet");
+  // Omgekeerde correctie: een eerder als privé gemarkeerde lening blijkt toch zakelijk — terug naar "Leningen".
+  const markLoanAsZakelijk = (loan) => zetLening(loan, "Leningen", "Lening op Leningen (zakelijk) gezet");
+  // Alleen de echte leningboekingen houden, met de categorie die de lening nu heeft.
+  const leningOpschonen = (loan) => zetLening(loan, loan.transactions[0]?.category === "Leningen (privé)" ? "Leningen (privé)" : "Leningen", "Lening opgeschoond");
   const acceptVerwachteMatch = () => {
     const { type, idx, matches, targetCategory } = verwachteMatchSuggestie;
     snapshotBeforeAction("Verwachte lease/lening/AOV ingedeeld");
@@ -2719,7 +2738,7 @@ export default function App() {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening,
+    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
