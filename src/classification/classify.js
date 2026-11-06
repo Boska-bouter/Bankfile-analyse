@@ -91,7 +91,7 @@ export function echtePartij(counterparty) {
 // beide-V16R7 — soortwoorden zeggen WAT er gekocht is en winnen van de winkelnaam: "Makro tanken" is brandstof, geen boodschappen
 // (wens Boska 5-11). Niveau 4, boven elke merknaam.
 const BETAALKAART = /pasvolgnr|\bterm:|\bbea\b|betaalpas|kaartnr|\bpas: ?\d|apple pay|google pay|betaalautomaat|\bpinnen\b|\bpin\b/i;
-export const SOORT_WOORDEN = new Set(["tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
+export const SOORT_WOORDEN = new Set(["tankserv", "tankservice", "tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
 function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
   if (SOORT_WOORDEN.has(t)) return 4;
@@ -542,6 +542,11 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 // herkennen tekstpatroon — dit vangt die bekende gevallen af vóórdat een trefwoordmatch wordt
 // geaccepteerd, in plaats van de trefwoordenlijst zelf onveilig smal te maken (v220).
 export function isKnownFalsePositiveRuleMatch(rule, text, accountType) {
+  // beide-V17R3 — "CCV SUPERSAM", "SumUp Asn Asianfood": een pinbetaling bij een winkel via een betaalterminal is geen
+  // betaalautomaatkosten (blinde test 6-11). Die kosten komen als factuur/incasso van CCV, SumUp enz., niet als pinbetaling.
+  if (rule.name === "Betaalautomaat kosten" && /pasvolgnr|\bterm:|^(bea|gea)\b|\bpas\s?:?\s?\d{2,3}\b|\bpasnr\b|apple pay|google pay/i.test(text)) return true;
+  // beide-V17R3 — "Kenteken Administratie" (RDW-tenaamstelling) is geen administratiekantoor.
+  if (rule.name === "Boekhouder, accountant & administratie" && /kenteken|tenaamstelling|\brdw\b/i.test(text)) return true;
   // "Betaalautomaat kosten" herkent (onder andere) de merknamen van pinbetaaldiensten (SumUp,
   // Zettle, CCV, Mollie, ...) om de eigen, door de bank in rekening gebrachte servicekosten van
   // zo'n dienst te herkennen. Diezelfde merknamen staan echter OOK op de rekening van de klant die

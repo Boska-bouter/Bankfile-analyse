@@ -214,7 +214,7 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   "Zakelijk mobiel": ["ben nederland", "lyca", "kpn mobiel", "tele2 mobiel", "odido mobiel"],
   "Zakelijk internet/TV": ["freedom internet", "jonaz", "tweak", "canaldigitaal", "canal digitaal", "m7 group", "glasvezel", "fiber nederland"],
   "Privé overige abonnementen": [
-    "disney", "nlziet", "max.com", "apple.com/bill", "google play", "playstation", "xbox", "nintendo", "audible",
+    "disney", "nlziet", "max.com", "apple.com/bill", "audible", // beide-V17R4 — google play → persoonlijk, playstation/xbox/nintendo → vrije tijd (wens Boska 6-11)
     "kobo", "bookbeat", "patreon", "ad abonnement", "dpg media", "mediahuis", "persgroep", "volkskrant", "trouw abonnement",
     "nrc media", "het parool", "telegraaf", "eindhovens dagblad", "brabants dagblad", "de limburger", "tijdschrift",
   ],
@@ -230,7 +230,7 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   ],
   "Webshops & online aankopen": ["marktplaats", "vinted", "etsy", "aliexpress", "temu", "shein", "lidl shop", "action.com"],
   "Privé - vrijetijd-uitgaan-vakantie & uit eten": [
-    "coffee", "koffiebar", "koffiehuis", "koffiecorner", "theehuis", "tearoom", // huishoudboekje-V4R6 — koffie en thee buiten de deur = vrije tijd (wens Boska 5-11)
+    "coffee", "koffiebar", "koffiehuis", "koffiecorner", "theehuis", "tearoom", "pathé", // huishoudboekje-V5R6 — "Pathé Eindhoven" (met accent) werd een overboeking aan personen // huishoudboekje-V4R6 — koffie en thee buiten de deur = vrije tijd (wens Boska 5-11)
     "hostellerie", "hotel", "herberg", "restaurant", "brasserie", "bistro", "eetcafe", "eetcafé", "pizzeria", "lunchroom",
     "paviljoen", "airbnb", "natuurhuisje", "booking.com", "landal", "center parcs", "roompot", "camping", "vakantiepark",
     "bungalowpark", "museum", "theater", "schouwburg", "bioscoop", "kinepolis", "vue cinema", "efteling", "dierentuin",
