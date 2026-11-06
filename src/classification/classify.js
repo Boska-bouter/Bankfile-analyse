@@ -1,5 +1,5 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory } from "./categories.js";
-import { brancheCategorie } from "./branche.js";
+import { brancheCategorie, getZakelijkVanPrive } from "./branche.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -222,6 +222,8 @@ export function looksLikeForeignCardPayment(tx) {
 // (1–3 losse letters) vóór de volledige achternaam en de eerste voorletter gelijk; een voluit geschreven voornaam ("Ricardo
 // Meijer") of andere voorletter ("F Meijer") telt niet, zodat familieleden niet als de ondernemer zelf worden gezien.
 // Alleen voor geld dat binnenkomt: uitgaand naar de eigen naam kiezen ondernemers verschillend (bij een BV vaak loon, test RG).
+// huishoudboekje-V6R4 — betaaldiensten en kasstortingen: nooit een opdrachtgever of leverancier (ook gebruikt door utils/wizardSuggesties.js).
+export const GEEN_PARTIJ = /betaalverzoek|tikkie|geldmaat|geldautomaat|online payment|\bmollie\b|\badyen\b|buckaroo|pay\.nl|multisafepay|derdengelden|\bpaypal\b|\bklarna\b|\bsumup\b|\bccv\b/i;
 export function naamMetVoorletters(haystack, naam) {
   const delen = String(naam || "").split(" ").filter(Boolean);
   if (delen.length < 2 || !/^[a-zà-ÿ]{1,3}$/.test(delen[0])) return false;
@@ -229,7 +231,7 @@ export function naamMetVoorletters(haystack, naam) {
   const achternaam = delen.slice(1).join(" ").replace(/^([a-zà-ÿ]{1,3} )+(?=[a-zà-ÿ]{4,})/, (m) => (/^(van|de|der|den|ter|ten|het|la|le) /.test(m) ? m : ""));
   if (achternaam.length < 3) return false;
   const esc = achternaam.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`(?:^| )((?:[a-zà-ÿ] ?){1,3}|[a-zà-ÿ]{2,3}) ${esc}(?= |$)`);
+  const re = new RegExp(`(?:^| )((?:[a-zà-ÿ] ?){1,4}|[a-zà-ÿ]{2,4}) ${esc}(?= |$)`); // huishoudboekje-V6R4 — tot 4 voorletters ("J.P.M.A. Koenders")
   const tekst = ` ${haystack} `.replace(/ (hr|mw|dhr|mr|mevr|de heer|mevrouw)(?= )/g, " ").replace(/\s+/g, " ");
   const m = tekst.match(re);
   return !!m && m[1].replace(/ /g, "")[0] === voorletter;
@@ -351,7 +353,10 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // betaling van een bevestigde zakelijke klant toch op de privérekening binnen, dan blijft dat
   // zichtbaar (category "Zakelijke inkomsten", type "Prive") in plaats van stilzwijgend als
   // "Zakelijk" te worden geboekt.
-  const isBiz = businessKeywords.some((kw) => textHasKeyword(text, kw));
+  // huishoudboekje-V6R4 — een betaaldienst als opdrachtgever (Tikkie, "Rabo Betaalverzoek") telt alleen voor geld dat binnenkomt (Koenders 6-11:
+  // honderden betaalverzoeken die híj betaalde telden als omzet; in Houtman zijn binnenkomende Tikkies wél omzet). Een betaling áán een echte
+  // opdrachtgever blijft omzet (creditnota/terugbetaling, zo gekozen in JvS en Houtman).
+  const isBiz = businessKeywords.some((kw) => (isIncome || !GEEN_PARTIJ.test(kw)) && textHasKeyword(text, kw));
   if (isBiz) {
     return { category: "Zakelijke inkomsten", type };
   }
@@ -476,7 +481,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     }
   }
 
-  const explicitBizExpense = businessExpenseKeywords.some((kw) => textHasKeyword(text, kw));
+  const explicitBizExpense = businessExpenseKeywords.some((kw) => (!isIncome || !GEEN_PARTIJ.test(kw)) && textHasKeyword(text, kw)); // huishoudboekje-V6R4 — betaaldienst alleen voor uitgaven
   if (explicitBizExpense) {
     return { category: "Zakelijke inkoop/uitgaven", type };
   }
@@ -816,9 +821,10 @@ export function bedrijfsnaamVan(tx, eigenNamen = []) {
 }
 // beide-V16R3 — horeca, tabak, kiosk in de naam van de tegenpartij bij een pinbetaling.
 // beide-V16R4 — niet meer Privé opnames maar de soort uitgave (wens Boska 5-11): horeca → vrije tijd/uit eten, tabak/snoep/bakker → boodschappen.
-export const HORECA_TABAK = /caf[eé]\b|restaurant|bistro|brasserie|eetcaf|lunchroom|pizz|burger|kebab|d[oö]ner|shoarma|snack|friet|frituur|grill\b|sushi|ijssalon|\bbar\b|\bpub\b|kiosk|quiosk|koffie|coffee|\bthee\b|theehuis|bakker|patisserie|tabak|sigaren|sigaret|snoep|tabac/i;
+export const HORECA_TABAK = /caf[eé]\b|restaurant|eethuis|lunch|tave?erne|cafetaria|bistro|brasserie|eetcaf|lunchroom|pizz|burger|kebab|d[oö]ner|shoarma|snack|friet|frituur|grill\b|sushi|ijssalon|\bbar\b|\bpub\b|kiosk|quiosk|koffie|coffee|\bthee\b|theehuis|bakker|patisserie|tabak|sigaren|sigaret|snoep|tabac/i;
 const BOODSCHAPPEN_PIN = /kiosk|quiosk|bakker|patisserie|tabak|sigaren|sigaret|snoep|tabac/i;
-export const PINBETALING = /pasvolgnr|\bpas: ?\d|\bterm:/i;
+// huishoudboekje-V6R4 — ook Rabobank: "Betaalautomaat 12:30 pasnr. 015" (Koenders 6-11). Een Rabo-iDEAL ("x9400 pasnr.001") is geen pinbetaling.
+export const PINBETALING = /pasvolgnr|\bpas: ?\d|\bterm:|\bbetaalautomaat \d{1,2}:\d{2}\b/i;
 export const HORECA_PIN_CATEGORIEEN = new Set(["Boodschappen", "Privé - vrijetijd-uitgaan-vakantie & uit eten"]);
 export function horecaPinVan(tx) {
   const naam = String(tx.counterparty || "").split(/\s+via\s+/i)[0];
@@ -904,16 +910,18 @@ export function resolveClassification(tx, ...rest) {
   const branche = !eigenKeuze && !getCategorieProfiel() && brancheCategorie(tx, uitkomst.category, rest[3]);
   if (branche) return { ...uitkomst, category: branche, type: "Zakelijk" };
   // beide-V17R6 — pinbetaling op een NS-station ("NSBest 203 BEST NLD", "NS Eindhv Bkln 202"): openbaar vervoer, standaard privé (besluit 28-10).
-  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && /^NS ?[A-Z][a-z]/.test(String(tx.counterparty || "")) && /pasvolgnr|\bterm:/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && /^NS ?[A-Z][a-z]/.test(String(tx.counterparty || "")) && PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Privé - openbaar vervoer" };
   }
   const horeca = !eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx);
   if (horeca) return { ...uitkomst, category: horeca };
-  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel()
+  // huishoudboekje-V6R5 — ook vanaf de privérekening als in de wizard "zakelijke rekeningen ook vanaf privé" is gekozen (branche.js).
+  const zakelijkeKant = rest[3] === "Zakelijk" || getZakelijkVanPrive();
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && zakelijkeKant && Number(tx.amount) < 0 && !getCategorieProfiel()
     && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
   }
-  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && rest[3] === "Zakelijk" && Number(tx.amount) < 0 && !getCategorieProfiel() && bedrijfsnaamVan(tx, rest[7])) {
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && zakelijkeKant && Number(tx.amount) < 0 && !getCategorieProfiel() && bedrijfsnaamVan(tx, rest[7])) {
     return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
   }
   // beide-V10R4 — een verzekeraar (bijv. Centraal Beheer) is niet altijd zakelijk; staat in de omschrijving dat het een zakelijke
@@ -953,6 +961,8 @@ export function sleutelVoorTegenpartij(tx, overridesByCounterparty = {}) {
 // gaat naar "Overig" om na te kijken: meer dan € 300 in één keer past niet in een tank.
 const MAX_BEDRAG = { Brandstof: 300 };
 function nietAannemelijk(tx, uitkomst, accountType) {
+  // huishoudboekje-V6R4 — een pinbetaling is nooit een lening ("CCV*Floryn Grand Cafe UDEN" ving het trefwoord van geldverstrekker Floryn).
+  if ((uitkomst?.category === "Leningen" || uitkomst?.category === "Leningen (privé)") && PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) return { ...uitkomst, category: "Overig" };
   const max = MAX_BEDRAG[uitkomst?.category];
   return max && Math.abs(Number(tx.amount) || 0) > max ? { ...uitkomst, category: "Overig" } : uitkomst;
 }

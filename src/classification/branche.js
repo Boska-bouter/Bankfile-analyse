@@ -11,6 +11,13 @@ export const BRANCHES = [
 ];
 export const brancheLabel = (key) => BRANCHES.find((b) => b.key === key)?.label || "";
 
+// huishoudboekje-V6R5 — wizardvraag "Betaal je ook zakelijke rekeningen vanaf je privérekening?" (besluit Boska 6-11, dossier Koenders).
+// Bewaard als eigenNamen.zakelijkVanPrive; bij ja wordt een onbekende betaling met factuurnummer of aan een bedrijf vanaf privé een voorstel
+// Zakelijke inkoop (nakijken). Bij R. Meijer zijn zulke betalingen juist privé (energie, zorg), dus niet standaard.
+let _zakelijkVanPrive = false;
+export function setZakelijkVanPrive(j) { _zakelijkVanPrive = j === true; }
+export function getZakelijkVanPrive() { return _zakelijkVanPrive; }
+
 let _branche = null;
 export function setBranche(b) { _branche = b || null; }
 export function getBranche() { return _branche; }

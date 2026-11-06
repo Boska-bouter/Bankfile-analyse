@@ -1,3 +1,4 @@
+import { GEEN_PARTIJ } from "../classification/classify.js";
 // V65 — suggesties voor de wizard, afgeleid uit de al ingelezen en geclassificeerde transacties:
 // "gevonden in je bankdata". Alleen een hulpmiddel om niet te hoeven typen; niets wordt zonder
 // bevestiging in het dossier gezet.
@@ -9,11 +10,13 @@ const OMZET_CATEGORIEEN = new Set(["Zakelijke inkomsten", "Inkomsten", "Zakelijk
 const sleutel = (naam) => naam.toLowerCase().replace(/[^a-z0-9]/g, "");
 const LEASE_NAAM = /lease|leasing|financial services|\bvwpfs\b|alphabet|athlon|ayvens|arval|hiltermann|de lage landen|\bdll\b|alfam|\bpfs\b|ald automotive|volkswagen pon/i;
 
+// huishoudboekje-V6R4 — betaaldiensten en kasstortingen zijn geen opdrachtgever of leverancier (Koenders 6-11: "Rabo Betaalverzoek",
+// "Rabobank inzake Geldmaat" en "Online Payment Stichting" stonden in de lijst en werden zo aangevinkt).
 function topNamen(txs, { max, perAantal = false }) {
   const map = new Map();
   for (const tx of txs) {
     const naam = String(tx.counterparty || "").replace(/\s+/g, " ").trim();
-    if (naam.length < 3) continue;
+    if (naam.length < 3 || GEEN_PARTIJ.test(naam)) continue;
     const k = sleutel(naam);
     let key = k;
     for (const bestaand of map.keys()) {

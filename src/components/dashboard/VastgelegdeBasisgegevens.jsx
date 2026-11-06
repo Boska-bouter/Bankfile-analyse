@@ -63,6 +63,8 @@ export default function VastgelegdeBasisgegevens({
         ["Rekeninghouder", rekeninghouder],
         // beide-V17R7
         ["Soort bedrijf", eigenNamen === null ? null : brancheLabel(eigenNamen?.branche) || "Niet ingevuld"],
+        // huishoudboekje-V6R5
+        ["Zakelijke rekeningen vanaf privé", eigenNamen === null ? null : eigenNamen?.zakelijkVanPrive === true ? "Ja" : eigenNamen?.zakelijkVanPrive === false ? "Nee" : "Niet ingevuld"],
         ["Rechtsvorm", rechtsvorm == null ? null : isBV ? "BV" : "Eenmanszaak/zzp"],
         ...(isBV ? [["Holding", jaNee(heeftHolding, "Ja, holding + werkmaatschappij", "Nee")]] : []),
         ...(!isBV ? [["KOR", jaNee(korRegeling)], ["BTW verlegd", jaNee(btwVerlegd)]] : []),

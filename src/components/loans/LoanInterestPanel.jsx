@@ -10,17 +10,8 @@ import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 
 // beide-V17R8 — de boekingen zelf tonen (wens Boska 6-11: "de beschrijving van de banktransactie is niet te zien, dus dan is het een gok?").
 // Zo zie je waarop de herkenning "lening" is gebaseerd, meestal het woord lening in de omschrijving.
-export function kortOmschrijving(t) {
-  return String(t.description || t.fullDescription || "")
-    .replace(/^Naam:.*?(?=Omschrijving:|IBAN:|Kenmerk:|$)/, "")
-    .replace(/Omschrijving:\s*/, "")
-    .replace(/IBAN:\s*\S+\s*/, "")
-    .replace(/(Datum\/Tijd|Valutadatum):.*$/, "")
-    .replace(/Kenmerk:\s*/, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 140);
-}
+export { kortOmschrijving } from "../../classification/leningBoeking.js";
+import { kortOmschrijving } from "../../classification/leningBoeking.js";
 const datum = (d) => (d instanceof Date ? d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" }) : "");
 function LeningBoekingen({ loan, transactions = [], nietLening = 0, onOpschonen }) {
   const [alle, setAlle] = useState(false);

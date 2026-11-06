@@ -100,6 +100,8 @@ export default function SetupWizardModal({
       naam: vol && eigenNamen === null,
       // beide-V17R7 — soort bedrijf (helpt de herkenning, classification/branche.js).
       branche: vol && !eigenNamen?.branche,
+      // huishoudboekje-V6R5 — zakelijke rekeningen ook vanaf privé betaald? (alleen gevraagd als er een privérekening is)
+      vanPrive: vol && typeof eigenNamen?.zakelijkVanPrive !== "boolean",
       rechtsvorm: vol && (rechtsvorm === null || forceRechtsvormStep),
       holding: vol && heeftHolding === null,
       andere: vol && (eigenRekeningenExtra === null || forceRechtsvormStep),
@@ -149,7 +151,7 @@ export default function SetupWizardModal({
     const vol = !(alreadyEstablished && !forceRechtsvormStep);
     if (vol && loadFilesFirst && !Array.isArray(alleenVragen)) list.push(20);
     // Scherm 31: rekeningtype per bestand (alleen als er bestanden zijn), naam, rechtsvorm, holding.
-    if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.branche || needs.rechtsvorm || needs.holding) list.push(31);
+    if (pendingFileNames.length > 0 || loadFilesFirst || needs.naam || needs.branche || needs.vanPrive || needs.rechtsvorm || needs.holding) list.push(31);
     if (needs.andere || needs.spaar || needs.spaarPrive) list.push(32);
     if (needs.klanten) list.push(33);
     if (needs.auto || needs.lease || needs.leaseOverig || needs.lening || needs.voorraad || needs.activa) list.push(34);
@@ -171,7 +173,7 @@ export default function SetupWizardModal({
     // release21V2 — een scherm alleen tonen als er ook echt een vraag op staat. Voorheen kwam scherm 31
     // leeg in beeld bij een zzp'er (holdingvraag staat open maar hoort alleen bij een BV) en scherm 32 bij
     // een openstaande privé-spaarvraag zonder geladen privérekening — alleen een knop "Doorgaan".
-    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.branche && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
+    if (id === 31 && sessionFiles.length === 0 && !needs.naam && !needs.branche && !(needs.vanPrive && Object.values(accountTypeByFile).includes("Prive")) && !needs.rechtsvorm && !(needs.holding && isBV)) return false;
     if (id === 37 && !leaseControle?.nodig) return false;
     if (id === 32 && !needs.andere && !needs.spaar && !(needs.spaarPrive && sessionFiles.some((f) => typedNow[f] === "Prive"))) return false;
     // Scherm 35 heeft niets te vragen als alleen KOR/verlegd/uren openstaan en het een BV is.
@@ -603,6 +605,8 @@ function Scherm31({
   const naamP = typedNow.eigenNaamPartner ?? eigenNamen?.partner ?? "";
   const naamB = typedNow.eigenNaamBedrijf ?? eigenNamen?.bedrijf ?? "";
   const branche = typedNow.branche ?? eigenNamen?.branche ?? null;
+  const vanPrive = typedNow.zakelijkVanPrive ?? eigenNamen?.zakelijkVanPrive ?? null;
+  const toonVanPrive = needs.vanPrive && Object.values(types).includes("Prive");
   return (
     <div className="space-y-4">
       {sessionFiles.length > 0 && (
@@ -669,6 +673,15 @@ function Scherm31({
         </Sectie>
       )}
 
+      {toonVanPrive && (
+        <Sectie titel="Betaal je ook zakelijke rekeningen vanaf je privérekening?" uitleg="Bijvoorbeeld facturen van leveranciers, verhuur of materiaal. Bij ja worden onbekende betalingen met een factuurnummer of aan een bedrijf vanaf de privérekening een voorstel &quot;Zakelijke inkoop&quot; om na te kijken. Later aanpasbaar bij Rekeninghouder.">
+          <div className="flex gap-2">
+            <button type="button" onClick={() => zet({ zakelijkVanPrive: true })} className={`${KNOP} ${vanPrive === true ? KNOP_AAN : KNOP_UIT}`}>Ja, regelmatig</button>
+            <button type="button" onClick={() => zet({ zakelijkVanPrive: false })} className={`${KNOP} ${vanPrive === false ? KNOP_AAN : KNOP_UIT}`}>Nee, (bijna) nooit</button>
+          </div>
+        </Sectie>
+      )}
+
       {toonRechtsvorm && (
         <Sectie titel="Eenmanszaak/zzp of BV?" uitleg="Bepaalt de berekening: IB en Zvw (eenmanszaak) of Vpb (BV). Later aanpasbaar.">
           <div className="flex gap-2">
@@ -713,9 +726,10 @@ function Scherm31({
         type="button"
         disabled={!klaar}
         onClick={() => {
-          if (needs.naam || (needs.branche && branche)) {
+          if (needs.naam || (needs.branche && branche) || (toonVanPrive && typeof vanPrive === "boolean")) {
             const basis = needs.naam ? { ...(eigenNamen || {}), ondernemer: naamO.trim() || null, partner: naamP.trim() || null, bedrijf: naamB.trim() || null } : { ...(eigenNamen || {}) };
-            setEigenNamen(branche ? { ...basis, branche } : basis);
+            const metBranche = branche ? { ...basis, branche } : basis;
+            setEigenNamen(typeof vanPrive === "boolean" ? { ...metBranche, zakelijkVanPrive: vanPrive } : metBranche);
           }
           goNext();
         }}

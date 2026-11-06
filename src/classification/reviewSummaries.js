@@ -104,7 +104,7 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     map[mapKey].total += tx.amount;
     map[mapKey].count += 1;
     // beide-V16R3 — voor "alle onbekende pinbetalingen onder € …" in Overig opruimen.
-    if (/pasvolgnr|\bpas: ?\d|\bterm:/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) map[mapKey].pinAantal = (map[mapKey].pinAantal || 0) + 1;
+    if (/pasvolgnr|\bpas: ?\d|\bterm:|\bbetaalautomaat \d{1,2}:\d{2}\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) map[mapKey].pinAantal = (map[mapKey].pinAantal || 0) + 1;
     map[mapKey].maxBedrag = Math.max(map[mapKey].maxBedrag || 0, Math.abs(Number(tx.amount) || 0));
     map[mapKey].years.add(tx.year);
     map[mapKey].soorten.add(soort);

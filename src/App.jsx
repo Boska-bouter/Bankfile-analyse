@@ -103,7 +103,8 @@ import HuishoudboekjeOverzicht from "./components/huishoudboekje/HuishoudboekjeO
 import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import HuishoudboekjeMakenModal from "./components/huishoudboekje/HuishoudboekjeMakenModal.jsx";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
-import { setBranche } from "./classification/branche.js";
+import { setBranche, setZakelijkVanPrive } from "./classification/branche.js";
+import { LENING_CATS, hoortBijLening } from "./classification/leningBoeking.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import NextStepCard from "./components/dashboard/NextStepCard.jsx";
@@ -1372,6 +1373,7 @@ export default function App() {
   const herkenning = useCategorieProfiel(modus, setCategoryRules, setFixedCategories, categoryRules);
   // beide-V17R7 — soort bedrijf uit de wizard (classification/branche.js); verandert eigenNamen, dan ook eigenNamenKeywords en dus de indeling.
   setBranche(eigenNamen?.branche || null);
+  setZakelijkVanPrive(eigenNamen?.zakelijkVanPrive); // huishoudboekje-V6R5
   const classified = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
@@ -1457,10 +1459,8 @@ export default function App() {
   // beide-V17R9 — een keuze in het leningenpaneel geldt alleen voor de boekingen die zelf een lening zijn (de app herkent ze zonder
   // eigen keuzes als lening, meestal door "lening" in de omschrijving). Voorheen ging de keuze op de hele tegenpartij (IBAN), zodat
   // ook "voorgeschoten inkopen", "annulering order" en "privé storting" van dezelfde persoon als lening telden (Boska 6-11, Dakhlaoui).
-  const LENING_CATS = new Set(["Leningen", "Leningen (privé)"]);
   // Besluit Boska 6-11: alleen met "lening" (of iets wat erop lijkt, ook "voorgeschoten") in de omschrijving, of een herkende geldverstrekker.
-  const LENING_WOORD = /lening|leen\b|geleend|uitgeleend|aflossing|voorgeschot|voorschot|voorgeschiet/i;
-  const isLeningBoeking = (tx) => LENING_WOORD.test(`${tx.description || ""} ${tx.fullDescription || ""}`) || LENING_CATS.has(resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords,
+  const isLeningBoeking = (tx) => hoortBijLening(tx) || LENING_CATS.has(resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords,
     accountTypeByFile[tx.source], {}, {}, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords)?.category);
   const nietLeningAantal = (loan) => {
     const echt = loan.transactions.filter(isLeningBoeking).length;

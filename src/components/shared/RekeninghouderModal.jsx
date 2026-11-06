@@ -12,9 +12,10 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
   const [partner, setPartner] = useState(eigenNamen?.partner || "");
   const [bedrijf, setBedrijf] = useState(eigenNamen?.bedrijf || ""); // beide-V8R7
   const [branche, setBrancheKeuze] = useState(eigenNamen?.branche || ""); // beide-V17R7
+  const [vanPrive, setVanPrive] = useState(eigenNamen?.zakelijkVanPrive); // huishoudboekje-V6R5 — true/false, of undefined als nog niet gevraagd
 
   const save = () => {
-    onSave({ ...(eigenNamen || {}), ondernemer: ondernemer.trim() || null, partner: partner.trim() || null, bedrijf: bedrijf.trim() || null, branche: branche || null });
+    onSave({ ...(eigenNamen || {}), ondernemer: ondernemer.trim() || null, partner: partner.trim() || null, bedrijf: bedrijf.trim() || null, branche: branche || null, ...(typeof vanPrive === "boolean" ? { zakelijkVanPrive: vanPrive } : {}) });
     onClose();
   };
 
@@ -58,6 +59,10 @@ export default function RekeninghouderModal({ eigenNamen, onSave, onClose }) {
             <option value="">Soort bedrijf (optioneel)</option>
             {BRANCHES.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
           </select>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={vanPrive === true} onChange={(e) => setVanPrive(e.target.checked)} className="mt-0.5" />
+            <span>Zakelijke rekeningen worden ook vanaf de privérekening betaald</span>
+          </label>
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
               Annuleren
