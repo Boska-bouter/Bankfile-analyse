@@ -14,7 +14,7 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 // s-prive zetten --accent op het element (kaarten op welkomst- en aanmeldpagina).
 export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}
 @media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}}`;
-export const WELKOM_STIJL = `main{max-width:1080px;padding-top:48px}
+export const WELKOM_STIJL = `main{max-width:1200px;padding-top:48px}
 .drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
 .soortkaarten{display:grid;gap:12px;grid-template-columns:1fr}
 .soortkaart{display:grid;grid-row:span 7;grid-template-rows:subgrid;row-gap:8px;align-content:start;border-top:6px solid var(--accent)}.soortkaart h3{margin:0;font-size:1.1rem;color:var(--accent)}

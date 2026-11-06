@@ -28,7 +28,7 @@ function decor() {
     x.clearRect(0, 0, w, h);
     x.font = "13px ui-monospace,SFMono-Regular,Menlo,monospace";
     // Breed scherm: twee kolommen naast de inhoud. Smal: één vage kolom over de hele breedte.
-    const zij = (w - 1080) / 2 - 40, ruim = zij >= 220, f = ruim ? 1 : 0.45, kb0 = Math.min(360, zij);
+    const zij = (w - 1200) / 2 - 40, ruim = zij >= 220, f = ruim ? 1 : 0.45, kb0 = Math.min(360, zij);
     const kolommen = ruim ? [[24, kb0], [w - kb0 - 24, kb0]] : [[16, w - 32]];
     const reg = css("--regel"), plus = css("--plus"), min = css("--min"), kl = [css("--k1"), css("--k2"), css("--k3"), css("--k4")];
     kolommen.forEach(([kx, kb], ki) => {
