@@ -13,7 +13,7 @@ const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 // s-prive en s-hb zetten --accent op het element (kaarten op welkomst- en aanmeldpagina, kolom in de vergelijking).
 export const SOORT_KLEUR_STIJL = `.s-zakelijk{--accent:#0f766e}.s-prive{--accent:#24569f}.s-hb,.s-huishoudboekje{--accent:#8a3b7c}
 @media (prefers-color-scheme:dark){.s-zakelijk{--accent:#2fb3a6}.s-prive{--accent:#6f9be0}.s-hb,.s-huishoudboekje{--accent:#cf86c0}}`;
-export const WELKOM_STIJL = `main{max-width:1200px;padding-top:48px}
+export const WELKOM_STIJL = `main{max-width:1440px;padding-top:48px}
 .drie{margin:8px 0 0;padding-left:20px;font-size:1rem;color:var(--muted)}.drie li{margin:4px 0}.drie b{color:var(--fg)}
 .omzetband{margin:12px 0 0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;background:var(--card);font-size:14px}
 .kop h1{font-size:clamp(1.45rem,6.5vw,2.2rem);letter-spacing:-.01em;margin:0;overflow-wrap:anywhere}.kop .sub{font-size:1.05rem;margin-top:6px}
