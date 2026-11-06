@@ -3,7 +3,13 @@
 // Bewust niet "alleen de eerste keer": dat is niet te weten (lege cache, privémodus, ander apparaat). Teksten en
 // prijzen van de abonnementen komen uit rechten.js, net als op de aanmeldpagina.
 import { GEBRUIK, PLANNEN, PLAN_UITLEG, plannenVoor, prijzen, prijsTekst } from "./rechten.js";
-import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, GRATIS_KORT, GRATIS_UITLEG, GRATIS_DAGEN, BANKKOPPELING_STATUS, OMZETTEN, OMZETTEN_KORTING, OMZETTEN_WELKOM, OMZETTEN_WELKOM_KORTING } from "../src/content/aanbod.js";
+import { INZICHTEN, KEUZE, SOORT_KORT, PRIVACY_LABEL, PRIVACY_KERN, PRIVACY_SERVER, PRIVACY_DOSSIER, GRATIS_KORT, GRATIS_UITLEG, GRATIS_DAGEN, BANKKOPPELING_STATUS, OMZETTEN, OMZETTEN_KORTING, OMZETTEN_WELKOM, OMZETTEN_WELKOM_KORTING } from "../src/content/aanbod.js";
+
+// beide-V17R0 — niet afbreken na het streepje in "IB-aangifte", "btw-", "-uitgaven" enz. (melding Boska 5-11: "IB-" aan het
+// eind van de regel en "aangifte" op de volgende ziet er niet uit): vast streepje U+2011.
+// vastStreepje gaat over de hele pagina-inhoud (ook vaste teksten in de sjablonen); bewust smal, zodat CSS ongemoeid blijft.
+export const vastStreepje = (html) => String(html)
+  .replace(/(^|[\s(>])(IB|btw|Btw|BTW|privé|Privé|Zvw)-(?=\p{L})/gu, "$1$2\u2011").replace(/ (en|of) -(?=\p{L})/gu, " $1 \u2011");
 
 const e = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -201,7 +207,7 @@ export const welkomVeilig = (veilig = VEILIG) => `
   <section class="veilig">
     <h2 id="veilig">Je gegevens blijven op je eigen apparaat</h2>
     <div class="kaart">
-      <p style="margin:0">${e(PRIVACY_KERN)} ${e(PRIVACY_SERVER)} Een kopie van het dossier kun je als bestand opslaan, als je wilt met een wachtwoord. De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
+      <p style="margin:0">${e(PRIVACY_KERN)} ${e(PRIVACY_SERVER)} ${e(PRIVACY_DOSSIER)} De uitkomsten zijn een indicatie, geen aangifte of advies.</p>
       <p class="let-op">${e(veilig)}</p>
     </div>
   </section>
