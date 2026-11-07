@@ -52,6 +52,10 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
   if (keyOverride && keyOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+  // huishoudboekje-V6R6 — een keuze op de oorspronkelijke naam (bijv. "ABN AMRO Bank NV" vóór "Latour via Tikkie") telt ook (zie classify.js).
+  const orgKey = tx.counterpartyOrigineel && counterpartyKey(tx.counterpartyOrigineel, tx.amount);
+  const orgOverride = orgKey && overridesByCounterparty[orgKey];
+  if (orgOverride && orgOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
 
   if (PRIVE_TRANSFER_CATEGORIES.includes(resolvedCategory) && isOwnAccountTransferMatch(tx, ownAccountsElsewhere)) {
     return { level: "keyword", label: "Automatisch herkend: overboeking naar/van eigen andere rekening (IBAN)" };

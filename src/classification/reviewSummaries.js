@@ -80,7 +80,9 @@ export const bevestigdVoor = (lijst, sleutel, tx) => lijst.has(sleutel) || lijst
 // beide-V11R3 — `gesplitst(tx)`: is voor deze tegenpartij gekozen om de zakelijke en de privérekening apart in te delen (wens Boska
 // 30-10)? Dan komt er per rekening een eigen regel (sleutel@Zakelijk / sleutel@Prive). Anders één regel; `beideRekeningen` zegt dan
 // of splitsen kan.
-export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null, gesplitst = null } = {}) {
+// huishoudboekje-V6R6 — sortering "aantal": de tegenpartijen met de meeste boekingen eerst (Overig en personen; wens Boska 7-11 na
+// ChatGPT-analyse: 20 tegenpartijen zijn vaak al de helft van alle onbekende boekingen). Standaard blijft "bedrag".
+export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null, gesplitst = null, sortering = "bedrag" } = {}) {
   const map = {};
   for (const tx of classified) {
     if (tx.category !== category || tx.isMirror) continue;
@@ -115,7 +117,7 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
   }
   return Object.values(map)
     .map((item) => ({ ...item, beideRekeningen: item.soorten.size > 1 }))
-    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    .sort((a, b) => (sortering === "aantal" ? b.count - a.count : 0) || Math.abs(b.total) - Math.abs(a.total));
 }
 
 // Zelfde soort samenvatting als hierboven, maar dan over de VIER "Zakelijke inkomsten"-categorieën

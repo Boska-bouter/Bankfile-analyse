@@ -89,6 +89,13 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
     return bron.filter((i) => i.name.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
   }, [bron, search]);
   const aantalBevestigd = (allItems?.length || 0) - items.length;
+  // huishoudboekje-V6R6 — hoeveel van de open boekingen zitten bij de 20 tegenpartijen bovenaan? (lijst staat op aantal, zie reviewSummaries.js)
+  const top = useMemo(() => {
+    if (search.trim() || items.length <= 20) return null;
+    const alle = items.reduce((a, i) => a + (i.count || 0), 0);
+    const twintig = items.slice(0, 20).reduce((a, i) => a + (i.count || 0), 0);
+    return alle > 0 ? { twintig, alle, pct: Math.round((100 * twintig) / alle) } : null;
+  }, [items, search]);
 
   return (
     <div className="p-5">
@@ -111,6 +118,11 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
         <p className="mb-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
           Je ziet nu ook de al bevestigde tegenpartijen — die passen bij een wijziging net zo goed direct alle transacties aan.
           {" "}<button onClick={() => setShowAll(false)} className="underline font-medium hover:text-slate-700">Verberg bevestigde tegenpartijen weer</button>.
+        </p>
+      )}
+      {top && !showAll && (
+        <p className="mb-3 text-xs text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
+          De bovenste 20 tegenpartijen zijn samen {top.twintig} van de {top.alle} boekingen ({top.pct}%). Begin daar: één keuze geldt voor alle boekingen van die tegenpartij.
         </p>
       )}
       <div className="flex flex-wrap items-center gap-2 mb-3">

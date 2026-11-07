@@ -239,6 +239,7 @@ export const PRIVE_EXTRA_WOORDEN = Object.freeze({
   ],
   Huur: ["vestia", "de key", "woonpunt", "woonservice", "woonfriesland", "accolade", "dudok wonen", "woongoed", "wonen limburg"],
   Boodschappen: [
+    "metro cash", "makro", "sligro", "hanos", "bidfood", "horeca groothandel", // huishoudboekje-V6R6 — groothandel = boodschappen in privé/hb (Boska 7-11)
     "plus supermarkt", "hellofresh", "marley spoon", "bakkerij", "warme bakker", "slagerij", "keurslager", "groenteboer",
     "kaashandel", "visspecialist", "natuurwinkel", "toko ",
   ],

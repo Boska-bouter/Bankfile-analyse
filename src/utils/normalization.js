@@ -16,6 +16,9 @@ const COMPANY_HINTS = [
   "administratie", "bureau", "entertainment", "records",
 ];
 
+// huishoudboekje-V6R6 — losse woorden die op een bedrijf wijzen, nooit op een persoon (alleen als heel woord).
+export const BEDRIJFSWOORD = /\b(meat|vlees|koekjes|bakkerij|slagerij|patisserie|import|export|importexport|handel|groothandel|food|foods|market|markt|supermarkt|shop|winkel|kapsalon|garage|techniek|bouw|transport|verhuur|rent|consult|consultancy|solutions|trading|group|groep|catering|logistiek|logistics|webshop|store|travel|reizen|installatie|schilders|hoveniers|loodgieter|autobedrijf|zonen)\b/i;
+
 // Getest tegen echte bankbestanden (ING, ABN MT940, Knab — 6000+ regels in totaal): de eerdere,
 // simpelere versie van deze heuristiek herkende tientallen overduidelijk-geen-persoon
 // pinbetalingen als "persoon" — vooral kaarttransacties met een "CCV*"/"BCK*"-voorvoegsel en/of
@@ -31,6 +34,8 @@ export function looksLikePerson(text) {
   const t = raw.toLowerCase();
   if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
   if (/\s(ag|se|sarl|srl)$/i.test(raw)) return false; // buitenlandse rechtsvorm achteraan (bijv. "Autodoc AG")
+  // huishoudboekje-V6R6 — bedrijfswoorden als los woord (ChatGPT-analyse 6-11, Dakhlaoui: "hmp meat", "al baraka koekjes").
+  if (BEDRIJFSWOORD.test(t)) return false;
   if (PERSON_TITLES.some((p) => t.startsWith(p))) return true;
   // Kaarttransactie-voorvoegsels (CCV*, BCK*, MOL*, ...) en een land-/plaatscode-achtervoegsel
   // ("... NLD") zijn typerend voor automatisch gegenereerde pin-omschrijvingen, nooit een mens.

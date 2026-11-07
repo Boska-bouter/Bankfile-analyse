@@ -1,3 +1,4 @@
+import { echtePartijAchterDienst } from "./betaaldienst.js";
 import { parseDate } from "../utils/dates.js";
 import { parseEuroNumber } from "../utils/amounts.js";
 import { normalizeIban } from "../utils/normalization.js";
@@ -88,6 +89,9 @@ export function buildTransactions(parsedFiles) {
       // gelden via counterpartyOrigineel.
       const ovpay = /^NLOV[A-Z0-9]{8,}\s+(www\.ovpay\.nl)\b/i.exec(counterparty);
       if (ovpay) counterparty = "OVpay (www.ovpay.nl)";
+      // huishoudboekje-V6R6 — de echte partij achter Tikkie, betaalverzoeken en Online Payments Foundation (importers/betaaldienst.js).
+      const achterDienst = echtePartijAchterDienst(counterparty, description, fullDescription);
+      if (achterDienst) counterparty = achterDienst;
       fileTx.push({
         id: id++,
         date,

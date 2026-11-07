@@ -1651,7 +1651,7 @@ export default function App() {
   };
   // beide-V11R4 — sleutel waaronder de (gesplitste) keuze van deze tegenpartij staat, anders die van de detailtabel.
   const keuzeSleutel = (tx) => { const k = sleutelVoorTegenpartij(tx, overridesByCounterparty); return overridesByCounterparty[k] ? k : keyForTx(tx); };
-  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo, gesplitst }), [classified, rekeningInfo, gesplitst]);
+  const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo, gesplitst, sortering: "aantal" }), [classified, rekeningInfo, gesplitst]);
   const nogTeBekijken = (lijst, bekeken) => lijst.filter((i) => !i.handmatig && !bekeken.includes(i.key) && !bekeken.includes(i.basisKey));
   const pendingPersonReview = useMemo(() => nogTeBekijken(personSummary, reviewedPersonKeys), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
@@ -1665,7 +1665,7 @@ export default function App() {
     setReviewedPersonKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
   };
 
-  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true, rekening: rekeningInfo, gesplitst }), [classified, rekeningInfo, gesplitst]);
+  const overigSummary = useMemo(() => computeCategorySummary(classified, "Overig", { metZonderNaam: true, rekening: rekeningInfo, gesplitst, sortering: "aantal" }), [classified, rekeningInfo, gesplitst]);
   const pendingOverigReview = useMemo(() => nogTeBekijken(overigSummary, reviewedOverigKeys), [overigSummary, reviewedOverigKeys]);
   const markOverigItem = (item, category, type) => {
     zetVoorItem(item, { category, type });
