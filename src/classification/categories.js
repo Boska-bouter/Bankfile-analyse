@@ -3,7 +3,7 @@
 export const DEFAULT_RULES = [
   { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto", "bandenservice", " rdw "] },
   { name: "Bankkosten", color: "bg-slate-200 text-slate-800", keywords: [
-    "kosten betaalpakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie", "betalingsverkeer",
+    "kosten betaalpakket", "rabo directpakket", "rabo totaalpakket", "rabo basispakket", "rabo zakelijk pakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie", "betalingsverkeer",
     "abn amro bank n.v.", "abn amro", "ing bank n.v.", "ing bank", "rabobank", "sns bank", "asn bank",
     "triodos bank", "bunq", "knab", "regiobank", "van lanschot", "nibc", "nibc direct", "achmea bank",
     "aegon bank", "nn bank", "nationale-nederlanden bank", "moneyou", "revolut", "n26", "openbank",

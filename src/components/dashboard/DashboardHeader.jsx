@@ -8,7 +8,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 // kaart die voorheen tussen de andere dashboardCards stond: dezelfde data (yearProgress), nu
 // prominenter bovenaan i.p.v. als gelijkwaardige tegel tussen de rest.
 export default function DashboardHeader({
-  title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl,
+  title, subtitle, pct: pctIn, gaugeLabel, statusLines, accent = "#0F766E", yearControl, boekingenInfo = null,
   werkelijkAangifteDone, werkelijkAangifteTotal, werkelijkAangifteItems: werkelijkItems, onOpenAangifteItem, aangifteSoorten = "IB · Zvw · BTW", zonderAangifte = false, openPoints, openBreakdown, yearRing, compact = false, dossierInfo, soortLabel = null,
 }) {
   const [toonAangiftes, setToonAangiftes] = useState(false);
@@ -117,6 +117,11 @@ export default function DashboardHeader({
                       </span>
                     </div>
                   </div>
+                  {boekingenInfo && (
+                    <span className="text-[11px] text-slate-500" data-testid="boekingen-pct">
+                      {boekingenInfo.zeker}% van de boekingen zeker ingedeeld{boekingenInfo.klein > 0 ? ` · ${boekingenInfo.klein}% klein, niet nalopen` : ""}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (

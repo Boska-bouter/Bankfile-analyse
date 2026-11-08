@@ -9,6 +9,7 @@ import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
 import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
+import { LENING_CATS, heeftLeningWoord, hoortBijLening } from "../classification/leningBoeking.js";
 import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
 
 export function useClassified(p) {
@@ -31,7 +32,25 @@ export function useClassified(p) {
     // beide-V1R6 — privédossier: de profielherkenning verfijnt de automatische uitkomst (modus/prive/herkenning.js).
     const autoRegels = herkenning ? herkenning.uitgaveRegels(categoryRules) : categoryRules;
     const herkenCtx = herkenning?.context ? herkenning.context(transactions, { eigenNamen: eigenNamenKeywords }) : null; // beide-V2R2 — o.a. terugbetalingen
+    // huishoudboekje-V6R2 — een keuze "Lening" op de hele tegenpartij geldt alleen voor de leningboekingen van die tegenpartij, als
+    // die er zijn (Boska 6-11, Dakhlaoui: "snappcar", "brandstof", "ticket", "brandblusser" van dezelfde persoon stonden onder de lening).
+    // Boekingen zonder omschrijving blijven wel bij de lening (Boska 6-11).
+    // Heeft geen enkele boeking van die tegenpartij een lening-woord, dan geldt de keuze zoals altijd voor alles (zelf aangewezen lening).
+    const leningSleutel = (tx) => {
+      if (overridesByRow[tx.id]) return "";
+      const k = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
+      return k && LENING_CATS.has(overridesByCounterparty[k]?.category) ? k : "";
+    };
+    const leningMetWoord = new Set(transactions.filter(heeftLeningWoord).map(leningSleutel).filter(Boolean));
+    const keuzesZonder = new Map();
+    const keuzesVoor = (tx) => {
+      const k = leningMetWoord.size && !hoortBijLening(tx) ? leningSleutel(tx) : "";
+      if (!k || !leningMetWoord.has(k)) return overridesByCounterparty;
+      if (!keuzesZonder.has(k)) { const { [k]: _weg, ...rest } = overridesByCounterparty; keuzesZonder.set(k, rest); }
+      return keuzesZonder.get(k);
+    };
     const base00ruw = transactions.map((tx) => {
+      const overridesByCounterparty = keuzesVoor(tx);
       let resolved = resolveClassification(
         tx, autoRegels, businessKeywords, businessExpenseKeywords, accountTypeByFile[tx.source],
         overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords,

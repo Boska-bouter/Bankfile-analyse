@@ -1,7 +1,9 @@
 // Normalisatie van tegenpartij-/omschrijvingsnamen — voor het herkennen van dezelfde
 // tegenpartij ondanks kleine schrijfwijzeverschillen tussen transacties.
 
-const PERSON_TITLES = ["mw ", "hr ", "dhr ", "mevr ", "mevrouw ", "de heer ", "meneer "];
+import { VOORNAMEN, GEEN_NAAMWOORD } from "./voornamen.js";
+
+const PERSON_TITLES = ["mw ", "hr ", "dhr ", "mevr ", "mevrouw ", "de heer ", "meneer ", "mr ", "mrs ", "ms "];
 const COMPANY_HINTS = [
   "b.v", "bv", "n.v.", "nv", "stichting", "vof", "gemeente", "bank", "verzekering", "insurance", "services",
   "holding", "limited", "betalingsverkeer", "incasso", "stadsbestuur", "buckaroo", "u.a.", "geldmaat",
@@ -15,6 +17,18 @@ const COMPANY_HINTS = [
   // release30V8 — gezien in een Knab/ING-dossier als "persoon": administratiekantoor, CBR, Sony, platenzaak.
   "administratie", "bureau", "entertainment", "records",
 ];
+
+// huishoudboekje-V6R6 — losse woorden die op een bedrijf wijzen, nooit op een persoon (alleen als heel woord).
+export const BEDRIJFSWOORD = /\b(meat|vlees|koekjes|bakkerij|slagerij|patisserie|import|export|importexport|handel|groothandel|food|foods|market|markt|supermarkt|shop|winkel|kapsalon|garage|techniek|bouw|transport|verhuur|rent|consult|consultancy|solutions|trading|group|groep|catering|logistiek|logistics|webshop|store|travel|reizen|installatie|schilders|hoveniers|loodgieter|autobedrijf|zonen|management|consultants|media|schade|performance|welding|automotive|benefits|merken|advocaten|advocatuur|notaris|notarissen|atletiek|vereniging|stg|pensioenfonds|fonds|foundation|hotel|hostel|camping|restaurant|cafe|bistro|pizzeria|horeca|autos|occasions|events|impex|touristik|spices|naturals|deli|outlet|discounter|brands|veilingen|bedrukt|textiel|rechtshulp|letselschade|factoring|derdengelden|systems|inschrijfgelden|kruidvat|mister|belgie|nederland)\b/i;
+// huishoudboekje-V6R7 — samengestelde bedrijfsnamen ("Ongediertewinkel", "Oogwereld", "VakantieVeilingen").
+const BEDRIJFSACHTERVOEGSEL = /[a-zà-ÿ]{3,}(winkel|shop|markt|wereld|veilingen|discounter|outlet|store|centrum|fonds|service|deli|verzorging|kantoor|deurwaarders|bewaking|smederij|systems)\b/i;
+// huishoudboekje-V6R7 — tekens en vormen die bij een persoonsnaam niet voorkomen: webadres, "X by MultiSafepay",
+// "A & B", "A/B", landcode achteraan ("Kruidvat NL").
+export function heeftBedrijfsVorm(raw) {
+  const t = String(raw || "").trim();
+  return /\.(nl|com|nu|be|de|eu|org|net|shop|io|fr|uk)\b/i.test(t) || /\sby\s/i.test(t) || /\s&\s|\//.test(t) || /\s(nl|be|bv|oy|ab|aps|kft|ltd)$/i.test(t)
+    || BEDRIJFSWOORD.test(t) || BEDRIJFSACHTERVOEGSEL.test(t);
+}
 
 // Getest tegen echte bankbestanden (ING, ABN MT940, Knab — 6000+ regels in totaal): de eerdere,
 // simpelere versie van deze heuristiek herkende tientallen overduidelijk-geen-persoon
@@ -31,6 +45,8 @@ export function looksLikePerson(text) {
   const t = raw.toLowerCase();
   if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
   if (/\s(ag|se|sarl|srl)$/i.test(raw)) return false; // buitenlandse rechtsvorm achteraan (bijv. "Autodoc AG")
+  // huishoudboekje-V6R6 — bedrijfswoorden als los woord (ChatGPT-analyse 6-11, Dakhlaoui: "hmp meat", "al baraka koekjes").
+  if (heeftBedrijfsVorm(raw)) return false;
   if (PERSON_TITLES.some((p) => t.startsWith(p))) return true;
   // Kaarttransactie-voorvoegsels (CCV*, BCK*, MOL*, ...) en een land-/plaatscode-achtervoegsel
   // ("... NLD") zijn typerend voor automatisch gegenereerde pin-omschrijvingen, nooit een mens.
@@ -63,7 +79,33 @@ export function looksLikePerson(text) {
   // herkennen: één of meer losse hoofdletter-voorletters gevolgd door een achternaam.
   if (/^([A-Z][.,]){1,3}\s*[A-Z][a-zà-ÿ]+$/.test(raw)) return true;
   const words = t.split(/\s+/).filter(Boolean);
-  return words.length >= 2 && words.length <= 4 && !/\d/.test(t);
+  return words.length >= 2 && words.length <= 4 && !/\d/.test(t) && lijktOpNaam(raw);
+}
+
+// huishoudboekje-V6R8 — een naam van 2-4 woorden telt pas als persoon als er iets in staat dat op een mens wijst
+// (wens Boska 8-11: "Pro Curo", "che bello", "NYPD Best" zijn geen personen):
+// - voorletters: "P. Gerits", "P Gerits", "P.Gerits", "C.J.G.M. Gilsing", "j r gerad", "Gerits P", "CJGM Gilsing";
+// - een bekende voornaam (VOORNAMEN) vooraan of achteraan: "Inge Cox", "Achour Bouliche";
+// - een tussenvoegsel midden in de naam: "Saleh al Mussa", "Oualid Ben Naceur", "Miranda Van De Wiel";
+// - een dubbele achternaam met streepje: "Anke Giesler-Lakhdar".
+// Een woord dat vaak in bedrijfsnamen staat (GEEN_NAAMWOORD: best, pro, bello, lune, golden, ...) maakt het nooit een persoon.
+const TUSSENVOEGSEL = new Set(["van", "de", "den", "der", "ter", "ten", "te", "el", "al", "ben", "bin", "ait", "abu", "abou", "da", "dos", "du", "von", "le", "la", "di", "del", "op", "in", "t", "'t", "vd", "v/d"]);
+const zonderAccent = (w) => w.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export function lijktOpNaam(raw) {
+  const delen = String(raw || "").replace(/,/g, " ").trim().split(/\s+/).filter(Boolean);
+  const woorden = delen.map((w) => zonderAccent(w.toLowerCase()).replace(/[^a-z'.-]/g, ""));
+  const kaal = woorden.map((w) => w.replace(/[.']/g, ""));
+  if (kaal.some((w) => w.split("-").some((d) => GEEN_NAAMWOORD.has(d)))) return false;
+  // Voorletters: één letter (met of zonder punt), of een reeks met punten ("C.J.G.M."), of hoofdletters vóór een naam ("CJGM Gilsing").
+  const isVoorletters = (orig, i) => /^([a-zà-ÿ]\.?)$/i.test(orig) || /^([a-z]\.){1,5}[a-z]?$/i.test(orig) || (i === 0 && delen.length > 1 && /^[b-df-hj-np-tv-xz]{2,3}$/i.test(orig.replace(/y/gi, "x"))) || (i < delen.length - 1 && /^[A-Z]{2,5}$/.test(orig) && /[aeiouy]/i.test(delen[delen.length - 1]) && delen.length <= 3 && /^[A-Z][a-z]/.test(delen[delen.length - 1]));
+  if (delen.some((w, i) => isVoorletters(w, i))) return true;
+  if (/^([A-Z]\.){1,5}[A-Z][a-zà-ÿ]+/.test(delen[0])) return true; // "P.Gerits", "Y.Ben Mansour"
+  const eerste = kaal[0], laatste = kaal[kaal.length - 1];
+  if (VOORNAMEN.has(eerste) || VOORNAMEN.has(laatste)) return true;
+  if (kaal.slice(1, -1).some((w) => TUSSENVOEGSEL.has(w))) return true;
+  if (kaal.length <= 3 && ["van", "de", "ter", "ten", "el", "al"].includes(eerste)) return true; // alleen achternaam: "Van beurden", "de Vries"
+  if (delen.some((w) => /^[A-Z][a-zà-ÿ]+-[A-Z][a-zà-ÿ]+$/.test(w))) return true;
+  return false;
 }
 
 export function normKey(s) {

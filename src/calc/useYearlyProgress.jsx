@@ -30,7 +30,7 @@ export function useYearlyProgress(p) {
       // beide-V11R3 — per tegenpartij; na splitsen per rekening telt "Klopt zo" per rekening (bevestigdVoor).
       // huishoudboekje-V3R3 — een zelf gekozen categorie (override) is al beoordeeld: Controleren vraagt er ook niet meer naar
       // (nogTeBekijken slaat "handmatig" over). Anders bleef er een open punt staan dat nergens te controleren was (melding Boska 4-11).
-      const bekeken = (tx, set) => tx.confidence?.level === "override" || bevestigdVoor(set, counterpartyKey(tx.counterparty || tx.description, tx.amount), tx);
+      const bekeken = (tx, set) => tx.confidence?.level === "override" || tx.kleinBedrag || bevestigdVoor(set, counterpartyKey(tx.counterparty || tx.description, tx.amount), tx);
       const perSleutel = (cat, set) => {
         const m = new Map();
         for (const tx of allYearItems) {

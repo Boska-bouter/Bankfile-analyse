@@ -80,7 +80,9 @@ export const bevestigdVoor = (lijst, sleutel, tx) => lijst.has(sleutel) || lijst
 // beide-V11R3 — `gesplitst(tx)`: is voor deze tegenpartij gekozen om de zakelijke en de privérekening apart in te delen (wens Boska
 // 30-10)? Dan komt er per rekening een eigen regel (sleutel@Zakelijk / sleutel@Prive). Anders één regel; `beideRekeningen` zegt dan
 // of splitsen kan.
-export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null, gesplitst = null } = {}) {
+// huishoudboekje-V6R6 — sortering "aantal": de tegenpartijen met de meeste boekingen eerst (Overig en personen; wens Boska 7-11 na
+// ChatGPT-analyse: 20 tegenpartijen zijn vaak al de helft van alle onbekende boekingen). Standaard blijft "bedrag".
+export function computeCategorySummary(classified, category, { metZonderNaam = false, rekening = null, gesplitst = null, sortering = "bedrag" } = {}) {
   const map = {};
   for (const tx of classified) {
     if (tx.category !== category || tx.isMirror) continue;
@@ -104,7 +106,7 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     map[mapKey].total += tx.amount;
     map[mapKey].count += 1;
     // beide-V16R3 — voor "alle onbekende pinbetalingen onder € …" in Overig opruimen.
-    if (/pasvolgnr|\bpas: ?\d|\bterm:/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) map[mapKey].pinAantal = (map[mapKey].pinAantal || 0) + 1;
+    if (/pasvolgnr|\bpas: ?\d|\bterm:|\bbetaalautomaat \d{1,2}:\d{2}\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) map[mapKey].pinAantal = (map[mapKey].pinAantal || 0) + 1;
     map[mapKey].maxBedrag = Math.max(map[mapKey].maxBedrag || 0, Math.abs(Number(tx.amount) || 0));
     map[mapKey].years.add(tx.year);
     map[mapKey].soorten.add(soort);
@@ -112,10 +114,12 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     map[mapKey].description = tx.fullDescription || tx.description || map[mapKey].description;
     // V7R6 / beide-V3R0 — zelf gekozen (bijv. in Eenvoudig "Aan familie of vrienden"): dan is het al beoordeeld.
     if (tx.confidence?.level === "override") map[mapKey].handmatig = true;
+    // huishoudboekje-V6R9 — alle boekingen klein (kleineBedragen.js): geen open punt.
+    map[mapKey].alleKlein = (map[mapKey].alleKlein ?? true) && !!tx.kleinBedrag;
   }
   return Object.values(map)
     .map((item) => ({ ...item, beideRekeningen: item.soorten.size > 1 }))
-    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    .sort((a, b) => (sortering === "aantal" ? b.count - a.count : 0) || Math.abs(b.total) - Math.abs(a.total));
 }
 
 // Zelfde soort samenvatting als hierboven, maar dan over de VIER "Zakelijke inkomsten"-categorieën

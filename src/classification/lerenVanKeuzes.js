@@ -9,7 +9,7 @@ import { bedrijfsnaamVan, horecaPinVan } from "./classify.js";
 // Elk dossier leert alleen van zichzelf (wat bij de één privé is, is bij de ander inkoop).
 export const LEER_ONBEKEND = new Set(["Overig", "Overboekingen aan personen"]);
 export const LEER_MIN_PARTIJEN = 5;
-const PIN = /pasvolgnr|\bpas: ?\d|\bterm:/i;
+const PIN = /pasvolgnr|\bpas: ?\d|\bterm:|\bbetaalautomaat \d{1,2}:\d{2}\b/i; // huishoudboekje-V6R4 — ook Rabobank
 // beide-V16R2 — partijen waarbij de tegenpartij niets zegt over de soort uitgave: betaaldiensten en creditcardafrekeningen (PayPal,
 // Klarna, International Card Services) en de eigen naam. Die leren niet mee en krijgen geen voorstel (meting huishoudboekje 5-11:
 // bijna alle foute privévoorstellen kwamen van PayPal, ICS en "GERITS P H").
