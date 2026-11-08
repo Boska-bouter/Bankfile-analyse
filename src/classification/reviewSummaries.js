@@ -114,6 +114,8 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     map[mapKey].description = tx.fullDescription || tx.description || map[mapKey].description;
     // V7R6 / beide-V3R0 — zelf gekozen (bijv. in Eenvoudig "Aan familie of vrienden"): dan is het al beoordeeld.
     if (tx.confidence?.level === "override") map[mapKey].handmatig = true;
+    // huishoudboekje-V6R9 — alle boekingen klein (kleineBedragen.js): geen open punt.
+    map[mapKey].alleKlein = (map[mapKey].alleKlein ?? true) && !!tx.kleinBedrag;
   }
   return Object.values(map)
     .map((item) => ({ ...item, beideRekeningen: item.soorten.size > 1 }))

@@ -16,6 +16,8 @@ import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { computeIncomeSummary, computeCategorySummary, computeIncomeCategorySummary, sleutelZonderNaam, bevestigdVoor, rekeningSoortVan } from "./classification/reviewSummaries.js";
 import { counterpartyKey, ibanKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { overrideSleutel, sleutelVoorTegenpartij, resolveClassification } from "./classification/classify.js";
+import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
+import KleineBedragen from "./components/review/KleineBedragen.jsx";
 import { makeUndoWrapped } from "./utils/withUndo.js";
 import { loadPersistedParsedFiles, loadPersistedSettings } from "./storage/projectStorage.js";
 import { useDashboardCards } from "./cards/useDashboardCards.jsx";
@@ -508,6 +510,7 @@ export default function App() {
   const [incomeBtwTarieven, setIncomeBtwTarieven] = useState(null); // null=nog niet gevraagd | ["9","21"] e.d.
   const [meerdereTarievenBevestigd, setMeerdereTarievenBevestigd] = useState(false);
   const [verwachteMatchSuggestie, setVerwachteMatchSuggestie] = useState(null); // {type, naam, matches, targetCategory}
+  const [kleinBedragInstelling, setKleinBedragInstelling] = useState(null); // huishoudboekje-V6R9 — {grens, procent}; null = standaard
   const [verwachteAangeboden, setVerwachteAangeboden] = useState({}); // {lease: aantalTransactiesToenGecontroleerd, ...}
   const [confirmedLeaseTypeKeys, setConfirmedLeaseTypeKeys] = useState([]);
   const [incomeSearch, setIncomeSearch] = useState("");
@@ -780,6 +783,7 @@ export default function App() {
     setIncomeBtwTarieven(settings.incomeBtwTarieven ?? null);
     setMeerdereTarievenBevestigd(settings.meerdereTarievenBevestigd ?? false);
     setVerwachteAangeboden(settings.verwachteAangeboden && typeof settings.verwachteAangeboden === "object" ? settings.verwachteAangeboden : {});
+    setKleinBedragInstelling(settings.kleinBedragInstelling && typeof settings.kleinBedragInstelling === "object" ? settings.kleinBedragInstelling : null);
     setLeaseMergedInto(settings.leaseMergedInto && typeof settings.leaseMergedInto === "object" ? settings.leaseMergedInto : {});
     setConfirmedLeaseTypeKeys(Array.isArray(settings.confirmedLeaseTypeKeys) ? settings.confirmedLeaseTypeKeys : []);
     setIbStatus(settings.ibStatus && typeof settings.ibStatus === "object" ? settings.ibStatus : {});
@@ -1181,7 +1185,7 @@ export default function App() {
     zvwStatus, vpbStatus, zelfstandigenaftrekStatus, zaLegacyJaDefault, startersaftrekStatus, werkruimteStatus,
     weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus,
     autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
-    categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden,
+    categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, kleinBedragInstelling,
   };
   const dossierZetters = {
     parsedFiles: setParsedFiles, accountTypeByFile: setAccountTypeByFile, overridesByCounterparty: setOverridesByCounterparty,
@@ -1205,7 +1209,7 @@ export default function App() {
     autoWizardStatus: setAutoWizardStatus, autoActivaDetails: setAutoActivaDetails, kmVergoedingDetails: setKmVergoedingDetailsState,
     huurZakelijkPercentageStatus: setHuurZakelijkPercentageStatusState, energieZakelijkPercentageStatus: setEnergieZakelijkPercentageStatusState, gemeentelijkeKostenZakelijkPercentageStatus: setGemeentelijkeKostenZakelijkPercentageStatusState,
     categoryZakelijkPercentage: setCategoryZakelijkPercentageState, openingBalanceCorrections: setOpeningBalanceCorrections, incomeBtwTarieven: setIncomeBtwTarieven,
-    meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden,
+    meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden, kleinBedragInstelling: setKleinBedragInstelling,
   };
 
   useAutomatischBewaren({
@@ -1374,7 +1378,7 @@ export default function App() {
   // beide-V17R7 — soort bedrijf uit de wizard (classification/branche.js); verandert eigenNamen, dan ook eigenNamenKeywords en dus de indeling.
   setBranche(eigenNamen?.branche || null);
   setZakelijkVanPrive(eigenNamen?.zakelijkVanPrive); // huishoudboekje-V6R5
-  const classified = useClassified({
+  const classifiedBasis = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
@@ -1382,6 +1386,10 @@ export default function App() {
     factuurjaar: bevestigdeControles?.factuurjaar || null,
     eigenRekeningAanpasbaar: huishoudboekje,
   });
+  // huishoudboekje-V6R9 — kleine onzekere boekingen tellen niet als open punt (zie classification/kleineBedragen.js).
+  const classified = useMemo(() => markeerKleineBedragen(classifiedBasis, kleinBedragInstelling), [classifiedBasis, kleinBedragInstelling]);
+  const kleinBedragOverzicht = useMemo(() => kleinOverzicht(classified, kleinBedragInstelling), [classified, kleinBedragInstelling]);
+  const kleinBedragGroepen = useMemo(() => kleineGroepen(classified), [classified]);
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
   // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
@@ -1520,6 +1528,7 @@ export default function App() {
   const bekekenOverigSet = useMemo(() => new Set(reviewedOverigKeys), [reviewedOverigKeys]);
   const bekekenPersonenSet = useMemo(() => new Set(reviewedPersonKeys), [reviewedPersonKeys]);
   const bevestigdInBulkVenster = (tx) => {
+    if (tx.kleinBedrag) return true; // huishoudboekje-V6R9 — klein bedrag, weinig invloed: geen open punt
     if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") return false;
     const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
     return bevestigdVoor(tx.category === "Overig" ? bekekenOverigSet : bekekenPersonenSet, k, tx);
@@ -1652,7 +1661,7 @@ export default function App() {
   // beide-V11R4 — sleutel waaronder de (gesplitste) keuze van deze tegenpartij staat, anders die van de detailtabel.
   const keuzeSleutel = (tx) => { const k = sleutelVoorTegenpartij(tx, overridesByCounterparty); return overridesByCounterparty[k] ? k : keyForTx(tx); };
   const personSummary = useMemo(() => computeCategorySummary(classified, "Overboekingen aan personen", { metZonderNaam: true, rekening: rekeningInfo, gesplitst, sortering: "aantal" }), [classified, rekeningInfo, gesplitst]);
-  const nogTeBekijken = (lijst, bekeken) => lijst.filter((i) => !i.handmatig && !bekeken.includes(i.key) && !bekeken.includes(i.basisKey));
+  const nogTeBekijken = (lijst, bekeken) => lijst.filter((i) => !i.handmatig && !i.alleKlein && !bekeken.includes(i.key) && !bekeken.includes(i.basisKey));
   const pendingPersonReview = useMemo(() => nogTeBekijken(personSummary, reviewedPersonKeys), [personSummary, reviewedPersonKeys]);
   // release31V0 — regel zonder tegenpartijnaam: alleen die ene boeking aanpassen.
   const zetVoorItem = (item, patch) => (item.zonderNaam ? setRowOverride(item.txId, patch) : item.rekeningSoort ? setRekeningKeuze(item, patch) : setCounterpartyOverride(item.name, item.amount, patch));
@@ -2892,6 +2901,17 @@ export default function App() {
     if (dossierOpenPoints === 0) return 100;
     return Math.min(99, Math.floor((100 * (totaal - dossierOpenPoints)) / totaal));
   }, [classified, confidenceSummary, dossierOpenPoints]);
+  // huishoudboekje-V6R9 — wens Boska 8-11: naast de ring (telt groepen) ook het deel van de BOEKINGEN dat zeker is ingedeeld.
+  const boekingenInfo = useMemo(() => {
+    let n = 0, zeker = 0, klein = 0;
+    for (const tx of classified) {
+      if (tx.isMirror) continue;
+      n++;
+      if (tx.kleinBedrag) klein++;
+      else if (tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigdInBulkVenster(tx)) zeker++;
+    }
+    return n ? { zeker: Math.floor((100 * zeker) / n), klein: Math.round((100 * klein) / n) } : null;
+  }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
   // V74 — tweede ring: dezelfde berekening, maar alleen voor het gekozen jaar. Open = groepen met een
   // onzekere indeling in dat jaar + de administratieve jaarchecks die nog openstaan (KOR, BTW-verlegd,
   // personen/Overig beoordeeld, enz.); totaal = alle groepen van dat jaar + het aantal jaarchecks.
@@ -3261,7 +3281,7 @@ export default function App() {
     setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys,
     setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setSoortDossier,
     setStartersaftrekStatusState, setTariefOverridesState, setTransactionNotes, setVerwachteAOV,
-    setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening,
+    setVerwachteAangeboden, setKleinBedragInstelling, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening,
     setVerwachteMatchSuggestie, setVoorbelastingExcluded, setVpbStatus, setWeergave, setWerkruimteStatusState,
     setZaLegacyJaDefault, setZakelijkeSpaarRekening, setZelfstandigenaftrekStatusState, setZvwStatus,
     snapshotBeforeAction, soortDossier, startNieuwDossierWizard, suppressChangeCount, 
@@ -3761,7 +3781,7 @@ export default function App() {
             subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : parsedFiles.length === 0 ? "Nog geen bankgegevens in dit dossier" : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
-            yearRing={yearRing}
+            yearRing={yearRing} boekingenInfo={boekingenInfo}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4034,7 +4054,7 @@ export default function App() {
             subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
-            yearRing={yearRing}
+            yearRing={yearRing} boekingenInfo={boekingenInfo}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}
@@ -4057,6 +4077,14 @@ export default function App() {
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
+          {classified.length > 0 && <KleineBedragen overzicht={kleinBedragOverzicht} groepen={kleinBedragGroepen} metPrive={!huishoudboekje}
+            onInstelling={(v) => { snapshotBeforeAction("Grens kleine bedragen"); setKleinBedragInstelling(v); }}
+            onZetCategorie={(groepen, category) => {
+              const ids = groepen.flatMap((g) => g.ids);
+              if (!ids.length) return;
+              snapshotBeforeAction(`${ids.length} kleine boekingen naar ${category}`);
+              setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category }; return next; });
+            }} />}
           <SectionCardGrid cards={controlerenCardGroups} onOpenHelp={setHelpPopupChapter} swipe={{ years, year: activeYear, onSelectYear: setActiveYear }} />
         </div>
 
@@ -4268,7 +4296,7 @@ export default function App() {
             subtitle={activeYear ? `Boekjaar ${activeYear}${yearPeriod[activeYear] ? ` · ${yearPeriod[activeYear].label}` : ""}` : "Voeg een bankbestand toe (links) om te beginnen"}
             dossierInfo={years.length > 0 ? `${years.length} jaar in dossier · ${parsedFiles.length} bankbestand${parsedFiles.length === 1 ? "" : "en"}${rekeningTypeTekst}` : null}
             pct={activeYear && yearlyProgress[activeYear] ? dossierPct : null}
-            yearRing={yearRing}
+            yearRing={yearRing} boekingenInfo={boekingenInfo}
             openPoints={activeYear ? dossierOpenPoints : null}
             openBreakdown={dossierOpenBreakdown}
             statusLines={dashboardCards.find((c) => c.key === "yearStatus")?.lines}

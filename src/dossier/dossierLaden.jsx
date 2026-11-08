@@ -82,6 +82,7 @@ export function pasDossierToe(project, { naam = null, lastModified = null } = {}
     setIncomeBtwTarieven(project.incomeBtwTarieven ?? null);
     setMeerdereTarievenBevestigd(project.meerdereTarievenBevestigd ?? false);
     setVerwachteAangeboden(project.verwachteAangeboden && typeof project.verwachteAangeboden === "object" ? project.verwachteAangeboden : {});
+    c.setKleinBedragInstelling?.(project.kleinBedragInstelling && typeof project.kleinBedragInstelling === "object" ? project.kleinBedragInstelling : null);
     setConfirmedLeaseTypeKeys(Array.isArray(project.confirmedLeaseTypeKeys) ? project.confirmedLeaseTypeKeys : []);
     setFixedCategories(Array.isArray(project.fixedCategories) ? migreerCategorieLijst(project.fixedCategories) : DEFAULT_FIXED_CATEGORIES);
     setExcludedManualFingerprints(Array.isArray(project.excludedManualFingerprints) ? project.excludedManualFingerprints : []);
@@ -210,6 +211,7 @@ export async function wisDossier(c, askWizard = false) {
   setMeerdereTarievenBevestigd(false);
   setVerwachteMatchSuggestie(null);
   setVerwachteAangeboden({});
+  c.setKleinBedragInstelling?.(null);
   setLoanDetailsModalKey(null);
   setLeaseDetailsModalKey(null);
   setActivaDetailsModalKey(null);

@@ -16,7 +16,7 @@ export const DOSSIER_VELDEN = [
   "ibStatus", "zvwStatus", "vpbStatus", "zelfstandigenaftrekStatus", "zaLegacyJaDefault", "startersaftrekStatus", "werkruimteStatus", "weergave", "eenvoudigGezien",
   "tariefOverrides", "overigInkomenBox1", "priveAntwoorden", "autoStatus", "autoWizardStatus", "autoActivaDetails", "kmVergoedingDetails",
   "huurZakelijkPercentageStatus", "energieZakelijkPercentageStatus", "gemeentelijkeKostenZakelijkPercentageStatus", "categoryZakelijkPercentage",
-  "openingBalanceCorrections", "incomeBtwTarieven", "meerdereTarievenBevestigd", "verwachteAangeboden",
+  "openingBalanceCorrections", "incomeBtwTarieven", "meerdereTarievenBevestigd", "verwachteAangeboden", "kleinBedragInstelling",
 ];
 
 // Wisselen tussen Eenvoudig en Uitgebreid telt niet als wijziging (nieuw-V6R6) en wordt niet teruggedraaid:
@@ -35,7 +35,7 @@ const HERSTEL = {
   gemeentelijkeKostenZakelijkPercentageStatus: obj, categoryZakelijkPercentage: obj, openingBalanceCorrections: obj,
   bevestigdeControles: obj, verwachteAangeboden: obj, eenvoudigGezien: obj,
   verwachteLease: ofNull, verwachteLeaseOverig: ofNull, verwachteLening: ofNull, verwachteAOV: ofNull, heeftVoorraad: ofNull,
-  eigenNamen: ofNull, eigenRekeningenExtra: ofNull, zakelijkeSpaarRekening: ofNull, opdrachtgeversGevraagd: ofNull, incomeBtwTarieven: ofNull,
+  eigenNamen: ofNull, eigenRekeningenExtra: ofNull, zakelijkeSpaarRekening: ofNull, opdrachtgeversGevraagd: ofNull, incomeBtwTarieven: ofNull, kleinBedragInstelling: ofNull,
   meerdereTarievenBevestigd: (v) => v ?? false,
   autoWizardStatus: normalizeAutoWizard, autoStatus: normalizeAutoStatus,
   autoActivaDetails: echtObject, kmVergoedingDetails: echtObject,
@@ -77,7 +77,7 @@ export const VELD_LABEL = {
   kmVergoedingDetails: "kilometers", huurZakelijkPercentageStatus: "huur zakelijk %", energieZakelijkPercentageStatus: "energie zakelijk %",
   gemeentelijkeKostenZakelijkPercentageStatus: "gemeentelijke kosten zakelijk %", categoryZakelijkPercentage: "zakelijk percentage",
   openingBalanceCorrections: "beginsaldo", incomeBtwTarieven: "btw-tarief omzet", meerdereTarievenBevestigd: "btw-tarieven omzet",
-  verwachteAangeboden: "verwachte posten",
+  verwachteAangeboden: "verwachte posten", kleinBedragInstelling: "grens kleine bedragen",
 };
 export const wijzigingsLabel = (velden) => {
   const namen = [...new Set(velden.map((k) => VELD_LABEL[k] || "dossiergegevens"))];
