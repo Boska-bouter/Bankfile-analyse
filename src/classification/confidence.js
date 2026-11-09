@@ -15,7 +15,7 @@
 // - "fallback"   — geen van bovenstaande matchte; de transactie is in "Overig" beland
 
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
-import { looksLikeForeignCardPayment, isKnownFalsePositiveRuleMatch, ruleMatchesText, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
+import { looksLikeForeignCardPayment, passendeRegels, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
 import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
@@ -94,7 +94,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (resolvedCategory === "Interne overboeking: privé sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen privé-spaarrekening" };
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
-  const matchedRule = rules.find((r) => ruleMatchesText(r, text) && !isKnownFalsePositiveRuleMatch(r, text));
+  const matchedRule = passendeRegels(rules, text)[0]; // nieuw-V1R8 — onthouden per tekst (snelheid)
   if (matchedRule) {
     // beide-V15R8 — passen twee categorieën even goed (zie besteRegel in classify.js), dan is het twijfel: controleren.
     const beste = besteRegel(rules, zonderBetaalmiddel(text), tx.type === "Zakelijk" || tx.type === "Prive" ? tx.type : null, tx);

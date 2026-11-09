@@ -41,7 +41,10 @@ export function heeftBedrijfsVorm(raw) {
 // persoon als de wél herkende "K A.Eshmanova") werd gemist omdat voorletters-met-punten zonder
 // spaties als één woord tellen. Beide zijn hieronder gericht gerepareerd.
 export function looksLikePerson(text) {
-  const raw = String(text || "").trim();
+  const raw = String(text || "").trim().replace(/^[.,\s]+/, "");
+  // nieuw-V1R8 — "S.R. Reijnhout eo M. Reijnhout-van der Sluis" (eo = en/of): een gezamenlijke rekening; beoordeel de eerste naam.
+  const eo = raw.split(/\s+(?:eo|e\/o|en\/of)\s+/i);
+  if (eo.length > 1 && eo[0].trim()) return looksLikePerson(eo[0]);
   const t = raw.toLowerCase();
   if (COMPANY_HINTS.some((h) => t.includes(h))) return false;
   if (/\s(ag|se|sarl|srl)$/i.test(raw)) return false; // buitenlandse rechtsvorm achteraan (bijv. "Autodoc AG")
@@ -248,7 +251,15 @@ export function ibanKey(iban, amount) {
 // V73 — tekstmatch voor door de gebruiker opgegeven opdrachtgevers/leveranciers: leestekens en
 // meervoudige spaties tellen niet mee, zodat "Bouwbedrijf L. vd Ven BV" ook "BOUWBEDRIJF L VD VEN BV"
 // uit het bankbestand vindt (de wizard bewaart de naam zoals getypt, de bank schrijft 'm anders).
-const normTekst = (s) => ` ${String(s || "").toLowerCase().replace(/[^a-z0-9à-ÿ]+/g, " ").trim()} `;
+const normTekstRuw = (s) => ` ${String(s || "").toLowerCase().replace(/[^a-z0-9à-ÿ]+/g, " ").trim()} `;
+// nieuw-V1R8 — onthouden (snelheid): dezelfde boekingstekst werd bij elke wijziging voor elk zoekwoord opnieuw genormaliseerd.
+const NORM = new Map();
+const normTekst = (s) => {
+  const k = String(s || "");
+  let v = NORM.get(k);
+  if (v === undefined) { if (NORM.size > 100000) NORM.clear(); v = normTekstRuw(k); NORM.set(k, v); }
+  return v;
+};
 export function textHasKeyword(text, kw) {
   if (!kw) return false;
   const raw = String(kw).toLowerCase();

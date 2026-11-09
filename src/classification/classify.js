@@ -109,13 +109,45 @@ function trefwoordNiveau(kw) {
   return 3;
 }
 // Beste regel voor deze tekst, of null. Geeft { rule, niveau, twijfel } — twijfel = naam van de andere categorie bij een gelijke stand.
+// nieuw-V1R8 — snelheid (melding Boska 9-11: een categorie aanpassen duurde 3-4 seconden). Bij elke wijziging werd elke boeking
+// opnieuw langs alle trefwoorden van alle regels gehaald. Welke regels op een tekst passen hangt alleen af van de regels, de tekst
+// en het rekeningtype; dat onthouden we per regellijst. Een nieuwe regellijst (zoekwoord toegevoegd) begint met een lege lijst.
+const PASSEND = new WeakMap();
+export function passendeRegels(rules, text, accountType = null) {
+  let perTekst = PASSEND.get(rules);
+  if (!perTekst) { perTekst = new Map(); PASSEND.set(rules, perTekst); }
+  const sleutel = `${accountType || ""}\u0001${text}`;
+  let lijst = perTekst.get(sleutel);
+  if (!lijst) {
+    lijst = rules.filter((rule) => ruleMatchesText(rule, text, accountType) && !isKnownFalsePositiveRuleMatch(rule, text, accountType));
+    if (perTekst.size > 200000) perTekst.clear();
+    perTekst.set(sleutel, lijst);
+  }
+  return lijst;
+}
+// Gelijke stand bepalen gebeurt bij elke aanroep (gelijkeSoort hangt af van de weergave-instelling), de kandidaten worden onthouden.
+const KANDIDATEN = new WeakMap();
 export function besteRegel(rules, text, accountType, tx = null, { overslaan = null } = {}) {
   const partij = tx ? echtePartij(tx.counterparty) : "";
+  let kandidaten;
+  if (overslaan) kandidaten = regelKandidaten(rules, text, accountType, partij).filter((k) => !overslaan(k.rule));
+  else {
+    let perTekst = KANDIDATEN.get(rules);
+    if (!perTekst) { perTekst = new Map(); KANDIDATEN.set(rules, perTekst); }
+    const sleutel = `${accountType || ""}\u0001${partij}\u0001${text}`;
+    kandidaten = perTekst.get(sleutel);
+    if (!kandidaten) { if (perTekst.size > 200000) perTekst.clear(); kandidaten = regelKandidaten(rules, text, accountType, partij); perTekst.set(sleutel, kandidaten); }
+  }
   let beste = null;
+  for (const k of kandidaten) if (!beste || k.niveau > beste.niveau) beste = k;
+  if (!beste) return null;
+  const ander = kandidaten.find((k) => k.niveau === beste.niveau && k.rule.name !== beste.rule.name && k.woord !== beste.woord
+    && !gelijkeSoort(k.rule.name, beste.rule.name));
+  return { rule: beste.rule, niveau: beste.niveau, twijfel: ander ? ander.rule.name : null };
+}
+function regelKandidaten(rules, text, accountType, partij) {
   const kandidaten = [];
-  for (const rule of rules) {
-    if (overslaan && overslaan(rule)) continue;
-    if (!ruleMatchesText(rule, text, accountType) || isKnownFalsePositiveRuleMatch(rule, text, accountType)) continue;
+  for (const rule of passendeRegels(rules, text, accountType)) {
     let niveau = -1, woord = null;
     if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) { niveau = 3; woord = "hypotheek"; }
     for (const kw of rule.keywords) {
@@ -126,14 +158,9 @@ export function besteRegel(rules, text, accountType, tx = null, { overslaan = nu
       if (n > 0 && partij && keywordInText(partij, kw)) n += 1;
       if (n > niveau) { niveau = n; woord = String(kw).trim().toLowerCase(); }
     }
-    if (niveau < 0) continue;
-    kandidaten.push({ rule, niveau, woord });
-    if (!beste || niveau > beste.niveau) beste = { rule, niveau, woord };
+    if (niveau >= 0) kandidaten.push({ rule, niveau, woord });
   }
-  if (!beste) return null;
-  const ander = kandidaten.find((k) => k.niveau === beste.niveau && k.rule.name !== beste.rule.name && k.woord !== beste.woord
-    && !gelijkeSoort(k.rule.name, beste.rule.name));
-  return { rule: beste.rule, niveau: beste.niveau, twijfel: ander ? ander.rule.name : null };
+  return kandidaten;
 }
 // Zakelijke en privé-variant van hetzelfde (bijv. "Zakelijk overige abonnementen" / "Privé overige abonnementen") is geen twijfel:
 // de rekening beslist daar al.
