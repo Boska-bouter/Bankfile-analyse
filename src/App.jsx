@@ -1031,6 +1031,18 @@ export default function App() {
   const classified = useMemo(() => markeerKleineBedragen(classifiedBasis, kleinBedragInstelling), [classifiedBasis, kleinBedragInstelling]);
   const kleinBedragOverzicht = useMemo(() => kleinOverzicht(classified, kleinBedragInstelling), [classified, kleinBedragInstelling]);
   const kleinBedragGroepen = useMemo(() => kleineGroepen(classified), [classified]);
+  // nieuw-V1R5 — één set props voor de kaart bij Controleren en bij Instellingen (bevestigd = melding bij Controleren afgesloten)
+  const kleinBedragProps = {
+    overzicht: kleinBedragOverzicht, groepen: kleinBedragGroepen, metPrive: !huishoudboekje, bevestigd: kleinBedragInstelling?.bevestigd === true,
+    onInstelling: (v) => { snapshotBeforeAction("Grens kleine bedragen"); setKleinBedragInstelling(v); },
+    onBevestig: (aan) => { snapshotBeforeAction(aan ? "Kleine boekingen akkoord" : "Kleine boekingen weer tonen"); setKleinBedragInstelling((prev) => ({ ...(prev || {}), bevestigd: aan })); },
+    onZetCategorie: (groepen, category) => {
+      const ids = groepen.flatMap((g) => g.ids);
+      if (!ids.length) return;
+      snapshotBeforeAction(`${ids.length} kleine boekingen naar ${category}`);
+      setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category }; return next; });
+    },
+  };
 
   // Zoekt, na een "ja" op de lease/lening/AOV-vraag in de wizard (met een naam erbij), of die naam
   // al voorkomt in de geladen transacties — zowel meteen na het invullen als steeds opnieuw
@@ -2767,14 +2779,7 @@ export default function App() {
             v240, nu gegroepeerd in precies de 5 categorieën uit het bouwvoorstel en getekend met
             SectionCard (dezelfde stijl als Overzicht) i.p.v. de oudere DashboardOverview-tegel. */}
         <div style={sectionTabStyle("controleren")}>
-          {classified.length > 0 && <KleineBedragen overzicht={kleinBedragOverzicht} groepen={kleinBedragGroepen} metPrive={!huishoudboekje}
-            onInstelling={(v) => { snapshotBeforeAction("Grens kleine bedragen"); setKleinBedragInstelling(v); }}
-            onZetCategorie={(groepen, category) => {
-              const ids = groepen.flatMap((g) => g.ids);
-              if (!ids.length) return;
-              snapshotBeforeAction(`${ids.length} kleine boekingen naar ${category}`);
-              setOverridesByRow((prev) => { const next = { ...prev }; for (const id of ids) next[id] = { ...(prev[id] || {}), category }; return next; });
-            }} />}
+          {classified.length > 0 && <KleineBedragen plek="controleren" {...kleinBedragProps} />}
           <SectionCardGrid cards={controlerenCardGroups} onOpenHelp={setHelpPopupChapter} swipe={{ years, year: activeYear, onSelectYear: setActiveYear }} />
         </div>
 
@@ -3003,6 +3008,8 @@ export default function App() {
               )
             }
           />
+          {/* nieuw-V1R5 — kleine boekingen staan hier zodra ze bij Controleren zijn afgesloten */}
+          {classified.length > 0 && <KleineBedragen plek="instellingen" {...kleinBedragProps} />}
         </div>
 
         {/* Fase 2 (bouwvoorstel) — Instellingen in kaartstijl: dezelfde onderliggende kaarten als
