@@ -262,9 +262,9 @@ export const DEFAULT_RULES = [
     "shawarma", "döner", "doner", " diner", "foodcourt", "food court", " buffet", " bbq ",
   ] },
   { name: "Hypotheek", color: "bg-amber-200 text-amber-900", keywords: ["hypotheek", "hypotheekrente", "inzake rente", "inzake aflossing", "leningdeel"] },
-  { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering"] },
+  { name: "Verzekering: Auto", color: "bg-sky-100 text-sky-800", keywords: ["autoverzekering", "wa verzekering", "motorrijtuigenverzekering", "anwb autoverzekering", "casco", "allrisk auto", "autopolis"] },
   { name: "Verzekering: Zakelijk", color: "bg-cyan-200 text-cyan-900", keywords: [
-    "bedrijfsaansprakelijkheid", "zakelijke verzekering", "bedrijfsverzekering", "beroepsaansprakelijkheid", "movir", "de goudse", "klaverblad", "chubb", "voogd",
+    "bedrijfsaansprakelijkheid", "zakelijke verzekering", "bedrijfsverzekering", "beroepsaansprakelijkheid", "mkb-verzekering", "mkb verzekering", "bedrijfsschade", "inventarisverzekering", "movir", "de goudse", "klaverblad", "chubb", "voogd",
     "aig", "hiscox", "zurich verzekeringen", "hdi global", "qbe", "liberty specialty markets", "ms amlin",
     "arag", " das ", "bovemij", "turien & co", "vivat", "aon", "surebusiness",
   ],
@@ -274,7 +274,8 @@ export const DEFAULT_RULES = [
   ],
     description: "Arbeidsongeschiktheidsverzekering — een veelvoorkomende, specifieke aftrekpost bij zzp'ers die anders in de generieke \"Verzekering: Zakelijk\" verdwijnt." },
   { name: "Verzekeringen", color: "bg-teal-100 text-teal-800", keywords: [
-    "zorgverzekering", "zorgpremie", "zilveren kruis", " cz zorg", "cz zorgverzekering", " cz ", "cz groep",
+    "zorgverzekering", "zorgpremie", "inboedel", "opstal",
+    "aansprakelijkheid particulier", "particuliere aansprakelijkheid", "avp", "reisverzekering", "doorlopende reisverzekering", "uitvaartverzekering", "zilveren kruis", " cz zorg", "cz zorgverzekering", " cz ", "cz groep",
     "vgz", "menzis", "onvz", "dsw", "izz", "aevitae", "iza zorgverzekering", "anderzorg",
     "achmea", "interpolis", "allianz", "independer", "assuradeur", "anwb", "nationale-nederlanden", "nationale nederlanden",
     "ohra", "vereniging eigen huis", "lemonade verzekering", "europeesche verzekeringen", "unigarant",
