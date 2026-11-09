@@ -91,7 +91,7 @@ export default function DashboardHeader({
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
-        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
+        <div className="flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
           {pct != null ? (
             yearRing ? (
               <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
@@ -118,8 +118,10 @@ export default function DashboardHeader({
                     </div>
                   </div>
                   {boekingenInfo && (
-                    <span className="text-[11px] text-slate-500" data-testid="boekingen-pct">
-                      {boekingenInfo.zeker}% van de boekingen zeker ingedeeld{boekingenInfo.klein > 0 ? ` · ${boekingenInfo.klein}% klein, niet nalopen` : ""}
+                    // nieuw-V1R1 — twee regels, zodat de kaart op de iPad niet breder wordt dan het scherm
+                    <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
+                      <span>{boekingenInfo.zeker}% van de boekingen zeker ingedeeld</span>
+                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span>}
                     </span>
                   )}
                 </div>
@@ -194,7 +196,8 @@ export default function DashboardHeader({
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
               <span className="text-xs font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· {aangifteSoorten}</span></span>
-              <span className="flex items-center gap-2">
+              {/* nieuw-V1R1 — mag teruglopen: op de iPad viel "welke?" buiten de kaart */}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
                 <span className="text-xs text-slate-500 whitespace-nowrap">{werkelijkTekst}</span>
                 {werkelijkItems?.length > 0 && <span className="text-xs text-teal-700 underline">welke?</span>}
