@@ -56,22 +56,29 @@ function KostenInItem({ k, onBevestig, onVerplaats }) {
   const [keuze, setKeuze] = useState({});
   return (
     <div className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
-      <p><strong>{k.categorie} {k.jaar}</strong>: {k.aantalIn}× bijgeschreven, samen {eur(k.in)}; betaald {eur(k.uit)}.{k.positief ? <> Per saldo <strong>{eur(k.saldo)} ontvangen</strong> — voor een kostenpost is dat ongebruikelijk.</> : " Veel bijschrijvingen voor een kostenpost."}</p>
+      {/* nieuw-V1R7 — terugbetalingen van eigen leveranciers: andere vraag, "Klopt, terugbetaling" voorop (Boska 9-11) */}
+      {k.alleenTerug ? (
+        <p><strong>{k.categorie} {k.jaar}</strong>: meer terugontvangen dan betaald, klopt dat? Terug {eur(k.in)} ({k.aantalIn}×), betaald {eur(k.uit)}; per saldo <strong>{eur(k.saldo)} ontvangen</strong>. Het geld komt van partijen die je ook betaalt.</p>
+      ) : (
+        <p><strong>{k.categorie} {k.jaar}</strong>: {k.aantalIn}× bijgeschreven, samen {eur(k.in)}; betaald {eur(k.uit)}.{k.positief ? <> Per saldo <strong>{eur(k.saldo)} ontvangen</strong> — voor een kostenpost is dat ongebruikelijk.</> : " Veel bijschrijvingen voor een kostenpost."}</p>
+      )}
       <p className="mt-1 text-slate-600">Grootste bijschrijvingen:</p>
       {k.tegenpartijen.map((t) => (
         <div key={t.naam} className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="flex-1 min-w-[14rem]">{t.naam} — {t.aantal}× samen {eur(t.bedrag)}</span>
+          <span className="flex-1 min-w-[14rem]">{t.naam} — {t.aantal}× samen {eur(t.bedrag)}{t.terug ? <span className="text-slate-500"> · terugbetaling (wordt ook door je betaald)</span> : null}</span>
           {onVerplaats && (
             <span className="inline-flex items-center gap-1.5">
-              <Knop primair onClick={() => onVerplaats(t.ids, "Zakelijke inkomsten", t.naam)}>Zet op Zakelijke inkomsten</Knop>
-              <span className="text-slate-500">of op:</span>
+              {!t.terug && <Knop primair onClick={() => onVerplaats(t.ids, "Zakelijke inkomsten", t.naam)}>Zet op Zakelijke inkomsten</Knop>}
+              <span className="text-slate-500">{t.terug ? "andere categorie:" : "of op:"}</span>
               <CategorieSelect value={keuze[t.naam] || null} onChange={(v) => setKeuze((p) => ({ ...p, [t.naam]: v }))} placeholder="kies categorie…" className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs max-w-[14rem]" />
               {keuze[t.naam] && <Knop primair onClick={() => { onVerplaats(t.ids, keuze[t.naam], t.naam); setKeuze((p) => ({ ...p, [t.naam]: "" })); }}>Toepassen</Knop>}
             </span>
           )}
         </div>
       ))}
-      <div className="mt-2"><Knop onClick={() => onBevestig(k.key)}>Klopt zo (bijv. terugbetalingen)</Knop></div>
+      <div className="mt-2">{k.alleenTerug
+        ? <Knop primair onClick={() => onBevestig(k.key)}>Klopt, terugbetaling</Knop>
+        : <Knop onClick={() => onBevestig(k.key)}>Klopt zo (bijv. terugbetalingen)</Knop>}</div>
     </div>
   );
 }
