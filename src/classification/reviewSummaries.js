@@ -55,11 +55,12 @@ export function computeIncomeSummary(classified, accountTypeByFile, businessKeyw
     const key = normKey(tx.counterparty || tx.description);
     if (!key) continue;
     if (!map[key]) {
-      map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, source: tx.source, description: "", years: new Set(), rekeningen: {} };
+      map[key] = { key, name: tx.counterparty || tx.description, total: 0, count: 0, source: tx.source, description: "", years: new Set(), rekeningen: {}, txs: [] };
     }
     telRekening(map[key], tx, { accountTypeByFile, ownAccountByFile });
     map[key].total += tx.amount;
     map[key].count += 1;
+    map[key].txs.push(tx);
     map[key].years.add(tx.year);
     map[key].description = tx.fullDescription || tx.description || map[key].description;
   }
@@ -98,13 +99,14 @@ export function computeCategorySummary(classified, category, { metZonderNaam = f
     if (!map[mapKey]) {
       map[mapKey] = {
         key: mapKey, basisKey: key, name: zonderNaam ? (String(tx.description || "").trim() || `(geen naam) ${tx.date?.toLocaleDateString?.("nl-NL") || ""}`.trim()) : tx.counterparty || tx.description, amount: tx.amount, total: 0, count: 0,
-        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd, rekeningen: {}, soorten: new Set(), voorbeeldTx: tx,
+        category: tx.category, type: tx.type, description: "", years: new Set(), btwVerlegd: tx.btwVerlegd, rekeningen: {}, soorten: new Set(), voorbeeldTx: tx, txs: [],
         ...(split ? { rekeningSoort: soort } : {}),
         ...(zonderNaam ? { zonderNaam: true, txId: tx.id } : {}),
       };
     }
     map[mapKey].total += tx.amount;
     map[mapKey].count += 1;
+    map[mapKey].txs.push(tx); // huishoudboekje-V7R1 — onderliggende boekingen tonen (wens Boska 9-11)
     // beide-V16R3 — voor "alle onbekende pinbetalingen onder € …" in Overig opruimen.
     if (/pasvolgnr|\bpas: ?\d|\bterm:|\bbetaalautomaat \d{1,2}:\d{2}\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) map[mapKey].pinAantal = (map[mapKey].pinAantal || 0) + 1;
     map[mapKey].maxBedrag = Math.max(map[mapKey].maxBedrag || 0, Math.abs(Number(tx.amount) || 0));

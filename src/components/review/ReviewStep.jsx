@@ -5,6 +5,7 @@ import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soort
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import BoekingenLijst from "../shared/BoekingenLijst.jsx";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import RekeningLabels from "../shared/RekeningLabels.jsx";
 import { vergelijkbareItems } from "../../review/vergelijkbaar.js";
@@ -39,6 +40,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
           )}
         </p>
         {item.description && <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400" />}
+        <BoekingenLijst txs={item.txs} className="mt-1" />
       </div>
       {/* release30V6 — één gegroepeerde keuzelijst (groep → soort) i.p.v. eerst groep, dan soort */}
       <CategorieSelect value={category} onChange={(c) => apply(c, type)} className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs max-w-[16rem]" />
