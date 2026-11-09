@@ -20,7 +20,7 @@ const coverageTekst = (c) => {
   return null;
 };
 
-export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage, yearPeriod = {} }) {
+export default function YearDropdown({ years, activeYear, onSelectYear, yearlyProgress, zakelijkYears, priveYears, showBreakdown, yearCoverage, yearPeriod = {}, gestapeld = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -35,7 +35,7 @@ export default function YearDropdown({ years, activeYear, onSelectYear, yearlyPr
   if (!years || years.length === 0) return null;
 
   return (
-    <div className="relative shrink-0 flex items-center gap-4" ref={ref}>
+    <div className={`relative shrink-0 flex ${gestapeld ? "flex-col items-start gap-1.5" : "items-center gap-4"}`} ref={ref}>{/* nieuw-V1R2 — gestapeld: tekst boven de knop (kop Overzicht, middelste kolom) */}
       {/* v299 — op verzoek: naast het jaartal ook in één oogopslag zien hoeveel jaren het dossier
           totaal beslaat, en — alleen als er ook echt een privérekening is ingeladen (showBreakdown) —
           de uitsplitsing zakelijk/privé daaronder. Zonder privérekening is die uitsplitsing gelijk aan
