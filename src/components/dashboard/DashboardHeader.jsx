@@ -87,39 +87,37 @@ export default function DashboardHeader({
         {dossierInfo && <p className="mt-0.5 text-xs text-slate-400">{dossierInfo}</p>}
       </div>
 
-      <div className="flex flex-wrap items-start gap-3 min-w-0 max-w-full">
+      <div className="flex flex-wrap items-start gap-3 min-w-0 max-w-full 2xl:flex-1">
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
-        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
+        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full 2xl:w-full">
           {pct != null ? (
             yearRing ? (
-              <div className="flex items-center gap-3 min-w-0 flex-1 whitespace-nowrap">
+              <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
                 <ConcentricGauge outerPct={pct} innerPct={yearRing.pct} outerColor={accent} />
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
-                  <div className="flex items-start gap-1.5">
-                    <span className="mt-1 rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-xs text-slate-400">Hele dossier · {pct}%</span>
-                      <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
-                        {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
-                      </span>
-                      {heeftOpenPunten && openBreakdown && <span className="text-[11px] text-slate-400">{openBreakdown}</span>}
-                    </div>
+                  {/* nieuw-V1R3 — per ring alles op één regel (Boska 9-11): kolom smaller en lager, meer ruimte voor kolom 2 en 3 */}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
+                    <span className="text-slate-400">Hele dossier · {pct}% ·</span>
+                    <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
+                      {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
+                    </span>
+                    {heeftOpenPunten && openBreakdown && <span className="text-[11px] text-slate-400">· {openBreakdown}</span>}
                   </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="mt-1 rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-xs text-slate-400">{yearRing.jaar} · {yearRing.pct}%</span>
-                      <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
-                        {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
+                    <span className="text-slate-400">{yearRing.jaar} · {yearRing.pct}% ·</span>
+                    <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
+                      {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
+                    </span>
                   </div>
                   {boekingenInfo && (
-                    <span className="text-[11px] text-slate-500 whitespace-normal" data-testid="boekingen-pct">
-                      {boekingenInfo.zeker}% van de boekingen zeker ingedeeld{boekingenInfo.klein > 0 && <>{" · "}<span className="whitespace-nowrap">{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span></>}
+                    <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
+                      <span>{boekingenInfo.zeker}% van de boekingen zeker ingedeeld</span>
+                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span>}
                     </span>
                   )}
                 </div>
@@ -154,7 +152,7 @@ export default function DashboardHeader({
           {dossierLines.length > 0 ? (
             <>
               <div className="w-px self-stretch bg-slate-200" />
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                 {dossierLines.map((line) => (
                   // nieuw-V1R2 — waarde onder het label (Boska 9-11): de kolom wordt smaller, de eerste kolom krijgt de ruimte
                   <div key={line.label} className="flex flex-col gap-0.5 text-xs">
@@ -169,7 +167,7 @@ export default function DashboardHeader({
             yearControl ? (
               <>
                 <div className="w-px self-stretch bg-slate-200" />
-                <div className="flex flex-col gap-1.5 shrink-0 whitespace-nowrap">{yearControl}</div>
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">{isValidElement(yearControl) ? cloneElement(yearControl, { gestapeld: true }) : yearControl}</div>
               </>
             ) : null
           ) : (
