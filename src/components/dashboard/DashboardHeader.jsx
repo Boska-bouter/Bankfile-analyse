@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useRef, useState } from "react";
 import ProgressGauge from "./ProgressGauge.jsx";
 import ConcentricGauge from "./ConcentricGauge.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
@@ -91,12 +91,12 @@ export default function DashboardHeader({
         {/* v272 — deze statuskaart stond volledig verborgen zolang er geen data was (pct/statusLines
             allebei leeg); op verzoek toont hij nu altijd het standaard-dashboard, met een neutrale
             leeg-status i.p.v. helemaal te verdwijnen. */}
-        <div className="flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
+        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full">
           {pct != null ? (
             yearRing ? (
-              <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-3 min-w-0 flex-1 whitespace-nowrap">
                 <ConcentricGauge outerPct={pct} innerPct={yearRing.pct} outerColor={accent} />
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 min-w-0">
                   <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
                   <div className="flex items-start gap-1.5">
                     <span className="mt-1 rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
@@ -118,10 +118,8 @@ export default function DashboardHeader({
                     </div>
                   </div>
                   {boekingenInfo && (
-                    // nieuw-V1R1 — twee regels, zodat de kaart op de iPad niet breder wordt dan het scherm
-                    <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
-                      <span>{boekingenInfo.zeker}% van de boekingen zeker ingedeeld</span>
-                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span>}
+                    <span className="text-[11px] text-slate-500 whitespace-normal" data-testid="boekingen-pct">
+                      {boekingenInfo.zeker}% van de boekingen zeker ingedeeld{boekingenInfo.klein > 0 && <>{" · "}<span className="whitespace-nowrap">{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span></>}
                     </span>
                   )}
                 </div>
@@ -158,12 +156,13 @@ export default function DashboardHeader({
               <div className="w-px self-stretch bg-slate-200" />
               <div className="flex flex-col gap-1.5">
                 {dossierLines.map((line) => (
-                  <div key={line.label} className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-500 w-[120px] shrink-0">{line.label}</span>
+                  // nieuw-V1R2 — waarde onder het label (Boska 9-11): de kolom wordt smaller, de eerste kolom krijgt de ruimte
+                  <div key={line.label} className="flex flex-col gap-0.5 text-xs">
+                    <span className="text-slate-500">{line.label}</span>
                     <span className="font-semibold text-slate-800">{metBolletjes(line.value)}</span>
                   </div>
                 ))}
-                {yearControl && <div className="mt-2 shrink-0 whitespace-nowrap">{yearControl}</div>}
+                {yearControl && <div className="mt-2 shrink-0 whitespace-nowrap">{isValidElement(yearControl) ? cloneElement(yearControl, { gestapeld: true }) : yearControl}</div>}
               </div>
             </>
           ) : pct != null ? (
@@ -188,14 +187,14 @@ export default function DashboardHeader({
               blijft inhoudelijk los van de Dossiercontrole: eigen kop, eigen stip. */}
           {/* huishoudboekje-V1R0 — een Huishoudboekje kent geen aangifte */}
           {!zonderAangifte && <div className="w-px self-stretch bg-slate-200" />}
-          {!zonderAangifte && <div ref={aangiftesRef} className="relative flex flex-col justify-center gap-1 min-w-0 shrink">
+          {!zonderAangifte && <div ref={aangiftesRef} className="relative flex flex-col justify-center gap-1 w-[10rem] shrink-0">
             <button
               type="button"
               onClick={() => (werkelijkItems?.length ? setToonAangiftes((v) => !v) : null)}
               className={`flex flex-col items-start gap-1 text-left ${werkelijkItems?.length ? "cursor-pointer" : "cursor-default"}`}
               title={werkelijkItems?.length ? "Klik om te zien welke aangiftes nog open staan" : undefined}
             >
-              <span className="text-xs font-medium text-slate-400">Aangifte buiten deze app <span className="font-normal">· {aangifteSoorten}</span></span>
+              <span className="text-xs font-medium text-slate-400 leading-snug">Aangifte buiten deze app<br /><span className="font-normal">{aangifteSoorten}</span></span>
               {/* nieuw-V1R1 — mag teruglopen: op de iPad viel "welke?" buiten de kaart */}
               <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 {werkelijkDotKleur && <span className="rounded-full shrink-0" style={{ background: werkelijkDotKleur, width: 8, height: 8 }} />}
