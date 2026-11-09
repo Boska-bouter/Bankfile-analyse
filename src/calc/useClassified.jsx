@@ -7,6 +7,7 @@ import { koppelDoorsluisOverboekingen } from "../classification/doorsluis.js";
 import { scoreClassification } from "../classification/confidence.js";
 import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
 import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
+import { personenViaIban } from "../classification/personenViaIban.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
 import { LENING_CATS, heeftLeningWoord, hoortBijLening } from "../classification/leningBoeking.js";
@@ -104,7 +105,7 @@ export function useClassified(p) {
     })();
     // beide-V5R1 — privé: dezelfde eigen rekening in beide richtingen dezelfde soort (sparen/beleggen), zie herkenning.js.
     const vasteSoortIbans = new Set(Object.values(ownAccountsElsewhereByFile).flat().filter((o) => o?.soort).map((o) => String(o.iban).replace(/\s+/g, "").toUpperCase()));
-    const base0a = herkenTerugbetalingen(base00); // beide-V8R4 — terugbetaling is geen omzet
+    const base0a = herkenTerugbetalingen(personenViaIban(base00)); // beide-V8R4 — terugbetaling is geen omzet; nieuw-V1R8 — persoon via rekeningnummer
     const base0 = herkenning?.samenhang ? herkenning.samenhang(base0a, { vasteSoortIbans }) : base0a;
     // Een geladen privérekening die geld krijgt van/stuurt naar een opgegeven maar niet geladen ándere
     // eigen privérekening wordt herkend als "Interne overboeking" (twee privérekeningen onderling). Staat er

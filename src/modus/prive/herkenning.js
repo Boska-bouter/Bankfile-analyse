@@ -137,8 +137,12 @@ export function herkenningContext(transacties, { eigenNamen = [] } = {}) {
 }
 
 // Regels voor de gewone herkenning: zonder de regels die alleen voor bijschrijvingen gelden.
+// nieuw-V1R8 — dezelfde lijst teruggeven zolang de regels niet veranderen, zodat passendeRegels (classify.js) zijn geheugen houdt.
+const UITGAVE = new WeakMap();
 export function uitgaveRegels(regels) {
-  return regels.some((r) => r.alleenInkomen) ? regels.filter((r) => !r.alleenInkomen) : regels;
+  if (!regels.some((r) => r.alleenInkomen)) return regels;
+  if (!UITGAVE.has(regels)) UITGAVE.set(regels, regels.filter((r) => !r.alleenInkomen));
+  return UITGAVE.get(regels);
 }
 
 const HUUR = new Set(["Huur", "Huur (deels zakelijk)", "Privé - huur"]);
