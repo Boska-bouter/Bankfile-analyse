@@ -161,7 +161,26 @@ export function vindJaarSprongen({ classified = [], bevestigd = {}, maxPerJaar =
 // Bijschrijvingen in een kostencategorie: een kostencategorie die in een jaar per saldo positief uitkomt, of met
 // veel/grote bijschrijvingen. Vaak omzet of terugbetalingen die verkeerd zijn ingedeeld (bijv. de dagelijkse
 // afrekeningen van een betaalterminal die als "Huur" stonden). Per categorie per jaar, met de grootste tegenpartijen.
+// nieuw-V1R7 — geld terug van een partij die in dezelfde categorie ook betaald wordt (energiebedrijf, verzekeraar) is een
+// terugbetaling (Boska 9-11; betaald in een kostencategorie): die telt niet mee voor "veel bijschrijvingen" en krijgt geen vraag "Zakelijke inkomsten?".
+// Alleen als een jaar per saldo positief is (meer terug dan betaald) blijft de melding, met als eerste keuze "Klopt, terugbetaling".
+const leverancierSleutels = (tx) => {
+  const r = [];
+  if (tx.counterpartyIban) r.push(`iban:${String(tx.counterpartyIban).replace(/\s/g, "").toUpperCase()}`);
+  const naam = tx.counterparty || "";
+  if (naam.trim()) r.push(`naam:${counterpartyKey(naam, 1).replace(/::(pos|neg)$/, "")}`);
+  return r;
+};
 export function vindInkomstenInKosten({ classified = [], bevestigd = {}, minPositief = 1000, minAantal = 10, minBedrag = 1000 }) {
+  // Wie wordt er per kostencategorie betaald (alle jaren)?
+  const betaald = {};
+  for (const tx of classified) {
+    if (tx.isMirror || !tx.category || !(tx.amount < 0)) continue;
+    if (fiscalTreatmentOf(tx.category) !== "kosten") continue;
+    // Over alle kostencategorieën: een verzekeraar die je voor de auto betaalt en die iets terugstort op Verzekering: Zakelijk.
+    const set = (betaald.alle ||= new Set());
+    for (const k of leverancierSleutels(tx)) set.add(k);
+  }
   const per = {};
   for (const tx of classified) {
     if (tx.isMirror || !tx.date || tx.transferLocked) continue;
@@ -170,11 +189,15 @@ export function vindInkomstenInKosten({ classified = [], bevestigd = {}, minPosi
     const cat = tx.category;
     if (!cat || fiscalTreatmentOf(cat) !== "kosten") continue;
     const y = tx.date.getFullYear();
-    const o = ((per[cat] ||= {})[y] ||= { in: 0, uit: 0, aantalIn: 0, tegen: {} });
+    const o = ((per[cat] ||= {})[y] ||= { in: 0, uit: 0, aantalIn: 0, inOnbekend: 0, aantalOnbekend: 0, tegen: {} });
     if (tx.amount > 0) {
+      // Ook als de tegenpartij op naam herkend is als zo'n bedrijf (zoekwoord: verzekeraar, energiebedrijf), al is er nooit aan betaald.
+      const terug = leverancierSleutels(tx).some((k) => betaald.alle?.has(k)) || tx.confidence?.level === "keyword"
+        || /verzekeraar/.test(tx.confidence?.label || "");
       o.in += tx.amount; o.aantalIn += 1;
+      if (!terug) { o.inOnbekend += tx.amount; o.aantalOnbekend += 1; }
       const naam = tx.counterparty || tx.description || "onbekend";
-      const t = (o.tegen[naam] ||= { naam, bedrag: 0, ids: [] });
+      const t = (o.tegen[naam] ||= { naam, bedrag: 0, ids: [], terug });
       t.bedrag += tx.amount; t.ids.push(tx.id);
     } else o.uit += -tx.amount;
   }
@@ -183,13 +206,16 @@ export function vindInkomstenInKosten({ classified = [], bevestigd = {}, minPosi
     for (const [y, o] of Object.entries(perJaar)) {
       const saldo = o.in - o.uit;
       const positief = saldo > 0 && o.in >= minPositief;
-      const veel = o.aantalIn >= minAantal && o.in >= minBedrag;
+      const veel = o.aantalOnbekend >= minAantal && o.inOnbekend >= minBedrag;
+      // Per saldo positief, maar alleen door terugbetalingen van eigen leveranciers en onder de drempel: geen melding.
       if (!positief && !veel) continue;
+      if (positief && o.inOnbekend < minPositief && !veel && saldo < minPositief) continue;
       const key = `kostenIn|${cat}|${y}`;
       if (bevestigd[key]) continue;
       const tegenpartijen = Object.values(o.tegen).sort((a, b) => b.bedrag - a.bedrag).slice(0, 3)
         .map((t) => ({ ...t, bedrag: Math.round(t.bedrag * 100) / 100, aantal: t.ids.length }));
-      meldingen.push({ key, categorie: cat, jaar: Number(y), in: Math.round(o.in * 100) / 100, uit: Math.round(o.uit * 100) / 100, saldo: Math.round(saldo * 100) / 100, aantalIn: o.aantalIn, positief, tegenpartijen });
+      const alleenTerug = o.inOnbekend === 0;
+      meldingen.push({ key, categorie: cat, jaar: Number(y), in: Math.round(o.in * 100) / 100, uit: Math.round(o.uit * 100) / 100, saldo: Math.round(saldo * 100) / 100, aantalIn: o.aantalIn, positief, alleenTerug, tegenpartijen });
     }
   }
   return meldingen.sort((a, b) => b.in - a.in);
