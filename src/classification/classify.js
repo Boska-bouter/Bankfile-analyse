@@ -92,7 +92,14 @@ export function echtePartij(counterparty) {
 // beide-V16R7 — soortwoorden zeggen WAT er gekocht is en winnen van de winkelnaam: "Makro tanken" is brandstof, geen boodschappen
 // (wens Boska 5-11). Niveau 4, boven elke merknaam.
 const BETAALKAART = /pasvolgnr|\bterm:|\bbea\b|betaalpas|kaartnr|\bpas: ?\d|apple pay|google pay|betaalautomaat|\bpinnen\b|\bpin\b/i;
-export const SOORT_WOORDEN = new Set(["tankserv", "tankservice", "tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue"]);
+// huishoudboekje-V7R2 — ook de soort polis telt zwaarder dan de naam van de verzekeraar (ChatGPT-analyse 9-11, Boska "Ja").
+export const SOORT_WOORDEN = new Set(["tankserv", "tankservice", "tanken", "tankstation", "benzine", "benzinestation", "diesel", "brandstof", "lpg", "adblue",
+  "autoverzekering", "motorrijtuigenverzekering", "wa verzekering", "casco", "allrisk auto", "autopolis",
+  "inboedel", "inboedelverzekering", "opstal", "opstalverzekering", "woonhuisverzekering",
+  "aansprakelijkheid particulier", "particuliere aansprakelijkheid", "avp", "reisverzekering", "doorlopende reisverzekering", "uitvaartverzekering",
+  "zorgverzekering", "zorgpremie",
+  "bedrijfsaansprakelijkheid", "beroepsaansprakelijkheid", "bedrijfsverzekering", "mkb-verzekering", "mkb verzekering", "bedrijfsschade", "inventarisverzekering",
+  "arbeidsongeschiktheidsverzekering", "aov"]);
 function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
   if (SOORT_WOORDEN.has(t)) return 4;
@@ -224,7 +231,20 @@ export function looksLikeForeignCardPayment(tx) {
 // Alleen voor geld dat binnenkomt: uitgaand naar de eigen naam kiezen ondernemers verschillend (bij een BV vaak loon, test RG).
 // huishoudboekje-V6R4 — betaaldiensten en kasstortingen: nooit een opdrachtgever of leverancier (ook gebruikt door utils/wizardSuggesties.js).
 export const GEEN_PARTIJ = /betaalverzoek|tikkie|geldmaat|geldautomaat|online payment|\bmollie\b|\badyen\b|buckaroo|pay\.nl|multisafepay|derdengelden|\bpaypal\b|\bklarna\b|\bsumup\b|\bccv\b/i;
-export function naamMetVoorletters(haystack, naam) {
+// huishoudboekje-V7R2 — "ij" en "y" als dezelfde letter (Reijnhout/Reynhout, Bijl/Byl).
+export const ijY = (t) => String(t || "").replace(/ij/g, "y");
+export const LENING_EXPLICIET = /\blening|\bgeleend|\buitgeleend|\bleen\b|\blenen\b/i;
+// `strikt`: alleen een tegenpartijnaam die vrijwel alleen uit voorletters + deze achternaam bestaat (ook voor uitgaand geld),
+// zodat "S.R. Reijnhout" of "Mw M Reijnhout-van der Sluis" niet als partner "N. Reijnhout" tellen.
+export function naamMetVoorletters(haystack, naam, strikt = false) {
+  if (strikt) {
+    const tekst = ` ${haystack} `.replace(/ (hr|mw|dhr|mr|mevr|de heer|mevrouw)(?= )/g, " ").replace(/\s+/g, " ").trim();
+    const delen = String(naam || "").split(" ").filter(Boolean);
+    if (delen.length < 2 || !/^[a-zà-ÿ]{1,3}$/.test(delen[0])) return false;
+    const achternaam = delen.slice(1).join(" ");
+    const m = tekst.match(/^((?:[a-zà-ÿ] ){1,4})(.+)$/);
+    return !!m && m[2].trim() === achternaam && m[1].replace(/ /g, "")[0] === delen[0][0];
+  }
   const delen = String(naam || "").split(" ").filter(Boolean);
   if (delen.length < 2 || !/^[a-zà-ÿ]{1,3}$/.test(delen[0])) return false;
   const voorletter = delen[0][0];
@@ -329,9 +349,14 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
     // R. Meijer en J.M. Wintermans"), dan is het géén overboeking van/naar jezelf. Alleen als de
     // tegenpartijnaam leeg is, kijken we nog naar de volledige tekst.
     const cpNorm = String(tx.counterparty || "").toLowerCase().replace(/[^a-zà-ÿ0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-    const nameHaystack = cpNorm ? ` ${cpNorm} ` : textForEigenNaam;
-    const matchedNaam = eigenNamen.find((naam) => naam && (nameHaystack.includes(naam) || (isIncome && naamMetVoorletters(nameHaystack, naam))));
-    if (matchedNaam) {
+    // huishoudboekje-V7R2 — ij en y gelijk ("Mw N N Reynhout" = "N. Reijnhout"), zie ijY.
+    const nameHaystack = ijY(cpNorm ? ` ${cpNorm} ` : textForEigenNaam);
+    const matchedNaam = eigenNamen.map(ijY).find((naam) => naam && (nameHaystack.includes(naam) || (isIncome && naamMetVoorletters(nameHaystack, naam))
+      || naamMetVoorletters(nameHaystack, naam, true)));
+    // huishoudboekje-V7R2 — een expliciete lening gaat vóór de eigen naam (ChatGPT-analyse 9-11, Boska "Ja"): "lening terug" aan de partner
+    // is geen privé-opname. De boeking gaat dan verder naar de gewone regels (Leningen), zoals zonder ingevulde partnernaam.
+    const leningTekst = LENING_EXPLICIET.test(`${tx.description || ""} ${tx.fullDescription || ""}`);
+    if (matchedNaam && !leningTekst) {
       if (accountType === "Zakelijk") {
         return isIncome ? { category: "Terugboeking van privé", type } : { category: "Privé opnames", type };
       }

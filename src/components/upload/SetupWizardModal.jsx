@@ -587,7 +587,7 @@ function RekeningGroep({ g, typedNow, zet, onAccountTypeChoose, fileContinuity, 
 function Scherm31({
   typedNow, zet, needs, goNext, sessionFiles, fileContinuity, onAccountTypeChoose, allTypedNow, ownAccountByFile = {}, bestandInfo = {}, onRekeningWijzig,
   rechtsvorm, setRechtsvorm, heeftHolding, setHeeftHolding, setKorRegeling, setBtwVerlegd, eigenNamen, setEigenNamen,
-  accountTypeByFile = {}, onPickFiles, onKoppelen,
+  accountTypeByFile = {}, onPickFiles, onKoppelen, suggesties = {},
 }) {
   // release31V4 — dekken de zakelijke en de privébestanden dezelfde periode? Zo niet: melden welke maanden
   // maar één kant hebben (daar kan de controle zakelijk ↔ privé niets koppelen).
@@ -650,6 +650,23 @@ function Scherm31({
             placeholder="Naam fiscaal partner (optioneel)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
+          {/* huishoudboekje-V7R2 — personen aan wie vaak geld gaat: is één van hen de fiscale partner? */}
+          {!naamP.trim() && (() => {
+            const eigen = naamO.toLowerCase().replace(/[^a-zà-ÿ ]/g, " ").trim();
+            const lijst = (suggesties.partner || []).filter((s) => s.naam.toLowerCase().replace(/[^a-zà-ÿ ]/g, " ").trim() !== eigen);
+            if (!lijst.length) return null;
+            return (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600" data-testid="partner-suggestie">
+                <span>Vaak geld naar of van: is één van hen je fiscale partner?</span>
+                {lijst.map((s) => (
+                  <button key={s.naam} type="button" onClick={() => zet({ eigenNaamPartner: s.naam })}
+                    className="rounded-full border border-teal-300 bg-teal-50 px-2.5 py-0.5 font-medium text-teal-800 hover:bg-teal-100">
+                    {s.naam} · {s.count}x
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
           {/* beide-V8R7 — bedrijfsnaam: extra herkenningspunt voor eigen rekeningen (wens Boska 27-10). */}
           <input
             type="text"

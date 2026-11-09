@@ -36,6 +36,8 @@ function isOwnAccountTransferMatch(tx, ownAccountsElsewhere) {
   return ownAccountsElsewhere.some((o) => o.accountType && ibansMatch(tx.counterpartyIban, o.iban));
 }
 
+const VERZEKER_CATEGORIEEN = new Set(["Verzekeringen", "Verzekering: Zakelijk", "Verzekering: Auto", "AOV (arbeidsongeschiktheidsverzekering)", "Verzekering: Zakelijk – bijgeschreven"]);
+const VERZEKERAAR = /verzeker|assuradeur|schadeverz|schade-?uitkering|nationale.nederlanden|allianz|interpolis|achmea|centraal beheer|klaverblad|\bohra\b|a\.s\.r|aegon|univ[eé]|fbto|inshared|ditzo|reaal|movir/;
 export function scoreClassification(tx, rules, overridesByCounterparty, overridesByRow, resolvedCategory, ownAccountsElsewhere = [], businessKeywords = [], businessExpenseKeywords = []) {
   // Vergelijk ook de CATEGORIE van de override met de uiteindelijk gebruikte categorie: bij een
   // oude "Overig"-override die resolveClassification inmiddels zelf heeft "heropend" (zie
@@ -76,6 +78,12 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     }
   }
 
+  // huishoudboekje-V7R2 — groot bedrag terug van een verzekeraar (ChatGPT-analyse 9-11, Boska "Ja"): een premieteruggave hoort bij de
+  // verzekeringscategorie, een schade-uitkering niet. Vanaf € 500 laten we het de gebruiker beoordelen; de categorie blijft staan.
+  if (Number(tx.amount) >= 500 && (VERZEKER_CATEGORIEEN.has(resolvedCategory)
+    || (/^Zakelijke inkomsten|^Inkomsten$/.test(resolvedCategory) && VERZEKERAAR.test(` ${tx.counterparty} ${tx.description}`.toLowerCase())))) {
+    return { level: "heuristic", label: "Groot bedrag terug van een verzekeraar: schade-uitkering of premieteruggave?" };
+  }
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
   if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen zakelijke spaarrekening" };

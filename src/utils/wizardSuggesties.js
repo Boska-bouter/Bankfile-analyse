@@ -1,4 +1,9 @@
 import { GEEN_PARTIJ } from "../classification/classify.js";
+import { looksLikePerson } from "./normalization.js";
+
+// huishoudboekje-V7R2 — mogelijke fiscale partner: personen aan/van wie vaak geld gaat (ChatGPT-analyse 9-11, Dakhlaoui: partnernaam leeg,
+// 65 boekingen aan "n reijnhout" bleven Overboekingen aan personen).
+const PERSOON_CATEGORIEEN = new Set(["Overboekingen aan personen", "Overboeking van bekenden"]);
 // V65 — suggesties voor de wizard, afgeleid uit de al ingelezen en geclassificeerde transacties:
 // "gevonden in je bankdata". Alleen een hulpmiddel om niet te hoeven typen; niets wordt zonder
 // bevestiging in het dossier gezet.
@@ -45,6 +50,8 @@ export function computeWizardSuggesties(classified) {
       { max: 6, perAantal: true }
     ),
     lening: topNamen(uit("Leningen"), { max: 3, perAantal: true }),
+    partner: topNamen(echt.filter((tx) => PERSOON_CATEGORIEEN.has(tx.category) && looksLikePerson(tx.counterparty || "") && !/\bvia\b/i.test(tx.counterparty || "")), { max: 3, perAantal: true })
+      .filter((s) => s.count >= 5),
     aov: topNamen(uit("AOV (arbeidsongeschiktheidsverzekering)"), { max: 2, perAantal: true }),
     opdrachtgevers: topNamen(zakelijk.filter((tx) => tx.amount > 0 && OMZET_CATEGORIEEN.has(tx.category)), { max: 10 }),
     // Alleen echte inkoop/onderaanneming: geen energie, supermarkt, telecom, boekhouder of software
