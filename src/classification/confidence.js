@@ -84,6 +84,9 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     || (/^Zakelijke inkomsten|^Inkomsten$/.test(resolvedCategory) && VERZEKERAAR.test(` ${tx.counterparty} ${tx.description}`.toLowerCase())))) {
     return { level: "heuristic", label: "Groot bedrag terug van een verzekeraar: schade-uitkering of premieteruggave?" };
   }
+  // nieuw-V1R5 — openbaar vervoer is standaard privé en dat is zeker genoeg (besluit Boska 9-11): geen open punt meer.
+  // Zakelijk = achteraf zelf "Reiskosten (OV)" kiezen als de klant dat aangeeft.
+  if (resolvedCategory === "Privé - openbaar vervoer") return { level: "keyword", label: "Openbaar vervoer: standaard privé (zakelijk? kies Reiskosten (OV))" };
   if (resolvedCategory === "Overig") return { level: "fallback", label: "Geen regel gevonden — controleren" };
   if (resolvedCategory === "Overboekingen aan personen") return { level: "heuristic", label: "Herkend als naam, niet als bekende categorie" };
   if (resolvedCategory === "Interne overboeking: zakelijk sparen") return { level: "keyword", label: "Herkend op tekst: overboeking naar/van eigen zakelijke spaarrekening" };

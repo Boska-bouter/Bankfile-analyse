@@ -46,12 +46,15 @@ export function markeerKleineBedragen(classified, instelling) {
 }
 
 // huishoudboekje-V6R9 — de kleine boekingen per tegenpartij + categorie, voor "alsnog nalopen" (wens Boska 8-11).
+// nieuw-V1R5 — een rij zonder tegenpartij kreeg geen naam (Boska 9-11): dan de omschrijving van de bank.
+const naamVan = (t) => String(t.counterparty || "").trim() || String(t.description || "").trim().slice(0, 70) || String(t.fullDescription || "").trim().slice(0, 70) || "(geen naam)";
+
 export function kleineGroepen(classified) {
   const m = new Map();
   for (const t of classified || []) {
     if (!t.kleinBedrag || t.isMirror) continue;
     const k = `${counterpartyKey(t.counterparty || t.description, t.amount) || `rij:${t.id}`}|${t.category}|${t.type}`;
-    const g = m.get(k) || { key: k, name: t.counterparty || t.description || "(geen naam)", category: t.category, type: t.type, ids: [], txs: [], total: 0, count: 0 };
+    const g = m.get(k) || { key: k, name: naamVan(t), category: t.category, type: t.type, ids: [], txs: [], total: 0, count: 0 };
     g.ids.push(t.id); g.txs.push(t); g.total += Number(t.amount); g.count++;
     m.set(k, g);
   }

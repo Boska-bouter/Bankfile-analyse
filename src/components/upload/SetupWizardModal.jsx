@@ -126,6 +126,11 @@ export default function SetupWizardModal({
       // wizard zelf) zijn de jaren dan nog niet bekend. De lijst zelf wordt hieronder live opgebouwd.
       kwartalen: vol && korRegeling !== true,
     };
+    // nieuw-V1R4 — via "Basisvragen bewerken" (forceRechtsvormStep) alle vragen tonen, ook de al beantwoorde, met het
+    // huidige antwoord ingevuld (Boska 9-11: partnernaam alsnog invullen kon niet, er kwamen maar 3 schermen).
+    // Alleen de schermen 31 en 32: die tonen het huidige antwoord; de andere schermen vragen per jaar opnieuw en
+    // staan bij Instellingen (Persoonlijke aannames) al te bewerken.
+    if (forceRechtsvormStep && !Array.isArray(alleenVragen)) for (const k of ["naam", "branche", "vanPrive", "rechtsvorm", "holding", "andere", "spaar", "spaarPrive"]) n[k] = vol;
     // release30V3 — geopend via "Nu beantwoorden": alleen de vragen die op die kaart staan. Voorheen kwamen
     // er schermen bij voor vragen die niet op de kaart stonden (bijv. aangekochte machines, BTW-kwartalen).
     if (Array.isArray(alleenVragen)) for (const k of Object.keys(n)) n[k] = n[k] && alleenVragen.includes(k);
@@ -773,10 +778,10 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
   // De privé-spaarvraag is alleen zinvol als er een privérekening is geladen.
   const priveGeladen = sessionFiles.some((f) => typedNow[f] === "Prive");
   const toonPriveSpaar = needs.spaarPrive && priveGeladen;
-  const priveGekoppeld = typedNow.priveSpaarGekoppeld ?? (zakelijkeSpaarRekening?.priveStatus === "ja" ? true : null);
+  const priveGekoppeld = typedNow.priveSpaarGekoppeld ?? (zakelijkeSpaarRekening?.priveStatus === "ja" ? true : zakelijkeSpaarRekening?.priveStatus === "nee" ? false : null);
   const priveSpaarNaam = typedNow.priveSpaarNaam ?? zakelijkeSpaarRekening?.priveNaam ?? "";
   const lijst = typedNow.eigenRekeningenLijst ?? eigenRekeningenExtra ?? [];
-  const spaarGekoppeld = typedNow.spaarGekoppeld ?? (zakelijkeSpaarRekening?.status === "ja" ? true : null);
+  const spaarGekoppeld = typedNow.spaarGekoppeld ?? (zakelijkeSpaarRekening?.status === "ja" ? true : zakelijkeSpaarRekening?.status === "nee" ? false : null);
   const spaarNaam = typedNow.zakelijkeSpaarNaam ?? zakelijkeSpaarRekening?.naam ?? "";
   const maakEntry = () => {
     if (!typedNow.eigenRekeningIban?.trim() && typedNow.eigenRekeningSoort == null) return null;
