@@ -51,8 +51,8 @@ export function kleineGroepen(classified) {
   for (const t of classified || []) {
     if (!t.kleinBedrag || t.isMirror) continue;
     const k = `${counterpartyKey(t.counterparty || t.description, t.amount) || `rij:${t.id}`}|${t.category}|${t.type}`;
-    const g = m.get(k) || { key: k, name: t.counterparty || t.description || "(geen naam)", category: t.category, type: t.type, ids: [], total: 0, count: 0 };
-    g.ids.push(t.id); g.total += Number(t.amount); g.count++;
+    const g = m.get(k) || { key: k, name: t.counterparty || t.description || "(geen naam)", category: t.category, type: t.type, ids: [], txs: [], total: 0, count: 0 };
+    g.ids.push(t.id); g.txs.push(t); g.total += Number(t.amount); g.count++;
     m.set(k, g);
   }
   return [...m.values()].sort((a, b) => b.count - a.count || a.total - b.total);

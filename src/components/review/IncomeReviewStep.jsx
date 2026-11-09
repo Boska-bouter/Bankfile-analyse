@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
+import BoekingenLijst from "../shared/BoekingenLijst.jsx";
 import RekeningLabels from "../shared/RekeningLabels.jsx";
 
 export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark }) {
@@ -61,6 +62,7 @@ export default function IncomeReviewStep({ items, totalCount, doneCount, search,
                 {item.description && (
                   <ExpandableDescription tx={item} prefix="Omschrijving bank: " className="text-xs text-slate-400 mt-0.5" />
                 )}
+                <BoekingenLijst txs={item.txs} className="mt-1" />
               </div>
               <button
                 onClick={() => onMark(item, "zakelijk")}

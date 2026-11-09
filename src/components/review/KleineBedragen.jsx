@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { omzetVan } from "../../classification/kleineBedragen.js";
 import { eur } from "../../utils/amounts.js";
+import BoekingenLijst from "../shared/BoekingenLijst.jsx";
 
 export { omzetVan };
 // beide-V17R2 — kandidaten voor de oude knop "Zet op Privé opnames" (blijft voor de bestaande test).
@@ -71,6 +72,7 @@ export default function KleineBedragen({ overzicht, groepen = [], metPrive = tru
               <span className="font-medium text-slate-800 min-w-0 break-words">{g.name}</span>
               <span className="text-slate-500">{g.count}x · {eur(g.total)} · {g.category}{g.type === "Zakelijk" ? " · zakelijke rekening" : ""}</span>
               <span className="flex-1" />
+              <BoekingenLijst txs={g.txs} className="basis-full order-last" />
               {metPrive && g.type === "Zakelijk" && g.category !== "Privé opnames" && (
                 <button type="button" onClick={() => onZetCategorie([g], "Privé opnames")} className="rounded border border-sky-300 px-2 py-0.5 text-sky-800 hover:bg-sky-50">Privé opname</button>
               )}
