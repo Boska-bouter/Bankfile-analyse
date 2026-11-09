@@ -24,7 +24,7 @@ export function kleineKandidaten(items, grens) {
 // huishoudboekje-V6R9 — melding bovenaan Controleren (wens Boska 8-11): kleine onzekere boekingen tellen niet als open punt.
 // De grens is per dossier instelbaar; 0 zet het uit. Zie classification/kleineBedragen.js.
 // nieuw-V1R5 — voorstel Boska 9-11: (1) de grens zit achter "Grens aanpassen", met uitleg; de knop heet "Opnieuw berekenen",
-// werkt pas na een wijziging en laat zien wat er veranderde. (2) "Akkoord" of de Privé-opnameknop sluit de melding in
+// werkt pas na een wijziging en laat zien wat er veranderde. (2) alleen "Akkoord" sluit de melding in (V1R6, Boska 9-11: de Privé-opnameknop niet)
 // Controleren af (bevestigd in het dossier); daarna staat dezelfde kaart bij Instellingen, met "Weer tonen bij Controleren".
 export default function KleineBedragen({ overzicht, groepen = [], metPrive = true, bevestigd = false, plek = "controleren", onInstelling, onZetCategorie, onBevestig }) {
   const [toon, setToon] = useState(false);
@@ -79,7 +79,7 @@ export default function KleineBedragen({ overzicht, groepen = [], metPrive = tru
           </button>
         )}
         {groepen.length > 0 && metPrive && zakelijk.length > 0 && (
-          <button type="button" onClick={() => { if (window.confirm(`${zakelijkAantal} kleine boekingen op de zakelijke rekening uit Overig en personen (${zakelijk.length} tegenpartijen, samen ${eur(Math.abs(zakelijkTotaal))}) op Privé opnames zetten? De rest houdt de categorie die de app koos; deze melding gaat daarna naar Instellingen.`)) { onZetCategorie(zakelijk, "Privé opnames"); onBevestig(true); } }}
+          <button type="button" onClick={() => { if (window.confirm(`${zakelijkAantal} kleine boekingen op de zakelijke rekening uit Overig en personen (${zakelijk.length} tegenpartijen, samen ${eur(Math.abs(zakelijkTotaal))}) op Privé opnames zetten? De rest blijft hier staan tot je op Akkoord klikt.`)) onZetCategorie(zakelijk, "Privé opnames"); }}
             className={knop}>
             Overig en personen op Privé opnames ({zakelijkAantal})
           </button>
