@@ -11,6 +11,7 @@ import { personenViaIban } from "../classification/personenViaIban.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
 import { LENING_CATS, heeftLeningWoord, hoortBijLening, LENING_EIGEN } from "../classification/leningBoeking.js";
+import { gedeeldeKeuzeLabel } from "../classification/gedeeldeNamen.js";
 import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
 
 export function useClassified(p) {
@@ -20,6 +21,7 @@ export function useClassified(p) {
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
     leaseSoortWizard = null, // beide-V10R5 — "financial": automatisch herkende lease wordt financiële lease
     factuurjaar = null, // beide-V11R7 — { uit, niet: [ids] } uit bevestigdeControles (classification/factuurjaar.js)
+    gedeeldeNamenVersie = 0, // nieuw-V2R1 — opnieuw indelen als de gedeelde namenlijst binnen is
     eigenRekeningAanpasbaar = false, // huishoudboekje-V1R2 — opgegeven (niet geladen) eigen rekening ligt niet vast
   } = p;
   const ownAccountsElsewhereByFile = useMemo(() => {
@@ -65,7 +67,9 @@ export function useClassified(p) {
       const transferLocked = eigenRekeningVast(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
       const eigenOverboeking = transferLocked || !!detectOwnAccountTransfer(tx, accountTypeByFile[tx.source], ownAccountsElsewhereByFile[tx.source] || []);
       if (herkenning?.naKeuze) resolved = herkenning.naKeuze(tx, resolved, { eigenKeuzeVoorBoeking: !!overridesByRow[tx.id] || (!transferLocked && !!overrideSleutel(tx, overridesByCounterparty)), vastgezet: eigenOverboeking, eigenRekeningen: ownAccountsElsewhereByFile[tx.source] || [] });
-      const confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
+      let confidence = scoreClassification(tx, categoryRules, overridesByCounterparty, overridesByRow, resolved.category, ownAccountsElsewhereByFile[tx.source] || [], businessKeywords, businessExpenseKeywords);
+      // nieuw-V2R1 — uit de gedeelde namenlijst: zeker telt als herkend, een voorstel blijft op "nakijken".
+      if (resolved.gedeeld && confidence.level !== "override") confidence = { level: resolved.gedeeld.zeker ? "keyword" : "heuristic", label: gedeeldeKeuzeLabel(resolved.gedeeld) };
       // accountType = het type van de REKENING waar de boeking op staat (weergave in detailvensters). `type`
       // blijft zoals het was: een override (bijv. een bevestigde zakelijke klant) kan daar "Zakelijk" op zetten
       // zodat de boeking in de zakelijke overzichten meetelt, ook als hij op een privérekening staat.
@@ -189,5 +193,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning, leaseSoortWizard, factuurjaar]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning, leaseSoortWizard, factuurjaar, gedeeldeNamenVersie]);
 }

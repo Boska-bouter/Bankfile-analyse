@@ -16,6 +16,7 @@
 import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inloggen.js";
 import { inloggenVastleggen, zetInloggenVastleggen, logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
 import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN, KOPPELING } from "./peiling.js";
+import { zetNamenToestemming, wisNamen } from "./namenlijst.js";
 import { uitgebreidExtra, BANKKOPPELING_STATUS, GRATIS_KORT } from "../src/content/aanbod.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
@@ -428,6 +429,8 @@ export async function aanmeldRoute(request, env, url, email, ctx) {
        ON CONFLICT(email) DO UPDATE SET aanvraag = ?3, aanvraag_gebruik = ?6, aangevraagd = ?2, naam = ?4, reden = ?5, telefoon = ?7, organisatie = ?8, verlenging = 0`
     ).bind(e, tijd, plan, naam, reden, gebruik, telefoon, organisatie || null).run();
     await werkGebruikBij(env.DB, e);
+    // nieuw-V2R1 — vrijwillige toestemming voor de gedeelde namenlijst (standaard uit; alleen "aan" wordt vastgelegd).
+    if (body?.namenToestemming === true) await zetNamenToestemming(env, e, true);
     slotCache.delete(e);
   } catch (err) {
     return json({ ok: false, fout: "Databasefout", detail: String(err?.message || err).slice(0, 300) }, 500);
@@ -667,8 +670,9 @@ export async function beheerRoute(request, env, url, email) {
         try { await env.DB.prepare(`DELETE FROM ${t} WHERE email = ?`).bind(doel).run(); } catch { /* tabel bestaat (nog) niet */ }
       }
       await wisPeiling(env.DB, doel);
+      await wisNamen(env.DB, doel); // nieuw-V2R1 — gedeelde namenlijst
       slotCache.delete(doel);
-      await logBeheer(env.DB, { door, email: doel, actie: "gebruiker verwijderd", details: "toegang, sessies, inloglinks, passkeys, wachtwoord, akkoord voorwaarden en antwoorden peilvraag gewist" });
+      await logBeheer(env.DB, { door, email: doel, actie: "gebruiker verwijderd", details: "toegang, sessies, inloglinks, passkeys, wachtwoord, akkoord voorwaarden, antwoorden peilvraag en keuzes gedeelde namenlijst gewist" });
       return json({ ok: true });
     }
     return json({ ok: false, fout: "Onbekende route" }, 404);

@@ -61,7 +61,8 @@ export function useMagUitgebreid() {
         // beide-V5R8 — bankkoppeling = staat de bankkoppeling aan in de Worker (variabele BANKKOPPELING); uit = nergens tonen.
         const x = { koppelen: d?.koppelen === true, bankkoppeling: d?.bankkoppeling === true, beheerder: d?.beheerder === true, geldigTot: d?.geldigTot || null, aanvragen: Number(d?.aanvragen || 0), aanvraag: d?.aanvraag || null, inlog: d?.inlog || "access", voorwaarden: d?.voorwaarden || null, voorwaardenPrive: d?.voorwaardenPrive || null,
           // beide-V1R0 — rechten per soort gebruik (zakelijk/prive); fase 2 gebruikt dit bij "Nieuw dossier".
-          soorten: d?.soorten && typeof d.soorten === "object" ? d.soorten : null, gebruik: d?.gebruik || null, aanvraagGebruik: d?.aanvraagGebruik || null };
+          soorten: d?.soorten && typeof d.soorten === "object" ? d.soorten : null, gebruik: d?.gebruik || null, aanvraagGebruik: d?.aanvraagGebruik || null,
+          namenToestemming: d?.namenToestemming === true, namenAi: d?.namenAi === true }; // nieuw-V2R1 — gedeelde namenlijst (standaard uit)
         try { localStorage.setItem(EXTRA_SLEUTEL, JSON.stringify(x)); } catch { /* geen opslag */ }
         setExtra(x);
         // beide-V10R10 — de noodmodus (service worker) werkt niet langer dan het abonnement loopt.
@@ -92,5 +93,5 @@ export function useMagUitgebreid() {
   // nieuw-V4R5 — aanvragen = openstaande aanmeldingen (alleen voor de beheerder); aanvraag = eigen lopende aanvraag.
   const zetAanvraag = (plan) => setExtra((x) => ({ ...x, aanvraag: plan }));
   const zetAanvragen = (n) => setExtra((x) => ({ ...x, aanvragen: n }));
-  return { mag, email, status, koppelen: mag && !!extra.koppelen, bankkoppeling: !!extra.bankkoppeling, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", voorwaarden: extra.voorwaarden || null, voorwaardenPrive: extra.voorwaardenPrive || null, soorten: extra.soorten || null, gebruik: extra.gebruik || null, zetAanvraag, zetAanvragen };
+  return { mag, email, status, koppelen: mag && !!extra.koppelen, bankkoppeling: !!extra.bankkoppeling, beheerder: !!extra.beheerder, geldigTot: extra.geldigTot || null, aanvragen: extra.aanvragen || 0, aanvraag: extra.aanvraag || null, inlog: extra.inlog || "access", voorwaarden: extra.voorwaarden || null, voorwaardenPrive: extra.voorwaardenPrive || null, soorten: extra.soorten || null, gebruik: extra.gebruik || null, namenToestemming: !!extra.namenToestemming, namenAi: !!extra.namenAi, zetNamenToestemming: (v) => setExtra((x) => ({ ...x, namenToestemming: !!v })), zetAanvraag, zetAanvragen };
 }

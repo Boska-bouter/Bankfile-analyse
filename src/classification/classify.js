@@ -1,4 +1,5 @@
-import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory } from "./categories.js";
+import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory, CATEGORY_COLOR } from "./categories.js";
+import { gedeeldeKeuze } from "./gedeeldeNamen.js";
 import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk } from "./branche.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
@@ -968,6 +969,13 @@ export function resolveClassification(tx, ...rest) {
   }
   const horeca = !eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && !getCategorieProfiel() && horecaPinVan(tx);
   if (horeca) return { ...uitkomst, category: horeca };
+  // nieuw-V2R1 — gedeelde namenlijst (gedeeldeNamen.js): wat andere gebruikers voor deze bedrijfsnaam kozen. Zeker = overnemen,
+  // anders een voorstel op "nakijken" (useClassified zet het label). Gaat vóór de schattingen op factuurnummer en bedrijfsnaam.
+  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category)) {
+    const regels = rest[0] || [];
+    const g = gedeeldeKeuze(tx, rest[3], (c) => c in CATEGORY_COLOR || regels.some((r) => r?.name === c));
+    if (g) return { ...uitkomst, category: g.categorie, gedeeld: g };
+  }
   // huishoudboekje-V6R5 — ook vanaf de privérekening als in de wizard "zakelijke rekeningen ook vanaf privé" is gekozen (branche.js).
   const zakelijkeKant = rest[3] === "Zakelijk" || getZakelijkVanPrive();
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && zakelijkeKant && Number(tx.amount) < 0 && !getCategorieProfiel()

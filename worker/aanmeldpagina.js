@@ -8,6 +8,7 @@ import { BETALEN, KOPPELING, KOPPELING_VRAAG } from "./peiling.js";
 import { vastStreepje, vergelijkTabel, welkomSoorten, VERGELIJK_STIJL, SOORT_KLEUR_STIJL } from "./welkom.js";
 
 const NIVEAU_PLAN = ["", "eenvoudig", "uitgebreid", "koppelen"];
+const NAMEN_TEKST = "Mijn indeling van bedrijfsnamen mag anoniem worden gebruikt voor de gedeelde namenlijst, zodat de app bekende bedrijven voor iedereen vaker meteen goed indeelt. Alleen bedrijfsnaam en categorie, nooit bedragen, rekeningnummers of namen van personen (voorwaarden 4.9). Vrijwillig."; // nieuw-V2R1 — gedeelde namenlijst
 const nlDatum = (iso) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" });
 
 // Wat iemand nu heeft, per soort, als leesbare regels (alleen soorten met een abonnement).
@@ -57,7 +58,7 @@ ${keuze}
 </form>`;
 }
 
-export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, plan = null, verlengen = null, slot = true } = {}) {
+export function aanmeldPagina(email, r, env = {}, { status = 403, soort = null, plan = null, verlengen = null, slot = true, namen = false } = {}) {
   const prijs = prijzen(env);
   const heeftToegang = !!r?.toegang;
   const huidig = slot ? huidigeAbonnementen(r) : []; // zonder slot heeft iedereen Eenvoudig; dan niets tonen
@@ -150,9 +151,13 @@ ${verlengLijst.length ? `<h2 style="margin-top:8px">Of een ander abonnement aanv
 <small class="hint">Het telefoonnummer is alleen om te kunnen nagaan of de aanvraag echt is. Het wordt gewist zodra de aanvraag is beoordeeld, en uiterlijk na 30 dagen.</small>
 <label>Waarom vraag je toegang aan? (verplicht)<br><textarea name="reden" required minlength="${MIN_REDEN}" maxlength="1000" rows="4" style="width:100%;box-sizing:border-box"></textarea>
 <small class="hint">Vertel kort wie je bent en waarvoor je de app wilt gebruiken. Zonder duidelijke reden kan ik je aanvraag niet goedkeuren.</small></label>
+${heeftToegang ? "" : `<label class="keuze"><input type="checkbox" name="namen"><span>${NAMEN_TEKST}</span></label>`}
 <button type="submit">${heeftToegang ? "Aanvraag versturen" : "Aanmelding versturen"}</button>
 <p id="status" role="status"></p>
 </form>
+${heeftToegang ? `<h2 style="margin-top:8px">Gedeelde namenlijst</h2>
+<form id="nl"><label class="keuze"><input type="checkbox" name="aan"${namen ? " checked" : ""}><span>${NAMEN_TEKST}</span></label>
+<small class="hint">Zet je dit uit, dan worden je eerder gestuurde keuzes ook verwijderd.</small><p id="nlstatus" role="status"></p></form>` : ""}
 ${heeftToegang ? `<a class="naarapp" href="/">Naar de app</a>` : ""}
 <p class="sub">Ander e-mailadres? <a href="/uitloggen">Uitloggen</a></p>
 </main><script>
@@ -167,11 +172,16 @@ for(const r of f.querySelectorAll("input[name=gebruik]"))r.addEventListener("cha
 soortGekozen();
 f.addEventListener("submit",async(e)=>{e.preventDefault();if(!T[f.gebruik.value]){st.className="err";st.textContent="Kies eerst zakelijk, privé of huishoudboekje.";return}
 const k=f.querySelector("button");k.disabled=true;st.className="";st.textContent="Bezig…";
-try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({gebruik:f.gebruik.value,plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,telefoon:f.telefoon.value,organisatie:f.organisatie.value,reden:f.reden.value})});
+try{const r=await fetch("/api/aanmelden",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({gebruik:f.gebruik.value,plan:f.plan.value,voornaam:f.voornaam.value,achternaam:f.achternaam.value,telefoon:f.telefoon.value,organisatie:f.organisatie.value,reden:f.reden.value,namenToestemming:!!(f.namen&&f.namen.checked)})});
 const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));
 if(d.alActief){st.textContent=d.melding||"Dit abonnement heb je al.";return}
 st.textContent=TOEGANG?"Je aanvraag is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld.":"Je aanmelding is verstuurd. Je krijgt een e-mail zodra de beheerder hem heeft beoordeeld. Je kunt dit tabblad daarna sluiten.";setTimeout(()=>location.reload(),2500)}
 catch(x){st.className="err";st.textContent="Versturen lukte niet: "+x.message}finally{k.disabled=false}});
+const nl=document.getElementById("nl");
+if(nl){const ns=document.getElementById("nlstatus");nl.aan.addEventListener("change",async()=>{ns.className="";ns.textContent="Bezig…";
+try{const r=await fetch("/api/namen/toestemming",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({aan:nl.aan.checked})});
+const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.fout||("Fout "+r.status));ns.textContent=d.aan?"Toestemming staat aan.":"Toestemming staat uit."}
+catch(x){nl.aan.checked=!nl.aan.checked;ns.className="err";ns.textContent="Opslaan lukte niet: "+x.message}})}
 const vf=document.getElementById("verleng");
 if(vf){const vs=document.getElementById("vstatus"),bv=document.getElementById("bedragvak");
 const toon=()=>{bv.hidden=vf.betalen.value==="nee"};for(const x of vf.querySelectorAll("input[name=betalen]"))x.addEventListener("change",toon);
