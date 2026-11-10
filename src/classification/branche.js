@@ -41,3 +41,11 @@ export function brancheCategorie(tx, category, accountType, branche = _branche) 
   if (Math.abs(Number(tx.amount)) >= HORECA_GRENS && !HORECA_SUPERMARKT.test(naam) && !HORECA_NIET_ETEN.test(naam) && HORECA_ETEN.test(naam)) return "Zakelijke inkoop/uitgaven";
   return null;
 }
+
+// nieuw-V1R9 — bouwmarkt vanaf de zakelijke rekening is alleen bij soort bedrijf "bouw" vanzelf inkoop (melding Boska 10-11, Dakhlaoui:
+// restaurant, Hornbach en Gamma stonden op zakelijke inkoop). Bij een andere soort bedrijf: Winkels divers, op controleren (confidence.js).
+export const BOUWMARKT = /\b(praxis|gamma|karwei|hornbach|hubo|bauhaus)\b/i;
+export function bouwmarktNietZakelijk(tx, category, accountType, branche = _branche) {
+  return !!branche && branche !== "bouw" && accountType === "Zakelijk" && category === "Zakelijke inkoop/uitgaven"
+    && Number(tx.amount) < 0 && BOUWMARKT.test(String(tx.counterparty || ""));
+}

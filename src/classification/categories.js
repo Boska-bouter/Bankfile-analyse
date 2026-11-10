@@ -169,6 +169,8 @@ export const DEFAULT_RULES = [
     description: "Uitgaven vanaf een privérekening die op een zakelijke categorie lijken (bijv. boekhouder, marketing, OV). Ze zijn standaard privé, maar kunnen mogelijk zakelijke kosten zijn — controleer ze, en geef bij Aannames & percentages een % zakelijk op als een deel zakelijk is. Daarom is dit een andere categorie dan \"Privé: overig\"." },
   { name: "Privé - huur", color: "bg-amber-50 text-amber-700", keywords: [] },
   { name: "Privé overige abonnementen", color: "bg-violet-50 text-violet-700", keywords: [
+    // nieuw-V2R0 — The Rent Company verhuurt laptops voor school (digitaal onderwijs, Boska 10-11); geen woonhuur.
+    "the rent company",
     "netflix", "spotify", "videoland", "disney+", "disney plus", "hbo max", "hbomax", "npo start", "storytel",
     "npostart", "npo plus", "amazon prime", "prime video", "youtube premium", "apple music", "apple tv+",
     "deezer", "tidal", "viaplay", "dazn", "rtl+", "kijk.nl", "ziggo sport",
@@ -187,6 +189,15 @@ export const DEFAULT_RULES = [
     "fysiotherapie", "fysiotherapeut", "logopedie", "podotherapie", "podologie", "diëtist", "dietist",
     "ggz", "psycholoog", "psychotherapie", "verloskundige", "kraamzorg", "optometrist",
     "eigen risico zorgverzekering",
+    // nieuw-V1R9 — meer bekende Nederlandse zorgpartijen (wens Boska 10-11).
+    "medisch centrum", "gezondheidscentrum", "umc utrecht", "erasmus mc", "amsterdam umc", "radboudumc", "maastricht umc", "umcg",
+    "catharina ziekenhuis", "maxima mc", "máxima mc", "anna ziekenhuis", "elkerliek", "zorggroep", "huisartsenzorg", "tandartspraktijk",
+    "mondhygiëne", "mondhygienist", "mondhygiënist", "kaakchirurg", "oefentherapie", "ergotherapie", "manuele therapie", "chiropractor", "osteopaat",
+    "audicien", "hoortoestel", "beter horen", "schoonenberg", "opticien", "specsavers", "pearle", "hans anders", "eyewish", "oogarts",
+    "dermatoloog", "huidtherapie", "huidtherapeut", "thuiszorg", "buurtzorg", "benu apotheek", "service apotheek", "mediq", "zorgkantoor",
+    "trombosedienst", "laboratorium", "saltro", "diagnostiek", "cbr medisch", "zorgverlener",
+    // nieuw-V1R9 — Infomedics int de rekeningen van tandartsen, fysio's enz. (melding Boska 10-11, Dakhlaoui: stond op zakelijke inkoop).
+    "infomedics",
   ] },
   { name: "Lease (operationeel)", color: "bg-teal-100 text-teal-800", keywords: [
     "lease", "leaseplan", "alphabet", "athlon", "arval", "ayvens", "grenke", "volkswagen pon financial services",
@@ -238,6 +249,8 @@ export const DEFAULT_RULES = [
   { name: "Privé - sport & fitness", color: "bg-teal-50 text-teal-700", keywords: [
     "basic-fit", "basic fit", "sportschool", "fitness", "anytime fitness", "sportcity", "trainmore", "fit for free", "fitforfree",
     "david lloyd", "healthcity", "sportcentrum", "crossfit", "yoga", "pilates", "golfclub", "tennisclub", "voetbalvereniging", "knvb", "knltb", "gymly", "kickboxing",
+    // nieuw-V1R9 — sportclubs en wedstrijden (melding Boska 10-11, Dakhlaoui: Eindhoven Atletiek, Holland Triathlon op zakelijke inkoop).
+    "atletiek", "triathlon", "sportvereniging", "zwemvereniging", "hockeyclub", "hockeyvereniging", "korfbalvereniging", "turnvereniging", "judovereniging",
   ] },
   { name: "Privé - vrijetijd-uitgaan-vakantie & uit eten", color: "bg-teal-50 text-teal-700", keywords: [
     "takeaway", "thuisbezorgd", "mcdonald", "kfc", "subway", "ijssalon", "bastani", "zwembad", "casino", "pathe", "pathé", "cinema", "restaurant", "cafe",
@@ -282,6 +295,14 @@ export const DEFAULT_RULES = [
     "achmea rechtsbijstand", "a.s.r.", "nh1816", "nh 1816", // beide-V11R6 — "NH 1816 SCHADEVERZEKERIN" (test Koenders)
     "centraal beheer", "aegon", "reaal", "ditzo", "fbto", "univé", "unive", "inshared",
     "opstalverzekering", "inboedelverzekering", "woonverzekering", "woonhuisverzekering",
+    // nieuw-V1R9 — meer bekende Nederlandse verzekeraars en zorgverzekeraars (wens Boska 10-11).
+    "zorg en zekerheid", "salland zorgverzekeringen", "salland verzekeringen", "de friesland", "eno zorgverzekeraar", "hollandzorg",
+    "pnozorg", "pno zorg", "stad holland", "zekur", "caresq", "jaaah", "nationale nederlanden schade", "nn schadeverzekering",
+    "de amersfoortse", "asr verzekeringen", "asr schadeverzekering", "a.s.r. verzekeringen", "london verzekeringen", "promovendum",
+    "ing verzekeren", "nn verzekeringen", "delta lloyd", "dela uitvaart", "cooperatie dela", "coöperatie dela", "monuta", "yarden",
+    "hema verzekering", "kruidvat verzekering", "ohra zorg", "ditzo zorg", "fbto zorg", "unive zorg", "univé zorg", "vgz zorg",
+    "zorgverzekeraar", "verzekeringsmaatschappij", "verzekeringen n.v.", "levensverzekering", "overlijdensrisicoverzekering",
+    "rechtsbijstandverzekering",
   ],
     description: "Alle privé-verzekeringen op één subtype: ziektekosten, wonen en overige (zoals aansprakelijkheid, rechtsbijstand, reisverzekering) — alleen auto staat apart." },
   { name: "Webshops & online aankopen", color: "bg-violet-100 text-violet-800", keywords: [

@@ -17,6 +17,7 @@
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 import { looksLikeForeignCardPayment, passendeRegels, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
 import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
+import { getBranche, BOUWMARKT, HORECA_GROOTHANDEL } from "./branche.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -95,6 +96,19 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = passendeRegels(rules, text)[0]; // nieuw-V1R8 — onthouden per tekst (snelheid)
+  // nieuw-V1R9 — horeca: inkoop bij een groothandel is zeker (geen open punt), net als bij een opgegeven leverancier.
+  if (resolvedCategory === "Zakelijke inkoop/uitgaven" && Number(tx.amount) < 0 && getBranche() === "horeca" && HORECA_GROOTHANDEL.test(String(tx.counterparty || ""))) {
+    return { level: "keyword", label: "Groothandel: inkoop voor horeca" };
+  }
+  // nieuw-V1R9 — bouwmarkt bij een bedrijf dat niet in de bouw zit: zakelijk of privé laat de app aan de gebruiker (branche.js).
+  if (resolvedCategory === "Winkels divers" && Number(tx.amount) < 0 && getBranche() && getBranche() !== "bouw" && BOUWMARKT.test(String(tx.counterparty || ""))) {
+    return { level: "heuristic", label: "Bouwmarkt: zakelijk of privé? (alleen bij een bouwbedrijf vanzelf zakelijk)" };
+  }
+  // nieuw-V1R9 — verzekeraar die zowel privé- als zakelijke polissen verkoopt (Nationale-Nederlanden, Achmea, Allianz …) op de zakelijke
+  // rekening: de app zet hem op Verzekering: Zakelijk, maar dat moet de gebruiker bevestigen (melding Boska 10-11).
+  if (matchedRule && matchedRule.name === "Verzekeringen" && resolvedCategory === "Verzekering: Zakelijk") {
+    return { level: "heuristic", label: "Verzekeraar met privé- én zakelijke polissen: zakelijk of privé?" };
+  }
   if (matchedRule) {
     // beide-V15R8 — passen twee categorieën even goed (zie besteRegel in classify.js), dan is het twijfel: controleren.
     const beste = besteRegel(rules, zonderBetaalmiddel(text), tx.type === "Zakelijk" || tx.type === "Prive" ? tx.type : null, tx);
