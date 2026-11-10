@@ -116,7 +116,7 @@ export function gedeeldeKeuze(tx, accountType, geldig0 = () => true) {
   // nieuw-V2R2 — niet in de lijst: wat het opzoeken met AI vond (alleen hoog of middel), altijd als voorstel.
   if (!uit) {
     const a = _ai.get(ck);
-    if (a && (a.zekerheid === "hoog" || a.zekerheid === "middel") && geldig(a.categorie) && lijktOpBedrijf(tx, true)) uit = { categorie: a.categorie, zeker: false, ai: true, zekerheid: a.zekerheid, soortBedrijf: a.soortBedrijf };
+    if (a && (a.zekerheid === "hoog" || a.zekerheid === "middel") && geldig(a.categorie) && !NOOIT_AI.test(a.categorie) && lijktOpBedrijf(tx, true)) uit = { categorie: a.categorie, zeker: false, ai: true, zekerheid: a.zekerheid, soortBedrijf: a.soortBedrijf };
   }
   if (UITKOMST.size > 50000) UITKOMST.clear();
   UITKOMST.set(ck, uit);
@@ -147,6 +147,8 @@ export function stemmenUit(classified) {
 }
 
 // ---- Opzoeken met AI (nieuw-V2R2) ----
+// nieuw-V2R3 — zelfde lijst als worker/namenAi.js: deze categorieën neemt de app nooit van de AI over.
+export const NOOIT_AI = /^(lease|leningen|hypotheek|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Welke namen moeten nog worden opgezocht? Boekingen zonder eigen keuze die in Overig/personen staan of alleen op bedrijfsnaam of
 // factuurnummer als leverancier zijn geschat, met een naam die op een bedrijf lijkt en die nog niet in de lijst of bij de AI staat.
 const GESCHAT = /^Geschat: (bedrijfsnaam|betaling met factuurnummer)/;

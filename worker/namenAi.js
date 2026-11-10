@@ -24,6 +24,8 @@ const klaar = new WeakSet();
 async function zorg(db) {
   if (klaar.has(db)) return;
   for (const s of SCHEMA) await db.prepare(s).run();
+  const kol = new Set(((await db.prepare("PRAGMA table_info(namen_ai)").all())?.results || []).map((k) => k.name));
+  if (!kol.has("versie")) await db.prepare("ALTER TABLE namen_ai ADD COLUMN versie INTEGER NOT NULL DEFAULT 1").run();
   klaar.add(db);
 }
 
@@ -31,6 +33,11 @@ export const MODEL = "claude-haiku-5-5";
 const MAX_PER_VRAAG = 50; // namen per verzoek van de app
 const MAX_CATEGORIEEN = 250;
 const ONBEKEND = "Onbekend";
+// nieuw-V2R3 — categorieën die een contract of eigen gegevens vragen (lease, leningen, hypotheek, eigen rekeningen): nooit door de AI.
+// Boska 10-11: Boels Verhuur werd "Lease (operationeel)", maar kortdurende huur van materieel is gewoon zakelijke kosten.
+export const NOOIT_AI = /^(lease|leningen|hypotheek|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
+// Hoort bij de vraag hieronder: verandert de vraag, dan tellen eerder bewaarde antwoorden niet meer en wordt opnieuw gevraagd.
+export const VRAAG_VERSIE = 2;
 const SOORT_TEKST = {
   zakelijk: "de zakelijke rekening van een ondernemer",
   prive: "de privérekening van een ondernemer (zakelijk dossier)",
@@ -55,7 +62,7 @@ export function maakVraag(namen, { soort, branche, teken }) {
   const bedrijf = soort === "zakelijk" && BRANCHE_TEKST[branche] ? ` Soort bedrijf van de rekeninghouder: ${BRANCHE_TEKST[branche]}.` : "";
   return `Hieronder staan namen van tegenpartijen op Nederlandse bankafschriften: ${wat} deze partijen, vanaf ${SOORT_TEKST[soort]}.${bedrijf}
 
-Geef per naam de best passende categorie uit de toegestane lijst, en wat voor soort bedrijf het is (een paar woorden). Ken je het bedrijf niet, of kan de naam bij meerdere categorieën horen, kies dan "${ONBEKEND}" of zekerheid "laag". Gok niet op basis van alleen een plaatsnaam of een achternaam.
+Geef per naam de best passende categorie uit de toegestane lijst, en wat voor soort bedrijf het is (een paar woorden). Huur of verhuur van machines, gereedschap, materieel, containers of aanhangers (zoals Boels, Kiloutou, Hertz Equipment) is een gewone bedrijfsuitgave, geen lease en geen huur van een pand. Een abonnement op een fiets, scooter of apparaat (zoals Swapfiets) is een abonnement, geen lease. Ken je het bedrijf niet, of kan de naam bij meerdere categorieën horen, kies dan "${ONBEKEND}" of zekerheid "laag". Gok niet op basis van alleen een plaatsnaam of een achternaam.
 
 ${regels}`;
 }
@@ -124,7 +131,7 @@ export async function zoekRoute(request, env, account, { maakClient = (e) => new
   try { body = await request.json(); } catch { return json({ ok: false, fout: "Ongeldig bericht" }, 400); }
   const soort = SOORT_TEKST[body?.soort] ? body.soort : null;
   const branche = /^[a-z-]{0,30}$/.test(String(body?.branche || "")) ? String(body?.branche || "") : "";
-  const categorieen = [...new Set((Array.isArray(body?.categorieen) ? body.categorieen : []).map(geldigeCategorie).filter(Boolean))].slice(0, MAX_CATEGORIEEN);
+  const categorieen = [...new Set((Array.isArray(body?.categorieen) ? body.categorieen : []).map(geldigeCategorie).filter((c) => c && !NOOIT_AI.test(c)))].slice(0, MAX_CATEGORIEEN);
   if (!soort || categorieen.length < 2) return json({ ok: false, fout: "Soort of categorieën ontbreken" }, 400);
   const namen = [];
   const gezien = new Set();
@@ -139,7 +146,7 @@ export async function zoekRoute(request, env, account, { maakClient = (e) => new
   const uitkomst = {};
   const nieuw = [];
   for (const n of namen) {
-    const r = await env.DB.prepare("SELECT categorie, zekerheid, soort_bedrijf FROM namen_ai WHERE sleutel = ? AND teken = ? AND soort = ? AND branche = ?").bind(n.s, n.t, soort, branche).first();
+    const r = await env.DB.prepare("SELECT categorie, zekerheid, soort_bedrijf FROM namen_ai WHERE sleutel = ? AND teken = ? AND soort = ? AND branche = ? AND versie = ?").bind(n.s, n.t, soort, branche, VRAAG_VERSIE).first();
     if (r) uitkomst[`${n.s}|${n.t}`] = r.categorie && categorieen.includes(r.categorie) ? { categorie: r.categorie, zekerheid: r.zekerheid, soortBedrijf: r.soort_bedrijf || "" } : null;
     else nieuw.push(n);
   }
@@ -169,9 +176,9 @@ export async function zoekRoute(request, env, account, { maakClient = (e) => new
         const a = antwoord[i];
         if (!a) return; // geen antwoord: niet bewaren, later opnieuw
         uitkomst[`${n.s}|${n.t}`] = a.categorie ? a : null;
-        stmts.push(env.DB.prepare(`INSERT INTO namen_ai (sleutel, teken, soort, branche, categorie, zekerheid, soort_bedrijf, model, tijd) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-          ON CONFLICT(sleutel, teken, soort, branche) DO UPDATE SET categorie = ?5, zekerheid = ?6, soort_bedrijf = ?7, model = ?8, tijd = ?9`)
-          .bind(n.s, n.t, soort, branche, a.categorie, a.zekerheid, a.soortBedrijf, model, tijd));
+        stmts.push(env.DB.prepare(`INSERT INTO namen_ai (sleutel, teken, soort, branche, categorie, zekerheid, soort_bedrijf, model, tijd, versie) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+          ON CONFLICT(sleutel, teken, soort, branche) DO UPDATE SET categorie = ?5, zekerheid = ?6, soort_bedrijf = ?7, model = ?8, tijd = ?9, versie = ?10`)
+          .bind(n.s, n.t, soort, branche, a.categorie, a.zekerheid, a.soortBedrijf, model, tijd, VRAAG_VERSIE));
       });
       if (stmts.length) await env.DB.batch(stmts);
     }
