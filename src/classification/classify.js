@@ -1,5 +1,5 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory } from "./categories.js";
-import { brancheCategorie, getZakelijkVanPrive } from "./branche.js";
+import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk } from "./branche.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -961,6 +961,7 @@ export function resolveClassification(tx, ...rest) {
   // beide-V17R7 — soort bedrijf (wizard): horeca koopt in bij groothandel en speciaalzaken voor eten.
   const branche = !eigenKeuze && !getCategorieProfiel() && brancheCategorie(tx, uitkomst.category, rest[3]);
   if (branche) return { ...uitkomst, category: branche, type: "Zakelijk" };
+  if (!eigenKeuze && !getCategorieProfiel() && bouwmarktNietZakelijk(tx, uitkomst.category, rest[3])) return { ...uitkomst, category: "Winkels divers" };
   // beide-V17R6 — pinbetaling op een NS-station ("NSBest 203 BEST NLD", "NS Eindhv Bkln 202"): openbaar vervoer, standaard privé (besluit 28-10).
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && Number(tx.amount) < 0 && /^NS ?[A-Z][a-z]/.test(String(tx.counterparty || "")) && PINBETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { ...uitkomst, category: "Privé - openbaar vervoer" };

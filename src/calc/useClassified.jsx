@@ -10,7 +10,7 @@ import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 import { personenViaIban } from "../classification/personenViaIban.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
-import { LENING_CATS, heeftLeningWoord, hoortBijLening } from "../classification/leningBoeking.js";
+import { LENING_CATS, heeftLeningWoord, hoortBijLening, LENING_EIGEN } from "../classification/leningBoeking.js";
 import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
 
 export function useClassified(p) {
@@ -78,6 +78,16 @@ export function useClassified(p) {
       if (tegenhanger && resolved.type === "Prive" && accountTypeByFile[tx.source] !== "Zakelijk") {
         const pct = (c) => { const m = pctEff?.[c]; return m?.[`${tx.year}:prive`] ?? m?.[tx.year]; };
         if (pct(resolved.category) === 0 && !(pct(tegenhanger) > 0)) resolved = { ...resolved, category: tegenhanger };
+      }
+      // nieuw-V1R9 — geld van of naar een eigen of partnerrekening met "lening" in de omschrijving is een lening, geen privé storting/opname
+      // (besluit Boska 10-11, Dakhlaoui: partner leende het bedrijf geld en kreeg het terug). Op controleren; voorgeschoten inkopen niet.
+      //   Omdat de boeking dan niet meer vastligt, kan de gebruiker hem ook zelf anders indelen (per boeking of per tegenpartij).
+      if (transferLocked && accountTypeByFile[tx.source] === "Zakelijk" && LENING_EIGEN.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+        const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
+        const eigen = overridesByRow[tx.id] || (sleutel ? overridesByCounterparty[sleutel] : null);
+        const lening = { ...tx, ...resolved, category: "Leningen", transferLocked: false, leningEigenRekening: true, accountType: "Zakelijk" };
+        if (eigen?.category) return { ...lening, category: eigen.category, confidence: { level: "override", label: overridesByRow[tx.id] ? "Handmatig bevestigd (deze transactie)" : "Handmatig bevestigd (tegenpartij)" } };
+        return { ...lening, confidence: { level: "heuristic", label: "Lening van of naar eigen/partnerrekening (staat in de omschrijving)" } };
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });

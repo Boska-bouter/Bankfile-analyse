@@ -2,6 +2,8 @@
 // (aflossing, geleend, voorgeschoten). Gedeeld door het indelen (calc/useClassified.jsx) en het leningenpaneel (App.jsx).
 export const LENING_CATS = new Set(["Leningen", "Leningen (privé)"]);
 export const LENING_WOORD = /lening|leen\b|geleend|uitgeleend|aflossing|voorgeschot|voorschot|voorgeschiet/i;
+// nieuw-V1R9 — strikter: alleen een echte lening (niet "voorgeschoten"/"voorschot"), voor boekingen van/naar een eigen of partnerrekening.
+export const LENING_EIGEN = /lening|geleend|uitgeleend|aflossing/i;
 export const heeftLeningWoord = (tx) => LENING_WOORD.test(`${tx.description || ""} ${tx.fullDescription || ""}`);
 
 // beide-V17R8 — korte omschrijving van een boeking (zonder Naam/IBAN/Datum), ook getoond onder elke lening.
