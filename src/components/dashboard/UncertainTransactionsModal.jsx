@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, Check, Lock } from "lucide-react";
+import { X, Check, Lock, Sparkles } from "lucide-react";
 import { mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { counterpartyKey } from "../../utils/normalization.js";
@@ -27,6 +27,8 @@ export default function UncertainTransactionsModal({
   const [zichtbaar, setZichtbaar] = useState(60);
   const [bevestigAlles, setBevestigAlles] = useState(false);
   const [openLosse, setOpenLosse] = useState(false);
+  // nieuw-V2R4 — aparte lijst met alleen de voorstellen die met AI zijn opgezocht (wens Boska 10-11).
+  const [alleenAi, setAlleenAi] = useState(false);
 
   const groepen = useMemo(() => {
     const map = new Map();
@@ -40,23 +42,27 @@ export default function UncertainTransactionsModal({
     return [...map.values()].map((g) => ({
       ...g,
       eerste: g.txs[0],
+      ai: !!g.txs[0].gedeeld?.ai && g.txs[0].confidence?.level === "heuristic",
       naam: g.losse ? "Losse pinbetalingen (geen herkend zoekwoord)" : (g.txs[0].counterparty || g.txs[0].description || "(geen omschrijving)"),
     }));
   }, [transactions]);
 
+  const aiGroepen = useMemo(() => groepen.filter((g) => g.ai), [groepen]);
+  const aiAan = alleenAi && aiGroepen.length > 0;
+  const basis = aiAan ? aiGroepen : groepen;
   const categorieen = useMemo(() => {
     const c = new Map();
-    for (const g of groepen) c.set(displayCategory(g.eerste.category), (c.get(displayCategory(g.eerste.category)) || 0) + 1);
+    for (const g of basis) c.set(displayCategory(g.eerste.category), (c.get(displayCategory(g.eerste.category)) || 0) + 1);
     return [...c.entries()].sort((x, y) => x[0].localeCompare(y[0], "nl", { sensitivity: "base" }));
-  }, [groepen]);
+  }, [basis]);
 
   const getoond = useMemo(() => {
-    const l = groepen.filter((g) => !catFilter || displayCategory(g.eerste.category) === catFilter);
+    const l = basis.filter((g) => !catFilter || displayCategory(g.eerste.category) === catFilter);
     const cmp = sortering === "aantal" ? (x, y) => y.txs.length - x.txs.length
       : sortering === "naam" ? (x, y) => x.naam.localeCompare(y.naam, "nl")
       : (x, y) => y.abs - x.abs;
     return [...l].sort(cmp);
-  }, [groepen, catFilter, sortering]);
+  }, [basis, catFilter, sortering]);
   const getoondTx = useMemo(() => getoond.flatMap((g) => g.txs), [getoond]);
 
   const renderRow = (tx, g) => {
@@ -65,6 +71,7 @@ export default function UncertainTransactionsModal({
       <div key={tx.id} className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
         <div className="flex-1 min-w-[9rem]">
           <p className="font-medium truncate">
+            {g?.ai && <span className="mr-1.5 inline-flex items-center gap-0.5 rounded bg-violet-100 text-violet-800 px-1 py-px text-[10px] font-semibold align-middle" title="Categorie opgezocht met AI: controleer of hij klopt"><Sparkles className="h-2.5 w-2.5" />AI</span>}
             {g ? g.naam : (tx.counterparty || tx.description || "(geen omschrijving)")}
             {meer && <span className="ml-1.5 font-normal text-slate-500">· {g.txs.length} transacties</span>}
           </p>
@@ -114,9 +121,13 @@ export default function UncertainTransactionsModal({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
           <p className="text-sm font-semibold text-slate-800">
+            {aiAan ? (<>
+              <Sparkles className="inline h-4 w-4 text-violet-700 -mt-0.5" /> Opgezocht met AI ({aiGroepen.length} groep{aiGroepen.length === 1 ? "" : "en"}, {aiGroepen.reduce((a, g) => a + g.txs.length, 0)} transacties)
+            </>) : (<>
             {metBolletjes(info.icon)} {info.label} ({groepen.length} groep{groepen.length === 1 ? "" : "en"}
             {transactions.length !== groepen.length ? `, ${transactions.length} transacties` : ""}
             {bulkTotal > 0 ? ` + ${bulkTotal} elders` : ""})
+            </>)}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             {/* v236 — bevestigt in één keer het huidige voorstel (categorie/type) voor alle getoonde
@@ -172,7 +183,23 @@ export default function UncertainTransactionsModal({
           );
         })()}
 
-        {bulkTotal > 0 && (
+        {aiGroepen.length > 0 && (
+          <div className="mx-4 mt-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs text-violet-900 shrink-0">
+            {aiAan ? (
+              <p>
+                Je ziet alleen de voorstellen die met AI zijn opgezocht. Klopt een categorie, dan telt hij na "Klopt" als je eigen keuze.{" "}
+                <button onClick={() => { setAlleenAi(false); setCatFilter(""); setZichtbaar(60); }} className="underline hover:no-underline font-medium">Alle te controleren boekingen tonen</button>
+              </p>
+            ) : (
+              <p>
+                <Sparkles className="inline h-3.5 w-3.5 -mt-0.5" /> {aiGroepen.length} groep{aiGroepen.length === 1 ? " is" : "en zijn"} opgezocht met AI.{" "}
+                <button onClick={() => { setAlleenAi(true); setCatFilter(""); setZichtbaar(60); }} className="underline hover:no-underline font-medium">"Opgezocht met AI" openen</button>
+              </p>
+            )}
+          </div>
+        )}
+
+        {bulkTotal > 0 && !aiAan && (
           <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 shrink-0">
             <p>
               ⓘ {bulkTotal} van deze transacties staan al verzameld in{" "}
@@ -210,7 +237,7 @@ export default function UncertainTransactionsModal({
               onChange={(e) => { setCatFilter(e.target.value); setZichtbaar(60); }}
               className="rounded-md border border-slate-300 px-1.5 py-1 text-xs max-w-[14rem]"
             >
-              <option value="">Alle categorieën ({groepen.length})</option>
+              <option value="">Alle categorieën ({basis.length})</option>
               {categorieen.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
             </select>
           </div>

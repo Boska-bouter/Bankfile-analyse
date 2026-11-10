@@ -65,6 +65,7 @@ export function setGedeeldeNamen(data) {
   _lijst = m.size ? m : null;
   _versie++;
   UITKOMST.clear();
+  meld();
 }
 // nieuw-V2R2 — uitkomsten van het opzoeken met AI (worker/namenAi.js): "sleutel|teken|soort|branche" → { categorie, zekerheid, soortBedrijf } of null.
 const _ai = new Map();
@@ -76,12 +77,16 @@ export function voegAiToe(soort, branche, uitkomst) {
     _ai.set(key, v && v.categorie ? { categorie: String(v.categorie), zekerheid: v.zekerheid, soortBedrijf: String(v.soortBedrijf || "") } : null);
     nieuw++;
   }
-  if (nieuw) { _versie++; UITKOMST.clear(); }
+  if (nieuw) { _versie++; UITKOMST.clear(); meld(); }
   return nieuw;
 }
 export const aiAlGevraagd = (k) => _ai.has(k);
 export function wisAi() { _ai.clear(); _versie++; UITKOMST.clear(); }
 export const gedeeldeNamenVersie = () => _versie;
+// nieuw-V2R4 — wie wil weten dat de lijst of een AI-uitkomst is veranderd (useGedeeldeNamenLijst: opnieuw indelen).
+const _luisteraars = new Set();
+export function luisterNaarNamen(f) { _luisteraars.add(f); return () => _luisteraars.delete(f); }
+const meld = () => { for (const f of _luisteraars) f(_versie); };
 export const heeftGedeeldeNamen = () => !!_lijst;
 
 function meeste(cats) {
