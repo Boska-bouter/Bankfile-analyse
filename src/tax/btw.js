@@ -49,6 +49,7 @@ DEFAULT_BTW_RATES["Reiskosten (OV)"] = 9; // personenvervoer valt onder het lage
 DEFAULT_BTW_RATES["Privé - openbaar vervoer"] = 9;
 // beide-V16R5 — internationale vluchten: 0% btw (binnenlandse vluchten zijn zeldzaam).
 DEFAULT_BTW_RATES["Reiskosten (vliegtickets)"] = 0;
+DEFAULT_BTW_RATES["Reiskosten (hotel & verblijf)"] = 9; // logies t/m 2025 laag tarief (vanaf 2026 21%, per boeking aan te passen)
 DEFAULT_BTW_RATES["Privé - vliegtickets"] = 0;
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)

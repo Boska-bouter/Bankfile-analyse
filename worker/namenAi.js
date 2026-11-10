@@ -37,7 +37,8 @@ const ONBEKEND = "Onbekend";
 // Boska 10-11: Boels Verhuur werd "Lease (operationeel)", maar kortdurende huur van materieel is gewoon zakelijke kosten.
 export const NOOIT_AI = /^(lease|leningen|hypotheek|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Hoort bij de vraag hieronder: verandert de vraag, dan tellen eerder bewaarde antwoorden niet meer en wordt opnieuw gevraagd.
-export const VRAAG_VERSIE = 2;
+// nieuw-V2R5 (melding Boska 10-11): e-bike meestal privé, hotel = reiskosten, markt/toko/supermarkt bij horeca = inkoop.
+export const VRAAG_VERSIE = 3;
 const SOORT_TEKST = {
   zakelijk: "de zakelijke rekening van een ondernemer",
   prive: "de privérekening van een ondernemer (zakelijk dossier)",
@@ -62,7 +63,7 @@ export function maakVraag(namen, { soort, branche, teken }) {
   const bedrijf = soort === "zakelijk" && BRANCHE_TEKST[branche] ? ` Soort bedrijf van de rekeninghouder: ${BRANCHE_TEKST[branche]}.` : "";
   return `Hieronder staan namen van tegenpartijen op Nederlandse bankafschriften: ${wat} deze partijen, vanaf ${SOORT_TEKST[soort]}.${bedrijf}
 
-Geef per naam de best passende categorie uit de toegestane lijst, en wat voor soort bedrijf het is (een paar woorden). Huur of verhuur van machines, gereedschap, materieel, containers of aanhangers (zoals Boels, Kiloutou, Hertz Equipment) is een gewone bedrijfsuitgave, geen lease en geen huur van een pand. Een abonnement op een fiets, scooter of apparaat (zoals Swapfiets) is een abonnement, geen lease. Ken je het bedrijf niet, of kan de naam bij meerdere categorieën horen, kies dan "${ONBEKEND}" of zekerheid "laag". Gok niet op basis van alleen een plaatsnaam of een achternaam.
+Geef per naam de best passende categorie uit de toegestane lijst, en wat voor soort bedrijf het is (een paar woorden). Huur of verhuur van machines, gereedschap, materieel, containers of aanhangers (zoals Boels, Kiloutou, Hertz Equipment) is een gewone bedrijfsuitgave, geen lease en geen huur van een pand. Een abonnement op een fiets, scooter of apparaat (zoals Swapfiets) is een abonnement, geen lease. De aankoop van een fiets of e-bike (fietsenwinkel) is meestal privé; kies dan een privécategorie als die in de lijst staat, behalve bij vervoer of koerier. Een hotel, hostel of overnachting is reiskosten (hotel en verblijf als die categorie in de lijst staat), geen inkoop. Bij horeca, catering of eten zijn supermarkten, markten, toko's, slagers en groothandels meestal zakelijke inkoop en geen boodschappen. Ken je het bedrijf niet, of kan de naam bij meerdere categorieën horen, kies dan "${ONBEKEND}" of zekerheid "laag". Gok niet op basis van alleen een plaatsnaam of een achternaam.
 
 ${regels}`;
 }
@@ -109,9 +110,29 @@ export async function vraagClaude(client, model, namen, ctx, categorieen) {
     const i = Number(r?.nr) - 1;
     if (!Number.isInteger(i) || i < 0 || i >= namen.length) continue;
     const categorie = r.categorie === ONBEKEND || !categorieen.includes(r.categorie) ? null : r.categorie;
-    uit[i] = { categorie, zekerheid: ["hoog", "middel", "laag"].includes(r.zekerheid) ? r.zekerheid : "laag", soortBedrijf: String(r.soort_bedrijf || "").slice(0, 80) };
+    uit[i] = bijsturen({ categorie, zekerheid: ["hoog", "middel", "laag"].includes(r.zekerheid) ? r.zekerheid : "laag", soortBedrijf: String(r.soort_bedrijf || "").slice(0, 80) }, ctx, categorieen);
   }
   return uit;
+}
+
+// nieuw-V2R5 — vaste correcties na het antwoord (melding Boska 10-11), op basis van het soort bedrijf dat Claude noemt.
+const HOTEL = /hotel|hostel|motel|overnacht|logies|bed (and|&) breakfast|b&b|vakantiepark|camping/i;
+const ETENSWAREN = /supermarkt|markt|toko|slager|bakker|groothandel|groente|levensmiddel|food/i;
+const FIETS = /fiets|e-?bike|bike/i;
+export function bijsturen(a, { soort, branche } = {}, categorieen = []) {
+  if (!a?.categorie) return a;
+  const sb = a.soortBedrijf || "";
+  const mag = (c) => categorieen.includes(c);
+  if (HOTEL.test(sb) && !/restaurant|eten/i.test(a.categorie)) {
+    if (soort === "zakelijk" && mag("Reiskosten (hotel & verblijf)")) return { ...a, categorie: "Reiskosten (hotel & verblijf)" };
+  }
+  if (soort === "zakelijk" && branche === "horeca" && ETENSWAREN.test(sb) && a.categorie === "Boodschappen" && mag("Zakelijke inkoop/uitgaven")) {
+    return { ...a, categorie: "Zakelijke inkoop/uitgaven" };
+  }
+  if (soort === "zakelijk" && branche !== "vervoer" && FIETS.test(sb) && !/abonnement|lease|verhuur|huur/i.test(sb) && /^zakelijk/i.test(a.categorie) && mag("Privé: overig")) {
+    return { ...a, categorie: "Privé: overig" };
+  }
+  return a;
 }
 
 async function telOp(db, account, dag, n) {
