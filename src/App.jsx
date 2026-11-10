@@ -91,6 +91,7 @@ import { rechtVoorSoort } from "./modus/useDossierSoort.jsx";
 import HuishoudboekjeMakenModal from "./components/huishoudboekje/HuishoudboekjeMakenModal.jsx";
 import { useCategorieProfiel } from "./modus/useCategorieProfiel.jsx";
 import { setBranche, setZakelijkVanPrive } from "./classification/branche.js";
+import { useGedeeldeNamenLijst, useNamenTerugsturen, useNamenOpzoeken, stuurNamenToestemming } from "./dossier/useGedeeldeNamen.js";
 import { useToonFijn } from "./utils/useToonFijn.js";
 import DashboardHeader from "./components/dashboard/DashboardHeader.jsx";
 import NextStepCard from "./components/dashboard/NextStepCard.jsx";
@@ -253,7 +254,7 @@ export default function App() {
   const [werkruimteStatus, setWerkruimteStatusState] = useState({});
   // nieuw-V1R01 — weergave per dossier: "uitgebreid" (zoals altijd) of "eenvoudig" (vier stappen voor niet-deskundigen).
   const [weergave, setWeergave] = useState("uitgebreid");
-  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, bankkoppeling: bankkoppelingAan, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, geldigTot: abonnementTot, zetAanvragen } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
+  const { mag: magUitgebreidAccount, email: ingelogdAls, status: rolStatus, koppelen: magKoppelenAccount, bankkoppeling: bankkoppelingAan, beheerder: isBeheerder, aanvragen: openAanvragen, aanvraag: eigenAanvraag, inlog: inlogModus, voorwaarden: voorwaardenServer, voorwaardenPrive: voorwaardenPriveServer, soorten: rechtenPerSoort, geldigTot: abonnementTot, zetAanvragen, namenToestemming, zetNamenToestemming, namenAi } = useMagUitgebreid(); // nieuw-V2R0 — lijst AccessAll in de Worker
   // beide-V1R2 — Uitgebreid en de bankkoppeling gelden per soort abonnement (zakelijk/privé), dus voor de soort van dit dossier.
   const [eenvoudigUitlegOpen, setEenvoudigUitlegOpen] = useState(false); // nieuw-V7R0 — welkomstuitleg Eenvoudig staat open
   const magUitgebreid = rechtVoorSoort(rechtenPerSoort, soortDossier, "uitgebreid", magUitgebreidAccount);
@@ -1019,14 +1020,17 @@ export default function App() {
   // beide-V17R7 — soort bedrijf uit de wizard (classification/branche.js); verandert eigenNamen, dan ook eigenNamenKeywords en dus de indeling.
   setBranche(eigenNamen?.branche || null);
   setZakelijkVanPrive(eigenNamen?.zakelijkVanPrive); // huishoudboekje-V6R5
+  const gedeeldeNamenVersie = useGedeeldeNamenLijst(ingelogdAls); // nieuw-V2R1
   const classifiedBasis = useClassified({
     ZAKELIJKE_SPIEGEL_CATEGORIEEN, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules,
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
     leaseSoortWizard: autoWizardStatus?.soort || null,
     factuurjaar: bevestigdeControles?.factuurjaar || null,
-    eigenRekeningAanpasbaar: huishoudboekje,
+    eigenRekeningAanpasbaar: huishoudboekje, gedeeldeNamenVersie,
   });
+  useNamenTerugsturen(classifiedBasis, namenToestemming); // nieuw-V2R1 — alleen met toestemming
+  useNamenOpzoeken(classifiedBasis, categoryRules, namenAi); // nieuw-V2R2 — onbekende bedrijfsnamen opzoeken met AI
   // huishoudboekje-V6R9 — kleine onzekere boekingen tellen niet als open punt (zie classification/kleineBedragen.js).
   const classified = useMemo(() => markeerKleineBedragen(classifiedBasis, kleinBedragInstelling), [classifiedBasis, kleinBedragInstelling]);
   const kleinBedragOverzicht = useMemo(() => kleinOverzicht(classified, kleinBedragInstelling), [classified, kleinBedragInstelling]);
@@ -2000,7 +2004,8 @@ export default function App() {
   }, [startMetNieuw, rolStatus, voorwaarden.ok]); // eslint-disable-line react-hooks/exhaustive-deps
   Object.assign(appLaat, { fingerprintByTxId, jumpToSection, requestCategoryChange, setCounterpartyOverride, snapshotBeforeAction, years });
   if (rolStatus === "laden") return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-sm text-slate-500">Bezig met laden…</div>;
-  if (!voorwaarden.ok) return <VoorwaardenScherm soorten={voorwaarden.ontbrekend} onAkkoord={voorwaarden.akkoord} />;
+  if (!voorwaarden.ok) return <VoorwaardenScherm soorten={voorwaarden.ontbrekend} namenVraag={!!ingelogdAls && !namenToestemming}
+    onAkkoord={(namen) => { if (namen) { zetNamenToestemming(true); stuurNamenToestemming(true); } voorwaarden.akkoord(); }} />;
 
   if (showStartupChoice) {
     const pending = pendingProjectRef.current;

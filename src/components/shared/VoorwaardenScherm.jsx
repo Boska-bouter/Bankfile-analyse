@@ -6,8 +6,9 @@ import { APP_RELEASE } from "../../version.js";
 // Volledig scherm bij eerste gebruik: lezen en akkoord gaan voordat de app opent. beide-V1R9 — per soort (zakelijk/privé)
 // eigen voorwaarden; ontbreken beide, dan staan ze onder elkaar en geldt één akkoord voor allebei.
 const TITEL = { zakelijk: "Voorwaarden zakelijk", prive: "Voorwaarden privé" };
-export default function VoorwaardenScherm({ soorten = ["zakelijk"], onAkkoord }) {
+export default function VoorwaardenScherm({ soorten = ["zakelijk"], onAkkoord, namenVraag = false }) {
   const [akkoord, setAkkoord] = useState(false);
+  const [namen, setNamen] = useState(false); // nieuw-V2R1 — toestemming gedeelde namenlijst (artikel 4.9), standaard uit
   const twee = soorten.length > 1;
   return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 sm:p-6">
@@ -27,8 +28,14 @@ export default function VoorwaardenScherm({ soorten = ["zakelijk"], onAkkoord })
             <input type="checkbox" className="mt-0.5" checked={akkoord} onChange={(e) => setAkkoord(e.target.checked)} />
             <span>Ik heb de gebruiksvoorwaarden{twee ? " (zakelijk en privé)" : soorten[0] === "prive" ? " voor privé" : ""} gelezen en ga ermee akkoord.</span>
           </label>
+          {namenVraag && (
+            <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" className="mt-0.5" checked={namen} onChange={(e) => setNamen(e.target.checked)} />
+              <span>Ik geef toestemming om mijn indeling van bedrijfsnamen anoniem te gebruiken voor de gedeelde namenlijst (artikel 4.9, vrijwillig). Alleen bedrijfsnaam en categorie, nooit bedragen, rekeningnummers of namen van personen.</span>
+            </label>
+          )}
           <button
-            onClick={onAkkoord}
+            onClick={() => onAkkoord(namenVraag && namen)}
             disabled={!akkoord}
             className="w-full rounded-lg bg-teal-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-teal-800 disabled:opacity-40 disabled:cursor-not-allowed"
           >

@@ -8,6 +8,8 @@
 import { bankRoute, bankTerugRoute } from "./bank.js";
 import { eigenInlog, wieIsIngelogd, inlogRoute, isOpenPad, passkeyAanbieden, PASSKEY_GEVRAAGD } from "./inloggen.js";
 import { aanmeldPagina } from "./aanmeldpagina.js";
+import { namenRoute, namenToestemmingVan } from "./namenlijst.js";
+import { opzoekenAan } from "./namenAi.js";
 import { tarievenRoute, tarievenBeheerRoute, tarievenHerinneringMail } from "./tarieven.js";
 import { zoekmachineRoute } from "./zoekmachines.js";
 import { opLijst, rechtenVan, bankkoppelingVoor, bankkoppelingHelemaalUit, beheerRoute, aanmeldRoute, heeftToegang, toegangVerplicht, telAanvragen, voorwaardenVan, voorwaardenRoute, wisOudeTelefoons, verloopHerinneringen, logboekControle, registreerGezien } from "./rechten.js";
@@ -83,8 +85,10 @@ export default {
       }
       // lijst = is er een bron van rechten (AccessAll of de database); de inhoud wordt niet teruggegeven.
       const akkoord = await voorwaardenVan(email, env);
-      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, bankkoppeling: bankkoppelingVoor(env, r.beheerder), ...r });
+      return json({ ok: true, email: email || null, lijst: !!String(env.AccessAll || "").trim() || !!env.DB, db: !!env.DB, slot: toegangVerplicht(env), aanvragen, inlog: eigenInlog(env) ? "eigen" : "access", voorwaarden: akkoord.zakelijk, voorwaardenPrive: akkoord.prive, bankkoppeling: bankkoppelingVoor(env, r.beheerder), namenToestemming: await namenToestemmingVan(email, env), namenAi: opzoekenAan(env), ...r });
     }
+    // nieuw-V2R1 — gedeelde namenlijst (zie namenlijst.js)
+    if (url.pathname.startsWith("/api/namen/")) return namenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     if (url.pathname === "/api/voorwaarden") return voorwaardenRoute(request, env, url, request.headers.get("Cf-Access-Authenticated-User-Email"));
     // nieuw-V4R5 — aanmelden voor een abonnement (Eenvoudig, Uitgebreid, met bankkoppeling)
     if (url.pathname === "/api/aanmelden") {
@@ -94,7 +98,7 @@ export default {
     if (url.pathname === "/aanmelden") {
       const email = request.headers.get("Cf-Access-Authenticated-User-Email");
       return aanmeldPagina(email, await rechtenVan(email, env), env,
-        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), verlengen: url.searchParams.get("verlengen"), slot: toegangVerplicht(env) });
+        { status: 200, soort: url.searchParams.get("soort"), plan: url.searchParams.get("plan"), verlengen: url.searchParams.get("verlengen"), slot: toegangVerplicht(env), namen: await namenToestemmingVan(email, env) });
     }
     // nieuw-V4R5 — toegangsslot: met TOEGANG_VERPLICHT = "ja" krijgt alleen wie toegang heeft de app; de rest de
     // aanmeldpagina. Vereist "run_worker_first": true in wrangler.jsonc, anders komen de app-bestanden niet langs hier.
