@@ -39,6 +39,41 @@ export function verschuifNaarFactuurjaar(lijst, keuze = null) {
   });
 }
 
+// nieuw-V3R0 — wens Boska 11-11: een teruggave in een kostencategorie (bijv. "Restitutie creditsaldo" energie in februari)
+// kan bij het vorige jaar horen. Hij telt dan in december van dat jaar (kosten van dat jaar omlaag), niet in het jaar van
+// ontvangst. Alleen als dat vorige jaar ook geladen is. Met de hand per boeking (bevestigdeControles.kostenVorigJaar = [ids]),
+// of vanzelf als de omschrijving het jaar noemt ("Periode 2023-12", "jaarafrekening 2023"), tenzij uitgezet
+// (bevestigdeControles.kostenVorigJaarNiet = [ids]). Noemt de omschrijving het eigen jaar, dan hoeft er niets gevraagd te worden.
+const JAAR_IN_OMSCHRIJVING = [
+  /\bperiode\s*:?\s*(20\d{2})\b/gi,
+  /\b(?:jaar|eind|slot)?afrekening\s*(?:over\s*|van\s*)?(?:het\s*jaar\s*)?(20\d{2})\b/gi,
+  /\b(?:verbruiks|belasting|boek)?jaar\s*:?\s*(20\d{2})\b/gi,
+  /\bover\s*(?:het\s*jaar\s*)?(20\d{2})\b/gi,
+];
+
+export function jaarUitOmschrijving(tx) {
+  const tekst = `${tx.description || ""} ${tx.fullDescription || ""}`;
+  const jaren = new Set();
+  for (const re of JAAR_IN_OMSCHRIJVING) for (const m of tekst.matchAll(re)) jaren.add(Number(m[1]));
+  return jaren.size === 1 ? [...jaren][0] : null;
+}
+
+const isKostenTeruggave = (t) => !t.isMirror && t.amount > 0 && fiscalTreatmentOf(t.category) === "kosten";
+const beginVanJaar = (t) => { const m = Number(String(t.month || "").split("-")[1]); return m >= 1 && m <= 6; };
+
+export function verschuifKostenNaarVorigJaar(lijst, ids = null, niet = null) {
+  const kies = new Set(ids || []);
+  const nietSet = new Set(niet || []);
+  const jaren = new Set(lijst.filter((t) => !t.isMirror).map((t) => t.year));
+  return lijst.map((t) => {
+    if (!isKostenTeruggave(t) || !jaren.has(t.year - 1)) return t;
+    const vanzelf = !nietSet.has(t.id) && beginVanJaar(t) && jaarUitOmschrijving(t) === t.year - 1;
+    if (!kies.has(t.id) && !vanzelf) return t;
+    const vj = t.year - 1;
+    return { ...t, year: vj, month: `${vj}-12`, betaaldJaar: t.year, kostenjaarVerschoven: true, ...(vanzelf && !kies.has(t.id) ? { kostenjaarUitOmschrijving: true } : {}) };
+  });
+}
+
 // Overzicht voor het scherm en het rapport: per factuurjaar wat er uit het volgende jaar bij is gekomen.
 export function factuurjaarOverzicht(classified) {
   const perJaar = {};

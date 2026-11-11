@@ -9,7 +9,7 @@ import { percentagesMetWerkruimte } from "../tax/werkruimte.js";
 import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 import { personenViaIban } from "../classification/personenViaIban.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
-import { verschuifNaarFactuurjaar } from "../classification/factuurjaar.js";
+import { verschuifNaarFactuurjaar, verschuifKostenNaarVorigJaar } from "../classification/factuurjaar.js";
 import { LENING_CATS, heeftLeningWoord, hoortBijLening, LENING_EIGEN } from "../classification/leningBoeking.js";
 import { gedeeldeKeuzeLabel } from "../classification/gedeeldeNamen.js";
 import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
@@ -20,6 +20,8 @@ export function useClassified(p) {
     eigenNamenKeywords, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile: ownAccountsElsewhereByFile0, parsedFiles,
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning = null,
     leaseSoortWizard = null, // beide-V10R5 — "financial": automatisch herkende lease wordt financiële lease
+    kostenVorigJaarNiet = null, // nieuw-V3R0 — [ids] automatisch verschoven teruggaven die toch in het jaar van ontvangst tellen
+    kostenVorigJaar = null, // nieuw-V3R0 — [ids] teruggaven in een kostencategorie die bij het vorige jaar horen
     factuurjaar = null, // beide-V11R7 — { uit, niet: [ids] } uit bevestigdeControles (classification/factuurjaar.js)
     gedeeldeNamenVersie = 0, // nieuw-V2R1 — opnieuw indelen als de gedeelde namenlijst binnen is
     eigenRekeningAanpasbaar = false, // huishoudboekje-V1R2 — opgegeven (niet geladen) eigen rekening ligt niet vast
@@ -146,7 +148,7 @@ export function useClassified(p) {
       return { ...tx, category: tx.amount > 0 ? "Ontvangen van zakelijk" : "Terugboeking naar zakelijk" };
     });
     // beide-V11R7 — borg/eenmalig/loon/verzekering nakijken, daarna omzet in het factuurjaar.
-    const base = verschuifNaarFactuurjaar(markeerNakijkSignalen(koppelDoorsluisOverboekingen(base1, Object.values(accountTypeByFile).includes("Zakelijk"))), factuurjaar);
+    const base = verschuifKostenNaarVorigJaar(verschuifNaarFactuurjaar(markeerNakijkSignalen(koppelDoorsluisOverboekingen(base1, Object.values(accountTypeByFile).includes("Zakelijk"))), factuurjaar), kostenVorigJaar, kostenVorigJaarNiet);
     // "Privé opnames"/"Terugboeking van privé" (zakelijke kant) zijn geld dat tussen zakelijk en
     // privé beweegt. Staat zo'n boeking aan de zakelijke kant, dan voegen we er een
     // spiegelboeking van hetzelfde bedrag met omgekeerd teken aan toe — zodat de balans tussen
@@ -193,5 +195,5 @@ export function useClassified(p) {
     return result.map((tx) =>
       !tx.isMirror && tx.viewType !== "Zakelijk" && ZAKELIJKE_SPIEGEL_CATEGORIEEN.includes(tx.category) ? { ...tx, viewType: "Zakelijk" } : tx
     );
-  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning, leaseSoortWizard, factuurjaar, gedeeldeNamenVersie]);
+  }, [transactions, categoryZakelijkPercentage, werkruimteStatus, categoryRules, businessKeywords, businessExpenseKeywords, accountTypeByFile, overridesByCounterparty, overridesByRow, ownAccountsElsewhereByFile, eigenNamenKeywords, zakelijkeSpaarKeywords, parsedFiles, herkenning, leaseSoortWizard, factuurjaar, kostenVorigJaar, kostenVorigJaarNiet, gedeeldeNamenVersie]);
 }

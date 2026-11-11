@@ -18,7 +18,7 @@ const LEVEL_INFO = {
 // De samengevoegde "losse pinbetalingen" (Winkels divers zonder herkend zoekwoord) zijn één groep
 // die je kunt uitklappen om per transactie te corrigeren.
 export default function UncertainTransactionsModal({
-  level, transactions, bulkCounts, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions, bulkCounts, activeYear = null, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
@@ -33,9 +33,18 @@ export default function UncertainTransactionsModal({
   const [openGroepen, setOpenGroepen] = useState(() => new Set());
   const wisselGroep = (k) => setOpenGroepen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
+  // nieuw-V3R0 — open punten per jaar bekijken (wens Boska 11-11). "" = alle jaren.
+  // Standaard het jaar dat bovenaan gekozen is (Boska: "de 77 i.p.v. 351").
+  const [jaar, setJaar] = useState(() => (activeYear && transactions.some((tx) => tx.year === activeYear) ? String(activeYear) : ""));
+  const jaren = useMemo(() => {
+    const n = new Map();
+    for (const tx of transactions) n.set(tx.year, (n.get(tx.year) || 0) + 1);
+    return [...n.entries()].sort((a, b) => b[0] - a[0]);
+  }, [transactions]);
+  const txsJaar = useMemo(() => (jaar ? transactions.filter((tx) => String(tx.year) === jaar) : transactions), [transactions, jaar]);
   const groepen = useMemo(() => {
     const map = new Map();
-    for (const tx of transactions) {
+    for (const tx of txsJaar) {
       const losse = tx.category === "Winkels divers" && /losse pinbetaling/i.test(tx.confidence?.label || "");
       const k = (losse ? "__losse__" : counterpartyKey(tx.counterparty || tx.description, tx.amount) || String(tx.id)) + "|" + tx.category;
       let g = map.get(k);
@@ -48,7 +57,7 @@ export default function UncertainTransactionsModal({
       ai: !!g.txs[0].gedeeld?.ai && g.txs[0].confidence?.level === "heuristic",
       naam: g.losse ? "Losse pinbetalingen (geen herkend zoekwoord)" : (g.txs[0].counterparty || g.txs[0].description || "(geen omschrijving)"),
     }));
-  }, [transactions]);
+  }, [txsJaar]);
 
   const aiGroepen = useMemo(() => groepen.filter((g) => g.ai), [groepen]);
   const aiAan = alleenAi && aiGroepen.length > 0;
@@ -141,7 +150,7 @@ export default function UncertainTransactionsModal({
               <Sparkles className="inline h-4 w-4 text-violet-700 -mt-0.5" /> Opgezocht met AI ({aiGroepen.length} groep{aiGroepen.length === 1 ? "" : "en"}, {aiGroepen.reduce((a, g) => a + g.txs.length, 0)} transacties)
             </>) : (<>
             {metBolletjes(info.icon)} {info.label} ({groepen.length} groep{groepen.length === 1 ? "" : "en"}
-            {transactions.length !== groepen.length ? `, ${transactions.length} transacties` : ""}
+            {txsJaar.length !== groepen.length ? `, ${txsJaar.length} transacties` : ""}
             {bulkTotal > 0 ? ` + ${bulkTotal} elders` : ""})
             </>)}
           </p>
@@ -247,6 +256,13 @@ export default function UncertainTransactionsModal({
               <option value="aantal">Meeste transacties eerst</option>
               <option value="naam">Naam A–Z</option>
             </select>
+            {jaren.length > 1 && (<>
+              <label className="text-slate-500 ml-2">Jaar</label>
+              <select value={jaar} onChange={(e) => { setJaar(e.target.value); setCatFilter(""); }} className="rounded-md border border-slate-300 px-1.5 py-1 text-xs">
+                <option value="">Alle jaren ({transactions.length})</option>
+                {jaren.map(([j, n]) => <option key={j} value={String(j)}>{j} ({n})</option>)}
+              </select>
+            </>)}
             <label className="text-slate-500 ml-2">Categorie</label>
             <select
               value={catFilter}
