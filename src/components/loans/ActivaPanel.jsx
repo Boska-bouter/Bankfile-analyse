@@ -6,11 +6,12 @@ import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 function isCompleteActivaDetails(details) {
   return !!(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
 }
 
-export default function ActivaPanel({ defaultOpen = false, activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp, onAddManual, onRemove }) {
+export default function ActivaPanel({ defaultOpen = false, activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp, onAddManual, onRemove, onRequestChange }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const sectionRef = useOpenOnJump(setOpen);
   if (activaSummary.length === 0 && !onAddManual) return null;
@@ -67,6 +68,14 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
                           <button onClick={() => { if (window.confirm(`Bedrijfsmiddel "${details?.naam || activum.naam}" verwijderen?`)) onRemove(activum.key); }} className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">
                             Verwijderen
                           </button>
+                        )}
+                        {/* nieuw-V2R6 — geen bedrijfsmiddel? Andere categorie kiezen (melding Boska 10-11). */}
+                        {!activum.handmatig && onRequestChange && activum.tx?.category && (
+                          <CategorieSelect
+                            value={activum.tx.category}
+                            onChange={(v) => v !== activum.tx.category && onRequestChange(activum.tx, { category: v, type: activum.tx.type })}
+                            className="max-w-[14rem] rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600"
+                          />
                         )}
                         {!compleet && !activum.handmatig && (
                           <button onClick={() => onMarkUnknown(activum.key)} className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">

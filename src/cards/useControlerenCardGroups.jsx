@@ -20,7 +20,7 @@ export function useControlerenCardGroups(p) {
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
     categoryZakelijkPercentage, classified, confidenceSectionRef, confirmClassificationCorrect, confirmLeaseType,
-    confirmOverigAsIs, confirmPersonAsIs, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
+    confirmOverigAsIs, confirmPersonAsIs, requestCategoryChange, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
@@ -188,6 +188,7 @@ export function useControlerenCardGroups(p) {
               onUnmarkUnknown={unmarkActivaUnknown}
               onAddManual={addManualActiva}
               onRemove={removeActivum}
+              onRequestChange={requestCategoryChange}
               onOpenHelp={setHelpPopupChapter}
             />
           </div>

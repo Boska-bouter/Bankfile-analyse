@@ -35,7 +35,8 @@ const MAX_CATEGORIEEN = 250;
 const ONBEKEND = "Onbekend";
 // nieuw-V2R3 — categorieën die een contract of eigen gegevens vragen (lease, leningen, hypotheek, eigen rekeningen): nooit door de AI.
 // Boska 10-11: Boels Verhuur werd "Lease (operationeel)", maar kortdurende huur van materieel is gewoon zakelijke kosten.
-export const NOOIT_AI = /^(lease|leningen|hypotheek|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
+// nieuw-V2R6 (melding Boska 10-11: BSH Huishoudapparaten werd activa): bedrijfsmiddelen (afschrijving) alleen als eigen keuze, nooit via AI of de gedeelde lijst.
+export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Hoort bij de vraag hieronder: verandert de vraag, dan tellen eerder bewaarde antwoorden niet meer en wordt opnieuw gevraagd.
 // nieuw-V2R5 (melding Boska 10-11): e-bike meestal privé, hotel = reiskosten, markt/toko/supermarkt bij horeca = inkoop.
 export const VRAAG_VERSIE = 3;

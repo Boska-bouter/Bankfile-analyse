@@ -25,7 +25,7 @@ const BETAALSPOOR = /pasvolgnr|\bpas: ?\d|\bterm:|betaalautomaat|incassant|macht
 const TUSSENPARTIJ = /^(paypal|stripe|mollie|stichting mollie|adyen|buckaroo|klarna|riverty|afterpay|multisafepay|pay nl|worldline|ingenico|ccv|sumup|zettle|tikkie|bng|geldmaat|ing|ing bank|rabobank|abn|abn amro|bunq|knab|asn|sns|triodos|regiobank|revolut|wise|n26|stichting derdengelden|derdengelden|stichting beheer)\b/;
 // Categorieën die niets over het bedrijf zeggen (onbekend, personen, eigen rekeningen): niet delen.
 export const NIET_DELEN = new Set(["Overig", "Overboekingen aan personen", "Overboeking van bekenden", "Interne overboeking", "Interne overboeking: zakelijk sparen",
-  "Interne overboeking: privé sparen", "Ontvangen van zakelijk", "Terugboeking naar zakelijk", "Terugboeking van privé", "Inkomsten/betalingen niet dit jaar"]);
+  "Interne overboeking: privé sparen", "Ontvangen van zakelijk", "Zakelijk - apparatuur/machines", "Terugboeking naar zakelijk", "Terugboeking van privé", "Inkomsten/betalingen niet dit jaar"]);
 
 // Sleutel voor de lijst: kleine letters, zonder plaats na " via ", zonder cijfers, terminalvoorvoegsel en rechtsvorm; eerste twee woorden.
 export function naamSleutel(naam) {
@@ -153,7 +153,8 @@ export function stemmenUit(classified) {
 
 // ---- Opzoeken met AI (nieuw-V2R2) ----
 // nieuw-V2R3 — zelfde lijst als worker/namenAi.js: deze categorieën neemt de app nooit van de AI over.
-export const NOOIT_AI = /^(lease|leningen|hypotheek|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
+// nieuw-V2R6 (melding Boska 10-11: BSH Huishoudapparaten werd activa): bedrijfsmiddelen (afschrijving) alleen als eigen keuze, nooit via AI of de gedeelde lijst.
+export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Welke namen moeten nog worden opgezocht? Boekingen zonder eigen keuze die in Overig/personen staan of alleen op bedrijfsnaam of
 // factuurnummer als leverancier zijn geschat, met een naam die op een bedrijf lijkt en die nog niet in de lijst of bij de AI staat.
 const GESCHAT = /^Geschat: (bedrijfsnaam|betaling met factuurnummer)/;
