@@ -20,7 +20,11 @@ export const TONE = {
   risk: { border: "border-red-300", bg: "bg-red-50", dot: "bg-red-500", text: "text-red-700" },
 };
 
-export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp, inGrid, secondaryAction }) {
+// nieuw-V3R1 — saldo-kleur los van de kaarttoon: ontvangen groen, betalen donker (wens Boska 11-11: oranje "te ontvangen" las als betalen).
+const KLEUR_SALDO = { ontvangen: "text-emerald-700", betalen: "text-slate-800" };
+const BADGE_SALDO = { ontvangen: "bg-emerald-600 text-white", betalen: "bg-slate-700 text-white" };
+
+export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutral", actionLabel, onClick, hint, expanded, children, helpChapter, onOpenHelp, inGrid, secondaryAction, valueKleur }) {
   const t = TONE[tone] || TONE.neutral;
   const clickable = !!onClick;
   const Wrapper = clickable ? "button" : "div";
@@ -56,7 +60,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
               tot nu toe geen top-level `value`, dus dit veranderde tot nu toe niets) — "BTW-kwartalen"
               wil nu juist wél een badge (het jaartotaal) tonen NAAST de per-kwartaal regels. */}
           {value != null && (
-            <span className={`text-xs font-bold rounded-full px-2 py-0.5 whitespace-nowrap ${tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
+            <span className={`text-xs font-bold rounded-full px-2 py-0.5 whitespace-nowrap ${valueKleur ? BADGE_SALDO[valueKleur] : tone === "neutral" ? "bg-slate-200 text-slate-600" : `${t.dot} text-white`}`}>
               {value}
             </span>
           )}
@@ -67,7 +71,7 @@ export function SectionCard({ title, icon, value, lines, subtitle, tone = "neutr
             {lines.map((l) => (
               <div key={l.label} className="flex justify-between items-baseline gap-2">
                 <span className="text-klein text-slate-500">{metBegrippen(l.label)}</span>
-                <span className={`text-basis font-semibold ${t.text}`}>{metBolletjes(l.value)}</span>
+                <span className={`text-basis font-semibold ${l.kleur ? KLEUR_SALDO[l.kleur] : t.text}`}>{metBolletjes(l.value)}</span>
               </div>
             ))}
           </div>

@@ -415,6 +415,14 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // opdrachtgever blijft omzet (creditnota/terugbetaling, zo gekozen in JvS en Houtman).
   const isBiz = businessKeywords.some((kw) => (isIncome || !GEEN_PARTIJ.test(kw)) && textHasKeyword(text, kw));
   if (isBiz) {
+    // nieuw-V3R2 — advies ChatGPT 11-11 (Boska "Ja"): ook bij een bevestigde opdrachtgever gaan borg, schade-uitkering en een lening die
+    // met zoveel woorden in de omschrijving staat vóór. Een creditnota/terugbetaling van een opdrachtgever blijft omzet (JvS, Houtman).
+    if (isIncome) {
+      const r = (name) => { const rule = rules.find((x) => x.name === name); return !!rule && ruleMatchesText(rule, text); };
+      if (r("Borg (waarborgsom)")) return { category: "Borg (waarborgsom)", type };
+      if (accountType === "Zakelijk" && r("Schade-uitkering verzekering")) return { category: "Schade-uitkering verzekering", type };
+      if (/\b(lening|leningsovereenkomst|uitbetaling lening|aflossing)\b/i.test(`${tx.description || ""} ${tx.fullDescription || ""}`) && !heeftBetaaldienst(text)) return { category: accountType === "Zakelijk" ? "Leningen" : "Leningen (privé)", type };
+    }
     return { category: "Zakelijke inkomsten", type };
   }
 

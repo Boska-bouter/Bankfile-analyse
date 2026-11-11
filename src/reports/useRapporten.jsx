@@ -8,7 +8,7 @@ import KlantJaarKeuzeModal from "../components/modals/KlantJaarKeuzeModal.jsx";
 import { jarenBereik } from "../dossier/dossierProfiel.js";
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
-import { estimateHeffingskortingenMetOndernemersaftrek, estimateIncomeTaxMetOndernemersaftrek, estimateZvwMetOndernemersaftrek } from "../tax/incomeTax.js";
+import { computeBelastbareWinstUitsplitsing, estimateHeffingskortingenMetOndernemersaftrek, estimateIncomeTaxMetOndernemersaftrek, estimateZvwMetOndernemersaftrek } from "../tax/incomeTax.js";
 import { estimateVpb } from "../tax/vpb.js";
 import { eur } from "../utils/amounts.js";
 import { aandachtspuntenHtml, bepaalAandachtspunten } from "./aandachtspunten.js";
@@ -68,6 +68,7 @@ export function useRapporten({
     if (!s) return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: null, winst: null, belasting: null };
     let delen = [];
     let btwSaldo = null;
+    let aftrekken = null, belastbaar = null, hkNoot = null;
     if (!korRegeling) {
       const q = computeQuarterlyBtwForYear(classified, y, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }));
       btwSaldo = [1, 2, 3, 4].reduce((acc, k) => { const r = q.find((i) => i.kwartaal === k); return acc + (r ? r.verschuldigdBtw21 + r.verschuldigdBtw9 - r.voorbelasting + (r.btwPrivegebruikAuto || 0) : 0); }, 0);
@@ -81,10 +82,25 @@ export function useRapporten({
       const ib = estimateIncomeTaxMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
       const hk = estimateHeffingskortingenMetOndernemersaftrek(s.winst, y, bedragAftrek, starters)?.totaal || 0;
       const zvw = estimateZvwMetOndernemersaftrek(s.winst, y, bedragAftrek, starters);
-      delen.push({ label: "IB (na heffingskorting)", bedrag: Math.max(0, (ib?.belasting || 0) - hk) });
-      delen.push({ label: "Zvw", bedrag: zvw?.bijdrage || 0 });
+      // nieuw-V3R1 — wens Boska 11-11: de rekensom zichtbaar (IB vóór heffingskorting, heffingskorting tot ten hoogste de IB,
+      // IB te betalen), zodat duidelijk is waarom de IB € 0 kan zijn. Alleen delen met telt tellen mee in het totaal.
+      const ibVoor = ib?.belasting || 0;
+      const hkToegepast = Math.min(hk, ibVoor);
+      delen.push({ label: "IB vóór heffingskorting", bedrag: ibVoor });
+      delen.push({ label: "Heffingskorting", bedrag: -hkToegepast, aftrek: true });
+      delen.push({ label: "IB te betalen", bedrag: ibVoor - hkToegepast, telt: true, sub: true });
+      delen.push({ label: "Zvw-bijdrage", bedrag: zvw?.bijdrage || 0, telt: true });
+      const u = computeBelastbareWinstUitsplitsing(s.winst, y, bedragAftrek, starters);
+      aftrekken = [
+        { label: "Zelfstandigenaftrek", bedrag: aftrek?.zelfstandigenaftrekBedrag || 0 },
+        ...(aftrek?.startersaftrekBedrag > 0 ? [{ label: "Startersaftrek", bedrag: aftrek.startersaftrekBedrag }] : []),
+        { label: "MKB-winstvrijstelling", bedrag: u.mkbVrijstellingBedrag },
+      ];
+      belastbaar = u.belastbaar;
+      if (hk > ibVoor + 0.005) hkNoot = { totaal: hk, vervalt: hk - ibVoor };
     }
-    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, belasting: { delen, totaal: delen.reduce((a, d) => a + d.bedrag, 0), btw: btwSaldo } };
+    const totaal = delen.filter((d) => d.telt || rechtsvorm === "bv").reduce((a, d) => a + d.bedrag, 0);
+    return { jaar: y, periode: yearPeriod[y]?.label, omzetNetto: s.zakelijkeInkomstenNetto, winst: s.winst, aftrekken, belastbaar, hkNoot, belasting: { delen, totaal, btw: btwSaldo } };
   };
   const [onderbouwingKeuze, setOnderbouwingKeuze] = useState(null);
   const [onderbouwingHtml, setOnderbouwingHtml] = useState(null);

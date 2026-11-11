@@ -295,6 +295,10 @@ export function useDashboardCards(p) {
                 }, 0);
                 return `${eur(Math.abs(totaal))} ${totaal < 0 ? "te ontvangen" : "te betalen"}`;
               })(),
+              valueKleur: [1, 2, 3, 4].reduce((a, kwartaal) => {
+                const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
+                return a + (q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0);
+              }, 0) < 0 ? "ontvangen" : "betalen",
               lines: [1, 2, 3, 4].map((kwartaal) => {
                 const q = quarterlyBtwData.find((item) => item.kwartaal === kwartaal);
                 const saldo = q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0;
@@ -303,6 +307,7 @@ export function useDashboardCards(p) {
                 // expliciet "te betalen" of "te ontvangen" erachter, zodat het nooit dubbelzinnig is.
                 return {
                   label: `Q${kwartaal}`,
+                  kleur: saldo < 0 ? "ontvangen" : "betalen",
                   value: `${eur(Math.abs(saldo))} ${saldo < 0 ? "te ontvangen" : "te betalen"}${q && (q.btwPrivegebruikAuto || 0) > 0.004 ? ` (incl. ${eur(q.btwPrivegebruikAuto)} privégebruik auto)` : ""}`,
                 };
               }),

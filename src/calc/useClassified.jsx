@@ -145,7 +145,9 @@ export function useClassified(p) {
       );
       if (!z) return tx;
       gebruiktZak.add(z.id);
-      return { ...tx, category: tx.amount > 0 ? "Ontvangen van zakelijk" : "Terugboeking naar zakelijk" };
+      const nieuweCat = tx.amount > 0 ? "Ontvangen van zakelijk" : "Terugboeking naar zakelijk";
+      // nieuw-V3R2 — label past bij de nieuwe categorie (was nog het label van "Interne overboeking").
+      return { ...tx, category: nieuweCat, confidence: { level: "keyword", label: `Gekoppeld aan de zakelijke boeking van ${z.date.toLocaleDateString("nl-NL")} (${nieuweCat})` } };
     });
     // beide-V11R7 — borg/eenmalig/loon/verzekering nakijken, daarna omzet in het factuurjaar.
     const base = verschuifKostenNaarVorigJaar(verschuifNaarFactuurjaar(markeerNakijkSignalen(koppelDoorsluisOverboekingen(base1, Object.values(accountTypeByFile).includes("Zakelijk"))), factuurjaar), kostenVorigJaar, kostenVorigJaarNiet);
