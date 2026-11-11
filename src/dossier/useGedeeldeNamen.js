@@ -1,7 +1,7 @@
 // nieuw-V2R1 — gedeelde namenlijst ophalen bij het openen en, met toestemming, eigen keuzes op bedrijfsnamen terugsturen.
 // Zie classification/gedeeldeNamen.js (wat er wel en niet meegaat) en worker/namenlijst.js.
 import { useEffect, useRef, useState } from "react";
-import { setGedeeldeNamen, gedeeldeNamenVersie, stemmenUit, aiKandidaten, voegAiToe, NIET_DELEN } from "../classification/gedeeldeNamen.js";
+import { setGedeeldeNamen, gedeeldeNamenVersie, stemmenUit, aiKandidaten, voegAiToe, NIET_DELEN, NOOIT_AI, luisterNaarNamen } from "../classification/gedeeldeNamen.js";
 
 const dev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
 
@@ -10,6 +10,7 @@ let _zetVersie = null;
 export function useGedeeldeNamenLijst(email) {
   const [versie, setVersie] = useState(gedeeldeNamenVersie());
   _zetVersie = setVersie;
+  useEffect(() => luisterNaarNamen((v) => setVersie(v)), []);
   useEffect(() => {
     if (!email || dev) return;
     let weg = false;
@@ -58,7 +59,7 @@ export function useNamenOpzoeken(classified, categoryRules, aan) {
     const t = setTimeout(async () => {
       const kandidaten = aiKandidaten(classified);
       if (!kandidaten.length) return;
-      const categorieen = [...new Set((categoryRules || []).map((r) => r?.name).filter((n) => n && !NIET_DELEN.has(n)))];
+      const categorieen = [...new Set((categoryRules || []).map((r) => r?.name).filter((n) => n && !NIET_DELEN.has(n) && !NOOIT_AI.test(n)))];
       if (categorieen.length < 2) return;
       bezig.current = true;
       const groepen = new Map();

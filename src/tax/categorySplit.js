@@ -17,6 +17,29 @@
 // "financiering" (Leningen/Lease financieel) blijft hier altijd buiten — daar is alleen de rente
 // aftrekbaar (niet het termijnbedrag), en dat wordt al apart berekend (zie loanAmortization.js).
 import { fiscalTreatmentOf } from "../classification/categories.js";
+import { isCardPaymentTx } from "../classification/classify.js";
+
+// nieuw-V2R8 — melding Boska 11-11: een grote teruggave (bijv. "Restitutie creditsaldo" van de energieleverancier, € 16.365)
+// werd voor 21% van de voorbelasting afgetrokken. De btw hoort bij de oorspronkelijke nota's: die zijn al met btw geboekt.
+// Bij geld dat terugkomt in een kostencategorie telt daarom alleen de btw die er zelf bij staat ("BTW 238.57"), en bij een
+// retour via de pinautomaat (een teruggebracht product) het gewone tarief. Anders: geen btw-correctie (de teruggave verlaagt
+// alleen de kosten); corrigeer de voorbelasting desgewenst met de btw van de eindnota.
+const BTW_IN_TEKST = /\bbtw\b[:\s]*(?:eur\s*|€\s*)?(\d{1,7}(?:[.,]\d{3})*[.,]\d{2})\b/i;
+export function genoemdeBtw(tx) {
+  const m = BTW_IN_TEKST.exec(`${tx.fullDescription || ""} ${tx.description || ""}`);
+  if (!m) return null;
+  let t = m[1];
+  t = /,\d{2}$/.test(t) ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 && n < Math.abs(tx.amount) ? n : null;
+}
+export function btwBijTeruggave(tx, rate) {
+  if (!(tx.amount > 0) || fiscalTreatmentOf(tx.category) !== "kosten") return null; // geen teruggave: gewone berekening
+  const genoemd = genoemdeBtw(tx);
+  if (genoemd != null) return genoemd;
+  if (isCardPaymentTx(tx)) return tx.amount - tx.amount / (1 + rate / 100);
+  return 0;
+}
 
 // Alleen deze categorieën komen in aanmerking voor de %-splitsing (in overleg bevestigd) — dit zijn
 // kosten die in de praktijk vaak deels zakelijk/deels privé zijn, ongeacht welke rekening betaalt.
@@ -54,6 +77,7 @@ export const SPLITSBARE_CATEGORIEEN = [
   "Privé - internet/TV",
   "Reiskosten (OV)",
   "Reiskosten (vliegtickets)", // beide-V16R5
+  "Reiskosten (hotel & verblijf)", // nieuw-V2R5
   "Parkeren",
   "Huur",
   "Streaming diensten",
@@ -171,6 +195,8 @@ export function rawBtw(tx, categoryBtwRates, btwVerlegd) {
   if (effectiefVerlegd && tx.category === "Zakelijke inkomsten") return 0;
   const rate = categoryBtwRates[tx.category];
   if (!rate) return 0;
+  const terug = btwBijTeruggave(tx, rate);
+  if (terug != null) return terug;
   return tx.amount - tx.amount / (1 + rate / 100);
 }
 

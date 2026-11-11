@@ -183,7 +183,7 @@ export function vindInkomstenInKosten({ classified = [], bevestigd = {}, minPosi
   }
   const per = {};
   for (const tx of classified) {
-    if (tx.isMirror || !tx.date || tx.transferLocked) continue;
+    if (tx.isMirror || !tx.date || tx.transferLocked || tx.kostenjaarVerschoven) continue;
     // beide-V10R9 — een boeking die al met de hand is ingedeeld telt niet meer mee (Boska 29-10: na "Toepassen" bleef de vraag staan).
     if (tx.confidence?.level === "override") continue;
     const cat = tx.category;

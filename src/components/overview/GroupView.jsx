@@ -1,3 +1,4 @@
+import BoekingenLijst from "../shared/BoekingenLijst.jsx";
 import { useToonFijn } from "../../utils/useToonFijn.js";
 import { useEffect, useMemo, useRef, useState, Fragment, memo } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
@@ -25,8 +26,8 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
     for (const tx of group.items) {
       if (tx.category !== "Privé opnames" || !(tx.amount < 0)) continue;
       const s = soortPriveOpname(tx, eigenPriveIbans);
-      const r = (t[s] ||= { bedrag: 0, n: 0 });
-      r.bedrag += tx.amount; r.n += 1;
+      const r = (t[s] ||= { bedrag: 0, n: 0, txs: [] });
+      r.bedrag += tx.amount; r.n += 1; r.txs.push(tx);
     }
     const lijst = Object.entries(t).map(([soort, r]) => ({ soort, ...r })).sort((a, b) => a.bedrag - b.bedrag);
     return lijst.length ? lijst : null;
@@ -149,8 +150,14 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
               <tbody>
                 {opnames.map((r) => (
                   <tr key={r.soort} className="border-b border-slate-50">
-                    <td className="py-1 pl-7">{r.soort} <span className="text-slate-400">({r.n})</span></td>
-                    <td className="py-1 pr-3 text-right font-mono">{eur(r.bedrag)}</td>
+                    {/* nieuw-V3R3 — wens Boska 11-11: de onderliggende boekingen per soort opname kunnen inzien. */}
+                    <td colSpan={2} className="py-1 pl-7 pr-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span>{r.soort} <span className="text-slate-400">({r.n})</span></span>
+                        <span className="font-mono">{eur(r.bedrag)}</span>
+                      </div>
+                      <BoekingenLijst txs={r.txs} className="mt-0.5 mb-1" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

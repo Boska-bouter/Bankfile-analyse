@@ -264,7 +264,8 @@ export function samenhangEigenRekeningen(txs, { vasteSoortIbans = new Set() } = 
   return txs.map((t) => {
     if (t.category !== "Interne overboeking" || t.confidence?.level === "override" || !t.counterpartyIban) return t;
     const nieuw = soortVan.get(ibanSleutel(t.counterpartyIban));
-    return nieuw ? { ...t, category: nieuw } : t;
+    // nieuw-V3R2 — label past bij de nieuwe categorie (niet meer het oude "Interne overboeking"-label).
+    return nieuw ? { ...t, category: nieuw, confidence: { level: t.confidence?.level === "keyword" ? "keyword" : "heuristic", label: `Zelfde eigen rekening als eerdere boekingen: ${nieuw}` } } : t;
   });
 }
 

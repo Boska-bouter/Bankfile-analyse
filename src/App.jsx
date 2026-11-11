@@ -7,7 +7,7 @@ import BankKoppelingModal, { rondKoppelingAf } from "./components/upload/BankKop
 import { INTRA_FILE_BALANCE_THRESHOLD, classifyContinuityGap, saldoControleSleutel } from "./importers/transactions.js";
 import TabPijlen from "./components/shared/TabPijlen.jsx";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
-import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm } from "./classification/categories.js";
+import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
@@ -66,7 +66,7 @@ import WelkomKaart from "./components/dashboard/WelkomKaart.jsx";
 import VastgelegdeBasisgegevens from "./components/dashboard/VastgelegdeBasisgegevens.jsx";
 import { computeWizardSuggesties } from "./utils/wizardSuggesties.js";
 import RekeninghouderModal from "./components/shared/RekeninghouderModal.jsx";
-import { factuurjaarOverzicht } from "./classification/factuurjaar.js";
+import { factuurjaarOverzicht, jaarUitOmschrijving } from "./classification/factuurjaar.js";
 import OnzekerhedenPanel from "./components/overview/OnzekerhedenPanel.jsx";
 import AangifteYearPickerModal from "./components/modals/AangifteYearPickerModal.jsx";
 import InkomenPerMaandModal from "./components/modals/InkomenPerMaandModal.jsx";
@@ -1027,6 +1027,8 @@ export default function App() {
     transactions, zakelijkeSpaarKeywords, categoryZakelijkPercentage, werkruimteStatus, herkenning,
     leaseSoortWizard: autoWizardStatus?.soort || null,
     factuurjaar: bevestigdeControles?.factuurjaar || null,
+    kostenVorigJaar: bevestigdeControles?.kostenVorigJaar || null,
+    kostenVorigJaarNiet: bevestigdeControles?.kostenVorigJaarNiet || null,
     eigenRekeningAanpasbaar: huishoudboekje, gedeeldeNamenVersie,
   });
   useNamenTerugsturen(classifiedBasis, namenToestemming); // nieuw-V2R1 — alleen met toestemming
@@ -1466,6 +1468,16 @@ export default function App() {
       eenzijdig: gezamenlijkePeriode(periodePerSoort.Zakelijk, periodePerSoort.Prive)?.eenzijdig || [],
       factuurjaar: factuurjaarOverzicht(classified),
       factuurjaarUit: !!bevestigdeControles?.factuurjaar?.uit,
+      kostenVorigJaar: classified.filter((t) => t.kostenjaarVerschoven),
+      // nieuw-V3R0 — grote teruggaven (>= € 1.000) in januari–juni in een kostencategorie: horen ze bij het vorige jaar?
+      grooteTeruggaven: (() => {
+        const jaren = new Set(allTransactions.map((t) => t.year));
+        return classified.filter((t) => !t.isMirror && !t.kostenjaarVerschoven && t.amount >= 1000 && fiscalTreatmentOf(t.category) === "kosten"
+          && Number(String(t.month || "").split("-")[1]) <= 6 && jaren.has(t.year - 1) && !bevestigdeControles?.[`teruggave|${t.id}`]
+          && jaarUitOmschrijving(t) !== t.year) // jaar staat al in de omschrijving: niet vragen
+          .sort((a, b) => b.amount - a.amount);
+      })(),
+      jaren: [...new Set(allTransactions.map((t) => t.year))],
     };
   }, [allTransactions, importDiagnostics, fileContinuity, accountTypeByFile, ownAccountByFile, classified, overridesByRow, bevestigdeControles, rechtsvorm, periodePerSoort]);
   // beide-V11R7 — omzet in het factuurjaar aan/uit, of één boeking toch in het jaar van ontvangst (classification/factuurjaar.js).
@@ -1475,6 +1487,13 @@ export default function App() {
     const set = new Set(oud.niet || []);
     if (niet) set.add(id); else set.delete(id);
     return { ...(prev || {}), factuurjaar: { ...oud, niet: [...set] } };
+  });
+  // nieuw-V3R0 — teruggave in een kostencategorie bij het vorige jaar laten tellen (of weer terug).
+  const zetKostenVorigJaar = (ids, aan) => setBevestigdeControles((prev) => {
+    const set = new Set(prev?.kostenVorigJaar || []);
+    const niet = new Set(prev?.kostenVorigJaarNiet || []);
+    for (const id of ids) { if (aan) { set.add(id); niet.delete(id); } else { set.delete(id); niet.add(id); } }
+    return { ...(prev || {}), kostenVorigJaar: [...set], kostenVorigJaarNiet: [...niet] };
   });
   const bevestigControle = (sleutel) => setBevestigdeControles((prev) => ({ ...prev, [sleutel]: true }));
   const bevestigControles = (sleutels) => setBevestigdeControles((prev) => { const next = { ...prev }; for (const k of sleutels) next[k] = true; return next; });
@@ -1606,11 +1625,11 @@ export default function App() {
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
     categoryZakelijkPercentage, classified, confidenceSectionRef, confirmClassificationCorrect, confirmLeaseType,
-    confirmOverigAsIs, confirmPersonAsIs, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
+    confirmOverigAsIs, confirmPersonAsIs, requestCategoryChange, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
-    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking,
+    aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking, zetKostenVorigJaar,
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
@@ -2684,6 +2703,7 @@ export default function App() {
             level={openConfidenceLevel}
             transactions={uncertainModalData.transactions}
             bulkCounts={uncertainModalData.bulkCounts}
+            activeYear={activeYear}
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
             onConfirmAll={confirmAllUncertain}

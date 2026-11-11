@@ -9,6 +9,8 @@ const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").
 export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
+  // nieuw-V3R1 — altijd expliciet "te betalen" of "te ontvangen" bij een saldo (wens Boska 11-11).
+  const saldo = (n) => (Math.abs(n) < 0.005 ? eur(0) : `${eur(Math.abs(n))} ${n < 0 ? "te ontvangen" : "te betalen"}`);
   const meer = jaren.length > 1;
   const jaarTitel = jarenBereik(jaren.map((j) => j.jaar));
   const periode = meer ? "" : jaren[0]?.periode;
@@ -18,13 +20,25 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
   const isNum = (n) => n != null && Number.isFinite(n);
   const heeftOmzet = jaren.some((j) => isNum(j.omzetNetto));
   const heeftWinst = jaren.some((j) => isNum(j.winst));
-  const resultaatHtml = `<table>${kop}${heeftOmzet ? rij("Omzet (excl. BTW)", jaren.map((j) => (isNum(j.omzetNetto) ? eur(j.omzetNetto) : "—"))) : ""}${heeftOmzet && heeftWinst ? rij("Zakelijke kosten", jaren.map((j) => (isNum(j.omzetNetto) && isNum(j.winst) && j.omzetNetto - j.winst >= 0 ? eur(j.omzetNetto - j.winst) : "—"))) : ""}${heeftWinst ? rij(isBV ? "Resultaat vóór Vpb" : "Winst uit onderneming", jaren.map((j) => (isNum(j.winst) ? eur(j.winst) : "—")), true) : ""}</table>`;
+  // nieuw-V3R1 — van winst naar belastbare winst, zodat die bedragen overal hetzelfde verhaal vertellen (wens Boska 11-11).
+  const aftrekLabels = [...new Set(jaren.flatMap((j) => (j.aftrekken || []).map((a) => a.label)))];
+  const heeftBelastbaar = !isBV && jaren.some((j) => isNum(j.belastbaar));
+  const aftrekHtml = heeftBelastbaar
+    ? aftrekLabels.map((l) => rij(l, jaren.map((j) => { const a = (j.aftrekken || []).find((x) => x.label === l); return a ? `− ${eur(a.bedrag)}` : "—"; }))).join("")
+      + rij("Belastbare winst", jaren.map((j) => (isNum(j.belastbaar) ? eur(j.belastbaar) : "—")), true)
+    : "";
+  const resultaatHtml = `<table>${kop}${heeftOmzet ? rij("Omzet (excl. BTW)", jaren.map((j) => (isNum(j.omzetNetto) ? eur(j.omzetNetto) : "—"))) : ""}${heeftOmzet && heeftWinst ? rij("Zakelijke kosten", jaren.map((j) => (isNum(j.omzetNetto) && isNum(j.winst) && j.omzetNetto - j.winst >= 0 ? `− ${eur(j.omzetNetto - j.winst)}` : "—"))) : ""}${heeftWinst ? rij(isBV ? "Resultaat vóór Vpb" : "Winst uit onderneming", jaren.map((j) => (isNum(j.winst) ? eur(j.winst) : "—")), true) : ""}${aftrekHtml}</table>`;
   const labels = [...new Set(jaren.flatMap((j) => (j.belasting?.delen || []).map((d) => d.label)))];
   const heeftBelasting = jaren.some((j) => j.belasting);
   const heeftBtw = jaren.some((j) => j.belasting && j.belasting.btw != null);
-  const totaalLabel = jaren.length === 1 && jaren[0].belasting?.totaal < 0 ? "Jaarlijks terug te krijgen" : "Jaarlijks te betalen";
+  const totaalLabel = "Totaal IB en Zvw";
+  const deelWaarde = (d) => (d.aftrek ? `− ${eur(Math.abs(d.bedrag))}` : bedrag(d.bedrag));
+  const hkNoten = jaren.filter((j) => j.hkNoot);
+  const hkNootHtml = hkNoten.length
+    ? `<p class="noot">De heffingskorting (${hkNoten.map((j) => `${meer ? `${esc(j.jaar)}: ` : ""}${eur(j.hkNoot.totaal)}`).join(", ")}) is hoger dan de berekende IB. Een heffingskorting verlaagt de IB hooguit tot € 0; het restant wordt niet uitbetaald. Op de Zvw-bijdrage telt de heffingskorting niet.</p>`
+    : "";
   const belastingHtml = heeftBelasting
-    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? bedrag(d.bedrag) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? bedrag(j.belasting.totaal) : "—")), true)}</table>${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? bedrag(j.belasting.btw) : "—")))}</table>` : ""}`
+    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? deelWaarde(d) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? saldo(j.belasting.totaal) : "—")), true)}</table>${hkNootHtml}${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? saldo(j.belasting.btw) : "—")))}</table>` : ""}`
     : `<p>Nog niet te berekenen.</p>`;
   const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");

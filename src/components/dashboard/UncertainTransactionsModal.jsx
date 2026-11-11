@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, Check, Lock } from "lucide-react";
+import { X, Check, Lock, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import { mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { counterpartyKey } from "../../utils/normalization.js";
@@ -18,7 +18,7 @@ const LEVEL_INFO = {
 // De samengevoegde "losse pinbetalingen" (Winkels divers zonder herkend zoekwoord) zijn één groep
 // die je kunt uitklappen om per transactie te corrigeren.
 export default function UncertainTransactionsModal({
-  level, transactions, bulkCounts, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions, bulkCounts, activeYear = null, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
@@ -27,10 +27,24 @@ export default function UncertainTransactionsModal({
   const [zichtbaar, setZichtbaar] = useState(60);
   const [bevestigAlles, setBevestigAlles] = useState(false);
   const [openLosse, setOpenLosse] = useState(false);
+  // nieuw-V2R4 — aparte lijst met alleen de voorstellen die met AI zijn opgezocht (wens Boska 10-11).
+  const [alleenAi, setAlleenAi] = useState(false);
+  // nieuw-V2R8 — groep openklappen om de losse transacties te zien en per stuk aan te passen (wens Boska 11-11).
+  const [openGroepen, setOpenGroepen] = useState(() => new Set());
+  const wisselGroep = (k) => setOpenGroepen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
+  // nieuw-V3R0 — open punten per jaar bekijken (wens Boska 11-11). "" = alle jaren.
+  // Standaard het jaar dat bovenaan gekozen is (Boska: "de 77 i.p.v. 351").
+  const [jaar, setJaar] = useState(() => (activeYear && transactions.some((tx) => tx.year === activeYear) ? String(activeYear) : ""));
+  const jaren = useMemo(() => {
+    const n = new Map();
+    for (const tx of transactions) n.set(tx.year, (n.get(tx.year) || 0) + 1);
+    return [...n.entries()].sort((a, b) => b[0] - a[0]);
+  }, [transactions]);
+  const txsJaar = useMemo(() => (jaar ? transactions.filter((tx) => String(tx.year) === jaar) : transactions), [transactions, jaar]);
   const groepen = useMemo(() => {
     const map = new Map();
-    for (const tx of transactions) {
+    for (const tx of txsJaar) {
       const losse = tx.category === "Winkels divers" && /losse pinbetaling/i.test(tx.confidence?.label || "");
       const k = (losse ? "__losse__" : counterpartyKey(tx.counterparty || tx.description, tx.amount) || String(tx.id)) + "|" + tx.category;
       let g = map.get(k);
@@ -40,40 +54,58 @@ export default function UncertainTransactionsModal({
     return [...map.values()].map((g) => ({
       ...g,
       eerste: g.txs[0],
+      ai: !!g.txs[0].gedeeld?.ai && g.txs[0].confidence?.level === "heuristic",
       naam: g.losse ? "Losse pinbetalingen (geen herkend zoekwoord)" : (g.txs[0].counterparty || g.txs[0].description || "(geen omschrijving)"),
     }));
-  }, [transactions]);
+  }, [txsJaar]);
 
+  const aiGroepen = useMemo(() => groepen.filter((g) => g.ai), [groepen]);
+  const aiAan = alleenAi && aiGroepen.length > 0;
+  const basis = aiAan ? aiGroepen : groepen;
   const categorieen = useMemo(() => {
     const c = new Map();
-    for (const g of groepen) c.set(displayCategory(g.eerste.category), (c.get(displayCategory(g.eerste.category)) || 0) + 1);
+    for (const g of basis) c.set(displayCategory(g.eerste.category), (c.get(displayCategory(g.eerste.category)) || 0) + 1);
     return [...c.entries()].sort((x, y) => x[0].localeCompare(y[0], "nl", { sensitivity: "base" }));
-  }, [groepen]);
+  }, [basis]);
 
   const getoond = useMemo(() => {
-    const l = groepen.filter((g) => !catFilter || displayCategory(g.eerste.category) === catFilter);
+    const l = basis.filter((g) => !catFilter || displayCategory(g.eerste.category) === catFilter);
     const cmp = sortering === "aantal" ? (x, y) => y.txs.length - x.txs.length
       : sortering === "naam" ? (x, y) => x.naam.localeCompare(y.naam, "nl")
       : (x, y) => y.abs - x.abs;
     return [...l].sort(cmp);
-  }, [groepen, catFilter, sortering]);
+  }, [basis, catFilter, sortering]);
   const getoondTx = useMemo(() => getoond.flatMap((g) => g.txs), [getoond]);
 
-  const renderRow = (tx, g) => {
+  const renderRow = (tx, g, compact = false) => {
     const meer = g && g.txs.length > 1;
     return (
-      <div key={tx.id} className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
+      <div key={tx.id} className={`flex flex-wrap items-center gap-2 text-xs ${compact ? "px-2.5 py-1.5" : "p-2.5"}`}>
+        {compact ? (
+        <div className="flex-1 min-w-[9rem]">
+          <p className="font-medium text-slate-700">{tx.date.toLocaleDateString("nl-NL")}</p>
+          <ExpandableDescription tx={tx} className="text-[11px] text-slate-500" />
+        </div>
+        ) : (
         <div className="flex-1 min-w-[9rem]">
           <p className="font-medium truncate">
+            {g?.ai && <span className="mr-1.5 inline-flex items-center gap-0.5 rounded bg-violet-100 text-violet-800 px-1 py-px text-[10px] font-semibold align-middle" title="Categorie opgezocht met AI: controleer of hij klopt"><Sparkles className="h-2.5 w-2.5" />AI</span>}
             {g ? g.naam : (tx.counterparty || tx.description || "(geen omschrijving)")}
             {meer && <span className="ml-1.5 font-normal text-slate-500">· {g.txs.length} transacties</span>}
           </p>
           <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
+          {meer && (
+            <button onClick={() => wisselGroep(g.key)} className="mt-0.5 mb-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-teal-700 underline underline-offset-2 hover:text-teal-900" aria-expanded={openGroepen.has(g.key)}>
+              {openGroepen.has(g.key) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {openGroepen.has(g.key) ? `${g.txs.length} transacties verbergen` : `Alle ${g.txs.length} transacties bekijken`}
+            </button>
+          )}
           <p className="text-[11px] text-slate-400 font-mono select-all">Tegenrekening: {tx.counterpartyIban || "—"}</p>
           <p className="text-[11px] text-slate-400">
             {tx.date.toLocaleDateString("nl-NL")} · {tx.confidence.label}
           </p>
         </div>
+        )}
         <span className="shrink-0 font-mono text-slate-500 w-24 text-right" title={meer ? `Totaal van ${g.txs.length} transacties` : undefined}>
           {eur(g ? g.totaal : tx.amount)}
         </span>
@@ -114,9 +146,13 @@ export default function UncertainTransactionsModal({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85dvh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
           <p className="text-sm font-semibold text-slate-800">
+            {aiAan ? (<>
+              <Sparkles className="inline h-4 w-4 text-violet-700 -mt-0.5" /> Opgezocht met AI ({aiGroepen.length} groep{aiGroepen.length === 1 ? "" : "en"}, {aiGroepen.reduce((a, g) => a + g.txs.length, 0)} transacties)
+            </>) : (<>
             {metBolletjes(info.icon)} {info.label} ({groepen.length} groep{groepen.length === 1 ? "" : "en"}
-            {transactions.length !== groepen.length ? `, ${transactions.length} transacties` : ""}
+            {txsJaar.length !== groepen.length ? `, ${txsJaar.length} transacties` : ""}
             {bulkTotal > 0 ? ` + ${bulkTotal} elders` : ""})
+            </>)}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             {/* v236 — bevestigt in één keer het huidige voorstel (categorie/type) voor alle getoonde
@@ -172,7 +208,23 @@ export default function UncertainTransactionsModal({
           );
         })()}
 
-        {bulkTotal > 0 && (
+        {aiGroepen.length > 0 && (
+          <div className="mx-4 mt-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs text-violet-900 shrink-0">
+            {aiAan ? (
+              <p>
+                Je ziet alleen de voorstellen die met AI zijn opgezocht. Klopt een categorie, dan telt hij na "Klopt" als je eigen keuze.{" "}
+                <button onClick={() => { setAlleenAi(false); setCatFilter(""); setZichtbaar(60); }} className="underline hover:no-underline font-medium">Alle te controleren boekingen tonen</button>
+              </p>
+            ) : (
+              <p>
+                <Sparkles className="inline h-3.5 w-3.5 -mt-0.5" /> {aiGroepen.length} groep{aiGroepen.length === 1 ? " is" : "en zijn"} opgezocht met AI.{" "}
+                <button onClick={() => { setAlleenAi(true); setCatFilter(""); setZichtbaar(60); }} className="underline hover:no-underline font-medium">"Opgezocht met AI" openen</button>
+              </p>
+            )}
+          </div>
+        )}
+
+        {bulkTotal > 0 && !aiAan && (
           <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 shrink-0">
             <p>
               ⓘ {bulkTotal} van deze transacties staan al verzameld in{" "}
@@ -204,13 +256,20 @@ export default function UncertainTransactionsModal({
               <option value="aantal">Meeste transacties eerst</option>
               <option value="naam">Naam A–Z</option>
             </select>
+            {jaren.length > 1 && (<>
+              <label className="text-slate-500 ml-2">Jaar</label>
+              <select value={jaar} onChange={(e) => { setJaar(e.target.value); setCatFilter(""); }} className="rounded-md border border-slate-300 px-1.5 py-1 text-xs">
+                <option value="">Alle jaren ({transactions.length})</option>
+                {jaren.map(([j, n]) => <option key={j} value={String(j)}>{j} ({n})</option>)}
+              </select>
+            </>)}
             <label className="text-slate-500 ml-2">Categorie</label>
             <select
               value={catFilter}
               onChange={(e) => { setCatFilter(e.target.value); setZichtbaar(60); }}
               className="rounded-md border border-slate-300 px-1.5 py-1 text-xs max-w-[14rem]"
             >
-              <option value="">Alle categorieën ({groepen.length})</option>
+              <option value="">Alle categorieën ({basis.length})</option>
               {categorieen.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
             </select>
           </div>
@@ -245,7 +304,17 @@ export default function UncertainTransactionsModal({
                     {g.txs.length > 100 && <p className="p-2 text-[11px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
                   </div>
                 </details>
-              ) : renderRow(g.eerste, g))}
+              ) : (
+                <div key={g.key}>
+                  {renderRow(g.eerste, g)}
+                  {g.txs.length > 1 && openGroepen.has(g.key) && (
+                    <div className="ml-4 mb-2 mr-1 rounded-lg border border-slate-200 bg-slate-50/70 divide-y divide-slate-100">
+                      {[...g.txs].sort((a, b) => b.date - a.date).slice(0, 100).map((tx) => renderRow(tx, null, true))}
+                      {g.txs.length > 100 && <p className="p-2 text-[11px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
           {getoond.length > zichtbaar && (

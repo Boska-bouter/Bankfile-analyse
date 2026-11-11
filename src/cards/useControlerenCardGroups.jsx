@@ -15,12 +15,12 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
-    overlapKoppeling, aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking,
+    overlapKoppeling, aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking, zetKostenVorigJaar,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
     categoryZakelijkPercentage, classified, confidenceSectionRef, confirmClassificationCorrect, confirmLeaseType,
-    confirmOverigAsIs, confirmPersonAsIs, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
+    confirmOverigAsIs, confirmPersonAsIs, requestCategoryChange, confirmedLeaseTypeKeys, confirmedSeparateGroups, controlerenCardsByKey,
     detailsSectionRef, duplicateGroups, duplicatePendingBreakdown, duplicatesSectionRef, effectiveCategoryBtwRates,
     energieZakelijkPercentageStatus, expandedCardKeys, expandedTable, fileContinuity, fingerprintByTxId,
     gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, gemeentelijkeKostenZakelijkPercentageStatus, groupCards,
@@ -91,7 +91,7 @@ export function useControlerenCardGroups(p) {
           <div ref={importControleSectionRef}>
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} overlap={overlapKoppeling} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
-          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} />
+          <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} onKostenVorigJaar={zetKostenVorigJaar} />
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={classified}
@@ -188,6 +188,7 @@ export function useControlerenCardGroups(p) {
               onUnmarkUnknown={unmarkActivaUnknown}
               onAddManual={addManualActiva}
               onRemove={removeActivum}
+              onRequestChange={requestCategoryChange}
               onOpenHelp={setHelpPopupChapter}
             />
           </div>

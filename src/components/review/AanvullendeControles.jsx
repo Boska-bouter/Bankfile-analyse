@@ -52,7 +52,7 @@ function TerugkerendItem({ t, onBevestig, onToepassenTerugkerend, onToepassenTer
 }
 
 // release33V7 — bijschrijvingen in een kostencategorie (vaak omzet of terugbetalingen die verkeerd staan).
-function KostenInItem({ k, onBevestig, onVerplaats }) {
+function KostenInItem({ k, onBevestig, onVerplaats, onVorigJaar, vorigJaarGeladen }) {
   const [keuze, setKeuze] = useState({});
   return (
     <div className="rounded-lg bg-white border border-slate-100 p-3 mb-2">
@@ -74,11 +74,32 @@ function KostenInItem({ k, onBevestig, onVerplaats }) {
               {keuze[t.naam] && <Knop primair onClick={() => { onVerplaats(t.ids, keuze[t.naam], t.naam); setKeuze((p) => ({ ...p, [t.naam]: "" })); }}>Toepassen</Knop>}
             </span>
           )}
+          {/* nieuw-V3R0 — teruggave over het vorige jaar (wens Boska 11-11) */}
+          {onVorigJaar && vorigJaarGeladen && (
+            <Knop onClick={() => onVorigJaar(t.ids, true)}>Hoort bij {k.jaar - 1}</Knop>
+          )}
         </div>
       ))}
       <div className="mt-2">{k.alleenTerug
         ? <Knop primair onClick={() => onBevestig(k.key)}>Klopt, terugbetaling</Knop>
         : <Knop onClick={() => onBevestig(k.key)}>Klopt zo (bijv. terugbetalingen)</Knop>}</div>
+    </div>
+  );
+}
+
+// nieuw-V3R0 — teruggave-regel, omschrijving uitklapbaar (wens Boska 11-11)
+function TeruggaveRegel({ t, children, knoppen }) {
+  const [open, setOpen] = useState(false);
+  const tekst = t.fullDescription || t.description;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-1">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} title={open ? "Omschrijving verbergen" : "Omschrijving tonen"}
+        className="flex-1 min-w-[14rem] text-left inline-flex items-center gap-1 hover:underline">
+        {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
+        <span>{children}</span>
+      </button>
+      {knoppen}
+      {open && tekst && <p className="basis-full whitespace-normal break-words text-xs text-slate-600 bg-white/70 rounded px-2 py-1">{tekst}</p>}
     </div>
   );
 }
@@ -124,13 +145,13 @@ function FactuurjaarBlok({ overzicht, uit, onFactuurjaar, onFactuurjaarBoeking }
   );
 }
 
-export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle, onVerplaatsBijschrijvingen, onFactuurjaar, onFactuurjaarBoeking }) {
+export default function AanvullendeControles({ data, onBevestig, onBevestigAlles, onToepassenTerugkerend, onToepassenTerugkerendAlle, onVerplaatsBijschrijvingen, onFactuurjaar, onFactuurjaarBoeking, onKostenVorigJaar }) {
   const [openOverride, setOpenOverride] = useState(null);
   if (!data) return null;
   const { dekking, terugkerend, sprongen } = data;
   const kostenIn = data.kostenIn || [];
   // 15V7: jaarverschillen (sprongen) zijn "inzicht" en tellen niet mee als punt om te bekijken.
-  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length + kostenIn.length;
+  const totaal = (dekking.aantalVerdacht > 0 ? 1 : 0) + terugkerend.length + kostenIn.length + (data.grooteTeruggaven || []).length;
   const gatenAlleen = !!data.gatenAlleen;
   const open = openOverride === null ? totaal > 0 : openOverride;
   const inzichtTekst = sprongen.length > 0 ? ` · inzicht: ${sprongen.length}` : "";
@@ -195,8 +216,31 @@ export default function AanvullendeControles({ data, onBevestig, onBevestigAlles
           <div>
             <h4 className="font-semibold text-slate-800 mb-1.5">Bijschrijvingen in een kostencategorie</h4>
             {kostenIn.length === 0 ? <p className="text-emerald-700">Geen kostencategorieën met opvallende bijschrijvingen.</p> : kostenIn.map((k) => (
-              <KostenInItem key={k.key} k={k} onBevestig={onBevestig} onVerplaats={onVerplaatsBijschrijvingen} />
+              <KostenInItem key={k.key} k={k} onBevestig={onBevestig} onVerplaats={onVerplaatsBijschrijvingen} onVorigJaar={onKostenVorigJaar} vorigJaarGeladen={(data.jaren || []).includes(k.jaar - 1)} />
             ))}
+            {(data.grooteTeruggaven || []).length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-2 text-amber-900">
+                <p className="font-semibold mb-1">Grote teruggaven begin van het jaar</p>
+                <p className="text-amber-800 mb-1.5">Een teruggave in januari–juni (bijv. de eindafrekening van energie) gaat vaak over het jaar ervoor. Hoort hij daarbij, dan verlaagt hij de kosten van dat jaar in plaats van dit jaar.</p>
+                {data.grooteTeruggaven.map((t) => (
+                  <TeruggaveRegel key={t.id} t={t} knoppen={<>
+                    {onKostenVorigJaar && <Knop primair onClick={() => onKostenVorigJaar([t.id], true)}>Hoort bij {t.year - 1}</Knop>}
+                    <Knop onClick={() => onBevestig(`teruggave|${t.id}`)}>Klopt in {t.year}</Knop>
+                  </>}>{t.counterparty || t.description} · {t.category} · <strong>{eur(t.amount)}</strong> ontvangen {t.date.toLocaleDateString("nl-NL")}</TeruggaveRegel>
+                ))}
+              </div>
+            )}
+            {(data.kostenVorigJaar || []).length > 0 && (
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 mb-2 text-sky-900">
+                <p className="font-semibold mb-1">Teruggaven die bij het vorige jaar horen</p>
+                <p className="text-sky-800 mb-1.5">Deze teruggaven verlagen de kosten van het jaar waar ze over gaan (geboekt in december van dat jaar), niet van het jaar van ontvangst.</p>
+                {data.kostenVorigJaar.map((t) => (
+                  <TeruggaveRegel key={t.id} t={t} knoppen={onKostenVorigJaar && <Knop onClick={() => onKostenVorigJaar([t.id], false)}>Toch in {t.betaaldJaar}</Knop>}>
+                    {t.counterparty || t.description} · {t.category} · {eur(t.amount)} ontvangen {t.date.toLocaleDateString("nl-NL")} → telt in <strong>{t.year}</strong>{t.kostenjaarUitOmschrijving ? <span className="text-sky-700"> (jaar uit de omschrijving)</span> : null}
+                  </TeruggaveRegel>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-slate-400">Gemeld als een kostencategorie in een jaar per saldo positief is met minstens € 1.000 aan bijschrijvingen, of minstens 10 bijschrijvingen van samen € 1.000 of meer heeft. Vaak omzet of terugbetalingen die in de verkeerde categorie staan.</p>
           </div>
 

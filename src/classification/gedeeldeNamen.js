@@ -25,7 +25,7 @@ const BETAALSPOOR = /pasvolgnr|\bpas: ?\d|\bterm:|betaalautomaat|incassant|macht
 const TUSSENPARTIJ = /^(paypal|stripe|mollie|stichting mollie|adyen|buckaroo|klarna|riverty|afterpay|multisafepay|pay nl|worldline|ingenico|ccv|sumup|zettle|tikkie|bng|geldmaat|ing|ing bank|rabobank|abn|abn amro|bunq|knab|asn|sns|triodos|regiobank|revolut|wise|n26|stichting derdengelden|derdengelden|stichting beheer)\b/;
 // Categorieën die niets over het bedrijf zeggen (onbekend, personen, eigen rekeningen): niet delen.
 export const NIET_DELEN = new Set(["Overig", "Overboekingen aan personen", "Overboeking van bekenden", "Interne overboeking", "Interne overboeking: zakelijk sparen",
-  "Interne overboeking: privé sparen", "Ontvangen van zakelijk", "Terugboeking naar zakelijk", "Terugboeking van privé", "Inkomsten/betalingen niet dit jaar"]);
+  "Interne overboeking: privé sparen", "Ontvangen van zakelijk", "Zakelijk - apparatuur/machines", "Terugboeking naar zakelijk", "Terugboeking van privé", "Inkomsten/betalingen niet dit jaar"]);
 
 // Sleutel voor de lijst: kleine letters, zonder plaats na " via ", zonder cijfers, terminalvoorvoegsel en rechtsvorm; eerste twee woorden.
 export function naamSleutel(naam) {
@@ -65,6 +65,7 @@ export function setGedeeldeNamen(data) {
   _lijst = m.size ? m : null;
   _versie++;
   UITKOMST.clear();
+  meld();
 }
 // nieuw-V2R2 — uitkomsten van het opzoeken met AI (worker/namenAi.js): "sleutel|teken|soort|branche" → { categorie, zekerheid, soortBedrijf } of null.
 const _ai = new Map();
@@ -76,12 +77,16 @@ export function voegAiToe(soort, branche, uitkomst) {
     _ai.set(key, v && v.categorie ? { categorie: String(v.categorie), zekerheid: v.zekerheid, soortBedrijf: String(v.soortBedrijf || "") } : null);
     nieuw++;
   }
-  if (nieuw) { _versie++; UITKOMST.clear(); }
+  if (nieuw) { _versie++; UITKOMST.clear(); meld(); }
   return nieuw;
 }
 export const aiAlGevraagd = (k) => _ai.has(k);
 export function wisAi() { _ai.clear(); _versie++; UITKOMST.clear(); }
 export const gedeeldeNamenVersie = () => _versie;
+// nieuw-V2R4 — wie wil weten dat de lijst of een AI-uitkomst is veranderd (useGedeeldeNamenLijst: opnieuw indelen).
+const _luisteraars = new Set();
+export function luisterNaarNamen(f) { _luisteraars.add(f); return () => _luisteraars.delete(f); }
+const meld = () => { for (const f of _luisteraars) f(_versie); };
 export const heeftGedeeldeNamen = () => !!_lijst;
 
 function meeste(cats) {
@@ -116,7 +121,7 @@ export function gedeeldeKeuze(tx, accountType, geldig0 = () => true) {
   // nieuw-V2R2 — niet in de lijst: wat het opzoeken met AI vond (alleen hoog of middel), altijd als voorstel.
   if (!uit) {
     const a = _ai.get(ck);
-    if (a && (a.zekerheid === "hoog" || a.zekerheid === "middel") && geldig(a.categorie) && lijktOpBedrijf(tx, true)) uit = { categorie: a.categorie, zeker: false, ai: true, zekerheid: a.zekerheid, soortBedrijf: a.soortBedrijf };
+    if (a && (a.zekerheid === "hoog" || a.zekerheid === "middel") && geldig(a.categorie) && !NOOIT_AI.test(a.categorie) && lijktOpBedrijf(tx, true)) uit = { categorie: a.categorie, zeker: false, ai: true, zekerheid: a.zekerheid, soortBedrijf: a.soortBedrijf };
   }
   if (UITKOMST.size > 50000) UITKOMST.clear();
   UITKOMST.set(ck, uit);
@@ -147,6 +152,9 @@ export function stemmenUit(classified) {
 }
 
 // ---- Opzoeken met AI (nieuw-V2R2) ----
+// nieuw-V2R3 — zelfde lijst als worker/namenAi.js: deze categorieën neemt de app nooit van de AI over.
+// nieuw-V2R6 (melding Boska 10-11: BSH Huishoudapparaten werd activa): bedrijfsmiddelen (afschrijving) alleen als eigen keuze, nooit via AI of de gedeelde lijst.
+export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Welke namen moeten nog worden opgezocht? Boekingen zonder eigen keuze die in Overig/personen staan of alleen op bedrijfsnaam of
 // factuurnummer als leverancier zijn geschat, met een naam die op een bedrijf lijkt en die nog niet in de lijst of bij de AI staat.
 const GESCHAT = /^Geschat: (bedrijfsnaam|betaling met factuurnummer)/;

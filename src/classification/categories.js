@@ -223,6 +223,15 @@ export const DEFAULT_RULES = [
   { name: "Reiskosten (vliegtickets)", color: "bg-sky-200 text-sky-900", keywords: [
     "klm", "transavia", "ryanair", "easyjet", "vueling", "lufthansa", "eurowings", "tui fly", "tuifly", "wizz air", "wizzair", "sunexpress", "pegasus airlines", "turkish airlines", "emirates", "qatar airways", "air france", "airfrance", "brussels airlines", "iberia", "british airways", "norwegian air", "sas scandinavian", "condor", "aegean", "tap air", "air arabia", "royal air maroc", "kenya airways", "delta air lines", "united airlines", "flydubai", "vliegticket", "vliegtickets", "airline",
   ] },
+  // nieuw-V2R5 — hotel en overnachting (melding Boska 10-11: Van der Valk Hotel is reiskosten). Geen zoekwoorden: de AI-opzoeking en de gebruiker kiezen hem.
+  { name: "Reiskosten (hotel & verblijf)", color: "bg-sky-100 text-sky-900", keywords: [],
+    description: "Hotel, overnachting en verblijf tijdens een zakelijke reis." },
+  // nieuw-V2R8 — besluit Boska 11-11: borg en schade-uitkering apart; andere teruggaven blijven bij de kostencategorie.
+  // Borg is geld dat je terugkrijgt: geen kosten en geen omzet. Schade-uitkering verlaagt de kosten (telt als bate), zonder btw.
+  { name: "Borg (waarborgsom)", color: "bg-slate-100 text-slate-700", keywords: ["waarborgsom", "borgsom", "retour borg", "borg retour", "terugbetaling borg", "teruggave borg", "restitutie borg"],
+    description: "Betaalde of terugontvangen borg (huur, verhuur, statiegeld van materieel). Geen kosten en geen omzet." },
+  { name: "Schade-uitkering verzekering", color: "bg-emerald-50 text-emerald-700", keywords: ["schadeuitkering", "schade-uitkering", "schade uitkering", "uitkering schade", "schadevergoeding", "uitkering schadeclaim"],
+    description: "Uitkering van een verzekeraar na schade. Verlaagt de zakelijke kosten (telt als bate), zonder btw." },
   // beide-V10R6 — mobiel en internet/tv zijn aparte categorieën (wens Boska 28-10): het zakelijk deel verschilt vaak
   // (bijv. mobiel 50%, internet thuis 100% privé). Aanbieders van beide (KPN, Vodafone, Odido) staan bij mobiel; staat er
   // internet/tv/glasvezel in de omschrijving, dan wordt het internet/TV (zie telecomSoort in classify.js).
@@ -382,7 +391,7 @@ export const CATEGORY_ORDER = [
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
   "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
   "Terugboeking van privé", "Terugboeking naar zakelijk",
-  "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
+  "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Reiskosten (hotel & verblijf)", "Borg (waarborgsom)", "Schade-uitkering verzekering", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
   "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel", "Zakelijk internet/TV", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
@@ -460,7 +469,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Belastingen: Naheffingen OB voorgaande jaren": "geen", "Belastingen: Naheffingen LH voorgaande jaren": "geen",
   "Belastingen: Naheffingen IB voorgaande jaren": "geen",
   // Transfers/boekwinst/nog-te-beoordelen — geen gewone omzet of kostenpost
-  "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen",
+  "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen", "Borg (waarborgsom)": "geen",
   "Interne overboeking": "geen", "Interne overboeking: zakelijk sparen": "geen", "Interne overboeking: privé sparen": "geen",
   // Alles met hoofdcategorie "Privé" of "Persoonlijk & vertrouwelijk": nooit een kostenpost,
   // ongeacht tx.type — dit was precies het gat waardoor "Privé: overig"/"Boodschappen" e.d. op de
@@ -476,7 +485,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Boekhouder, accountant & administratie": "kosten", "Brandstof": "kosten", "Energie-water": "kosten",
   "Gemeentelijke kosten": "kosten", "Huur": "kosten", "Inhuur personeel": "kosten", "Lease (operationeel)": "kosten",
   "Marketing-website": "kosten", "Onderhoud apparatuur/machines": "kosten", "Parkeren": "kosten",
-  "Betaalautomaat kosten": "kosten", "Reiskosten (OV)": "kosten", "Reiskosten (vliegtickets)": "kosten",
+  "Betaalautomaat kosten": "kosten", "Reiskosten (OV)": "kosten", "Reiskosten (vliegtickets)": "kosten", "Reiskosten (hotel & verblijf)": "kosten", "Schade-uitkering verzekering": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
   "Zakelijk mobiel": "kosten", "Zakelijk internet/TV": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke inkoop/uitgaven": "kosten",
@@ -639,7 +648,7 @@ export function mergeCategoryRules(savedRules) {
 export const MAIN_CATEGORY_ORDER = [
   "Zakelijke inkomsten", "Huisvesting", "Vervoer & auto", "Inkoop & zakelijke uitgaven",
   "Apparatuur & inventaris", "Personeel", "Telecom & abonnementen",
-  "Financiering", "Interne overboekingen", "Belastingen & heffingen", "Privé", "Persoonlijk & vertrouwelijk", "Nog te beoordelen",
+  "Financiering", "Interne overboekingen", "Borg & schade-uitkering", "Belastingen & heffingen", "Privé", "Persoonlijk & vertrouwelijk", "Nog te beoordelen",
 ];
 
 // Alfabetische volgorde (Nederlands) voor keuzelijsten waar je in zoekt/kiest.
@@ -662,6 +671,7 @@ export const MAIN_CATEGORY_COLOR = {
   "Telecom & abonnementen": KLEUR_KOSTEN,
   "Financiering": KLEUR_KOSTEN,
   "Interne overboekingen": KLEUR_NEUTRAAL,
+  "Borg & schade-uitkering": KLEUR_NEUTRAAL,
   "Belastingen & heffingen": KLEUR_KOSTEN,
   "Privé": KLEUR_NEUTRAAL,
   "Persoonlijk & vertrouwelijk": "bg-slate-700 text-slate-100",
@@ -699,6 +709,8 @@ export const SUBTYPE_TO_MAIN = {
   "Interne overboeking: zakelijk sparen": "Interne overboekingen",
   "Interne overboeking: privé sparen": "Interne overboekingen",
   "Interne overboeking": "Interne overboekingen",
+  "Borg (waarborgsom)": "Borg & schade-uitkering",
+  "Schade-uitkering verzekering": "Borg & schade-uitkering",
   "Kinderopvang": "Privé",
   "Medische uitgaven": "Privé",
   "Lease (operationeel)": "Vervoer & auto",
@@ -728,6 +740,7 @@ export const SUBTYPE_TO_MAIN = {
   "Terugboeking naar zakelijk": "Privé",
   "Reiskosten (OV)": "Vervoer & auto",
   "Reiskosten (vliegtickets)": "Vervoer & auto",
+  "Reiskosten (hotel & verblijf)": "Vervoer & auto",
   "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
   "Toeslagen": "Privé",
   "Uitbetalen loon": "Personeel",
@@ -778,6 +791,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Telecom & abonnementen": "Zakelijk overige abonnementen",
   "Financiering": "Leningen",
   "Interne overboekingen": "Interne overboeking: zakelijk sparen",
+  "Borg & schade-uitkering": "Borg (waarborgsom)",
   "Belastingen & heffingen": "Belastingen: overig",
   "Privé": "Privé: overig",
   "Persoonlijk & vertrouwelijk": "Persoonlijk & vertrouwelijk",
@@ -855,12 +869,13 @@ export const ZAK_GROEPEN = {
   "Apparatuur & inventaris": lid("Zakelijk - apparatuur/machines"),
   "Zakelijke inkomsten": lid("Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"),
   "Huisvesting": lid("Huur", "Energie-water", "Gemeentelijke kosten"),
-  "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)", "Reiskosten (vliegtickets)"),
+  "Vervoer & auto": lid("Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Reiskosten (hotel & verblijf)"),
   "Telecom & abonnementen": lid("Zakelijk overige abonnementen", "Zakelijk mobiel", "Zakelijk internet/TV", "Streaming diensten", "Software & Online diensten"),
   "Personeel": lid("Inhuur personeel", "Uitbetalen loon"),
   "Belastingen & heffingen": lid("Belastingen: overig", "Belastingen: OB", "Belastingen: LH", "Belastingen: IB", "Belastingen: ZVW", "Belastingen: IH", "Belastingen: MRB",
     "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren"),
   "Interne overboekingen": lid("Interne overboeking: zakelijk sparen", "Interne overboeking", "Interne overboeking: privé sparen"),
+  "Borg & schade-uitkering": lid("Borg (waarborgsom)", "Schade-uitkering verzekering"),
   "Inkoop & zakelijke uitgaven": lid("Zakelijke inkoop/uitgaven", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
     "Verzekering: Zakelijk", "Onderhoud apparatuur/machines", "Marketing-website"),
 };

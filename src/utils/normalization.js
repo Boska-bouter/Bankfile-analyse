@@ -192,6 +192,13 @@ export function extractDescriptionDate(tx) {
 
 // Overrides zijn keyed op tegenpartij ÉN teken, omdat dezelfde tegenpartij een andere categorie
 // kan vragen voor binnenkomend vs. uitgaand geld (bijv. een terugbetaling vs. een aankoop).
+// nieuw-V2R8 — wens Boska 11-11: "CCV" (betaalterminal) vóór de echte naam weglaten, overal: "CCV*ESSO ADRIAANSE", "CCVESSO …",
+// "CCV ESSO …" → "ESSO …". Niet bij het bedrijf CCV zelf ("CCV Nederland B.V.", servicekosten van de terminal).
+const CCV_VOOR = /(^|[^a-z0-9])ccv(?:\s*[*_]+\s*|\s+|(?=[a-z]{3}))(?!(?:nederland|group|holland|bv\b|b\.v\.|services|benelux|belgium|belgie)\b)(?=[a-z0-9])/gi;
+export function zonderCcv(t) {
+  return String(t ?? "").replace(CCV_VOOR, "$1");
+}
+
 export function counterpartyKey(name, amount) {
   const base = normKey(name);
   if (!base) return "";

@@ -1,7 +1,7 @@
 import { echtePartijAchterDienst } from "./betaaldienst.js";
 import { parseDate } from "../utils/dates.js";
 import { parseEuroNumber } from "../utils/amounts.js";
-import { normalizeIban } from "../utils/normalization.js";
+import { normalizeIban, zonderCcv } from "../utils/normalization.js";
 import { guessOwnAccountColumn, OWN_ACCOUNT_UITSLUITEN } from "./bankProfiles.js";
 
 // release30V1 — herstel voor dossiers die vóór deze versie zijn ingelezen: bij Rabobank-CSV's werd
@@ -89,6 +89,8 @@ export function buildTransactions(parsedFiles) {
       // gelden via counterpartyOrigineel.
       const ovpay = /^NLOV[A-Z0-9]{8,}\s+(www\.ovpay\.nl)\b/i.exec(counterparty);
       if (ovpay) counterparty = "OVpay (www.ovpay.nl)";
+      // nieuw-V2R8 — "CCV" vóór de echte naam weglaten (wens Boska 11-11); oude keuzes blijven gelden via counterpartyOrigineel.
+      if (counterparty && zonderCcv(counterparty).trim()) counterparty = zonderCcv(counterparty).trim();
       // huishoudboekje-V6R6 — de echte partij achter Tikkie, betaalverzoeken en Online Payments Foundation (importers/betaaldienst.js).
       const achterDienst = echtePartijAchterDienst(counterparty, description, fullDescription);
       if (achterDienst) counterparty = achterDienst;
