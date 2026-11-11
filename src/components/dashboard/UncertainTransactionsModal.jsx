@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, Check, Lock, Sparkles } from "lucide-react";
+import { X, Check, Lock, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import { mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { counterpartyKey } from "../../utils/normalization.js";
@@ -29,6 +29,9 @@ export default function UncertainTransactionsModal({
   const [openLosse, setOpenLosse] = useState(false);
   // nieuw-V2R4 — aparte lijst met alleen de voorstellen die met AI zijn opgezocht (wens Boska 10-11).
   const [alleenAi, setAlleenAi] = useState(false);
+  // nieuw-V2R8 — groep openklappen om de losse transacties te zien en per stuk aan te passen (wens Boska 11-11).
+  const [openGroepen, setOpenGroepen] = useState(() => new Set());
+  const wisselGroep = (k) => setOpenGroepen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
   const groepen = useMemo(() => {
     const map = new Map();
@@ -65,10 +68,16 @@ export default function UncertainTransactionsModal({
   }, [basis, catFilter, sortering]);
   const getoondTx = useMemo(() => getoond.flatMap((g) => g.txs), [getoond]);
 
-  const renderRow = (tx, g) => {
+  const renderRow = (tx, g, compact = false) => {
     const meer = g && g.txs.length > 1;
     return (
-      <div key={tx.id} className="flex flex-wrap items-center gap-2 p-2.5 text-xs">
+      <div key={tx.id} className={`flex flex-wrap items-center gap-2 text-xs ${compact ? "px-2.5 py-1.5" : "p-2.5"}`}>
+        {compact ? (
+        <div className="flex-1 min-w-[9rem]">
+          <p className="font-medium text-slate-700">{tx.date.toLocaleDateString("nl-NL")}</p>
+          <ExpandableDescription tx={tx} className="text-[11px] text-slate-500" />
+        </div>
+        ) : (
         <div className="flex-1 min-w-[9rem]">
           <p className="font-medium truncate">
             {g?.ai && <span className="mr-1.5 inline-flex items-center gap-0.5 rounded bg-violet-100 text-violet-800 px-1 py-px text-[10px] font-semibold align-middle" title="Categorie opgezocht met AI: controleer of hij klopt"><Sparkles className="h-2.5 w-2.5" />AI</span>}
@@ -76,11 +85,18 @@ export default function UncertainTransactionsModal({
             {meer && <span className="ml-1.5 font-normal text-slate-500">· {g.txs.length} transacties</span>}
           </p>
           <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
+          {meer && (
+            <button onClick={() => wisselGroep(g.key)} className="mt-0.5 mb-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-teal-700 underline underline-offset-2 hover:text-teal-900" aria-expanded={openGroepen.has(g.key)}>
+              {openGroepen.has(g.key) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {openGroepen.has(g.key) ? `${g.txs.length} transacties verbergen` : `Alle ${g.txs.length} transacties bekijken`}
+            </button>
+          )}
           <p className="text-[11px] text-slate-400 font-mono select-all">Tegenrekening: {tx.counterpartyIban || "—"}</p>
           <p className="text-[11px] text-slate-400">
             {tx.date.toLocaleDateString("nl-NL")} · {tx.confidence.label}
           </p>
         </div>
+        )}
         <span className="shrink-0 font-mono text-slate-500 w-24 text-right" title={meer ? `Totaal van ${g.txs.length} transacties` : undefined}>
           {eur(g ? g.totaal : tx.amount)}
         </span>
@@ -272,7 +288,17 @@ export default function UncertainTransactionsModal({
                     {g.txs.length > 100 && <p className="p-2 text-[11px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
                   </div>
                 </details>
-              ) : renderRow(g.eerste, g))}
+              ) : (
+                <div key={g.key}>
+                  {renderRow(g.eerste, g)}
+                  {g.txs.length > 1 && openGroepen.has(g.key) && (
+                    <div className="ml-4 mb-2 mr-1 rounded-lg border border-slate-200 bg-slate-50/70 divide-y divide-slate-100">
+                      {[...g.txs].sort((a, b) => b.date - a.date).slice(0, 100).map((tx) => renderRow(tx, null, true))}
+                      {g.txs.length > 100 && <p className="p-2 text-[11px] text-slate-400">Eerste 100 getoond van {g.txs.length}.</p>}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
           {getoond.length > zichtbaar && (

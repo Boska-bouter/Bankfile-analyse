@@ -30,7 +30,7 @@ const RUBRIEK_VERKOOP = ["Marketing-website"];
 const RUBRIEK_ANDERE_KOSTEN = [
   "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie", "Zakelijk mobiel", "Zakelijk internet/TV",
   "Privé - mobiel", "Privé - internet/TV", "Privé - streaming diensten", "Privé overige abonnementen", "Privé - bankkosten", // beide-V9R9 — zakelijk deel vanaf privé
-  "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
+  "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Schade-uitkering verzekering", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
   "Incasso, juridisch & schulden",
   // De twee "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) horen in dezelfde
@@ -232,6 +232,6 @@ export function rubriekVanCategorie(c) {
   if (AUTOKOSTEN_CATEGORIEN.includes(c) || c === "Zakelijk - apparatuur/machines") return "3. Auto's en machines";
   if ([...RUBRIEK_OVERIG_VERVOER, ...RUBRIEK_HUISVESTING, ...RUBRIEK_HUISVESTING_DEELS, ...RUBRIEK_VERKOOP, ...RUBRIEK_ANDERE_KOSTEN].includes(c)) return "4. Overige bedrijfskosten";
   if (AL_APART_BEHANDELD.includes(c)) return "5. Financiering en bedrijfsmiddelen";
-  if ([...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST].includes(c)) return null; // geen onderdeel van de winst
+  if ([...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN, ...BELASTINGEN_GEEN_KOSTENPOST, "Borg (waarborgsom)"].includes(c)) return null; // geen onderdeel van de winst
   return "6. Nog niet ingedeeld";
 }

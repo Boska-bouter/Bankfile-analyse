@@ -228,7 +228,11 @@ function kanPersoonZijn(tx) {
   return !isCardPaymentTx(tx) && !(tx.heeftIbanKolom && !tx.counterpartyIban);
 }
 
-export const zonderBetaalmiddel = (t) => t.replace(/\b(google|apple|samsung|garmin) pay\b|\bbetaalpas\b/g, " ");
+// nieuw-V2R8 — "CCV" (betaalterminal) vóór de echte naam weglaten, ook als het eraan vast zit ("CCVESSO ADRIAANSE", wens Boska 11-11),
+// zodat het zoekwoord ("esso") weer als woord begint. Niet bij het bedrijf CCV zelf ("CCV Nederland").
+export const zonderBetaalmiddel = (t) => t.replace(/\b(google|apple|samsung|garmin) pay\b|\bbetaalpas\b/g, " ")
+  .replace(CCV_VOOR_TEKST, "$1");
+const CCV_VOOR_TEKST = /(^|[^a-z0-9])ccv(?:\s*[*_]+\s*|\s+|(?=[a-z]{3}))(?!(?:nederland|group|holland|bv\b|b\.v\.|services|benelux|belgium|belgie)\b)(?=[a-z0-9])/g;
 
 // release31V2 — soort betaling, los van de categorie: contante opname, pinbetaling of opwaardering van een
 // betaaldienst. Gebruikt door de classificatie en door de controle zakelijk ↔ privé (die zulke boekingen
@@ -425,6 +429,10 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
       const rule = findRule(name);
       return !!rule && ruleMatchesText(rule, text);
     };
+    // nieuw-V2R8 — besluit Boska 11-11: teruggekregen borg en een schade-uitkering van de verzekeraar hebben een eigen categorie
+    // (geen omzet). Schade-uitkering alleen op de zakelijke rekening; op een privérekening blijft het de gewone indeling.
+    if (matchesRule("Borg (waarborgsom)")) return { category: "Borg (waarborgsom)", type };
+    if (accountType === "Zakelijk" && matchesRule("Schade-uitkering verzekering")) return { category: "Schade-uitkering verzekering", type };
     // beide-V15R8 — een uitbetaling door een betaaldienst ("Stichting Derdengelden Buckaroo … pin voorschot") is omzet, geen lening
     // (RG: 224 boekingen met de hand van Leningen naar Zakelijke inkomsten gezet).
     if (matchesRule("Leningen") && !heeftBetaaldienst(text)) {

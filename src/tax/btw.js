@@ -1,5 +1,5 @@
 import { CATEGORY_ORDER, fiscalTreatmentOf, GEDEELDE_HUUR_CATEGORIE, GEDEELDE_ENERGIE_CATEGORIE, GEDEELDE_GEMEENTELIJKE_KOSTEN_CATEGORIE, TELECOM_SPLITSING } from "../classification/categories.js";
-import { effectiveZakelijkPercentage, rawBtw } from "./categorySplit.js";
+import { effectiveZakelijkPercentage, rawBtw, btwBijTeruggave } from "./categorySplit.js";
 
 // Standaard BTW-percentage per categorie — het bedrag op de bank is altijd inclusief BTW.
 // Standaard 21%, met een vaste lijst uitzonderingen op 0%.
@@ -10,6 +10,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Belastingen: overig", // hoort net als de rest van de belastingen-subtypes bij 0% — stond er per abuis niet bij
   "Verzekering: Auto", "Verzekering: Overig", "Verzekering: Wonen", "Verzekering: Zakelijk", "Verzekering: Ziektekosten",
   "AOV (arbeidsongeschiktheidsverzekering)",
+  "Borg (waarborgsom)", "Schade-uitkering verzekering", // nieuw-V2R8
   "Verzekeringen", // privé-verzekeringen — net als hun zakelijke tegenhangers vrijgesteld van BTW
   "Uitbetalen loon",
   "Privé opnames",
@@ -123,6 +124,8 @@ export function computeBtw(tx, categoryBtwRates, btwVerlegd) {
   if (effectiefVerlegd && tx.category === "Zakelijke inkomsten") return 0;
   const rate = categoryBtwRates[tx.category];
   if (!rate) return 0;
+  const terug = btwBijTeruggave(tx, rate);
+  if (terug != null) return terug;
   return tx.amount - tx.amount / (1 + rate / 100);
 }
 

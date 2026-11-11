@@ -117,7 +117,7 @@ export default function DashboardHeader({
                   {boekingenInfo && (
                     <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
                       <span>{boekingenInfo.zeker}% van de boekingen zeker ingedeeld</span>
-                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), niet nalopen</span>}
+                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), hoeven niet gecontroleerd te worden</span>}
                     </span>
                   )}
                 </div>
