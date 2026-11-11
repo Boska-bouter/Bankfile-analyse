@@ -114,3 +114,4 @@ zie `tests/e2e/LEESMIJ.md`); zonder de map `tests/` werken die scripts niet.
 
 `npm test` draait de tests in `tests/`: een vaste controle dat de zakelijke berekening niet verandert
 (`tests/vastgelegd/zakelijk.json`), het dossierprofiel (`src/modus/`) en de rechten per soort in de Worker.
+
