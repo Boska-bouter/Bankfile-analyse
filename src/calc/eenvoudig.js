@@ -146,7 +146,7 @@ export const REKENING_TEKST = { Zakelijk: "zakelijke rekening", Prive: "privére
 // Welke categorie hoort bij een antwoord? keuze: "bedrijf" | "prive" | "eigen".
 export function categorieVoorAntwoord(keuze, teken, rekening) {
   const zak = rekening === "Zakelijk";
-  if (keuze === "bedrijf") return teken > 0 ? { category: "Zakelijke inkomsten", type: "Zakelijk" } : { category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
+  if (keuze === "bedrijf") return teken > 0 ? { category: "Zakelijke inkomsten", type: "Zakelijk" } : { category: "Zakelijke inkoop non-food", type: "Zakelijk" };
   if (keuze === "prive") {
     if (zak) return teken > 0 ? { category: "Terugboeking van privé", type: "Zakelijk" } : { category: "Privé opnames", type: "Zakelijk" };
     return { category: "Privé: overig", type: "Prive" };

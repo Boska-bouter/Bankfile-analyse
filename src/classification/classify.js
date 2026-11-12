@@ -1,6 +1,6 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory, CATEGORY_COLOR } from "./categories.js";
 import { gedeeldeKeuze } from "./gedeeldeNamen.js";
-import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk } from "./branche.js";
+import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk, inkoopEten, INKOOP_ETEN } from "./branche.js";
 import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
@@ -552,7 +552,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
 
   const explicitBizExpense = businessExpenseKeywords.some((kw) => (!isIncome || !GEEN_PARTIJ.test(kw)) && textHasKeyword(text, kw)); // huishoudboekje-V6R4 — betaaldienst alleen voor uitgaven
   if (explicitBizExpense) {
-    return { category: "Zakelijke inkoop/uitgaven", type };
+    return { category: "Zakelijke inkoop non-food", type };
   }
 
   // Buitenlandse pinbetaling op een privérekening, nog niet via een specifiek trefwoord herkend —
@@ -786,7 +786,7 @@ function withAccountType(override, accountType) {
 
 // V50 — categorieën die op een privérekening NIET automatisch naar "Privé - overige kosten" gaan.
 const PRIVE_REKENING_BEHOUD_CATEGORIEEN = [
-  "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop/uitgaven",
+  "Autokosten", "Brandstof", "Parkeren", "Verzekering: Auto", "Belastingen: MRB", "Lease (operationeel)", "Zakelijke inkoop non-food",
 ];
 
 // release31V2 — een keuze per tegenpartijnaam geldt voor alle rekeningen. Maar "Privé opnames"/"Terugboeking van
@@ -856,7 +856,7 @@ function resolveClassificationBasis(tx, rules, businessKeywords, businessExpense
 // beide-V9R1 — een autoverzekering blijft Verzekering: Auto, ook als de verzekeraar (bijv. Centraal Beheer) als geheel op zakelijk
 // staat. Zo valt hij bij een privéauto met km-aftrek niet alsnog als zakelijke kosten mee (vergelijking Houtman 27-10, besluit Boska).
 // Een keuze voor één boeking gaat voor.
-const AUTOVERZ_NAAR_AUTO = new Set(["Verzekering: Zakelijk", "Verzekeringen", "Zakelijke inkoop/uitgaven", "Zakelijk overige abonnementen"]);
+const AUTOVERZ_NAAR_AUTO = new Set(["Verzekering: Zakelijk", "Verzekeringen", "Zakelijke inkoop non-food", "Zakelijk overige abonnementen"]);
 const TELECOM_SOORT = {
   "Zakelijk mobiel": { internet: "Zakelijk internet/TV" }, "Privé - mobiel": { internet: "Privé - internet/TV" },
   "Zakelijk internet/TV": { mobiel: "Zakelijk mobiel" }, "Privé - internet/TV": { mobiel: "Privé - mobiel" },
@@ -869,14 +869,14 @@ function telecomSoort(tx) {
 }
 // beide-V10R7 — een uitgaande betaling vanaf de zakelijke rekening met een factuurnummer ("Fac. Nr. 238604", "factuur 2024-12",
 // "Db. Nr.") is bijna altijd een leverancier. Zonder herkenning bleef die in "Overig" of "personen" en telde niet als kosten
-// (test Koenders 28-10: € 55.000–220.000 per jaar). Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
+// (test Koenders 28-10: € 55.000–220.000 per jaar). Wordt "Zakelijke inkoop non-food", op "nakijken" (confidence.js).
 // beide-V10R8 — ook "FCT 2026…", "F236112", "klantnr./klant nr." (wens Boska 28-10). Kale nummers en datums bewust niet.
 export const FACTUUR_BETALING = /\bfa[ck]t?(uur)?\.? ?(nr|nummer|no)\b|\bfactuur|\bfacturen\b|\bfact?\.\s?\d|\bfactnr|\bdb\.\s?nr|\bfct\b|\bF\d{4,}\b|\bklant ?nr\b|\bklant ?nummer\b/i;
 const ONBEKEND_UIT = new Set(["Overig", "Overboekingen aan personen"]);
 // beide-V11R6 — een tegenpartij met een bedrijfsnaam (rechtsvorm of branchewoord) die vanaf de zakelijke rekening wordt betaald, is
 // bijna altijd een leverancier (test Koenders: € 13.000–56.000 per jaar bleef in Overig/personen, bijv. "Houthandel Smetsers",
 // "Container Nederland BV", "Kwekerij Muijderman"). Alleen de naam telt (vóór " via "), niet de omschrijving; banken, verzekeraars,
-// stichtingen en overheid niet. Wordt "Zakelijke inkoop/uitgaven", op "nakijken" (confidence.js).
+// stichtingen en overheid niet. Wordt "Zakelijke inkoop non-food", op "nakijken" (confidence.js).
 // beide-V17R2 — ook buitenlandse rechtsvormen (S.A., N.V., Ltd, sp. z o.o., AG, SARL, Inc, LLC, BVBA) en milieustraat/bouwmarkt/
 // aanhangwagens (voorstel trefkans 6-11: o.a. Eko-Okna S.A. en Bouwmat Veldman bleven in Overig).
 export const BEDRIJFSNAAM = /\b(b\.?\s?v\.?|n\.\s?v\.?|v\.?o\.?f\.?|holding|gmbh|s\.\s?a\.?|ltd|limited|sp\.?\s?z\.?\s?o\.?\s?o\.?|ag|sarl|s\.r\.l\.?|inc|llc|bvba|a\/s)(?![a-z])|(milieustraat|bouwmat|bouwmarkt|bouwcenter|aanhangwagens?|groothandel|handel|verhuur|bedrijf|diensten|dienstverlening|techniek|installaties?|materialen|kwekerij|hekwerken|hekwerk|bestratingen|bestrating|graszoden|composieten|transport|logistiek|machines?|aannemers?|sloopwerken|containers?|steigerbouw|metaalbouw|staalbouw|beton|elektrotechniek|schildersbedrijf|timmerwerken|dakdekkers?|tuincentrum|bouwmaterialen)(?![a-z])/i;
@@ -902,7 +902,7 @@ export function horecaPinVan(tx) {
 }
 // beide-V17R2 — betaalbedrijven die online casino's afhandelen (gezien in de testdossiers, altijd met een buitenlandse IBAN).
 export const KANSSPEL_VERWERKER = /novatech solutions|revoapps|zephyrion link|verdewich partners|naudapay|privalgo|mersey services|goldwin ltd|letplay/i;
-const KANSSPEL_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop/uitgaven"]);
+const KANSSPEL_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop non-food"]);
 export function kansspelVerwerkerVan(tx) {
   const inTekst = /IBAN:?\s*([A-Z]{2}\d{2}[A-Z0-9]{8,30})/i.exec(`${tx.description || ""} ${tx.fullDescription || ""}`)?.[1];
   const iban = String(tx.counterpartyIban || inTekst || "").replace(/\s/g, "").toUpperCase();
@@ -910,7 +910,7 @@ export function kansspelVerwerkerVan(tx) {
 }
 // beide-V16R0 — verhuurder herkennen aan de naam van de tegenpartij (vóór " via "). Netbeheer (Stedin, Enexis) is energie, geen huur.
 export const VERHUURDER = /vastgoed|makelaar|onroerend ?goed|(?<!net)beheer\s*b\.?\s?v\b/i;
-const VERHUUR_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop/uitgaven"]);
+const VERHUUR_VAN = new Set(["Overig", "Overboekingen aan personen", "Zakelijke inkoop non-food"]);
 export function verhuurderVan(tx) {
   return VERHUURDER.test(String(tx.counterparty || "").split(/\s+via\s+/i)[0]);
 }
@@ -944,6 +944,13 @@ export function belastingSoortUitKenmerk(tx) {
 }
 
 export function resolveClassification(tx, ...rest) {
+  const uitkomst = resolveClassificationZonderTarief(tx, ...rest);
+  // nieuw-V3R7 — horeca: inkoop van eten tegen 9% (branche.js). Niet bij een keuze per boeking of in een privédossier.
+  if (uitkomst && !(rest[5] || {})[tx.id] && !getCategorieProfiel() && inkoopEten(tx, uitkomst.category, rest[3])) return { ...uitkomst, category: INKOOP_ETEN };
+  return uitkomst;
+}
+
+function resolveClassificationZonderTarief(tx, ...rest) {
   const uitkomst = resolveClassificationBasis(tx, ...rest);
   const overridesByRow = rest[5] || {};
   if (!uitkomst || overridesByRow[tx.id]) return uitkomst;
@@ -996,10 +1003,10 @@ export function resolveClassification(tx, ...rest) {
   const zakelijkeKant = rest[3] === "Zakelijk" || getZakelijkVanPrive();
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && zakelijkeKant && Number(tx.amount) < 0 && !getCategorieProfiel()
     && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
-    return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
+    return { ...uitkomst, category: "Zakelijke inkoop non-food", type: "Zakelijk" };
   }
   if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category) && zakelijkeKant && Number(tx.amount) < 0 && !getCategorieProfiel() && bedrijfsnaamVan(tx, rest[7])) {
-    return { ...uitkomst, category: "Zakelijke inkoop/uitgaven", type: "Zakelijk" };
+    return { ...uitkomst, category: "Zakelijke inkoop non-food", type: "Zakelijk" };
   }
   // beide-V10R4 — een verzekeraar (bijv. Centraal Beheer) is niet altijd zakelijk; staat in de omschrijving dat het een zakelijke
   // verzekering is ("MKB", "zakelijke verzekering", "bedrijfsverzekering"), dan Verzekering: Zakelijk (vergelijking R. Meijer, Boska 28-10).

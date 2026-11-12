@@ -8,7 +8,7 @@ const PERSOON_CATEGORIEEN = new Set(["Overboekingen aan personen", "Overboeking 
 // "gevonden in je bankdata". Alleen een hulpmiddel om niet te hoeven typen; niets wordt zonder
 // bevestiging in het dossier gezet.
 
-const LEVERANCIER_CATEGORIEEN = new Set(["Zakelijke inkoop/uitgaven", "Inhuur personeel", "Zakelijk - apparatuur/machines", "Overig"]);
+const LEVERANCIER_CATEGORIEEN = new Set(["Zakelijke inkoop non-food", "Zakelijke inkoop voeding", "Inhuur personeel", "Zakelijk - apparatuur/machines", "Overig"]);
 const OMZET_CATEGORIEEN = new Set(["Zakelijke inkomsten", "Inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"]);
 
 // Zelfde partij onder iets andere schrijfwijze (hoofdletters, punten, afgekapte naam) wordt één suggestie.

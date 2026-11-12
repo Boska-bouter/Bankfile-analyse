@@ -3,6 +3,7 @@ import ModalShell from "../modals/ModalShell.jsx";
 import BeheerTarieven from "./BeheerTarieven.jsx";
 import BeheerLogboek from "./BeheerLogboek.jsx";
 import BeheerPeiling from "./BeheerPeiling.jsx";
+import BeheerNamen from "./BeheerNamen.jsx";
 import { tarievenHerinnering } from "../../tax/tarievenLaden.js";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR_KLEIN, VELD_KLEIN } from "../ui/stijl.js";
 
@@ -248,7 +249,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
         {fout && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{fout}</p>}
 
         <div className="flex gap-1 border-b border-slate-200" role="tablist">
-          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"], ["peiling", "Peiling"], ["logboek", "Logboek"]].map(([k, t]) => (
+          {[["aanvragen", `Aanvragen (${totaalAanvragen})`], ["gebruikers", `Gebruikers (${totaalGebruikers})`], ["tarieven", "Tarieven"], ["peiling", "Peiling"], ["namen", "Namenlijst"], ["logboek", "Logboek"]].map(([k, t]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => kiesTab(k)}
               className={`-mb-px border-b-2 px-3 py-2 font-medium ${tab === k ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
               {t}{(k === "aanvragen" && totaalAanvragen > 0) || (k === "tarieven" && tariefHerinnering) ? <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" /> : null}
@@ -257,7 +258,7 @@ export default function BeheerRechtenModal({ eigenEmail, onAanvragen, onClose })
           ))}
         </div>
 
-        {tab === "tarieven" ? <BeheerTarieven /> : tab === "peiling" ? <BeheerPeiling /> : tab === "logboek" ? <BeheerLogboek /> : (<>
+        {tab === "tarieven" ? <BeheerTarieven /> : tab === "peiling" ? <BeheerPeiling /> : tab === "namen" ? <BeheerNamen /> : tab === "logboek" ? <BeheerLogboek /> : (<>
         <div className="flex flex-wrap gap-2">
           <input type="search" value={zoek} onChange={(e) => { setZoek(e.target.value); setPagina(0); }} placeholder="Zoek op naam, e-mailadres of notitie"
             className={`${VELD_KLEIN} min-w-0 flex-1`} autoCapitalize="off" autoCorrect="off" aria-label="Zoeken" />

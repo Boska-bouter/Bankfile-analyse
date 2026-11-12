@@ -1,4 +1,5 @@
 import { bedrijfsnaamVan, horecaPinVan } from "./classify.js";
+import { inkoopEten, INKOOP_ETEN } from "./branche.js";
 // beide-V16R1 — leren van je eigen keuzes (trefkans-onderzoek 5-11, wens Boska). Een boeking die de app niet herkent ("Overig" of
 // "Overboekingen aan personen") krijgt een voorstel als je bij vergelijkbare onbekende boekingen in hetzelfde dossier meestal
 // hetzelfde kiest. Vergelijkbaar = zelfde soort rekening (zakelijk/privé), zelfde richting (betaald/ontvangen), zelfde soort
@@ -58,8 +59,10 @@ export function maakLeerModel(keuzes) {
     if (!categorie || categorie === "Overig" || !LEER_ONBEKEND.has(auto) || leertNiet(tx)) continue; // eigen naam telt wel als bron: één tegenpartij, en weglaten verschoof de verhoudingen (JvS)
     const s = leerSleutel(tx, accountType, auto), g = groepVan(tx);
     if (!g) continue;
-    voegToe(s, categorie, g);
-    voegToe(`${s}|${bedragGroep(tx.amount)}`, categorie, g);
+    // nieuw-V3R7 — inkoop van eten (9%) telt hier als gewone inkoop; het tarief volgt per tegenpartij uit de naam (branche.js).
+    const c = categorie === INKOOP_ETEN ? "Zakelijke inkoop non-food" : categorie;
+    voegToe(s, c, g);
+    voegToe(`${s}|${bedragGroep(tx.amount)}`, c, g);
   }
   return tabel;
 }
@@ -88,6 +91,7 @@ export function leerVoorstel(model, tx, accountType, autoCategorie, { zonderGroe
   // beide-V16R3 — "Privé opnames" niet voorstellen bij een bedrijf, deurwaarder of administratiekantoor (meting huishoudboekje 5-11:
   // Janssen + Janssen gerechtsdeurwaarder, Florijn administratie, Novatech kregen Privé opnames, gekozen was iets anders).
   if (v?.categorie === "Privé opnames" && (bedrijfsnaamVan(tx, eigenNamen) || GEEN_PRIVE_OPNAME.test(String(tx.counterparty || "")))) return null;
+  if (v && inkoopEten(tx, v.categorie, accountType)) return { ...v, categorie: INKOOP_ETEN };
   return v;
 }
 
