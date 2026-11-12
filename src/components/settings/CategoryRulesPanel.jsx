@@ -23,8 +23,8 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
     const eigen = cp ? categoryRules.filter((r) => cp.bevat(r.name)) : categoryRules;
     const sorted = [...eigen].sort((a, b) => categorieLabel(a.name).localeCompare(categorieLabel(b.name)));
     if (!isSearching) return sorted;
-    const q = search.toLowerCase();
-    return sorted.filter((r) => r.name.toLowerCase().includes(q) || categorieLabel(r.name).toLowerCase().includes(q) || r.keywords.some((kw) => kw.toLowerCase().includes(q)));
+    const q = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return sorted.filter((r) => r.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || categorieLabel(r.name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || r.keywords.some((kw) => kw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)));
   }, [categoryRules, search, isSearching, cp]);
 
   const groupedByMain = useMemo(() => {

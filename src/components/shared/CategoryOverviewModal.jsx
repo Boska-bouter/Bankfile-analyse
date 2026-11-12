@@ -19,7 +19,7 @@ export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
   const toonFijn = useToonFijn();
 
   const secties = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const isBv = rechtsvorm === "bv";
     const fijn = (main) => {
       const alle = subtypesForMainCategory(main).filter((c) => isBv || !ALLEEN_BV.has(c));
@@ -32,13 +32,13 @@ export default function CategoryOverviewModal({ onClose, rechtsvorm }) {
       const rest = alle.filter((c) => !volgorde.includes(c));
       return [...volgorde, ...rest];
     };
-    const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase()).join(" ");
+    const leden = (d) => (CATEGORIE_GROEPEN[d] || []).map((l) => l.key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")).join(" ");
     return SECTIES.map((sec) => ({
       titel: sec.titel,
       groups: sec.mains.map((main) => {
         const subtypes = fijn(main);
-        const mainMatches = !q || main.toLowerCase().includes(q);
-        const zichtbaar = mainMatches ? subtypes : subtypes.filter((x) => x.toLowerCase().includes(q) || leden(x).includes(q));
+        const mainMatches = !q || main.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q);
+        const zichtbaar = mainMatches ? subtypes : subtypes.filter((x) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || leden(x).includes(q));
         return { main, subtypes: zichtbaar };
       }).filter((g) => g.subtypes.length > 0),
     })).filter((sec) => sec.groups.length > 0);

@@ -55,8 +55,8 @@ export default function HelpPanel({ onClose, openChapter, intro = INTRO_CONTENT,
 
   const [zoek, setZoek] = useState("");
   const allChapters = [{ key: "intro", groep: "beginnen", titel: "Welkom — zo werkt deze app", inhoud: intro }, ...chapters];
-  const zoekTerm = zoek.trim().toLowerCase();
-  const doorzoekbaar = useMemo(() => allChapters.map((c) => ({ c, tekst: `${c.titel} ${tekstVan(c.inhoud)}`.toLowerCase() })), []);
+  const zoekTerm = zoek.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const doorzoekbaar = useMemo(() => allChapters.map((c) => ({ c, tekst: `${c.titel} ${tekstVan(c.inhoud)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") })), []);
   const zichtbareHoofdstukken = zoekTerm ? doorzoekbaar.filter((d) => d.tekst.includes(zoekTerm)).map((d) => d.c) : allChapters;
 
   // Was een gewone (niet-zwevende) <section>, gerenderd als vaste sibling ná de hoofdinhoud van elk

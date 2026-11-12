@@ -27,8 +27,8 @@ export default function CounterpartyRulesPanel({ overridesByCounterparty, setOve
 
   const filtered = useMemo(() => {
     if (!search.trim()) return rules;
-    const q = search.toLowerCase();
-    return rules.filter((r) => r.displayName.toLowerCase().includes(q) || r.category?.toLowerCase().includes(q));
+    const q = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return rules.filter((r) => r.displayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || r.category?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q));
   }, [rules, search]);
 
   const removeRule = (key) => {

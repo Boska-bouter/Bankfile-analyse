@@ -9,12 +9,12 @@ export default function SearchInput({ value, onChange, placeholder, className = 
 
   const matches = useMemo(() => {
     if (!suggestions || value.trim().length < 3) return [];
-    const q = value.trim().toLowerCase();
+    const q = value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const seen = new Set();
     const result = [];
     for (const s of suggestions) {
       if (!s) continue;
-      const sl = s.toLowerCase();
+      const sl = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (sl === q) continue; // exact match: al ingevuld, geen suggestie nodig
       if (sl.includes(q) && !seen.has(sl)) {
         seen.add(sl);
