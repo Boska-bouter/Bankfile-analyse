@@ -60,7 +60,7 @@ export function maakLeerModel(keuzes) {
     const s = leerSleutel(tx, accountType, auto), g = groepVan(tx);
     if (!g) continue;
     // nieuw-V3R7 — inkoop van eten (9%) telt hier als gewone inkoop; het tarief volgt per tegenpartij uit de naam (branche.js).
-    const c = categorie === INKOOP_ETEN ? "Zakelijke inkoop non-food" : categorie;
+    const c = categorie === INKOOP_ETEN ? "Zakelijke inkoop non-voedingsmiddelen" : categorie;
     voegToe(s, c, g);
     voegToe(`${s}|${bedragGroep(tx.amount)}`, c, g);
   }

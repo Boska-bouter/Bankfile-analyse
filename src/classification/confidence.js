@@ -17,10 +17,10 @@
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 import { looksLikeForeignCardPayment, passendeRegels, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
 import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
-// nieuw-V3R7 — inkoop van eten tegen 9% is dezelfde soort boeking als Zakelijke inkoop non-food.
-const INKOOP_CATEGORIEEN = new Set(["Zakelijke inkoop non-food", "Zakelijke inkoop voeding"]);
-// Een eigen keuze "Zakelijke inkoop non-food" die de app bij horeca naar de 9%-categorie zet (classify.js), blijft een eigen keuze.
-const zelfdeKeuze = (gekozen, uitkomst) => gekozen === uitkomst || (gekozen === "Zakelijke inkoop non-food" && uitkomst === "Zakelijke inkoop voeding");
+// nieuw-V3R7 — inkoop van eten tegen 9% is dezelfde soort boeking als Zakelijke inkoop non-voedingsmiddelen.
+const INKOOP_CATEGORIEEN = new Set(["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"]);
+// Een eigen keuze "Zakelijke inkoop non-voedingsmiddelen" die de app bij horeca naar de 9%-categorie zet (classify.js), blijft een eigen keuze.
+const zelfdeKeuze = (gekozen, uitkomst) => gekozen === uitkomst || (gekozen === "Zakelijke inkoop non-voedingsmiddelen" && uitkomst === "Zakelijke inkoop voedingsmiddelen");
 import { getBranche, BOUWMARKT, HORECA_GROOTHANDEL } from "./branche.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een

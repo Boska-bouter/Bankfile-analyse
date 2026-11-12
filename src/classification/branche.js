@@ -37,8 +37,8 @@ export function brancheCategorie(tx, category, accountType, branche = _branche) 
   const naam = String(tx.counterparty || "");
   // Geldopname ("GELDMAAT WOENSELSE MARKT") is geen inkoop.
   if (/geldmaat|geldautomaat|\batm\b/i.test(naam) || /geldautomaat/i.test(String(tx.betaalwijze || ""))) return null;
-  if (HORECA_GROOTHANDEL.test(naam)) return "Zakelijke inkoop non-food";
-  if (Math.abs(Number(tx.amount)) >= HORECA_GRENS && !HORECA_SUPERMARKT.test(naam) && !HORECA_NIET_ETEN.test(naam) && HORECA_ETEN.test(naam)) return "Zakelijke inkoop non-food";
+  if (HORECA_GROOTHANDEL.test(naam)) return "Zakelijke inkoop non-voedingsmiddelen";
+  if (Math.abs(Number(tx.amount)) >= HORECA_GRENS && !HORECA_SUPERMARKT.test(naam) && !HORECA_NIET_ETEN.test(naam) && HORECA_ETEN.test(naam)) return "Zakelijke inkoop non-voedingsmiddelen";
   return null;
 }
 
@@ -46,17 +46,17 @@ export function brancheCategorie(tx, category, accountType, branche = _branche) 
 // restaurant, Hornbach en Gamma stonden op zakelijke inkoop). Bij een andere soort bedrijf: Winkels divers, op controleren (confidence.js).
 export const BOUWMARKT = /\b(praxis|gamma|karwei|hornbach|hubo|bauhaus)\b/i;
 export function bouwmarktNietZakelijk(tx, category, accountType, branche = _branche) {
-  return !!branche && branche !== "bouw" && accountType === "Zakelijk" && category === "Zakelijke inkoop non-food"
+  return !!branche && branche !== "bouw" && accountType === "Zakelijk" && category === "Zakelijke inkoop non-voedingsmiddelen"
     && Number(tx.amount) < 0 && BOUWMARKT.test(String(tx.counterparty || ""));
 }
 
-// nieuw-V3R7 — btw 9% bij inkoop van eten (wens Boska 12-11): bij horeca wordt Zakelijke inkoop non-food bij een groothandel, supermarkt of
-// winkel in eten (slager, toko, markt …) "Zakelijke inkoop voeding". Ook als de gebruiker zelf "Zakelijke inkoop non-food" koos voor
+// nieuw-V3R7 — btw 9% bij inkoop van eten (wens Boska 12-11): bij horeca wordt Zakelijke inkoop non-voedingsmiddelen bij een groothandel, supermarkt of
+// winkel in eten (slager, toko, markt …) "Zakelijke inkoop voedingsmiddelen". Ook als de gebruiker zelf "Zakelijke inkoop non-voedingsmiddelen" koos voor
 // de tegenpartij (die keuze was er vóór deze categorie). Een keuze per boeking blijft staan. Drogist, bouwmarkt en winkels als Action: 21%.
-export const INKOOP_ETEN = "Zakelijke inkoop voeding";
+export const INKOOP_ETEN = "Zakelijke inkoop voedingsmiddelen";
 export const NIET_ETEN_WINKEL = /kruidvat|\betos\b|drogist|trekpleister|\bda\b drogist|holland ?& ?barrett|\baction\b|\bhema\b|blokker|xenos|ikea|praxis|gamma|karwei|hornbach|hubo|bauhaus|media ?markt|coolblue|\bggm\b|gastro ?international|elektro/i;
 export function inkoopEten(tx, category, accountType, branche = _branche) {
-  if (branche !== "horeca" || accountType !== "Zakelijk" || category !== "Zakelijke inkoop non-food" || Number(tx.amount) >= 0) return false;
+  if (branche !== "horeca" || accountType !== "Zakelijk" || category !== "Zakelijke inkoop non-voedingsmiddelen" || Number(tx.amount) >= 0) return false;
   const naam = String(tx.counterparty || "");
   if (NIET_ETEN_WINKEL.test(naam) || HORECA_NIET_ETEN.test(naam)) return false;
   return HORECA_GROOTHANDEL.test(naam) || HORECA_SUPERMARKT.test(naam) || HORECA_ETEN.test(naam) || ETEN_EXTRA.test(naam);

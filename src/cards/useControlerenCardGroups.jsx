@@ -27,7 +27,7 @@ export function useControlerenCardGroups(p) {
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
-    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
+    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
     markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
@@ -187,6 +187,7 @@ export function useControlerenCardGroups(p) {
               onMarkUnknown={markActivaUnknown}
               onUnmarkUnknown={unmarkActivaUnknown}
               onAddManual={addManualActiva}
+              onImportList={voegActivaLijstToe}
               onRemove={removeActivum}
               onRequestChange={requestCategoryChange}
               onOpenHelp={setHelpPopupChapter}

@@ -7,12 +7,14 @@ import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
+import ActivaLijstModal, { exporteerActiva } from "./ActivaLijstModal.jsx";
 function isCompleteActivaDetails(details) {
   return !!(details && details.aanschafwaarde && details.aanschafdatum && details.afschrijvingstermijnJaren);
 }
 
-export default function ActivaPanel({ defaultOpen = false, activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp, onAddManual, onRemove, onRequestChange }) {
+export default function ActivaPanel({ defaultOpen = false, activaSummary, activaDetails, activeYear, onOpenModal, onMarkUnknown, onUnmarkUnknown, onOpenHelp, onAddManual, onRemove, onRequestChange, onImportList }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  const [lijstOpen, setLijstOpen] = useState(false);
   const sectionRef = useOpenOnJump(setOpen);
   if (activaSummary.length === 0 && !onAddManual) return null;
 
@@ -53,7 +55,7 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
               return (
                 <div key={activum.key} className="rounded-lg border border-slate-100 p-3">
                   <div className="flex items-center gap-3 text-sm flex-wrap">
-                    <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}{activum.handmatig && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 align-middle">handmatig</span>}</span>
+                    <span className="flex-1 min-w-[8rem] truncate font-medium">{details?.naam || activum.naam}{details?.staat && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500">{details.staat}</span>}{activum.handmatig && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 align-middle">handmatig</span>}</span>
                     {!(activum.handmatig && !activum.tx.amount) && <span className="text-xs text-slate-400 font-mono">{eur(Math.abs(activum.tx.amount))}, {activum.tx.date.toLocaleDateString("nl-NL")}</span>}
                     {isOnbekend ? (
                       <button onClick={() => onUnmarkUnknown(activum.key)} className={KNOP_SECUNDAIR_XS}>
@@ -101,12 +103,18 @@ export default function ActivaPanel({ defaultOpen = false, activaSummary, activa
           </div>
           {onAddManual && (
             <div className="mt-3">
-              <button onClick={onAddManual} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100">+ Bedrijfsmiddel toevoegen</button>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={onAddManual} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100">+ Bedrijfsmiddel toevoegen</button>
+                {/* nieuw-V3R8 — lijst inlezen en exporteren (wens Boska 12-11) */}
+                {onImportList && <button onClick={() => setLijstOpen(true)} className="rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50">Lijst inlezen (Excel, CSV of plakken)</button>}
+                {activaSummary.length > 0 && <button onClick={() => exporteerActiva(activaSummary, activaDetails).catch((e) => window.alert(e.message))} className={KNOP_SECUNDAIR_XS}>Naar Excel</button>}
+              </div>
               <p className="mt-1.5 text-xs text-slate-400">Voor iets zonder bankbetaling in de geladen bestanden. Staat de betaling wél in de bank? Geef die dan de categorie "Zakelijk - apparatuur/machines", dan staat hij hier vanzelf (anders tel je hem dubbel).</p>
             </div>
           )}
         </div>
       )}
+      {lijstOpen && <ActivaLijstModal activaSummary={activaSummary} activaDetails={activaDetails} onToevoegen={onImportList} onClose={() => setLijstOpen(false)} />}
     </section>
   );
 }

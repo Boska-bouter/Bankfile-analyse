@@ -10,7 +10,7 @@ import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGed
 // zijn (belastingafdrachten, aflossing op leningen/lease, geldbewegingen naar/van privé) staan
 // bewust apart van deze winstberekening, net als op de aangifte zelf.
 const RUBRIEK_OPBRENGSTEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%"];
-const RUBRIEK_INKOOP = ["Zakelijke inkoop non-food", "Zakelijke inkoop voeding", "Inhuur personeel"];
+const RUBRIEK_INKOOP = ["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen", "Inhuur personeel"];
 // Gesplitst in twee: de categorieën die meetellen voor de bijtelling/onttrekking-aftopping bij een
 // geleasede auto (exact AUTOKOSTEN_CATEGORIEN uit autoBijtelling.js — deze horen bij de samengevoegde
 // "Auto's en machines"-post, zie leaseAutoKosten hieronder) en de twee die dat niet doen ("Lease

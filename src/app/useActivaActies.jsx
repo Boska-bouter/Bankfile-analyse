@@ -36,5 +36,18 @@ export function useActivaActies(invoer) {
     snapshotBeforeAction("Activum toch invullen");
     setActivaDetails((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), onbekend: false } }));
   };
-  return { activaSummary, addManualActiva, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe };
+  // nieuw-V3R8 — activa uit een lijst (ActivaLijstModal): "koppel" vult de gegevens van een bankbetaling aan, "nieuw" voegt een handmatig activum toe.
+  const voegActivaLijstToe = (acties) => {
+    if (!acties?.length) return;
+    snapshotBeforeAction(`${acties.length} bedrijfsmiddel${acties.length === 1 ? "" : "en"} uit lijst`);
+    setActivaDetails((prev) => {
+      const next = { ...prev };
+      acties.forEach((r, i) => {
+        if (r.actie === "koppel" && r.key) next[r.key] = { ...(prev[r.key] || {}), ...r.details, onbekend: false };
+        else if (r.actie === "nieuw") next[maakActivaSleutel(i)] = { handmatig: true, ...r.details };
+      });
+      return next;
+    });
+  };
+  return { activaSummary, addManualActiva, voegActivaLijstToe, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe };
 }

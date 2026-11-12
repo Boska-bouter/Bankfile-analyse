@@ -16,6 +16,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
     // zodat een bestaand dossier (zonder dit veld) precies hetzelfde blijft meetellen als voorheen.
     // Zie computeInvesteringenForYear in tax/activa.js.
     kiaStatus: details?.kiaStatus ?? "",
+    staat: details?.staat ?? "", // nieuw-V3R8 — nieuw of gebruikt gekocht (wens Boska 12-11)
   });
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -30,6 +31,7 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
       afschrijvingstermijnJaren: n(form.afschrijvingstermijnJaren),
       restwaarde: n(form.restwaarde),
       kiaStatus: form.kiaStatus || null,
+      staat: form.staat || null,
     });
     onClose();
   };
@@ -75,6 +77,14 @@ export default function ActivaDetailsModal({ activum, details, onSave, onClose }
             <label className="text-sm">
               <span className="block text-xs font-medium text-slate-600 mb-1">Restwaarde</span>
               <input type="number" min="0" step="0.01" value={form.restwaarde} onChange={set("restwaarde")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5" />
+            </label>
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-slate-600 mb-1">Nieuw of gebruikt gekocht</span>
+              <select value={form.staat} onChange={set("staat")} className="w-full rounded-lg border border-slate-300 px-2 py-1.5">
+                <option value="">Niet opgegeven</option>
+                <option value="nieuw">Nieuw</option>
+                <option value="gebruikt">Gebruikt (tweedehands)</option>
+              </select>
             </label>
           </div>
 

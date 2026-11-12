@@ -21,7 +21,11 @@ async function zorg(db) {
   if (klaar.has(db)) return;
   for (const s of SCHEMA) await db.prepare(s).run();
   // nieuw-V3R7 — categorie hernoemd (wens Boska 12-11).
-  await db.prepare("UPDATE namen_stem SET categorie = 'Zakelijke inkoop non-food' WHERE categorie = 'Zakelijke inkoop/uitgaven'").run();
+  // nieuw-V3R8 — namen zoals Boska ze opgaf; OR IGNORE + DELETE voor het geval beide namen al naast elkaar staan.
+  for (const [oud, nieuw] of [["Zakelijke inkoop/uitgaven", "Zakelijke inkoop non-voedingsmiddelen"], ["Zakelijke inkoop non-food", "Zakelijke inkoop non-voedingsmiddelen"], ["Zakelijke inkoop voeding", "Zakelijke inkoop voedingsmiddelen"], ["Zakelijke inkoop voedingsmiddelen/drank", "Zakelijke inkoop voedingsmiddelen"]]) {
+    await db.prepare("UPDATE OR IGNORE namen_stem SET categorie = ?1 WHERE categorie = ?2").bind(nieuw, oud).run();
+    await db.prepare("DELETE FROM namen_stem WHERE categorie = ?1").bind(oud).run();
+  }
   klaar.add(db);
 }
 
