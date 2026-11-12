@@ -17,6 +17,10 @@
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 import { looksLikeForeignCardPayment, passendeRegels, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
 import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
+// nieuw-V3R7 — inkoop van eten tegen 9% is dezelfde soort boeking als Zakelijke inkoop non-food.
+const INKOOP_CATEGORIEEN = new Set(["Zakelijke inkoop non-food", "Zakelijke inkoop voeding"]);
+// Een eigen keuze "Zakelijke inkoop non-food" die de app bij horeca naar de 9%-categorie zet (classify.js), blijft een eigen keuze.
+const zelfdeKeuze = (gekozen, uitkomst) => gekozen === uitkomst || (gekozen === "Zakelijke inkoop non-food" && uitkomst === "Zakelijke inkoop voeding");
 import { getBranche, BOUWMARKT, HORECA_GROOTHANDEL } from "./branche.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
@@ -51,14 +55,14 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
 
   const ik = ibanKey(tx.counterpartyIban, tx.amount);
   const ibanOverride = ik && overridesByCounterparty[ik];
-  if (ibanOverride && ibanOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
+  if (ibanOverride && zelfdeKeuze(ibanOverride.category, resolvedCategory)) return { level: "override", label: "Handmatig bevestigd (IBAN)" };
   const key = counterpartyKey(tx.counterparty || tx.description, tx.amount);
   const keyOverride = key && overridesByCounterparty[key];
-  if (keyOverride && keyOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+  if (keyOverride && zelfdeKeuze(keyOverride.category, resolvedCategory)) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
   // huishoudboekje-V6R6 — een keuze op de oorspronkelijke naam (bijv. "ABN AMRO Bank NV" vóór "Latour via Tikkie") telt ook (zie classify.js).
   const orgKey = tx.counterpartyOrigineel && counterpartyKey(tx.counterpartyOrigineel, tx.amount);
   const orgOverride = orgKey && overridesByCounterparty[orgKey];
-  if (orgOverride && orgOverride.category === resolvedCategory) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
+  if (orgOverride && zelfdeKeuze(orgOverride.category, resolvedCategory)) return { level: "override", label: "Handmatig bevestigd (tegenpartij)" };
 
   if (PRIVE_TRANSFER_CATEGORIES.includes(resolvedCategory) && isOwnAccountTransferMatch(tx, ownAccountsElsewhere)) {
     return { level: "keyword", label: "Automatisch herkend: overboeking naar/van eigen andere rekening (IBAN)" };
@@ -72,7 +76,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
       return { level: "keyword", label: "Herkend: door jou opgegeven als opdrachtgever" };
     }
   }
-  if (tx.amount < 0 && resolvedCategory === "Zakelijke inkoop/uitgaven") {
+  if (tx.amount < 0 && INKOOP_CATEGORIEEN.has(resolvedCategory)) {
     const t = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
     if ((businessExpenseKeywords || []).some((kw) => textHasKeyword(t, kw))) {
       return { level: "keyword", label: "Herkend: door jou opgegeven als leverancier" };
@@ -97,7 +101,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   const text = ` ${tx.counterparty} ${tx.description} ${tx.fullDescription}`.toLowerCase();
   const matchedRule = passendeRegels(rules, text)[0]; // nieuw-V1R8 — onthouden per tekst (snelheid)
   // nieuw-V1R9 — horeca: inkoop bij een groothandel is zeker (geen open punt), net als bij een opgegeven leverancier.
-  if (resolvedCategory === "Zakelijke inkoop/uitgaven" && Number(tx.amount) < 0 && getBranche() === "horeca" && HORECA_GROOTHANDEL.test(String(tx.counterparty || ""))) {
+  if (INKOOP_CATEGORIEEN.has(resolvedCategory) && Number(tx.amount) < 0 && getBranche() === "horeca" && HORECA_GROOTHANDEL.test(String(tx.counterparty || ""))) {
     return { level: "keyword", label: "Groothandel: inkoop voor horeca" };
   }
   // nieuw-V1R9 — bouwmarkt bij een bedrijf dat niet in de bouw zit: zakelijk of privé laat de app aan de gebruiker (branche.js).
@@ -127,11 +131,11 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     return { level: "heuristic", label: "Geschat: verhuurder (vastgoed/makelaar/beheer), waarschijnlijk huur" };
   }
   // beide-V10R7 — betaling met factuurnummer vanaf zakelijk (zie FACTUUR_BETALING in classify.js): een schatting, dus nakijken.
-  if (resolvedCategory === "Zakelijke inkoop/uitgaven" && tx.amount < 0 && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+  if (INKOOP_CATEGORIEEN.has(resolvedCategory) && tx.amount < 0 && FACTUUR_BETALING.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
     return { level: "heuristic", label: "Geschat: betaling met factuurnummer, waarschijnlijk leverancier" };
   }
   // beide-V11R6 — bedrijfsnaam vanaf zakelijk (zie BEDRIJFSNAAM in classify.js).
-  if (resolvedCategory === "Zakelijke inkoop/uitgaven" && tx.amount < 0 && bedrijfsnaamVan(tx)) {
+  if (INKOOP_CATEGORIEEN.has(resolvedCategory) && tx.amount < 0 && bedrijfsnaamVan(tx)) {
     return { level: "heuristic", label: "Geschat: bedrijfsnaam, waarschijnlijk leverancier" };
   }
 

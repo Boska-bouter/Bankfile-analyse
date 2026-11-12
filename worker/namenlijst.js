@@ -20,6 +20,8 @@ const klaar = new WeakSet();
 async function zorg(db) {
   if (klaar.has(db)) return;
   for (const s of SCHEMA) await db.prepare(s).run();
+  // nieuw-V3R7 — categorie hernoemd (wens Boska 12-11).
+  await db.prepare("UPDATE namen_stem SET categorie = 'Zakelijke inkoop non-food' WHERE categorie = 'Zakelijke inkoop/uitgaven'").run();
   klaar.add(db);
 }
 
@@ -89,6 +91,8 @@ export function voegSamen(start, rijen) {
 }
 
 let cache = null, cacheTijd = 0;
+export function legeNamenCache() { cache = null; cacheTijd = 0; } // nieuw-V3R6 — na een wijziging door de beheerder
+export { zorg as zorgNamenStem };
 export async function namenRoute(request, env, url, email) {
   const e = String(email || "").trim().toLowerCase();
   if (!e) return json({ ok: false, fout: "Niet ingelogd" }, 401);

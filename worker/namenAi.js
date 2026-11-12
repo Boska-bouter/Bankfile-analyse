@@ -21,11 +21,15 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS namen_ai_teller (account TEXT NOT NULL, dag TEXT NOT NULL, aantal INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (account, dag))",
 ];
 const klaar = new WeakSet();
+// nieuw-V3R6 — een door de beheerder gezette categorie (model 'beheerder') blijft gelden, ook na een nieuwe VRAAG_VERSIE.
+export async function zorgNamenAi(db) { return zorg(db); }
 async function zorg(db) {
   if (klaar.has(db)) return;
   for (const s of SCHEMA) await db.prepare(s).run();
   const kol = new Set(((await db.prepare("PRAGMA table_info(namen_ai)").all())?.results || []).map((k) => k.name));
   if (!kol.has("versie")) await db.prepare("ALTER TABLE namen_ai ADD COLUMN versie INTEGER NOT NULL DEFAULT 1").run();
+  // nieuw-V3R7 — categorie hernoemd (wens Boska 12-11); ook een keuze van de beheerder blijft zo gelden.
+  await db.prepare("UPDATE namen_ai SET categorie = 'Zakelijke inkoop non-food' WHERE categorie = 'Zakelijke inkoop/uitgaven'").run();
   klaar.add(db);
 }
 
@@ -39,7 +43,7 @@ const ONBEKEND = "Onbekend";
 export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Hoort bij de vraag hieronder: verandert de vraag, dan tellen eerder bewaarde antwoorden niet meer en wordt opnieuw gevraagd.
 // nieuw-V2R5 (melding Boska 10-11): e-bike meestal privé, hotel = reiskosten, markt/toko/supermarkt bij horeca = inkoop.
-export const VRAAG_VERSIE = 3;
+export const VRAAG_VERSIE = 4; // nieuw-V3R7: Zakelijke inkoop voeding (horeca)
 const SOORT_TEKST = {
   zakelijk: "de zakelijke rekening van een ondernemer",
   prive: "de privérekening van een ondernemer (zakelijk dossier)",
@@ -119,6 +123,8 @@ export async function vraagClaude(client, model, namen, ctx, categorieen) {
 // nieuw-V2R5 — vaste correcties na het antwoord (melding Boska 10-11), op basis van het soort bedrijf dat Claude noemt.
 const HOTEL = /hotel|hostel|motel|overnacht|logies|bed (and|&) breakfast|b&b|vakantiepark|camping/i;
 const ETENSWAREN = /supermarkt|markt|toko|slager|bakker|groothandel|groente|levensmiddel|food/i;
+// nieuw-V3R7 — niet als eten: bouwmarkt, drogist, alcohol (21%), keukenapparatuur en dergelijke.
+const GEEN_ETEN = /bouwmarkt|drogist|slijter|drank|wijn|bier|elektro|keuken|apparat|inventaris|meubel|textiel|kleding|non-?food/i;
 const FIETS = /fiets|e-?bike|bike/i;
 export function bijsturen(a, { soort, branche } = {}, categorieen = []) {
   if (!a?.categorie) return a;
@@ -127,8 +133,10 @@ export function bijsturen(a, { soort, branche } = {}, categorieen = []) {
   if (HOTEL.test(sb) && !/restaurant|eten/i.test(a.categorie)) {
     if (soort === "zakelijk" && mag("Reiskosten (hotel & verblijf)")) return { ...a, categorie: "Reiskosten (hotel & verblijf)" };
   }
-  if (soort === "zakelijk" && branche === "horeca" && ETENSWAREN.test(sb) && a.categorie === "Boodschappen" && mag("Zakelijke inkoop/uitgaven")) {
-    return { ...a, categorie: "Zakelijke inkoop/uitgaven" };
+  // nieuw-V3R7 — bij horeca is inkoop van eten "Zakelijke inkoop voeding" (9% btw), ook als de AI inkoop non-food of boodschappen zegt.
+  if (soort === "zakelijk" && branche === "horeca" && ETENSWAREN.test(sb) && !GEEN_ETEN.test(sb) && ["Boodschappen", "Zakelijke inkoop non-food"].includes(a.categorie)) {
+    if (mag("Zakelijke inkoop voeding")) return { ...a, categorie: "Zakelijke inkoop voeding" };
+    if (mag("Zakelijke inkoop non-food")) return { ...a, categorie: "Zakelijke inkoop non-food" };
   }
   if (soort === "zakelijk" && branche !== "vervoer" && FIETS.test(sb) && !/abonnement|lease|verhuur|huur/i.test(sb) && /^zakelijk/i.test(a.categorie) && mag("Privé: overig")) {
     return { ...a, categorie: "Privé: overig" };
@@ -168,7 +176,7 @@ export async function zoekRoute(request, env, account, { maakClient = (e) => new
   const uitkomst = {};
   const nieuw = [];
   for (const n of namen) {
-    const r = await env.DB.prepare("SELECT categorie, zekerheid, soort_bedrijf FROM namen_ai WHERE sleutel = ? AND teken = ? AND soort = ? AND branche = ? AND versie = ?").bind(n.s, n.t, soort, branche, VRAAG_VERSIE).first();
+    const r = await env.DB.prepare("SELECT categorie, zekerheid, soort_bedrijf FROM namen_ai WHERE sleutel = ? AND teken = ? AND soort = ? AND branche = ? AND (versie = ? OR model = 'beheerder')").bind(n.s, n.t, soort, branche, VRAAG_VERSIE).first();
     if (r) uitkomst[`${n.s}|${n.t}`] = r.categorie && categorieen.includes(r.categorie) ? { categorie: r.categorie, zekerheid: r.zekerheid, soortBedrijf: r.soort_bedrijf || "" } : null;
     else nieuw.push(n);
   }

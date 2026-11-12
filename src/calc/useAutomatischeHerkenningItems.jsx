@@ -13,7 +13,7 @@ export function useAutomatischeHerkenningItems(p) {
     return [
       { label: "Categorieregels", count: categoryRules.length },
       incomeCard && { label: "Zakelijke klanten herkend", count: incomeCard.value, onClick: incomeCard.onClick },
-      expenseCard && { label: "Zakelijke inkoop/uitgaven", count: expenseCard.value, onClick: expenseCard.onClick },
+      expenseCard && { label: "Zakelijke inkoop non-food", count: expenseCard.value, onClick: expenseCard.onClick },
     ].filter(Boolean);
   }, [instellingenDashboardCards, categoryRules]);
 }

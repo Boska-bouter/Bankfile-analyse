@@ -17,6 +17,7 @@ import { verstuur, opmaakMail, maakInloglink, GOEDKEUR_LINK_UREN } from "./inlog
 import { inloggenVastleggen, zetInloggenVastleggen, logBeheer, leesLogboek, beschrijfRechten, telLogboek, logboekGrens, exporteerLogboek, schoonLogboekOp, controleerLogboekGrootte } from "./logboek.js";
 import { schoonPeiling, bewaarPeiling, leesPeiling, wisPeiling, BETALEN, KOPPELING } from "./peiling.js";
 import { zetNamenToestemming, wisNamen } from "./namenlijst.js";
+import { namenBeheerRoute } from "./namenBeheer.js";
 import { uitgebreidExtra, BANKKOPPELING_STATUS, GRATIS_KORT } from "../src/content/aanbod.js";
 
 const SCHEMA = `CREATE TABLE IF NOT EXISTS rechten (
@@ -547,6 +548,10 @@ export async function beheerRoute(request, env, url, email) {
     // beide-V7R3 — antwoorden op de peilvraag bij verlengen
     if (url.pathname === "/api/beheer/peiling" && request.method === "GET") {
       return json({ ok: true, ...(await leesPeiling(env.DB)) });
+    }
+    // nieuw-V3R6 — Beheer → Namenlijst (zie namenBeheer.js)
+    if (url.pathname === "/api/beheer/namen" || url.pathname.startsWith("/api/beheer/namen/")) {
+      return namenBeheerRoute(request, env, url, String(email).toLowerCase());
     }
     // beide-V6R8 — logboek (laatste 200, met zoeken). beide-V7R7 — met het aantal regels en de grens, exporteren en opschonen.
     if (url.pathname === "/api/beheer/logboek" && request.method === "GET") {

@@ -324,8 +324,12 @@ export const DEFAULT_RULES = [
     "klarna", "riverty", "afterpay", "billink", "in3",
   ],
     description: "Algemene online aankopen (marktplaatsen, elektronica) die niet specifiek onder een andere categorie vallen. Kleding, schoenen, accessoires, kook- en huishoudwinkels (ook online) staan bij \"Winkels divers\"." },
-  { name: "Zakelijke inkoop/uitgaven", color: "bg-sky-200 text-sky-900", keywords: ["staangeld", "marktgeld", "gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
-    description: "Algemene zakelijke kosten die nergens anders onder vallen." },
+  { name: "Zakelijke inkoop non-food", color: "bg-sky-200 text-sky-900", keywords: ["staangeld", "marktgeld", "gamma", "praxis", "hornbach", "karwei", "hubo", "welkoop", "toolstation", "bouwmaat", "bauhaus", "klusmaat", "multimate", "boss", "raab karcher", "van neerbos"],
+    description: "Inkoop die geen voeding is en algemene zakelijke kosten die nergens anders onder vallen." },
+  // nieuw-V3R7 — inkoop van eten en drinken tegen het lage btw-tarief (9%), wens Boska 12-11 (horeca: voedsel 9%, keukenspullen 21%).
+  // Geen zoekwoorden: bij soort bedrijf horeca wordt Zakelijke inkoop non-food bij een groothandel of winkel in eten deze categorie (branche.js).
+  { name: "Zakelijke inkoop voeding", color: "bg-sky-100 text-sky-900", keywords: [],
+    description: "Inkoop van voedingsmiddelen en frisdrank (groothandel, supermarkt, slager, toko, markt) tegen 9% btw. Alcohol, keukenspullen en andere inkoop vallen onder Zakelijke inkoop non-food (21%)." },
   // Bewust GEEN zoekwoorden: net als "Huur (deels zakelijk)" wordt dit subtype nooit automatisch
   // toegekend. Streaming-/softwareabonnementen matchen anders via de zoekwoorden bij "Prive overige
   // abonnementen" gewoon bij die (100% privé) categorie — de gebruiker moet een abonnement dat
@@ -393,7 +397,7 @@ export const CATEGORY_ORDER = [
   "Terugboeking van privé", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Reiskosten (hotel & verblijf)", "Borg (waarborgsom)", "Schade-uitkering verzekering", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
-  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel", "Zakelijk internet/TV", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop/uitgaven",
+  "Webshops & online aankopen", "Winkels divers", "Zakelijk - apparatuur/machines", "Zakelijk mobiel", "Zakelijk internet/TV", "Zakelijk overige abonnementen", "Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop non-food", "Zakelijke inkoop voeding",
   "DGA-salaris", "Dividenduitkering", "Rekening-courant DGA", "Kapitaalstorting", "Vergoeding/huur aan holding",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -488,7 +492,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Betaalautomaat kosten": "kosten", "Reiskosten (OV)": "kosten", "Reiskosten (vliegtickets)": "kosten", "Reiskosten (hotel & verblijf)": "kosten", "Schade-uitkering verzekering": "kosten",
   "Uitbetalen loon": "kosten", "Verzekering: Auto": "kosten", "Verzekering: Zakelijk": "kosten",
   "AOV (arbeidsongeschiktheidsverzekering)": "kosten", "Zakelijk - apparatuur/machines": "kosten",
-  "Zakelijk mobiel": "kosten", "Zakelijk internet/TV": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke inkoop/uitgaven": "kosten",
+  "Zakelijk mobiel": "kosten", "Zakelijk internet/TV": "kosten", "Zakelijk overige abonnementen": "kosten", "Zakelijke inkoop non-food": "kosten", "Zakelijke inkoop voeding": "kosten",
   "Streaming diensten": "kosten", "Software & Online diensten": "kosten",
   // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
   "DGA-salaris": "kosten", "Vergoeding/huur aan holding": "kosten",
@@ -497,13 +501,13 @@ export const CATEGORY_FISCAL_TREATMENT = {
 
 // "Zakelijke inkoop" is samengevoegd met "Zakelijke uitgaven" — bestaande, eerder opgeslagen
 // correcties/regels met de oude naam worden bij het laden automatisch omgezet. "Zakelijke uitgaven"
-// zelf heet inmiddels "Zakelijke inkoop/uitgaven" — de subcategorie heette daarvoor hetzelfde als
+// zelf heet inmiddels "Zakelijke inkoop non-food" — de subcategorie heette daarvoor hetzelfde als
 // haar hoofdcategorie "Inkoop & zakelijke uitgaven", wat verwarrend zocht. De migratieketen loopt
 // door (zie migrateLegacyCategoryName): "Zakelijke inkoop" en "Overig zakelijk: overig" komen
 // hierdoor via "Zakelijke uitgaven" alsnog op de nieuwe naam uit.
 // 15V4: zoekwoorden die in twee categorieën voorkomen. Welke categorie wint hangt af van de rekening:
 // op een zakelijke rekening de zakelijke, op een privérekening de privé-categorie (zie classify.js).
-const _bouwmarkt = { Zakelijk: "Zakelijke inkoop/uitgaven", Prive: "Winkels divers" };
+const _bouwmarkt = { Zakelijk: "Zakelijke inkoop non-food", Prive: "Winkels divers" };
 const _betaalverwerker = { Zakelijk: "Betaalautomaat kosten", Prive: "Privé - vrijetijd-uitgaan-vakantie & uit eten" };
 export const REKENING_VOORKEUR_KEYWORDS = {
   praxis: _bouwmarkt, gamma: _bouwmarkt, karwei: _bouwmarkt, hornbach: _bouwmarkt, hubo: _bouwmarkt, bauhaus: _bouwmarkt,
@@ -512,7 +516,9 @@ export const REKENING_VOORKEUR_KEYWORDS = {
 
 export const LEGACY_CATEGORY_RENAMES = {
   "Zakelijke inkoop": "Zakelijke uitgaven",
-  "Zakelijke uitgaven": "Zakelijke inkoop/uitgaven",
+  "Zakelijke uitgaven": "Zakelijke inkoop non-food",
+  // nieuw-V3R7 — wens Boska 12-11: naast "Zakelijke inkoop voeding" (9%) heet de gewone inkoop "Zakelijke inkoop non-food".
+  "Zakelijke inkoop/uitgaven": "Zakelijke inkoop non-food",
   "Telecom & abonnementen": "Zakelijk mobiel",
   "Energie": "Energie-water",
   "Prive - vrijetijd-uitgaan-vakantie": "Prive - vrijetijd-uitgaan-vakantie & uit eten",
@@ -767,7 +773,8 @@ export const SUBTYPE_TO_MAIN = {
   "Zakelijke inkomsten 0%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 9%": "Zakelijke inkomsten",
   "Zakelijke inkomsten 21%": "Zakelijke inkomsten",
-  "Zakelijke inkoop/uitgaven": "Inkoop & zakelijke uitgaven",
+  "Zakelijke inkoop non-food": "Inkoop & zakelijke uitgaven",
+  "Zakelijke inkoop voeding": "Inkoop & zakelijke uitgaven",
   // Alleen relevant bij rechtsvorm "bv" — zie de toelichting bij DEFAULT_RULES hierboven.
   "DGA-salaris": "Personeel",
   "Dividenduitkering": "Financiering",
@@ -785,7 +792,7 @@ export const MAIN_CATEGORY_DEFAULT_SUBTYPE = {
   "Zakelijke inkomsten": "Zakelijke inkomsten",
   "Huisvesting": "Huur",
   "Vervoer & auto": "Autokosten",
-  "Inkoop & zakelijke uitgaven": "Zakelijke inkoop/uitgaven",
+  "Inkoop & zakelijke uitgaven": "Zakelijke inkoop non-food",
   "Apparatuur & inventaris": "Zakelijk - apparatuur/machines",
   "Personeel": "Inhuur personeel",
   "Telecom & abonnementen": "Zakelijk overige abonnementen",
@@ -876,7 +883,7 @@ export const ZAK_GROEPEN = {
     "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren"),
   "Interne overboekingen": lid("Interne overboeking: zakelijk sparen", "Interne overboeking", "Interne overboeking: privé sparen"),
   "Borg & schade-uitkering": lid("Borg (waarborgsom)", "Schade-uitkering verzekering"),
-  "Inkoop & zakelijke uitgaven": lid("Zakelijke inkoop/uitgaven", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
+  "Inkoop & zakelijke uitgaven": lid("Zakelijke inkoop non-food", "Zakelijke inkoop voeding", "Bankkosten", "Betaalautomaat kosten", "Boekhouder, accountant & administratie",
     "Verzekering: Zakelijk", "Onderhoud apparatuur/machines", "Marketing-website"),
 };
 
