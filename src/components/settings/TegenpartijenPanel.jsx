@@ -1,7 +1,7 @@
 import KeywordManager from "./KeywordManager.jsx";
 
 // Fase 3 — was inline JSX in App.jsx (twee KeywordManager-secties, "Zakelijke tegenpartijen
-// (inkomsten)" en "Zakelijke inkoop non-food (leveranciers)"), nu een zelfstandig onderdeel zodat
+// (inkomsten)" en "Zakelijke inkoop non-voedingsmiddelen (leveranciers)"), nu een zelfstandig onderdeel zodat
 // dit ook binnen de SectionCard "Tegenpartijen" (Instellingen) kan worden uitgeklapt zonder de
 // oorspronkelijke plek nogmaals te tonen. De twee secties delen hun "volledige lijst tonen"-stand
 // (isExpanded/onToggleExpand hieronder, per lijst) — dat blijft ongewijzigd werken zolang dit
@@ -73,7 +73,7 @@ export default function TegenpartijenPanel({
       )}
       {!expandedBusinessIncomeList && (
         <section className="rounded-paneel border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop non-food (leveranciers)</h2>
+          <h2 className="text-sm font-semibold mb-1">Zakelijke inkoop non-voedingsmiddelen (leveranciers)</h2>
           <p className="text-xs text-slate-500 mb-3">
             Leveranciers die altijd als zakelijke kosten worden herkend — elke transactie die hierop matcht krijgt
             automatisch het label Zakelijk.
@@ -86,7 +86,7 @@ export default function TegenpartijenPanel({
             chipClass="bg-teal-100 text-teal-800"
             addButtonClass="bg-teal-600 hover:bg-teal-700"
             entries={businessExpenseEntries}
-            entriesLabel="Nu herkend als Zakelijke inkoop non-food"
+            entriesLabel="Nu herkend als Zakelijke inkoop non-voedingsmiddelen"
             onReclassify={onReclassifyBusinessEntry}
             isExpanded={expandedBusinessExpenseList}
             onToggleExpand={onToggleExpandBusinessExpenseList}

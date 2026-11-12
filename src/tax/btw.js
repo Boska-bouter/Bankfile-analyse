@@ -52,7 +52,7 @@ DEFAULT_BTW_RATES["Privé - openbaar vervoer"] = 9;
 DEFAULT_BTW_RATES["Reiskosten (vliegtickets)"] = 0;
 DEFAULT_BTW_RATES["Reiskosten (hotel & verblijf)"] = 9; // logies t/m 2025 laag tarief (vanaf 2026 21%, per boeking aan te passen)
 DEFAULT_BTW_RATES["Privé - vliegtickets"] = 0;
-DEFAULT_BTW_RATES["Zakelijke inkoop voeding"] = 9; // nieuw-V3R7 — eten en drinken, laag tarief (vast, zie FIXED_BTW_RATE_CATEGORIES)
+DEFAULT_BTW_RATES["Zakelijke inkoop voedingsmiddelen"] = 9; // nieuw-V3R7 — eten en drinken, laag tarief (vast, zie FIXED_BTW_RATE_CATEGORIES)
 DEFAULT_BTW_RATES["Zakelijke inkomsten 9%"] = 9; // voor wie zowel laag- als hoogbelaste diensten factureert
 DEFAULT_BTW_RATES["Zakelijke inkomsten 0%"] = 0; // vrijgestelde omzet (bijv. bepaalde zorg-, onderwijs- of financiële diensten)
 
@@ -70,7 +70,7 @@ export const FIXED_BTW_RATE_CATEGORIES = {
   "Zakelijke inkomsten 0%": 0,
   "Zakelijke inkomsten 9%": 9,
   "Zakelijke inkomsten 21%": 21,
-  "Zakelijke inkoop voeding": 9, // nieuw-V3R7 — de naam noemt het tarief
+  "Zakelijke inkoop voedingsmiddelen": 9, // nieuw-V3R7 — de naam noemt het tarief
 };
 
 export const DEFAULT_VOORBELASTING_EXCLUDED = [

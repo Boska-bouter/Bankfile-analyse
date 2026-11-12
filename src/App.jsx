@@ -1207,7 +1207,7 @@ export default function App() {
 
   // ---- Activa (bedrijfsmiddelen) — eenvoudiger dan Leningen/Lease: geen type-bevestiging nodig,
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
-  const { activaSummary, addManualActiva, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe } = useActivaActies({ activaDetails, classified, setActivaDetails, setActivaDetailsModalKey, snapshotBeforeAction });
+  const { activaSummary, addManualActiva, voegActivaLijstToe, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe } = useActivaActies({ activaDetails, classified, setActivaDetails, setActivaDetailsModalKey, snapshotBeforeAction });
 
   const { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion } = useCategorieWijziging({
     accountTypeByFile, setCategoryRules, setOverridesByCounterparty, overridesByCounterparty, setOverridesByRow, setKeywordSuggestion, keywordSuggestion, ownAccountByFile, snapshotBeforeAction, classified, setRekeningKeuzeOpSleutel, keuzeSleutel, exclusiveIbanKey, keyForTx, setCounterpartyOverride, setRowOverride,
@@ -1633,7 +1633,7 @@ export default function App() {
     huurZakelijkPercentageStatus, importControleSectionRef, importDiagnostics, incomeReviewSectionRef, incomeSearch,
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
-    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, removeActivum, markIncomeSource, markLeaseUnknown,
+    loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
     markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
@@ -2704,6 +2704,7 @@ export default function App() {
             transactions={uncertainModalData.transactions}
             bulkCounts={uncertainModalData.bulkCounts}
             activeYear={activeYear}
+            dossierJaren={years}
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
             onConfirmAll={confirmAllUncertain}

@@ -216,7 +216,7 @@ export function useInstellingenDashboardCards(p) {
                 },
           ]
         : []),
-      // v251 — "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop non-food (leveranciers)"
+      // v251 — "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop non-voedingsmiddelen (leveranciers)"
       // hadden nog geen eigen kaart — puur informatief (geen compleet/onvolledig-status, dus neutrale
       // kleur), maar wel handig als snelkoppeling. Een klik doet hetzelfde als het bestaande
       // uitklap-knopje in KeywordManager zelf (isExpanded/onToggleExpand): de betreffende lijst gaat
@@ -239,12 +239,12 @@ export function useInstellingenDashboardCards(p) {
             },
             {
               key: "businessExpenseEntries",
-              title: "Zakelijke inkoop non-food",
+              title: "Zakelijke inkoop non-voedingsmiddelen",
               icon: <CardIcon name="package" />,
               value: businessExpenseEntries.length,
               subtitle: businessExpenseEntries.length === 1 ? "leverancier herkend" : "leveranciers herkend",
               tone: "neutral",
-              hint: "Zakelijke inkoop non-food (leveranciers) bekijken",
+              hint: "Zakelijke inkoop non-voedingsmiddelen (leveranciers) bekijken",
               onClick: () => {
                 setExpandedBusinessExpenseList(true);
                 jumpToSection(incomeRatesSectionRef);

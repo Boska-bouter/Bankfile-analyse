@@ -214,10 +214,10 @@ export function useReviewActies(invoer) {
     setBusinessExpenseKeywords((prev) => prev.filter((k) => k !== kw));
   };
   const businessIncomeEntries = useMemo(() => computeIncomeCategorySummary(classified), [classified]);
-  const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkoop non-food"), [classified]);
+  const businessExpenseEntries = useMemo(() => computeCategorySummary(classified, "Zakelijke inkoop non-voedingsmiddelen"), [classified]);
   const reclassifyBusinessEntry = (item, newMainCategory) => {
     const newSubtype = MAIN_CATEGORY_DEFAULT_SUBTYPE[newMainCategory] || newMainCategory;
-    // "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop non-food (leveranciers)" zijn per definitie
+    // "Zakelijke tegenpartijen (inkomsten)" en "Zakelijke inkoop non-voedingsmiddelen (leveranciers)" zijn per definitie
     // al bevestigd Zakelijk — hier alleen de categorie wijzigen mag dat nooit stilzwijgend naar
     // Prive omzetten (defaultTypeForCategory zou voor de meeste categorieën "Prive" teruggeven).
     requestCategoryChange({ counterparty: item.name, amount: item.amount }, { category: newSubtype, type: "Zakelijk" });

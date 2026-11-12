@@ -17,4 +17,4 @@ export const PRIVE_ONLY_HUISVESTING_STANDAARD_NUL = [
   "Huur", "Energie-water", "Gemeentelijke kosten", "Zakelijk mobiel", "Zakelijk internet/TV", "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Reiskosten (hotel & verblijf)", "Streaming diensten",
   "Software & Online diensten", "Boekhouder, accountant & administratie",
 ];
-export const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop non-food", "Zakelijke inkoop voeding"];
+export const ZAKELIJKE_SPIEGEL_CATEGORIEEN = ["Zakelijke inkomsten", "Zakelijke inkomsten 0%", "Zakelijke inkomsten 9%", "Zakelijke inkomsten 21%", "Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"];

@@ -288,7 +288,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   // (netto, exclusief BTW, zelfde sumCatNetto-conventie als de rest van boxMapping.js) — geen nieuwe
   // berekening, puur een andere weergave van precies dezelfde bedragen. "Andere externe kosten" heeft
   // in deze app (nog) geen categorie gekoppeld en is daardoor altijd € 0,00.
-  const INKOOP = ["Zakelijke inkoop non-food", "Zakelijke inkoop voeding"]; // nieuw-V3R7
+  const INKOOP = ["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"]; // nieuw-V3R7
   const inkoopkostenBedrag = ib.inkoopkosten.perCategorie.filter((r) => INKOOP.includes(r.categorie)).reduce((t, r) => t + (r.totaal || 0), 0);
   const uitbesteedWerkBedrag = ib.inkoopkosten.perCategorie.find((r) => r.categorie === "Inhuur personeel")?.totaal || 0;
   const andereExterneKostenBedrag = 0;
@@ -693,7 +693,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   <p class="toelichting">Alle bedragen hieronder zijn netto, exclusief BTW (niet het bruto bankbedrag), tenzij anders vermeld.</p>
   <div class="wvr">
     ${rubriekBlok(1, ib.opbrengsten.naam, ib.opbrengsten.totaal, null, ib.opbrengsten.perCategorie)}
-    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null, ib.inkoopkosten.perCategorie.filter((r) => ["Zakelijke inkoop non-food", "Zakelijke inkoop voeding"].includes(r.categorie) && r.totaal))}
+    ${rubriekBlokAltijd(2, "Inkoopkosten", inkoopkostenBedrag, null, ib.inkoopkosten.perCategorie.filter((r) => ["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"].includes(r.categorie) && r.totaal))}
     ${rubriekBlokAltijd(null, "Uitbesteed werk", uitbesteedWerkBedrag, "Inhuur van derden/freelancers.", ib.inkoopkosten.perCategorie.filter((r) => r.categorie === "Inhuur personeel" && r.totaal))}
     ${rubriekBlokAltijd(null, "Andere externe kosten", andereExterneKostenBedrag, "Op dit moment zijn hier geen categorieën aan gekoppeld.")}
     ${autoMachineKostenHtml}

@@ -189,7 +189,7 @@ export function useClassified(p) {
     }
     const result = mirrors.length ? [...base, ...mirrors] : base;
     // V46 — dossier met ALLEEN privérekening(en): elke transactie met categorie "Zakelijke
-    // inkomsten"/"Zakelijke inkoop non-food" is een zakelijke boeking via de privérekening. Het
+    // inkomsten"/"Zakelijke inkoop non-voedingsmiddelen" is een zakelijke boeking via de privérekening. Het
     // `type` blijft de rekening (Prive); alleen de zakelijke OVERZICHTEN (viewType) tonen ze, zodat
     // de zakelijke kant exact de spiegel is van die categorieën op de privékant.
     const heeftZakelijkeRekening = Object.values(accountTypeByFile).includes("Zakelijk");

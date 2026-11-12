@@ -31,3 +31,18 @@ export async function parseExcelFile(file) {
   });
   return rows;
 }
+
+// nieuw-V3R8 — alle bladen als rijen met cellen (voor de activalijst): het eerste blad met herkenbare koppen wordt gebruikt.
+export async function leesExcelBladen(file) {
+  const XLSX = await laadXlsx();
+  const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
+  return wb.SheetNames.map((sn) => ({ naam: sn, rijen: XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "", raw: true, blankrows: true }) }));
+}
+export async function schrijfExcel(rijen, bladnaam, bestandsnaam) {
+  const XLSX = await laadXlsx();
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rijen);
+  ws["!cols"] = rijen[0].map((k, i) => ({ wch: Math.max(12, ...rijen.map((r) => String(r[i] ?? "").length + 2)) }));
+  XLSX.utils.book_append_sheet(wb, ws, bladnaam.slice(0, 31));
+  XLSX.writeFile(wb, bestandsnaam);
+}

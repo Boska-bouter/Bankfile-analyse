@@ -29,7 +29,11 @@ async function zorg(db) {
   const kol = new Set(((await db.prepare("PRAGMA table_info(namen_ai)").all())?.results || []).map((k) => k.name));
   if (!kol.has("versie")) await db.prepare("ALTER TABLE namen_ai ADD COLUMN versie INTEGER NOT NULL DEFAULT 1").run();
   // nieuw-V3R7 — categorie hernoemd (wens Boska 12-11); ook een keuze van de beheerder blijft zo gelden.
-  await db.prepare("UPDATE namen_ai SET categorie = 'Zakelijke inkoop non-food' WHERE categorie = 'Zakelijke inkoop/uitgaven'").run();
+  // nieuw-V3R8 — namen zoals Boska ze opgaf; OR IGNORE + DELETE voor het geval beide namen al naast elkaar staan.
+  for (const [oud, nieuw] of [["Zakelijke inkoop/uitgaven", "Zakelijke inkoop non-voedingsmiddelen"], ["Zakelijke inkoop non-food", "Zakelijke inkoop non-voedingsmiddelen"], ["Zakelijke inkoop voeding", "Zakelijke inkoop voedingsmiddelen"], ["Zakelijke inkoop voedingsmiddelen/drank", "Zakelijke inkoop voedingsmiddelen"]]) {
+    await db.prepare("UPDATE OR IGNORE namen_ai SET categorie = ?1 WHERE categorie = ?2").bind(nieuw, oud).run();
+    await db.prepare("DELETE FROM namen_ai WHERE categorie = ?1").bind(oud).run();
+  }
   klaar.add(db);
 }
 
@@ -43,7 +47,7 @@ const ONBEKEND = "Onbekend";
 export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Hoort bij de vraag hieronder: verandert de vraag, dan tellen eerder bewaarde antwoorden niet meer en wordt opnieuw gevraagd.
 // nieuw-V2R5 (melding Boska 10-11): e-bike meestal privé, hotel = reiskosten, markt/toko/supermarkt bij horeca = inkoop.
-export const VRAAG_VERSIE = 4; // nieuw-V3R7: Zakelijke inkoop voeding (horeca)
+export const VRAAG_VERSIE = 4; // nieuw-V3R7: Zakelijke inkoop voedingsmiddelen (horeca)
 const SOORT_TEKST = {
   zakelijk: "de zakelijke rekening van een ondernemer",
   prive: "de privérekening van een ondernemer (zakelijk dossier)",
@@ -133,10 +137,10 @@ export function bijsturen(a, { soort, branche } = {}, categorieen = []) {
   if (HOTEL.test(sb) && !/restaurant|eten/i.test(a.categorie)) {
     if (soort === "zakelijk" && mag("Reiskosten (hotel & verblijf)")) return { ...a, categorie: "Reiskosten (hotel & verblijf)" };
   }
-  // nieuw-V3R7 — bij horeca is inkoop van eten "Zakelijke inkoop voeding" (9% btw), ook als de AI inkoop non-food of boodschappen zegt.
-  if (soort === "zakelijk" && branche === "horeca" && ETENSWAREN.test(sb) && !GEEN_ETEN.test(sb) && ["Boodschappen", "Zakelijke inkoop non-food"].includes(a.categorie)) {
-    if (mag("Zakelijke inkoop voeding")) return { ...a, categorie: "Zakelijke inkoop voeding" };
-    if (mag("Zakelijke inkoop non-food")) return { ...a, categorie: "Zakelijke inkoop non-food" };
+  // nieuw-V3R7 — bij horeca is inkoop van eten "Zakelijke inkoop voedingsmiddelen" (9% btw), ook als de AI inkoop non-food of boodschappen zegt.
+  if (soort === "zakelijk" && branche === "horeca" && ETENSWAREN.test(sb) && !GEEN_ETEN.test(sb) && ["Boodschappen", "Zakelijke inkoop non-voedingsmiddelen"].includes(a.categorie)) {
+    if (mag("Zakelijke inkoop voedingsmiddelen")) return { ...a, categorie: "Zakelijke inkoop voedingsmiddelen" };
+    if (mag("Zakelijke inkoop non-voedingsmiddelen")) return { ...a, categorie: "Zakelijke inkoop non-voedingsmiddelen" };
   }
   if (soort === "zakelijk" && branche !== "vervoer" && FIETS.test(sb) && !/abonnement|lease|verhuur|huur/i.test(sb) && /^zakelijk/i.test(a.categorie) && mag("Privé: overig")) {
     return { ...a, categorie: "Privé: overig" };

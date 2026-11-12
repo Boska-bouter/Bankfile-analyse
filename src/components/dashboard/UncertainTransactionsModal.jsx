@@ -18,7 +18,7 @@ const LEVEL_INFO = {
 // De samengevoegde "losse pinbetalingen" (Winkels divers zonder herkend zoekwoord) zijn één groep
 // die je kunt uitklappen om per transactie te corrigeren.
 export default function UncertainTransactionsModal({
-  level, transactions, bulkCounts, activeYear = null, onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions, bulkCounts, activeYear = null, dossierJaren = [], onRequestChange, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
@@ -35,12 +35,19 @@ export default function UncertainTransactionsModal({
 
   // nieuw-V3R0 — open punten per jaar bekijken (wens Boska 11-11). "" = alle jaren.
   // Standaard het jaar dat bovenaan gekozen is (Boska: "de 77 i.p.v. 351").
-  const [jaar, setJaar] = useState(() => (activeYear && transactions.some((tx) => tx.year === activeYear) ? String(activeYear) : ""));
+  // nieuw-V4R1 — is er maar één jaar met open punten, dan staat dat jaar gekozen (zichtbaar welk jaar nog open is).
+  const [jaar, setJaar] = useState(() => {
+    if (activeYear && transactions.some((tx) => tx.year === activeYear)) return String(activeYear);
+    const js = new Set(transactions.map((tx) => tx.year));
+    return js.size === 1 ? String([...js][0]) : "";
+  });
   const jaren = useMemo(() => {
     const n = new Map();
+    // nieuw-V4R1 — alle jaren van het dossier in de keuze, ook die zonder open punten (wens Boska 12-11).
+    for (const j of dossierJaren || []) n.set(j, 0);
     for (const tx of transactions) n.set(tx.year, (n.get(tx.year) || 0) + 1);
     return [...n.entries()].sort((a, b) => b[0] - a[0]);
-  }, [transactions]);
+  }, [transactions, dossierJaren]);
   const txsJaar = useMemo(() => (jaar ? transactions.filter((tx) => String(tx.year) === jaar) : transactions), [transactions, jaar]);
   const groepen = useMemo(() => {
     const map = new Map();
@@ -256,7 +263,8 @@ export default function UncertainTransactionsModal({
               <option value="aantal">Meeste transacties eerst</option>
               <option value="naam">Naam A–Z</option>
             </select>
-            {jaren.length > 1 && (<>
+            {/* nieuw-V4R1 — ook bij één jaar tonen (Boska 12-11: "nog 1 jaar over, maar dat is niet zichtbaar"). */}
+            {jaren.length > 0 && (<>
               <label className="text-slate-500 ml-2">Jaar</label>
               <select value={jaar} onChange={(e) => { setJaar(e.target.value); setCatFilter(""); }} className="rounded-md border border-slate-300 px-1.5 py-1 text-xs">
                 <option value="">Alle jaren ({transactions.length})</option>

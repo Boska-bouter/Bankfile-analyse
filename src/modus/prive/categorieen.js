@@ -285,8 +285,8 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Zakelijk mobiel": "Privé - mobiel", "Zakelijk internet/TV": "Privé - internet/TV", "Bankkosten": "Privé - bankkosten", "Leningen": "Leningen (privé)",
   "Zakelijk overige abonnementen": "Privé overige abonnementen", "Streaming diensten": "Privé overige abonnementen",
   "Privé - streaming diensten": "Privé overige abonnementen", "Software & Online diensten": "Privé overige abonnementen",
-  "Zakelijke inkoop non-food": "Privé: overig",
-  "Zakelijke inkoop voeding": "Boodschappen",
+  "Zakelijke inkoop non-voedingsmiddelen": "Privé: overig",
+  "Zakelijke inkoop voedingsmiddelen": "Boodschappen",
   "Belastingen: OB": "Belastingen: overig", "Belastingen: LH": "Belastingen: overig", "Belastingen: IH": "Belastingen: overig",
   "Belastingen: Naheffingen OB voorgaande jaren": "Belastingen: overig", "Belastingen: Naheffingen LH voorgaande jaren": "Belastingen: overig",
 });
