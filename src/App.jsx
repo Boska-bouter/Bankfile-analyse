@@ -2704,6 +2704,7 @@ export default function App() {
             transactions={uncertainModalData.transactions}
             bulkCounts={uncertainModalData.bulkCounts}
             activeYear={activeYear}
+            dossierJaren={years}
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
             onConfirmAll={confirmAllUncertain}
