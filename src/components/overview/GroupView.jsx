@@ -401,10 +401,10 @@ export function DetailTable({
 
   const filteredItems = useMemo(() => {
     let rows = group.items;
-    const q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (q) {
       rows = rows.filter((t) =>
-        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${displayCategory(t.category)} ${mainCategoryOf(t.category)}`.toLowerCase().includes(q)
+        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${displayCategory(t.category)} ${mainCategoryOf(t.category)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)
       );
     }
     const min = amountMin.trim() === "" ? null : Math.abs(parseFloat(amountMin));

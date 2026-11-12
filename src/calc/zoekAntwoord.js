@@ -11,12 +11,12 @@ export function soortZoekterm(z) {
   if (!t) return null;
   if (/^\d{1,4}([-/]\d{1,4}){1,2}$/.test(t)) return { soort: "datum", t: t.replace(/\//g, "-").split("-").map((x) => (x.length === 1 ? twee(x) : x)).join("-") };
   if (/^[−-]?\s?€?\s?\d+([.,]\d{0,2})?$/.test(t)) return { soort: "bedrag", t: t.replace(/[−€\s-]/g, "").replace(".", ",") };
-  return { soort: "tekst", t: t.toLowerCase() };
+  return { soort: "tekst", t: t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") };
 }
 
 export function zoekAntwoord(rij, term) {
   if (!term) return { boeking: null };
-  const tekstTreffer = String(rij.naam || "").toLowerCase().includes(term.t) || String(rij.categorieen ? rij.categorieen.join(" ") : rij.categorie || "").toLowerCase().includes(term.t);
+  const tekstTreffer = String(rij.naam || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(term.t) || String(rij.categorieen ? rij.categorieen.join(" ") : rij.categorie || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(term.t);
   if (term.soort === "tekst") return tekstTreffer ? { boeking: null } : null;
   const boekingen = rij.boekingen || [];
   const b = term.soort === "bedrag"

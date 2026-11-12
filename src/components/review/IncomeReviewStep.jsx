@@ -9,8 +9,8 @@ import RekeningLabels from "../shared/RekeningLabels.jsx";
 export default function IncomeReviewStep({ items, totalCount, doneCount, search, onSearch, onMark }) {
   const filtered = useMemo(() => {
     if (!search.trim()) return items;
-    const q = search.toLowerCase();
-    return items.filter((i) => i.name.toLowerCase().includes(q));
+    const q = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return items.filter((i) => i.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q));
   }, [items, search]);
 
   return (

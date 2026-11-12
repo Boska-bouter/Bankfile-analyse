@@ -169,7 +169,7 @@ export default function BankKoppelingModal({ afronding, parsedFiles, koppelingen
   };
   useEffect(() => { laadBanken(psu); }, [psu]);
 
-  const gefilterd = useMemo(() => (banken || []).filter((b) => b.naam.toLowerCase().includes(zoek.trim().toLowerCase())), [banken, zoek]);
+  const gefilterd = useMemo(() => (banken || []).filter((b) => b.naam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(zoek.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""))), [banken, zoek]);
 
   const naarBank = async () => {
     const bank = isPonto ? { naam: "Ponto" } : (banken || []).find((b) => b.naam === gekozen);

@@ -16,11 +16,11 @@ export default function ZoekAllesModal({ transacties, jaren = [], onClose, onGaN
 
   const index = useMemo(() => (transacties || []).filter((t) => t && t.date).map((t) => ({
     t,
-    hay: `${t.counterparty || ""} ${t.description || ""} ${t.fullDescription || ""} ${displayCategory(t.category) || ""} ${t.date.toLocaleDateString("nl-NL").replace(/\//g, "-")} ${t.year} ${normBedrag(t.amount)} ${Math.abs(t.amount).toFixed(2)}`.toLowerCase(),
+    hay: `${t.counterparty || ""} ${t.description || ""} ${t.fullDescription || ""} ${displayCategory(t.category) || ""} ${t.date.toLocaleDateString("nl-NL").replace(/\//g, "-")} ${t.year} ${normBedrag(t.amount)} ${Math.abs(t.amount).toFixed(2)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   })), [transacties]);
 
   const { rijen, totaal, som } = useMemo(() => {
-    const woorden = q.toLowerCase().split(/\s+/).map((w) => w.replace(/^€/, "").replace(/\.(?=\d{3}\b)/g, "")).filter(Boolean);
+    const woorden = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).map((w) => w.replace(/^€/, "").replace(/\.(?=\d{3}\b)/g, "")).filter(Boolean);
     const hits = index.filter(({ t, hay }) =>
       (jaar === "alle" || String(t.year) === jaar) &&
       (soort === "alle" || (soort === "zakelijk" ? t.accountType === "Zakelijk" : t.accountType === "Prive")) &&

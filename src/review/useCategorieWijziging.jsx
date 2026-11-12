@@ -121,12 +121,12 @@ export function useCategorieWijziging(p) {
       return;
     }
     // V53 — actieve zoekopdracht in de detailtabel: de reikwijdte is wat het zoekwoord vindt, niet de IBAN.
-    const sq = (opts?.searchQuery || "").toLowerCase();
+    const sq = (opts?.searchQuery || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (sq && tx.id != null) {
       const kwMatches = classified.filter(
         (t) =>
           !t.isMirror && !t.transferLocked && (t.amount >= 0) === (tx.amount >= 0) &&
-          `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(sq)
+          `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(sq)
       );
       if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
         const matchYears = [...new Set(kwMatches.map((t) => t.year))].sort((a, b) => a - b);

@@ -87,8 +87,8 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
   };
   const filtered = useMemo(() => {
     if (!search.trim()) return bron;
-    const q = search.toLowerCase();
-    return bron.filter((i) => i.name.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
+    const q = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return bron.filter((i) => i.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || (i.description && i.description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)));
   }, [bron, search]);
   const aantalBevestigd = (allItems?.length || 0) - items.length;
   // huishoudboekje-V6R6 — hoeveel van de open boekingen zitten bij de 20 tegenpartijen bovenaan? (lijst staat op aantal, zie reviewSummaries.js)
