@@ -563,8 +563,9 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // classificatie — komt zichtbaar als "controleren" in de reviewlijst terecht, precies zodat een
   // zakelijke uitgave bij een buitenlandse leverancier (software, congres, hosting) alsnog
   // gecorrigeerd kan worden.
+  // nieuw-V4R6 — gok: true = laatste-redmiddel-gok; de gedeelde namenlijst en het opzoeken met AI mogen er een betere categorie voor geven.
   if (accountType !== "Zakelijk" && looksLikeForeignCardPayment(tx)) {
-    return { category: "Privé - vrijetijd-uitgaan-vakantie & uit eten", type };
+    return { category: "Privé - vrijetijd-uitgaan-vakantie & uit eten", type, gok: true };
   }
 
   if (looksLikePerson(tx.counterparty || tx.description) && kanPersoonZijn(tx)) {
@@ -580,7 +581,7 @@ export function autoClassify(tx, rules, businessKeywords, businessExpenseKeyword
   // Alleen op de PRIVÉrekening — op de zakelijke rekening blijft een onherkende uitgave bewust op
   // "Overig" staan, omdat de fiscale inzet (aftrekbaarheid) daar te groot is om te gokken.
   if (accountType !== "Zakelijk" && !tx.counterpartyIban && tx.amount < 0) {
-    return { category: "Winkels divers", type };
+    return { category: "Winkels divers", type, gok: true };
   }
 
   return { category: "Overig", type };
@@ -994,7 +995,8 @@ function resolveClassificationZonderTarief(tx, ...rest) {
   if (horeca) return { ...uitkomst, category: horeca };
   // nieuw-V2R1 — gedeelde namenlijst (gedeeldeNamen.js): wat andere gebruikers voor deze bedrijfsnaam kozen. Zeker = overnemen,
   // anders een voorstel op "nakijken" (useClassified zet het label). Gaat vóór de schattingen op factuurnummer en bedrijfsnaam.
-  if (!eigenKeuze && ONBEKEND_UIT.has(uitkomst.category)) {
+  // nieuw-V4R6 — ook bij een gok zonder zoekwoord (Winkels divers bij een losse pinbetaling, buitenlandse pinbetaling).
+  if (!eigenKeuze && (ONBEKEND_UIT.has(uitkomst.category) || uitkomst.gok)) {
     const regels = rest[0] || [];
     const g = gedeeldeKeuze(tx, rest[3], (c) => c in CATEGORY_COLOR || regels.some((r) => r?.name === c));
     if (g) return { ...uitkomst, category: g.categorie, gedeeld: g };

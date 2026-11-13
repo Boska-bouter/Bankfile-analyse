@@ -5,6 +5,8 @@
 // - GET/POST /api/namen/toestemming : toestemming lezen of aan/uit zetten ({ aan: true|false }). Standaard uit.
 // Er komt nooit een e-mailadres bij de keuzes: elk account telt onder een anonieme code (hash), één stem per naam per account.
 // D1-tabellen "namen_stem" en "namen_toestemming"; de Worker maakt ze zelf aan.
+import { zetSleutelsOm } from "./namenSleutelOm.js";
+import { bedrijfSleutel } from "../src/classification/bedrijfSleutel.js";
 import START from "./namenlijst-start.js";
 import { zoekRoute } from "./namenAi.js";
 
@@ -26,6 +28,7 @@ async function zorg(db) {
     await db.prepare("UPDATE OR IGNORE namen_stem SET categorie = ?1 WHERE categorie = ?2").bind(nieuw, oud).run();
     await db.prepare("DELETE FROM namen_stem WHERE categorie = ?1").bind(oud).run();
   }
+  await zetSleutelsOm(db, "namen_stem");
   klaar.add(db);
 }
 
@@ -40,7 +43,9 @@ export function geldigeSleutel(k) {
   if (d.length !== 4) return null;
   const [s, t, o, b] = d;
   if (!/^[a-z][a-z ]{1,59}$/.test(s) || !/^(neg|pos)$/.test(t) || !SOORTEN.has(o) || !/^[a-z-]{0,30}$/.test(b)) return null;
-  return { sleutel: s, teken: t, soort: o, branche: b };
+  // nieuw-V4R6 — een oude sleutel (bijv. uit een eerder bewaarde Excel) wordt omgezet naar de nieuwe vorm.
+  const n = bedrijfSleutel(s);
+  return n ? { sleutel: n, teken: t, soort: o, branche: b } : null;
 }
 export function geldigeCategorie(c) {
   const t = String(c || "").trim();

@@ -6,13 +6,18 @@ const VOORVOEGSELS = [
 ];
 const RUIS = new Set(["nld", "nl", "bel", "be", "deu", "de", "via", "bv", "b.v.", "nv", "vof"]);
 
-export function vergelijkSleutel(naam) {
+// nieuw-V4R6 — de woorden zonder ruis, cijfers en "via …"; ook gebruikt door bedrijfSleutel (gedeelde namenlijst).
+export function vergelijkWoorden(naam) {
   let t = String(naam || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   t = t.split(/\s+via\s+/)[0];
   for (const [re, door] of VOORVOEGSELS) t = t.replace(re, door);
-  const woorden = t
+  return t
     .split(/[^a-z0-9]+/)
     .filter((w) => w && !/\d/.test(w) && !RUIS.has(w));
+}
+
+export function vergelijkSleutel(naam) {
+  const woorden = vergelijkWoorden(naam);
   // Losse letters (voorletters) tellen niet mee, behalve als er verder niets is.
   const kern = woorden.filter((w) => w.length > 1);
   const basis = kern.length ? kern : woorden;

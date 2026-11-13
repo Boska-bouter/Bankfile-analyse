@@ -98,6 +98,7 @@ export function useControlerenCardGroups(p) {
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
+              onRequestChange={requestCategoryChange}
               reviewedOverigKeys={reviewedOverigKeys}
               reviewedPersonKeys={reviewedPersonKeys}
             />

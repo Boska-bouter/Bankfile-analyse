@@ -2,7 +2,9 @@ import { counterpartyKey } from "../../utils/normalization.js";
 import { sleutelZonderNaam, bevestigdVoor } from "../../classification/reviewSummaries.js";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { CATEGORY_COLOR, displayCategory } from "../../classification/categories.js";
+import { CATEGORY_COLOR, displayCategory, mainCategoryOf, hoofdKleur } from "../../classification/categories.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
+import { Lock } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
@@ -13,7 +15,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
+export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -27,10 +29,14 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
     const k = counterpartyKey(tx.counterparty || tx.description, tx.amount) || sleutelZonderNaam(tx);
     return bevestigdVoor(tx.category === "Overig" ? overigSet : personenSet, k, tx);
   };
-  const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigd(tx));
-  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx));
-  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback" && !bevestigd(tx));
-  const needsReview = [...unclear, ...review]; // onduidelijk eerst — dat verdient de meeste aandacht
+  // nieuw-V4R7 — een klein bedrag (kleineBedragen.js) telt nergens als open punt, dus hier ook niet: anders opende "controleren"
+  // een venster zonder boekingen dat meteen weer sloot (melding Boska 13-11). In de lijst blijven ze wel staan, met keuzevak.
+  const open_ = (tx) => (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigd(tx);
+  const klein = nonMirror.filter((tx) => tx.kleinBedrag && open_(tx));
+  const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigd(tx) || (tx.kleinBedrag && open_(tx)));
+  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx) && !tx.kleinBedrag);
+  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback" && !bevestigd(tx) && !tx.kleinBedrag);
+  const needsReview = [...unclear, ...review, ...klein]; // onduidelijk eerst — dat verdient de meeste aandacht; kleine bedragen achteraan
   const total = nonMirror.length;
   const pct = (n) => Math.round((n / total) * 100);
 
@@ -89,13 +95,21 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
             <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
               {needsReview.slice(0, 200).map((tx) => (
                 <div key={tx.id} className="flex items-center gap-2 p-2 text-xs">
-                  <span className="shrink-0">{metBolletjes(LEVEL_ICON[tx.confidence.level])}</span>
+                  <span className="shrink-0">{metBolletjes(tx.kleinBedrag ? "🟢" : LEVEL_ICON[tx.confidence.level])}</span>
                   <div className="flex-1 min-w-0">
                     <p className="truncate">{tx.counterparty || tx.description || "(geen omschrijving)"}</p>
                     <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
-                    <p className="text-[11px] text-slate-400">{tx.confidence.label}</p>
+                    <p className="text-[11px] text-slate-400">{tx.confidence.label}{tx.kleinBedrag ? " · klein bedrag, telt niet als open punt" : ""}</p>
                   </div>
-                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{displayCategory(tx.category)}</span>
+                  {onRequestChange && !tx.transferLocked ? (
+                    <CategorieSelect
+                      value={tx.category}
+                      onChange={(v) => onRequestChange(tx, { category: v, type: tx.type })}
+                      className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
+                    />
+                  ) : (
+                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{tx.transferLocked && <Lock className="h-3 w-3" />}{displayCategory(tx.category)}</span>
+                  )}
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (
                     <button

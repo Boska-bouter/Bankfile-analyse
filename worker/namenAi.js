@@ -9,6 +9,7 @@
 // - Variabele NAMEN_AI = "uit" zet het opzoeken uit, ook met sleutel.
 // - Variabele NAMEN_AI_MODEL (standaard claude-haiku-5-5), NAMEN_AI_PER_DAG (per account, standaard 500 namen),
 //   NAMEN_AI_TOTAAL_PER_DAG (alle accounts samen, standaard 5000 namen).
+import { zetSleutelsOm } from "./namenSleutelOm.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { geldigeCategorie } from "./namenlijst.js";
 
@@ -34,6 +35,7 @@ async function zorg(db) {
     await db.prepare("UPDATE OR IGNORE namen_ai SET categorie = ?1 WHERE categorie = ?2").bind(nieuw, oud).run();
     await db.prepare("DELETE FROM namen_ai WHERE categorie = ?1").bind(oud).run();
   }
+  await zetSleutelsOm(db, "namen_ai");
   klaar.add(db);
 }
 
