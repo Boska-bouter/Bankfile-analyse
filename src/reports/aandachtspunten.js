@@ -15,7 +15,7 @@ export function bepaalAandachtspunten({
   const onvolledig = jaren.filter((y) => yearPeriod[y] && !yearPeriod[y].heel);
   if (onvolledig.length) p.push(`Niet-volledig jaar: ${onvolledig.map((y) => `${y} (${yearPeriod[y].label})`).join(", ")}. De cijfers gaan alleen over de periode met bankgegevens; een eventuele extrapolatie of jaarcorrectie is niet beoordeeld.`);
 
-  const onzeker = classified.filter((t) => !t.isMirror && jaren.includes(String(t.year)) && (t.confidence?.level === "heuristic" || t.confidence?.level === "fallback"));
+  const onzeker = classified.filter((t) => !t.isMirror && !t.afgehandeld && jaren.includes(String(t.year)) && (t.confidence?.level === "heuristic" || t.confidence?.level === "fallback"));
   if (onzeker.length) p.push(`${onzeker.length} transactie${onzeker.length === 1 ? "" : "s"} (samen ${eur(onzeker.reduce((a, t) => a + Math.abs(t.amount || 0), 0))}) ${onzeker.length === 1 ? "heeft" : "hebben"} een indeling die de app niet zeker kent en die niet is bevestigd. Controleer de indeling.`);
 
   if (incompleteLeases > 0) p.push(`${incompleteLeases} leasecontract${incompleteLeases === 1 ? "" : "en"} met onvolledige gegevens: bijtelling, afschrijving en rente zijn daardoor onzeker.`);
