@@ -453,6 +453,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       <div><span>MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span>- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
       <div class="tussentotaal"><span>Indicatieve belastbare winst</span><span>${eur(winstUitsplitsing.belastbaar)}</span></div>
     </div>
+    ${(ibEstimate.overigInkomen || 0) > 0 ? `<div class="kerncijfers-stappen">
+      <div><span>Overig inkomen box 1 (loon/uitkering, bruto per jaar, opgegeven)</span><span>${eur(ibEstimate.overigInkomen)}</span></div>
+      <p class="kerncijfers-voetnoot">Niet bij de winst opgeteld: hierover is al loonheffing ingehouden. Heffingskorting toegepast op: ${heffingskortingen.kortingOp === "overig" ? "dit overig inkomen" : "de winst"} (zie de totaalkaart).</p>
+    </div>` : ""}
     <div class="kerncijfers-resultaat">
       <div><span class="label">Indicatieve IB*</span><span class="bedrag-groot">${eur(ibEstimate.belasting)}</span></div>
       <div><span class="label">Indicatieve Zvw</span><span class="bedrag-groot">${eur(zvwEstimate.bijdrage)}</span></div>
@@ -503,12 +507,21 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const i = ibNa(ibEstimate, heffingskortingen);
     const t = i + zvwEstimate.bijdrage;
     JAAR_TOTALEN.push({ year, totaal: t, winst: summary.winst, ib: i, zvw: zvwEstimate.bijdrage, btw: korRegeling ? null : btwJaarSaldo });
+    // nieuw-V4R4 — IB vóór korting, heffingskortingen en het effect van overig inkomen zichtbaar (Boska 13-11:
+    // "de te betalen belasting verandert, maar het is niet te zien waardoor").
+    const overigInk = ibEstimate.overigInkomen || 0;
+    const hk = heffingskortingen.totaal || 0;
     jaarTotaalHtml = `<div class="totaal-kaart">
+      <div class="totaal-regel"><span>Indicatieve IB vóór heffingskorting</span><span>${eur(ibEstimate.belasting || 0)}</span></div>
+      <div class="totaal-regel"><span>Heffingskortingen over de winst${overigInk > 0 && heffingskortingen.kortingOp === "overig" ? " (korting toegepast op het overig inkomen)" : ""}</span><span>${hk >= 0 ? "- " : "+ "}${eur(Math.abs(hk))}</span></div>
       <div class="totaal-regel"><span>Indicatieve IB na heffingskorting</span><span>${eur(i)}</span></div>
       <div class="totaal-regel"><span>Indicatieve Zvw</span><span>${eur(zvwEstimate.bijdrage)}</span></div>
       <div class="totaal-regel totaal-eind"><span>Totaal ${year} (jaarlijks: IB + Zvw)</span><span>${totaalTekst(t)}</span></div>
       ${btwRegelHtml}
-      <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; overig inkomen alleen voor zover opgegeven in de wizard, zonder verrekening van voorschotten of voorlopige aanslagen.</p>
+      ${overigInk > 0
+        ? `<p class="kerncijfers-voetnoot">Overig inkomen box 1: ${eur(overigInk)} bruto (loon/uitkering), opgegeven bij Aannames &amp; percentages. Daarover is al loonheffing ingehouden. De heffingskorting krijg je maar één keer en is toegepast op ${heffingskortingen.kortingOp === "overig" ? `het overig inkomen (via de loonheffing, ${eur(heffingskortingen.gebruiktOpOverig || 0)}); over de winst telt dus geen korting meer mee` : "de winst; op het overig inkomen is dan geen korting toegepast"}. Te wijzigen bij Aannames &amp; percentages. De IB is het extra deel door de winst.</p>`
+        : `<p class="kerncijfers-voetnoot">Geen overig inkomen opgegeven: de volledige heffingskortingen zijn tegen de winst weggestreept.</p>`}
+      <p class="kerncijfers-voetnoot">Indicatief, na zelfstandigenaftrek, startersaftrek, MKB-winstvrijstelling en heffingskortingen; zonder verrekening van voorschotten of voorlopige aanslagen.</p>
     </div>`;
   }
 
