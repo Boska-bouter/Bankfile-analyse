@@ -856,7 +856,7 @@ export const PRIVE_GROEPEN = {
   [PRIVE_TELECOM]: [
     { key: "Privé - mobiel", label: "Mobiel" },
     { key: "Privé - internet/TV", label: "Internet & tv" },
-    { key: "Privé overige abonnementen", label: "Overige abonnementen" },
+    { key: "Privé overige abonnementen", label: "Overige (bijv. Swapfiets, huur witgoed, krant)" },
     { key: "Privé - streaming diensten", label: "Streaming" },
   ],
   [PRIVE_VERZEKERINGEN]: [{ key: "Verzekeringen", label: "Verzekeringen" }],
@@ -946,7 +946,8 @@ export function categorieZichtbaar(c, huidige = null) { return _rechtsvorm === "
 // zakelijke uitgaven" meteen "Verzekering: Zakelijk"), zodat je niet eerst een groep en dan een soort hoeft
 // te kiezen. Privé kosten algemeen blijft één keuze (geen fiscaal verschil tussen de 17 leden).
 // beide-V10R4 — in de keuzelijst staat de groep (bijv. "Privé") al als kop; herhaal dan niet steeds de volle groepsnaam (wens Boska 28-10).
-const KORTE_GROEPNAAM = { [PRIVE_WONEN]: "Wonen", [PRIVE_TELECOM]: "Telecom & abonnementen" };
+// nieuw-V4R5 — "Abonnementen" i.p.v. "Telecom & abonnementen": overige abonnementen (Swapfiets, huur witgoed) werden niet gevonden (Boska 13-11).
+const KORTE_GROEPNAAM = { [PRIVE_WONEN]: "Wonen", [PRIVE_TELECOM]: "Abonnementen" };
 export function keuzeGroepen(huidige = null) {
   if (_cp) return _cp.keuzeGroepen(huidige);
   return MAIN_CATEGORY_ORDER.map((main) => {
