@@ -1,10 +1,18 @@
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
 
 // Met `swipe={{ years, year, onSelectYear }}` kun je in het venster links/rechts vegen om van jaar te wisselen.
 // Gedeelde pop-up-schil (donkere achtergrond, witte kaart, titelbalk met sluitknop) voor de grotere
 // vensters van de app. Klik naast het venster of op het kruisje sluit het.
-export default function ModalShell({ title, onClose, maxWidth = "max-w-4xl", swipe, children }) {
+// nieuw-V4R3 — via een portal op document.body, zodat het venster altijd midden in beeld staat, ook als het vanuit een
+// blok met transform/animatie wordt geopend (Boska 13-11: "Activa als lijst inlezen" opende onderaan het scherm).
+export default function ModalShell(props) {
+  const inhoud = <ModalInhoud {...props} />;
+  return typeof document !== "undefined" ? createPortal(inhoud, document.body) : inhoud;
+}
+
+function ModalInhoud({ title, onClose, maxWidth = "max-w-4xl", swipe, children }) {
   return (
     <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
       <div className={`bg-white rounded-xl shadow-xl w-full ${maxWidth} max-h-[85dvh] flex flex-col`} onClick={(e) => e.stopPropagation()}>
