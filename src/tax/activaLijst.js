@@ -123,12 +123,15 @@ export function leesActivaTabel(rijen) {
   }
   if (!kolommen) return { regels: [], kolommen: null, fout: "Geen kolommen herkend. De eerste rij moet koppen hebben, zoals Omschrijving, Aanschafdatum en Aanschafwaarde. Gebruik zo nodig het sjabloon." };
   const cel = (r, veld) => (kolommen[veld] == null ? "" : r[kolommen[veld]]);
-  const regels = [];
+  const regels = [], leeg = [];
   lijst.slice(kopRij + 1).forEach((r) => {
     const naam = String(cel(r, "naam") ?? "").trim();
     if (/^(totaal|subtotaal|total)\b/i.test(naam)) return;
-    const fouten = [];
     const aanschafwaarde = leesBedrag(cel(r, "aanschafwaarde"));
+    // nieuw-V4R2 — regel zonder omschrijving én zonder aanschafwaarde = lege regel, overslaan (wens Boska 13-11),
+    // ook als er nog iets als "gebruikt" of een datum in staat (doorgetrokken kolommen in Excel).
+    if (!naam && aanschafwaarde == null) { leeg.push(r.nr); return; }
+    const fouten = [];
     const aanschafdatum = leesDatum(cel(r, "aanschafdatum"));
     const termijn = leesBedrag(cel(r, "afschrijvingstermijnJaren"));
     const restwaarde = leesBedrag(cel(r, "restwaarde"));
@@ -158,13 +161,15 @@ export function leesActivaTabel(rijen) {
       },
     });
   });
-  return { regels, kolommen, fout: regels.length ? null : "Geen regels gevonden onder de koppen." };
+  return { regels, kolommen, leeg, fout: regels.length ? null : "Geen regels gevonden onder de koppen." };
 }
 
 const dagen = (a, b) => Math.abs(new Date(a) - new Date(b)) / 86400000;
 const dag = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d || "").slice(0, 10));
 
-// Per regel wat er gebeurt: "fout" (niet toevoegen), "bestaat" (staat er al), "koppel" (gegevens bij een bankbetaling) of "nieuw".
+// Per regel wat er gebeurt: "fout" (niet toevoegen), "dubbel" (vraag: klopt dat?), "koppel" (gegevens bij een bankbetaling) of "nieuw".
+// nieuw-V4R2 — een dubbele regel (twee keer in de lijst, of al in de activalijst) wordt NIET zelf overgeslagen: de gebruiker
+// beslist (wens Boska 13-11: er kunnen meerdere dezelfde activa zijn). alsJa = wat er gebeurt als het toch wordt toegevoegd.
 // Bankbetaling past als het bedrag gelijk is aan de aanschafwaarde of aanschafwaarde + 21% btw (± € 1), binnen 31 dagen, en die
 // betaling nog geen ingevulde gegevens heeft. Elke betaling wordt hooguit één keer gebruikt.
 export function bepaalActies(regels, activaSummary = [], activaDetails = {}) {
@@ -173,15 +178,15 @@ export function bepaalActies(regels, activaSummary = [], activaDetails = {}) {
     const d = activaDetails[a.key] || {};
     return { key: a.key, naam: plat(d.naam || a.naam), datum: d.aanschafdatum || dag(a.tx?.date), waarde: Number(d.aanschafwaarde) || Math.abs(Number(a.tx?.amount) || 0), bank: !a.handmatig, ingevuld: !!(d.aanschafwaarde && d.aanschafdatum && d.afschrijvingstermijnJaren), tx: a.tx };
   });
-  const gezien = new Set();
+  const gezien = new Map();
   return regels.map((r) => {
     if (r.fouten.length) return { ...r, actie: "fout" };
     const d = r.details;
     const sleutel = `${plat(d.naam)}|${d.aanschafdatum}|${d.aanschafwaarde}`;
-    if (gezien.has(sleutel)) return { ...r, actie: "bestaat", reden: "staat twee keer in de lijst" };
-    gezien.add(sleutel);
+    if (gezien.has(sleutel)) return { ...r, actie: "dubbel", alsJa: "nieuw", reden: `staat ook op rij ${gezien.get(sleutel)}` };
+    gezien.set(sleutel, r.regel);
     const zelfde = bestaand.find((b) => b.ingevuld && b.datum === d.aanschafdatum && Math.abs(b.waarde - d.aanschafwaarde) < 1 && (b.naam === plat(d.naam) || b.bank));
-    if (zelfde) return { ...r, actie: "bestaat", reden: "staat al in de activalijst", key: zelfde.key };
+    if (zelfde) return { ...r, actie: "dubbel", alsJa: "nieuw", reden: "staat al in de activalijst" };
     const bank = bestaand
       .filter((b) => b.bank && !b.ingevuld && !gebruikt.has(b.key) && dagen(b.datum, d.aanschafdatum) <= 31
         && (Math.abs(b.waarde - d.aanschafwaarde) <= 1 || Math.abs(b.waarde - d.aanschafwaarde * 1.21) <= 1))
@@ -189,6 +194,13 @@ export function bepaalActies(regels, activaSummary = [], activaDetails = {}) {
     if (bank) { gebruikt.add(bank.key); return { ...r, actie: "koppel", key: bank.key, bank: { naam: bank.tx?.counterparty || bank.naam, bedrag: Math.abs(Number(bank.tx?.amount) || 0), datum: dag(bank.tx?.date) } }; }
     return { ...r, actie: "nieuw" };
   });
+}
+
+// Wat er na de antwoorden op de vragen gebeurt: dubbel + ja → alsJa, dubbel + nee → "overslaan", dubbel zonder antwoord → "vraag".
+export function naAntwoorden(acties, antwoorden = {}) {
+  return acties.map((r) => (r.actie !== "dubbel" ? r
+    : antwoorden[r.regel] === true ? { ...r, actie: r.alsJa, gevraagd: true }
+    : antwoorden[r.regel] === false ? { ...r, actie: "overslaan" } : { ...r, actie: "vraag" }));
 }
 
 // Activalijst als rijen voor Excel: koppen + een regel per activum (sjabloon: alleen de koppen en een voorbeeldregel).
