@@ -2696,7 +2696,7 @@ export default function App() {
             }}
             eigenNamen={eigenNamen}
             bekijken={aansluitControleInfo.tone !== "attention"}
-            bekijkenTekst={aansluitControleInfo.zijdeOntbreekt ? `De ${aansluitControleInfo.zijdeOntbreekt === "Prive" ? "privérekening" : "zakelijke rekening"} is voor dit jaar niet geladen, dus koppelen kan niet.` : ""}
+            bekijkenTekst=""
             onClose={() => setShowOnverklaard(false)}
           />
         )}

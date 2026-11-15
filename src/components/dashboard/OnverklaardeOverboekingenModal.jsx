@@ -172,7 +172,7 @@ export default function OnverklaardeOverboekingenModal({ items: itemsNu, toegeli
         </div>
         <div className="px-4 pt-3 text-xs text-slate-600 shrink-0">
           {bekijken ? (
-            <>Hier staat niets meer open. {bekijkenTekst} Je kunt de boekingen nalopen en een categorie aanpassen als er een fout in zit.</>
+            <>Er staat niets open. Pas een categorie aan als die niet klopt.{bekijkenTekst ? ` ${bekijkenTekst}` : ""}</>
           ) : (<>
           Verschil: <strong className="font-mono">{eur(diff)}</strong>. Dit zijn de boekingen waarvan aan de andere kant geen boeking met
           hetzelfde bedrag (binnen 5 dagen) staat. Als je deze goed indeelt of het ontbrekende bestand laadt, wordt het verschil kleiner.
@@ -290,8 +290,8 @@ export default function OnverklaardeOverboekingenModal({ items: itemsNu, toegeli
           )}
           {toegelicht.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Komt niet op de privérekening terug, reden bekend ({toegelichtNu.length})</p>
-              <p className="text-[11px] text-slate-500 mb-1.5">Dit geld komt niet op een geladen privérekening terug, en dat hoeft ook niet. De reden staat per boeking: contant opgenomen bij een geldautomaat, rechtstreeks aan een ander betaald, of naar een eigen rekening die niet is geladen ("automatisch" = herkend door de app). Je hoeft er niets mee te doen, behalve de categorie aanpassen als die niet klopt. Pas je de categorie aan, dan blijft de boeking hier staan met "Aangepast naar …" en telt hij niet meer mee in deze controle.</p>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Contant, gepind, aan anderen of naar een eigen rekening die niet is geladen ({toegelichtNu.length})</p>
+              <p className="text-[11px] text-slate-500 mb-1.5">Een aangepaste boeking blijft hier staan met "Aangepast naar …".</p>
               <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
                 {toegelicht.map(({ tx, kant, sleutel, uitleg, aangepast }) => aangepast ? (
                   <div key={sleutel} className="p-2.5 text-xs flex flex-wrap items-center gap-2 bg-slate-50">

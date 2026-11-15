@@ -78,22 +78,19 @@ export function useControlerenCardGroups(p) {
             <div className={`rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2 ${aansluitControleInfo.tone === "attention" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
               {/* nieuw-V5R4 — privé opnames in twee soorten, zonder het woord "tegenboeking" (Boska 15-11) */}
               <div className="space-y-1">
-                <p><strong>Controle zakelijk ↔ privé</strong> <span className="text-xs opacity-80">(alleen geld van zakelijk voor privé; gewone betalingen en ontvangsten doen hier niet mee)</span></p>
-                {aansluitControleInfo.soorten && (
+                <p><strong>Privé opnames {activeYear || ""}:</strong> {eur(-aansluitControleInfo.zakSum)}</p>
+                {aansluitControleInfo.soorten && (() => {
+                  const so = aansluitControleInfo.soorten;
+                  const nb = (g) => `${g.n} boeking${g.n === 1 ? "" : "en"}, ${eur(-g.bedrag)}`;
+                  return (
                   <ul className="text-xs space-y-0.5 list-disc pl-4">
-                    {aansluitControleInfo.soorten.eigen.n > 0 && (
-                      <li>
-                        <strong>Naar een eigen privérekening:</strong> {aansluitControleInfo.soorten.eigen.n} boeking{aansluitControleInfo.soorten.eigen.n === 1 ? "" : "en"}, {eur(-aansluitControleInfo.soorten.eigen.bedrag)}.{" "}
-                        {aansluitControleInfo.zijdeOntbreekt === "Prive"
-                          ? "Niet te controleren: de privérekening is niet geladen."
-                          : <>{aansluitControleInfo.soorten.eigen.gekoppeld} teruggevonden op de privérekening{aansluitControleInfo.soorten.eigen.nietGeladen > 0 ? `, ${aansluitControleInfo.soorten.eigen.nietGeladen} naar een eigen rekening die niet is geladen of met jouw uitleg` : ""}{aansluitControleInfo.soorten.eigen.open > 0 ? `, ${aansluitControleInfo.soorten.eigen.open} niet teruggevonden` : ""}.</>}
-                      </li>
-                    )}
-                    {aansluitControleInfo.soorten.ander.n > 0 && (
-                      <li><strong>Contant opgenomen of rechtstreeks aan een ander betaald:</strong> {aansluitControleInfo.soorten.ander.n} boeking{aansluitControleInfo.soorten.ander.n === 1 ? "" : "en"}, {eur(-aansluitControleInfo.soorten.ander.bedrag)}. Dit komt nooit op een privérekening, en dat is goed.</li>
-                    )}
+                    {so.terug.n > 0 && <li>Teruggevonden op de privérekening: {nb(so.terug)}</li>}
+                    {so.eigen.n > 0 && <li>Naar eigen rekening {so.eigen.ibans.join(", ")} (niet geladen): {nb(so.eigen)}</li>}
+                    {so.ander.n > 0 && <li>Contant, gepind of aan anderen betaald: {nb(so.ander)}</li>}
+                    {so.onbekend.n > 0 && <li>Naar een onbekende rekening: {nb(so.onbekend)}{so.onbekend.open > 0 ? " (nakijken)" : ""}</li>}
                   </ul>
-                )}
+                  );
+                })()}
                 {aansluitControleInfo.zijdeOntbreekt !== "Prive" && <p className="text-xs opacity-80">{aansluitControleInfo.subtitle}</p>}
               </div>
               {aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0 ? (
