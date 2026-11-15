@@ -55,8 +55,12 @@ export function useReviewActies(invoer) {
     return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
   }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
   // V90 — een venster dat "0 open" meldt is overbodig: sluit automatisch zodra er niets (meer) te beoordelen is
+  // nieuw-V5R3 — alleen bij het openen: wat je in het venster afhandelt blijft zichtbaar tot je het zelf sluit.
+  const gecontroleerdBijOpenen = useRef(null);
   useEffect(() => {
-    if (!openConfidenceLevel || !uncertainModalData) return;
+    if (!openConfidenceLevel || !uncertainModalData) { gecontroleerdBijOpenen.current = null; return; }
+    if (gecontroleerdBijOpenen.current === openConfidenceLevel) return;
+    gecontroleerdBijOpenen.current = openConfidenceLevel;
     const b = uncertainModalData.bulkCounts;
     if (uncertainModalData.transactions.length === 0 && (b.overig || 0) + (b.personen || 0) === 0) setOpenConfidenceLevel(null);
   }, [openConfidenceLevel, uncertainModalData]);

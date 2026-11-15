@@ -16,7 +16,7 @@ export function useControlerenDashboardCards(p) {
     return [
       {
         key: "importControle",
-        title: "Import controle",
+        title: "Importcontrole",
         icon: <FileSpreadsheet className="h-3.5 w-3.5" />,
         value: controlerenImportProblemCount,
         openCount: controlerenImportProblemCount,
@@ -27,7 +27,7 @@ export function useControlerenDashboardCards(p) {
       },
       {
         key: "confidence",
-        title: "Classificatie zekerheid",
+        title: "Classificatiezekerheid",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
         // release31V1 — zonder wat al in "Overig opruimen"/"Overboekingen aan personen" staat (eigen kaarten)
         value: confidenceSummary.openExBulk,

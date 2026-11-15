@@ -2,7 +2,7 @@ import { counterpartyKey } from "../../utils/normalization.js";
 import { sleutelZonderNaam, bevestigdVoor } from "../../classification/reviewSummaries.js";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { CATEGORY_COLOR, displayCategory, mainCategoryOf, hoofdKleur } from "../../classification/categories.js";
+import { CATEGORY_COLOR, displayCategory, keuzeLabel, mainCategoryOf, hoofdKleur } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { Lock } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
@@ -15,7 +15,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
+export default function ClassificationConfidencePanel({ classified, jaar = null, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -53,7 +53,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
         className="w-full flex items-center gap-2 p-4 text-left cursor-pointer"
       >
         <span className="text-sm font-semibold flex items-center gap-2">
-          Classificatiezekerheid
+          Classificatiezekerheid{jaar ? ` ${jaar}` : ""}
           {onOpenHelp && <HelpHint chapter="classificatiezekerheid" onOpen={onOpenHelp} />}
         </span>
         <span className="flex-1" />
@@ -108,7 +108,7 @@ export default function ClassificationConfidencePanel({ classified, onOpenHelp, 
                       className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
                     />
                   ) : (
-                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{tx.transferLocked && <Lock className="h-3 w-3" />}{displayCategory(tx.category)}</span>
+                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{tx.transferLocked && <Lock className="h-3 w-3" />}{keuzeLabel(tx.category)}</span>
                   )}
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (

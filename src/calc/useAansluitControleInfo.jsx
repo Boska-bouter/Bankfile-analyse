@@ -95,21 +95,45 @@ export function useAansluitControleInfo(p) {
     const zijdeOntbreekt = !priveRekeningGeladen || priGroupForYear.items.length === 0 ? "Prive"
       : !zakelijkRekeningGeladen || zakGroupForYear.items.length === 0 ? "Zakelijk" : null;
     const heeftData = !(zakSum === 0 && priSum === 0);
+    // nieuw-V5R4 — privé opnames in twee soorten (Boska 15-11: "waar slaat tegenboeking op?"):
+    // (1) naar een eigen privérekening: daar hoort hetzelfde bedrag binnen te komen;
+    // (2) contant opgenomen of vanaf zakelijk rechtstreeks aan een ander betaald: komt nooit op een privérekening.
+    const zakOnverklaard = new Map(onverklaardAlle.filter((x) => x.kant === "Zakelijk").map((x) => [x.tx.id, x]));
+    const soortVan = (t) => {
+      const x = zakOnverklaard.get(t.id);
+      const a = x ? autoUitleg(x) : null;
+      return a && (a.reden === "contant" || a.reden === "pin" || a.reden === "derden") ? "ander" : "eigen";
+    };
+    const som = (l) => Math.round(l.reduce((a, t) => a + t.amount, 0) * 100) / 100;
+    const anderTx = zakTx.filter((t) => soortVan(t) === "ander");
+    const eigenTx = zakTx.filter((t) => soortVan(t) === "eigen");
+    const openIds = new Set(onverklaard.map((x) => x.tx.id));
+    const soorten = {
+      ander: { n: anderTx.length, bedrag: som(anderTx) },
+      eigen: {
+        n: eigenTx.length, bedrag: som(eigenTx),
+        gekoppeld: eigenTx.filter((t) => !zakOnverklaard.has(t.id)).length,
+        nietGeladen: eigenTx.filter((t) => zakOnverklaard.has(t.id) && !openIds.has(t.id)).length,
+        open: eigenTx.filter((t) => openIds.has(t.id)).length,
+      },
+    };
     let tone, subtitle;
     if (!heeftData) {
       tone = "neutral";
       subtitle = "Geen overboekingen tussen zakelijk en privé gevonden dit jaar.";
     } else if (zijdeOntbreekt) {
       tone = "ok";
-      subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Privé"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
+      subtitle = zijdeOntbreekt === "Prive"
+        ? `Privé opnames ${eur(zakSum)}. De privérekening is voor dit jaar niet geladen, dus niet te controleren of het geld daar is aangekomen. Dat is geen fout.`
+        : `Op de privérekening ${eur(priSum)} ontvangen van zakelijk. De zakelijke rekening is voor dit jaar niet geladen, dus niet te controleren. Dat is geen fout.`;
     } else {
       const ok = Math.abs(diffOpen) < 0.01;
-      const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} (${eur(toegelichtBedrag)}) zonder tegenboeking aan de andere kant, en dat hoeft ook niet: de reden is bekend (bijv. contant opgenomen of een eigen rekening die niet is geladen). Je hoeft er niets mee te doen.` : "";
+      const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} (${eur(toegelichtBedrag)}) kom${toegelichtLijst.length === 1 ? "t" : "en"} niet op de privérekening terug, en dat hoeft ook niet: contant opgenomen, rechtstreeks aan een ander betaald of naar een eigen rekening die niet is geladen.` : "";
       tone = ok ? "ok" : "attention";
       subtitle = ok
-        ? (toegelichtLijst.length > 0 || buitenLijst.length > 0 ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — verschil ${eur(diff)}, volledig verklaard.${toegelichtTekst}${buitenTekst}` : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`)
-        : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt niet overeen (verschil ${eur(diffOpen)}).${toegelichtTekst}${buitenTekst}`;
+        ? (toegelichtLijst.length > 0 || buitenLijst.length > 0 ? `Van zakelijk naar privé ${eur(-zakSum)}, op privé ontvangen ${eur(priSum)}. Het verschil van ${eur(Math.abs(diff))} is verklaard.${toegelichtTekst}${buitenTekst}` : `Van zakelijk naar privé ${eur(-zakSum)}, op privé ontvangen ${eur(priSum)}. Komt overeen.`)
+        : `Van zakelijk naar privé ${eur(-zakSum)}, op privé ontvangen ${eur(priSum)}. Komt niet overeen: ${eur(Math.abs(diffOpen))} is niet terug te vinden.${toegelichtTekst}${buitenTekst}`;
     }
-    return { zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag, buitenPeriode: buitenLijst, buitenBedrag, eenzijdigTekst };
+    return { soorten, zakSum, priSum, diff, diffOpen, zijdeOntbreekt, heeftData, tone, subtitle, onverklaard, toegelicht: toegelichtLijst, toegelichtBedrag, buitenPeriode: buitenLijst, buitenBedrag, eenzijdigTekst };
   }, [zakGroupForYear, priGroupForYear, priveRekeningGeladen, zakelijkRekeningGeladen, toegelicht, eigenRekeningenNietGeladen.join("|"), eigenIbansAlle.join("|"), periodeZak, periodePri]);
 }

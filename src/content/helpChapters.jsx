@@ -308,7 +308,7 @@ export const HELP_CHAPTERS = [
           rubrieken rekenen ongewijzigd op de fijne soort.
         </p>
         <p>
-          Toch alle fijne categorieën zien? Zet het vinkje <strong>fijne categorieën</strong> aan in de
+          Toch elke soort apart zien? Zet het vinkje <strong>alle soorten tonen</strong> aan in het
           tabblad Categorieën onder "Details en overzichten" (Overzicht). Dat geldt voor alle keuzelijsten en overzichten tot het
           vinkje weer uit staat.
         </p>
@@ -341,10 +341,10 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 override")}</strong> (al eens zelf bevestigd,
-          op IBAN of tegenpartij), <strong>{metBolletjes("🟢 keyword")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
-          Brandstof), <strong>{metBolletjes("🟡 heuristic")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
-          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 fallback")}</strong> (geen enkele regel matchte
+          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 zelf bevestigd")}</strong> (al eens door jou bevestigd,
+          op IBAN of tegenpartij), <strong>{metBolletjes("🟢 zoekwoord")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
+          Brandstof), <strong>{metBolletjes("🟡 controleren")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
+          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 onduidelijk")}</strong> (geen enkele regel matchte
           — in "Overig" beland).
         </p>
         <p>

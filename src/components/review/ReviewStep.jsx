@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soortenVoor, getCategorieProfiel } from "../../classification/categories.js";
+import { useState, useMemo, useRef } from "react";
+import { CATEGORY_ORDER, sortNl, displayCategory, storedCategoryForChoice, soortenVoor, getCategorieProfiel, keuzeLabel } from "../../classification/categories.js";
 
 // V76 — privé-categorieën samengevoegd in de keuzelijst (zie displayCategory in categories.js).
 import { eur } from "../../utils/amounts.js";
@@ -10,7 +10,7 @@ import CategorieSelect from "../shared/CategorieSelect.jsx";
 import RekeningLabels from "../shared/RekeningLabels.jsx";
 import { vergelijkbareItems } from "../../review/vergelijkbaar.js";
 
-function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass, onSplits }) {
+function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClass, onSplits, klaar = false }) {
   const [category, setCategory] = useState(item.category || defaultCategory);
   const [type, setType] = useState(item.type || "Prive");
 
@@ -22,9 +22,10 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
   const isDefault = category === defaultCategory && type === (item.type || "Prive");
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3">
+    <div className={`flex flex-wrap items-center gap-2 p-3 ${klaar ? "bg-emerald-50/60" : ""}`}>
       <div className="flex-1 min-w-[10rem]">
         <p className="text-sm font-medium truncate">
+          {klaar && <span className="mr-1 inline-block rounded-md bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800 align-middle">✓ Gecontroleerd</span>}
           {item.name}{" "}
           <span className={`ml-1 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-semibold align-middle ${item.amount >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
             {item.amount >= 0 ? "ontvangen" : "betaald"}
@@ -75,7 +76,17 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
   const [showAll, setShowAll] = useState(false);
   // beide-V15R5 — na een keuze: andere (nog open) tegenpartijen die erop lijken, in één keer mee laten zetten (wens Boska 5-11).
   const [voorstel, setVoorstel] = useState(null);
-  const bron = showAll ? allItems : items;
+  // nieuw-V5R3 — een tegenpartij die je net hebt ingedeeld of bevestigd, blijft op zijn plek staan met
+  // "✓ Gecontroleerd" tot je het venster sluit (Boska 15-11: regels verdwenen meteen en de lijst schoof op).
+  const gezien = useRef([]);
+  const bron = useMemo(() => {
+    if (showAll) return allItems;
+    const keys = new Set(gezien.current);
+    gezien.current = [...gezien.current, ...items.map((i) => i.key).filter((k) => !keys.has(k))];
+    const open = new Map(items.map((i) => [i.key, i]));
+    const alle = new Map((allItems || []).map((i) => [i.key, i]));
+    return gezien.current.map((k) => open.get(k) || (alle.has(k) ? { ...alle.get(k), klaar: true } : null)).filter(Boolean);
+  }, [showAll, items, allItems]);
   const markMetVoorstel = (item, category, type) => {
     onMark(item, category, type);
     const andere = vergelijkbareItems(item, items).filter((i) => i.category !== category || (i.type || "Prive") !== type);
@@ -91,6 +102,7 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
     return bron.filter((i) => i.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q) || (i.description && i.description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)));
   }, [bron, search]);
   const aantalBevestigd = (allItems?.length || 0) - items.length;
+  const aantalNetKlaar = bron.filter((i) => i.klaar).length;
   // huishoudboekje-V6R6 — hoeveel van de open boekingen zitten bij de 20 tegenpartijen bovenaan? (lijst staat op aantal, zie reviewSummaries.js)
   const top = useMemo(() => {
     if (search.trim() || items.length <= 20) return null;
@@ -102,7 +114,7 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
   return (
     <div className="p-5">
       <p className="text-xs text-slate-500 mb-3 max-w-2xl">{explanation}</p>
-      {allDone && !showAll && (
+      {allDone && !showAll && aantalNetKlaar === 0 && (
         <p className="mb-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
           Alles gecontroleerd — niets meer openstaand.
           {aantalBevestigd > 0 && (
@@ -110,9 +122,14 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
           )}
         </p>
       )}
-      {!allDone && !showAll && aantalBevestigd > 0 && (
+      {!showAll && aantalNetKlaar > 0 && (
+        <p className="mb-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          {aantalNetKlaar} {aantalNetKlaar === 1 ? "tegenpartij" : "tegenpartijen"} net gecontroleerd. Ze blijven hier staan tot je dit onderdeel sluit; je kunt ze nog aanpassen.{allDone ? " Verder staat er niets meer open." : ""}
+        </p>
+      )}
+      {!allDone && !showAll && aantalBevestigd - aantalNetKlaar > 0 && (
         <p className="mb-3 text-xs text-slate-400">
-          {aantalBevestigd} tegenpartij(en) hier al bevestigd (niet getoond).{" "}
+          {aantalBevestigd - aantalNetKlaar} tegenpartij(en) eerder al gecontroleerd (niet getoond).{" "}
           <button onClick={() => setShowAll(true)} className="underline hover:text-slate-600">Toon ook bevestigde tegenpartijen</button>.
         </p>
       )}
@@ -146,7 +163,7 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
           <p>
             <strong>{voorstel.items.length}</strong> {voorstel.items.length === 1 ? "tegenpartij lijkt" : "tegenpartijen lijken"} op <strong>{voorstel.naam}</strong>:{" "}
             {voorstel.items.slice(0, 5).map((i) => i.name).join(", ")}{voorstel.items.length > 5 ? ` en nog ${voorstel.items.length - 5}` : ""}.
-            {" "}Ook op <strong>{displayCategory(voorstel.category)}</strong>{getCategorieProfiel() ? "" : ` (${voorstel.type === "Zakelijk" ? "zakelijk" : "privé"})`} zetten?
+            {" "}Ook op <strong>{keuzeLabel(voorstel.category)}</strong>{getCategorieProfiel() ? "" : ` (${voorstel.type === "Zakelijk" ? "zakelijk" : "privé"})`} zetten?
           </p>
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={voorstelToepassen} className="rounded-lg bg-sky-700 px-3 py-1.5 font-semibold text-white hover:bg-sky-800">
@@ -158,9 +175,9 @@ export default function ReviewStep({ items, allItems, allDone, search, onSearch,
       )}
       <div className="max-h-[32rem] overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
         {filtered.map((item) => (
-          <ReviewRow key={item.key} item={item} defaultCategory={defaultCategory} onMark={markMetVoorstel} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} onSplits={onSplits} />
+          <ReviewRow key={item.key} item={item} klaar={!!item.klaar} defaultCategory={defaultCategory} onMark={markMetVoorstel} onConfirm={onConfirm} confirmButtonClass={confirmButtonClass} onSplits={onSplits} />
         ))}
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !(allDone && !showAll && !search.trim()) && (
           <p className="p-4 text-sm text-slate-400 text-center">
             {search.trim() ? `Geen tegenpartijen gevonden voor "${search}"` : "Niets (meer) te tonen."}
           </p>

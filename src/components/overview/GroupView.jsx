@@ -2,7 +2,7 @@ import BoekingenLijst from "../shared/BoekingenLijst.jsx";
 import { useToonFijn } from "../../utils/useToonFijn.js";
 import { useEffect, useMemo, useRef, useState, Fragment, memo } from "react";
 import { ChevronRight, ChevronDown, Pencil, Check, X, Lock } from "lucide-react";
-import { CATEGORY_COLOR, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieen, hoofdcategorieenAlfa, hoofdKleur } from "../../classification/categories.js";
+import { CATEGORY_COLOR, mainCategoryOf, subtypesForMainCategory, displayCategory, subtypeChoicesFor, getToonFijn, setToonFijn, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieen, hoofdcategorieenAlfa, hoofdKleur, keuzeLabel } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { computeBtw } from "../../tax/btw.js";
 import { eur } from "../../utils/amounts.js";
@@ -31,6 +31,11 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
     }
     const lijst = Object.entries(t).map(([soort, r]) => ({ soort, ...r })).sort((a, b) => a.bedrag - b.bedrag);
     return lijst.length ? lijst : null;
+  }, [group.items, ibansKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // nieuw-V5R4 — teruggestort van privé, zodat de bedragen op deze pagina op elkaar aansluiten (Boska 15-11).
+  const terugVanPrive = useMemo(() => {
+    if (!eigenPriveIbans) return 0;
+    return Math.round(group.items.filter((tx) => (tx.category === "Privé opnames" && tx.amount > 0) || tx.category === "Terugboeking van privé").reduce((a, tx) => a + tx.amount, 0) * 100) / 100;
   }, [group.items, ibansKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [opnamesOpen, setOpnamesOpen] = useState(false);
   const totals = useMemo(() => {
@@ -62,9 +67,9 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
       <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
         {titel || <>Categorieën — {group.label}</>}
         {onOpenHelp && <HelpHint chapter="categorieen-overzicht" onOpen={onOpenHelp} />}
-        <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon de fijne categorieën (huur, energie-water, …) in plaats van de samengevoegde keuzes">
+        <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-normal normal-case text-slate-400 cursor-pointer select-none" title="Toon elke soort apart (bijv. Boodschappen, Kleding, Huur) in plaats van per groep">
           <input type="checkbox" checked={toonFijn} onChange={(e) => setToonFijn(e.target.checked)} className="h-3 w-3" />
-          fijne categorieën
+          alle soorten tonen
         </label>
       </h3>
       {/* release22V10 — welke rekening(en) achter deze tabel zitten */}
@@ -131,7 +136,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-200 font-semibold">
-            <td className="pt-2">Totaal</td>
+            <td className="pt-2">Totaal {!group.items.every((t) => t.isMirror) && <span className="font-normal text-[11px] text-slate-400">(verandering van het saldo)</span>}</td>
             <td className="pt-2 px-2 text-right font-mono">{eur(grandTotal)}</td>
             {!zonderBtw && <td className="pt-2 px-2 text-right font-mono">{eur(grandBtw)}</td>}
             {!zonderBtw && <td className="pt-2 text-right font-mono">{eur(grandTotal - grandBtw)}</td>}
@@ -145,6 +150,11 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
             Privé opnames uitgesplitst
             <span className="ml-auto font-mono font-normal">{eur(opnames.reduce((a, r) => a + r.bedrag, 0))}</span>
           </button>
+          {terugVanPrive !== 0 && (
+            <p className="px-3 pb-2 -mt-1 text-[11px] text-slate-500">
+              Opgenomen {eur(opnames.reduce((a, r) => a + r.bedrag, 0))}, teruggestort {eur(terugVanPrive)}: netto naar privé {eur(opnames.reduce((a, r) => a + r.bedrag, 0) + terugVanPrive)}. Dat nettobedrag staat bij de controle zakelijk ↔ privé.{(() => { const ov = Math.round((group.items.filter((t) => mainCategoryOf(t.category) === "Privé").reduce((a, t) => a + t.amount, 0) - (opnames.reduce((a, r) => a + r.bedrag, 0) + terugVanPrive)) * 100) / 100; return Math.abs(ov) >= 0.01 ? ` De regel Privé in de tabel bevat daarnaast ${eur(ov)} aan andere privéboekingen.` : ""; })()}
+            </p>
+          )}
           {opnamesOpen && (
             <table className="w-full text-xs border-t border-slate-100">
               <tbody>
@@ -205,7 +215,7 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
             className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${hoofdKleur(mainCategoryOf(t.category))}`}
             title="Overboeking tussen eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."
           >
-            <Lock className="h-3 w-3 shrink-0" /> {displayCategory(t.category)}
+            <Lock className="h-3 w-3 shrink-0" /> {keuzeLabel(t.category)}
           </span>
         ) : (<>
         {/* beide-V5R1 / V9R3 — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}

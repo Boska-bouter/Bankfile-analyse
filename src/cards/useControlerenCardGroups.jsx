@@ -1,4 +1,5 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
+import { eur } from "../utils/amounts.js";
 import { useMemo } from "react";
 import ActivaPanel from "../components/loans/ActivaPanel.jsx";
 import CategoryPercentagePanel from "../components/overview/CategoryPercentagePanel.jsx";
@@ -68,20 +69,39 @@ export function useControlerenCardGroups(p) {
           return {
             ...basis,
             tone: toneRank[aansluitControleInfo.tone] > toneRank[basis.tone] ? aansluitControleInfo.tone : basis.tone,
-            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: `${bol}${aansluitControleInfo.tone === "ok" ? (aansluitControleInfo.toegelicht?.length > 0 ? `Klopt (${aansluitControleInfo.toegelicht.length} zonder tegenboeking, reden bekend)` : "Klopt") : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet gekoppeld` : "Controleren"}` }],
+            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: aansluitControleInfo.zijdeOntbreekt ? `Niet te controleren (${aansluitControleInfo.zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}rekening niet geladen)` : `${bol}${aansluitControleInfo.tone === "ok" ? "Klopt" : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet teruggevonden` : "Controleren"}` }],
           };
         })(),
         "importKwaliteit",
         <div className="space-y-3">
           {aansluitControleInfo.heeftData && (
             <div className={`rounded-xl border px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2 ${aansluitControleInfo.tone === "attention" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
-              <span><strong>Controle zakelijk ↔ privé:</strong> {aansluitControleInfo.subtitle}</span>
+              {/* nieuw-V5R4 — privé opnames in twee soorten, zonder het woord "tegenboeking" (Boska 15-11) */}
+              <div className="space-y-1">
+                <p><strong>Controle zakelijk ↔ privé</strong> <span className="text-xs opacity-80">(alleen geld van zakelijk voor privé; gewone betalingen en ontvangsten doen hier niet mee)</span></p>
+                {aansluitControleInfo.soorten && (
+                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                    {aansluitControleInfo.soorten.eigen.n > 0 && (
+                      <li>
+                        <strong>Naar een eigen privérekening:</strong> {aansluitControleInfo.soorten.eigen.n} boeking{aansluitControleInfo.soorten.eigen.n === 1 ? "" : "en"}, {eur(-aansluitControleInfo.soorten.eigen.bedrag)}.{" "}
+                        {aansluitControleInfo.zijdeOntbreekt === "Prive"
+                          ? "Niet te controleren: de privérekening is niet geladen."
+                          : <>{aansluitControleInfo.soorten.eigen.gekoppeld} teruggevonden op de privérekening{aansluitControleInfo.soorten.eigen.nietGeladen > 0 ? `, ${aansluitControleInfo.soorten.eigen.nietGeladen} naar een eigen rekening die niet is geladen of met jouw uitleg` : ""}{aansluitControleInfo.soorten.eigen.open > 0 ? `, ${aansluitControleInfo.soorten.eigen.open} niet teruggevonden` : ""}.</>}
+                      </li>
+                    )}
+                    {aansluitControleInfo.soorten.ander.n > 0 && (
+                      <li><strong>Contant opgenomen of rechtstreeks aan een ander betaald:</strong> {aansluitControleInfo.soorten.ander.n} boeking{aansluitControleInfo.soorten.ander.n === 1 ? "" : "en"}, {eur(-aansluitControleInfo.soorten.ander.bedrag)}. Dit komt nooit op een privérekening, en dat is goed.</li>
+                    )}
+                  </ul>
+                )}
+                {aansluitControleInfo.zijdeOntbreekt !== "Prive" && <p className="text-xs opacity-80">{aansluitControleInfo.subtitle}</p>}
+              </div>
               {aansluitControleInfo.tone === "attention" && aansluitControleInfo.onverklaard.length > 0 ? (
-                <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.onverklaard.length} niet-gekoppelde boeking{aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}</button>
+                <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.onverklaard.length} niet teruggevonden boeking{aansluitControleInfo.onverklaard.length === 1 ? "" : "en"}</button>
               ) : (
                 <>
                   {aansluitControleInfo.toegelicht?.length > 0 && (
-                    <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-emerald-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.toegelicht.length} boeking{aansluitControleInfo.toegelicht.length === 1 ? "" : "en"} zonder tegenboeking</button>
+                    <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-emerald-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de boekingen</button>
                   )}
                   <button type="button" onClick={() => jumpToSection(detailsSectionRef)} className="text-xs underline">Naar de detailtabellen</button>
                 </>
@@ -94,7 +114,8 @@ export function useControlerenCardGroups(p) {
           <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} onKostenVorigJaar={zetKostenVorigJaar} />
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
-              classified={classified}
+              classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
+              jaar={activeYear}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}

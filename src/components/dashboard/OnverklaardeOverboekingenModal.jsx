@@ -274,7 +274,7 @@ export default function OnverklaardeOverboekingenModal({ items: itemsNu, toegeli
                 Buiten de gezamenlijke periode — niet te controleren ({buitenPeriode.length})
               </summary>
               <p className="px-3 pb-2 text-[11px] text-slate-500">
-                {eenzijdigTekst ? `Geladen: ${eenzijdigTekst}. ` : ""}In die maanden is de andere rekening niet geladen, dus er kan geen tegenboeking zijn. Deze boekingen tellen niet als open punt. Laad je de ontbrekende afschriften alsnog, dan worden ze vanzelf gecontroleerd. De indeling (categorie) verandert hier niet door.
+                {eenzijdigTekst ? `Geladen: ${eenzijdigTekst}. ` : ""}In die maanden is de andere rekening niet geladen, dus het bedrag kan daar niet teruggevonden worden. Deze boekingen tellen niet als open punt. Laad je de ontbrekende afschriften alsnog, dan worden ze vanzelf gecontroleerd. De indeling (categorie) verandert hier niet door.
               </p>
               <div className="divide-y divide-slate-100 border-t border-slate-200 bg-white">
                 {buitenPeriode.map(({ tx, kant, sleutel }) => (
@@ -290,8 +290,8 @@ export default function OnverklaardeOverboekingenModal({ items: itemsNu, toegeli
           )}
           {toegelicht.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Geen tegenboeking, reden bekend ({toegelichtNu.length})</p>
-              <p className="text-[11px] text-slate-500 mb-1.5">Bij deze boekingen staat aan de andere kant (zakelijk of privé) geen boeking met hetzelfde bedrag. Dat hoeft ook niet: de reden staat per boeking, bijvoorbeeld contant opgenomen bij een geldautomaat of een eigen rekening die niet is geladen ("automatisch" = herkend door de app). Je hoeft er niets mee te doen, behalve de categorie aanpassen als die niet klopt. Pas je de categorie aan, dan blijft de boeking hier staan met "Aangepast naar …" en telt hij niet meer mee in deze controle.</p>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Komt niet op de privérekening terug, reden bekend ({toegelichtNu.length})</p>
+              <p className="text-[11px] text-slate-500 mb-1.5">Dit geld komt niet op een geladen privérekening terug, en dat hoeft ook niet. De reden staat per boeking: contant opgenomen bij een geldautomaat, rechtstreeks aan een ander betaald, of naar een eigen rekening die niet is geladen ("automatisch" = herkend door de app). Je hoeft er niets mee te doen, behalve de categorie aanpassen als die niet klopt. Pas je de categorie aan, dan blijft de boeking hier staan met "Aangepast naar …" en telt hij niet meer mee in deze controle.</p>
               <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
                 {toegelicht.map(({ tx, kant, sleutel, uitleg, aangepast }) => aangepast ? (
                   <div key={sleutel} className="p-2.5 text-xs flex flex-wrap items-center gap-2 bg-slate-50">

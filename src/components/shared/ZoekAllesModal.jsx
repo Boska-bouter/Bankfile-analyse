@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X, Search } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
-import { displayCategory } from "../../classification/categories.js";
+import { displayCategory, keuzeLabel } from "../../classification/categories.js";
 
 // D2 — één zoekveld over alle transacties (alle jaren, alle bestanden). Zoekt in tegenpartij,
 // omschrijving, categorie, datum (dd-mm-jjjj), jaar en bedrag (1250 / 1.250,00). Meerdere woorden = allemaal.
@@ -16,7 +16,7 @@ export default function ZoekAllesModal({ transacties, jaren = [], onClose, onGaN
 
   const index = useMemo(() => (transacties || []).filter((t) => t && t.date).map((t) => ({
     t,
-    hay: `${t.counterparty || ""} ${t.description || ""} ${t.fullDescription || ""} ${displayCategory(t.category) || ""} ${t.date.toLocaleDateString("nl-NL").replace(/\//g, "-")} ${t.year} ${normBedrag(t.amount)} ${Math.abs(t.amount).toFixed(2)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+    hay: `${t.counterparty || ""} ${t.description || ""} ${t.fullDescription || ""} ${displayCategory(t.category) || ""} ${keuzeLabel(t.category) || ""} ${t.date.toLocaleDateString("nl-NL").replace(/\//g, "-")} ${t.year} ${normBedrag(t.amount)} ${Math.abs(t.amount).toFixed(2)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   })), [transacties]);
 
   const { rijen, totaal, som } = useMemo(() => {
@@ -62,7 +62,7 @@ export default function ZoekAllesModal({ transacties, jaren = [], onClose, onGaN
                 <tr key={t.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => onGaNaarJaar?.(String(t.year))} title={`Ga naar ${t.year}`}>
                   <td className="px-3 py-1.5 whitespace-nowrap font-mono text-slate-500">{t.date.toLocaleDateString("nl-NL")}</td>
                   <td className={`px-3 py-1.5 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
-                  <td className="px-3 py-1.5 text-slate-700">{displayCategory(t.category)}<span className="ml-1 text-[11px] text-slate-400">{t.accountType === "Prive" ? "privé" : "zakelijk"}</span></td>
+                  <td className="px-3 py-1.5 text-slate-700">{keuzeLabel(t.category)}<span className="ml-1 text-[11px] text-slate-400">{t.accountType === "Prive" ? "privé" : "zakelijk"}</span></td>
                   <td className="px-3 py-1.5 text-slate-800 max-w-[14rem] truncate">{t.counterparty}</td>
                   <td className="px-3 py-1.5 text-slate-500 max-w-[18rem] truncate">{t.description}</td>
                 </tr>
