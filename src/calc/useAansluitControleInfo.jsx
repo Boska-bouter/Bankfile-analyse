@@ -104,7 +104,7 @@ export function useAansluitControleInfo(p) {
       subtitle = `Geen ${zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}-transacties geladen voor dit jaar, dus niet te verifiëren — dat is geen fout. ${zijdeOntbreekt === "Prive" ? "Zakelijk" : "Privé"}: ${eur(zijdeOntbreekt === "Prive" ? zakSum : priSum)}.`;
     } else {
       const ok = Math.abs(diffOpen) < 0.01;
-      const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} toegelicht (${eur(toegelichtBedrag)}).` : "";
+      const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} toegelicht (${eur(toegelichtBedrag)}): zonder tegenboeking, maar de oorzaak is bekend (bijv. contant opgenomen of een eigen rekening die niet is geladen).` : "";
       tone = ok ? "ok" : "attention";
       subtitle = ok
         ? (toegelichtLijst.length > 0 || buitenLijst.length > 0 ? `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — verschil ${eur(diff)}, volledig verklaard.${toegelichtTekst}${buitenTekst}` : `Zakelijk ${eur(zakSum)} tegenover Privé ${eur(priSum)} — komt overeen (samen nul, zoals het hoort).`)

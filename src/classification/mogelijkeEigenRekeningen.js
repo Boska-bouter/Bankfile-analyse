@@ -31,6 +31,14 @@ function lijktOpBedrijf(tekst, bedrijf) {
   return b.length >= 4 && plat(tekst).includes(b);
 }
 
+// nieuw-V4R9 — lijkt een naam op de rekeninghouder, partner of het eigen bedrijf? (o.a. "Toevoegen als eigen rekening" bij
+// niet-gekoppelde overboekingen alleen voorstellen als de naam klopt; melding Boska 15-11).
+export function naamLijktOpEigen(tekst, eigenNamen) {
+  if (!eigenNamen || !tekst) return false;
+  if (eigenNamen.bedrijf && lijktOpBedrijf(tekst, eigenNamen.bedrijf)) return true;
+  return [eigenNamen.ondernemer, eigenNamen.partner].filter(Boolean).some((p) => lijktOpPersoon(tekst, p));
+}
+
 export function vindMogelijkeEigenRekeningen(transacties, { eigenIbans = [], eigenNamen = null, afgewezen = [] } = {}) {
   const bekend = (iban) => eigenIbans.some((e) => ibansMatch(e, iban)) || afgewezen.some((a) => ibansMatch(a, iban));
   const eigenBanken = new Set(eigenIbans.map((e) => bankVan(zonderBic(e))).filter(Boolean));
