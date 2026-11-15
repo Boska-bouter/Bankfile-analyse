@@ -969,6 +969,15 @@ export function keuzeGroepen(huidige = null) {
     return { groep: main, opties: sortNl(opties, (o) => o.label) };
   }).filter((g) => g.opties.length > 0);
 }
+// nieuw-V5R0 — naam van de gekozen optie zoals in de keuzelijst (bijv. "Boodschappen" i.p.v. de groepsnaam
+// "Privé kosten algemeen"), zodat de vraag na het kiezen precies noemt wat je koos (Boska 15-11).
+export function keuzeLabel(category) {
+  for (const g of keuzeGroepen(category)) {
+    const o = g.opties.find((x) => x.value === category);
+    if (o) return o.label;
+  }
+  return displayCategory(category);
+}
 // Welke optie hoort bij de huidige categorie (voor privé-algemeen: de standaardsoort van die groep).
 export function keuzeWaarde(category) {
   return category; // beide-V10R9 — elke soort heeft een eigen optie

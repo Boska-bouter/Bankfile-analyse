@@ -68,7 +68,7 @@ export function useControlerenCardGroups(p) {
           return {
             ...basis,
             tone: toneRank[aansluitControleInfo.tone] > toneRank[basis.tone] ? aansluitControleInfo.tone : basis.tone,
-            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: `${bol}${aansluitControleInfo.tone === "ok" ? (aansluitControleInfo.toegelicht?.length > 0 ? `Klopt (${aansluitControleInfo.toegelicht.length} toegelicht)` : "Klopt") : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet gekoppeld` : "Controleren"}` }],
+            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: `${bol}${aansluitControleInfo.tone === "ok" ? (aansluitControleInfo.toegelicht?.length > 0 ? `Klopt (${aansluitControleInfo.toegelicht.length} zonder tegenboeking, reden bekend)` : "Klopt") : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet gekoppeld` : "Controleren"}` }],
           };
         })(),
         "importKwaliteit",
@@ -81,7 +81,7 @@ export function useControlerenCardGroups(p) {
               ) : (
                 <>
                   {aansluitControleInfo.toegelicht?.length > 0 && (
-                    <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-emerald-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.toegelicht.length} toegelichte boeking{aansluitControleInfo.toegelicht.length === 1 ? "" : "en"}</button>
+                    <button type="button" onClick={() => setShowOnverklaard(true)} className="rounded-full border border-emerald-400 bg-white px-3 py-1 text-xs font-semibold">Bekijk de {aansluitControleInfo.toegelicht.length} boeking{aansluitControleInfo.toegelicht.length === 1 ? "" : "en"} zonder tegenboeking</button>
                   )}
                   <button type="button" onClick={() => jumpToSection(detailsSectionRef)} className="text-xs underline">Naar de detailtabellen</button>
                 </>
