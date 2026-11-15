@@ -54,7 +54,7 @@ function ReviewRow({ item, defaultCategory, onMark, onConfirm, confirmButtonClas
         onClick={() => onConfirm(item)}
         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${isDefault ? confirmButtonClass : "border-slate-200 text-slate-400 hover:bg-slate-50"}`}
       >
-        Klopt zo
+        Categorie klopt
       </button>
     </div>
   );

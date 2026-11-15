@@ -69,7 +69,7 @@ export function useControlerenCardGroups(p) {
           return {
             ...basis,
             tone: toneRank[aansluitControleInfo.tone] > toneRank[basis.tone] ? aansluitControleInfo.tone : basis.tone,
-            lines: [...basis.lines, { label: "Zakelijk ↔ privé", value: aansluitControleInfo.zijdeOntbreekt ? `Niet te controleren (${aansluitControleInfo.zijdeOntbreekt === "Prive" ? "privé" : "zakelijke"}rekening niet geladen)` : `${bol}${aansluitControleInfo.tone === "ok" ? "Klopt" : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet teruggevonden` : "Controleren"}` }],
+            lines: [...basis.lines, { label: "Zakelijk\u00a0↔\u00a0privé", value: aansluitControleInfo.zijdeOntbreekt ? "Op categorie" : `${bol}${aansluitControleInfo.tone === "ok" ? "Klopt" : aansluitControleInfo.tone === "attention" ? `${aansluitControleInfo.onverklaard.length} niet teruggevonden` : "Controleren"}` }],
           };
         })(),
         "importKwaliteit",

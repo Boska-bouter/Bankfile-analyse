@@ -54,7 +54,7 @@ export default function OpschonenPanel({
         <section ref={overigReviewRef} className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden shadow-sm">
           <button onClick={() => onToggleShowOverigReview(!overigOpen)} className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left">
             {pendingOverigReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-            <span className="text-sm font-semibold">"Overig" opruimen</span>
+            <span className="text-sm font-semibold">Nog niet ingedeeld</span>
             {pendingOverigReview.length > 0 ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingOverigReview.length}
@@ -78,7 +78,7 @@ export default function OpschonenPanel({
               onConfirm={onConfirmOverigAsIs}
               defaultCategory="Overig"
               confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-              explanation={getCategorieProfiel() ? 'Kies per tegenpartij de juiste categorie, of klik "Klopt zo" als het hier bewust moet blijven staan.' : 'Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Klopt zo" als Overig hier bewust moet blijven staan.'}
+              explanation={getCategorieProfiel() ? 'Kies per tegenpartij de juiste categorie, of klik "Categorie klopt" als het hier bewust moet blijven staan.' : 'Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Categorie klopt" als Overig hier bewust moet blijven staan.'}
               bulkAction={[
                 overigZakelijkCount > 0 && {
                   label: `Alle zakelijke (${overigZakelijkCount}) naar "Privé opnames"`,

@@ -42,12 +42,12 @@ export function useDashboardCards(p) {
       },
       {
         key: "personReview",
-        title: "Overboekingen aan personen",
+        title: "Personen en onbekende tegenpartijen",
         icon: <Users className="h-3.5 w-3.5" />,
         value: pendingPersonReview.length,
         subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
-        hint: "Openstaande overboekingen aan personen bekijken",
+        hint: "Openstaande overboekingen aan personen en onbekende tegenpartijen bekijken",
         onClick: () => {
           // V90 — "Overboekingen aan personen" verschijnt pas als de herkomst van inkomsten is beantwoord;
           // zolang die nog openstaat, ga je eerst daarheen (anders gebeurde er niets).
@@ -60,7 +60,7 @@ export function useDashboardCards(p) {
       },
       {
         key: "overigReview",
-        title: '"Overig" opruimen',
+        title: "Nog niet ingedeeld",
         icon: <HelpCircle className="h-3.5 w-3.5" />,
         value: pendingOverigReview.length,
         subtitle: pendingOverigReview.length > 0 ? "tegenpartij(en) nog te bepalen" : "Niets openstaand",

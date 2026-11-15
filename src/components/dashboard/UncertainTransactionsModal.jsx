@@ -258,20 +258,20 @@ export default function UncertainTransactionsModal({
           <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 shrink-0">
             <p>
               ⓘ {bulkTotal} van deze transacties staan al verzameld in{" "}
-              {bulkCounts.overig > 0 && <>"Overig" ({bulkCounts.overig})</>}
+              {bulkCounts.overig > 0 && <>"Nog niet ingedeeld" ({bulkCounts.overig})</>}
               {bulkCounts.overig > 0 && bulkCounts.personen > 0 && " en "}
-              {bulkCounts.personen > 0 && <>"Overboekingen aan personen" ({bulkCounts.personen})</>} — check die twee
+              {bulkCounts.personen > 0 && <>"Personen en onbekende tegenpartijen" ({bulkCounts.personen})</>} — check die twee
               vensters eerst, dat is vaak sneller dan hier één voor één doorlopen.
             </p>
             <div className="mt-1.5 flex gap-3">
               {bulkCounts.overig > 0 && (
                 <button onClick={onJumpToOverig} className="underline hover:no-underline font-medium">
-                  "Overig" openen
+                  "Nog niet ingedeeld" openen
                 </button>
               )}
               {bulkCounts.personen > 0 && (
                 <button onClick={onJumpToPersonen} className="underline hover:no-underline font-medium">
-                  "Overboekingen aan personen" openen
+                  "Personen en onbekende tegenpartijen" openen
                 </button>
               )}
             </div>

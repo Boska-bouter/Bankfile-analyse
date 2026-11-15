@@ -2697,6 +2697,7 @@ export default function App() {
             eigenNamen={eigenNamen}
             bekijken={aansluitControleInfo.tone !== "attention"}
             bekijkenTekst=""
+            zijdeOntbreekt={aansluitControleInfo.zijdeOntbreekt}
             onClose={() => setShowOnverklaard(false)}
           />
         )}

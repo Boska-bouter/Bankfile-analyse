@@ -30,7 +30,7 @@ export default function MogelijkeEigenRekeningen({ kandidaten = [], soort = "zak
           <button type="button" onClick={onClose} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" /> {kandidaten.length ? "Later" : "Sluiten"}</button>
         </div>
         <div className="overflow-y-auto px-5 py-3">
-          <p className="mb-3 text-sm text-slate-600">Deze rekeningen lijken op eigen rekeningen die niet zijn opgegeven. Is dat zo, kies dan de soort: overboekingen ermee tellen dan als geld tussen eigen rekeningen, niet als inkomsten of uitgaven.</p>
+          <p className="mb-3 text-sm text-slate-600">Deze rekeningnummers zijn misschien van jou of je bedrijf. Kies de soort, of 'Nee, is iemand anders'.</p>
           {kandidaten.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Alle gevonden rekeningen zijn afgehandeld.</p>}
           {kandidaten.map((k) => (
             <div key={k.iban} className="border-b border-slate-100 py-3 last:border-0">

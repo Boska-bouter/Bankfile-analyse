@@ -130,8 +130,8 @@ export function useAansluitControleInfo(p) {
     } else if (zijdeOntbreekt) {
       tone = "ok";
       subtitle = zijdeOntbreekt === "Prive"
-        ? `Privé opnames ${eur(zakSum)}. De privérekening is voor dit jaar niet geladen, dus niet te controleren of het geld daar is aangekomen. Dat is geen fout.`
-        : `Op de privérekening ${eur(priSum)} ontvangen van zakelijk. De zakelijke rekening is voor dit jaar niet geladen, dus niet te controleren. Dat is geen fout.`;
+        ? `Privé opnames ${eur(zakSum)}. Privérekening niet geladen: controle op categorie.`
+        : `Op de privérekening ${eur(priSum)} ontvangen van zakelijk. Zakelijke rekening niet geladen: controle op categorie.`;
     } else {
       const ok = Math.abs(diffOpen) < 0.01;
       const toegelichtTekst = toegelichtLijst.length > 0 ? ` ${toegelichtLijst.length} boeking${toegelichtLijst.length === 1 ? "" : "en"} (${eur(toegelichtBedrag)}) kom${toegelichtLijst.length === 1 ? "t" : "en"} niet op de privérekening terug, en dat hoeft ook niet: contant opgenomen, rechtstreeks aan een ander betaald of naar een eigen rekening die niet is geladen.` : "";

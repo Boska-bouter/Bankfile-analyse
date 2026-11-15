@@ -60,13 +60,13 @@ export function useControlerenDashboardCards(p) {
       },
       {
         key: "personReview",
-        title: "Overboekingen aan personen",
+        title: "Personen en onbekende tegenpartijen",
         icon: <Users className="h-3.5 w-3.5" />,
         value: pendingPersonReview.length,
         openCount: pendingPersonReview.length,
         subtitle: pendingPersonReview.length > 0 ? "nog te bepalen" : "Niets openstaand",
         tone: pendingPersonReview.length > 0 ? "attention" : "ok",
-        hint: "Openstaande overboekingen aan personen bekijken",
+        hint: "Openstaande overboekingen aan personen en onbekende tegenpartijen bekijken",
         onClick: () => {
           if (pendingIncomeReview.length > 0) { jumpToSection(incomeReviewSectionRef); return; }
           // release30V7 — één paneel tegelijk open: "Overig opruimen" eronder klapt in, zodat je ziet waar je mee bezig bent.
@@ -77,7 +77,7 @@ export function useControlerenDashboardCards(p) {
       },
       {
         key: "overigReview",
-        title: '"Overig" opruimen',
+        title: "Nog niet ingedeeld",
         icon: <HelpCircle className="h-3.5 w-3.5" />,
         value: pendingOverigReview.length,
         openCount: pendingOverigReview.length,

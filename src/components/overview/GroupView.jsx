@@ -77,7 +77,7 @@ export function CategorySummaryCard({ group, categoryBtwRates, btwVerlegd, onOpe
         <p className="-mt-2 mb-3 text-xs text-slate-500">
           {rekeningen.lijst.length > 0
             ? <>Rekening{rekeningen.lijst.length > 1 ? "en" : ""}: {rekeningen.lijst.map((r, i) => (
-                <span key={r.id}>{i > 0 && " · "}<span className="font-mono text-slate-700">{r.tekst}</span>{r.opgegeven ? <span className="text-slate-400"> (opgegeven, niet geladen)</span> : null}</span>
+                <span key={r.id}>{i > 0 && " · "}<span className="font-mono text-slate-700">{r.tekst}</span>{r.opgegeven ? <span className="text-slate-400"> (geen bankbestand)</span> : null}</span>
               ))}</>
             : rekeningen.leegTekst}
         </p>
