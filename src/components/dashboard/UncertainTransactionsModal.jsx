@@ -18,13 +18,20 @@ const LEVEL_INFO = {
 // De samengevoegde "losse pinbetalingen" (Winkels divers zonder herkend zoekwoord) zijn één groep
 // die je kunt uitklappen om per transactie te corrigeren.
 export default function UncertainTransactionsModal({
-  level, transactions: transactionsNu, bulkCounts, activeYear = null, dossierJaren = [], onRequestChange: onRequestChange0, onConfirmCorrect, onConfirmAll, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions: transactionsNu, bulkCounts, activeYear = null, dossierJaren = [], onRequestChange: onRequestChange0, onConfirmCorrect, onConfirmAll, onChangeGroup, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   // nieuw-V5R3 — wat je hier bevestigt of aanpast, blijft op zijn plek staan met "✓ Gecontroleerd" tot je het
   // venster sluit; een groep valt niet uit elkaar als je er één boeking uit aanpast (Boska 15-11).
   const [gekozen, setGekozen] = useState({});
   const onRequestChange = (tx, patch) => { setGekozen((g) => ({ ...g, [tx.id]: patch.category })); onRequestChange0(tx, patch); };
+  // nieuw-V6R3 — keuze in de kop van een groep geldt voor alle open boekingen van die groep (Boska 16-11).
+  const wijzigGroep = (g, patch) => {
+    const open = g.txs.filter((t) => !t.klaar);
+    if (!onChangeGroup || open.length <= 1) return onRequestChange(open[0] || g.txs[0], patch);
+    setGekozen((k) => { const n = { ...k }; for (const t of open) n[t.id] = patch.category; return n; });
+    onChangeGroup(open, patch);
+  };
   const gezien = useRef(new Map());
   const transactions = useMemo(() => {
     const nu = new Map(transactionsNu.map((t) => [t.id, t]));
@@ -135,7 +142,7 @@ export default function UncertainTransactionsModal({
         <span className="shrink-0 font-mono text-slate-500 w-24 text-right" title={meer ? `Totaal van ${g.txs.length} transacties` : undefined}>
           {eur(g ? g.totaal : tx.amount)}
         </span>
-        {klaar ? (
+        {klaar && !(compact && !tx.transferLocked) ? (
           <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-800 px-1.5 py-1 text-xs font-medium">
             <Check className="h-3 w-3 shrink-0" /> {meer && g.txs.some((t) => t.category !== tx.category) ? "Aangepast" : keuzeLabel(tx.category)}
           </span>
@@ -150,7 +157,7 @@ export default function UncertainTransactionsModal({
           {/* beide-V5R1 / V9R3 — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
         <CategorieSelect
           value={tx.category}
-          onChange={(v) => onRequestChange(tx, { category: v, type: tx.type })}
+          onChange={(v) => (meer && !compact ? wijzigGroep(g, { category: v, type: tx.type }) : onRequestChange(tx, { category: v, type: tx.type }))}
           className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
         />
         </>)}

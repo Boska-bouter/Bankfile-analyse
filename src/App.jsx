@@ -1213,7 +1213,7 @@ export default function App() {
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
   const { activaSummary, addManualActiva, voegActivaLijstToe, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe } = useActivaActies({ activaDetails, classified, setActivaDetails, setActivaDetailsModalKey, snapshotBeforeAction });
 
-  const { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion } = useCategorieWijziging({
+  const { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion, wijzigGroep } = useCategorieWijziging({
     accountTypeByFile, setCategoryRules, setOverridesByCounterparty, overridesByCounterparty, setOverridesByRow, setKeywordSuggestion, keywordSuggestion, ownAccountByFile, snapshotBeforeAction, classified, setRekeningKeuzeOpSleutel, keuzeSleutel, exclusiveIbanKey, keyForTx, setCounterpartyOverride, setRowOverride,
   });
 
@@ -2716,6 +2716,7 @@ export default function App() {
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
             onConfirmAll={confirmAllUncertain}
+            onChangeGroup={wijzigGroep}
             onJumpToOverig={jumpToOverigFromModal}
             onJumpToPersonen={jumpToPersonenFromModal}
             onClose={() => setOpenConfidenceLevel(null)}

@@ -22,12 +22,12 @@ export function useCategorieWijziging(p) {
   // in één keer een herbruikbaar trefwoord kunt vastleggen in plaats van dezelfde correctie steeds
   // opnieuw te moeten doen. Geen suggestie bij "Overig"/"Overboekingen aan personen" zelf, want dat
   // is geen bruikbaar trefwoord om aan andere transacties te koppelen.
-  const suggestSimilarIfAny = (tx, patch) => {
+  const suggestSimilarIfAny = (tx, patch, uitgesloten = null) => {
     if (!patch.category || patch.category === "Overig" || patch.category === "Overboekingen aan personen") return;
     const keyword = extractKeywordCandidate(tx.counterparty || tx.description);
     if (!keyword) return;
     const matches = classified.filter((t) => {
-      if (t.isMirror || t.id === tx.id) return false;
+      if (t.isMirror || t.id === tx.id || uitgesloten?.has(t.id)) return false;
       if (!t.confidence || (t.confidence.level !== "heuristic" && t.confidence.level !== "fallback")) return false;
       const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
       return text.includes(keyword);
@@ -93,6 +93,20 @@ export function useCategorieWijziging(p) {
         return next;
       });
     }
+  };
+
+  // nieuw-V6R3 — categorie van een hele groep in het controlevenster: alle boekingen van de groep krijgen de keuze.
+  // Voorheen ging alleen de eerste boeking mee als de tegenpartijnaam per boeking verschilde (pinbetalingen, Boska 16-11).
+  const wijzigGroep = (txs, patch) => {
+    const echte = (txs || []).filter((t) => t.id != null && !t.isMirror && !t.transferLocked);
+    if (echte.length === 0) return;
+    snapshotBeforeAction("Categorie aangepast (groep)");
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const t of echte) next[t.id] = { ...(next[t.id] || {}), category: patch.category, type: t.type };
+      return next;
+    });
+    suggestSimilarIfAny(echte[0], { ...patch, type: echte[0].type }, new Set(echte.map((t) => t.id)));
   };
 
   const requestCategoryChange = (tx, patch, opts) => {
@@ -212,5 +226,5 @@ export function useCategorieWijziging(p) {
     suggestSimilarIfAny(tx, patch);
   };
 
-  return { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion };
+  return { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion, wijzigGroep };
 }
