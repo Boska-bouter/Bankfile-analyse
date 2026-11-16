@@ -192,18 +192,29 @@ function controleerClientData(clientDataJSON, type, uitdaging, origin) {
 // nieuw-V4R7 — de send_email-binding van Cloudflare Email Routing mailt alleen naar geverifieerde adressen. Voor
 // inloglinks naar willekeurige gebruikers kan daarom Resend (resend.com) worden gebruikt: Secret RESEND_API_KEY en een
 // afzender op een bij Resend geverifieerd domein (INLOG_FROM). Zonder die Secret gaat het via de binding EMAIL.
+// nieuw-V6R1 — automatische mails: koppen tegen afwezigheidsmeldingen (RFC 3834) en een Reply-To naar een echte
+// mailbox (MAIL_REPLY_TO, anders FEEDBACK_TO), zodat een antwoord niet op het afzenderadres zonder mailbox stuit.
+export const AUTO_KOPPEN = { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All", Precedence: "bulk" };
+export const antwoordAdres = (env) => String(env.MAIL_REPLY_TO || env.FEEDBACK_TO || "").split(",")[0].trim() || null;
 export async function verstuur(env, bericht) {
+  const replyTo = antwoordAdres(env);
   if (env.RESEND_API_KEY) {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: bericht.from, to: [bericht.to], subject: bericht.subject, text: bericht.text, html: bericht.html }),
+      body: JSON.stringify({ from: bericht.from, to: [bericht.to], subject: bericht.subject, text: bericht.text, html: bericht.html,
+        headers: AUTO_KOPPEN, ...(replyTo ? { reply_to: replyTo } : {}) }),
     });
     if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 150)}`);
     return;
   }
   if (!env.EMAIL) throw new Error("Binding EMAIL ontbreekt");
-  await env.EMAIL.send(bericht);
+  try {
+    await env.EMAIL.send({ ...bericht, headers: AUTO_KOPPEN, ...(replyTo ? { replyTo } : {}) });
+  } catch {
+    // Niet elke versie van de binding kent headers/replyTo: dan zonder.
+    await env.EMAIL.send(bericht);
+  }
 }
 
 // nieuw-V5R2 — aanhef en handtekening voor alle mails aan gebruikers. Handtekening aanpasbaar met de variabele
