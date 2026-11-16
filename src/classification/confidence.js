@@ -21,7 +21,7 @@ import { displayCategory, keuzeLabel, SPLIT_CATEGORY_NAMES } from "./categories.
 const INKOOP_CATEGORIEEN = new Set(["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"]);
 // Een eigen keuze "Zakelijke inkoop non-voedingsmiddelen" die de app bij horeca naar de 9%-categorie zet (classify.js), blijft een eigen keuze.
 const zelfdeKeuze = (gekozen, uitkomst) => gekozen === uitkomst || (gekozen === "Zakelijke inkoop non-voedingsmiddelen" && uitkomst === "Zakelijke inkoop voedingsmiddelen");
-import { getBranche, BOUWMARKT, HORECA_GROOTHANDEL } from "./branche.js";
+import { getBranche, BOUWMARKT, HORECA_GROOTHANDEL, groenInkoop } from "./branche.js";
 
 // Zelfde drietal categorieën als in classify.js (overboeking tussen zakelijk en privé). Een
 // resolvedCategory die hierin voorkomt én waarvan de tegenrekening-IBAN overeenkomt met een eigen,
@@ -104,8 +104,12 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
   if (INKOOP_CATEGORIEEN.has(resolvedCategory) && Number(tx.amount) < 0 && getBranche() === "horeca" && HORECA_GROOTHANDEL.test(String(tx.counterparty || ""))) {
     return { level: "keyword", label: "Groothandel: inkoop voor horeca" };
   }
+  // nieuw-V6R5 — hovenier: inkoop bij kwekerij, verhuur, bestrating enz. is zeker.
+  if (resolvedCategory === "Zakelijke inkoop non-voedingsmiddelen" && groenInkoop({ ...tx, amount: Number(tx.amount) }, tx.type || tx.accountType || "Zakelijk")) {
+    return { level: "keyword", label: "Hovenier: inkoop (kwekerij, materiaal of verhuur)" };
+  }
   // nieuw-V1R9 — bouwmarkt bij een bedrijf dat niet in de bouw zit: zakelijk of privé laat de app aan de gebruiker (branche.js).
-  if (resolvedCategory === "Winkels divers" && Number(tx.amount) < 0 && getBranche() && getBranche() !== "bouw" && BOUWMARKT.test(String(tx.counterparty || ""))) {
+  if (resolvedCategory === "Winkels divers" && Number(tx.amount) < 0 && getBranche() && getBranche() !== "bouw" && getBranche() !== "groen" && BOUWMARKT.test(String(tx.counterparty || ""))) {
     return { level: "heuristic", label: "Bouwmarkt: zakelijk of privé? (alleen bij een bouwbedrijf vanzelf zakelijk)" };
   }
   // nieuw-V1R9 — verzekeraar die zowel privé- als zakelijke polissen verkoopt (Nationale-Nederlanden, Achmea, Allianz …) op de zakelijke
