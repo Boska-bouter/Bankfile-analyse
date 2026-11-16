@@ -101,7 +101,7 @@ export default function DashboardHeader({
                   {/* nieuw-V1R3 — per ring alles op één regel (Boska 9-11): kolom smaller en lager, meer ruimte voor kolom 2 en 3 */}
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
-                    <span className="text-slate-400">Hele dossier · {pct}% ·</span>
+                    <span className="text-slate-400">Hele dossier · {pct}% gecontroleerd ·</span>
                     <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
                       {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
                     </span>
@@ -109,15 +109,14 @@ export default function DashboardHeader({
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
-                    <span className="text-slate-400">{yearRing.jaar} · {yearRing.pct}% ·</span>
+                    <span className="text-slate-400">{yearRing.jaar} · {yearRing.pct}% gecontroleerd ·</span>
                     <span className={`text-sm font-bold ${yearRing.open > 0 ? "text-slate-900" : "text-emerald-700"}`}>
                       {yearRing.open > 0 ? `${yearRing.open} open punt${yearRing.open === 1 ? "" : "en"}` : "Dit jaar afgehandeld"}
                     </span>
                   </div>
                   {boekingenInfo && (
                     <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
-                      <span>{boekingenInfo.zeker}% van de boekingen zeker ingedeeld</span>
-                      {boekingenInfo.klein > 0 && <span>{boekingenInfo.klein}% kleine transacties (&lt; € {boekingenInfo.grens ?? 50}), hoeven niet gecontroleerd te worden</span>}
+                      <span>Boekingen: {boekingenInfo.zeker}% zeker ingedeeld{boekingenInfo.klein > 0 ? ` + ${boekingenInfo.klein}% kleine bedragen (< € ${boekingenInfo.grens ?? 50})` : ""}{boekingenInfo.open > 0 ? ` + ${boekingenInfo.open}% nog controleren` : ""} = 100%</span>
                     </span>
                   )}
                 </div>

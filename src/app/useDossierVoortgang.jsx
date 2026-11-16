@@ -104,7 +104,12 @@ export function useDossierVoortgang(invoer) {
       else if (tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigdInBulkVenster(tx)) zeker++;
     }
     // nieuw-V1R1 — grens erbij, zodat de kop "kleine transacties (< € 50)" kan zeggen
-    return n ? { zeker: Math.floor((100 * zeker) / n), klein: Math.round((100 * klein) / n), grens: kleinInstelling(kleinBedragInstelling).grens } : null;
+    // nieuw-V5R6 — de delen tellen op tot 100% (Boska 16-11: "hele dossier 100%" naast "98% zeker" gaf verwarring).
+    if (!n) return null;
+    const kleinPct = Math.round((100 * klein) / n);
+    const open = n - zeker - klein;
+    const zekerPct = open > 0 ? Math.max(0, Math.min(Math.floor((100 * zeker) / n), 99 - kleinPct)) : 100 - kleinPct;
+    return { zeker: zekerPct, klein: kleinPct, open: open > 0 ? 100 - zekerPct - kleinPct : 0, grens: kleinInstelling(kleinBedragInstelling).grens };
   }, [classified, reviewedOverigKeys, reviewedPersonKeys, kleinBedragInstelling]);
   // V74 — tweede ring: dezelfde berekening, maar alleen voor het gekozen jaar. Open = groepen met een
   // onzekere indeling in dat jaar + de administratieve jaarchecks die nog openstaan (KOR, BTW-verlegd,
