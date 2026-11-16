@@ -11,7 +11,7 @@ import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
-import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
+import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
 import KleineBedragen from "./components/review/KleineBedragen.jsx";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -2483,7 +2483,7 @@ export default function App() {
                     {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
                   </div>
                   <div className="truncate text-base font-bold">
-                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open${volgende.jaren?.length ? ` in ${volgende.jaren.join(", ")}` : ""})` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
+                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open${volgende.jaren?.length ? ` in ${korteJaren(volgende.jaren)}` : ""})` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
                   </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-3">

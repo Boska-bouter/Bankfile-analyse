@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { korteJaren } from "../utils/normalization.js";
 import { kaartenVolgensProfiel } from "../modus/index.js";
 import { AlertTriangle, Copy, FileSpreadsheet, HelpCircle, Users } from "lucide-react";
 
@@ -11,7 +12,7 @@ export function useControlerenDashboardCards(p) {
     setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear = null, setActiveYear = null,
   } = p;
   // nieuw-V5R7 — jaartal bij de open punten (Boska 16-11)
-  const metJaren = (n, jaren) => (n > 0 && jaren?.length ? `${n} (${jaren.join(", ")})` : n);
+  const metJaren = (n, jaren) => (n > 0 && jaren?.length ? `${n} (${korteJaren(jaren)})` : n);
 
   const kaarten = useMemo(() => {
     if (transactions.length === 0) return [];

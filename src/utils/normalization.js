@@ -131,6 +131,8 @@ export function normKey(s) {
 // nieuw-V5R8 — kenmerkende woorden van een naam (verwachte lease/lening): woorden van 4+ tekens zonder algemene woorden
 // als "stichting" of "payments". Een boeking hoort erbij als ALLE kenmerkende woorden in de tekst staan.
 const ALGEMEEN = new Set(["stichting", "ontvangsten", "betalingen", "payments", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "bank", "services", "financial", "finance", "lease", "leasing", "via", "voor", "and", "van"]);
+// nieuw-V5R9 — jaren kort ("’21, ’22") zodat ze op één regel passen (Boska 16-11)
+export const korteJaren = (jaren) => (jaren || []).map((j) => `’${String(j).slice(-2)}`).join(", ");
 export function kenmerkendeWoorden(text) {
   const cleaned = String(text || "")
     .replace(/\b(b\.?v\.?|n\.?v\.?|ltd|inc|gmbh)\b/gi, " ")

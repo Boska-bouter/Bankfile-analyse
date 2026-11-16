@@ -2,7 +2,7 @@
 // nieuw-V1R0 — uit App.jsx gehaald (opruimronde 9-11). Alle invoer komt binnen via `invoer`; namen die App pas later maakt via invoer.appLaat.
 import { MOBIEL_CATS, MOBIEL_LABEL } from "./constanten.js";
 import { autoJaren } from "../tax/eenvoudigLease.js";
-import { counterpartyKey } from "../utils/normalization.js";
+import { counterpartyKey, korteJaren } from "../utils/normalization.js";
 import { useMemo } from "react";
 import { kleinInstelling } from "../classification/kleineBedragen.js";
 
@@ -139,7 +139,7 @@ export function useDossierVoortgang(invoer) {
     .join(" · ") + (() => {
       // nieuw-V5R7 — in welk jaar staan de open punten (Boska 16-11)
       const jaren = [...new Set([...(confidenceSummary?.openJaren || []), ...Object.keys(yearlyProgress || {}).filter((y) => (yearlyProgress[y]?.openPunten || 0) > 0).map(Number)])].sort((a, b) => a - b);
-      return controlerenBadge + instellingenBadge > 0 && jaren.length ? ` · in ${jaren.join(", ")}` : "";
+      return controlerenBadge + instellingenBadge > 0 && jaren.length ? ` · in ${korteJaren(jaren)}` : "";
     })();
 
   // Fase 1, dashboard-restyling (Stijl F) — de 4 samenvattende categorie-kaarten bovenaan Overzicht
