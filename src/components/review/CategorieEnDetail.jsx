@@ -52,7 +52,7 @@ export default function CategorieEnDetail({
           {expandedCardKeys.detailTabellen ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
           <span className="text-sm font-semibold text-slate-800">Detailtabellen</span>
           <span className="text-xs text-slate-400">
-            {(soortDossier === "prive" || soortDossier === "huishoudboekje") && !(zakGroupForYear?.items?.length) ? `${priGroupShown?.items?.length ?? 0} transacties` : `${zakGroupForYear?.items?.length ?? 0} zakelijke en ${priGroupShown?.items?.length ?? 0} privé-transacties`} · {expandedCardKeys.detailTabellen ? "klik om in te klappen" : "klik om te openen"}
+            {(soortDossier === "prive" || soortDossier === "huishoudboekje") && !(zakGroupForYear?.items?.length) ? `${priGroupShown?.items?.length ?? 0} transacties` : `${zakGroupForYear?.items?.length ?? 0} zakelijke en ${priGroupShown?.items?.length ?? 0} ${priveRekeningGeladen ? "privé-transacties" : "opnames naar privé (privérekening niet geladen)"}`} · {expandedCardKeys.detailTabellen ? "klik om in te klappen" : "klik om te openen"}
           </span>
         </button>
       </div>

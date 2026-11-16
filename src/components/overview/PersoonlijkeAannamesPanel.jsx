@@ -228,6 +228,32 @@ export default function PersoonlijkeAannamesPanel({
               Bepaalt in welke schijf de winst valt en hoeveel heffingskorting daarbovenop nog meetelt. Is er geen ander
               inkomen, laat dit dan leeg. Pensioen of ander niet-arbeidsinkomen: de arbeidskorting is dan te hoog geschat.
             </p>
+            {(overigInkomenBox1?.[activeYear] || 0) > 0 && (() => {
+              // nieuw-V4R4 — wens Boska 13-11: vragen over welk inkomen de heffingskorting wordt toegepast.
+              const keuze = tariefOverrides?.[activeYear]?.kortingOp || "";
+              const auto = overigInkomenBox1[activeYear] > (winst || 0) ? "het overig inkomen" : "de winst";
+              const zet = (v) => {
+                const next = { ...(tariefOverrides || {}) };
+                const rest = { ...(next[activeYear] || {}) };
+                if (v) rest.kortingOp = v; else delete rest.kortingOp;
+                if (Object.keys(rest).length) next[activeYear] = rest; else delete next[activeYear];
+                onSetTariefOverrides(next);
+              };
+              return (
+                <div className="mt-3">
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Over welk inkomen wordt de heffingskorting toegepast?</label>
+                  <select value={keuze} onChange={(e) => zet(e.target.value)} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm">
+                    <option value="">Het hoogste inkomen (nu: {auto})</option>
+                    <option value="winst">De winst uit onderneming</option>
+                    <option value="overig">Het overig inkomen (loon, uitkering)</option>
+                  </select>
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    De heffingskorting krijg je maar één keer. Meestal wordt die toegepast op het hoogste inkomen. Kies "overig inkomen"
+                    als de werkgever of uitkeringsinstantie de loonheffingskorting toepast; dan telt er voor de winst geen korting meer mee.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
 
           <TarievenJaarEditor activeYear={activeYear} years={years} tariefOverrides={tariefOverrides} onSetTariefOverrides={onSetTariefOverrides} />
@@ -253,8 +279,8 @@ export default function PersoonlijkeAannamesPanel({
             </p>
             {(overigInkomenBox1?.[activeYear] || 0) > 0 && (
               <p className="text-slate-500">
-                Overig inkomen {eur(overigInkomenBox1[activeYear])} is meegenomen: belasting en kortingen zijn het verschil met en zonder winst.
-                Een negatieve heffingskorting betekent dat er door de winst korting verloren gaat die er op het overige inkomen alleen wél was.
+                Overig inkomen {eur(overigInkomenBox1[activeYear])} is meegenomen: de belasting is het verschil met en zonder winst.
+                Heffingskorting toegepast op {heffingskortingen.kortingOp === "overig" ? "het overig inkomen, dus niet op de winst" : "de winst"}.
               </p>
             )}
             <p>

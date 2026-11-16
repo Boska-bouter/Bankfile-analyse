@@ -10,7 +10,7 @@ import { keuzeGroepen, keuzeWaarde } from "../../classification/categories.js";
 // die letters voorkomen. Enter kiest de eerste, Esc sluit. Niet sluiten bij resize: het iPad-toetsenbord verandert de hoogte. Een gewone <select> kan op de iPad niet zoeken, daarom een eigen lijst.
 const zonderAccent = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export default function CategorieSelect({ value, onChange, className = "", placeholder = null }) {
+export default function CategorieSelect({ value, onChange, className = "", placeholder = null, startOpen = false, onSluit = null }) {
   const [open, setOpen] = useState(false);
   const [zoek, setZoek] = useState("");
   const [plek, setPlek] = useState(null);
@@ -70,6 +70,11 @@ export default function CategorieSelect({ value, onChange, className = "", place
     setZoek("");
     setOpen(true);
   };
+
+  // nieuw-V5R1 — na "Categorie wijzigen" meteen de lijst openen (Boska 15-11: anders leek de keuze te "springen").
+  useEffect(() => { if (startOpen) openen(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const wasOpen = useRef(false);
+  useEffect(() => { if (wasOpen.current && !open) onSluit?.(); wasOpen.current = open; }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return undefined;

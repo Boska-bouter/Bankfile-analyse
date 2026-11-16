@@ -51,7 +51,7 @@ export default function HerkomstVanGeldPanel({
     <section ref={personReviewRef} className="rounded-xl border-2 border-fuchsia-200 bg-white overflow-hidden shadow-sm">
       <button onClick={() => onToggleShowPersonReview(!open)} className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left">
         {pendingPersonReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-        <span className="text-sm font-semibold">Overboekingen aan personen controleren</span>
+        <span className="text-sm font-semibold">Personen en onbekende tegenpartijen controleren</span>
         {pendingPersonReview.length > 0 ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingPersonReview.length}

@@ -2694,6 +2694,10 @@ export default function App() {
               snapshotBeforeAction("Eigen rekening toegevoegd (niet-gekoppelde overboekingen)");
               setEigenRekeningenExtra((prev) => [...(prev || []).filter((r) => normKey(r?.iban || "") !== normKey(iban)), { iban, accountType }]);
             }}
+            eigenNamen={eigenNamen}
+            bekijken={aansluitControleInfo.tone !== "attention"}
+            bekijkenTekst=""
+            zijdeOntbreekt={aansluitControleInfo.zijdeOntbreekt}
             onClose={() => setShowOnverklaard(false)}
           />
         )}

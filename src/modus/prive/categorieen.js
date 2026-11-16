@@ -76,7 +76,7 @@ export const PRIVE_CATEGORIEEN = Object.freeze([
 
   c("Privé - mobiel", "Abonnementen", { label: "Mobiel", vast: true }),
   c("Privé - internet/TV", "Abonnementen", { label: "Internet & tv", vast: true }),
-  c("Privé overige abonnementen", "Abonnementen", { label: "Streaming & overige abonnementen", vast: true }),
+  c("Privé overige abonnementen", "Abonnementen", { label: "Streaming & overige abonnementen (bijv. krant, Swapfiets)", vast: true }),
 
   c("Privé - vrijetijd-uitgaan-vakantie & uit eten", "Vrije tijd", { label: "Uitgaan, vakantie & uit eten" }),
   c("Uit eten & afhalen", "Vrije tijd", { nieuw: true, kleur: "bg-sky-100 text-sky-800" }),

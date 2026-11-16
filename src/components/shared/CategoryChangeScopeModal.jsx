@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { displayCategory } from "../../classification/categories.js";
+import { keuzeLabel } from "../../classification/categories.js";
 
 export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onApplyRekening, onClose }) {
   const { tx, patch, matchCount, matchYears, viaIban, keywordQuery, rekening } = pending;
@@ -26,9 +26,9 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               <>Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met hetzelfde teken.</>
             )}{" "}
             {isConfirmOnly ? (
-              <>Ook voor die transacties bevestigen dat <strong>{displayCategory(patch.category)}</strong> ({patch.type === "Prive" ? "Privé" : patch.type}) klopt?</>
+              <>Ook voor die transacties bevestigen dat <strong>{keuzeLabel(patch.category)}</strong> (boeking op de {patch.type === "Prive" ? "privérekening" : "zakelijke rekening"}) klopt?</>
             ) : (
-              <>Naar <strong>{displayCategory(patch.category)}</strong> ({patch.type === "Prive" ? "Privé" : patch.type}).</>
+              <>Naar <strong>{keuzeLabel(patch.category)}</strong> (boeking op de {patch.type === "Prive" ? "privérekening" : "zakelijke rekening"}).</>
             )}{" "}
             Alleen deze ene transactie {isConfirmOnly ? "bevestigen" : "aanpassen"}, of ook de andere?
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}

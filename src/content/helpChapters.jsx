@@ -124,7 +124,7 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           De kaart bovenaan het Overzicht toont per jaar het aantal <strong>open punten</strong>: wat nog moet worden
-          beoordeeld (onzekere indelingen, herkomst van inkomsten, overboekingen aan personen, "Overig") plus openstaande
+          beoordeeld (onzekere indelingen, herkomst van inkomsten, personen en onbekende tegenpartijen, "Nog niet ingedeeld") plus openstaande
           vragen bij Instellingen. Daaronder staat tussen haakjes de verdeling, bijvoorbeeld "5 controle · 1 instelling".
           Een indeling die al groen is telt niet mee.
         </p>
@@ -308,7 +308,7 @@ export const HELP_CHAPTERS = [
           rubrieken rekenen ongewijzigd op de fijne soort.
         </p>
         <p>
-          Toch alle fijne categorieën zien? Zet het vinkje <strong>fijne categorieën</strong> aan in de
+          Toch elke soort apart zien? Zet het vinkje <strong>alle soorten tonen</strong> aan in het
           tabblad Categorieën onder "Details en overzichten" (Overzicht). Dat geldt voor alle keuzelijsten en overzichten tot het
           vinkje weer uit staat.
         </p>
@@ -323,12 +323,12 @@ export const HELP_CHAPTERS = [
       <div className="space-y-2">
         <p>
           Op Controleren staan vier punten die zelf beoordeeld moeten worden: de <strong>herkomst van inkomsten</strong> (zakelijk
-          of privé), <strong>overboekingen aan personen</strong>, alles wat nog in <strong>"Overig"</strong> staat en
+          of privé), <strong>personen en onbekende tegenpartijen</strong>, alles wat nog in <strong>"Overig"</strong> staat en
           mogelijke <strong>duplicaten</strong>. Elk punt toont hoeveel er nog te bepalen is; staat er "Niets openstaand",
           dan is het klaar.
         </p>
         <p>
-          Bij "Overig opruimen" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Privé opnames" (voor een
+          Bij "Nog niet ingedeeld" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Privé opnames" (voor een
           zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
       </div>
@@ -341,10 +341,10 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2">
         <p>
-          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 override")}</strong> (al eens zelf bevestigd,
-          op IBAN of tegenpartij), <strong>{metBolletjes("🟢 keyword")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
-          Brandstof), <strong>{metBolletjes("🟡 heuristic")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
-          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 fallback")}</strong> (geen enkele regel matchte
+          Elke transactie krijgt een van vier niveaus: <strong>{metBolletjes("🟢 zelf bevestigd")}</strong> (al eens door jou bevestigd,
+          op IBAN of tegenpartij), <strong>{metBolletjes("🟢 zoekwoord")}</strong> (matcht een specifieke zoekwoord-regel, bijv. "shell" →
+          Brandstof), <strong>{metBolletjes("🟡 controleren")}</strong> (automatisch bepaald zonder specifiek zoekwoord, bijv. op basis van
+          rekeningtype of "ziet eruit als een persoonsnaam"), of <strong>{metBolletjes("🔴 onduidelijk")}</strong> (geen enkele regel matchte
           — in "Overig" beland).
         </p>
         <p>

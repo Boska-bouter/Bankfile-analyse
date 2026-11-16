@@ -334,11 +334,30 @@ export function estimateZvwMetOndernemersaftrek(winst, year, ondernemersaftrekBe
 // (loon/uitkering) — bij pensioen of ander niet-arbeidsinkomen is de arbeidskorting dus te hoog
 // ingeschat. Heeft de gebruiker de werkelijke heffingskorting ingevuld (tariefOverrides[jaar]
 // .werkelijkeHeffingskorting), dan vervangt die het totaal.
+// "winst" of "overig": over welk inkomen de heffingskortingen worden toegepast. Zonder keuze: het hoogste inkomen.
+export function kortingOpVoor(year, winst) {
+  const overig = getOverigInkomenBox1(year);
+  if (!(overig > 0)) return "winst";
+  const keuze = _overrides?.[year]?.kortingOp;
+  if (keuze === "winst" || keuze === "overig") return keuze;
+  return overig > (winst || 0) ? "overig" : "winst";
+}
 function heffingskortingenVoor(winst, belastbaarInkomen, year) {
   const overig = getOverigInkomenBox1(year);
   const bi = Math.max(0, belastbaarInkomen);
-  const algemeneHeffingskorting = computeAlgemeneHeffingskorting(bi + overig, year) - (overig > 0 ? computeAlgemeneHeffingskorting(overig, year) : 0);
-  const arbeidskorting = computeArbeidskorting(winst + overig, year) - (overig > 0 ? computeArbeidskorting(overig, year) : 0);
+  // nieuw-V4R4 — wens Boska 13-11: de heffingskortingen krijg je maar één keer. De gebruiker kiest over welk inkomen
+  // ze worden toegepast (tariefOverrides[jaar].kortingOp = "winst" | "overig"); standaard het hoogste inkomen.
+  // Alleen over dát inkomen wordt de korting berekend. Bij "overig" is de korting al via de loonheffing op het
+  // loon/de uitkering gebruikt (nooit meer dan de belasting daarover) en blijft er voor de winst niets over.
+  const kortingOp = kortingOpVoor(year, winst);
+  let algemeneHeffingskorting = 0, arbeidskorting = 0, gebruiktOpOverig = 0;
+  if (kortingOp === "overig") {
+    const { waarde: t } = resolveTariefGroep("ib", year);
+    gebruiktOpOverig = Math.min(computeAlgemeneHeffingskorting(overig, year) + computeArbeidskorting(overig, year), belastingOverSchijvenVoor(overig, t));
+  } else {
+    algemeneHeffingskorting = computeAlgemeneHeffingskorting(bi, year);
+    arbeidskorting = computeArbeidskorting(winst, year);
+  }
   const werkelijk = Number(_overrides?.[year]?.werkelijkeHeffingskorting);
   const heeftWerkelijk = _overrides?.[year]?.werkelijkeHeffingskorting != null && _overrides?.[year]?.werkelijkeHeffingskorting !== "" && Number.isFinite(werkelijk) && werkelijk >= 0;
   const geschat = algemeneHeffingskorting + arbeidskorting;
@@ -347,6 +366,7 @@ function heffingskortingenVoor(winst, belastbaarInkomen, year) {
     totaal: heeftWerkelijk ? werkelijk : geschat,
     geschatTotaal: geschat,
     werkelijkIngevuld: heeftWerkelijk,
+    gebruiktOpOverig, kortingOp,
   };
 }
 

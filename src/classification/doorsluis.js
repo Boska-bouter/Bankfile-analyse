@@ -36,7 +36,7 @@ export function koppelDoorsluisOverboekingen(base, heeftZakelijkeRekening) {
   if (naarNeutraal.size === 0) return base;
   return base.map((tx) =>
     naarNeutraal.has(tx.id)
-      ? { ...tx, category: "Interne overboeking", confidence: { level: "keyword", label: "Eigen rekening — geen zakelijke tegenboeking, telt niet mee in de controle zakelijk ↔ privé" } }
+      ? { ...tx, category: "Interne overboeking", confidence: { level: "keyword", label: "Eigen rekening, komt niet van de zakelijke rekening: telt niet mee in de controle zakelijk ↔ privé" } }
       : tx
   );
 }

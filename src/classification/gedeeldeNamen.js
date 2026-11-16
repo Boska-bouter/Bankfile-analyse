@@ -5,7 +5,7 @@
 // - Anders, als minstens VOORSTEL_ACCOUNTS accounts met dezelfde soort rekening het meestal eens zijn: voorstel, op "nakijken".
 // Terugsturen (alleen met toestemming, standaard uit): de eigen keuze op tegenpartij, alleen voor namen die op een bedrijf lijken.
 // Er gaan nooit bedragen, rekeningnummers, omschrijvingen of namen van personen mee.
-import { vergelijkSleutel } from "../review/vergelijkbaar.js";
+import { bedrijfSleutel, TERMINAL } from "./bedrijfSleutel.js";
 import { looksLikePerson } from "../utils/normalization.js";
 import { getCategorieProfiel } from "./categories.js";
 import { getBranche } from "./branche.js";
@@ -15,23 +15,17 @@ export const ZEKER_AANDEEL = 0.8;
 export const VOORSTEL_ACCOUNTS = 2;
 export const VOORSTEL_AANDEEL = 0.6;
 
-// Betaalterminals en -diensten vóór de naam ("BCK*Decathlon", "SumUp *Bakker", "Zettle_*Kiosk", "CCV*Kapper").
-const TERMINAL = /^\s*(bck|ccv|sumup|zettle|iz|sq|sp|pp|paypal|pay\.nl|mollie|stripe|adyen|bcc|myp|ecom|cm)\s*[*_]+\s*_?\s*/i;
 // Tekenen dat de tegenpartij een bedrijf is (en geen persoon): rechtsvorm of bedrijfswoord, pinbetaling, incasso, iDEAL of betaaldienst.
 const RECHTSVORM = /\b(b\.?\s?v\.?|n\.\s?v\.?|v\.?o\.?f\.?|holding|gmbh|ltd|limited|inc|llc|bvba|s\.\s?a\.?|sarl|a\/s)(?![a-z])|groothandel|handel|winkel|shop|store|supermarkt|bouwmarkt|apotheek|tandarts|huisarts|fysio|praktijk|kliniek|ziekenhuis|verzeker|energie|telecom|garage|autobedrijf|tankstation|restaurant|caf[eé]|hotel|bakkerij|slagerij|drogist|stichting|vereniging|gemeente|waterschap/i;
 const BETAALSPOOR = /pasvolgnr|\bpas: ?\d|\bterm:|betaalautomaat|incassant|machtiging|sepa.?incasso|europese incasso|doorlopende incasso|\bideal\b|via (mollie|adyen|stripe|buckaroo|pay\.nl|multisafepay|worldline|ingenico|cm\.com|ccv|sumup|zettle|paypal|klarna|riverty|afterpay)/i;
 
-// Betaaldiensten, banken en tussenpartijen: de categorie hangt af van wie er achter zit, dus nooit in de lijst.
-const TUSSENPARTIJ = /^(paypal|stripe|mollie|stichting mollie|adyen|buckaroo|klarna|riverty|afterpay|multisafepay|pay nl|worldline|ingenico|ccv|sumup|zettle|tikkie|bng|geldmaat|ing|ing bank|rabobank|abn|abn amro|bunq|knab|asn|sns|triodos|regiobank|revolut|wise|n26|stichting derdengelden|derdengelden|stichting beheer)\b/;
 // Categorieën die niets over het bedrijf zeggen (onbekend, personen, eigen rekeningen): niet delen.
 export const NIET_DELEN = new Set(["Overig", "Overboekingen aan personen", "Overboeking van bekenden", "Interne overboeking", "Interne overboeking: zakelijk sparen",
   "Interne overboeking: privé sparen", "Ontvangen van zakelijk", "Zakelijk - apparatuur/machines", "Terugboeking naar zakelijk", "Terugboeking van privé", "Inkomsten/betalingen niet dit jaar"]);
 
-// Sleutel voor de lijst: kleine letters, zonder plaats na " via ", zonder cijfers, terminalvoorvoegsel en rechtsvorm; eerste twee woorden.
+// Sleutel voor de lijst (zie bedrijfSleutel).
 export function naamSleutel(naam) {
-  const t = String(naam || "").replace(TERMINAL, "").replace(TERMINAL, "");
-  const k = vergelijkSleutel(t);
-  return k && !TUSSENPARTIJ.test(k) ? k : "";
+  return bedrijfSleutel(naam);
 }
 
 // Lijkt de tegenpartij van deze boeking op een bedrijf? Alleen dan mag de naam (sleutel) naar de server.
@@ -111,11 +105,15 @@ export function gedeeldeKeuze(tx, accountType, geldig0 = () => true) {
     const eigen = rijen.find((r) => r.branche === branche);
     const z = eigen && meeste(eigen.cats);
     if (z && z.categorie && geldig(z.categorie) && z.totaal >= ZEKER_ACCOUNTS && z.aantal / z.totaal >= ZEKER_AANDEEL) uit = { ...z, zeker: true };
+    else if (z && z.categorie && geldig(z.categorie) && z.totaal >= VOORSTEL_ACCOUNTS && z.aantal / z.totaal >= VOORSTEL_AANDEEL) uit = { ...z, zeker: false };
     else {
+      // nieuw-V4R6 — keuzes uit andere branches tellen alleen mee als elke branche meestal dezelfde categorie kiest
+      // (een leverancier voor horeca kan voor een kantoor een gewone winkel zijn).
       const alle = {};
       for (const r of rijen) for (const [c, a] of Object.entries(r.cats)) alle[c] = (alle[c] || 0) + a;
       const v = meeste(alle);
-      if (v.categorie && geldig(v.categorie) && v.totaal >= VOORSTEL_ACCOUNTS && v.aantal / v.totaal >= VOORSTEL_AANDEEL) uit = { ...v, zeker: false };
+      const eens = rijen.every((r) => meeste(r.cats).categorie === v.categorie);
+      if (eens && v.categorie && geldig(v.categorie) && v.totaal >= VOORSTEL_ACCOUNTS && v.aantal / v.totaal >= VOORSTEL_AANDEEL) uit = { ...v, zeker: false };
     }
   }
   // nieuw-V2R2 — niet in de lijst: wat het opzoeken met AI vond (alleen hoog of middel), altijd als voorstel.
@@ -157,23 +155,32 @@ export function stemmenUit(classified) {
 export const NOOIT_AI = /^(lease|leningen|hypotheek|zakelijk - apparatuur|prive hypotheek|interne overboeking|ontvangen van zakelijk|terugboeking|privé opnames|privé stortingen|overboekingen aan personen|overboeking van bekenden)/i;
 // Welke namen moeten nog worden opgezocht? Boekingen zonder eigen keuze die in Overig/personen staan of alleen op bedrijfsnaam of
 // factuurnummer als leverancier zijn geschat, met een naam die op een bedrijf lijkt en die nog niet in de lijst of bij de AI staat.
+// nieuw-V4R6 — ook een gok zonder zoekwoord (losse of buitenlandse pinbetaling); en eerst de namen met de meeste boekingen
+// (Overig/personen telt zwaarder dan een schatting), want die leveren het meeste op. Daarna de eerste `max`.
 const GESCHAT = /^Geschat: (bedrijfsnaam|betaling met factuurnummer)/;
+const GOK = /^Geschat: (losse pinbetaling zonder herkend zoekwoord|buitenlandse pinbetaling)/;
 export function aiKandidaten(classified, max = 300) {
   const uit = new Map();
   const branche = getBranche() || "";
   for (const tx of classified || []) {
-    if (uit.size >= max) break;
     const c = tx?.confidence;
     if (!c || c.level === "override" || tx.isMirror || tx.gedeeld || tx.transferLocked) continue;
-    if (!(tx.category === "Overig" || tx.category === "Overboekingen aan personen" || GESCHAT.test(c.label || ""))) continue;
+    const onbekend = tx.category === "Overig" || tx.category === "Overboekingen aan personen";
+    const gewicht = onbekend ? 3 : GESCHAT.test(c.label || "") ? 2 : GOK.test(c.label || "") ? 1 : 0;
+    if (!gewicht) continue;
     const s = naamSleutel(tx.counterparty);
     if (!s || !lijktOpBedrijf(tx)) continue;
     const soort = namenSoort(tx.accountType || tx.type);
     const k = `${s}|${teken(tx.amount)}`;
     const key = `${k}|${soort}|${branche}`;
-    if (uit.has(key) || _ai.has(key)) continue;
+    if (_ai.has(key)) continue;
+    const al = uit.get(key);
+    if (al) { al.score += gewicht; al.bedrag += Math.abs(Number(tx.amount) || 0); continue; }
     const naam = String(tx.counterparty || "").split(/\s+via\s+/i)[0].replace(TERMINAL, "").replace(/\d+/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
-    if (naam.length >= 2) uit.set(key, { soort, branche, k, naam });
+    if (naam.length >= 2) uit.set(key, { soort, branche, k, naam, score: gewicht, bedrag: Math.abs(Number(tx.amount) || 0) });
   }
-  return [...uit.values()];
+  return [...uit.values()]
+    .sort((a, b) => b.score - a.score || b.bedrag - a.bedrag)
+    .slice(0, max)
+    .map(({ soort, branche: b, k, naam }) => ({ soort, branche: b, k, naam }));
 }

@@ -242,18 +242,21 @@ function buildYearSectionBv(
   const priItemsChecklist = classified.filter((tx) => (tx.viewType || tx.type) === "Prive" && tx.year === year);
   const priveRekeningGeladen = Object.values(accountTypeByFile || {}).includes("Prive");
   const yc = computeChecklistLikeDataForYear(zakItemsChecklist, priItemsChecklist, kwartalen, kwartaalStatus || {}, priveRekeningGeladen);
+  // nieuw-V4R8 — wat in de app al is afgehandeld ("Klopt zo" in Overig/personen, kleine bedragen; tx.afgehandeld, gezet in
+  // useRapporten) is geen open punt meer, net als in Controleren (melding Boska 13-11: app "geen open punten", rapport wel).
+  const overigOpen = [...zakItemsChecklist, ...priItemsChecklist].filter((tx) => !tx.isMirror && tx.category === "Overig" && !tx.afgehandeld).length;
   const onzekerDitJaar = [...zakItemsChecklist, ...priItemsChecklist].filter(
-    (tx) => !tx.isMirror && tx.confidence?.level !== "override" && tx.confidence?.level !== "keyword" && tx.confidence?.level !== "heuristic"
+    (tx) => !tx.isMirror && !tx.afgehandeld && tx.confidence?.level !== "override" && tx.confidence?.level !== "keyword" && tx.confidence?.level !== "heuristic"
   ).length;
   const yearStatus =
     gatenDitJaar.length > 0
       ? "rood"
-      : yc.categorizedPct === 100 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
+      : overigOpen === 0 && onzekerDitJaar === 0 && geelGatenDitJaar.length === 0
       ? "groen"
       : "oranje";
 
   const openPunten = [];
-  if (yc.overigCount > 0) openPunten.push(`${yc.overigCount} transactie${yc.overigCount === 1 ? "" : "s"} nog in "Overig"`);
+  if (overigOpen > 0) openPunten.push(`${overigOpen} transactie${overigOpen === 1 ? "" : "s"} nog in "Overig"`);
   if (gatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(gatenDitJaar[0].fileA)} en ${esc(gatenDitJaar[0].fileB)} sluit niet aan`);
   else if (geelGatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(geelGatenDitJaar[0].fileA)} en ${esc(geelGatenDitJaar[0].fileB)} sluit niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}, nog geen echt gat)`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} met onzekere classificatie`);

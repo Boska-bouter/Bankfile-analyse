@@ -66,7 +66,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
 
       {loadedAccounts.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-slate-600 mb-1">Geladen bankbestanden</p>
+          <p className="text-xs font-medium text-slate-600 mb-1">Ingelezen rekeningen</p>
           <ul className="space-y-1">
             {loadedAccounts.map((a) => (
               <li key={a.iban} className="flex items-center gap-2 text-xs rounded-lg bg-slate-50 px-3 py-1.5">
@@ -79,7 +79,7 @@ export default function EigenRekeningenPanel({ loadedAccounts = [], eigenRekenin
       )}
 
       <div>
-        <p className="text-xs font-medium text-slate-600 mb-1">Opgegeven, niet geladen</p>
+        <p className="text-xs font-medium text-slate-600 mb-1">Eigen rekeningen zonder bankbestand</p>
         {lijst.length === 0 ? (
           <p className="text-xs text-slate-400">Nog geen opgegeven.</p>
         ) : (

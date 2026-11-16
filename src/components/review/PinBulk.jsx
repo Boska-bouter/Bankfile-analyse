@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
-import { displayCategory, getCategorieProfiel } from "../../classification/categories.js";
+import { displayCategory, getCategorieProfiel, keuzeLabel } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
 
 // beide-V16R3 — "Overig" opruimen: alle onbekende pinbetalingen onder een bedrag in één keer op een categorie (wens Boska 5-11).
@@ -23,7 +23,7 @@ export default function PinBulk({ items, onMark }) {
   const totaal = kandidaten.reduce((n, i) => n + i.total, 0);
   const toepassen = () => {
     if (!categorie || !kandidaten.length) return;
-    const tekst = `${kandidaten.length} tegenpartij(en) met alleen pinbetalingen onder ${eur(Number(grens))} (${boekingen} boekingen, ${eur(totaal)}) op ${displayCategory(categorie)} zetten?`;
+    const tekst = `${kandidaten.length} tegenpartij(en) met alleen pinbetalingen onder ${eur(Number(grens))} (${boekingen} boekingen, ${eur(totaal)}) op ${keuzeLabel(categorie)} zetten?`;
     if (!window.confirm(tekst)) return;
     for (const i of kandidaten) onMark(i, categorie, rek);
     setCategorie("");

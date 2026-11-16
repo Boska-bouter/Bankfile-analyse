@@ -16,7 +16,7 @@
 
 import { counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
 import { looksLikeForeignCardPayment, passendeRegels, FACTUUR_BETALING, bedrijfsnaamVan, verhuurderVan, horecaPinVan, besteRegel, zonderBetaalmiddel } from "./classify.js";
-import { displayCategory, SPLIT_CATEGORY_NAMES } from "./categories.js";
+import { displayCategory, keuzeLabel, SPLIT_CATEGORY_NAMES } from "./categories.js";
 // nieuw-V3R7 — inkoop van eten tegen 9% is dezelfde soort boeking als Zakelijke inkoop non-voedingsmiddelen.
 const INKOOP_CATEGORIEEN = new Set(["Zakelijke inkoop non-voedingsmiddelen", "Zakelijke inkoop voedingsmiddelen"]);
 // Een eigen keuze "Zakelijke inkoop non-voedingsmiddelen" die de app bij horeca naar de 9%-categorie zet (classify.js), blijft een eigen keuze.
@@ -118,7 +118,7 @@ export function scoreClassification(tx, rules, overridesByCounterparty, override
     const beste = besteRegel(rules, zonderBetaalmiddel(text), tx.type === "Zakelijk" || tx.type === "Prive" ? tx.type : null, tx);
     const vanDezeRegel = beste && (resolvedCategory === beste.rule.name || resolvedCategory === SPLIT_CATEGORY_NAMES[beste.rule.name]);
     if (beste?.twijfel && vanDezeRegel) {
-      return { level: "heuristic", label: `Twijfel: ${displayCategory(beste.rule.name)} of ${displayCategory(beste.twijfel)}?`, twijfel: [beste.rule.name, beste.twijfel] };
+      return { level: "heuristic", label: `Twijfel: ${keuzeLabel(beste.rule.name)} of ${keuzeLabel(beste.twijfel)}?`, twijfel: [beste.rule.name, beste.twijfel] };
     }
     return { level: "keyword", label: `Zoekwoord-match ("${matchedRule.name}")` };
   }
