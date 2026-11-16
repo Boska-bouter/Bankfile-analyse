@@ -94,7 +94,7 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
         {andereJaren.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-            <span className="font-medium">Nog te controleren in andere jaren: {korteJaren(andereJaren)}</span>
+            <span className="font-medium">Open punten in: {korteJaren([...new Set([...andereJaren, ...(nOpen > 0 && jaar ? [jaar] : [])].map(Number))].sort((a, b) => a - b))}{jaar ? ` · getoond: ${jaar}` : ""}</span>
             <span className="flex-1" />
             {onKiesJaar && andereJaren.map((y) => (
               <button key={y} type="button" onClick={(e) => { e.stopPropagation(); onKiesJaar(Number(y)); }} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold hover:bg-amber-100">Naar {y}</button>

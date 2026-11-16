@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { X, Check, Lock, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import { mainCategoryOf, displayCategory, subtypeChoicesFor, storedCategoryForChoice, categoryForMainChange, soortenVoor, hoofdcategorieenAlfa, hoofdKleur, keuzeLabel } from "../../classification/categories.js";
 import CategorieSelect from "../shared/CategorieSelect.jsx";
-import { counterpartyKey } from "../../utils/normalization.js";
+import { korteJaren, counterpartyKey } from "../../utils/normalization.js";
 import { eur } from "../../utils/amounts.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
@@ -27,7 +27,7 @@ export default function UncertainTransactionsModal({
   const onRequestChange = (tx, patch) => { setGekozen((g) => ({ ...g, [tx.id]: patch.category })); onRequestChange0(tx, patch); };
   // nieuw-V6R3 — keuze in de kop van een groep geldt voor alle open boekingen van die groep (Boska 16-11).
   const wijzigGroep = (g, patch) => {
-    const open = g.txs.filter((t) => !t.klaar);
+    const open = [...g.txs.filter((t) => !t.klaar), ...andereJarenVan(g)];
     if (!onChangeGroup || open.length <= 1) return onRequestChange(open[0] || g.txs[0], patch);
     setGekozen((k) => { const n = { ...k }; for (const t of open) n[t.id] = patch.category; return n; });
     onChangeGroup(open, patch);
@@ -69,12 +69,18 @@ export default function UncertainTransactionsModal({
     for (const tx of transactions) n.set(tx.year, (n.get(tx.year) || 0) + 1);
     return [...n.entries()].sort((a, b) => b[0] - a[0]);
   }, [transactions, dossierJaren]);
+  const groepSleutel = (tx) => {
+    const losse = tx.category === "Winkels divers" && /losse pinbetaling/i.test(tx.confidence?.label || "");
+    return (losse ? "__losse__" : counterpartyKey(tx.counterparty || tx.description, tx.amount) || String(tx.id)) + "|" + (tx.groepCat || tx.category);
+  };
+  // nieuw-V6R4 — een groep is één beslissing over alle jaren: ook de open boekingen van die groep in andere jaren (Boska 16-11).
+  const andereJarenVan = (g) => (jaar ? transactions.filter((t) => String(t.year) !== jaar && !t.klaar && groepSleutel(t) === g.key) : []);
   const txsJaar = useMemo(() => (jaar ? transactions.filter((tx) => String(tx.year) === jaar) : transactions), [transactions, jaar]);
   const groepen = useMemo(() => {
     const map = new Map();
     for (const tx of txsJaar) {
       const losse = tx.category === "Winkels divers" && /losse pinbetaling/i.test(tx.confidence?.label || "");
-      const k = (losse ? "__losse__" : counterpartyKey(tx.counterparty || tx.description, tx.amount) || String(tx.id)) + "|" + (tx.groepCat || tx.category);
+      const k = groepSleutel(tx);
       let g = map.get(k);
       if (!g) { g = { key: k, txs: [], totaal: 0, abs: 0, losse }; map.set(k, g); }
       g.txs.push(tx); g.totaal += tx.amount; g.abs += Math.abs(tx.amount);
@@ -125,6 +131,7 @@ export default function UncertainTransactionsModal({
             {klaar && <span className="mr-1 inline-block rounded-md bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800 align-middle">✓ Gecontroleerd</span>}
             {g ? g.naam : (tx.counterparty || tx.description || "(geen omschrijving)")}
             {meer && <span className="ml-1.5 font-normal text-slate-500">· {g.txs.length} transacties{!g.klaar && g.nKlaar > 0 ? `, ${g.nKlaar} gecontroleerd` : ""}</span>}
+            {g && !g.klaar && (() => { const a = andereJarenVan(g); return a.length ? <span className="ml-1.5 font-normal text-amber-700">· ook {a.length} in {korteJaren([...new Set(a.map((t) => t.year))].sort())}, gaat mee</span> : null; })()}
           </p>
           <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
           {meer && (
@@ -157,7 +164,7 @@ export default function UncertainTransactionsModal({
           {/* beide-V5R1 / V9R3 — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
         <CategorieSelect
           value={tx.category}
-          onChange={(v) => (meer && !compact ? wijzigGroep(g, { category: v, type: tx.type }) : onRequestChange(tx, { category: v, type: tx.type }))}
+          onChange={(v) => (g && !compact && (meer || andereJarenVan(g).length) ? wijzigGroep(g, { category: v, type: tx.type }) : onRequestChange(tx, { category: v, type: tx.type }))}
           className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
         />
         </>)}
@@ -168,7 +175,7 @@ export default function UncertainTransactionsModal({
           {(tx.accountType || tx.type) === "Prive" ? "Privé" : (tx.accountType || tx.type)}
         </span>
         {!klaar && <button
-          onClick={() => (meer ? onConfirmAll(g.txs.filter((t) => !t.klaar)) : onConfirmCorrect(tx))}
+          onClick={() => { const anders = g ? andereJarenVan(g) : []; return meer || anders.length ? onConfirmAll([...(g ? g.txs : [tx]).filter((t) => !t.klaar), ...anders]) : onConfirmCorrect(tx); }}
           className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[11px] font-medium hover:bg-emerald-100"
           title={meer ? `Klopt zo — bevestig alle ${g.txs.length} transacties van deze groep` : "Klopt zo — markeer als bevestigd (wordt voortaan 🟢)"}
         >
