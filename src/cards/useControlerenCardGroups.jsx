@@ -16,6 +16,7 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
+    confidenceOpenJaren = [], setActiveYear,
     overlapKoppeling, aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking, zetKostenVorigJaar,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
@@ -113,6 +114,8 @@ export function useControlerenCardGroups(p) {
             <ClassificationConfidencePanel
               classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
               jaar={activeYear}
+              andereJaren={activeYear ? confidenceOpenJaren.filter((y) => Number(y) !== Number(activeYear)) : []}
+              onKiesJaar={setActiveYear}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}

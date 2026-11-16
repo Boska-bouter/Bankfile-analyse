@@ -1624,7 +1624,7 @@ export default function App() {
     };
   };
   const controlerenCardGroups = useControlerenCardGroups({
-    rechtsvorm, overlapKoppeling: overlapKoppeling.overlap,
+    rechtsvorm, confidenceOpenJaren: confidenceSummary?.openJaren || [], setActiveYear, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,

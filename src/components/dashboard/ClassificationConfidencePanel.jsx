@@ -1,4 +1,4 @@
-import { counterpartyKey } from "../../utils/normalization.js";
+import { counterpartyKey, korteJaren } from "../../utils/normalization.js";
 import { sleutelZonderNaam, bevestigdVoor } from "../../classification/reviewSummaries.js";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, AlertCircle, Check } from "lucide-react";
@@ -15,7 +15,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, jaar = null, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
+export default function ClassificationConfidencePanel({ classified, jaar = null, andereJaren = [], onKiesJaar, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -90,6 +90,17 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
             )}
           </div>
         </div>
+        {/* nieuw-V6R2 — open punten in andere jaren tonen, met knop naar dat jaar (Boska 16-11: kaart 4, blok 0) */}
+        {andereJaren.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="font-medium">Nog te controleren in andere jaren: {korteJaren(andereJaren)}</span>
+            <span className="flex-1" />
+            {onKiesJaar && andereJaren.map((y) => (
+              <button key={y} type="button" onClick={(e) => { e.stopPropagation(); onKiesJaar(Number(y)); }} className="rounded-full border border-amber-400 bg-white px-3 py-1 text-xs font-semibold hover:bg-amber-100">Naar {y}</button>
+            ))}
+          </div>
+        )}
         {open && needsReview.length > 0 && (
           <div className="mt-3">
             <p className="text-xs text-slate-400 mb-2">
