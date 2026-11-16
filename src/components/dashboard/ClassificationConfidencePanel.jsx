@@ -15,7 +15,7 @@ const LEVEL_ICON = { override: "🟢", keyword: "🟢", heuristic: "🟡", fallb
 // Maakt zichtbaar hoe zeker de automatische classificatie is — niet als vervanging van
 // resolveClassification (die blijft de bron van waarheid), maar als hulp om te zien welke
 // transacties de moeite waard zijn om te controleren, in plaats van alles na te lopen.
-export default function ClassificationConfidencePanel({ classified, jaar = null, andereJaren = [], onKiesJaar, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
+export default function ClassificationConfidencePanel({ classified, jaar = null, andereJaren = [], onKiesJaar, onOpenOverig, onOpenPersonen, onOpenHelp, onConfirmCorrect, onOpenLevel, onRequestChange, reviewedOverigKeys = [], reviewedPersonKeys = [] }) {
   const [open, setOpen] = useState(false);
   const nonMirror = classified.filter((tx) => !tx.isMirror);
   if (nonMirror.length === 0) return null;
@@ -34,8 +34,13 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
   const open_ = (tx) => (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigd(tx);
   const klein = nonMirror.filter((tx) => tx.kleinBedrag && open_(tx));
   const approved = nonMirror.filter((tx) => tx.confidence.level === "override" || tx.confidence.level === "keyword" || bevestigd(tx) || (tx.kleinBedrag && open_(tx)));
-  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx) && !tx.kleinBedrag);
-  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback" && !bevestigd(tx) && !tx.kleinBedrag);
+  // nieuw-V6R6 — "Nog niet ingedeeld" (Overig) en "Personen en onbekende tegenpartijen" hebben een eigen kaart en venster: hier niet
+  // meetellen, wel noemen (regressietest 16-11: blok 216, venster 184 + 32 elders).
+  const elders = (tx) => tx.category === "Overig" || tx.category === "Overboekingen aan personen";
+  const review = nonMirror.filter((tx) => tx.confidence.level === "heuristic" && !bevestigd(tx) && !tx.kleinBedrag && !elders(tx));
+  const unclear = nonMirror.filter((tx) => tx.confidence.level === "fallback" && !bevestigd(tx) && !tx.kleinBedrag && !elders(tx));
+  const eldersOverig = nonMirror.filter((tx) => tx.category === "Overig" && open_(tx) && !tx.kleinBedrag).length;
+  const eldersPersonen = nonMirror.filter((tx) => tx.category === "Overboekingen aan personen" && open_(tx) && !tx.kleinBedrag).length;
   const needsReview = [...unclear, ...review, ...klein]; // onduidelijk eerst — dat verdient de meeste aandacht; kleine bedragen achteraan
   const total = nonMirror.length;
   // nieuw-V6R0 — 7 van 2282 is geen "0%" (Boska 16-11)
@@ -90,6 +95,14 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
             )}
           </div>
         </div>
+        {(eldersOverig > 0 || eldersPersonen > 0) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <span>Daarnaast {[eldersOverig > 0 ? `${eldersOverig} in Nog niet ingedeeld` : null, eldersPersonen > 0 ? `${eldersPersonen} in Personen en onbekende tegenpartijen` : null].filter(Boolean).join(", ")}{jaar ? ` (${jaar})` : ""}</span>
+            <span className="flex-1" />
+            {eldersOverig > 0 && onOpenOverig && <button type="button" onClick={(e) => { e.stopPropagation(); onOpenOverig(); }} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-100">Nog niet ingedeeld</button>}
+            {eldersPersonen > 0 && onOpenPersonen && <button type="button" onClick={(e) => { e.stopPropagation(); onOpenPersonen(); }} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-100">Personen</button>}
+          </div>
+        )}
         {/* nieuw-V6R2 — open punten in andere jaren tonen, met knop naar dat jaar (Boska 16-11: kaart 4, blok 0) */}
         {andereJaren.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">

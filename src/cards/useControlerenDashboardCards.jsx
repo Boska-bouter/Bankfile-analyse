@@ -126,6 +126,8 @@ export function useControlerenDashboardCards(p) {
     pendingOverigReview.length,
     pendingDuplicateCount,
     duplicatePendingBreakdown,
+    activeYear, // nieuw-V6R6 — anders sprong de kaart naar het jaar van bij het laden (regressietest 16-11)
+    setActiveYear,
   ]);
   // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
   const keuze = p.modus?.kaarten?.controleren ?? null;

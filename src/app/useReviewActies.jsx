@@ -36,8 +36,10 @@ export function useReviewActies(invoer) {
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
       const exBulk = tx.category !== "Overig" && tx.category !== "Overboekingen aan personen";
       if (exBulk) openJarenSet.add(Number(tx.year));
-      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (exBulk) reviewExBulk.add(gk); }
-      else { unclearTx++; unclearGroups.add(gk); if (exBulk) unclearExBulk.add(gk); }
+      // nieuw-V6R6 — open punten per jaar: dezelfde tegenpartij in twee jaren telt in elk jaar (zoals de jaarkop en het venster per jaar).
+      const gkj = `${tx.year}|${gk}`;
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gkj); if (exBulk) reviewExBulk.add(gkj); }
+      else { unclearTx++; unclearGroups.add(gkj); if (exBulk) unclearExBulk.add(gkj); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
     // release31V1 — `openExBulk`: alleen wat NIET al in "Overig opruimen" of "Overboekingen aan personen" staat.

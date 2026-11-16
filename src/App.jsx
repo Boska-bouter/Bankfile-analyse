@@ -1692,6 +1692,30 @@ export default function App() {
   // altijd zichtbaar (ook na "Wis alles" of vóór het laden van een eerste bestand) — de tabs tonen
   // dan gewoon een leeg/nul dashboard i.p.v. dat het hele linkermenu zijn navigatie verliest.
   const { basisvragenNietGestart, boekingenInfo, controlerenBadge, dashboardCardsByKey, dossierOpenBreakdown, dossierOpenPoints, dossierPct, inTeStellenItems, instellingenBadge, mobielOpenJarenVan, openBasisvragen, openBasisvragenTelling, tabsVisible, teControlerenItems, yearRing } = useDossierVoortgang({ kleinBedragInstelling, activeYear, autoExactIngevuld, autoStatus, autoWizardStatus, bevestigdInBulkVenster, categoryZakelijkPercentage, classified, confidenceSummary, controlerenDashboardCards, dashboardCards, eenvoudigActief, eenvoudigLease, eigenNamen, eigenRekeningenExtra, heeftVoorraad, instellingenDashboardCards, korRegeling, leaseGroepenEenv, modus, overigInkomenBox1, parsedFiles, priveAntwoorden, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, setShowMultiYearModal, setShowQuarterlyBtwModal, startersaftrekStatus, verwachteAOV, verwachteLease, verwachteLeaseOverig, verwachteLening, werkruimteStatus, yearlyProgress, years, zelfstandigenaftrekStatus });
+  // nieuw-V6R6 — alleen in ontwikkeling: tellers voor de regressietest van de controles (tests/e2e/controles.mjs).
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const kaart = (c) => ({ key: c.key, title: c.title, value: typeof c.value === "object" ? null : c.value, openCount: c.openCount, tone: c.tone });
+    window.__bt = {
+      activeYear, years, setActiveYear, confidenceSummary: { ...confidenceSummary, reviewTxList: undefined },
+      controleren: controlerenDashboardCards.map(kaart), instellingen: instellingenDashboardCards.map(kaart),
+      route: teControlerenItems.map((i) => ({ key: i.key, label: i.label, count: i.count, jaren: i.jaren })), inTeStellen: inTeStellenItems.map((i) => ({ key: i.key, label: i.label, count: i.count })),
+      klik: Object.fromEntries([...controlerenDashboardCards, ...instellingenDashboardCards].map((c) => [c.key, c.onClick])),
+      controlerenBadge, instellingenBadge, dossierOpenPoints, yearRing,
+      jaarOpen: Object.fromEntries(Object.entries(yearlyProgress || {}).map(([y, v]) => [y, v?.openPunten || 0])),
+      perJaar: (() => {
+        const r = {};
+        for (const tx of classified) {
+          if (tx.isMirror) continue;
+          const o = (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx);
+          const y = (r[tx.year] ||= { open: 0, openExBulk: 0, overig: 0, personen: 0 });
+          if (!o) continue;
+          y.open++;
+          if (tx.category === "Overig") y.overig++; else if (tx.category === "Overboekingen aan personen") y.personen++; else y.openExBulk++;
+        }
+        return r;
+      })(),
+    };
+  }
   // V90 — vaste volgorde voor "eerstvolgende stap": eerst de importcontrole (klopt de data?), dan lease,
   // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
   // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.

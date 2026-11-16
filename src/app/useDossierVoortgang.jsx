@@ -125,7 +125,7 @@ export function useDossierVoortgang(invoer) {
       alle.add(gk);
       if ((tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)) open.add(gk);
     }
-    const adminOpen = yearlyProgress[activeYear].openPunten || 0;
+    const adminOpen = yearlyProgress[activeYear].openAdmin || 0; // nieuw-V6R6 — boekingen tellen al als groep
     const openN = open.size + adminOpen;
     const totaal = Math.max(alle.size + 5, openN, 1);
     const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
@@ -138,7 +138,7 @@ export function useDossierVoortgang(invoer) {
     .filter(Boolean)
     .join(" · ") + (() => {
       // nieuw-V5R7 — in welk jaar staan de open punten (Boska 16-11)
-      const jaren = [...new Set([...(confidenceSummary?.openJaren || []), ...Object.keys(yearlyProgress || {}).filter((y) => (yearlyProgress[y]?.openPunten || 0) > 0).map(Number)])].sort((a, b) => a - b);
+      const jaren = [...new Set([...(confidenceSummary?.openJaren || []), ...Object.keys(yearlyProgress || {}).filter((y) => (yearlyProgress[y]?.openAdmin || 0) > 0).map(Number)])].sort((a, b) => a - b);
       return controlerenBadge + instellingenBadge > 0 && jaren.length ? ` · in ${korteJaren(jaren)}` : "";
     })();
 

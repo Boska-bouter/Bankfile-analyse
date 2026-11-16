@@ -116,6 +116,8 @@ export function useControlerenCardGroups(p) {
               jaar={activeYear}
               andereJaren={activeYear ? confidenceOpenJaren.filter((y) => Number(y) !== Number(activeYear)) : []}
               onKiesJaar={setActiveYear}
+              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick}
+              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
