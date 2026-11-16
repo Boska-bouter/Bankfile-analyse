@@ -20,6 +20,12 @@ export function useLeningActies(invoer) {
     }
     setOpdrachtgeversGevraagd(true);
   };
+  // nieuw-V5R8 — "Dit is geen lease": de boekingen van die tegenpartij krijgen de gekozen categorie (Boska 16-11, PS: Assuradeuren,
+  // Sleiderink en Van Deuren stonden onterecht bij lease en waren niet weg te halen).
+  const markLeaseNotALease = (lease, category) => {
+    snapshotBeforeAction(`Lease op ${category} gezet`);
+    for (const tx of lease.transactions || []) setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, { category, type: tx.type }, tx.counterpartyIban);
+  };
   const markLoanNotALoan = (loan, category = "Overig") => {
     snapshotBeforeAction(`Lening op ${category} gezet`);
     for (const tx of loan.transactions) {
@@ -80,5 +86,5 @@ export function useLeningActies(invoer) {
     setVerwachteAangeboden((prev) => ({ ...prev, [aangebodenKey]: classified.length }));
     setVerwachteMatchSuggestie(null);
   };
-  return { acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal };
+  return { markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal };
 }

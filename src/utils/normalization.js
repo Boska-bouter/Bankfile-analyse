@@ -128,6 +128,17 @@ export function normKey(s) {
 // woord: kort genoeg om ook licht afwijkende schrijfwijzen van dezelfde tegenpartij te raken
 // (bijv. "Coolblue" bij zowel "Coolblue.nl" als "COOLBLUE B.V."), lang genoeg (4+ tekens) om
 // valse matches op een toevallig woordje als "de"/"van" te vermijden.
+// nieuw-V5R8 — kenmerkende woorden van een naam (verwachte lease/lening): woorden van 4+ tekens zonder algemene woorden
+// als "stichting" of "payments". Een boeking hoort erbij als ALLE kenmerkende woorden in de tekst staan.
+const ALGEMEEN = new Set(["stichting", "ontvangsten", "betalingen", "payments", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "bank", "services", "financial", "finance", "lease", "leasing", "via", "voor", "and", "van"]);
+export function kenmerkendeWoorden(text) {
+  const cleaned = String(text || "")
+    .replace(/\b(b\.?v\.?|n\.?v\.?|ltd|inc|gmbh)\b/gi, " ")
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s]/g, " ")
+    .toLowerCase();
+  return [...new Set(cleaned.split(/\s+/).filter((w) => w.length >= 4 && !ALGEMEEN.has(w)))];
+}
+
 export function extractKeywordCandidate(text) {
   const raw = String(text || "").trim();
   if (!raw) return "";

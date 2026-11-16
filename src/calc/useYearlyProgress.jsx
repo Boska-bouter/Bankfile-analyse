@@ -142,9 +142,11 @@ export function useYearlyProgress(p) {
       // als verder alles compleet is), vanaf €1000 is het een echt gat (rood).
       const gatDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "rood" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
       const geelDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "geel" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      // nieuw-V5R7 — ook "controleren" (geschat, nog niet bevestigd) houdt het jaar oranje; anders stond 2026 groen met een open punt (Boska 16-11).
+      const teControlerenDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level === "heuristic" && !bevestigdInBulkVenster(tx)).length;
       let status;
       if (gatDitJaar) status = "rood";
-      else if (openPunten === 0 && onzekerDitJaar === 0 && !geelDitJaar) status = "groen";
+      else if (openPunten === 0 && onzekerDitJaar === 0 && teControlerenDitJaar === 0 && !geelDitJaar) status = "groen";
       else status = "oranje";
 
       map[year] = {

@@ -11,7 +11,7 @@ import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
-import { counterpartyKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
+import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
 import KleineBedragen from "./components/review/KleineBedragen.jsx";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -1077,6 +1077,10 @@ export default function App() {
       // Een contract kan meerdere namen hebben (aliassen): een transactie hoort erbij als één ervan past.
       const zoek = [naam, ...(aliassen || [])].map((nm) => {
         const naamTrim = String(nm).trim().toLowerCase();
+        // nieuw-V5R8 — alle kenmerkende woorden moeten voorkomen, niet alleen het eerste: bij "Stichting Ontvangsten Hiltermann Lease"
+        // was dat "stichting", en kwamen alle stichtingen (Assuradeuren, Mollie Payments) bij lease (Boska 16-11, PS).
+        const woorden = kenmerkendeWoorden(nm);
+        if (woorden.length) return { woorden };
         const keyword = extractKeywordCandidate(nm) || (naamTrim.length >= 3 ? naamTrim : "");
         if (!keyword) return null;
         const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
@@ -1086,7 +1090,7 @@ export default function App() {
       const hits = classified.filter((t) => {
         if (t.isMirror) return false;
         const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-        return zoek.some(({ keyword, kortRe }) => (kortRe ? kortRe.test(text) : text.includes(keyword)));
+        return zoek.some(({ woorden, keyword, kortRe }) => (woorden ? woorden.every((w) => text.includes(w)) : kortRe ? kortRe.test(text) : text.includes(keyword)));
       });
       const matches = hits.filter((t) => t.category !== targetCategory);
       if (matches.length === 0 && hits.length > 0) {
@@ -1103,7 +1107,7 @@ export default function App() {
     }
   }, [classified, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
 
-  const { acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
+  const { markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
 
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
@@ -1518,7 +1522,7 @@ export default function App() {
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
-    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions,
+    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear, setActiveYear,
   });
 
   // v261 — telt, over alle (niet-vaste-tarief) subtype-categorieën, hoeveel er op 21%/9%/0% staan —
@@ -1634,7 +1638,7 @@ export default function App() {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -2479,7 +2483,7 @@ export default function App() {
                     {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
                   </div>
                   <div className="truncate text-base font-bold">
-                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open)` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
+                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open${volgende.jaren?.length ? ` in ${volgende.jaren.join(", ")}` : ""})` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
                   </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-3">

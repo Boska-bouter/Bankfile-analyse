@@ -9,6 +9,7 @@ import HelpHint from "../shared/HelpHint.jsx";
 import { useOpenOnJump } from "../shared/useOpenOnJump.js";
 
 import { KNOP_SECUNDAIR_XS } from "../ui/stijl.js";
+import CategorieSelect from "../shared/CategorieSelect.jsx";
 function computeFinancialLeaseAmortization(lease, details) {
   if (!isCompleteFinancialLeaseDetails(details)) return null;
   return computeFinancialLeaseAmortizationMultiSegment(lease.transactions, details, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
@@ -75,7 +76,7 @@ export function contractGroepen(segments) {
 }
 
 function LeaseGroepPanel({
-  titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown,
+  titel, uitleg, defaultOpen = false, leaseSummary, leaseDetails, confirmedLeaseTypeKeys, onConfirmType, onOpenModal, onOpenWizard, onMarkUnknown, onUnmarkUnknown, onMarkNotALease,
   onMergeInto, onUndoMerge, leaseMerges, onOpenHelp, onJump, openSignal, legeTekst, soort, alleLeases = [], groep = null, onAddManualLease, onRemoveManualLease, onKoppelBetalingen, onWijsKandidatenAf, onBehandelAlsLease, onWijsZoekAf,
 }) {
   const [formOpen, setFormOpen] = useState(false);
@@ -89,6 +90,7 @@ function LeaseGroepPanel({
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
   // Per samengevoegde lease: zijn de bijbehorende benamingen uitgeklapt? (standaard dicht)
   const [toonBenamingen, setToonBenamingen] = useState({});
+  const [geenLease, setGeenLease] = useState(null); // nieuw-V5R8 — lease-key waarvoor "Dit is geen lease" openstaat
   const leeg = leaseSummary.length === 0;
 
   const incompleteCount = leaseSummary.filter((l) => {
@@ -294,7 +296,22 @@ function LeaseGroepPanel({
                         )}
                       </>
                     )}
+                    {onMarkNotALease && !lease.handmatig && (lease.transactions || []).length > 0 && (
+                      <button onClick={() => setGeenLease((k) => (k === lease.key ? null : lease.key))} aria-expanded={geenLease === lease.key}
+                        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-400 hover:bg-slate-50">
+                        Dit is geen lease
+                      </button>
+                    )}
                   </div>
+                  {onMarkNotALease && geenLease === lease.key && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                      <span>Welke categorie is het dan?</span>
+                      <CategorieSelect value={null} placeholder="kies categorie…" startOpen
+                        onChange={(c) => { setGeenLease(null); onMarkNotALease(lease, c); }}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs max-w-[16rem]" />
+                      <button onClick={() => setGeenLease(null)} className="text-slate-400 underline">Annuleren</button>
+                    </div>
+                  )}
                   {onUndoMerge && benamingen.length > 0 && toonBenamingen[lease.key] && (
                     <div className="mt-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-600 space-y-1.5">
                       <p className="font-semibold text-slate-700">Samengevoegde benamingen</p>

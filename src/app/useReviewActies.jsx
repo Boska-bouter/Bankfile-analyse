@@ -22,6 +22,7 @@ export function useReviewActies(invoer) {
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
     const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set(), reviewExBulk = new Set();
+    const openJarenSet = new Set(); // nieuw-V5R7 — in welk jaar staan de open punten (Boska 16-11: jaartal erbij)
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -33,14 +34,16 @@ export function useReviewActies(invoer) {
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
-      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") reviewExBulk.add(gk); }
-      else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
+      const exBulk = tx.category !== "Overig" && tx.category !== "Overboekingen aan personen";
+      if (exBulk) openJarenSet.add(Number(tx.year));
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (exBulk) reviewExBulk.add(gk); }
+      else { unclearTx++; unclearGroups.add(gk); if (exBulk) unclearExBulk.add(gk); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
     // release31V1 — `openExBulk`: alleen wat NIET al in "Overig opruimen" of "Overboekingen aan personen" staat.
     // Die twee hebben een eigen kaart; voorheen telden dezelfde boekingen dubbel mee in de open punten
     // (bijv. 347 bij Classificatie, terwijl het venster "0 groepen + 555 elders" toonde).
-    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+    return { openJaren: [...openJarenSet].sort((a, b) => a - b), groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al

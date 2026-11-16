@@ -116,7 +116,7 @@ export default function DashboardHeader({
                   </div>
                   {boekingenInfo && (
                     <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
-                      <span>Boekingen: {boekingenInfo.zeker}% zeker ingedeeld{boekingenInfo.klein > 0 ? ` + ${boekingenInfo.klein}% kleine bedragen (< € ${boekingenInfo.grens ?? 50})` : ""}{boekingenInfo.open > 0 ? ` + ${boekingenInfo.open}% nog controleren` : ""} = 100%</span>
+                      <span>Boekingen hele dossier: {boekingenInfo.zeker}% zeker ingedeeld{boekingenInfo.klein > 0 ? ` + ${boekingenInfo.klein}% kleine bedragen (< € ${boekingenInfo.grens ?? 50})` : ""}{boekingenInfo.open > 0 ? ` + ${boekingenInfo.open}% nog controleren` : ""} = 100%</span>
                     </span>
                   )}
                 </div>

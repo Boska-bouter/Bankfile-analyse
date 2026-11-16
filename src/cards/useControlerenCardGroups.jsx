@@ -29,7 +29,7 @@ export function useControlerenCardGroups(p) {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -229,6 +229,7 @@ export function useControlerenCardGroups(p) {
               onWijsZoekAf={wijsZoekAf}
               overigeLeaseNamen={(verwachteLeaseOverig || []).flatMap((i) => [i?.naam, ...(i?.aliassen || [])]).filter(Boolean)}
               onMarkUnknown={markLeaseUnknown}
+              onMarkNotALease={markLeaseNotALease}
               onUnmarkUnknown={unmarkLeaseUnknown}
               onMergeInto={mergeLeaseInto}
               onUndoMerge={undoMergeLease}
