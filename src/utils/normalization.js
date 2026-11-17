@@ -131,6 +131,8 @@ export function normKey(s) {
 // nieuw-V5R8 — kenmerkende woorden van een naam (verwachte lease/lening): woorden van 4+ tekens zonder algemene woorden
 // als "stichting" of "payments". Een boeking hoort erbij als ALLE kenmerkende woorden in de tekst staan.
 const ALGEMEEN = new Set(["stichting", "ontvangsten", "betalingen", "payments", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "bank", "services", "financial", "finance", "lease", "leasing", "via", "voor", "and", "van"]);
+// nieuw-V7R0 — algemene woorden die als los trefwoord niets zeggen over de tegenpartij (geen voorstel, en bij laden weg uit eigen trefwoorden).
+export const ALGEMEEN_TREFWOORD = new Set(["stichting", "vereniging", "cooperatie", "coöperatie", "cooperatieve", "coöperatieve", "ontvangsten", "betalingen", "betaling", "payments", "payment", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "services", "service", "financial", "finance", "via", "voor", "and", "van", "the"]);
 // nieuw-V5R9 — jaren kort ("’21, ’22") zodat ze op één regel passen (Boska 16-11)
 export const korteJaren = (jaren) => (jaren || []).map((j) => `’${String(j).slice(-2)}`).join(", ");
 export function kenmerkendeWoorden(text) {
@@ -152,7 +154,8 @@ export function extractKeywordCandidate(text) {
     .trim()
     .toLowerCase();
   const words = cleaned.split(" ").filter(Boolean);
-  return words.find((w) => w.length >= 4) || "";
+  // nieuw-V7R0 — nooit een algemeen woord als "stichting" voorstellen: dat raakt elke stichting (Dakhlaoui 17-11: huur werd twijfel).
+  return words.find((w) => w.length >= 4 && !ALGEMEEN_TREFWOORD.has(w)) || "";
 }
 
 // Normaliseert een volledige (rekeninghouder-/partner-)naam voor de "eigen naam"-herkenning in

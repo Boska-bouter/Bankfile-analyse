@@ -1,7 +1,7 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory, CATEGORY_COLOR } from "./categories.js";
 import { gedeeldeKeuze } from "./gedeeldeNamen.js";
 import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk, inkoopEten, INKOOP_ETEN } from "./branche.js";
-import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
+import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword, ALGEMEEN_TREFWOORD } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
 export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|leningdeel|rente\s+lening|aflossing\s+lening/;
@@ -105,6 +105,7 @@ function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
   if (SOORT_WOORDEN.has(t)) return 4;
   if (BETAALDIENST_WOORDEN.has(t)) return 0;
+  if (ALGEMEEN_TREFWOORD.has(t)) return 0; // nieuw-V7R0 — "stichting" als eigen trefwoord: alleen als niets anders past (Dakhlaoui 17-11)
   if (ALGEMENE_WOORDEN.has(t)) return 1;
   if (t.length <= 4 && !/\s/.test(t)) return 2;
   return 3;
@@ -139,11 +140,13 @@ export function besteRegel(rules, text, accountType, tx = null, { overslaan = nu
     kandidaten = perTekst.get(sleutel);
     if (!kandidaten) { if (perTekst.size > 200000) perTekst.clear(); kandidaten = regelKandidaten(rules, text, accountType, partij); perTekst.set(sleutel, kandidaten); }
   }
+  // nieuw-V7R0 — een trefwoord dat binnen het winnende trefwoord valt ("stichting" in "stichting trudo") is geen twijfel.
+  const binnen = (kort, lang) => !!kort && !!lang && kort !== lang && keywordInText(lang, kort);
   let beste = null;
   for (const k of kandidaten) if (!beste || k.niveau > beste.niveau) beste = k;
   if (!beste) return null;
   const ander = kandidaten.find((k) => k.niveau === beste.niveau && k.rule.name !== beste.rule.name && k.woord !== beste.woord
-    && !gelijkeSoort(k.rule.name, beste.rule.name));
+    && !binnen(k.woord, beste.woord) && !gelijkeSoort(k.rule.name, beste.rule.name));
   return { rule: beste.rule, niveau: beste.niveau, twijfel: ander ? ander.rule.name : null };
 }
 function regelKandidaten(rules, text, accountType, partij) {

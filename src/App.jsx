@@ -1701,6 +1701,7 @@ export default function App() {
       route: teControlerenItems.map((i) => ({ key: i.key, label: i.label, count: i.count, jaren: i.jaren })), inTeStellen: inTeStellenItems.map((i) => ({ key: i.key, label: i.label, count: i.count })),
       klik: Object.fromEntries([...controlerenDashboardCards, ...instellingenDashboardCards].map((c) => [c.key, c.onClick])),
       controlerenBadge, instellingenBadge, dossierOpenPoints, yearRing,
+      openLijst: () => classified.filter((tx) => !tx.isMirror && (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)).map((tx) => ({ id: tx.id, jaar: tx.year, datum: String(tx.date).slice(0, 15), bedrag: tx.amount, naam: tx.counterparty, oms: String(tx.description || "").slice(0, 80), cat: tx.category, niveau: tx.confidence.level, label: tx.confidence.label, row: overridesByRow[tx.id] || null })),
       jaarOpen: Object.fromEntries(Object.entries(yearlyProgress || {}).map(([y, v]) => [y, v?.openPunten || 0])),
       perJaar: (() => {
         const r = {};
