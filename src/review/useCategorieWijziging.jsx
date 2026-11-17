@@ -146,7 +146,17 @@ export function useCategorieWijziging(p) {
       );
       if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
         const matchYears = [...new Set(kwMatches.map((t) => t.year))].sort((a, b) => a - b);
-        setPendingCategoryChange({ tx, patch, key: null, matchCount: kwMatches.length, matchYears, viaIban: false, keywordQuery: opts.searchQuery, matchIds: kwMatches.map((t) => t.id) });
+        // nieuw-V7R2 — al vastgelegde boekingen (eigen keuze of herkend aan de omschrijving) gaan standaard niet mee (Dakhlaoui 17-11:
+        // "pasvolgnr: 018" overschreef 1.914 eigen keuzes als Boodschappen, Brandstof enz.). Per categorie zelf aan te vinken.
+        // Vastgelegde boekingen die al de gekozen categorie hebben, veranderen niet: die vallen er helemaal buiten.
+        const vastPerCat = {}, alGelijk = new Set();
+        for (const t of kwMatches) {
+          if (t.id === tx.id || (t.confidence?.level !== "override" && t.confidence?.level !== "keyword")) continue;
+          if (t.category === patch.category) { alGelijk.add(t.id); continue; }
+          (vastPerCat[t.category] ||= []).push({ id: t.id, year: t.year });
+        }
+        const zoekMatches = kwMatches.filter((t) => !alGelijk.has(t.id));
+        setPendingCategoryChange({ tx, patch, key: null, matchCount: zoekMatches.length, matchYears, viaIban: false, keywordQuery: opts.searchQuery, matchIds: zoekMatches.map((t) => t.id), vastPerCat, alGelijk: alGelijk.size });
         return;
       }
     }
@@ -182,7 +192,7 @@ export function useCategorieWijziging(p) {
     suggestSimilarIfAny(tx, patch);
   };
   const applyRowsOverride = (ids, patch, tx) => {
-    snapshotBeforeAction("Categorie/type aangepast (zoekwoord)");
+    snapshotBeforeAction(`${ids.length} boeking${ids.length === 1 ? "" : "en"} aangepast (zoekwoord)`);
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const id of ids) next[id] = { ...(next[id] || {}), ...patch };
@@ -191,9 +201,14 @@ export function useCategorieWijziging(p) {
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
-  const applyPendingToAllYears = () => {
+  // nieuw-V7R2 — zoekwoord: welke boekingen gaan mee (vastgelegde alleen uit de aangevinkte categorieën).
+  const zoekIds = (pending, meeCats = []) => {
+    const vast = new Set(Object.entries(pending.vastPerCat || {}).filter(([c]) => !meeCats.includes(c)).flatMap(([, l]) => l.map((x) => x.id)));
+    return pending.matchIds.filter((id) => !vast.has(id));
+  };
+  const applyPendingToAllYears = (meeCats = []) => {
     const { tx, patch, matchIds, rekening } = pendingCategoryChange;
-    if (matchIds) return applyRowsOverride(matchIds, patch, tx);
+    if (matchIds) return applyRowsOverride(zoekIds(pendingCategoryChange, meeCats), patch, tx);
     setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     // beide-V11R4 — "beide rekeningen": een eerdere splitsing per rekening vervalt, anders bleef die voorgaan.
     if (rekening) {
@@ -213,8 +228,9 @@ export function useCategorieWijziging(p) {
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
-  const applyPendingToYears = (selectedYears) => {
-    const { tx, key, patch, matchIds } = pendingCategoryChange;
+  const applyPendingToYears = (selectedYears, meeCats = []) => {
+    const { tx, key, patch } = pendingCategoryChange;
+    const matchIds = pendingCategoryChange.matchIds ? zoekIds(pendingCategoryChange, meeCats) : null;
     snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
     const idsToPatch = matchIds
       ? classified.filter((t) => matchIds.includes(t.id) && selectedYears.includes(t.year)).map((t) => t.id)

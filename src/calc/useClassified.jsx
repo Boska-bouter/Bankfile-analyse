@@ -10,7 +10,7 @@ import { herkenTerugbetalingen } from "../classification/terugbetalingen.js";
 import { personenViaIban } from "../classification/personenViaIban.js";
 import { markeerNakijkSignalen } from "../classification/nakijkSignalen.js";
 import { verschuifNaarFactuurjaar, verschuifKostenNaarVorigJaar } from "../classification/factuurjaar.js";
-import { LENING_CATS, heeftLeningWoord, hoortBijLening, LENING_EIGEN } from "../classification/leningBoeking.js";
+import { LENING_CATS, heeftLeningWoord, hoortBijLening, LENING_EIGEN, VOORGESCHOTEN_EIGEN } from "../classification/leningBoeking.js";
 import { gedeeldeKeuzeLabel } from "../classification/gedeeldeNamen.js";
 import { maakLeerModel, leerVoorstel, leerLabel, LEER_ONBEKEND } from "../classification/lerenVanKeuzes.js";
 
@@ -94,6 +94,15 @@ export function useClassified(p) {
         const lening = { ...tx, ...resolved, category: "Leningen", transferLocked: false, leningEigenRekening: true, accountType: "Zakelijk" };
         if (eigen?.category) return { ...lening, category: eigen.category, confidence: { level: "override", label: overridesByRow[tx.id] ? "Handmatig bevestigd (deze transactie)" : "Handmatig bevestigd (tegenpartij)" } };
         return { ...lening, confidence: { level: "heuristic", label: "Lening van of naar eigen/partnerrekening (staat in de omschrijving)" } };
+      }
+      // nieuw-V7R1 — voorgeschoten kosten terugbetaald aan eigen/partnerrekening: niet vast, op controleren (Dakhlaoui 17-11).
+      if (transferLocked && accountTypeByFile[tx.source] === "Zakelijk" && tx.amount < 0 && VOORGESCHOTEN_EIGEN.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+        const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
+        const eigen = overridesByRow[tx.id] || (sleutel ? overridesByCounterparty[sleutel] : null);
+        const los = { ...tx, ...resolved, transferLocked: false, voorgeschotenEigen: true, accountType: "Zakelijk" };
+        if (overridesByRow[tx.id]?.category) return { ...los, category: overridesByRow[tx.id].category, confidence: { level: "override", label: "Handmatig bevestigd (deze transactie)" } };
+        if (eigen?.category && eigen.category !== resolved.category) return { ...los, category: eigen.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
+        return { ...los, confidence: { level: "heuristic", label: "Terugbetaling van voorgeschoten kosten? Kies de kostencategorie" } };
       }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
