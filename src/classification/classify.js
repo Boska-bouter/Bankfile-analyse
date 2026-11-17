@@ -14,17 +14,32 @@ export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|len
 // zoekwoorden blijven een gewone deelstring-match (die wil bijv. "bmk" ook binnen "CollactiveBMK" vinden).
 const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
-const HEEL_WOORD = new Set(["boss"]);
+// nieuw-V7R6 — opschonen standaard zoekwoorden (Boska 17-11): "spar" ving "sparen" (167x), "coop" "Coöperatie" (Rabobank), "total" "totale",
+// "loon" "loonbureau"/"loonbedrijf"/"loonwerk". Die moeten een heel woord zijn.
+const HEEL_WOORD = new Set(["boss", "spar", "coop", "total", "loon"]);
 // beide-V9R1 — merknamen die ook midden in een ander woord staan: "athlon" (lease) in "Decathlon" (vergelijking Houtman 27-10).
 // beide-V11R7 — "lening" in "Tim Engelen dienstverlening" (inhuur) maakte er een lening van (vergelijking Koenders 30-10).
-const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam", "lening"]);
+// nieuw-V7R6 — "huur " ving "verhuur"/"autoverhuur"/"kraanverhuur" (289x), "pay.nl" ving "ovpay.nl" (164x).
+const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam", "lening", "huur", "pay.nl"]);
+const regexVeilig = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// nieuw-V7R6 — vaste banktekst telt nooit mee in een zoekwoord (Boska 17-11): eigen zoekwoord "trans" ving "Transactie:" in elke
+// pinbetaling. De labels (met dubbele punt) en het nummer achter "Trans.Reference:" vallen weg; de rest van de tekst blijft.
+export const VASTE_BANKTEKST = /trans\.reference:\s*\S*|\b(?:transactie|term|pasvolgnr|valutadatum|kaartnr|datum\/tijd)\s*:/g;
+let _bankIn = null, _bankUit = null;
+export function zonderBanktekst(text) {
+  if (text === _bankIn) return _bankUit;
+  _bankIn = text; _bankUit = String(text).replace(VASTE_BANKTEKST, " ");
+  return _bankUit;
+}
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
+  if (text.indexOf(kw) < 0) return false;
+  text = zonderBanktekst(text);
   let i = text.indexOf(kw);
   if (i < 0) return false;
   const trimmed = kw.trim();
-  if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${trimmed}`).test(text);
+  if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${regexVeilig(kw.trimStart())}`).test(text);
   // huishoudboekje-V1R2 — een kort zoekwoord met alleen een spatie vooraan (" izz", " dsw", " uwv") moet ook als woord
   // eindigen: " izz" (zorgverzekeraar IZZ) ving "Helal Slagerij Izzet" (melding Boska 2-11).
   if (kw.startsWith(" ") && !kw.endsWith(" ") && trimmed.length <= 3 && /^[a-z0-9]+$/.test(trimmed)) {

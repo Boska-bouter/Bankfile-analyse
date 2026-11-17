@@ -1,12 +1,24 @@
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, X, Plus } from "lucide-react";
-import { registerCategory, mainCategoryOf, groepeerPerWeergave, hoofdcategorieen, hoofdKleur, getCategorieProfiel, categorieLabel } from "../../classification/categories.js";
+import { ChevronDown, ChevronRight, X, Plus, AlertTriangle } from "lucide-react";
+import { DEFAULT_RULES, registerCategory, mainCategoryOf, groepeerPerWeergave, hoofdcategorieen, hoofdKleur, getCategorieProfiel, categorieLabel } from "../../classification/categories.js";
 import SearchInput from "../shared/SearchInput.jsx";
+import { zoekwoordBereik, fmtAantal } from "../../utils/zoekwoordBereik.js";
+
+const STANDAARD = new Map(DEFAULT_RULES.map((r) => [r.name, new Set((r.keywords || []).map((k) => String(k).toLowerCase()))]));
+
+// nieuw-V7R6 — waarschuwing bij een zoekwoord dat veel verschillende tegenpartijen raakt (mockup akkoord Boska 17-11).
+function BreedMelding({ children }) {
+  return (
+    <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed">
+      {children}
+    </div>
+  );
+}
 
 // Zoekwoorden per subtype — gegroepeerd onder de hoofdcategorie waar dat subtype bij hoort (net
 // als bij BTW-percentages en Vaste/variabele kosten), zodat de ~54 subtypes overzichtelijk
 // blijven in plaats van één lange platte lijst.
-export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) {
+export default function CategoryRulesPanel({ categoryRules, setCategoryRules, transacties = [] }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [openGroups, setOpenGroups] = useState({});
@@ -15,6 +27,7 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryMain, setNewCategoryMain] = useState("Zakelijk");
   const [newCategoryError, setNewCategoryError] = useState("");
+  const [breedVraag, setBreedVraag] = useState(null); // { categoryName, kw, b }
 
   // beide-V1R6 — in een privédossier alleen de privécategorieën, met hun privélabel en privéhoofdcategorieën.
   const cp = getCategorieProfiel();
@@ -40,11 +53,32 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
   const toggleCard = (name) => setExpandedCards((prev) => ({ ...prev, [name]: !prev[name] }));
   const toggleGroup = (main) => setOpenGroups((prev) => ({ ...prev, [main]: !prev[main] }));
 
+  // Eigen zoekwoorden (niet uit de standaardlijst) die al in het dossier staan en te breed zijn: geel gemarkeerd.
+  const breedBestaand = useMemo(() => {
+    const uit = {};
+    if (!open || !transacties.length) return uit;
+    for (const r of categoryRules) {
+      const std = STANDAARD.get(r.name) || new Set();
+      for (const kw of r.keywords || []) {
+        if (std.has(String(kw).toLowerCase())) continue;
+        const b = zoekwoordBereik(kw, transacties);
+        if (b?.breed) (uit[r.name] ||= {})[kw] = b;
+      }
+    }
+    return uit;
+  }, [open, categoryRules, transacties]);
+
+  const voegToe = (categoryName, kw) => {
+    setCategoryRules((prev) => prev.map((r) => (r.name === categoryName && !r.keywords.includes(kw) ? { ...r, keywords: [...r.keywords, kw] } : r)));
+    setNewKeywordByCategory((prev) => ({ ...prev, [categoryName]: "" }));
+    setBreedVraag(null);
+  };
   const addKeyword = (categoryName) => {
     const kw = (newKeywordByCategory[categoryName] || "").trim().toLowerCase();
     if (!kw) return;
-    setCategoryRules((prev) => prev.map((r) => (r.name === categoryName && !r.keywords.includes(kw) ? { ...r, keywords: [...r.keywords, kw] } : r)));
-    setNewKeywordByCategory((prev) => ({ ...prev, [categoryName]: "" }));
+    const b = transacties.length ? zoekwoordBereik(kw, transacties) : null;
+    if (b?.breed) { setBreedVraag({ categoryName, kw, b }); return; }
+    voegToe(categoryName, kw);
   };
   const removeKeyword = (categoryName, kw) => {
     setCategoryRules((prev) => prev.map((r) => (r.name === categoryName ? { ...r, keywords: r.keywords.filter((k) => k !== kw) } : r)));
@@ -117,7 +151,8 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                                 {r.description && <p className="text-xs text-slate-500 mb-2">{r.description}</p>}
                                 <div className="flex flex-wrap gap-1.5">
                                   {r.keywords.map((kw) => (
-                                    <span key={kw} className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">
+                                    <span key={kw} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${breedBestaand[r.name]?.[kw] ? "bg-amber-200 text-amber-900" : "bg-slate-100 text-slate-600"}`}>
+                                      {breedBestaand[r.name]?.[kw] && <AlertTriangle className="h-3 w-3" />}
                                       {kw}
                                       <button onClick={() => removeKeyword(r.name, kw)} className="hover:text-rose-600">
                                         <X className="h-2.5 w-2.5" />
@@ -126,6 +161,12 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                                   ))}
                                   {r.keywords.length === 0 && <span className="text-xs text-slate-400">Nog geen zoekwoorden</span>}
                                 </div>
+                                {Object.values(breedBestaand[r.name] || {}).map((b) => (
+                                  <BreedMelding key={b.keyword}>
+                                    <p className="font-semibold flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5 shrink-0" />Zoekwoord "{b.keyword}" raakt {fmtAantal(b.tegenpartijen)} tegenpartijen</p>
+                                    <p>{b.plaatsnaam ? "Dit lijkt een plaatsnaam. " : ""}Haal het weg met het kruisje, of laat het staan als het zo bedoeld is.</p>
+                                  </BreedMelding>
+                                ))}
                                 <div className="mt-2 flex gap-1.5">
                                   <input
                                     value={newKeywordByCategory[r.name] || ""}
@@ -138,6 +179,24 @@ export default function CategoryRulesPanel({ categoryRules, setCategoryRules }) 
                                     <Plus className="h-3 w-3" />
                                   </button>
                                 </div>
+                                {breedVraag?.categoryName === r.name && (() => {
+                                  const b = breedVraag.b;
+                                  return (
+                                    <BreedMelding>
+                                      <p className="font-semibold mb-1">Dit woord raakt veel verschillende boekingen</p>
+                                      <p className="mb-1">
+                                        "{b.keyword}" staat in <strong>{fmtAantal(b.boekingen)} boekingen</strong> bij <strong>{fmtAantal(b.tegenpartijen)} tegenpartijen</strong>
+                                        {b.plaatsnaam ? <>. Het lijkt een plaatsnaam: het staat in de naam van winkels als {b.voorbeelden.map((v) => v.naam).join(", ")}.</> : <>, zoals {b.voorbeelden.map((v) => `${v.naam} (${fmtAantal(v.aantal)})`).join(", ")}.</>}
+                                      </p>
+                                      {b.perCategorie.length > 0 && <p className="mb-1">Die boekingen staan nu vooral op {b.perCategorie.map(([c, n]) => `${categorieLabel(c)} (${fmtAantal(n)})`).join(", ")}.</p>}
+                                      <p>Vaste banktekst zoals "Transactie:" telt niet mee. Kies liever een woord dat alleen bij de bedoelde partij hoort.</p>
+                                      <div className="flex gap-1.5 mt-2">
+                                        <button onClick={() => setBreedVraag(null)} className="rounded-lg bg-teal-700 text-white px-2.5 py-1 text-xs hover:bg-teal-800">Niet toevoegen</button>
+                                        <button onClick={() => voegToe(r.name, breedVraag.kw)} className="rounded-lg border border-slate-300 bg-white text-slate-700 px-2.5 py-1 text-xs hover:bg-slate-50">Toch toevoegen</button>
+                                      </div>
+                                    </BreedMelding>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>

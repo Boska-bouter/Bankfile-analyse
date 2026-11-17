@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { zoekwoordBereik } from "../utils/zoekwoordBereik.js";
 import { rekeningSoortVan, rekeningLabelVan } from "../classification/reviewSummaries.js";
 import { counterpartyKey, extractKeywordCandidate } from "../utils/normalization.js";
 import { keuzeMelding } from "./openPunten.js";
@@ -28,6 +29,8 @@ export function useCategorieWijziging(p) {
     if (!patch.category || patch.category === "Overig" || patch.category === "Overboekingen aan personen") return;
     const keyword = extractKeywordCandidate(tx.counterparty || tx.description);
     if (!keyword) return;
+    // nieuw-V7R6 — nooit een te breed woord voorstellen (plaatsnaam, woord dat bij veel verschillende tegenpartijen staat).
+    if (zoekwoordBereik(keyword, classified)?.breed) return;
     const matches = classified.filter((t) => {
       if (t.isMirror || t.id === tx.id || uitgesloten?.has(t.id)) return false;
       if (!t.confidence || (t.confidence.level !== "heuristic" && t.confidence.level !== "fallback")) return false;
