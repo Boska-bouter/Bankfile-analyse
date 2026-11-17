@@ -2,6 +2,7 @@ import { useState } from "react";
 import { rekeningSoortVan, rekeningLabelVan } from "../classification/reviewSummaries.js";
 import { counterpartyKey, extractKeywordCandidate } from "../utils/normalization.js";
 import { keuzeMelding } from "./openPunten.js";
+import { zoekTermen, zoektermTreft } from "../utils/zoekTermen.js";
 
 // beide-V11R8 — uit App.jsx gehaald (opsplitsing): categorie-/typewijziging met de vraag voor welke boekingen en jaren.
 export function useCategorieWijziging(p) {
@@ -136,12 +137,12 @@ export function useCategorieWijziging(p) {
       return;
     }
     // V53 — actieve zoekopdracht in de detailtabel: de reikwijdte is wat het zoekwoord vindt, niet de IBAN.
-    const sq = (opts?.searchQuery || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (sq && tx.id != null) {
+    const termen = zoekTermen(opts?.searchQuery); // nieuw-V6R9 — meerdere woorden met , of ;
+    if (termen.length && tx.id != null) {
       const kwMatches = classified.filter(
         (t) =>
           !t.isMirror && !t.transferLocked && (t.amount >= 0) === (tx.amount >= 0) &&
-          `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(sq)
+          zoektermTreft(`${t.counterparty} ${t.description} ${t.fullDescription}`, termen)
       );
       if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
         const matchYears = [...new Set(kwMatches.map((t) => t.year))].sort((a, b) => a - b);

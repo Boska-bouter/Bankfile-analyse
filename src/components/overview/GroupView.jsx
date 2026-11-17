@@ -9,6 +9,7 @@ import { eur } from "../../utils/amounts.js";
 import SearchInput from "../shared/SearchInput.jsx";
 import HelpHint from "../shared/HelpHint.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
+import { zoekTermen, zoektermTreft } from "../../utils/zoekTermen.js";
 import { soortPriveOpname } from "../../calc/inkomenPerMaand.js";
 
 // Categorietotalen voor één groep (bijv. "Zakelijk 2026") — losstaand van de detailtabel zodat
@@ -411,10 +412,10 @@ export function DetailTable({
 
   const filteredItems = useMemo(() => {
     let rows = group.items;
-    const q = query.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (q) {
+    const termen = zoekTermen(query); // nieuw-V6R9 — meerdere woorden met , of ;
+    if (termen.length) {
       rows = rows.filter((t) =>
-        `${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${displayCategory(t.category)} ${mainCategoryOf(t.category)}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)
+        zoektermTreft(`${t.counterparty} ${t.description} ${t.fullDescription} ${t.category} ${displayCategory(t.category)} ${mainCategoryOf(t.category)}`, termen)
       );
     }
     const min = amountMin.trim() === "" ? null : Math.abs(parseFloat(amountMin));
@@ -471,7 +472,7 @@ export function DetailTable({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie…" className="w-full" suggestions={searchSuggestions} />
+            <SearchInput value={query} onChange={setQuery} placeholder="Zoeken op naam, omschrijving of categorie (meerdere: scheid met , of ;)" className="w-full" suggestions={searchSuggestions} />
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap mb-2">
