@@ -91,14 +91,14 @@ function Boeking({ tx, kant, sleutel, openSleutel, setOpenSleutel, onToelichten:
                       </>
                     )}
                     {/* release31V2 — klopt de categorie zelf niet (bijv. geen privé-opname maar een zakelijke uitgave)? */}
-                    {onRequestChange && !tx.transferLocked && (
+                    {onRequestChange && !(tx.transferLocked && !tx.transferAanpasbaar) && (
                       wijzig ? (
                         <CategorieSelect startOpen value={tx.category} onChange={(c) => { setWijzig(false); onRequestChange(tx, { category: c, type: tx.type }); }} onSluit={() => setWijzig(false)} className="rounded-lg border border-slate-300 px-2 py-1 text-xs max-w-[16rem]" />
                       ) : (
                         <button onClick={() => setWijzig(true)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Categorie wijzigen</button>
                       )
                     )}
-                    {bekijken ? null : kant === "Prive" && !tx.transferLocked ? (
+                    {bekijken ? null : kant === "Prive" && !(tx.transferLocked && !tx.transferAanpasbaar) ? (
                       <>
                         <button
                           onClick={() => onRequestChange(tx, { category: "Interne overboeking", type: tx.type })}
@@ -305,7 +305,7 @@ export default function OnverklaardeOverboekingenModal({ items: itemsNu, toegeli
                       <p className="font-medium truncate">{tx.counterparty || tx.description || "(geen omschrijving)"} <span className="text-slate-400 font-normal">· {kant === "Zakelijk" ? "zakelijk" : "privé"} · {tx.date.toLocaleDateString("nl-NL")}</span></p>
                       <p className="text-[11px] text-slate-500">{uitleg?.redenTekst}{uitleg?.notitie ? ` — ${uitleg.notitie}` : ""}</p>
                     </div>
-                    {onRequestChange && !tx.transferLocked ? (
+                    {onRequestChange && !(tx.transferLocked && !tx.transferAanpasbaar) ? (
                       <CategorieSelect value={tx.category} onChange={(c) => onRequestChange(tx, { category: c, type: tx.type })}
                         className={`shrink-0 max-w-[13rem] rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`} />
                     ) : <Indeling categorie={tx.category} />}

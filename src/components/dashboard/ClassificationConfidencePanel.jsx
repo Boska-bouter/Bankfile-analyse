@@ -131,14 +131,14 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
                     <ExpandableDescription tx={tx} className="text-[11px] text-slate-400" />
                     <p className="text-[11px] text-slate-400">{tx.confidence.label}{tx.kleinBedrag ? " · klein bedrag, telt niet als open punt" : ""}</p>
                   </div>
-                  {onRequestChange && !tx.transferLocked ? (
+                  {onRequestChange && !(tx.transferLocked && !tx.transferAanpasbaar) ? (
                     <CategorieSelect
                       value={tx.category}
                       onChange={(v) => onRequestChange(tx, { category: v, type: tx.type })}
                       className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-[11px] font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
                     />
                   ) : (
-                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{tx.transferLocked && <Lock className="h-3 w-3" />}{keuzeLabel(tx.category)}</span>
+                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${CATEGORY_COLOR[displayCategory(tx.category)] || "bg-slate-200 text-slate-700"}`}>{(tx.transferLocked && !tx.transferAanpasbaar) && <Lock className="h-3 w-3" />}{keuzeLabel(tx.category)}</span>
                   )}
                   <span className="shrink-0 font-mono text-slate-500 w-20 text-right">{eur(tx.amount)}</span>
                   {onConfirmCorrect && (

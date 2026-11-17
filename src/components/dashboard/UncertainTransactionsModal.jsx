@@ -153,11 +153,11 @@ export default function UncertainTransactionsModal({
         <span className="shrink-0 font-mono text-slate-500 w-24 text-right" title={meer ? `Totaal van ${g.txs.length} transacties` : undefined}>
           {eur(g ? g.totaal : tx.amount)}
         </span>
-        {klaar && !(compact && !tx.transferLocked) ? (
+        {klaar && !(compact && !(tx.transferLocked && !tx.transferAanpasbaar)) ? (
           <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-800 px-1.5 py-1 text-xs font-medium">
             <Check className="h-3 w-3 shrink-0" /> {meer && g.txs.some((t) => t.category !== tx.category) ? "Aangepast" : keuzeLabel(tx.category)}
           </span>
-        ) : tx.transferLocked ? (
+        ) : (tx.transferLocked && !tx.transferAanpasbaar) ? (
           <span
             className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-1.5 py-1 text-xs font-medium cursor-help"
             title="Overboeking tussen eigen rekeningen (herkend op rekeningnummer): de categorie ligt vast."

@@ -104,6 +104,17 @@ export function useClassified(p) {
         if (eigen?.category && eigen.category !== resolved.category) return { ...los, category: eigen.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
         return { ...los, confidence: { level: "heuristic", label: "Terugbetaling van voorgeschoten kosten? Kies de kostencategorie" } };
       }
+      // nieuw-V7R3 — overboeking naar een opgegeven eigen/partnerrekening die NIET is ingeladen: geen tegenboeking die moet kloppen,
+      // dus zelf aan te passen (Dakhlaoui 17-11: "ticket tunesie" stond op slot). Zonder eigen keuze blijft het Privé opnames.
+      const nietGeladen = transferLocked && !(ownAccountsElsewhereByFile[tx.source] || []).find((o) => ibansMatch(tx.counterpartyIban, o.iban))?.isLoadedFile;
+      if (nietGeladen) {
+        const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
+        const rij = overridesByRow[tx.id], cp = sleutel ? overridesByCounterparty[sleutel] : null;
+        const los = { ...tx, ...resolved, transferLocked: false, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
+        if (rij?.category && rij.category !== resolved.category) return { ...los, category: rij.category, confidence: { level: "override", label: "Handmatig bevestigd (deze transactie)" } };
+        if (cp?.category && cp.category !== resolved.category) return { ...los, category: cp.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
+        return { ...tx, ...resolved, confidence, transferLocked, transferAanpasbaar: true, accountType: los.accountType };
+      }
       return { ...tx, ...resolved, confidence, transferLocked, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
     });
     // beide-V16R1 — leren van je eigen keuzes (classification/lerenVanKeuzes.js): een onbekende boeking krijgt een voorstel als je bij

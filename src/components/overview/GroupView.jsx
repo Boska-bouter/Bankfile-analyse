@@ -211,7 +211,7 @@ const DetailRij = memo(function DetailRij({ t, cpOpen, descOpen, bewerken, noteD
       </td>
       <td className={`px-4 py-2 text-right font-mono whitespace-nowrap ${t.amount >= 0 ? "text-emerald-700" : "text-slate-700"}`}>{eur(t.amount)}</td>
       <td className="px-4 py-2">
-        {t.transferLocked ? (
+        {(t.transferLocked && !t.transferAanpasbaar) ? (
           <span
             className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-help ${hoofdKleur(mainCategoryOf(t.category))}`}
             title="Overboeking tussen eigen rekeningen (herkend op rekeningnummer). Deze categorie ligt vast en kan niet worden aangepast, zodat beide kanten van de overboeking blijven kloppen."

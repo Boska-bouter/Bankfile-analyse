@@ -100,7 +100,7 @@ export function useCategorieWijziging(p) {
   // nieuw-V6R3 — categorie van een hele groep in het controlevenster: alle boekingen van de groep krijgen de keuze.
   // Voorheen ging alleen de eerste boeking mee als de tegenpartijnaam per boeking verschilde (pinbetalingen, Boska 16-11).
   const wijzigGroep = (txs, patch) => {
-    const echte = (txs || []).filter((t) => t.id != null && !t.isMirror && !t.transferLocked);
+    const echte = (txs || []).filter((t) => t.id != null && !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar));
     if (echte.length === 0) return;
     snapshotBeforeAction(keuzeMelding("aangepast", echte)); // nieuw-V6R8 — bijv. "3 boekingen aangepast · 1 open punt dicht"
     setOverridesByRow((prev) => {
@@ -119,7 +119,7 @@ export function useCategorieWijziging(p) {
     // negeren we een eventueel meegestuurd `type` altijd en behouden we het bestaande type van tx.
     patch = { ...patch, type: tx.type };
     // v311 (V33) — overboekingen tussen eigen rekeningen (herkend op IBAN) liggen vast, zie detectOwnAccountTransfer.
-    if (tx.transferLocked) return;
+    if ((tx.transferLocked && !tx.transferAanpasbaar)) return;
     // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
     // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
     // uit een override teruggelezen. Een wijziging rechtstreeks op de spiegel opslaan komt dus
@@ -141,7 +141,7 @@ export function useCategorieWijziging(p) {
     if (termen.length && tx.id != null) {
       const kwMatches = classified.filter(
         (t) =>
-          !t.isMirror && !t.transferLocked && (t.amount >= 0) === (tx.amount >= 0) &&
+          !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar) && (t.amount >= 0) === (tx.amount >= 0) &&
           zoektermTreft(`${t.counterparty} ${t.description} ${t.fullDescription}`, termen)
       );
       if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
@@ -166,7 +166,7 @@ export function useCategorieWijziging(p) {
       setRowOverride(tx.id, patch);
       return;
     }
-    const matches = classified.filter((t) => !t.isMirror && !t.transferLocked && keyForTx(t) === key);
+    const matches = classified.filter((t) => !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar) && keyForTx(t) === key);
     if (matches.length <= 1) {
       snapshotBeforeAction("Categorie/type aangepast");
       if (tx.id != null) setRowOverride(tx.id, patch);
