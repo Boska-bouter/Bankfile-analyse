@@ -104,6 +104,13 @@ export function useClassified(p) {
         if (eigen?.category && eigen.category !== resolved.category) return { ...los, category: eigen.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
         return { ...los, confidence: { level: "heuristic", label: "Terugbetaling van voorgeschoten kosten? Kies de kostencategorie" } };
       }
+      // nieuw-V7R4 — "lening" of "aflossing" in de omschrijving is geen omzet: op controleren met de vraag zakelijk of privé
+      // (analyse Dakhlaoui v23, Boska 17-11: aflossing lening Gilsing stond als omzet). Een keuze per boeking gaat voor, behalve bij een
+      // uitgaande aflossing: die is nooit omzet.
+      if ((!overridesByRow[tx.id]?.category || tx.amount < 0) && /^Zakelijke inkomsten/.test(resolved.category) && LENING_EIGEN.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
+        return { ...tx, ...resolved, category: "Leningen", transferLocked: false, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive",
+          confidence: { level: "heuristic", label: "Lening of aflossing in de omschrijving: zakelijk (Leningen) of privé (Leningen (privé))?" } };
+      }
       // nieuw-V7R3 — overboeking naar een opgegeven eigen/partnerrekening die NIET is ingeladen: geen tegenboeking die moet kloppen,
       // dus zelf aan te passen (Dakhlaoui 17-11: "ticket tunesie" stond op slot). Zonder eigen keuze blijft het Privé opnames.
       const nietGeladen = transferLocked && !(ownAccountsElsewhereByFile[tx.source] || []).find((o) => ibansMatch(tx.counterpartyIban, o.iban))?.isLoadedFile;

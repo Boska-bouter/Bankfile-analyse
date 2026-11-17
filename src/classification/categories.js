@@ -1,7 +1,7 @@
 // Categorieregels — zelfde logica als het manuele werkblad, editable at runtime.
 
 export const DEFAULT_RULES = [
-  { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto", "bandenservice", " rdw "] },
+  { name: "Autokosten", color: "bg-red-100 text-red-800", keywords: ["garage", "apk", "bandenbedrijf", "autoservice", "autoschade", "onderhoud auto", "bandenservice", " rdw ", "amber nederland", "ambernederland", "amber trip"] }, // nieuw-V7R4 — Amber deelauto (Boska 17-11)
   { name: "Bankkosten", color: "bg-slate-200 text-slate-800", keywords: [
     "kosten betaalpakket", "rabo directpakket", "rabo totaalpakket", "rabo basispakket", "rabo zakelijk pakket", "servicekosten", "bankkosten", "afschrijving rente", "provisie", "betalingsverkeer",
     "abn amro bank n.v.", "abn amro", "ing bank n.v.", "ing bank", "rabobank", "sns bank", "asn bank",

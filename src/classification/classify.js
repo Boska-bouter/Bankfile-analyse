@@ -48,11 +48,20 @@ export function keywordInText(text, keyword) {
   }
   return false;
 }
+// nieuw-V7R4 — een los algemeen eigen trefwoord ("stichting") telt niet als het alleen in een betaaldienst staat ("via Stichting Mollie
+// Payments", "Stichting Derdengelden"), en niet op de zakelijke rekening bij een factuur: dat is meestal een zakelijke uitgave (Boska 17-11).
+const BETAALDIENST_STICHTING = /stichting\s+(mollie|derdengelden|online\s*betaal|ticketing|pay|adyen|buckaroo)[^\s]*(\s+payments?)?/g;
+function algemeenUitgesloten(kw, text, accountType) {
+  const t = String(kw).trim().toLowerCase();
+  if (!ALGEMEEN_TREFWOORD.has(t)) return false;
+  if (!keywordInText(text.replace(BETAALDIENST_STICHTING, " "), kw)) return true;
+  return accountType === "Zakelijk" && FACTUUR_BETALING.test(text);
+}
 export function ruleMatchesText(rule, text, accountType = null) {
   // beide-V5R0 / V9R2 — "inzake   rente" staat met wisselende spaties in de omschrijving.
   if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   return rule.keywords.some((kw) => {
-    if (!keywordInText(text, kw)) return false;
+    if (!keywordInText(text, kw) || algemeenUitgesloten(kw, text, accountType)) return false;
     const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
     return !voorkeur || !voorkeur[accountType] || voorkeur[accountType] === rule.name;
   });
@@ -155,7 +164,7 @@ function regelKandidaten(rules, text, accountType, partij) {
     let niveau = -1, woord = null;
     if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) { niveau = 3; woord = "hypotheek"; }
     for (const kw of rule.keywords) {
-      if (!keywordInText(text, kw)) continue;
+      if (!keywordInText(text, kw) || algemeenUitgesloten(kw, text, accountType)) continue;
       const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
       if (voorkeur && voorkeur[accountType] && voorkeur[accountType] !== rule.name) continue;
       let n = trefwoordNiveau(kw);
@@ -929,6 +938,8 @@ const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzeke
 export function belastingSoortUitKenmerk(tx) {
   const tekst = `${tx.description || ""} ${tx.fullDescription || ""}`;
   if (/\b[A-Z0-9]{1,3}-[A-Z0-9]{1,3}-[A-Z0-9]{1,3}\b\s+\d{2}-\d{2}-\d{4}\s+t\/m\b/i.test(tekst)) return "Belastingen: MRB";
+  // nieuw-V7R4 — "TERUGGAAF NR. … OB.2EKWART25": btw-teruggaaf (analyse Dakhlaoui v23, Boska 17-11)
+  if (/teruggaaf/i.test(tekst) && /\bOB\.|\bOB\s+\d|omzetbelasting/i.test(tekst)) return "Belastingen: OB";
   const m = /(?<![\d])(\d{4})[ .]?(\d{4})[ .]?(\d{4})[ .]?(\d{4})(?![\d])/.exec(tekst);
   if (!m) return null;
   const k = m.slice(1).join("");
