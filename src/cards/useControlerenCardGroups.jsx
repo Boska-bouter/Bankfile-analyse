@@ -30,7 +30,7 @@ export function useControlerenCardGroups(p) {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, leningAllesKlopt, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -255,6 +255,7 @@ export function useControlerenCardGroups(p) {
               onMarkAsPrive={markLoanAsPrive}
               onMarkAsZakelijk={markLoanAsZakelijk}
               onOpschonen={leningOpschonen}
+              onAllesKlopt={leningAllesKlopt}
               nietLeningAantal={nietLeningAantal}
               onOpenHelp={setHelpPopupChapter}
             />

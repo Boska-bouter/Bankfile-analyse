@@ -4,7 +4,7 @@ import { LENING_CATS, hoortBijLening } from "../classification/leningBoeking.js"
 import { overrideSleutel, resolveClassification } from "../classification/classify.js";
 
 export function useLeningActies(invoer) {
-  const { accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords } = invoer;
+  const { overridesByRow = {}, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords } = invoer;
   const setCounterpartyOverride = (...args) => invoer.appLaat.setCounterpartyOverride(...args);
   const addBusinessKeywords = (namen) => {
     if (namen.length > 0) {
@@ -36,7 +36,8 @@ export function useLeningActies(invoer) {
   // eigen keuzes als lening, meestal door "lening" in de omschrijving). Voorheen ging de keuze op de hele tegenpartij (IBAN), zodat
   // ook "voorgeschoten inkopen", "annulering order" en "privé storting" van dezelfde persoon als lening telden (Boska 6-11, Dakhlaoui).
   // Besluit Boska 6-11: alleen met "lening" (of iets wat erop lijkt, ook "voorgeschoten") in de omschrijving, of een herkende geldverstrekker.
-  const isLeningBoeking = (tx) => hoortBijLening(tx) || LENING_CATS.has(resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords,
+  // nieuw-V7R5 — zelf bevestigd met "Klopt, alles hoort bij de lening" (keuze per boeking): telt ook als leningboeking (Boska 17-11).
+  const isLeningBoeking = (tx) => hoortBijLening(tx) || LENING_CATS.has(overridesByRow[tx.id]?.category) || LENING_CATS.has(resolveClassification(tx, categoryRules, businessKeywords, businessExpenseKeywords,
     accountTypeByFile[tx.source], {}, {}, ownAccountsElsewhereByFile[tx.source] || [], eigenNamenKeywords, zakelijkeSpaarKeywords)?.category);
   const nietLeningAantal = (loan) => {
     const echt = loan.transactions.filter(isLeningBoeking).length;
@@ -68,6 +69,16 @@ export function useLeningActies(invoer) {
   // Omgekeerde correctie: een eerder als privé gemarkeerde lening blijkt toch zakelijk — terug naar "Leningen".
   const markLoanAsZakelijk = (loan) => zetLening(loan, "Leningen", "Lening op Leningen (zakelijk) gezet");
   // Alleen de echte leningboekingen houden, met de categorie die de lening nu heeft.
+  // nieuw-V7R5 — "Klopt, alles hoort bij de lening": elke boeking krijgt de leningcategorie als eigen keuze, de melding verdwijnt.
+  const leningAllesKlopt = (loan) => {
+    const category = loan.transactions[0]?.category === "Leningen (privé)" ? "Leningen (privé)" : "Leningen";
+    snapshotBeforeAction("Lening: alle boekingen horen erbij");
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const tx of loan.transactions) if (tx.id != null) next[tx.id] = { ...(prev[tx.id] || {}), category, type: tx.type };
+      return next;
+    });
+  };
   const leningOpschonen = (loan) => zetLening(loan, loan.transactions[0]?.category === "Leningen (privé)" ? "Leningen (privé)" : "Leningen", "Lening opgeschoond");
   const acceptVerwachteMatch = () => {
     const { type, idx, matches, targetCategory } = verwachteMatchSuggestie;
@@ -86,5 +97,5 @@ export function useLeningActies(invoer) {
     setVerwachteAangeboden((prev) => ({ ...prev, [aangebodenKey]: classified.length }));
     setVerwachteMatchSuggestie(null);
   };
-  return { markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal };
+  return { leningAllesKlopt, markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal };
 }

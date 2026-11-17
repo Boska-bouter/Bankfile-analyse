@@ -1107,7 +1107,7 @@ export default function App() {
     }
   }, [classified, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
 
-  const { markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
+  const { leningAllesKlopt, markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ overridesByRow, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
 
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
@@ -1638,7 +1638,7 @@ export default function App() {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, leningAllesKlopt, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
