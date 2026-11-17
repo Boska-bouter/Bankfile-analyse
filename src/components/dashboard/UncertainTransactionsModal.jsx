@@ -18,7 +18,7 @@ const LEVEL_INFO = {
 // De samengevoegde "losse pinbetalingen" (Winkels divers zonder herkend zoekwoord) zijn één groep
 // die je kunt uitklappen om per transactie te corrigeren.
 export default function UncertainTransactionsModal({
-  level, transactions: transactionsNu, bulkCounts, activeYear = null, dossierJaren = [], onRequestChange: onRequestChange0, onConfirmCorrect, onConfirmAll, onChangeGroup, onJumpToOverig, onJumpToPersonen, onClose,
+  level, transactions: transactionsNu, bulkCounts: bulkAlle, activeYear = null, dossierJaren = [], onRequestChange: onRequestChange0, onConfirmCorrect, onConfirmAll, onChangeGroup, onJumpToOverig, onJumpToPersonen, onClose,
 }) {
   const info = LEVEL_INFO[level];
   // nieuw-V5R3 — wat je hier bevestigt of aanpast, blijft op zijn plek staan met "✓ Gecontroleerd" tot je het
@@ -28,7 +28,10 @@ export default function UncertainTransactionsModal({
   // nieuw-V6R3 — keuze in de kop van een groep geldt voor alle open boekingen van die groep (Boska 16-11).
   const wijzigGroep = (g, patch) => {
     const open = [...g.txs.filter((t) => !t.klaar), ...andereJarenVan(g)];
-    if (!onChangeGroup || open.length <= 1) return onRequestChange(open[0] || g.txs[0], patch);
+    // nieuw-V6R7 — ook bij één boeking geen vraag "alleen deze / alle jaren" meer: in dit venster geldt de keuze voor de open boekingen van
+    // de groep (Boska 16-11). Andere, al zekere boekingen van dezelfde tegenpartij blijven zoals ze zijn.
+    if (!onChangeGroup) return onRequestChange(open[0] || g.txs[0], patch);
+    if (!open.length) open.push(...g.txs);
     setGekozen((k) => { const n = { ...k }; for (const t of open) n[t.id] = patch.category; return n; });
     onChangeGroup(open, patch);
   };
@@ -42,7 +45,6 @@ export default function UncertainTransactionsModal({
       return { ...tx, category: gekozen[tx.id] ?? tx.category, groepCat, klaar: true };
     });
   }, [transactionsNu, gekozen]);
-  const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
   const [sortering, setSortering] = useState("bedrag");
   const [catFilter, setCatFilter] = useState("");
   const [zichtbaar, setZichtbaar] = useState(60);
@@ -62,6 +64,8 @@ export default function UncertainTransactionsModal({
     const js = new Set(transactions.map((tx) => tx.year));
     return js.size === 1 ? String([...js][0]) : "";
   });
+  const bulkCounts = jaar && bulkAlle.perJaar ? (bulkAlle.perJaar[jaar] || { overig: 0, personen: 0 }) : bulkAlle; // nieuw-V6R8 — per getoond jaar
+  const bulkTotal = (bulkCounts.overig || 0) + (bulkCounts.personen || 0);
   const jaren = useMemo(() => {
     const n = new Map();
     // nieuw-V4R1 — alle jaren van het dossier in de keuze, ook die zonder open punten (wens Boska 12-11).
@@ -164,7 +168,7 @@ export default function UncertainTransactionsModal({
           {/* beide-V5R1 / V9R3 — één keuzelijst met alle categorieën per groep (wens Boska 25-10), i.p.v. groep + soort apart. */}
         <CategorieSelect
           value={tx.category}
-          onChange={(v) => (g && !compact && (meer || andereJarenVan(g).length) ? wijzigGroep(g, { category: v, type: tx.type }) : onRequestChange(tx, { category: v, type: tx.type }))}
+          onChange={(v) => (g && !compact ? wijzigGroep(g, { category: v, type: tx.type }) : onChangeGroup ? (setGekozen((k) => ({ ...k, [tx.id]: v })), onChangeGroup([tx], { category: v, type: tx.type })) : onRequestChange(tx, { category: v, type: tx.type }))}
           className={`shrink-0 max-w-[14rem] rounded-md px-1.5 py-1 text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${hoofdKleur(mainCategoryOf(tx.category))}`}
         />
         </>)}
@@ -175,7 +179,7 @@ export default function UncertainTransactionsModal({
           {(tx.accountType || tx.type) === "Prive" ? "Privé" : (tx.accountType || tx.type)}
         </span>
         {!klaar && <button
-          onClick={() => { const anders = g ? andereJarenVan(g) : []; return meer || anders.length ? onConfirmAll([...(g ? g.txs : [tx]).filter((t) => !t.klaar), ...anders]) : onConfirmCorrect(tx); }}
+          onClick={() => { const anders = g ? andereJarenVan(g) : []; return onConfirmAll([...(g ? g.txs : [tx]).filter((t) => !t.klaar), ...anders]); }}
           className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 px-2 py-1 text-[11px] font-medium hover:bg-emerald-100"
           title={meer ? `Klopt zo — bevestig alle ${g.txs.length} transacties van deze groep` : "Klopt zo — markeer als bevestigd (wordt voortaan 🟢)"}
         >

@@ -126,7 +126,7 @@ export function useDossierVoortgang(invoer) {
       if ((tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)) open.add(gk);
     }
     const adminOpen = yearlyProgress[activeYear].openAdmin || 0; // nieuw-V6R6 — boekingen tellen al als groep
-    const openN = open.size + adminOpen;
+    const openN = yearlyProgress[activeYear].openTotaal ?? (open.size + adminOpen); // nieuw-V6R8 — zelfde telling als Meerjarenoverzicht
     const totaal = Math.max(alle.size + 5, openN, 1);
     const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
     return { pct, open: openN, jaar: activeYear };

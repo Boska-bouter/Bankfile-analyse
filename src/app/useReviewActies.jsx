@@ -30,7 +30,7 @@ export function useReviewActies(invoer) {
       // in de lijst "Classificatie zekerheid" staan).
       const losseWinkel = tx.category === "Winkels divers" && tx.confidence.level === "heuristic" && /losse pinbetaling/i.test(tx.confidence.label || "");
       const gk = losseWinkel ? "__losse-pinbetalingen__|Winkels divers" : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
-      allGroups.add(gk);
+      allGroups.add(`${tx.year}|${gk}`); // nieuw-V6R8 — totaal per jaar, net als de open punten (analyse 17-11, punt A)
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
@@ -57,7 +57,13 @@ export function useReviewActies(invoer) {
     const overigCount = all.filter((tx) => tx.category === "Overig").length;
     const personenCount = all.filter((tx) => tx.category === "Overboekingen aan personen").length;
     const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
-    return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
+    // nieuw-V6R8 — ook per jaar, zodat het venster "elders" telt voor het jaar dat het toont (analyse 17-11)
+    const perJaar = {};
+    for (const tx of all) {
+      const k = tx.category === "Overig" ? "overig" : tx.category === "Overboekingen aan personen" ? "personen" : null;
+      if (k) (perJaar[tx.year] ||= { overig: 0, personen: 0 })[k]++;
+    }
+    return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount, perJaar } };
   }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
   // V90 — een venster dat "0 open" meldt is overbodig: sluit automatisch zodra er niets (meer) te beoordelen is
   // nieuw-V5R3 — alleen bij het openen: wat je in het venster afhandelt blijft zichtbaar tot je het zelf sluit.

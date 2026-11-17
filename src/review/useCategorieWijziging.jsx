@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { rekeningSoortVan, rekeningLabelVan } from "../classification/reviewSummaries.js";
 import { counterpartyKey, extractKeywordCandidate } from "../utils/normalization.js";
+import { keuzeMelding } from "./openPunten.js";
 
 // beide-V11R8 — uit App.jsx gehaald (opsplitsing): categorie-/typewijziging met de vraag voor welke boekingen en jaren.
 export function useCategorieWijziging(p) {
@@ -64,7 +65,7 @@ export function useCategorieWijziging(p) {
   // scope-keuze hier niet nodig — elke transactie krijgt gewoon zijn eigen expliciete override.
   const confirmAllUncertain = (txs) => {
     if (!txs || txs.length === 0) return;
-    snapshotBeforeAction("Alle transacties in dit venster bevestigd");
+    snapshotBeforeAction(`Alle transacties in dit venster bevestigd: ${keuzeMelding("bevestigd", txs)}`); // nieuw-V6R8 — tellingen in de melding
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const tx of txs) {
@@ -100,7 +101,7 @@ export function useCategorieWijziging(p) {
   const wijzigGroep = (txs, patch) => {
     const echte = (txs || []).filter((t) => t.id != null && !t.isMirror && !t.transferLocked);
     if (echte.length === 0) return;
-    snapshotBeforeAction("Categorie aangepast (groep)");
+    snapshotBeforeAction(keuzeMelding("aangepast", echte)); // nieuw-V6R8 — bijv. "3 boekingen aangepast · 1 open punt dicht"
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const t of echte) next[t.id] = { ...(next[t.id] || {}), category: patch.category, type: t.type };

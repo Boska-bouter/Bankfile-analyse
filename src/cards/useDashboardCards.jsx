@@ -113,7 +113,7 @@ export function useDashboardCards(p) {
               lines: [
                 {
                   label: "Dossiercontrole",
-                  value: !yearProgress || yearProgress.openPunten === 0 ? "🟢 Compleet" : `🟠 ${yearProgress.openPunten} ${yearProgress.openPunten === 1 ? "punt" : "punten"}`,
+                  value: !yearProgress || (yearProgress.openTotaal ?? yearProgress.openPunten) === 0 ? "🟢 Compleet" : `🟠 ${yearProgress.openTotaal ?? yearProgress.openPunten} ${(yearProgress.openTotaal ?? yearProgress.openPunten) === 1 ? "punt" : "punten"}`, // nieuw-V6R8
                 },
                 {
                   label: "Indicatieve aangifte",

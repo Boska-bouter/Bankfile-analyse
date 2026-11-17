@@ -7,6 +7,7 @@ import CategorieSelect from "../shared/CategorieSelect.jsx";
 import { Lock } from "lucide-react";
 import { eur } from "../../utils/amounts.js";
 import HelpHint from "../shared/HelpHint.jsx";
+import { telOpenPunten } from "../../review/openPunten.js";
 import ExpandableDescription from "../shared/ExpandableDescription.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 
@@ -46,6 +47,7 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
   // nieuw-V6R0 — 7 van 2282 is geen "0%" (Boska 16-11)
   const pct = (n) => (n > 0 && Math.round((n / total) * 100) === 0 ? "<1" : Math.round((n / total) * 100));
   const nOpen = review.length + unclear.length;
+  const nGroepen = telOpenPunten([...review, ...unclear]); // nieuw-V6R8 — kop telt groepen én boekingen (analyse 17-11, punt 3)
 
   return (
     // nieuw-V6R0 — zelfde stijl als Importcontrole: oranje met aantal als er iets te controleren is, anders groen (Boska 16-11)
@@ -62,7 +64,7 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
       >
         {nOpen > 0 ? <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" /> : <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
         <span className={`text-sm font-semibold flex items-center gap-2 ${nOpen > 0 ? "text-amber-900" : "text-emerald-900"}`}>
-          Classificatiezekerheid{jaar ? ` ${jaar}` : ""} — {nOpen > 0 ? `${nOpen} boeking${nOpen === 1 ? "" : "en"} te controleren` : "alles zeker"}
+          Classificatiezekerheid{jaar ? ` ${jaar}` : ""} — {nOpen > 0 ? `${nGroepen} groep${nGroepen === 1 ? "" : "en"} · ${nOpen} boeking${nOpen === 1 ? "" : "en"} te controleren` : "alles zeker"}
           {onOpenHelp && <HelpHint chapter="classificatiezekerheid" onOpen={onOpenHelp} />}
         </span>
         <span className="flex-1" />

@@ -6,6 +6,7 @@ import { computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJ
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { counterpartyKey } from "../utils/normalization.js";
 import { bevestigdVoor } from "../classification/reviewSummaries.js";
+import { groepSleutelVan, isOnzeker } from "../review/openPunten.js";
 
 export function useYearlyProgress(p) {
   const {
@@ -70,6 +71,14 @@ export function useYearlyProgress(p) {
       // nieuw-V6R6 — open punten die NIET al als boeking/groep tellen (KOR, btw verlegd). De boekingschecks hierboven tellen in de
       // jaarkop al als groep; samen telden ze dubbel (regressietest 16-11: 1 persoon gaf "2 open punten").
       const openAdmin = checks.filter((c) => !c.boeking && c.frac < 0.999).length;
+      // nieuw-V6R8 — één jaartelling voor jaarkop, Meerjarenoverzicht en jaarkaart: open groepen (tegenpartij + categorie) plus open vragen.
+      const openGroepen = new Set();
+      for (const tx of allYearItems) {
+        if (tx.isMirror) continue;
+        if (!isOnzeker(tx) || bevestigdInBulkVenster(tx)) continue;
+        openGroepen.add(groepSleutelVan(tx));
+      }
+      const openTotaal = openGroepen.size + openAdmin;
 
       // ---- Werkelijke aangifte — apart signaal, telt niet mee in pct/status hierboven ----
       // v285 — voorheen telde de BTW (alle kwartalen samen) hier als ÉÉN item, even zwaar als IB of
@@ -153,7 +162,7 @@ export function useYearlyProgress(p) {
       else status = "oranje";
 
       map[year] = {
-        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, openAdmin, aannamesCount, aannamesLabels,
+        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, openAdmin, openTotaal, aannamesCount, aannamesLabels,
         werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
         werkelijkAangifteItems: werkelijkAangifteChecks.map((c) => ({ label: c.label, detail: c.detail, doel: c.doel, done: c.frac >= 0.999 })),
       };
