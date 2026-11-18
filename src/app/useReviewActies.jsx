@@ -22,6 +22,7 @@ export function useReviewActies(invoer) {
   const confidenceSummary = useMemo(() => {
     let approved = 0, reviewTx = 0, unclearTx = 0;
     const reviewGroups = new Set(), unclearGroups = new Set(), allGroups = new Set(), unclearExBulk = new Set(), reviewExBulk = new Set();
+    const openJarenSet = new Set(); // nieuw-V5R7 — in welk jaar staan de open punten (Boska 16-11: jaartal erbij)
     for (const tx of classified) {
       if (tx.isMirror) continue;
       // V70 — losse pinbetalingen zonder herkend zoekwoord (categorie "Winkels divers", geschat) zijn
@@ -29,18 +30,22 @@ export function useReviewActies(invoer) {
       // in de lijst "Classificatie zekerheid" staan).
       const losseWinkel = tx.category === "Winkels divers" && tx.confidence.level === "heuristic" && /losse pinbetaling/i.test(tx.confidence.label || "");
       const gk = losseWinkel ? "__losse-pinbetalingen__|Winkels divers" : `${counterpartyKey(tx.counterparty || tx.description, tx.amount) || tx.id}|${tx.category}`;
-      allGroups.add(gk);
+      allGroups.add(`${tx.year}|${gk}`); // nieuw-V6R8 — totaal per jaar, net als de open punten (analyse 17-11, punt A)
       if (tx.confidence.level === "override" || tx.confidence.level === "keyword") { approved++; continue; }
       // V90 — "Klopt zo" in het Overig-/Personen-venster telt als beoordeeld (anders blijft het onduidelijk tellen)
       if (bevestigdInBulkVenster(tx)) { approved++; continue; }
-      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") reviewExBulk.add(gk); }
-      else { unclearTx++; unclearGroups.add(gk); if (tx.category !== "Overig" && tx.category !== "Overboekingen aan personen") unclearExBulk.add(gk); }
+      const exBulk = tx.category !== "Overig" && tx.category !== "Overboekingen aan personen";
+      if (exBulk) openJarenSet.add(Number(tx.year));
+      // nieuw-V6R6 — open punten per jaar: dezelfde tegenpartij in twee jaren telt in elk jaar (zoals de jaarkop en het venster per jaar).
+      const gkj = `${tx.year}|${gk}`;
+      if (tx.confidence.level === "heuristic") { reviewTx++; reviewGroups.add(gkj); if (exBulk) reviewExBulk.add(gkj); }
+      else { unclearTx++; unclearGroups.add(gkj); if (exBulk) unclearExBulk.add(gkj); }
     }
     const review = reviewGroups.size, unclear = unclearGroups.size;
     // release31V1 — `openExBulk`: alleen wat NIET al in "Overig opruimen" of "Overboekingen aan personen" staat.
     // Die twee hebben een eigen kaart; voorheen telden dezelfde boekingen dubbel mee in de open punten
     // (bijv. 347 bij Classificatie, terwijl het venster "0 groepen + 555 elders" toonde).
-    return { groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
+    return { openJaren: [...openJarenSet].sort((a, b) => a - b), groupsTotal: allGroups.size, approved, review, unclear, unclearExBulk: unclearExBulk.size, reviewExBulk: reviewExBulk.size, openExBulk: reviewExBulk.size + unclearExBulk.size, reviewTx, unclearTx, needsReview: review + unclear, needsReviewTx: reviewTx + unclearTx, total: approved + reviewTx + unclearTx };
   }, [classified, reviewedOverigKeys, reviewedPersonKeys]);
 
   // ---- Data voor de 🟡/🔴-pop-up: "Overig" en "Overboekingen aan personen" horen daar altijd al
@@ -52,7 +57,13 @@ export function useReviewActies(invoer) {
     const overigCount = all.filter((tx) => tx.category === "Overig").length;
     const personenCount = all.filter((tx) => tx.category === "Overboekingen aan personen").length;
     const rest = all.filter((tx) => tx.category !== "Overig" && tx.category !== "Overboekingen aan personen");
-    return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount } };
+    // nieuw-V6R8 — ook per jaar, zodat het venster "elders" telt voor het jaar dat het toont (analyse 17-11)
+    const perJaar = {};
+    for (const tx of all) {
+      const k = tx.category === "Overig" ? "overig" : tx.category === "Overboekingen aan personen" ? "personen" : null;
+      if (k) (perJaar[tx.year] ||= { overig: 0, personen: 0 })[k]++;
+    }
+    return { transactions: rest, bulkCounts: { overig: overigCount, personen: personenCount, perJaar } };
   }, [classified, openConfidenceLevel, reviewedOverigKeys, reviewedPersonKeys]);
   // V90 — een venster dat "0 open" meldt is overbodig: sluit automatisch zodra er niets (meer) te beoordelen is
   // nieuw-V5R3 — alleen bij het openen: wat je in het venster afhandelt blijft zichtbaar tot je het zelf sluit.

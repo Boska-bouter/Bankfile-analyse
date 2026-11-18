@@ -6,6 +6,7 @@ import { computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJ
 import { computeQuarterlyBtwForYear } from "../tax/btw.js";
 import { counterpartyKey } from "../utils/normalization.js";
 import { bevestigdVoor } from "../classification/reviewSummaries.js";
+import { groepSleutelVan, isOnzeker } from "../review/openPunten.js";
 
 export function useYearlyProgress(p) {
   const {
@@ -45,15 +46,15 @@ export function useYearlyProgress(p) {
       const personKeysThisYear = perSleutel("Overboekingen aan personen", new Set(reviewedPersonKeys));
       if (personKeysThisYear.size > 0) {
         const done = [...personKeysThisYear.values()].filter(Boolean).length;
-        checks.push({ frac: done / personKeysThisYear.size });
+        checks.push({ frac: done / personKeysThisYear.size, boeking: true });
       }
       const overigKeysThisYear = perSleutel("Overig", new Set(reviewedOverigKeys));
       if (overigKeysThisYear.size > 0) {
         const done = [...overigKeysThisYear.values()].filter(Boolean).length;
-        checks.push({ frac: done / overigKeysThisYear.size });
+        checks.push({ frac: done / overigKeysThisYear.size, boeking: true });
       }
       const overigAlleBevestigd = overigKeysThisYear.size > 0 && [...overigKeysThisYear.values()].every(Boolean);
-      checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100 });
+      checks.unshift({ frac: overigAlleBevestigd ? 1 : yc.categorizedPct / 100, boeking: true });
       // huishoudboekje-V3R3 — KOR en btw-verlegd horen alleen bij een jaar met zakelijke boekingen; in een privédossier of
       // Huishoudboekje bleef de KOR-vraag anders altijd een open punt (melding Boska 4-11).
       const zakelijkJaar = zakItems.length > 0;
@@ -67,6 +68,17 @@ export function useYearlyProgress(p) {
       // werkelijkAangifteChecks verderop).
       const avgFrac = checks.length ? checks.reduce((a, c) => a + c.frac, 0) / checks.length : 1;
       const openPunten = checks.filter((c) => c.frac < 0.999).length;
+      // nieuw-V6R6 — open punten die NIET al als boeking/groep tellen (KOR, btw verlegd). De boekingschecks hierboven tellen in de
+      // jaarkop al als groep; samen telden ze dubbel (regressietest 16-11: 1 persoon gaf "2 open punten").
+      const openAdmin = checks.filter((c) => !c.boeking && c.frac < 0.999).length;
+      // nieuw-V6R8 — één jaartelling voor jaarkop, Meerjarenoverzicht en jaarkaart: open groepen (tegenpartij + categorie) plus open vragen.
+      const openGroepen = new Set();
+      for (const tx of allYearItems) {
+        if (tx.isMirror) continue;
+        if (!isOnzeker(tx) || bevestigdInBulkVenster(tx)) continue;
+        openGroepen.add(groepSleutelVan(tx));
+      }
+      const openTotaal = openGroepen.size + openAdmin;
 
       // ---- Werkelijke aangifte — apart signaal, telt niet mee in pct/status hierboven ----
       // v285 — voorheen telde de BTW (alle kwartalen samen) hier als ÉÉN item, even zwaar als IB of
@@ -142,13 +154,15 @@ export function useYearlyProgress(p) {
       // als verder alles compleet is), vanaf €1000 is het een echt gat (rood).
       const gatDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "rood" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
       const geelDitJaar = fileContinuity.some((g) => !g.ok && classifyContinuityGap(g.diff) === "geel" && (g.aTo.getFullYear() === year || g.bFrom.getFullYear() === year));
+      // nieuw-V5R7 — ook "controleren" (geschat, nog niet bevestigd) houdt het jaar oranje; anders stond 2026 groen met een open punt (Boska 16-11).
+      const teControlerenDitJaar = allYearItems.filter((tx) => !tx.isMirror && tx.confidence.level === "heuristic" && !bevestigdInBulkVenster(tx)).length;
       let status;
       if (gatDitJaar) status = "rood";
-      else if (openPunten === 0 && onzekerDitJaar === 0 && !geelDitJaar) status = "groen";
+      else if (openPunten === 0 && onzekerDitJaar === 0 && teControlerenDitJaar === 0 && !geelDitJaar) status = "groen";
       else status = "oranje";
 
       map[year] = {
-        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, aannamesCount, aannamesLabels,
+        pct: openPunten > 0 ? Math.min(99, Math.round(avgFrac * 100)) : Math.round(avgFrac * 100), status, onzekerDitJaar, gatDitJaar, geelDitJaar, openPunten, openAdmin, openTotaal, aannamesCount, aannamesLabels,
         werkelijkAangifteStatus, werkelijkAangifteDone, werkelijkAangifteTotal,
         werkelijkAangifteItems: werkelijkAangifteChecks.map((c) => ({ label: c.label, detail: c.detail, doel: c.doel, done: c.frac >= 0.999 })),
       };

@@ -2,7 +2,7 @@
 // nieuw-V1R0 — uit App.jsx gehaald (opruimronde 9-11). Alle invoer komt binnen via `invoer`; namen die App pas later maakt via invoer.appLaat.
 import { MOBIEL_CATS, MOBIEL_LABEL } from "./constanten.js";
 import { autoJaren } from "../tax/eenvoudigLease.js";
-import { counterpartyKey } from "../utils/normalization.js";
+import { counterpartyKey, korteJaren } from "../utils/normalization.js";
 import { useMemo } from "react";
 import { kleinInstelling } from "../classification/kleineBedragen.js";
 
@@ -125,8 +125,8 @@ export function useDossierVoortgang(invoer) {
       alle.add(gk);
       if ((tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)) open.add(gk);
     }
-    const adminOpen = yearlyProgress[activeYear].openPunten || 0;
-    const openN = open.size + adminOpen;
+    const adminOpen = yearlyProgress[activeYear].openAdmin || 0; // nieuw-V6R6 — boekingen tellen al als groep
+    const openN = yearlyProgress[activeYear].openTotaal ?? (open.size + adminOpen); // nieuw-V6R8 — zelfde telling als Meerjarenoverzicht
     const totaal = Math.max(alle.size + 5, openN, 1);
     const pct = openN === 0 ? 100 : Math.min(99, Math.floor((100 * (totaal - openN)) / totaal));
     return { pct, open: openN, jaar: activeYear };
@@ -136,7 +136,11 @@ export function useDossierVoortgang(invoer) {
     instellingenBadge > 0 ? `${instellingenBadge} instelling${instellingenBadge === 1 ? "" : "en"}` : null,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" · ") + (() => {
+      // nieuw-V5R7 — in welk jaar staan de open punten (Boska 16-11)
+      const jaren = [...new Set([...(confidenceSummary?.openJaren || []), ...Object.keys(yearlyProgress || {}).filter((y) => (yearlyProgress[y]?.openAdmin || 0) > 0).map(Number)])].sort((a, b) => a - b);
+      return controlerenBadge + instellingenBadge > 0 && jaren.length ? ` · in ${korteJaren(jaren)}` : "";
+    })();
 
   // Fase 1, dashboard-restyling (Stijl F) — de 4 samenvattende categorie-kaarten bovenaan Overzicht
   // ("Nog te controleren"/"Nog in te stellen"/"Resultaten"/"Automatische herkenning" in het mockup).
@@ -144,7 +148,8 @@ export function useDossierVoortgang(invoer) {
   // businessIncomeEntries/businessExpenseEntries) — geen nieuwe berekening, alleen samengevat en
   // doorklikbaar. Zie RollupCard.jsx.
   const dashboardCardsByKey = useMemo(() => Object.fromEntries(dashboardCards.map((c) => [c.key, c])), [dashboardCards]);
-  const stapItem = (c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, onClick: c.onClick });
+  // nieuw-V5R7 — jaartal bij de open punten in de routebalk ("Classificatiezekerheid (1 open in 2026)"); count blijft een getal
+  const stapItem = (c) => ({ key: c.key, label: c.title, count: typeof c.openCount === "number" ? c.openCount : c.value, jaren: c.key === "confidence" && c.openCount > 0 ? confidenceSummary?.openJaren || null : null, onClick: c.onClick });
   const teControlerenItems = useMemo(
     () => [
       ...controlerenDashboardCards.filter((c) => c.tone === "attention" || c.tone === "risk").map(stapItem),

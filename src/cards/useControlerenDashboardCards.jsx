@@ -1,5 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { useMemo } from "react";
+import { korteJaren } from "../utils/normalization.js";
 import { kaartenVolgensProfiel } from "../modus/index.js";
 import { AlertTriangle, Copy, FileSpreadsheet, HelpCircle, Users } from "lucide-react";
 
@@ -8,8 +9,10 @@ export function useControlerenDashboardCards(p) {
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
-    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions,
+    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear = null, setActiveYear = null,
   } = p;
+  // nieuw-V5R7 — jaartal bij de open punten (Boska 16-11)
+  const metJaren = (n, jaren) => (n > 0 && jaren?.length ? `${n} (${korteJaren(jaren)})` : n);
 
   const kaarten = useMemo(() => {
     if (transactions.length === 0) return [];
@@ -30,7 +33,7 @@ export function useControlerenDashboardCards(p) {
         title: "Classificatiezekerheid",
         icon: <AlertTriangle className="h-3.5 w-3.5" />,
         // release31V1 — zonder wat al in "Overig opruimen"/"Overboekingen aan personen" staat (eigen kaarten)
-        value: confidenceSummary.openExBulk,
+        value: metJaren(confidenceSummary.openExBulk, confidenceSummary.openJaren),
         openCount: confidenceSummary.openExBulk,
         subtitle:
           confidenceSummary.openExBulk > 0
@@ -39,6 +42,8 @@ export function useControlerenDashboardCards(p) {
         tone: confidenceSummary.openExBulk > 0 ? "attention" : "ok",
         hint: "Transacties met onzekere classificatie bekijken",
         onClick: () => {
+          const jaren = confidenceSummary.openJaren || [];
+          if (confidenceSummary.openExBulk > 0 && setActiveYear && jaren.length && !jaren.includes(Number(activeYear))) setActiveYear(jaren[0]);
           if (confidenceSummary.openExBulk > 0) setOpenConfidenceLevel(confidenceSummary.unclearExBulk > 0 ? "fallback" : "heuristic");
           jumpToSection(confidenceSectionRef);
         },
@@ -121,6 +126,8 @@ export function useControlerenDashboardCards(p) {
     pendingOverigReview.length,
     pendingDuplicateCount,
     duplicatePendingBreakdown,
+    activeYear, // nieuw-V6R6 — anders sprong de kaart naar het jaar van bij het laden (regressietest 16-11)
+    setActiveYear,
   ]);
   // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
   const keuze = p.modus?.kaarten?.controleren ?? null;

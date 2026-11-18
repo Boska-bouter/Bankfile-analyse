@@ -1,3 +1,4 @@
+import { giftenAftrek } from "./prive/aftrekposten.js";
 // Grove, indicatieve schatting van de inkomstenbelasting (box 1) over de winst uit onderneming
 // — bewust vereenvoudigd: geen heffingskortingen, geen overig inkomen, geen startersaftrek.
 // Bron: gepubliceerde belastingschijven, zelfstandigenaftrek en mkb-winstvrijstelling per jaar.
@@ -50,6 +51,14 @@ let _overigInkomen = {};
 export function registerTariefInstellingen({ overrides, overigInkomen } = {}) {
   _overrides = overrides && typeof overrides === "object" ? overrides : {};
   _overigInkomen = overigInkomen && typeof overigInkomen === "object" ? overigInkomen : {};
+}
+// nieuw-V7R7 — giften aan goede doelen (categorie "Giften & donaties", wens Boska 17-11) per jaar, door App.jsx gezet. Persoonsgebonden
+// aftrek: deel boven de drempel (1% van het drempelinkomen, minimaal € 60) tot maximaal 10% (zelfde tabel als het privédossier).
+let _giften = {};
+export function registerGiften(perJaar) { _giften = perJaar && typeof perJaar === "object" ? perJaar : {}; }
+export function getGiften(year) {
+  const v = Number(_giften?.[year]);
+  return Number.isFinite(v) && v > 0 ? v : 0;
 }
 export function getOverigInkomenBox1(year) {
   const v = Number(_overigInkomen?.[year]);
@@ -128,14 +137,16 @@ function berekenIbMetToevoegingen(belastbaar, year, aftrekposten) {
   const { waarde: t, status } = resolveTariefGroep("ib", year);
   const overig = getOverigInkomenBox1(year);
   const b = Math.max(0, belastbaar || 0);
-  const basis = Math.max(0, belastingOverSchijvenVoor(b + overig, t) - belastingOverSchijvenVoor(overig, t));
+  const giften = getGiften(year);
+  const giftenAftrekBedrag = giften > 0 ? giftenAftrek(giften, b + overig, year) : 0;
+  const basis = Math.max(0, belastingOverSchijvenVoor(Math.max(0, b + overig - giftenAftrekBedrag), t) - belastingOverSchijvenVoor(overig, t));
   const topGrens = t.brackets.length > 1 ? t.brackets[t.brackets.length - 2].tot : 0;
   const toptarief = t.brackets[t.brackets.length - 1].tarief;
   const verschil = Math.max(0, toptarief - (t.aftrekBeperkingPct || 0) / 100);
   const inkomenZonderAftrek = (belastbaar || 0) + (aftrekposten || 0) + overig;
-  const deelInTopschijf = Math.max(0, Math.min(aftrekposten || 0, inkomenZonderAftrek - topGrens));
+  const deelInTopschijf = Math.max(0, Math.min((aftrekposten || 0) + giftenAftrekBedrag, inkomenZonderAftrek - topGrens));
   const beperking = t.aftrekBeperkingPct ? deelInTopschijf * verschil : 0;
-  return { belasting: basis + beperking, belastingVoorBeperking: basis, beperkingAftrek: beperking, overigInkomen: overig, tariefStatus: status };
+  return { belasting: basis + beperking, belastingVoorBeperking: basis, beperkingAftrek: beperking, overigInkomen: overig, giften, giftenAftrek: giftenAftrekBedrag, tariefStatus: status };
 }
 
 export function estimateIncomeTax(winst, year, zelfstandigenaftrekToegepast = true) {

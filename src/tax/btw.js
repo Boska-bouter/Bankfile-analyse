@@ -40,7 +40,7 @@ export const ZERO_BTW_CATEGORIES = new Set([
   "Kinderopvang", // geregistreerde kinderopvang is vrijgesteld van BTW
   "Toeslagen", // overheidstoeslagen (kindertoeslag, huurtoeslag, ...) zijn geen BTW-belaste omzet
   "Persoonlijk & vertrouwelijk", // nooit een echte (aftrekbare) zakelijke uitgave, ook niet als dit ooit per ongeluk op Zakelijk zou staan
-  "Partneralimentatie", "Kinderalimentatie", // alimentatie is geen BTW-belaste dienst/aankoop — hoort net als loon/belastingen/leningen nooit op een BTW-aangifte
+  "Partneralimentatie", "Kinderalimentatie", "Giften & donaties", // giften en alimentatie zijn geen aankoop met btw; alimentatie is geen BTW-belaste dienst/aankoop — hoort net als loon/belastingen/leningen nooit op een BTW-aangifte
 ]);
 // "Inhuur personeel" stond hier eerder ook bij, maar een ingehuurde freelancer/zzp'er factureert je
 // in de praktijk vrijwel altijd gewoon mét 21% BTW (tenzij die zelf onder de KOR valt) — verwijderd.

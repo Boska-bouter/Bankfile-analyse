@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { laatsteTerm, zoekNorm } from "../../utils/zoekTermen.js";
 
 // `suggestions` (optioneel): volledige lijst kandidaat-teksten (bijv. alle tegenpartijnamen en
 // categorieën in de huidige groep) — vanaf 3 tekens verschijnt een uitklaplijst met de
@@ -8,8 +9,10 @@ export default function SearchInput({ value, onChange, placeholder, className = 
   const [focused, setFocused] = useState(false);
 
   const matches = useMemo(() => {
-    if (!suggestions || value.trim().length < 3) return [];
-    const q = value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // nieuw-V6R9 — bij meerdere woorden (, of ;) gelden de suggesties voor het woord waar je nu aan typt
+    const { term } = laatsteTerm(value);
+    if (!suggestions || term.length < 3) return [];
+    const q = zoekNorm(term);
     const seen = new Set();
     const result = [];
     for (const s of suggestions) {
@@ -53,7 +56,7 @@ export default function SearchInput({ value, onChange, placeholder, className = 
             <button
               key={s}
               type="button"
-              onClick={() => onChange(s)}
+              onClick={() => onChange(laatsteTerm(value).voor + s)}
               className="block w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 truncate"
             >
               {s}

@@ -128,6 +128,21 @@ export function normKey(s) {
 // woord: kort genoeg om ook licht afwijkende schrijfwijzen van dezelfde tegenpartij te raken
 // (bijv. "Coolblue" bij zowel "Coolblue.nl" als "COOLBLUE B.V."), lang genoeg (4+ tekens) om
 // valse matches op een toevallig woordje als "de"/"van" te vermijden.
+// nieuw-V5R8 — kenmerkende woorden van een naam (verwachte lease/lening): woorden van 4+ tekens zonder algemene woorden
+// als "stichting" of "payments". Een boeking hoort erbij als ALLE kenmerkende woorden in de tekst staan.
+const ALGEMEEN = new Set(["stichting", "ontvangsten", "betalingen", "payments", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "bank", "services", "financial", "finance", "lease", "leasing", "via", "voor", "and", "van"]);
+// nieuw-V7R0 — algemene woorden die als los trefwoord niets zeggen over de tegenpartij (geen voorstel, en bij laden weg uit eigen trefwoorden).
+export const ALGEMEEN_TREFWOORD = new Set(["stichting", "vereniging", "cooperatie", "coöperatie", "cooperatieve", "coöperatieve", "ontvangsten", "betalingen", "betaling", "payments", "payment", "derdengelden", "beheer", "beheren", "holding", "groep", "group", "nederland", "services", "service", "financial", "finance", "via", "voor", "and", "van", "the"]);
+// nieuw-V5R9 — jaren kort ("’21, ’22") zodat ze op één regel passen (Boska 16-11)
+export const korteJaren = (jaren) => (jaren || []).map((j) => `’${String(j).slice(-2)}`).join(", ");
+export function kenmerkendeWoorden(text) {
+  const cleaned = String(text || "")
+    .replace(/\b(b\.?v\.?|n\.?v\.?|ltd|inc|gmbh)\b/gi, " ")
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s]/g, " ")
+    .toLowerCase();
+  return [...new Set(cleaned.split(/\s+/).filter((w) => w.length >= 4 && !ALGEMEEN.has(w)))];
+}
+
 export function extractKeywordCandidate(text) {
   const raw = String(text || "").trim();
   if (!raw) return "";
@@ -139,7 +154,8 @@ export function extractKeywordCandidate(text) {
     .trim()
     .toLowerCase();
   const words = cleaned.split(" ").filter(Boolean);
-  return words.find((w) => w.length >= 4) || "";
+  // nieuw-V7R0 — nooit een algemeen woord als "stichting" voorstellen: dat raakt elke stichting (Dakhlaoui 17-11: huur werd twijfel).
+  return words.find((w) => w.length >= 4 && !ALGEMEEN_TREFWOORD.has(w)) || "";
 }
 
 // Normaliseert een volledige (rekeninghouder-/partner-)naam voor de "eigen naam"-herkenning in

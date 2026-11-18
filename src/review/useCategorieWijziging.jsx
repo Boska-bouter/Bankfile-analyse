@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { zoekwoordBereik } from "../utils/zoekwoordBereik.js";
 import { rekeningSoortVan, rekeningLabelVan } from "../classification/reviewSummaries.js";
 import { counterpartyKey, extractKeywordCandidate } from "../utils/normalization.js";
+import { keuzeMelding } from "./openPunten.js";
+import { zoekTermen, zoektermTreft } from "../utils/zoekTermen.js";
 
 // beide-V11R8 — uit App.jsx gehaald (opsplitsing): categorie-/typewijziging met de vraag voor welke boekingen en jaren.
 export function useCategorieWijziging(p) {
@@ -22,12 +25,14 @@ export function useCategorieWijziging(p) {
   // in één keer een herbruikbaar trefwoord kunt vastleggen in plaats van dezelfde correctie steeds
   // opnieuw te moeten doen. Geen suggestie bij "Overig"/"Overboekingen aan personen" zelf, want dat
   // is geen bruikbaar trefwoord om aan andere transacties te koppelen.
-  const suggestSimilarIfAny = (tx, patch) => {
+  const suggestSimilarIfAny = (tx, patch, uitgesloten = null) => {
     if (!patch.category || patch.category === "Overig" || patch.category === "Overboekingen aan personen") return;
     const keyword = extractKeywordCandidate(tx.counterparty || tx.description);
     if (!keyword) return;
+    // nieuw-V7R6 — nooit een te breed woord voorstellen (plaatsnaam, woord dat bij veel verschillende tegenpartijen staat).
+    if (zoekwoordBereik(keyword, classified)?.breed) return;
     const matches = classified.filter((t) => {
-      if (t.isMirror || t.id === tx.id) return false;
+      if (t.isMirror || t.id === tx.id || uitgesloten?.has(t.id)) return false;
       if (!t.confidence || (t.confidence.level !== "heuristic" && t.confidence.level !== "fallback")) return false;
       const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
       return text.includes(keyword);
@@ -64,7 +69,7 @@ export function useCategorieWijziging(p) {
   // scope-keuze hier niet nodig — elke transactie krijgt gewoon zijn eigen expliciete override.
   const confirmAllUncertain = (txs) => {
     if (!txs || txs.length === 0) return;
-    snapshotBeforeAction("Alle transacties in dit venster bevestigd");
+    snapshotBeforeAction(`Alle transacties in dit venster bevestigd: ${keuzeMelding("bevestigd", txs)}`); // nieuw-V6R8 — tellingen in de melding
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const tx of txs) {
@@ -95,6 +100,20 @@ export function useCategorieWijziging(p) {
     }
   };
 
+  // nieuw-V6R3 — categorie van een hele groep in het controlevenster: alle boekingen van de groep krijgen de keuze.
+  // Voorheen ging alleen de eerste boeking mee als de tegenpartijnaam per boeking verschilde (pinbetalingen, Boska 16-11).
+  const wijzigGroep = (txs, patch) => {
+    const echte = (txs || []).filter((t) => t.id != null && !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar));
+    if (echte.length === 0) return;
+    snapshotBeforeAction(keuzeMelding("aangepast", echte)); // nieuw-V6R8 — bijv. "3 boekingen aangepast · 1 open punt dicht"
+    setOverridesByRow((prev) => {
+      const next = { ...prev };
+      for (const t of echte) next[t.id] = { ...(next[t.id] || {}), category: patch.category, type: t.type };
+      return next;
+    });
+    suggestSimilarIfAny(echte[0], { ...patch, type: echte[0].type }, new Set(echte.map((t) => t.id)));
+  };
+
   const requestCategoryChange = (tx, patch, opts) => {
     // v303 — op verzoek: "type" (Zakelijk/Prive) van een transactie volgt uitsluitend het
     // bankbestand waaruit hij is ingelezen en mag nooit meer handmatig worden aangepast (zie
@@ -103,7 +122,7 @@ export function useCategorieWijziging(p) {
     // negeren we een eventueel meegestuurd `type` altijd en behouden we het bestaande type van tx.
     patch = { ...patch, type: tx.type };
     // v311 (V33) — overboekingen tussen eigen rekeningen (herkend op IBAN) liggen vast, zie detectOwnAccountTransfer.
-    if (tx.transferLocked) return;
+    if ((tx.transferLocked && !tx.transferAanpasbaar)) return;
     // Een spiegelboeking (zie de aanmaak van "mirrors" hierboven) is een afgeleide weergave van de
     // onderliggende zakelijke boeking — die wordt bij elke herberekening opnieuw aangemaakt, niet
     // uit een override teruggelezen. Een wijziging rechtstreeks op de spiegel opslaan komt dus
@@ -121,16 +140,26 @@ export function useCategorieWijziging(p) {
       return;
     }
     // V53 — actieve zoekopdracht in de detailtabel: de reikwijdte is wat het zoekwoord vindt, niet de IBAN.
-    const sq = (opts?.searchQuery || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (sq && tx.id != null) {
+    const termen = zoekTermen(opts?.searchQuery); // nieuw-V6R9 — meerdere woorden met , of ;
+    if (termen.length && tx.id != null) {
       const kwMatches = classified.filter(
         (t) =>
-          !t.isMirror && !t.transferLocked && (t.amount >= 0) === (tx.amount >= 0) &&
-          `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(sq)
+          !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar) && (t.amount >= 0) === (tx.amount >= 0) &&
+          zoektermTreft(`${t.counterparty} ${t.description} ${t.fullDescription}`, termen)
       );
       if (kwMatches.length > 1 && kwMatches.some((t) => t.id === tx.id)) {
         const matchYears = [...new Set(kwMatches.map((t) => t.year))].sort((a, b) => a - b);
-        setPendingCategoryChange({ tx, patch, key: null, matchCount: kwMatches.length, matchYears, viaIban: false, keywordQuery: opts.searchQuery, matchIds: kwMatches.map((t) => t.id) });
+        // nieuw-V7R2 — al vastgelegde boekingen (eigen keuze of herkend aan de omschrijving) gaan standaard niet mee (Dakhlaoui 17-11:
+        // "pasvolgnr: 018" overschreef 1.914 eigen keuzes als Boodschappen, Brandstof enz.). Per categorie zelf aan te vinken.
+        // Vastgelegde boekingen die al de gekozen categorie hebben, veranderen niet: die vallen er helemaal buiten.
+        const vastPerCat = {}, alGelijk = new Set();
+        for (const t of kwMatches) {
+          if (t.id === tx.id || (t.confidence?.level !== "override" && t.confidence?.level !== "keyword")) continue;
+          if (t.category === patch.category) { alGelijk.add(t.id); continue; }
+          (vastPerCat[t.category] ||= []).push({ id: t.id, year: t.year });
+        }
+        const zoekMatches = kwMatches.filter((t) => !alGelijk.has(t.id));
+        setPendingCategoryChange({ tx, patch, key: null, matchCount: zoekMatches.length, matchYears, viaIban: false, keywordQuery: opts.searchQuery, matchIds: zoekMatches.map((t) => t.id), vastPerCat, alGelijk: alGelijk.size });
         return;
       }
     }
@@ -140,7 +169,7 @@ export function useCategorieWijziging(p) {
       setRowOverride(tx.id, patch);
       return;
     }
-    const matches = classified.filter((t) => !t.isMirror && !t.transferLocked && keyForTx(t) === key);
+    const matches = classified.filter((t) => !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar) && keyForTx(t) === key);
     if (matches.length <= 1) {
       snapshotBeforeAction("Categorie/type aangepast");
       if (tx.id != null) setRowOverride(tx.id, patch);
@@ -166,7 +195,7 @@ export function useCategorieWijziging(p) {
     suggestSimilarIfAny(tx, patch);
   };
   const applyRowsOverride = (ids, patch, tx) => {
-    snapshotBeforeAction("Categorie/type aangepast (zoekwoord)");
+    snapshotBeforeAction(`${ids.length} boeking${ids.length === 1 ? "" : "en"} aangepast (zoekwoord)`);
     setOverridesByRow((prev) => {
       const next = { ...prev };
       for (const id of ids) next[id] = { ...(next[id] || {}), ...patch };
@@ -175,9 +204,14 @@ export function useCategorieWijziging(p) {
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
-  const applyPendingToAllYears = () => {
+  // nieuw-V7R2 — zoekwoord: welke boekingen gaan mee (vastgelegde alleen uit de aangevinkte categorieën).
+  const zoekIds = (pending, meeCats = []) => {
+    const vast = new Set(Object.entries(pending.vastPerCat || {}).filter(([c]) => !meeCats.includes(c)).flatMap(([, l]) => l.map((x) => x.id)));
+    return pending.matchIds.filter((id) => !vast.has(id));
+  };
+  const applyPendingToAllYears = (meeCats = []) => {
     const { tx, patch, matchIds, rekening } = pendingCategoryChange;
-    if (matchIds) return applyRowsOverride(matchIds, patch, tx);
+    if (matchIds) return applyRowsOverride(zoekIds(pendingCategoryChange, meeCats), patch, tx);
     setCounterpartyOverride(tx.counterparty || tx.description, tx.amount, patch, tx.counterpartyIban);
     // beide-V11R4 — "beide rekeningen": een eerdere splitsing per rekening vervalt, anders bleef die voorgaan.
     if (rekening) {
@@ -197,8 +231,9 @@ export function useCategorieWijziging(p) {
     setPendingCategoryChange(null);
     suggestSimilarIfAny(tx, patch);
   };
-  const applyPendingToYears = (selectedYears) => {
-    const { tx, key, patch, matchIds } = pendingCategoryChange;
+  const applyPendingToYears = (selectedYears, meeCats = []) => {
+    const { tx, key, patch } = pendingCategoryChange;
+    const matchIds = pendingCategoryChange.matchIds ? zoekIds(pendingCategoryChange, meeCats) : null;
     snapshotBeforeAction("Categorie/type aangepast (gekozen jaren)");
     const idsToPatch = matchIds
       ? classified.filter((t) => matchIds.includes(t.id) && selectedYears.includes(t.year)).map((t) => t.id)
@@ -212,5 +247,5 @@ export function useCategorieWijziging(p) {
     suggestSimilarIfAny(tx, patch);
   };
 
-  return { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion };
+  return { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion, wijzigGroep };
 }

@@ -3,8 +3,14 @@ import { X } from "lucide-react";
 import { keuzeLabel } from "../../classification/categories.js";
 
 export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyAllYears, onApplyYears, onApplyRekening, onClose }) {
-  const { tx, patch, matchCount, matchYears, viaIban, keywordQuery, rekening } = pending;
+  const { tx, patch, matchCount, matchYears, viaIban, keywordQuery, rekening, vastPerCat } = pending;
   const [selectedYears, setSelectedYears] = useState(matchYears);
+  // nieuw-V7R2 — zoekwoord: vastgelegde boekingen gaan alleen mee als je de categorie aanvinkt (Dakhlaoui 17-11).
+  const [meeCats, setMeeCats] = useState([]);
+  const vastLijst = Object.entries(vastPerCat || {}).map(([cat, l]) => ({ cat, l })).sort((a, b) => b.l.length - a.l.length);
+  const nVast = vastLijst.reduce((s, v) => s + v.l.length, 0);
+  const nMee = matchCount - vastLijst.filter((v) => !meeCats.includes(v.cat)).reduce((s, v) => s + v.l.length, 0);
+  const nf = (n) => n.toLocaleString("nl-NL");
   const isConfirmOnly = patch.category === tx.category && patch.type === tx.type;
 
   return (
@@ -21,7 +27,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
         <div className="p-4 text-sm text-slate-600 space-y-3">
           <p>
             {keywordQuery ? (
-              <>Er zijn {matchCount} transacties (incl. deze) waarin <strong>"{keywordQuery}"</strong> voorkomt, met hetzelfde teken.</>
+              <>Er zijn {nf(matchCount)} transacties (incl. deze) waarin <strong>"{keywordQuery}"</strong> voorkomt, met hetzelfde teken{pending.alGelijk ? <> en een andere categorie ({nf(pending.alGelijk)} hebben deze categorie al)</> : null}.</>
             ) : (
               <>Er zijn nog {matchCount - 1} andere transacties {viaIban ? <>van <strong>dezelfde IBAN</strong> als "{tx.counterparty || tx.description}"</> : <>van <strong>"{tx.counterparty || tx.description}"</strong></>} met hetzelfde teken.</>
             )}{" "}
@@ -34,6 +40,19 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
             {viaIban && <span className="block mt-1 text-xs text-slate-400">Herkend op rekeningnummer (IBAN) — werkt ook als de naam bij de bank per transactie verschilt.</span>}
             {keywordQuery && <span className="block mt-1 text-xs text-slate-400">Gekozen op je zoekwoord, niet op rekeningnummer.</span>}
           </p>
+          {keywordQuery && nVast > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 space-y-1.5">
+              <p><strong>{nf(nVast)} {nVast === 1 ? "ligt" : "liggen"} al vast</strong> (door jou gekozen of herkend aan de omschrijving). <strong>Niet aangevinkt blijft zoals het is. Aangevinkt wordt {keuzeLabel(patch.category)}.</strong></p>
+              <div className="max-h-36 overflow-y-auto space-y-1">
+                {vastLijst.map((v) => (
+                  <label key={v.cat} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={meeCats.includes(v.cat)} onChange={(e) => setMeeCats((m) => (e.target.checked ? [...m, v.cat] : m.filter((c) => c !== v.cat)))} />
+                    {keuzeLabel(v.cat)} ({nf(v.l.length)})
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {/* beide-V11R4 — de tegenpartij komt ook op een andere eigen rekening voor (wens Boska 30-10) */}
           {rekening && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
@@ -49,10 +68,11 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
               Alleen deze ene transactie
             </button>
             <button
-              onClick={onApplyAllYears}
-              className="w-full text-left rounded-lg border border-slate-300 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-50"
+              onClick={() => onApplyAllYears(meeCats)}
+              disabled={keywordQuery && nMee === 0}
+              className="w-full text-left rounded-lg border border-slate-300 px-3 py-2 text-sm hover:border-slate-400 hover:bg-slate-50 disabled:opacity-40"
             >
-              {keywordQuery ? `Alle ${matchCount} transacties met "${keywordQuery}"` : rekening ? "Deze tegenpartij, beide rekeningen" : "Deze tegenpartij"} — alle jaren ({matchYears.join(", ")})
+              {keywordQuery ? `${nf(nMee)} transactie${nMee === 1 ? "" : "s"} met "${keywordQuery}" aanpassen` : rekening ? "Deze tegenpartij, beide rekeningen" : "Deze tegenpartij"} — alle jaren ({matchYears.join(", ")})
             </button>
             {rekening && onApplyRekening && (
               <button
@@ -79,7 +99,7 @@ export default function CategoryChangeScopeModal({ pending, onApplyRow, onApplyA
                 ))}
               </div>
               <button
-                onClick={() => onApplyYears(selectedYears)}
+                onClick={() => onApplyYears(selectedYears, meeCats)}
                 disabled={selectedYears.length === 0}
                 className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-40"
               >

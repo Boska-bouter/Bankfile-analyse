@@ -455,6 +455,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       })()}
       <div><span>MKB-winstvrijstelling (${winstUitsplitsing.mkbPct}%)</span><span>- ${eur(winstUitsplitsing.mkbVrijstellingBedrag)}</span></div>
       <div class="tussentotaal"><span>Indicatieve belastbare winst</span><span>${eur(winstUitsplitsing.belastbaar)}</span></div>
+      ${(ibEstimate.giftenAftrek || 0) > 0 ? `<div><span>Aftrek giften (betaald ${eur(ibEstimate.giften)}, na drempel)</span><span>- ${eur(ibEstimate.giftenAftrek)}</span></div>` : ""}
     </div>
     ${(ibEstimate.overigInkomen || 0) > 0 ? `<div class="kerncijfers-stappen">
       <div><span>Overig inkomen box 1 (loon/uitkering, bruto per jaar, opgegeven)</span><span>${eur(ibEstimate.overigInkomen)}</span></div>
@@ -794,7 +795,10 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   // resolven naar zelfstandigenaftrekStatus "onbekend" (expliciet, of een onbeantwoord jaar in een
   // niet-legacy dossier) doen bewust niet mee in deze keten (die tonen hun eigen twee
   // scenario's, los van reserveverrekening).
-  const jarenVoorReserve = yearsToInclude
+  // nieuw-V7R8 — reserve over ALLE jaren met bankgegevens, net als het scherm (useOndernemersaftrekPerJaar), ook als het rapport later
+  // begint. Zo telt niet-gerealiseerde zelfstandigenaftrek van eerdere jaren altijd mee; de algemene waarschuwing daarover verviel (Boska 18-11).
+  const alleJarenMetData = [...new Set(classified.filter((tx) => !tx.isMirror).map((tx) => tx.year))].sort((a, b) => a - b);
+  const jarenVoorReserve = [...new Set([...alleJarenMetData, ...yearsToInclude])]
     .filter((year) => resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) !== "onbekend")
     .map((year) => ({
       year,
@@ -803,13 +807,6 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
       startersaftrekToegepast: startersaftrekStatus?.[year] === "ja",
     }));
   const ondernemersaftrekPerJaar = computeOndernemersaftrekMetReserve(jarenVoorReserve);
-  const alleJarenMetData = [...new Set(classified.filter((tx) => !tx.isMirror).map((tx) => tx.year))];
-  const vroegsteJaarMetData = alleJarenMetData.length > 0 ? Math.min(...alleJarenMetData) : null;
-  const vroegsteJaarInRapport = jarenVoorReserve.length > 0 ? Math.min(...jarenVoorReserve.map((j) => j.year)) : null;
-  const reserveWaarschuwingHtml =
-    vroegsteJaarMetData != null && vroegsteJaarInRapport != null && vroegsteJaarMetData < vroegsteJaarInRapport
-      ? `<p class="toelichting">⚠ Dit rapport begint bij ${vroegsteJaarInRapport}, terwijl er ook bankgegevens zijn van vóór dat jaar — een eventuele niet-gerealiseerde zelfstandigenaftrek van vóór ${vroegsteJaarInRapport} is hierin niet meegenomen. Neem alle jaren mee in één rapport voor een volledige verrekening.</p>`
-      : "";
 
   // Paginascheiding tussen jaarsecties (en vóór de bijlage) — zowel de oudere `page-break-before`
   // als de moderne `break-before` (browsers/PDF-generators op bijv. iPad/tablet ondersteunen niet
@@ -917,7 +914,6 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
 </style></head>
 <body>
   <p class="subtitle">Gegenereerd op ${new Date().toLocaleDateString("nl-NL")}</p>
-  ${reserveWaarschuwingHtml}
   ${overzichtJarenHtml}
   ${sections}
   ${PAGE_BREAK_DIVIDER}

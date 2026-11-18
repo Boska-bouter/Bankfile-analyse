@@ -94,19 +94,20 @@ export default function DashboardHeader({
         <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm min-w-0 max-w-full 2xl:w-full">
           {pct != null ? (
             yearRing ? (
-              <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-3 min-w-0">
                 <ConcentricGauge outerPct={pct} innerPct={yearRing.pct} outerColor={accent} />
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <span className="text-xs font-semibold text-slate-800">Dossiercontrole</span>
                   {/* nieuw-V1R3 — per ring alles op één regel (Boska 9-11): kolom smaller en lager, meer ruimte voor kolom 2 en 3 */}
-                  <div className="flex items-center gap-1.5 text-xs">
+                  {/* nieuw-V5R9 — regels mogen afbreken (Boska 16-11: na V5R7 werd de kolom te breed en raakte de jaarkeuze in de knel) */}
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs max-w-[30rem]">
                     <span className="rounded-full shrink-0" style={{ background: accent, width: 8, height: 8 }} />
                     <span className="text-slate-400">Hele dossier · {pct}% gecontroleerd ·</span>
                     <span className={`text-sm font-bold ${heeftOpenPunten ? "text-slate-900" : "text-emerald-700"}`}>
                       {heeftOpenPunten ? `${openPoints} open punt${openPoints === 1 ? "" : "en"}` : "Alles afgehandeld"}
                     </span>
-                    {heeftOpenPunten && openBreakdown && <span className="text-[11px] text-slate-400">· {openBreakdown}</span>}
                   </div>
+                  {heeftOpenPunten && openBreakdown && <span className="-mt-1 pl-3.5 text-[11px] text-slate-400">{openBreakdown}</span>}
                   <div className="flex items-center gap-1.5 text-xs">
                     <span className="rounded-full shrink-0" style={{ background: "#2563EB", width: 8, height: 8 }} />
                     <span className="text-slate-400">{yearRing.jaar} · {yearRing.pct}% gecontroleerd ·</span>
@@ -115,8 +116,8 @@ export default function DashboardHeader({
                     </span>
                   </div>
                   {boekingenInfo && (
-                    <span className="flex flex-col text-[11px] leading-snug text-slate-500" data-testid="boekingen-pct">
-                      <span>Boekingen: {boekingenInfo.zeker}% zeker ingedeeld{boekingenInfo.klein > 0 ? ` + ${boekingenInfo.klein}% kleine bedragen (< € ${boekingenInfo.grens ?? 50})` : ""}{boekingenInfo.open > 0 ? ` + ${boekingenInfo.open}% nog controleren` : ""} = 100%</span>
+                    <span className="flex flex-col text-[11px] leading-snug text-slate-500 max-w-[30rem]" data-testid="boekingen-pct">
+                      <span>Boekingen hele dossier: {boekingenInfo.zeker}% zeker ingedeeld{boekingenInfo.klein > 0 ? ` + ${boekingenInfo.klein}% kleine bedragen (< € ${boekingenInfo.grens ?? 50})` : ""}{boekingenInfo.open > 0 ? ` + ${boekingenInfo.open}% nog controleren` : ""} = 100%</span>
                     </span>
                   )}
                 </div>

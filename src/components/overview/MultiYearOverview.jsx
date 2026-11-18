@@ -33,7 +33,7 @@ export default function MultiYearOverview({
     if (!p) return { dot: "⚪", title: "Geen controle-informatie beschikbaar voor dit jaar" };
     const parts = [];
     if (p.gatDitJaar) parts.push("gat in bestandscontinuïteit");
-    if (p.openPunten) parts.push(`${p.openPunten} open controlepunt${p.openPunten === 1 ? "" : "en"}`);
+    { const n = p.openTotaal ?? p.openPunten; if (n) parts.push(`${n} open punt${n === 1 ? "" : "en"}`); } // nieuw-V6R8 — zelfde telling als de jaarkop
     if (p.onzekerDitJaar) parts.push(`${p.onzekerDitJaar} onzekere transactie${p.onzekerDitJaar === 1 ? "" : "s"}`);
     if (p.aannamesCount) parts.push(`${p.aannamesCount} aanname${p.aannamesCount === 1 ? "" : "n"} in de indicatieve aangifte`);
     const dot = p.status === "rood" ? "🔴" : p.status === "groen" ? "🟢" : "🟠";

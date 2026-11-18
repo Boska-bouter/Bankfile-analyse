@@ -1,7 +1,7 @@
 import { SPLIT_CATEGORY_NAMES, DEFAULT_RULES, fiscalTreatmentOf, REKENING_VOORKEUR_KEYWORDS, getCategorieProfiel, INTERNET_TV, displayCategory, CATEGORY_COLOR } from "./categories.js";
 import { gedeeldeKeuze } from "./gedeeldeNamen.js";
 import { brancheCategorie, getZakelijkVanPrive, bouwmarktNietZakelijk, inkoopEten, INKOOP_ETEN } from "./branche.js";
-import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword } from "../utils/normalization.js";
+import { looksLikePerson, counterpartyKey, ibanKey, ibansMatch, textHasKeyword, ALGEMEEN_TREFWOORD } from "../utils/normalization.js";
 
 // beide-V5R0 / V9R2 — rente of aflossing die de bank incasseert: hypotheek of lening (zie shouldSkip… hieronder).
 export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|leningdeel|rente\s+lening|aflossing\s+lening/;
@@ -14,17 +14,32 @@ export const HYPOTHEEK_BIJ_BANK = /inzake\s+rente|inzake\s+aflossing|hypothe|len
 // zoekwoorden blijven een gewone deelstring-match (die wil bijv. "bmk" ook binnen "CollactiveBMK" vinden).
 const DEFAULT_KEYWORD_SET = new Set(DEFAULT_RULES.flatMap((r) => r.keywords.map((k) => String(k).toLowerCase())));
 const ALNUM_RE = /[a-z0-9à-ÿ]/;
-const HEEL_WOORD = new Set(["boss"]);
+// nieuw-V7R6 — opschonen standaard zoekwoorden (Boska 17-11): "spar" ving "sparen" (167x), "coop" "Coöperatie" (Rabobank), "total" "totale",
+// "loon" "loonbureau"/"loonbedrijf"/"loonwerk". Die moeten een heel woord zijn.
+const HEEL_WOORD = new Set(["boss", "spar", "coop", "total", "loon"]);
 // beide-V9R1 — merknamen die ook midden in een ander woord staan: "athlon" (lease) in "Decathlon" (vergelijking Houtman 27-10).
 // beide-V11R7 — "lening" in "Tim Engelen dienstverlening" (inhuur) maakte er een lening van (vergelijking Koenders 30-10).
-const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam", "lening"]);
+// nieuw-V7R6 — "huur " ving "verhuur"/"autoverhuur"/"kraanverhuur" (289x), "pay.nl" ving "ovpay.nl" (164x).
+const WOORDBEGIN = new Set(["athlon", "arval", "ayvens", "alphabet", "dll", "alfam", "lening", "huur", "pay.nl"]);
+const regexVeilig = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// nieuw-V7R6 — vaste banktekst telt nooit mee in een zoekwoord (Boska 17-11): eigen zoekwoord "trans" ving "Transactie:" in elke
+// pinbetaling. De labels (met dubbele punt) en het nummer achter "Trans.Reference:" vallen weg; de rest van de tekst blijft.
+export const VASTE_BANKTEKST = /trans\.reference:\s*\S*|\b(?:transactie|term|pasvolgnr|valutadatum|kaartnr|datum\/tijd)\s*:/g;
+let _bankIn = null, _bankUit = null;
+export function zonderBanktekst(text) {
+  if (text === _bankIn) return _bankUit;
+  _bankIn = text; _bankUit = String(text).replace(VASTE_BANKTEKST, " ");
+  return _bankUit;
+}
 export function keywordInText(text, keyword) {
   if (!keyword) return false;
   const kw = String(keyword).toLowerCase();
+  if (text.indexOf(kw) < 0) return false;
+  text = zonderBanktekst(text);
   let i = text.indexOf(kw);
   if (i < 0) return false;
   const trimmed = kw.trim();
-  if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${trimmed}`).test(text);
+  if (WOORDBEGIN.has(trimmed)) return new RegExp(`(^|[^a-z0-9])${regexVeilig(kw.trimStart())}`).test(text);
   // huishoudboekje-V1R2 — een kort zoekwoord met alleen een spatie vooraan (" izz", " dsw", " uwv") moet ook als woord
   // eindigen: " izz" (zorgverzekeraar IZZ) ving "Helal Slagerij Izzet" (melding Boska 2-11).
   if (kw.startsWith(" ") && !kw.endsWith(" ") && trimmed.length <= 3 && /^[a-z0-9]+$/.test(trimmed)) {
@@ -48,11 +63,20 @@ export function keywordInText(text, keyword) {
   }
   return false;
 }
+// nieuw-V7R4 — een los algemeen eigen trefwoord ("stichting") telt niet als het alleen in een betaaldienst staat ("via Stichting Mollie
+// Payments", "Stichting Derdengelden"), en niet op de zakelijke rekening bij een factuur: dat is meestal een zakelijke uitgave (Boska 17-11).
+const BETAALDIENST_STICHTING = /stichting\s+(mollie|derdengelden|online\s*betaal|ticketing|pay|adyen|buckaroo)[^\s]*(\s+payments?)?/g;
+function algemeenUitgesloten(kw, text, accountType) {
+  const t = String(kw).trim().toLowerCase();
+  if (!ALGEMEEN_TREFWOORD.has(t)) return false;
+  if (!keywordInText(text.replace(BETAALDIENST_STICHTING, " "), kw)) return true;
+  return accountType === "Zakelijk" && FACTUUR_BETALING.test(text);
+}
 export function ruleMatchesText(rule, text, accountType = null) {
   // beide-V5R0 / V9R2 — "inzake   rente" staat met wisselende spaties in de omschrijving.
   if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) return true;
   return rule.keywords.some((kw) => {
-    if (!keywordInText(text, kw)) return false;
+    if (!keywordInText(text, kw) || algemeenUitgesloten(kw, text, accountType)) return false;
     const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
     return !voorkeur || !voorkeur[accountType] || voorkeur[accountType] === rule.name;
   });
@@ -105,6 +129,7 @@ function trefwoordNiveau(kw) {
   const t = String(kw).trim().toLowerCase();
   if (SOORT_WOORDEN.has(t)) return 4;
   if (BETAALDIENST_WOORDEN.has(t)) return 0;
+  if (ALGEMEEN_TREFWOORD.has(t)) return 0; // nieuw-V7R0 — "stichting" als eigen trefwoord: alleen als niets anders past (Dakhlaoui 17-11)
   if (ALGEMENE_WOORDEN.has(t)) return 1;
   if (t.length <= 4 && !/\s/.test(t)) return 2;
   return 3;
@@ -139,11 +164,13 @@ export function besteRegel(rules, text, accountType, tx = null, { overslaan = nu
     kandidaten = perTekst.get(sleutel);
     if (!kandidaten) { if (perTekst.size > 200000) perTekst.clear(); kandidaten = regelKandidaten(rules, text, accountType, partij); perTekst.set(sleutel, kandidaten); }
   }
+  // nieuw-V7R0 — een trefwoord dat binnen het winnende trefwoord valt ("stichting" in "stichting trudo") is geen twijfel.
+  const binnen = (kort, lang) => !!kort && !!lang && kort !== lang && keywordInText(lang, kort);
   let beste = null;
   for (const k of kandidaten) if (!beste || k.niveau > beste.niveau) beste = k;
   if (!beste) return null;
   const ander = kandidaten.find((k) => k.niveau === beste.niveau && k.rule.name !== beste.rule.name && k.woord !== beste.woord
-    && !gelijkeSoort(k.rule.name, beste.rule.name));
+    && !binnen(k.woord, beste.woord) && !gelijkeSoort(k.rule.name, beste.rule.name));
   return { rule: beste.rule, niveau: beste.niveau, twijfel: ander ? ander.rule.name : null };
 }
 function regelKandidaten(rules, text, accountType, partij) {
@@ -152,7 +179,7 @@ function regelKandidaten(rules, text, accountType, partij) {
     let niveau = -1, woord = null;
     if (rule.name === "Hypotheek" && HYPOTHEEK_BIJ_BANK.test(text)) { niveau = 3; woord = "hypotheek"; }
     for (const kw of rule.keywords) {
-      if (!keywordInText(text, kw)) continue;
+      if (!keywordInText(text, kw) || algemeenUitgesloten(kw, text, accountType)) continue;
       const voorkeur = accountType ? REKENING_VOORKEUR_KEYWORDS[String(kw).trim().toLowerCase()] : null;
       if (voorkeur && voorkeur[accountType] && voorkeur[accountType] !== rule.name) continue;
       let n = trefwoordNiveau(kw);
@@ -926,6 +953,8 @@ const ZAKELIJKE_VERZEKERING = /\bmkb\b|zakelijke? ?verzekering|bedrijfs ?verzeke
 export function belastingSoortUitKenmerk(tx) {
   const tekst = `${tx.description || ""} ${tx.fullDescription || ""}`;
   if (/\b[A-Z0-9]{1,3}-[A-Z0-9]{1,3}-[A-Z0-9]{1,3}\b\s+\d{2}-\d{2}-\d{4}\s+t\/m\b/i.test(tekst)) return "Belastingen: MRB";
+  // nieuw-V7R4 — "TERUGGAAF NR. … OB.2EKWART25": btw-teruggaaf (analyse Dakhlaoui v23, Boska 17-11)
+  if (/teruggaaf/i.test(tekst) && /\bOB\.|\bOB\s+\d|omzetbelasting/i.test(tekst)) return "Belastingen: OB";
   const m = /(?<![\d])(\d{4})[ .]?(\d{4})[ .]?(\d{4})[ .]?(\d{4})(?![\d])/.exec(tekst);
   if (!m) return null;
   const k = m.slice(1).join("");

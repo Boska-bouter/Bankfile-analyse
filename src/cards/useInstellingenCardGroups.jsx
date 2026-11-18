@@ -125,7 +125,7 @@ export function useInstellingenCardGroups(p) {
         "automatisering",
         <div className="space-y-3">
           <div ref={automatiseringSectionRef}>
-            <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} />
+            <CategoryRulesPanel categoryRules={categoryRules} setCategoryRules={setCategoryRulesWithUndo} transacties={classified} />
           </div>
           <CounterpartyRulesPanel
             overridesByCounterparty={overridesByCounterparty}

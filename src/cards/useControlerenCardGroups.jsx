@@ -16,6 +16,7 @@ import PersoonlijkeAannamesPanel from "../components/overview/PersoonlijkeAannam
 
 export function useControlerenCardGroups(p) {
   const {
+    confidenceOpenJaren = [], setActiveYear,
     overlapKoppeling, aanvullendeControles, bevestigControle, bevestigControles, herroepControle, bevestigdeControles, toepassenTerugkerend, toepassenTerugkerendAlle, verplaatsBijschrijvingen, zetFactuurjaar, zetFactuurjaarBoeking, zetKostenVorigJaar,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
@@ -29,7 +30,7 @@ export function useControlerenCardGroups(p) {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, leningAllesKlopt, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -113,6 +114,10 @@ export function useControlerenCardGroups(p) {
             <ClassificationConfidencePanel
               classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
               jaar={activeYear}
+              andereJaren={activeYear ? confidenceOpenJaren.filter((y) => Number(y) !== Number(activeYear)) : []}
+              onKiesJaar={setActiveYear}
+              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick}
+              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
@@ -229,6 +234,7 @@ export function useControlerenCardGroups(p) {
               onWijsZoekAf={wijsZoekAf}
               overigeLeaseNamen={(verwachteLeaseOverig || []).flatMap((i) => [i?.naam, ...(i?.aliassen || [])]).filter(Boolean)}
               onMarkUnknown={markLeaseUnknown}
+              onMarkNotALease={markLeaseNotALease}
               onUnmarkUnknown={unmarkLeaseUnknown}
               onMergeInto={mergeLeaseInto}
               onUndoMerge={undoMergeLease}
@@ -249,6 +255,7 @@ export function useControlerenCardGroups(p) {
               onMarkAsPrive={markLoanAsPrive}
               onMarkAsZakelijk={markLoanAsZakelijk}
               onOpschonen={leningOpschonen}
+              onAllesKlopt={leningAllesKlopt}
               nietLeningAantal={nietLeningAantal}
               onOpenHelp={setHelpPopupChapter}
             />

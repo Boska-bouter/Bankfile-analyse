@@ -3,6 +3,7 @@
 export const BRANCHES = [
   { key: "horeca", label: "Horeca, catering of eten" },
   { key: "bouw", label: "Bouw, klussen of installatie" },
+  { key: "groen", label: "Hovenier, tuinaanleg of boomonderhoud" },
   { key: "winkel", label: "Winkel of webshop" },
   { key: "vervoer", label: "Vervoer, taxi of koerier" },
   { key: "kantoor", label: "Kantoor, advies of ICT" },
@@ -32,7 +33,21 @@ export const HORECA_GRENS = 150;
 
 const VAN = new Set(["Boodschappen", "Overig", "Winkels divers", "Overboekingen aan personen", "Privé opnames", "Webshops & online aankopen", "Privé - vrijetijd-uitgaan-vakantie & uit eten"]);
 
+// nieuw-V6R5 — hovenier (wens Boska 16-11, dossier Koenders): kwekerij, tuincentrum, graszoden, bestrating, hout/schutting, hekwerk,
+// bouwmaterialen, machine- en containerverhuur, groenrecycling en tuinmachines vanaf de zakelijke rekening = zakelijke inkoop (zeker).
+export const GROEN_INKOOP = /kweker|tuincentr|tuinplant|tuinvariant|planten ?bestel|plantenbestel|graszode|hoveni|boomverzorg|bomenverzorg|vijverbouw|bestrating|steenhandel|vd ?steen|houthandel|houtwinkel|houtex|houth\b|schutting|hekwerk|bouwmat|bouwcenter|bouwma?r?tkt|bouwmarkt|bouwtag|bouw ?tag|verhuur|container|recycling|tuinmachine|machiner|machines|machi\b|agri\b|landbouw|beton|grondwerk|compost|boerenbond|welkoop|praxis|gamma|karwei|hornbach|hubo|bauhaus|toolstation|hijsmiddel|gereedschap|biomassa|bodempro|grondverzet/i;
+// Niet: geldopname, en de eigen naam van een bank of verzekeraar ("verhuur" komt daar niet in voor, maar voor de zekerheid).
+const GROEN_NIET = /geldmaat|geldautomaat|\batm\b|autoverhuur|auto ?verhuur|vakantie|camping|fietsverhuur/i;
+const GROEN_VAN = new Set([...VAN_LIJST(), "Zakelijke inkoop non-voedingsmiddelen", "Huur", "Incasso, juridisch & schulden", "Boodschappen"]);
+function VAN_LIJST() { return ["Boodschappen", "Overig", "Winkels divers", "Overboekingen aan personen", "Privé opnames", "Webshops & online aankopen", "Privé - vrijetijd-uitgaan-vakantie & uit eten"]; }
+export function groenInkoop(tx, accountType, branche = _branche) {
+  if (branche !== "groen" || accountType !== "Zakelijk" || Number(tx.amount) >= 0) return false;
+  const naam = String(tx.counterparty || "");
+  return GROEN_INKOOP.test(naam) && !GROEN_NIET.test(naam);
+}
+
 export function brancheCategorie(tx, category, accountType, branche = _branche) {
+  if (branche === "groen") return GROEN_VAN.has(category) && category !== "Zakelijke inkoop non-voedingsmiddelen" && groenInkoop(tx, accountType, branche) ? "Zakelijke inkoop non-voedingsmiddelen" : null;
   if (branche !== "horeca" || accountType !== "Zakelijk" || Number(tx.amount) >= 0 || !VAN.has(category)) return null;
   const naam = String(tx.counterparty || "");
   // Geldopname ("GELDMAAT WOENSELSE MARKT") is geen inkoop.
@@ -46,7 +61,7 @@ export function brancheCategorie(tx, category, accountType, branche = _branche) 
 // restaurant, Hornbach en Gamma stonden op zakelijke inkoop). Bij een andere soort bedrijf: Winkels divers, op controleren (confidence.js).
 export const BOUWMARKT = /\b(praxis|gamma|karwei|hornbach|hubo|bauhaus)\b/i;
 export function bouwmarktNietZakelijk(tx, category, accountType, branche = _branche) {
-  return !!branche && branche !== "bouw" && accountType === "Zakelijk" && category === "Zakelijke inkoop non-voedingsmiddelen"
+  return !!branche && branche !== "bouw" && branche !== "groen" && accountType === "Zakelijk" && category === "Zakelijke inkoop non-voedingsmiddelen"
     && Number(tx.amount) < 0 && BOUWMARKT.test(String(tx.counterparty || ""));
 }
 

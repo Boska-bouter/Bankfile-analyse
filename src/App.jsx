@@ -9,9 +9,9 @@ import TabPijlen from "./components/shared/TabPijlen.jsx";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
-import { registerTariefInstellingen } from "./tax/incomeTax.js";
+import { registerTariefInstellingen, registerGiften } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
-import { counterpartyKey, normKey, extractKeywordCandidate, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
+import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
 import KleineBedragen from "./components/review/KleineBedragen.jsx";
 import { makeUndoWrapped } from "./utils/withUndo.js";
@@ -1077,6 +1077,10 @@ export default function App() {
       // Een contract kan meerdere namen hebben (aliassen): een transactie hoort erbij als één ervan past.
       const zoek = [naam, ...(aliassen || [])].map((nm) => {
         const naamTrim = String(nm).trim().toLowerCase();
+        // nieuw-V5R8 — alle kenmerkende woorden moeten voorkomen, niet alleen het eerste: bij "Stichting Ontvangsten Hiltermann Lease"
+        // was dat "stichting", en kwamen alle stichtingen (Assuradeuren, Mollie Payments) bij lease (Boska 16-11, PS).
+        const woorden = kenmerkendeWoorden(nm);
+        if (woorden.length) return { woorden };
         const keyword = extractKeywordCandidate(nm) || (naamTrim.length >= 3 ? naamTrim : "");
         if (!keyword) return null;
         const kortRe = keyword.length < 4 ? new RegExp(`(^|[^a-z0-9])${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`) : null;
@@ -1086,7 +1090,7 @@ export default function App() {
       const hits = classified.filter((t) => {
         if (t.isMirror) return false;
         const text = `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase();
-        return zoek.some(({ keyword, kortRe }) => (kortRe ? kortRe.test(text) : text.includes(keyword)));
+        return zoek.some(({ woorden, keyword, kortRe }) => (woorden ? woorden.every((w) => text.includes(w)) : kortRe ? kortRe.test(text) : text.includes(keyword)));
       });
       const matches = hits.filter((t) => t.category !== targetCategory);
       if (matches.length === 0 && hits.length > 0) {
@@ -1103,7 +1107,7 @@ export default function App() {
     }
   }, [classified, verwachteLease, verwachteLeaseOverig, verwachteLening, verwachteAOV, verwachteAangeboden, verwachteMatchSuggestie]);
 
-  const { acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
+  const { leningAllesKlopt, markLeaseNotALease, acceptVerwachteMatch, addBusinessExpenseKeywords, addBusinessKeywords, dismissVerwachteMatch, leningOpschonen, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, nietLeningAantal } = useLeningActies({ overridesByRow, accountTypeByFile, businessExpenseKeywords, businessKeywords, categoryRules, classified, eigenNamenKeywords, overridesByCounterparty, ownAccountsElsewhereByFile, setBusinessExpenseKeywords, setBusinessKeywords, setOpdrachtgeversGevraagd, setOverridesByCounterparty, setOverridesByRow, setVerwachteAOV, setVerwachteAangeboden, setVerwachteLease, setVerwachteLeaseOverig, setVerwachteLening, setVerwachteMatchSuggestie, snapshotBeforeAction, verwachteMatchSuggestie, zakelijkeSpaarKeywords, appLaat });
 
   // ---- Zekerheid van de classificatie — hoeveel transacties zijn automatisch met vertrouwen
   // ingedeeld, en hoeveel verdienen een blik? Spiegelboekingen tellen niet mee (die zijn een
@@ -1209,7 +1213,7 @@ export default function App() {
   // gegroepeerd per transactie (elke aanschaf is meestal eenmalig, niet per tegenpartij).
   const { activaSummary, addManualActiva, voegActivaLijstToe, markActivaUnknown, removeActivum, setActivaDetailField, unmarkActivaUnknown, voegActivaToe } = useActivaActies({ activaDetails, classified, setActivaDetails, setActivaDetailsModalKey, snapshotBeforeAction });
 
-  const { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion } = useCategorieWijziging({
+  const { requestCategoryChange, confirmClassificationCorrect, pendingCategoryChange, applyPendingToRowOnly, applyPendingToAllYears, applyPendingToRekening, applyPendingToYears, setPendingCategoryChange, confirmAllUncertain, acceptKeywordSuggestion, wijzigGroep } = useCategorieWijziging({
     accountTypeByFile, setCategoryRules, setOverridesByCounterparty, overridesByCounterparty, setOverridesByRow, setKeywordSuggestion, keywordSuggestion, ownAccountByFile, snapshotBeforeAction, classified, setRekeningKeuzeOpSleutel, keuzeSleutel, exclusiveIbanKey, keyForTx, setCounterpartyOverride, setRowOverride,
   });
 
@@ -1328,6 +1332,13 @@ export default function App() {
     }
     prevActiveYearRef.current = activeYear;
   }, [activeYear]);
+  // nieuw-V7R7 — giften (categorie "Giften & donaties") per jaar voor de aftrekpost in de IB-indicatie (incomeTax.js).
+  const giftenPerJaar = useMemo(() => {
+    const r = {};
+    for (const tx of classified) if (!tx.isMirror && tx.category === "Giften & donaties") r[tx.year] = (r[tx.year] || 0) - Number(tx.amount || 0);
+    return r;
+  }, [classified]);
+  registerGiften(giftenPerJaar);
   const { autoExactIngevuld, belastingTotaalJaar, bvSignalering, categorieTotalenActiveYear, categoryZakelijkPercentageEff, confirmPeriodeAsIs, costBreakdownByQuarter, costBreakdownByYear, dashboardAangifteIndicatie, dashboardVpbBreakdown, dashboardVpbIndicatie, dgaSalarisByYear, eenvoudigLease, eigenPriveIbans, evVerloop, fiscaalVoorJaar, gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, heeftLeaseAutoDossierBreed, holdingSummaryCard, ibEstimate, kostenTotaalByYear, leaseGroepenEenv, movePeriodeToQuarter, ondernemersaftrekPerJaar, overigeDelen, periodeSignalenActiefJaar, priGroupForYear, priGroupShown, priGroupWeergave, priveOnlyDossier, priveOverzicht, quarterlyBtwData, rcVerloop, rekeningenVoorGroep, yearCoverage, yearlyOpenOB, yearlySummaries, yearlySummary, zakGroupForYear, zakGroupWeergave, zetEenvoudigLease, zvwEstimate } = useJaarGroepen({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoActivaDetails, autoStatus, autoWizardStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentage, classified, eenvoudigActief, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftHolding, holdingBoekingen, holdingBoekingenSectionRef, huurZakelijkPercentageStatus, importDiagnostics, kmVergoedingDetails, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, overigInkomenBox1, ownAccountByFile, periodeQuarterOverrides, priveAntwoorden, rechtsvorm, reviewedOverigKeys, reviewedPeriodeKeys, reviewedPersonKeys, setBevestigdeControles, setPeriodeQuarterOverrides, setReviewedPeriodeKeys, setShowHoldingBoekingen, snapshotBeforeAction, startersaftrekEff, tariefOverrides, voorbelastingExcluded, werkruimteStatus, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, appLaat });
   const { aansluitControleInfo, businessAdvies, checklistData, incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, priveRekeningGeladen, rekeningTypeTekst, volledigeJaren, yearlyProgress, zakelijkRekeningGeladen } = useRekeningOverzicht({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentageEff, classified, confirmedLeaseTypeKeys, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fileContinuity, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibEstimate, ibStatus, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, parsedFiles, periodePerSoort, periodeQuarterOverrides, priGroupForYear, priveOverzicht, quarterlyBtwData, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus, yearlyOpenOB, yearlySummary, years, zakGroupForYear, zelfstandigenaftrekStatus, zvwEstimate, zvwStatus });
 
@@ -1518,7 +1529,7 @@ export default function App() {
     confidenceSectionRef, confidenceSummary, controlerenImportProblemCount, duplicatePendingBreakdown, duplicatesSectionRef,
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
-    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions,
+    setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear, setActiveYear,
   });
 
   // v261 — telt, over alle (niet-vaste-tarief) subtype-categorieën, hoeveel er op 21%/9%/0% staan —
@@ -1620,7 +1631,7 @@ export default function App() {
     };
   };
   const controlerenCardGroups = useControlerenCardGroups({
-    rechtsvorm, overlapKoppeling: overlapKoppeling.overlap,
+    rechtsvorm, confidenceOpenJaren: confidenceSummary?.openJaren || [], setActiveYear, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
     btwVerlegd, bulkMarkOverigAsPriveOpname, bulkMarkOverigAsWinkelsDivers, categorieTotalenActiveYear, categoryPercentageSectionRef,
@@ -1634,7 +1645,7 @@ export default function App() {
     incomeSummary, instellingenCardsByKey, isDuplicateGroupRemoved, jumpToSection, kmVergoedingDetails,
     leaseDetails, leaseMerges, leaseSummary, leasesSectionRef, loanDetails,
     loanSummary, loansSectionRef, markActivaUnknown, addManualActiva, voegActivaLijstToe, removeActivum, markIncomeSource, markLeaseUnknown,
-    markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, nietLeningAantal,
+    markLeaseNotALease, markLoanAsPrive, markLoanAsZakelijk, markLoanNotALoan, markLoanUnknown, markOverigItem, splitsRekening, leningOpschonen, leningAllesKlopt, nietLeningAantal,
     markPersonSource, mergeLeaseInto, overigPrivePending, overigReviewSectionRef, overigSearch,
     overigSummary, overigZakelijkPending, pendingDuplicateCount, pendingIncomeReview, pendingOverigReview,
     pendingPersonReview, personBulkAction, personReviewSectionRef, personSearch, personSummary,
@@ -1688,6 +1699,33 @@ export default function App() {
   // altijd zichtbaar (ook na "Wis alles" of vóór het laden van een eerste bestand) — de tabs tonen
   // dan gewoon een leeg/nul dashboard i.p.v. dat het hele linkermenu zijn navigatie verliest.
   const { basisvragenNietGestart, boekingenInfo, controlerenBadge, dashboardCardsByKey, dossierOpenBreakdown, dossierOpenPoints, dossierPct, inTeStellenItems, instellingenBadge, mobielOpenJarenVan, openBasisvragen, openBasisvragenTelling, tabsVisible, teControlerenItems, yearRing } = useDossierVoortgang({ kleinBedragInstelling, activeYear, autoExactIngevuld, autoStatus, autoWizardStatus, bevestigdInBulkVenster, categoryZakelijkPercentage, classified, confidenceSummary, controlerenDashboardCards, dashboardCards, eenvoudigActief, eenvoudigLease, eigenNamen, eigenRekeningenExtra, heeftVoorraad, instellingenDashboardCards, korRegeling, leaseGroepenEenv, modus, overigInkomenBox1, parsedFiles, priveAntwoorden, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, setShowMultiYearModal, setShowQuarterlyBtwModal, startersaftrekStatus, verwachteAOV, verwachteLease, verwachteLeaseOverig, verwachteLening, werkruimteStatus, yearlyProgress, years, zelfstandigenaftrekStatus });
+  // nieuw-V6R6 — alleen in ontwikkeling: tellers voor de regressietest van de controles (tests/e2e/controles.mjs).
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const kaart = (c) => ({ key: c.key, title: c.title, value: typeof c.value === "object" ? null : c.value, openCount: c.openCount, tone: c.tone });
+    window.__bt = {
+      activeYear, years, setActiveYear, confidenceSummary: { ...confidenceSummary, reviewTxList: undefined },
+      controleren: controlerenDashboardCards.map(kaart), instellingen: instellingenDashboardCards.map(kaart),
+      route: teControlerenItems.map((i) => ({ key: i.key, label: i.label, count: i.count, jaren: i.jaren })), inTeStellen: inTeStellenItems.map((i) => ({ key: i.key, label: i.label, count: i.count })),
+      klik: Object.fromEntries([...controlerenDashboardCards, ...instellingenDashboardCards].map((c) => [c.key, c.onClick])),
+      controlerenBadge, instellingenBadge, dossierOpenPoints, yearRing,
+      alles: () => classified.filter((tx) => !tx.isMirror).map((tx) => ({ id: tx.id, jaar: tx.year, datum: tx.date ? new Date(tx.date).toISOString().slice(0, 10) : null, bedrag: tx.amount, naam: tx.counterparty, iban: tx.counterpartyIban, oms: String(tx.fullDescription || tx.description || "").slice(0, 160), cat: tx.category, type: tx.type, rek: tx.accountType, niveau: tx.confidence?.level, label: tx.confidence?.label, slot: !!tx.transferLocked, row: !!overridesByRow[tx.id] })),
+      vraagWijziging: (q, cat) => { const tx = classified.find((t) => !t.isMirror && !(t.transferLocked && !t.transferAanpasbaar) && `${t.counterparty} ${t.description} ${t.fullDescription}`.toLowerCase().includes(q.toLowerCase()) && t.amount < 0 && t.year === activeYear); if (tx) requestCategoryChange(tx, { category: cat, type: tx.type }, { searchQuery: q }); return tx?.id; },
+      openLijst: () => classified.filter((tx) => !tx.isMirror && (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx)).map((tx) => ({ id: tx.id, jaar: tx.year, datum: String(tx.date).slice(0, 15), bedrag: tx.amount, naam: tx.counterparty, oms: String(tx.description || "").slice(0, 80), cat: tx.category, niveau: tx.confidence.level, label: tx.confidence.label, row: overridesByRow[tx.id] || null })),
+      jaarOpen: Object.fromEntries(Object.entries(yearlyProgress || {}).map(([y, v]) => [y, v?.openPunten || 0])),
+      perJaar: (() => {
+        const r = {};
+        for (const tx of classified) {
+          if (tx.isMirror) continue;
+          const o = (tx.confidence.level === "heuristic" || tx.confidence.level === "fallback") && !bevestigdInBulkVenster(tx);
+          const y = (r[tx.year] ||= { open: 0, openExBulk: 0, overig: 0, personen: 0 });
+          if (!o) continue;
+          y.open++;
+          if (tx.category === "Overig") y.overig++; else if (tx.category === "Overboekingen aan personen") y.personen++; else y.openExBulk++;
+        }
+        return r;
+      })(),
+    };
+  }
   // V90 — vaste volgorde voor "eerstvolgende stap": eerst de importcontrole (klopt de data?), dan lease,
   // leningen en activa (die bepalen of andere open punten, zoals Overig/Overboekingen, nog nodig zijn),
   // daarna de rest. Een stap die je overslaat blijft in de lijst maar wordt niet meer als "volgende" getoond.
@@ -2479,7 +2517,7 @@ export default function App() {
                     {volgende ? `Stap ${Math.min(stappenKlaar + 1, maxStappen)} van ${maxStappen}` : "Alle resterende stappen overgeslagen"} · nog {totaal} open punt{totaal === 1 ? "" : "en"}
                   </div>
                   <div className="truncate text-base font-bold">
-                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open)` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
+                    {volgende ? <>{volgende.label}{volgende.count != null ? ` (${volgende.count} open${volgende.jaren?.length ? ` in ${korteJaren(volgende.jaren)}` : ""})` : ""}</> : `${openOvergeslagen.length} overgeslagen — nog niet afgerond`}
                   </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-3">
@@ -2712,6 +2750,7 @@ export default function App() {
             onRequestChange={requestCategoryChange}
             onConfirmCorrect={confirmClassificationCorrect}
             onConfirmAll={confirmAllUncertain}
+            onChangeGroup={wijzigGroep}
             onJumpToOverig={jumpToOverigFromModal}
             onJumpToPersonen={jumpToPersonenFromModal}
             onClose={() => setOpenConfidenceLevel(null)}
