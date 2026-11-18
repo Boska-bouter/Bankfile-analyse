@@ -10,6 +10,8 @@ import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeO
 import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen, registerGiften } from "./tax/incomeTax.js";
+import { laatsteJaarTotalen } from "./reports/aangiftevoorstel.js";
+import { laatsteJaarTotalenBv } from "./reports/aangiftevoorstel-bv.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
@@ -1735,7 +1737,7 @@ export default function App() {
     inTeStellenItems, stapVolgorde, teControlerenItems,
   });
   const {
-    exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   } = useRapporten({
     accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, autoActivaDetails, autoStatus,
@@ -1750,6 +1752,10 @@ export default function App() {
     tariefOverrides, voorbelastingExcluded, werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus,
   });
+  // nieuw-V7R9 — fiscale regressietest (tests/regressie/fiscaal.mjs): de jaartotalen van het rapport over alle jaren (alleen DEV).
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
+    window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };
+  }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.
   registreerRapportKop({

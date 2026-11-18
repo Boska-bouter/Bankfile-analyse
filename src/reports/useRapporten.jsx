@@ -39,13 +39,8 @@ export function useRapporten({
   // yearsOverride: gebruikt door de "Voorstel bekijken"-snelknop voor het actieve jaar, die niet
   // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
   // gewoon de bestaande jaren-selectie (uit de checkboxes) gebruikt.
-  const exportAangiftevoorstel = (yearsOverride) => {
-    const targetYears = yearsOverride || selectedAangifteYears;
-    if (targetYears.length === 0) {
-      window.alert("Selecteer minstens één jaar.");
-      return;
-    }
-    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+  // nieuw-V7R9 — het rapport zelf los van het venster, zodat de fiscale regressietest (window.__bt.fiscaal) precies dezelfde cijfers leest.
+  const bouwRapportHtml = (targetYears) => {
     // nieuw-V4R8 — wat in de app al is afgehandeld (zelf gekozen, ook bewust "Overig"; "Klopt zo" in Overig/personen; kleine bedragen)
     // telt in het rapport niet als open punt, net als in Controleren (melding Boska 13-11).
     const bevestigd = maakBevestigd(reviewedOverigKeys, reviewedPersonKeys);
@@ -59,6 +54,16 @@ export function useRapporten({
       : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
       : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
+    return html;
+  };
+  const exportAangiftevoorstel = (yearsOverride) => {
+    const targetYears = yearsOverride || selectedAangifteYears;
+    if (targetYears.length === 0) {
+      window.alert("Selecteer minstens één jaar.");
+      return;
+    }
+    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+    const html = bouwRapportHtml(targetYears);
     setAangiftevoorstelPreview(metRapportKop(html, targetYears));
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
@@ -243,7 +248,7 @@ export function useRapporten({
   );
 
   return {
-    exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   };
 }

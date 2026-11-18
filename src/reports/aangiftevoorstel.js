@@ -30,6 +30,8 @@ import { downloadRapport } from "./download.js";
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 // V19 — verzamelt per jaarsectie het totaal voor de meerjaren-slotregel (zie buildAangiftevoorstelHtml).
 let JAAR_TOTALEN = [];
+// nieuw-V7R9 — de jaartotalen van het laatst gemaakte rapport (winst, IB ná heffingskorting, Zvw, btw-saldo), voor de fiscale regressietest.
+export function laatsteJaarTotalen() { return JAAR_TOTALEN.map((j) => ({ ...j })); }
 
 function statusTekst(status, aantalPunten) {
   if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";

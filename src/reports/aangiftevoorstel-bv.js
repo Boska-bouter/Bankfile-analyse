@@ -51,6 +51,8 @@ export function computeBvSummary(year, classified, categoryBtwRates, btwVerlegd,
 
 // V20 — verzamelt per jaarsectie het totaal (BTW + Vpb) voor de meerjaren-slotregel.
 let JAAR_TOTALEN_BV = [];
+// nieuw-V7R9 — voor de fiscale regressietest (window.__bt.fiscaal).
+export function laatsteJaarTotalenBv() { return JAAR_TOTALEN_BV.map((j) => ({ ...j })); }
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_TEKST = { groen: "Klaar voor controle", oranje: "Controle nodig", rood: "Mogelijk ontbreekt een periode" };
