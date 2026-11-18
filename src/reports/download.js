@@ -58,7 +58,9 @@ function laadInIframe(html, breedte) {
     };
     f.onload = klaar;
     f.onerror = () => reject(new Error("rapport kon niet worden opgemaakt"));
-    f.srcdoc = zonderPrintOpLaden(html);
+    // nieuw-V8R6 — html2canvas zet op iPad-Safari tekst met line-height "normal" te laag, zodat lijnen door de tekst
+    // lopen (Boska 18-11). Een vaste line-height vooraan; eigen regels van het rapport gaan voor.
+    f.srcdoc = zonderPrintOpLaden(html).replace(/<head([^>]*)>/i, '<head$1><style>body{line-height:1.35}</style>');
     document.body.appendChild(f);
   });
 }

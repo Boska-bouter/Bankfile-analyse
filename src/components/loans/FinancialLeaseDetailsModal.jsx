@@ -250,6 +250,8 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     // betaling erbovenop tellen (dat gaf voorheen een te hoog "totaal betaald"). Telt ook eventuele,
     // met "Betaald t/m" bevestigde termijnen van een andere rekening mee (effectiveSegmentTransactions).
     const kostenKop = form.betalingKoppelingen || {};
+    // nieuw-V8R6 — teruggeboekte betalingen en kosten tellen niet mee in het aantal betalingen (Boska 18-11).
+    const teruggeboektSet = new Set((paymentCheck?.teruggeboekt || []).map(([min]) => min));
     const totaalBetaald = Math.abs(effectiveSegmentTransactions.filter((tx) => tx.synthetic || kostenKop[betalingSleutel(tx)] !== "kosten").reduce((a, tx) => a + tx.amount, 0));
     // nieuw-V8R4 — een termijn die al (vooruit) betaald is telt ook mee, ook al ligt de vervaldatum na de laatste betaling.
     const vooruit = new Set((paymentCheck?.results || []).filter((r) => r.matchedTx).map((r) => r.projected));
@@ -259,7 +261,7 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     if (verwachtTotNu === 0) return null;
     const verschil = totaalBetaald - verwachtTotNu;
     const marge = Math.max(Number(form.maandbedrag) || 0, 25);
-    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: effectiveSegmentTransactions.filter((tx) => tx.amount < 0).length };
+    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: effectiveSegmentTransactions.filter((tx) => tx.amount < 0 && !teruggeboektSet.has(tx) && (tx.synthetic || kostenKop[betalingSleutel(tx)] !== "kosten")).length };
   }, [effectiveSegmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag, form.betalingKoppelingen, paymentCheck]);
 
   // Berekende afschrijving per jaar voor dit contract als "Soort" is ingevuld — puur ter controle/

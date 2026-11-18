@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
@@ -18,8 +19,23 @@ function aangifteStatusTekst(status, aantalPunten) {
 
 export default function AangifteYearPickerModal({
   onClose, activeYear, onSelectYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
-  selectedYears, setSelectedYears, onExport,
+  selectedYears, setSelectedYears, onExport, toonBalansKeuze = false,
 }) {
+  // nieuw-V8R7 — Boska 18-11: vooraf kiezen "met of zonder balans", zodat het overzicht maar één manier toont.
+  const [balans, setBalans] = useState("zonder");
+  const balansKeuze = toonBalansKeuze ? (
+    <fieldset className="rounded-lg border border-slate-200 p-2.5 space-y-1.5">
+      <legend className="px-1 text-xs font-medium text-slate-600">Hoe vul je de aangifte in bij de Belastingdienst?</legend>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="radio" name="balans" className="mt-1" checked={balans === "zonder"} onChange={() => setBalans("zonder")} />
+        <span><b className="font-medium">Zonder balans</b><span className="block text-xs text-slate-500">Activa en passiva € 0; privéonttrekkingen sluiten aan op de winst.</span></span>
+      </label>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="radio" name="balans" className="mt-1" checked={balans === "met"} onChange={() => setBalans("met")} />
+        <span><b className="font-medium">Met balans</b><span className="block text-xs text-slate-500">Bezittingen en schulden op 1 januari en 31 december, met privéonttrekkingen en -stortingen.</span></span>
+      </label>
+    </fieldset>
+  ) : null;
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
@@ -45,9 +61,10 @@ export default function AangifteYearPickerModal({
                 ))}
               </ul>
             )}
+            {balansKeuze}
             <div className="flex gap-2 flex-wrap pt-1">
               <button
-                onClick={() => onExport([activeYear])}
+                onClick={() => onExport([activeYear], balans)}
                 className={KNOP_PRIMAIR}
               >
                 Berekening bekijken
@@ -82,8 +99,9 @@ export default function AangifteYearPickerModal({
                 </label>
               ))}
             </div>
+            <div className="mb-3">{balansKeuze}</div>
             <div className="flex gap-2">
-              <button onClick={() => onExport()} className={KNOP_PRIMAIR}>
+              <button onClick={() => onExport(undefined, balans)} className={KNOP_PRIMAIR}>
                 Berekening tonen
               </button>
               <button onClick={() => setMeerdereJaren(false)} className={KNOP_SECUNDAIR}>

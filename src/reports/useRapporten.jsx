@@ -40,7 +40,7 @@ export function useRapporten({
   // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
   // gewoon de bestaande jaren-selectie (uit de checkboxes) gebruikt.
   // nieuw-V7R9 — het rapport zelf los van het venster, zodat de fiscale regressietest (window.__bt.fiscaal) precies dezelfde cijfers leest.
-  const bouwRapportHtml = (targetYears) => {
+  const bouwRapportHtml = (targetYears, balans = "zonder") => {
     // nieuw-V4R8 — wat in de app al is afgehandeld (zelf gekozen, ook bewust "Overig"; "Klopt zo" in Overig/personen; kleine bedragen)
     // telt in het rapport niet als open punt, net als in Controleren (melding Boska 13-11).
     const bevestigd = maakBevestigd(reviewedOverigKeys, reviewedPersonKeys);
@@ -53,17 +53,18 @@ export function useRapporten({
       ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen })
       : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
-      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
+      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus, balans);
     return html;
   };
-  const exportAangiftevoorstel = (yearsOverride) => {
+  // nieuw-V8R7 — Boska 18-11: bij het openen kiezen "met of zonder balans", zodat A en B niet door elkaar staan.
+  const exportAangiftevoorstel = (yearsOverride, balans = "zonder") => {
     const targetYears = yearsOverride || selectedAangifteYears;
     if (targetYears.length === 0) {
       window.alert("Selecteer minstens één jaar.");
       return;
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
-    const html = bouwRapportHtml(targetYears);
+    const html = bouwRapportHtml(targetYears, balans);
     setAangiftevoorstelPreview(metRapportKop(html, targetYears));
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
