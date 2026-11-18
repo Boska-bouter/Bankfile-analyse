@@ -1,3 +1,4 @@
+import { kmBekend, kmMaxVoorJaar } from "./tax/kmVergoeding.js";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import PriveMakenModal from "./components/prive/PriveMakenModal.jsx";
 import ZakelijkMakenModal from "./components/prive/ZakelijkMakenModal.jsx";
@@ -1304,6 +1305,18 @@ export default function App() {
       return changed ? next : prev;
     });
   }, [years, autoWizardStatus, autoStatus]);
+  // nieuw-V8R1 — privéauto zakelijk gebruikt (wens Boska 18-11): vul per jaar de vergoeding per km in met het fiscale
+  // maximum van dat jaar (tax/kmVergoeding.js), ook voor jaren die later met een bankbestand binnenkomen. Een eigen bedrag blijft staan.
+  useEffect(() => {
+    // Eén keer per jaar (vlag automatisch), zodat het veld daarna vrij te wijzigen of leeg te maken is.
+    const ontbreekt = years.filter((y) => autoStatus?.[y] === "prive" && kmBekend(y) && kmVergoedingDetails?.[y]?.vergoedingPerKm == null && !kmVergoedingDetails?.[y]?.automatisch);
+    if (!ontbreekt.length) return;
+    setKmVergoedingDetailsState((prev) => {
+      const next = { ...prev };
+      for (const y of ontbreekt) next[y] = { ...(next[y] || {}), vergoedingPerKm: String(kmMaxVoorJaar(y)), automatisch: true };
+      return next;
+    });
+  }, [years, autoStatus, kmVergoedingDetails]);
   useEffect(() => {
     const bekendeJaren = Object.keys(zelfstandigenaftrekStatus || {}).map(Number).sort((a, b) => a - b);
     if (bekendeJaren.length === 0) return;
@@ -1755,6 +1768,8 @@ export default function App() {
   // nieuw-V7R9 — fiscale regressietest (tests/regressie/fiscaal.mjs): de jaartotalen van het rapport over alle jaren (alleen DEV).
   if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
     window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };
+    window.__bt.km = () => ({ autoStatus, kmVergoedingDetails }); // nieuw-V8R1 — controle km-vergoeding
+    window.__bt.rapport = (jaren) => bouwRapportHtml(jaren); // nieuw-V8R3 — rapport-HTML voor controle
   }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.

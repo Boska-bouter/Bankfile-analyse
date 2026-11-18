@@ -464,7 +464,7 @@ export const HELP_CHAPTERS = [
           <strong>Auto</strong> — per jaar is de keuze: geen auto, <em>Auto op de zaak</em> (gekocht, operationele lease of
           financiële lease) of <em>Privéauto zakelijk gebruikt</em>. Bij een auto op de zaak tellen de werkelijke
           autokosten mee met een bijtelling voor privégebruik, en vervalt de %-splitsing op Brandstof/Parkeren voor dat
-          jaar. Bij een privéauto worden de zakelijke kilometers en de vergoeding per km ingevuld. Een combinatie van beide
+          jaar. Bij een privéauto worden de zakelijke kilometers ingevuld. Zonder eigen bedrag per km rekent de app met het fiscale maximum van dat jaar (2021 en 2022 € 0,19, 2023 € 0,21, 2024 en 2025 € 0,23, 2026 € 0,25). Een combinatie van beide
           bestaat niet als keuze; heeft een oud dossier die nog, dan wordt het bij openen omgezet naar "Privéauto
           zakelijk gebruikt" — controleer zo'n jaar even.
         </p>

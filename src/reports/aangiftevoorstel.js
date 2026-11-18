@@ -469,6 +469,14 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </div>
     <p class="kerncijfers-voetnoot">* Vóór heffingskortingen — zie "Geschatte heffingskortingen" hieronder.</p>`;
 
+  // nieuw-V8R3 — toelichting btw privégebruik auto, nu bij de tabel BTW per kwartaal.
+  const btwPrivegebruikNoot = (() => {
+      const d = kwartalen.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
+      if (!d) return "";
+      if (!(d.bedrag > 0.004)) return `<p style="font-size:11px;color:#b45309;margin:6px 0 0">⚠ Btw-correctie privégebruik auto nog niet berekend: ${d.items.flatMap((i) => i.meldingen).join(" ")}</p>`;
+      const regels = d.items.map((i) => `${i.naam}: ${i.methode === "forfait" ? `forfait ${String(i.pct).replace(".", ",")}%${i.fractie < 1 ? ` × ${Math.round(i.fractie * 12)}/12` : ""} van catalogusprijs ${eur(i.catalogus)}${i.afgetopt ? `, afgetopt op het maximum van ${eur(i.maximum)}` : ""}` : `werkelijk privégebruik ${i.pct}%`} = ${eur(i.bedrag)}${i.meldingen.length ? ` (${i.meldingen.join(" ")})` : ""}`);
+      return `<p style="font-size:11px;color:#475569;margin:6px 0 0">Het saldo in Q4 bevat <strong>${eur(d.bedrag)}</strong> btw-correctie privégebruik auto (rubriek 1d van de laatste aangifte van het jaar). ${regels.join("; ")}.</p>`;
+    })();
   const btwKaartHtml =
     kwartalen.length > 0
       ? `
@@ -480,13 +488,6 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
         return `<td class="num">${eur(Math.abs(saldo))}${Math.abs(saldo) < 0.005 ? "" : saldo >= 0 ? " te betalen" : " terug"}</td>`;
       })
       .join("")}${(() => { const t = kwartalen.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0); return `<td class="num"><strong>${eur(Math.abs(t))} ${t >= 0 ? "te betalen" : "terug"}</strong></td>`; })()}</tr></tbody></table>
-  ${(() => {
-      const d = kwartalen.map((q) => q.btwPrivegebruikAutoDetail).find(Boolean);
-      if (!d) return "";
-      if (!(d.bedrag > 0.004)) return `<p style="font-size:11px;color:#b45309;margin:6px 0 0">⚠ Btw-correctie privégebruik auto nog niet berekend: ${d.items.flatMap((i) => i.meldingen).join(" ")}</p>`;
-      const regels = d.items.map((i) => `${i.naam}: ${i.methode === "forfait" ? `forfait ${String(i.pct).replace(".", ",")}%${i.fractie < 1 ? ` × ${Math.round(i.fractie * 12)}/12` : ""} van catalogusprijs ${eur(i.catalogus)}${i.afgetopt ? `, afgetopt op het maximum van ${eur(i.maximum)}` : ""}` : `werkelijk privégebruik ${i.pct}%`} = ${eur(i.bedrag)}${i.meldingen.length ? ` (${i.meldingen.join(" ")})` : ""}`);
-      return `<p style="font-size:11px;color:#475569;margin:6px 0 0">Het saldo in Q4 bevat <strong>${eur(d.bedrag)}</strong> btw-correctie privégebruik auto (rubriek 1d van de laatste aangifte van het jaar). ${regels.join("; ")}.</p>`;
-    })()}
   </div>`
       : "";
 
@@ -537,12 +538,87 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <p class="aannames-kop">⚠ Aannames/onzekerheden</p><ul>${openPunten.map((p) => `<li>${p}</li>`).join("")}</ul>
   </div>`
     : "";
+  // nieuw-V8R3 — één kaart per jaar in de volgorde en met de schermen van de Belastingdienst (mockup akkoord Boska 18-11:
+  // "WUO staat groot bovenaan, bij de Belastingdienst begin ik met de opbrengsten"). Vervangt de kaart "Winst uit
+  // onderneming", de btw-kaart en de totaalkaart; de toelichting op btw privégebruik auto staat bij "BTW per kwartaal".
+  const eh = (n) => `€ ${Math.round(Math.abs(n) || 0).toLocaleString("nl-NL")}`;
+  const af = (n) => (Math.round(n) === 0 ? eh(0) : `− ${eh(n)}`);
+  const rij = (label, bedrag, cls = "") => `<div class="ak-r${cls ? " " + cls : ""}"><span>${label}</span><span class="num">${bedrag}</span></div>`;
+  const scherm = (naam) => `<div class="ak-scherm">Scherm: ${naam}</div>`;
+  const inkoopGroep = (ib.inkoopkosten.totaal || 0) + andereExterneKostenBedrag;
+  const machineAfschr = apparatuurAfschrijving + leaseAfschrijvingMachine;
+  const overigeRubrieken = ib.overigeBedrijfskosten.filter((r) => Math.abs(r.totaal || 0) >= 0.005);
+  const overigeSom = overigeRubrieken.reduce((a, r) => a + (r.totaal || 0), 0);
+  const nogNietSom = ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0);
+  const autoNetto = kostenTotaal - inkoopGroep - machineAfschr - overigeSom - nogNietSom - renteAftrekbaar;
+  const autoOnttrekking = ib.leaseAutoKosten?.onttrekking || 0;
+  const heeftAuto = Math.abs(autoNetto) >= 0.5 || autoOnttrekking > 0;
+  const overigeGroep = overigeSom + nogNietSom + (heeftAuto ? autoNetto : 0);
+  const correctie = summary.winst - ((ib.opbrengsten.totaal || 0) - kostenTotaal);
+  const wvHtml = `${scherm("Winst-en-verliesrekening")}
+    ${rij("Opbrengsten (omzet zonder btw)", eh(ib.opbrengsten.totaal || 0))}
+    ${rij("Inkoopkosten, uitbesteed werk en andere externe kosten", eh(inkoopGroep))}
+    ${machineAfschr >= 0.5 ? rij("Afschrijvingen (apparatuur en machines)", eh(machineAfschr)) : ""}
+    ${rij("Overige bedrijfskosten", eh(overigeGroep))}
+    ${overigeRubrieken.map((r) => rij(esc(r.naam), eh(r.totaal), "sub")).join("")}
+    ${heeftAuto ? rij(`Auto- en transportkosten${autoOnttrekking > 0 ? ` (${eh(autoNetto + autoOnttrekking)} kosten min ${eh(autoOnttrekking)} bijtelling)` : ""}`, eh(autoNetto), "sub") : ""}
+    ${nogNietSom >= 0.5 ? rij("Nog niet ingedeeld", eh(nogNietSom), "sub") : ""}
+    ${renteAftrekbaar >= 0.5 ? rij(`Financiële baten en lasten (rente${(leaseRenteForYear?.totaalRente || 0) >= 0.5 ? " lease" : ""})`, af(renteAftrekbaar)) : ""}
+    ${Math.abs(correctie) >= 0.5 ? rij("Overige correcties (zie de winst-en-verliesrekening hieronder)", `${correctie < 0 ? "− " : ""}${eh(correctie)}`) : ""}
+    ${rij("Resultaat = winst uit onderneming", `${summary.winst < 0 ? "− " : ""}${eh(summary.winst)}`, "tot")}
+    <p class="ak-noot">Vul de opbrengsten en de kosten apart in; de winst rekent de Belastingdienst zelf uit.</p>`;
+  const priveHtmlKaart = `${scherm("Privéonttrekkingen en -stortingen")}
+    ${rij("Privéonttrekkingen in geld", eh(Math.max(0, summary.winst)))}
+    ${rij("Overige privéstortingen", eh(Math.max(0, -summary.winst)))}
+    <p class="ak-noot">Met de balans op € 0 geldt: onttrekkingen min stortingen = winst.${(ib.priveOnttrekkingen.totaal || 0) > 0 || (ib.priveStortingen.totaal || 0) > 0 ? ` Ter info, van de bank: opnames ${eh(ib.priveOnttrekkingen.totaal || 0)}, stortingen ${eh(ib.priveStortingen.totaal || 0)}; die gelden alleen als ook de balans (banksaldo begin en eind) wordt ingevuld.` : ""}${autoOnttrekking > 0 ? " Privégebruik auto staat al bij de autokosten, dus hier niet nog een keer invullen." : ""}</p>`;
+  let aftrekEnBelastingHtml;
+  if (zaScenarios) {
+    const kol = (sc) => { const i = ibNa(sc.ib, sc.heffingskortingen); return { aftrek: sc.ondernemersaftrekBedrag || 0, mkb: sc.winstUitsplitsing.mkbVrijstellingBedrag || 0, bel: sc.winstUitsplitsing.belastbaar, ibV: sc.ib.belasting || 0, hk: sc.heffingskortingen.totaal || 0, ibN: i, zvw: sc.zvw.bijdrage, tot: i + sc.zvw.bijdrage }; };
+    const m = kol(zaScenarios.metZelfstandigenaftrek), z = kol(zaScenarios.zonderZelfstandigenaftrek);
+    const r2 = (label, a, b, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><td>${label}</td><td class="num">${a}</td><td class="num">${b}</td></tr>`;
+    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek en Overzicht belasting en inkomen")}
+    <p class="ak-noot">Urencriterium onbekend: beide mogelijkheden naast elkaar.</p>
+    <table class="ak-tabel"><thead><tr><th></th><th class="num">Mét zelfstandigenaftrek</th><th class="num">Zonder zelfstandigenaftrek</th></tr></thead><tbody>
+      ${r2("Zelfstandigen- en startersaftrek", af(m.aftrek), af(z.aftrek))}
+      ${r2("Mkb-winstvrijstelling", af(m.mkb), af(z.mkb))}
+      ${r2("Belastbare winst", eh(m.bel), eh(z.bel), "tot")}
+      ${r2("Inkomstenbelasting vóór heffingskortingen", eh(m.ibV), eh(z.ibV))}
+      ${r2("Heffingskortingen", af(m.hk), af(z.hk))}
+      ${r2("Te betalen inkomstenbelasting en premie volksverzekeringen", eh(m.ibN), eh(z.ibN), "tot")}
+      ${r2("Te betalen bijdrage Zorgverzekeringswet", eh(m.zvw), eh(z.zvw), "tot")}
+      ${r2(`Totaal te betalen ${year}`, eh(m.tot), eh(z.tot), "groot")}
+    </tbody></table>`;
+  } else {
+    const sta = ondernemersaftrekVoorJaar ? ondernemersaftrekVoorJaar.startersaftrekBedrag : 0;
+    const i = ibNa(ibEstimate, heffingskortingen);
+    const hkD = heffingskortingen;
+    const overigInk = ibEstimate.overigInkomen || 0;
+    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek (rekent de Belastingdienst zelf)")}
+    ${rij(`Zelfstandigenaftrek (urencriterium: ${zaStatus === "ja" ? "ja" : "nee"})`, af(ondernemersaftrekBedrag - sta))}
+    ${sta > 0 ? rij("Startersaftrek", af(sta)) : ""}
+    ${rij(`Mkb-winstvrijstelling ${String(winstUitsplitsing.mkbPct).replace(".", ",")}%`, af(winstUitsplitsing.mkbVrijstellingBedrag))}
+    ${rij("Belastbare winst", eh(winstUitsplitsing.belastbaar), "tot")}
+    ${(ibEstimate.giftenAftrek || 0) > 0 ? rij(`Aftrek giften (betaald ${eh(ibEstimate.giften)}, na drempel)`, af(ibEstimate.giftenAftrek)) : ""}
+    ${overigInk > 0 ? rij("Overig inkomen box 1 (loon/uitkering, bruto)", eh(overigInk)) : ""}
+    ${scherm("Overzicht belasting en inkomen")}
+    ${rij("Inkomstenbelasting vóór heffingskortingen", eh(ibEstimate.belasting || 0))}
+    ${rij(`Heffingskortingen${!hkD.werkelijkIngevuld && hkD.algemeneHeffingskorting != null && hkD.arbeidskorting != null ? ` (algemeen ${eh(hkD.algemeneHeffingskorting)}, arbeidskorting ${eh(hkD.arbeidskorting)})` : ""}${overigInk > 0 && hkD.kortingOp === "overig" ? " (toegepast op het overig inkomen)" : ""}`, af(hkD.totaal || 0))}
+    ${rij("Te betalen inkomstenbelasting en premie volksverzekeringen", eh(i), "tot")}
+    ${rij("Te betalen bijdrage Zorgverzekeringswet", eh(zvwEstimate.bijdrage), "tot")}
+    ${rij(`Totaal te betalen ${year}`, eh(i + zvwEstimate.bijdrage), "groot")}
+    ${overigInk > 0 ? `<p class="ak-noot">Over het overig inkomen is al loonheffing ingehouden; de inkomstenbelasting hierboven is het extra deel door de winst. De heffingskorting telt maar één keer.</p>` : ""}`;
+  }
+  const btwJaarRegel = korRegeling ? "" : `<div class="ak-btw"><span>Btw ${year} (apart, per kwartaal aangegeven)</span><span>${eh(btwJaarSaldo)} ${btwJaarSaldo < 0 ? "terug" : "te betalen"}</span></div>`;
   const samenvattingHtml = `
-  <div class="kerncijfers-kaart">
-    ${kerncijfersHtml}
-  </div>
-  ${btwKaartHtml}
-  ${jaarTotaalHtml}${statusKaartHtml}`;
+  <div class="aangifte-kaart">
+    <div class="ak-kop"><b>Aangifte inkomstenbelasting ${year}</b><span>indicatief</span></div>
+    ${wvHtml}
+    ${priveHtmlKaart}
+    ${aftrekEnBelastingHtml}
+    ${btwJaarRegel}
+    <p class="ak-noot">Indicatief; zonder verrekening van voorschotten of voorlopige aanslagen.</p>
+  </div>${statusKaartHtml}`;
+  void kerncijfersHtml; void btwKaartHtml; void jaarTotaalHtml;
 
   const overigeBedrijfskostenHtml =
     ib.overigeBedrijfskosten.length > 0
@@ -745,6 +821,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     </tbody>
   </table>
   <p class="vergelijk-hint">Vergelijk het saldo per kwartaal hierboven met wat er daadwerkelijk is aangegeven en betaald.</p>` : ""}
+  ${btwPrivegebruikNoot}
   <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht zijn in de app zelf terug te vinden.</p>
 
   <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
@@ -885,6 +962,17 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
   .kerncijfers-resultaat .bedrag-groot { font-size: 19px; font-weight: bold; color: #0f172a; }
   .kerncijfers-voetnoot { font-size: 9.5px; color: #94a3b8; margin: 6px 0 0; }
+  .aangifte-kaart { margin: 0 0 12px; padding: 12px 16px; background: #fff; border: 2px solid #0f172a; border-radius: 10px; }
+  .ak-kop { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+  .ak-kop b { font-size: 15px; } .ak-kop span { color: #64748b; font-size: 11px; }
+  .ak-scherm { margin-top: 12px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #1d4ed8; break-after: avoid; page-break-after: avoid; }
+  .ak-r { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 12px; border-bottom: 1px dotted #e2e8f0; break-inside: avoid; }
+  .ak-r.sub { padding-left: 14px; color: #64748b; font-size: 11px; }
+  .ak-r.tot, .ak-tabel tr.tot td { font-weight: 700; border-bottom: 1px solid #0f172a; }
+  .ak-r.groot, .ak-tabel tr.groot td { font-size: 15px; font-weight: 800; border-bottom: 0; padding-top: 8px; }
+  .ak-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; } .ak-tabel td, .ak-tabel th { padding: 3px 4px; border-bottom: 1px dotted #e2e8f0; text-align: left; } .ak-tabel .num { text-align: right; }
+  .ak-noot { font-size: 10.5px; color: #64748b; margin: 4px 0 0; }
+  .ak-btw { margin-top: 10px; background: #f8fafc; border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; justify-content: space-between; }
   .totaal-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f0f9ff; border: 2px solid #0f172a; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .totaal-regel { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
   .totaal-eind { border-top: 1px solid #94a3b8; margin-top: 4px; padding-top: 6px; font-size: 14px; font-weight: bold; color: #0f172a; }

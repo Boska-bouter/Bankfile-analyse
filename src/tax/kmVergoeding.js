@@ -12,7 +12,12 @@
 // kmVergoedingDetails, dus geen enkele invloed op een bestaand dossier.
 // beide-V8R4 — zonder ingevuld bedrag per km rekent de app met het fiscale maximum van dat jaar (en nooit met meer). Eenvoudig vraagt alleen de
 // kilometers; voorheen telden die dan niet mee (vergelijking Houtman 27-10: 20.000 km zonder aftrek).
-export const KM_MAX = { 2022: 0.19, 2023: 0.21, 2024: 0.23, 2025: 0.23, 2026: 0.23 };
+// nieuw-V8R1 — tabel vanaf 2021, 2026 naar € 0,25 (Boska 18-11).
+export const KM_MAX = { 2021: 0.19, 2022: 0.19, 2023: 0.21, 2024: 0.23, 2025: 0.23, 2026: 0.25 };
+// nieuw-V8R1 — een nieuw jaar (bijv. 2027) komt via het tarievenbestand (Beheer → Tarieven, veld kmVergoeding) of een release.
+// Zolang het ontbreekt, vult de app het veld niet zelf in (kmBekend) en rekent hij met het laatst bekende jaar.
+// Oude jaren blijven in de tabel staan (oude dossiers).
+export const kmBekend = (year) => KM_MAX[Number(year)] != null;
 export function kmMaxVoorJaar(year) {
   const jaren = Object.keys(KM_MAX).map(Number).sort((a, b) => a - b);
   const j = Number(year);

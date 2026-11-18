@@ -226,7 +226,7 @@ export function useInstellingenActies(appInvoer) {
       if (waarde === "" || waarde == null) delete huidig[veld];
       else huidig[veld] = waarde;
       // V52 — alleen weggooien als beide velden echt leeg zijn; "0" of "0," moet kunnen blijven staan terwijl je typt.
-      if (huidig.zakelijkeKilometers == null && huidig.vergoedingPerKm == null) delete next[year];
+      if (huidig.zakelijkeKilometers == null && huidig.vergoedingPerKm == null && !huidig.automatisch) delete next[year]; // nieuw-V8R1 — vlag automatisch blijft staan
       else next[year] = huidig;
       return next;
     });

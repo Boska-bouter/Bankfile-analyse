@@ -29,7 +29,8 @@ export const TARIEF_GROEPEN = {
   box2: { titel: "Box 2", brackets: true, velden: [] },
 };
 // Losse bedragen per jaar.
-export const TARIEF_LOSSE = { gebruikelijkLoon: "Gebruikelijk loon (minimum)", startersaftrek: "Startersaftrek" };
+// nieuw-V8R1 — kmVergoeding: fiscaal maximum per km voor een privéauto die zakelijk wordt gebruikt (tax/kmVergoeding.js).
+export const TARIEF_LOSSE = { gebruikelijkLoon: "Gebruikelijk loon (minimum)", startersaftrek: "Startersaftrek", kmVergoeding: "Kilometervergoeding privéauto (per km)" };
 export const JAAR_STATUSSEN = ["definitief", "voorlopig"];
 
 const MAX_GETAL = 100_000_000;
