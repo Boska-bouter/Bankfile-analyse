@@ -40,7 +40,8 @@ export const HUISHOUD_HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>Kies bovenaan <strong>Maand</strong> of <strong>Week</strong> en blader met de pijltjes. Een week loopt van maandag tot en met zondag.</p>
-        <p>Bij elk bedrag staat hoeveel procent het hoger of lager is dan de vorige periode. Hogere uitgaven zijn rood, lagere groen. Is de vorige periode nul, dan staat er "nieuw". Een periode die nog loopt of waarin je bankbestand halverwege begint, heet "onvolledig" en krijgt geen percentage.</p>
+        <p>Bij elk bedrag staat het gemiddelde van de laatste zes volledige maanden ervoor: wat je gewoonlijk hebt. Alleen een duidelijk verschil krijgt een kleur: meer uitgeven is oranje, meer inkomen of meer over is groen. Een uitgave die er gewoonlijk niet is, heet "niet gebruikelijk". Een periode die nog loopt of waarin je bankbestand halverwege begint, heet "onvolledig" en wordt niet vergeleken.</p>
+        <p><strong>Opvallende uitgaven</strong> zijn losse betalingen van € 150 of meer die veel groter zijn dan gewoonlijk voor die categorie, zoals een grote aankoop.</p>
         <p><strong>Vaste lasten</strong> zijn de uitgaven die elke maand terugkomen: huur of hypotheek, energie, water, verzekeringen, abonnementen. <strong>Variabele uitgaven</strong> zijn de rest: boodschappen, uit eten, vakantie, kleding en dergelijke. Welke categorie vast is, stel je in bij Instellingen → Vaste/variabele kosten.</p>
         <p>Vaste lasten die per kwartaal of per jaar komen (bijvoorbeeld gemeentelijke belastingen) kun je laten uitsmeren over de maanden, zodat een maand niet ineens duur lijkt.</p>
         <p>Sparen en overboekingen tussen je eigen rekeningen tellen niet als uitgave. Terugbetalingen (Tikkie, retour) verlagen de uitgave.</p>

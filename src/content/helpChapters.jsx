@@ -252,6 +252,12 @@ export const HELP_CHAPTERS = [
         los aan te passen — zo blijft precies zichtbaar wat er vanaf welke rekening is betaald. 
         </p>
         <p>
+          Zoeken kan op meer woorden tegelijk, gescheiden door een komma of puntkomma: dan verschijnt alles waarin
+          een van die woorden staat. Wordt tijdens het zoeken een categorie gewijzigd, dan vraagt de app of dat voor
+          alle gevonden boekingen moet gelden. Vastgelegde boekingen (eigen keuze of eigen zoekwoord) blijven staan,
+          tenzij hun categorie wordt aangevinkt.
+        </p>
+        <p>
           Gebruik de filters
         op bedrag en datum om snel iets specifieks te vinden, en "Uitvergroten" om de tabel over de volle breedte
         te bekijken.
@@ -331,6 +337,12 @@ export const HELP_CHAPTERS = [
           Bij "Nog niet ingedeeld" staan twee snelknoppen voor alles wat nog in "Overig" staat: naar "Privé opnames" (voor een
           zakelijke rekening) of naar "Winkels divers" (voor een privérekening).
         </p>
+        <p>
+          <strong>Kleine bedragen:</strong> afschrijvingen bij een tegenpartij die allemaal onder de grens blijven
+          (standaard € 50) hoeven niet te worden nagelopen. Ze houden de categorie van de app en tellen niet als open punt.
+          Bij een dossier met omzet blijven ze samen onder 2,5% van de omzet. De grens is te wijzigen via "Grens aanpassen";
+          0 zet het uit. "Akkoord" sluit de melding.
+        </p>
       </div>
     ),
   },
@@ -367,10 +379,16 @@ export const HELP_CHAPTERS = [
           met andere leestekens schrijft.
         </p>
         <p>
-          <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah", "plus" of "spar") moeten
-          aan het begin van een woord staan en tellen niet mee als ze midden in een ander woord zitten. Zo wordt een
-          bankrekening of winkelnaam niet per ongeluk herkend op een stukje tekst. Zelf toegevoegde zoekwoorden
-          blijven gewoon op elke plek in de tekst werken.
+          <strong>Trefwoorden:</strong> korte standaard-zoekwoorden (tot 5 tekens, zoals "ah" of "plus") moeten aan het
+          begin van een woord staan. "spar", "coop", "total", "boss" en "loon" tellen alleen als heel woord, "huur" en
+          "pay.nl" alleen aan het begin van een woord. Zo wordt een winkelnaam niet herkend op een stukje van een ander
+          woord. Zelf toegevoegde zoekwoorden werken op elke plek in de tekst. Vaste banktekst (Transactie, Term,
+          Pasvolgnr, Valutadatum, Kaartnr) telt nooit mee.
+        </p>
+        <p>
+          <strong>Te breed zoekwoord:</strong> past een nieuw zoekwoord op meer dan 10 tegenpartijen, of is het een
+          plaatsnaam, dan waarschuwt de app eerst ("Niet toevoegen" of "Toch toevoegen"). Een bestaand eigen zoekwoord
+          dat te breed is, staat geel bij Categorieregels.
         </p>
         <p>
           Klopt een gele of rode indeling bij nazien gewoon? Dan hoeft hij niet te worden gewijzigd om hem te bevestigen — het
@@ -389,8 +407,9 @@ export const HELP_CHAPTERS = [
         <p>
           Bij het inlezen deelt de app elke transactie in volgorde in: eigen overboekingen (op IBAN, spaarrekening of
           eigen naam), eigen zoekwoorden, terugboekingen, dan de standaardcategorieën op trefwoord, daarna een
-          persoon of buitenlandse pinbetaling, winkels zonder IBAN ("Winkels divers") en als laatste "Overig". De eerste
-          regel die past wint.
+          persoon of buitenlandse pinbetaling, winkels zonder IBAN ("Winkels divers") en als laatste "Overig". Passen
+          zoekwoorden van meer categorieën, dan wint het meest specifieke zoekwoord (langer, of de naam van de partij zelf).
+          Is het gelijk, dan komt de boeking bij Controleren te staan met "Twijfel: … of …?".
         </p>
         <p>
           <strong>Retour en terugbetaling:</strong> een bijschrijving met een pasvolgnummer is een teruggeboekte
@@ -466,9 +485,17 @@ export const HELP_CHAPTERS = [
           kosten staat bij "Percentage zakelijk per categorie" — zie "Huur (deels zakelijk)" voor de uitleg.
         </p>
         <p>
-          <strong>Heffingskortingen</strong> (algemene heffingskorting + arbeidskorting) worden geschat ervan
-          uitgaande dat de winst het enige inkomen is, de AOW-leeftijd nog niet is bereikt, en er geen fiscale
-          partner is om mee te verrekenen — klopt een van die aannames niet, dan is de schatting minder betrouwbaar.
+          <strong>Overig inkomen</strong> — bruto loon of een uitkering naast de winst is per jaar op te geven. Dat telt mee
+          in box 1; de IB die bij de winst hoort is het verschil met en zonder winst. De heffingskorting telt maar één keer,
+          op het gekozen inkomen (standaard het hoogste).
+        </p>
+        <p>
+          <strong>Heffingskortingen</strong> (algemene heffingskorting en arbeidskorting) gaan ervan uit dat de AOW-leeftijd
+          nog niet is bereikt en dat er geen fiscale partner is. Klopt dat niet, dan is de schatting minder betrouwbaar.
+        </p>
+        <p>
+          <strong>Giften</strong> — boekingen in "Giften & donaties" tellen als aftrekpost: het deel boven 1% van het inkomen
+          (minimaal € 60), tot 10% van het inkomen. Alleen giften aan een ANBI tellen mee.
         </p>
         <p>
           <strong>Investeringsaftrek (KIA)</strong> wordt hier automatisch voorgesteld op basis van wat er in het
@@ -669,6 +696,11 @@ export const HELP_CHAPTERS = [
           <strong>totale rente al betaald</strong> — vul die in als ze al bekend zijn. Wijkt de berekening van
           de app meer dan €25 af van wat zelf is opgegeven, dan waarschuwt de app daarvoor.
         </p>
+        <p>
+          Hoort alles wat de app bij een lening heeft gezet er echt bij? De knop "Klopt, alles hoort bij de lening" legt
+          die boekingen vast en haalt de melding weg. Staat "lening", "lenen" of "aflossing" in de omschrijving van een
+          ontvangst, dan vraagt de app of het zakelijk of privé is.
+        </p>
       </div>
     ),
   },
@@ -695,10 +727,10 @@ export const HELP_CHAPTERS = [
         categorie. Alleen van toepassing op Zakelijke transacties. 
         </p>
         <p>
-          Standaard staat alles op 21% (Reiskosten OV op 9%), met
+          Standaard staat alles op 21% (Reiskosten OV en Zakelijke inkoop voedingsmiddelen op 9%), met
         uitzondering van categorieën waar geen BTW op zit: Bankkosten, alle Belastingen en Gemeentelijke kosten, alle
         Verzekeringen/AOV, Huur, Leningen, Lease (financieel), Hypotheek, Loon, Privé opnames/Ontvangen van zakelijk,
-        interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie en Overig. 
+        interne overboekingen, Overboekingen aan personen, Kinderopvang, Toeslagen, alimentatie, Giften & donaties en Overig. 
         </p>
         <p>
           Inhuur personeel
