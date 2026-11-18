@@ -9,7 +9,7 @@ import TabPijlen from "./components/shared/TabPijlen.jsx";
 import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeOverboekingenModal.jsx";
 import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
-import { registerTariefInstellingen } from "./tax/incomeTax.js";
+import { registerTariefInstellingen, registerGiften } from "./tax/incomeTax.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
@@ -1332,6 +1332,13 @@ export default function App() {
     }
     prevActiveYearRef.current = activeYear;
   }, [activeYear]);
+  // nieuw-V7R7 — giften (categorie "Giften & donaties") per jaar voor de aftrekpost in de IB-indicatie (incomeTax.js).
+  const giftenPerJaar = useMemo(() => {
+    const r = {};
+    for (const tx of classified) if (!tx.isMirror && tx.category === "Giften & donaties") r[tx.year] = (r[tx.year] || 0) - Number(tx.amount || 0);
+    return r;
+  }, [classified]);
+  registerGiften(giftenPerJaar);
   const { autoExactIngevuld, belastingTotaalJaar, bvSignalering, categorieTotalenActiveYear, categoryZakelijkPercentageEff, confirmPeriodeAsIs, costBreakdownByQuarter, costBreakdownByYear, dashboardAangifteIndicatie, dashboardVpbBreakdown, dashboardVpbIndicatie, dgaSalarisByYear, eenvoudigLease, eigenPriveIbans, evVerloop, fiscaalVoorJaar, gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, heeftLeaseAutoDossierBreed, holdingSummaryCard, ibEstimate, kostenTotaalByYear, leaseGroepenEenv, movePeriodeToQuarter, ondernemersaftrekPerJaar, overigeDelen, periodeSignalenActiefJaar, priGroupForYear, priGroupShown, priGroupWeergave, priveOnlyDossier, priveOverzicht, quarterlyBtwData, rcVerloop, rekeningenVoorGroep, yearCoverage, yearlyOpenOB, yearlySummaries, yearlySummary, zakGroupForYear, zakGroupWeergave, zetEenvoudigLease, zvwEstimate } = useJaarGroepen({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoActivaDetails, autoStatus, autoWizardStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentage, classified, eenvoudigActief, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftHolding, holdingBoekingen, holdingBoekingenSectionRef, huurZakelijkPercentageStatus, importDiagnostics, kmVergoedingDetails, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, overigInkomenBox1, ownAccountByFile, periodeQuarterOverrides, priveAntwoorden, rechtsvorm, reviewedOverigKeys, reviewedPeriodeKeys, reviewedPersonKeys, setBevestigdeControles, setPeriodeQuarterOverrides, setReviewedPeriodeKeys, setShowHoldingBoekingen, snapshotBeforeAction, startersaftrekEff, tariefOverrides, voorbelastingExcluded, werkruimteStatus, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, appLaat });
   const { aansluitControleInfo, businessAdvies, checklistData, incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, priveRekeningGeladen, rekeningTypeTekst, volledigeJaren, yearlyProgress, zakelijkRekeningGeladen } = useRekeningOverzicht({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentageEff, classified, confirmedLeaseTypeKeys, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fileContinuity, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibEstimate, ibStatus, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, parsedFiles, periodePerSoort, periodeQuarterOverrides, priGroupForYear, priveOverzicht, quarterlyBtwData, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus, yearlyOpenOB, yearlySummary, years, zakGroupForYear, zelfstandigenaftrekStatus, zvwEstimate, zvwStatus });
 

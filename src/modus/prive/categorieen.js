@@ -173,8 +173,9 @@ export const PRIVE_REGELS = Object.freeze([
     "yoga", "pilates", "bridge bond", "bridgeclub", "bridgevereniging", "ivn", "volksuniversiteit", "cursus", "schilderlokaal",
     "atelier", "museumkaart", "natuurmonumenten lid",
   ] },
+  // nieuw-V7R8 — alleen giften aan een ANBI zijn aftrekbaar (Boska 18-11): geen algemene woorden als "gift" of "donatie".
   { naam: "Giften", woorden: [
-    " gift ", "periodieke gift", "donatie", " anbi", "kwf", "rode kruis", "unicef", "artsen zonder grenzen", "greenpeace",
+    " anbi", "kwf", "rode kruis", "unicef", "artsen zonder grenzen", "greenpeace",
     "natuurmonumenten", "wereld natuur fonds", "wnf", "amnesty", "hartstichting", "nierstichting", "longfonds",
     "diabetes fonds", "alzheimer nederland", "leger des heils", "kerkbalans", "kerkelijke bijdrage", "parochie",
     "protestantse gemeente", "oxfam", "cordaid", "war child", "dierenbescherming", "kika", "voedselbank",
@@ -278,6 +279,7 @@ export const ZAKELIJK_NAAR_PRIVE = Object.freeze({
   "Reiskosten (OV)": "Openbaar vervoer", "Privé - openbaar vervoer": "Openbaar vervoer",
   "Reiskosten (vliegtickets)": "Vliegtickets", "Reiskosten (hotel & verblijf)": "Vrije tijd", "Borg (waarborgsom)": "Terugbetalingen & restituties", "Schade-uitkering verzekering": "Terugbetalingen & restituties", "Privé - vliegtickets": "Vliegtickets",
   "Privé - sport & fitness": "Sport & hobby",
+  "Giften & donaties": "Giften",
   "Verzekering: Auto": "Verzekeringen", "Verzekering: Zakelijk": "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)": "Verzekeringen",
   "Huur": "Privé - huur", "Energie-water": "Privé - energie-water", "Gemeentelijke kosten": "Privé - gemeentelijke kosten",
   "Huur (deels zakelijk)": "Privé - huur", "Energie-water (deels zakelijk)": "Privé - energie-water",

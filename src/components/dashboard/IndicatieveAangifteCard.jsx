@@ -60,9 +60,11 @@ export default function IndicatieveAangifteCard({ year, winst, indicatie, breakd
           {indicatie.startersaftrekBedrag > 0 && <Regel label="Startersaftrek" waarde={`− ${eur(indicatie.startersaftrekBedrag)}`} />}
           <Regel label="MKB-winstvrijstelling" waarde={`− ${eur(indicatie.mkbVrijstellingBedrag)}`} />
           <Regel label="Belastbare winst" waarde={eur(indicatie.belastbareWinst)} sterk />
+          {/* nieuw-V7R7 — giften boven de drempel (categorie Giften & donaties) */}
+          {(indicatie.ib?.giftenAftrek || 0) > 0 && <Regel label={`Aftrek giften (betaald ${eur(indicatie.ib.giften)}, na drempel)`} waarde={`− ${eur(indicatie.ib.giftenAftrek)}`} />}
         </div>
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-3">
-          <Regel label="IB over de belastbare winst" waarde={eur(ibVoor)} />
+          <Regel label={(indicatie.ib?.giftenAftrek || 0) > 0 ? "IB over belastbare winst min giften" : "IB over de belastbare winst"} waarde={eur(ibVoor)} />
           <Regel label={hkRest > 0.005 ? `Heffingskorting (van ${eur(heffingskortingTotaal)})` : "Heffingskorting"} waarde={`− ${eur(hkToegepast)}`} />
           <Regel label="IB te betalen" waarde={eur(ibNaHeffingskorting)} sterk />
           <Regel label="Zvw-bijdrage" waarde={eur(indicatie.zvw?.bijdrage || 0)} />

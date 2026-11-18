@@ -129,6 +129,16 @@ export const DEFAULT_RULES = [
     "kinderalimentatie", "lbio", "onderhoudsbijdrage",
   ],
     description: "Fiscaal neutraal — niet aftrekbaar bij de betaler, niet belast bij de ontvanger. Gewoon een privé-categorie, geen verdere fiscale behandeling nodig." },
+  // nieuw-V7R7 — giften aan goede doelen (wens Boska 17-11): bestond alleen in het privédossier. Telt als aftrekpost in de IB-indicatie
+  // (incomeTax.js, registerGiften). nieuw-V7R8 — alleen giften aan een ANBI zijn aftrekbaar (Boska 18-11): geen algemene woorden als
+  // "gift" of "donatie", alleen " anbi" en bekende ANBI's. Een andere gift zet de gebruiker zelf hier, als de ontvanger een ANBI is.
+  { name: "Giften & donaties", color: "bg-pink-100 text-pink-800", keywords: [
+    " anbi", "kwf", "rode kruis", "unicef", "artsen zonder grenzen", "greenpeace",
+    "natuurmonumenten", "wereld natuur fonds", "wnf", "amnesty", "hartstichting", "nierstichting", "longfonds",
+    "diabetes fonds", "alzheimer nederland", "leger des heils", "kerkbalans", "kerkelijke bijdrage", "parochie",
+    "protestantse gemeente", "oxfam", "cordaid", "war child", "dierenbescherming", "kika", "voedselbank",
+  ],
+    description: "Alleen giften aan een ANBI. Aftrekpost in de IB-indicatie: het deel boven 1% van het inkomen (minimaal € 60), tot maximaal 10%." },
   { name: "Winkels divers", color: "bg-lime-200 text-lime-900", keywords: [
     "jd sports", "shein", "zalando", "h&m", "hm.com", "c&a", "primark", "bershka", "zara", "asos",
     "urban outfitters", "bruna",
@@ -393,7 +403,7 @@ export const CATEGORY_ORDER = [
   "Autokosten", "Bankkosten", "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: MRB", "Belastingen: OB",
   "Belastingen: ZVW", "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren", "Belastingen: overig", "Boekhouder, accountant & administratie", "Boodschappen", "Brandstof", "Energie-water", "Gemeentelijke kosten",
   "Huur", "Hypotheek", "Incasso, juridisch & schulden", "Inhuur personeel", "Inkomsten", "Inkomsten/betalingen niet dit jaar", "Interne overboeking", "Interne overboeking: zakelijk sparen", "Interne overboeking: privé sparen", "Kinderopvang", "Lease (operationeel)", "Lease (financieel)", "Leningen", "Leningen (privé)", "Marketing-website", "Medische uitgaven", "Overboekingen aan personen", "Overboeking van bekenden", "Ontvangen van zakelijk",
-  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
+  "Overig", "Onderhoud apparatuur/machines", "Parkeren", "Betaalautomaat kosten", "Privé - bankkosten", "Privé - energie-water", "Privé - gemeentelijke kosten", "Privé - huur", "Privé - overige kosten", "Privé - mobiel", "Privé - internet/TV", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé opnames", "Privé overige abonnementen", "Privé: overig", "Partneralimentatie", "Kinderalimentatie", "Giften & donaties",
   "Terugboeking van privé", "Terugboeking naar zakelijk",
   "Reiskosten (OV)", "Reiskosten (vliegtickets)", "Reiskosten (hotel & verblijf)", "Borg (waarborgsom)", "Schade-uitkering verzekering", "Streaming diensten", "Privé - streaming diensten", "Software & Online diensten", "Toeslagen", "Uitbetalen loon", "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness",
   "Verkoop activa", "Verzekering: Auto", "Verzekering: Zakelijk", "Verzekeringen", "Persoonlijk & vertrouwelijk", "AOV (arbeidsongeschiktheidsverzekering)",
@@ -482,7 +492,7 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Kinderopvang": "geen", "Medische uitgaven": "geen", "Overboekingen aan personen": "geen", "Overboeking van bekenden": "geen", "Privé - mobiel": "geen", "Privé - internet/TV": "geen", "Privé - openbaar vervoer": "geen", "Privé - vliegtickets": "geen", "Privé - bankkosten": "geen", "Privé - energie-water": "geen", "Privé - gemeentelijke kosten": "geen", "Privé - huur": "geen", "Privé - overige kosten": "geen",
   "Privé opnames": "geen", "Privé overige abonnementen": "geen", "Privé - streaming diensten": "geen", "Terugboeking van privé": "geen", "Terugboeking naar zakelijk": "geen", "Leningen (privé)": "geen",
   "Toeslagen": "geen", "Ontvangen van zakelijk": "geen", "Privé - vrijetijd-uitgaan-vakantie & uit eten": "geen", "Privé - sport & fitness": "geen",
-  "Privé: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Verzekeringen": "geen",
+  "Privé: overig": "geen", "Partneralimentatie": "geen", "Kinderalimentatie": "geen", "Giften & donaties": "geen", "Verzekeringen": "geen",
   "Winkels divers": "geen", "Webshops & online aankopen": "geen", "Persoonlijk & vertrouwelijk": "geen",
   // Alle overige: gewone, volledig aftrekbare zakelijke kostenpost
   "Autokosten": "kosten", "Bankkosten": "kosten", "Belastingen: MRB": "kosten",
@@ -761,6 +771,7 @@ export const SUBTYPE_TO_MAIN = {
   "Privé: overig": "Privé",
   "Partneralimentatie": "Privé",
   "Kinderalimentatie": "Privé",
+  "Giften & donaties": "Privé",
   "Verkoop activa": "Zakelijke inkomsten",
   "Verzekering: Auto": "Vervoer & auto",
   "Verzekering: Zakelijk": "Inkoop & zakelijke uitgaven",
@@ -864,7 +875,7 @@ export const PRIVE_GROEPEN = {
     "Boodschappen", "Hypotheek", "Inkomsten", "Kinderopvang", "Medische uitgaven", "Overboekingen aan personen",
     "Overboeking van bekenden", "Privé - bankkosten", "Privé - openbaar vervoer", "Privé - vliegtickets", "Privé - overige kosten",
     "Privé - vrijetijd-uitgaan-vakantie & uit eten", "Privé - sport & fitness", "Privé: overig", "Partneralimentatie", "Kinderalimentatie",
-    "Toeslagen", "Winkels divers", "Webshops & online aankopen",
+    "Giften & donaties", "Toeslagen", "Winkels divers", "Webshops & online aankopen",
   ].map((key) => ({ key, label: key })),
 };
 
