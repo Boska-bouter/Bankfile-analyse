@@ -1,6 +1,6 @@
 import { fiscalTreatmentOf } from "../classification/categories.js";
 import { factuurjaarRegel } from "../classification/factuurjaar.js";
-import { computeQuarterlyBtwForYear } from "../tax/btw.js";
+import { computeQuarterlyBtwForYear, computeBtw } from "../tax/btw.js";
 import { computeYearlySummary } from "../tax/yearlySummary.js";
 import {
   estimateIncomeTax, estimateZvw, estimateHeffingskortingen, computeMogelijkeKia,
@@ -22,6 +22,7 @@ import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
 import { eur } from "../utils/amounts.js";
 import { downloadRapport } from "./download.js";
+import { balansPostenVoorJaar } from "./balansPosten.js";
 
 // De statustekst is een functie van het aantal openstaande punten (niet een vaste tekst per kleur)
 // — "groen" betekent hier altijd alléén dat de gegevenscontrole voldoende compleet is, NIET dat de
@@ -32,6 +33,30 @@ const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 let JAAR_TOTALEN = [];
 // nieuw-V7R9 — de jaartotalen van het laatst gemaakte rapport (winst, IB ná heffingskorting, Zvw, btw-saldo), voor de fiscale regressietest.
 export function laatsteJaarTotalen() { return JAAR_TOTALEN.map((j) => ({ ...j })); }
+
+// nieuw-V8R4 — banksaldo van de zakelijke rekening(en) op 1-1 en 31-12 uit "saldo na mutatie" (per bestand in
+// bestandsvolgorde, nieuwste-eerst herkend zoals checkBalanceConsistency). null als een bestand geen saldo heeft.
+export function banksaldiVoorJaar(classified, year, accountTypeByFile = null) {
+  const perBron = new Map();
+  for (const t of classified || []) {
+    const soort = accountTypeByFile?.[t.source] || t.type;
+    if (t.isMirror || soort !== "Zakelijk") continue;
+    if (!perBron.has(t.source)) perBron.set(t.source, []);
+    perBron.get(t.source).push(t);
+  }
+  let begin = 0, eind = 0, gevonden = false;
+  for (const lijst of perBron.values()) {
+    const opId = [...lijst].sort((a, b) => a.id - b.id);
+    if (opId.some((t) => t.balance == null)) return null;
+    const chrono = opId.length > 1 && opId[0].date > opId[opId.length - 1].date ? opId.reverse() : opId;
+    const voor = chrono.filter((t) => t.year < year), dit = chrono.filter((t) => t.year === year);
+    if (!dit.length && !voor.length) continue;
+    if (dit.length) { begin += dit[0].balance - dit[0].amount; eind += dit[dit.length - 1].balance; }
+    else { const l = voor[voor.length - 1]; if (chrono.some((t) => t.year > year)) { begin += l.balance; eind += l.balance; } else continue; }
+    gevonden = true;
+  }
+  return gevonden ? { begin: Math.round(begin * 100) / 100, eind: Math.round(eind * 100) / 100 } : null;
+}
 
 function statusTekst(status, aantalPunten) {
   if (status === "rood") return "Nog onvoldoende gegevens voor een betrouwbare reconstructie";
@@ -544,7 +569,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const eh = (n) => `€ ${Math.round(Math.abs(n) || 0).toLocaleString("nl-NL")}`;
   const af = (n) => (Math.round(n) === 0 ? eh(0) : `− ${eh(n)}`);
   const rij = (label, bedrag, cls = "") => `<div class="ak-r${cls ? " " + cls : ""}"><span>${label}</span><span class="num">${bedrag}</span></div>`;
-  const scherm = (naam) => `<div class="ak-scherm">Scherm: ${naam}</div>`;
+  const scherm = (naam) => `<div class="ak-scherm">${naam}</div>`; // nieuw-V8R4 — zonder "Scherm:" (Boska 18-11)
   const inkoopGroep = (ib.inkoopkosten.totaal || 0) + andereExterneKostenBedrag;
   const machineAfschr = apparatuurAfschrijving + leaseAfschrijvingMachine;
   const overigeRubrieken = ib.overigeBedrijfskosten.filter((r) => Math.abs(r.totaal || 0) >= 0.005);
@@ -567,16 +592,80 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${Math.abs(correctie) >= 0.5 ? rij("Overige correcties (zie de winst-en-verliesrekening hieronder)", `${correctie < 0 ? "− " : ""}${eh(correctie)}`) : ""}
     ${rij("Resultaat = winst uit onderneming", `${summary.winst < 0 ? "− " : ""}${eh(summary.winst)}`, "tot")}
     <p class="ak-noot">Vul de opbrengsten en de kosten apart in; de winst rekent de Belastingdienst zelf uit.</p>`;
+  // nieuw-V8R4 — met of zonder balans (wens Boska 18-11: "de balans van het banksaldo staat er niet bij").
+  // Banksaldo zakelijke rekening(en) uit "saldo na mutatie"; kosten die vanaf een privérekening zijn betaald tellen
+  // als privéstorting; wat dan nog overblijft zijn balansmutaties die de bank niet laat zien (auto, leaseschuld, btw).
+  const saldi = banksaldiVoorJaar(classified, year, accountTypeByFile);
+  const priveItems = zakItems.filter((tx) => (accountTypeByFile?.[tx.source] || tx.type) === "Prive");
+  const ibPrive = priveItems.length ? computeIbBoxMapping(priveItems, null, null, 0, categoryBtwRates, btwVerlegd, leaseAutoKostenForYear ? { contracten: [] } : null, year, categoryZakelijkPercentage, autoStatus, null, { huur: huurZakelijkPercentageStatus, energie: energieZakelijkPercentageStatus, gemeentelijk: gemeentelijkeKostenZakelijkPercentageStatus }) : null;
+  const priveBetaald = ibPrive ? (ibPrive.inkoopkosten.totaal || 0) + (ibPrive.autokostenOverig.totaal || 0) + ibPrive.overigeBedrijfskosten.reduce((x, r) => x + (r.totaal || 0), 0) + ibPrive.nogNietIngedeeld.reduce((x, r) => x + (r.totaal || 0), 0) : 0;
+  // De btw op kosten die vanaf privé zijn betaald komt als voorbelasting terug in de zaak: de storting is het brutobedrag.
+  const btwPriveBetaald = ibPrive ? -priveItems.filter((tx) => tx.amount < 0 && fiscalTreatmentOf(tx.category) !== "geen").reduce((a, tx) => a + computeBtw(tx, categoryBtwRates || {}, btwVerlegd), 0) : 0;
+  const opnames = ib.priveOnttrekkingen.totaal || 0, stortGeld = ib.priveStortingen.totaal || 0;
+  let metBalansHtml = "";
+  if (saldi) {
+    // Balans zoals de Belastingdienst die controleert: activa = passiva, met het ondernemingsvermogen als sluitpost.
+    // Btw: het saldo van Q4 wordt pas in januari betaald of ontvangen, dus staat op 31-12 als schuld of vordering.
+    const R = Math.round;
+    const stortTot = stortGeld + priveBetaald + btwPriveBetaald;
+    const bp = balansPostenVoorJaar({ classified, year, accountTypeByFile, leaseSummary, leaseDetails, activaDetails, autoActivaDetails, autoWizardStatus });
+    const q4 = (ks) => { const q = ks.find((k) => k.kwartaal === 4); return q ? q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0) : 0; };
+    const btwVorig = korRegeling ? [] : computeQuarterlyBtwForYear(classified, year - 1, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(year - 1, { leaseSummary: leaseSummary || [], leaseDetails: leaseDetails || {}, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates, btwVerlegd, rechtsvorm: "zzp" }));
+    const btw = { begin: R(q4(btwVorig)), eind: R(q4(kwartalen)) };
+    const p2 = (f) => ({ begin: f("begin"), eind: f("eind") });
+    const bank = p2((k) => R(saldi[k]));
+    const sparen = p2((k) => Math.max(0, R(bp.sparen[k]))), auto = p2((k) => R(bp.auto[k])), overig = p2((k) => R(bp.overig[k])), lease = p2((k) => R(bp.leaseschuld[k]));
+    const btwVord = p2((k) => Math.max(0, -btw[k])), btwSchuld = p2((k) => Math.max(0, btw[k]));
+    const liquide = p2((k) => Math.max(0, bank[k])), rcSchuld = p2((k) => Math.max(0, -bank[k]));
+    const activa = p2((k) => auto[k] + overig[k] + btwVord[k] + liquide[k] + sparen[k]);
+    const schulden = p2((k) => lease[k] + btwSchuld[k] + rcSchuld[k]);
+    const vermogen = p2((k) => activa[k] - schulden[k]);
+    const lR = R(bp.leaseElders || 0);
+    const wR = R(summary.winst), oR = R(opnames), bR = R(autoOnttrekking), sR = R(stortTot) + lR;
+    const verschil = wR - (vermogen.eind - vermogen.begin + oR + bR - sR);
+    const bedrag = (n) => `${n < 0 ? "− " : ""}${eh(n)}`;
+    const be = (o) => `${bedrag(o.begin)} en ${bedrag(o.eind)}`;
+    const heeft = (o) => o.begin !== 0 || o.eind !== 0;
+    metBalansHtml = `<div class="ak-sub">Met balans (bedragen 1-1 en 31-12)</div>
+    <div class="ak-sub2">Balans: activa</div>
+    ${heeft(auto) ? rij("Auto, boekwaarde (materiële vaste activa)", be(auto)) : ""}
+    ${bp.autoItems.map((a) => `${rij(`Aanschafwaarde${a.aanschafdatum ? ` (${new Date(a.aanschafdatum).toLocaleDateString("nl-NL")})` : ""}`, eh(a.aanschafwaarde), "sub")}${rij(`Afschrijving ${year}`, af(a.afschrijving), "sub")}`).join("")}
+    ${heeft(overig) ? rij("Overige bedrijfsmiddelen, boekwaarde (materiële vaste activa)", be(overig)) : ""}
+    ${heeft(btwVord) ? rij("Vordering omzetbelasting (btw terug over Q4)", be(btwVord)) : ""}
+    ${rij("Liquide middelen (banksaldo zakelijke rekening)", be(liquide))}
+    ${heeft(sparen) ? rij("Liquide middelen (zakelijke spaarrekening, uit de overboekingen)", be(sparen)) : ""}
+    ${rij("Totaal activa", be(activa), "tot")}
+    <div class="ak-sub2">Balans: passiva</div>
+    ${heeft(lease) ? rij("Leaseschuld", be(lease)) : ""}
+    ${heeft(btwSchuld) ? rij("Schuld omzetbelasting (btw te betalen over Q4)", be(btwSchuld)) : ""}
+    ${heeft(rcSchuld) ? rij("Overige kortlopende schulden (negatief banksaldo)", be(rcSchuld)) : ""}
+    ${rij("Totaal schulden", be(schulden), "sub")}
+    ${rij("Ondernemingsvermogen = totaal activa min totaal schulden", be(vermogen))}
+    ${rij("Totaal passiva (gelijk aan totaal activa)", be(activa), "tot")}
+    <p class="ak-noot">Het ondernemingsvermogen is wat de onderneming bezit min wat ze schuldig is. Het komt niet van de bank maar volgt uit de balans; daardoor zijn activa en passiva altijd gelijk.</p>
+    <div class="ak-sub2">Privéonttrekkingen en -stortingen</div>
+    ${rij("Privéonttrekkingen in geld (opnames van de bank)", eh(oR))}
+    ${bR > 0 ? rij("Privégebruik auto (bijtelling, onttrekking in natura)", eh(bR)) : ""}
+    ${verschil > 0 ? rij("Overige privéonttrekkingen (verschil, controleren)", eh(verschil)) : ""}
+    ${rij("Overige privéstortingen", eh(sR + (verschil < 0 ? -verschil : 0)))}
+    ${stortGeld >= 0.5 ? rij("Stortingen vanaf privé", eh(stortGeld), "sub") : ""}
+    ${priveBetaald >= 0.5 ? rij("Zakelijke kosten betaald vanaf de privérekening (inclusief btw)", eh(priveBetaald + btwPriveBetaald), "sub") : ""}
+    ${lR > 0 ? rij("Leasetermijnen betaald van een andere rekening", eh(lR), "sub") : ""}
+    ${verschil < 0 ? rij("Verschil (controleren)", eh(-verschil), "sub") : ""}
+    ${rij("Controle: vermogensverschil + onttrekkingen − stortingen = winst", bedrag(wR), "tot")}`;
+  }
   const priveHtmlKaart = `${scherm("Privéonttrekkingen en -stortingen")}
+    <div class="ak-sub">Zonder balans (balans op € 0)</div>
     ${rij("Privéonttrekkingen in geld", eh(Math.max(0, summary.winst)))}
-    ${rij("Overige privéstortingen", eh(Math.max(0, -summary.winst)))}
-    <p class="ak-noot">Met de balans op € 0 geldt: onttrekkingen min stortingen = winst.${(ib.priveOnttrekkingen.totaal || 0) > 0 || (ib.priveStortingen.totaal || 0) > 0 ? ` Ter info, van de bank: opnames ${eh(ib.priveOnttrekkingen.totaal || 0)}, stortingen ${eh(ib.priveStortingen.totaal || 0)}; die gelden alleen als ook de balans (banksaldo begin en eind) wordt ingevuld.` : ""}${autoOnttrekking > 0 ? " Privégebruik auto staat al bij de autokosten, dus hier niet nog een keer invullen." : ""}</p>`;
+    ${summary.winst < 0 ? rij("Overige privéstortingen", eh(-summary.winst)) : ""}
+    <p class="ak-noot">Met de balans op € 0 geldt: onttrekkingen min stortingen = winst.${autoOnttrekking > 0 ? " Privégebruik auto staat al bij de autokosten, dus hier niet nog een keer invullen." : ""}</p>
+    ${metBalansHtml}`;
   let aftrekEnBelastingHtml;
   if (zaScenarios) {
     const kol = (sc) => { const i = ibNa(sc.ib, sc.heffingskortingen); return { aftrek: sc.ondernemersaftrekBedrag || 0, mkb: sc.winstUitsplitsing.mkbVrijstellingBedrag || 0, bel: sc.winstUitsplitsing.belastbaar, ibV: sc.ib.belasting || 0, hk: sc.heffingskortingen.totaal || 0, ibN: i, zvw: sc.zvw.bijdrage, tot: i + sc.zvw.bijdrage }; };
     const m = kol(zaScenarios.metZelfstandigenaftrek), z = kol(zaScenarios.zonderZelfstandigenaftrek);
     const r2 = (label, a, b, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><td>${label}</td><td class="num">${a}</td><td class="num">${b}</td></tr>`;
-    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek en Overzicht belasting en inkomen")}
+    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek en belasting")}
     <p class="ak-noot">Urencriterium onbekend: beide mogelijkheden naast elkaar.</p>
     <table class="ak-tabel"><thead><tr><th></th><th class="num">Mét zelfstandigenaftrek</th><th class="num">Zonder zelfstandigenaftrek</th></tr></thead><tbody>
       ${r2("Zelfstandigen- en startersaftrek", af(m.aftrek), af(z.aftrek))}
@@ -593,14 +682,14 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const i = ibNa(ibEstimate, heffingskortingen);
     const hkD = heffingskortingen;
     const overigInk = ibEstimate.overigInkomen || 0;
-    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek (rekent de Belastingdienst zelf)")}
+    aftrekEnBelastingHtml = `${scherm("Ondernemersaftrek")}
     ${rij(`Zelfstandigenaftrek (urencriterium: ${zaStatus === "ja" ? "ja" : "nee"})`, af(ondernemersaftrekBedrag - sta))}
     ${sta > 0 ? rij("Startersaftrek", af(sta)) : ""}
     ${rij(`Mkb-winstvrijstelling ${String(winstUitsplitsing.mkbPct).replace(".", ",")}%`, af(winstUitsplitsing.mkbVrijstellingBedrag))}
     ${rij("Belastbare winst", eh(winstUitsplitsing.belastbaar), "tot")}
     ${(ibEstimate.giftenAftrek || 0) > 0 ? rij(`Aftrek giften (betaald ${eh(ibEstimate.giften)}, na drempel)`, af(ibEstimate.giftenAftrek)) : ""}
     ${overigInk > 0 ? rij("Overig inkomen box 1 (loon/uitkering, bruto)", eh(overigInk)) : ""}
-    ${scherm("Overzicht belasting en inkomen")}
+    ${scherm("Belasting en premies")}
     ${rij("Inkomstenbelasting vóór heffingskortingen", eh(ibEstimate.belasting || 0))}
     ${rij(`Heffingskortingen${!hkD.werkelijkIngevuld && hkD.algemeneHeffingskorting != null && hkD.arbeidskorting != null ? ` (algemeen ${eh(hkD.algemeneHeffingskorting)}, arbeidskorting ${eh(hkD.arbeidskorting)})` : ""}${overigInk > 0 && hkD.kortingOp === "overig" ? " (toegepast op het overig inkomen)" : ""}`, af(hkD.totaal || 0))}
     ${rij("Te betalen inkomstenbelasting en premie volksverzekeringen", eh(i), "tot")}
@@ -611,7 +700,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const btwJaarRegel = korRegeling ? "" : `<div class="ak-btw"><span>Btw ${year} (apart, per kwartaal aangegeven)</span><span>${eh(btwJaarSaldo)} ${btwJaarSaldo < 0 ? "terug" : "te betalen"}</span></div>`;
   const samenvattingHtml = `
   <div class="aangifte-kaart">
-    <div class="ak-kop"><b>Aangifte inkomstenbelasting ${year}</b><span>indicatief</span></div>
+    <div class="ak-kop"><b>Indicatief aangifteoverzicht inkomstenbelasting ${year}</b><span></span></div>
     ${wvHtml}
     ${priveHtmlKaart}
     ${aftrekEnBelastingHtml}
@@ -824,45 +913,27 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   ${btwPrivegebruikNoot}
   <p class="toelichting">Details van de onderliggende BTW-analyse per kwartaal en het volledige categorieoverzicht zijn in de app zelf terug te vinden.</p>
 
-  <h2>Indicatieve inkomstenbelasting en Zvw-bijdrage — details</h2>
-  <p class="toelichting">Kerncijfers staan al in het dashboard bovenaan; hieronder alleen de aanvullende opbouw.<!--V--> Zie de Bijlage voor de algemene aannames (urencriterium, extrapolatie, startersaftrek, 9-jaars-reserve) en het voorbehoud.<!--/V--></p>
-  ${zaScenarios ? `
-  <p>Indicatieve Zvw mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenarios.metZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""} · zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenarios.zonderZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}</p>
-  <p>Heffingskortingen mét zelfstandigenaftrek: <strong>${eur(zaScenarios.metZelfstandigenaftrek.heffingskortingen.totaal)}</strong> · zonder: <strong>${eur(zaScenarios.zonderZelfstandigenaftrek.heffingskortingen.totaal)}</strong></p>
-  ${mogelijkeKia > 0 ? `<p>Ná mogelijke KIA*: mét zelfstandigenaftrek → IB <strong>${eur(Math.max(0, zaScenariosNaKia.metZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.metZelfstandigenaftrek.heffingskortingen.totaal))}</strong> (ná heffingskorting), Zvw <strong>${eur(zaScenariosNaKia.metZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenariosNaKia.metZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}; zonder → IB <strong>${eur(Math.max(0, zaScenariosNaKia.zonderZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.zonderZelfstandigenaftrek.heffingskortingen.totaal))}</strong> (ná heffingskorting), Zvw <strong>${eur(zaScenariosNaKia.zonderZelfstandigenaftrek.zvw.bijdrage)}</strong>${zaScenariosNaKia.zonderZelfstandigenaftrek.zvw.gemaximeerd ? " (gemaximeerd)" : ""}.</p>` : ""}
-  <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
-  ` : `
-  ${ondernemersaftrekVoorJaar ? `
-  <p class="toelichting">Toegepast: zelfstandigenaftrek <strong>${eur(ondernemersaftrekVoorJaar.zelfstandigenaftrekBedrag)}</strong>${
-      ondernemersaftrekVoorJaar.verrekendUitReserve > 0
-        ? ` (waarvan ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend uit eerdere jaren)`
-        : ""
-    }${startersaftrekToegepast ? ` + startersaftrek <strong>${eur(ondernemersaftrekVoorJaar.startersaftrekBedrag)}</strong>` : ""}.${
-      ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0
-        ? ` ⚠ ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} niet benut (winst te laag), gereserveerd voor later.`
-        : ""
-    }</p>
-  ` : ""}
-  ${mogelijkeKia > 0 ? `<p>Ná mogelijke KIA*: IB <strong>${eur(ibEstimateNaKia.belasting)}</strong>, Zvw <strong>${eur(zvwEstimateNaKia.bijdrage)}</strong>${zvwEstimateNaKia.gemaximeerd ? " (gemaximeerd)" : ""}.</p>` : ""}
-  <p class="vergelijk-hint">Vergelijk met wat daadwerkelijk is aangegeven/betaald (zie ook "Al betaald ZVW/IH" in het meerjarenoverzicht).</p>
-
-  <h3>Geschatte heffingskortingen (indicatief)</h3>
-  <p>Algemene heffingskorting: <strong>${eur(heffingskortingen.algemeneHeffingskorting)}</strong> + arbeidskorting: <strong>${eur(heffingskortingen.arbeidskorting)}</strong> = totaal <strong>${eur(heffingskortingen.totaal)}</strong></p>
-  ${heffingskortingen.werkelijkIngevuld ? `<p class="toelichting">Heffingskorting: werkelijk ingevuld bedrag gebruikt (geschat was ${eur(heffingskortingen.geschatTotaal)}).</p>` : ""}
-  <p>Indicatieve IB ná heffingskortingen: <strong>${eur(Math.max(0, ibEstimate.belasting - heffingskortingen.totaal))}</strong></p>
-  ${ibEstimate.overigInkomen > 0 ? `<p class="toelichting">Inclusief effect van overig inkomen box 1 (${eur(ibEstimate.overigInkomen)}, opgegeven in de wizard): de belasting en de heffingskortingen zijn berekend als het verschil tussen winst + overig inkomen en overig inkomen alleen. Een negatieve heffingskorting betekent dat er door de winst korting verloren gaat die er op het overige inkomen alleen wél was.</p>` : ""}
-  ${ibEstimate.beperkingAftrek > 0 ? `<p>Beperking aftrek (aftrekposten in de hoogste schijf maar beperkt aftrekbaar): <strong>${eur(ibEstimate.beperkingAftrek)}</strong> extra IB, al opgenomen in de IB hierboven.</p>` : ""}
-  ${ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard" ? `<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : ibEstimate.tariefStatus === "voorlopig" ? "voorlopig, uit het Belastingplan (kan nog wijzigen)" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>` : ""}
-  `}
-
-  <h3>Mogelijke investeringsaftrek (KIA)</h3>
-  ${investeringenForYear.totaalInvestering > 0 ? `
-  <p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>
-  ${mogelijkeKia > 0 ? `
-  <p><strong>* IB vóór mogelijke KIA: ${eur(ibEstimate.belasting)}. IB ná mogelijke KIA: ${eur(ibEstimateNaKia.belasting)}</strong> (ná heffingskortingen: ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))}).</p>
-  <p class="toelichting">⚠ Dit is nadrukkelijk een scenario, geen vaststaand bedrag: een geleasede personenauto is hier al buiten de KIA-grondslag gehouden (bij financiële lease geeft "Voertuigtype" dat aan), maar overige uitzonderingen (grond/woningen, een drempelbedrag van ca. €450 per bedrijfsmiddel) kent deze app niet uit bankgegevens — controleer zelf per bedrijfsmiddel de "KIA-beoordeling" (Activa-paneel/leasegegevens) voordat de KIA wordt toegepast.</p>
-  ` : ""}
-  ` : `<p class="toelichting">KIA niet vast te stellen — geen (volledig ingevulde) investeringen gevonden voor ${year} in het Activa-paneel of bij financiële lease.</p>`}
+  ${(() => {
+    // nieuw-V8R4 — alleen wat niet al in het aangifteoverzicht bovenaan staat (Boska 18-11: dubbel, voegt niets toe).
+    const delen = [];
+    if (!zaScenarios && ondernemersaftrekVoorJaar && (ondernemersaftrekVoorJaar.verrekendUitReserve > 0 || ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0)) {
+      if (ondernemersaftrekVoorJaar.verrekendUitReserve > 0) delen.push(`<p>Zelfstandigenaftrek: ${eur(ondernemersaftrekVoorJaar.verrekendUitReserve)} verrekend uit eerdere jaren.</p>`);
+      if (ondernemersaftrekVoorJaar.nietGerealiseerdNieuw > 0) delen.push(`<p>⚠ ${eur(ondernemersaftrekVoorJaar.nietGerealiseerdNieuw)} zelfstandigenaftrek niet benut (winst te laag), gereserveerd voor later.</p>`);
+    }
+    if (!zaScenarios && heffingskortingen.werkelijkIngevuld) delen.push(`<p class="toelichting">Heffingskorting: werkelijk ingevuld bedrag gebruikt (geschat was ${eur(heffingskortingen.geschatTotaal)}).</p>`);
+    if (!zaScenarios && ibEstimate.beperkingAftrek > 0) delen.push(`<p>Beperking aftrek (aftrekposten in de hoogste schijf beperkt aftrekbaar): ${eur(ibEstimate.beperkingAftrek)} extra IB, al meegeteld.</p>`);
+    if (ibEstimate.tariefStatus && ibEstimate.tariefStatus !== "standaard") delen.push(`<p class="toelichting">⚠ Tarieven ${year}: ${ibEstimate.tariefStatus === "aangepast" ? "door jou aangepast" : ibEstimate.tariefStatus === "voorlopig" ? "voorlopig, uit het Belastingplan (kan nog wijzigen)" : "benadering met de waarden van het dichtstbijzijnde bekende jaar"}.</p>`);
+    if (investeringenForYear.totaalInvestering > 0) {
+      delen.push(`<p>Investeringen ${year}: <strong>${eur(investeringenForYear.totaalInvestering)}</strong> → mogelijke KIA: <strong>${eur(mogelijkeKia)}</strong>${investeringenForYear.onvolledig > 0 ? ` <span style="color:#b45309;">(⚠ ${investeringenForYear.onvolledig} bedrijfsmiddel(en) onvolledig ingevuld)</span>` : ""}<!--V--> <span class="toelichting">Zie Bijlage.</span><!--/V--></p>`);
+      if (mogelijkeKia > 0) {
+        delen.push(zaScenarios
+          ? `<p>Ná mogelijke KIA: mét zelfstandigenaftrek → IB ${eur(Math.max(0, zaScenariosNaKia.metZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.metZelfstandigenaftrek.heffingskortingen.totaal))}, Zvw ${eur(zaScenariosNaKia.metZelfstandigenaftrek.zvw.bijdrage)}; zonder → IB ${eur(Math.max(0, zaScenariosNaKia.zonderZelfstandigenaftrek.ib.belasting - zaScenariosNaKia.zonderZelfstandigenaftrek.heffingskortingen.totaal))}, Zvw ${eur(zaScenariosNaKia.zonderZelfstandigenaftrek.zvw.bijdrage)}.</p>`
+          : `<p>Ná mogelijke KIA: IB ${eur(Math.max(0, ibEstimateNaKia.belasting - heffingskortingenNaKia.totaal))} (na heffingskortingen), Zvw ${eur(zvwEstimateNaKia.bijdrage)}.</p>`);
+        delen.push(`<p class="toelichting">⚠ Dit is een scenario, geen vaststaand bedrag: controleer per bedrijfsmiddel de KIA-beoordeling (Activa-paneel/leasegegevens) voordat de KIA wordt toegepast.</p>`);
+      }
+    }
+    return delen.length ? `<h2>Aanvullende toelichting</h2>\n  ${delen.join("\n  ")}` : "";
+  })()}
 
   ${algemeneGegevensHtml}`;
 }
@@ -971,6 +1042,8 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .ak-r.tot, .ak-tabel tr.tot td { font-weight: 700; border-bottom: 1px solid #0f172a; }
   .ak-r.groot, .ak-tabel tr.groot td { font-size: 15px; font-weight: 800; border-bottom: 0; padding-top: 8px; }
   .ak-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; } .ak-tabel td, .ak-tabel th { padding: 3px 4px; border-bottom: 1px dotted #e2e8f0; text-align: left; } .ak-tabel .num { text-align: right; }
+  .ak-sub { margin-top: 6px; font-size: 11px; font-weight: 700; color: #334155; }
+  .ak-sub2 { margin-top: 4px; font-size: 10.5px; font-weight: 600; color: #64748b; font-style: italic; }
   .ak-noot { font-size: 10.5px; color: #64748b; margin: 4px 0 0; }
   .ak-btw { margin-top: 10px; background: #f8fafc; border-radius: 6px; padding: 6px 10px; font-size: 12px; display: flex; justify-content: space-between; }
   .totaal-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f0f9ff; border: 2px solid #0f172a; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }

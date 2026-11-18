@@ -191,10 +191,32 @@ function addWorkingDays(date, days) {
 // een marge van 10 werkdagen op de datum en €5 op het bedrag. Grotere afwijkingen worden niet
 // als "ontbrekend" gezien maar als "gevonden, bedrag wijkt af" — dat is juist waardevol om te
 // laten zien (bijv. een extra aflossing of een prijswijziging), niet iets om te verbergen.
-export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactions, maandbedrag) {
+// nieuw-V8R4 — sleutel van een betaling voor een handmatige koppeling (wens Boska 18-11: "niet gekoppeld" zelf
+// kunnen corrigeren). Waarde: "t:<termijnnummer>", "aflossing" of "kosten".
+export const betalingSleutel = (tx) => `${tx.date instanceof Date ? tx.date.toISOString().slice(0, 10) : String(tx.date).slice(0, 10)}|${tx.amount}`;
+
+export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactions, maandbedrag, koppelingen = null) {
   const lastDataDate = actualTransactions.reduce((max, t) => (!max || t.date > max ? t.date : max), null);
   const available = actualTransactions.map((t) => ({ tx: t, claimed: false }));
   const results = projectedPayments.map((p) => ({ projected: p, status: null, matchedTx: null, bedragVerschil: null }));
+  const extraAflossingen = [], kosten = [];
+  // Ronde 0: handmatige koppelingen gaan voor.
+  if (koppelingen && Object.keys(koppelingen).length) {
+    for (const a of available) {
+      if (a.tx.synthetic) continue;
+      const k = koppelingen[betalingSleutel(a.tx)];
+      if (!k) continue;
+      if (k === "aflossing") { a.claimed = true; extraAflossingen.push(a.tx); continue; }
+      if (k === "kosten") { a.claimed = true; kosten.push(a.tx); continue; }
+      const nr = Number(String(k).replace("t:", ""));
+      const r = results[nr - 1];
+      if (!r || r.matchedTx) continue;
+      a.claimed = true;
+      const bedragVerschil = Math.round((Math.abs(a.tx.amount) - Math.abs(r.projected.amount)) * 100) / 100;
+      r.status = Math.abs(bedragVerschil) <= AMOUNT_MARGIN ? "gevonden" : "gevonden-afwijkend";
+      r.matchedTx = a.tx; r.bedragVerschil = bedragVerschil; r.handmatig = true;
+    }
+  }
 
   // Ronde 1: gewone 1-op-1 match — dichtstbijzijnde datum binnen het venster wint.
   for (const r of results) {
@@ -270,6 +292,33 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
     }
   }
 
+  // Ronde 2b (nieuw-V8R4): een losse betaling van ongeveer het maandbedrag die net buiten het venster valt (bijv. op
+  // de 30e i.p.v. rond de 15e) hoort bij de dichtstbijzijnde nog open termijn, mits binnen 20 dagen. Een betaling die
+  // tegen een terugboeking van hetzelfde bedrag wegvalt telt niet: die is opnieuw aangeboden, niet extra.
+  if (maandbedrag > 0) {
+    const terug = available.filter((a) => !a.claimed && a.tx.amount > 0).map((a) => a.tx);
+    const kandidaten = available.filter((a) => !a.claimed && a.tx.amount < 0 && Math.abs(Math.abs(a.tx.amount) - maandbedrag) <= Math.max(AMOUNT_MARGIN, maandbedrag * 0.1));
+    for (const t of terug) {
+      const i = kandidaten.findIndex((a) => Math.abs(Math.abs(a.tx.amount) - t.amount) <= 0.01 && Math.abs(a.tx.date - t.date) <= 5 * 86400000);
+      if (i >= 0) kandidaten.splice(i, 1);
+    }
+    for (const a of kandidaten) {
+      let best = null;
+      for (const r of results) {
+        if (r.matchedTx) continue;
+        const diff = Math.abs(a.tx.date - r.projected.date);
+        if (diff <= 20 * 86400000 && (!best || diff < Math.abs(a.tx.date - best.projected.date))) best = r;
+      }
+      if (!best) continue;
+      a.claimed = true;
+      const bedragVerschil = Math.round((Math.abs(a.tx.amount) - Math.abs(best.projected.amount)) * 100) / 100;
+      best.status = Math.abs(bedragVerschil) <= AMOUNT_MARGIN ? "gevonden" : "gevonden-afwijkend";
+      best.matchedTx = a.tx;
+      best.bedragVerschil = bedragVerschil;
+      best.andereDatum = true;
+    }
+  }
+
   // Ronde 3: nog steeds geen match — "ontbrekend" als de verwachte datum vóór de laatst
   // geïmporteerde transactiedatum ligt (dus echt gemist), anders "nog niet in beeld" (simpelweg
   // nog niet aan de beurt in de geïmporteerde periode).
@@ -279,7 +328,7 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   }
 
   const onverwachteBetalingen = available.filter((a) => !a.claimed).map((a) => a.tx);
-  return { results, onverwachteBetalingen };
+  return { results, onverwachteBetalingen, extraAflossingen, kosten };
 }
 
 // v207 — is de eerste termijn daadwerkelijk in één bankafschrijving betaald sámen met "extra bedrag
@@ -319,9 +368,27 @@ export function mergeHandmatigeTermijnen(segment, segTx) {
   const grens = new Date(segment.handmatigBetaaldTotEnMet);
   const projected = generateProjectedLeasePayments(segment).filter((p) => p.date <= grens);
   if (projected.length === 0) return segTx;
-  const { results } = matchLeasePaymentsToSchedule(projected, segTx, Number(segment.maandbedrag) || 0);
-  const synthetic = results
-    .filter((r) => r.status === "ontbrekend" || r.status === "nog-niet-in-beeld")
+  const { results, onverwachteBetalingen } = matchLeasePaymentsToSchedule(projected, segTx, Number(segment.maandbedrag) || 0, segment.betalingKoppelingen);
+  // nieuw-V8R4 — een bankbetaling die net buiten het datumvenster valt (bijv. op de 26e i.p.v. rond de 15e) is
+  // wél een termijn: die dekt de dichtstbijzijnde nog open termijn, zodat die niet óók als "elders betaald" wordt
+  // aangevuld (Meijer: anders telden termijnen dubbel, totaalcontrole "€ 1.011 meer dan verwacht").
+  const open = results.filter((r) => r.status === "ontbrekend" || r.status === "nog-niet-in-beeld");
+  const maand = Number(segment.maandbedrag) || 0;
+  const termijnGroot = (t) => maand > 0 && Math.abs(t.amount) >= maand / 2;
+  const losseBetalingen = onverwachteBetalingen.filter((t) => t.date <= grens && termijnGroot(t));
+  const netto = losseBetalingen.filter((t) => t.amount < 0);
+  for (const terug of losseBetalingen.filter((t) => t.amount > 0)) {
+    const i = netto.findIndex((t) => Math.abs(Math.abs(t.amount) - terug.amount) <= 0.01);
+    if (i >= 0) netto.splice(i, 1);
+  }
+  const gedekt = new Set();
+  for (const t of netto) {
+    let best = null;
+    for (const r of open) if (!gedekt.has(r) && (!best || Math.abs(r.projected.date - t.date) < Math.abs(best.projected.date - t.date))) best = r;
+    if (best) gedekt.add(best);
+  }
+  const synthetic = open
+    .filter((r) => !gedekt.has(r))
     .map((r) => ({ date: r.projected.date, amount: r.projected.amount, synthetic: true }));
   if (synthetic.length === 0) return segTx;
   return [...segTx, ...synthetic].sort((a, b) => a.date - b.date);
@@ -405,4 +472,11 @@ export function computeTotaleLeaseBetalingen(details) {
   const eindbetaling = details.eindbetaling === "" || details.eindbetaling == null ? 0 : Number(details.eindbetaling);
   const extra = details.extraBedrag1eTermijn === "" || details.extraBedrag1eTermijn == null ? 0 : Number(details.extraBedrag1eTermijn);
   return maandbedrag * looptijd + eindbetaling + extra;
+}
+
+// nieuw-V8R4 — betalingen die handmatig als "kosten, geen aflossing" zijn gekoppeld gaan niet van de leaseschuld af.
+export function zonderKostenBetalingen(segment, segTx) {
+  const k = segment?.betalingKoppelingen;
+  if (!k || !Object.keys(k).length) return segTx;
+  return segTx.filter((tx) => tx.synthetic || k[betalingSleutel(tx)] !== "kosten");
 }

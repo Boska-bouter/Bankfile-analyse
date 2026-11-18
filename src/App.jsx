@@ -1770,6 +1770,7 @@ export default function App() {
     window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };
     window.__bt.km = () => ({ autoStatus, kmVergoedingDetails }); // nieuw-V8R1 — controle km-vergoeding
     window.__bt.rapport = (jaren) => bouwRapportHtml(jaren); // nieuw-V8R3 — rapport-HTML voor controle
+    window.__bt.lease = () => leaseSummary.map((l) => ({ key: l.key, category: l.category, tx: (l.transactions || []).map((t) => [new Date(t.date).toISOString().slice(0, 10), t.amount]) })); // nieuw-V8R4 — controle leaseschuld
   }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.

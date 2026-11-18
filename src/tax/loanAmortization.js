@@ -1,4 +1,4 @@
-import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen, stripExtraBedrag1eTermijnUitTransacties } from "./financialLease.js";
+import { getLeaseSegments, assignLeaseTransactionsToSegments, mergeHandmatigeTermijnen, stripExtraBedrag1eTermijnUitTransacties, zonderKostenBetalingen } from "./financialLease.js";
 import { eenvoudigLeaseRente } from "./eenvoudigLease.js";
 
 // Een bijschrijving (terugboeking, bijv. "Terugboeking op verzoek klant") corrigeert vrijwel altijd
@@ -188,7 +188,7 @@ export function computeFinancialLeaseAmortizationMultiSegment(transactions, deta
     // betaald als het maandbedrag van de eerste termijn, trek dat bedrag er dan hier weer af — zie
     // de toelichting bij stripExtraBedrag1eTermijnUitTransacties in financialLease.js. Zonder
     // ingevulde "extra bedrag 1e termijn" (elk bestaand dossier) verandert hier niets.
-    const segTx = stripExtraBedrag1eTermijnUitTransacties(segment, mergeHandmatigeTermijnen(segment, rawSegTx));
+    const segTx = stripExtraBedrag1eTermijnUitTransacties(segment, mergeHandmatigeTermijnen(segment, zonderKostenBetalingen(segment, rawSegTx)));
     const hoofdsom = computeOnbetaaldGedeelteKoop(segment);
     const rente = computeFinancialLeaseRate(segment);
     if (rente == null) {

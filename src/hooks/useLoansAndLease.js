@@ -46,12 +46,16 @@ export function computeAutoLeaseMerges(rawLeaseSummary, classified, leaseDetails
   return merges;
 }
 
-function applyLeaseMerges(leaseSummary, leaseMergedInto) {
+export function applyLeaseMerges(leaseSummary, leaseMergedInto) {
   if (!leaseMergedInto || Object.keys(leaseMergedInto).length === 0) return leaseSummary;
   const byKey = Object.fromEntries(leaseSummary.map((l) => [l.key, { ...l, transactions: [...l.transactions] }]));
   const merged = new Set();
-  for (const [sourceKey, targetKey] of Object.entries(leaseMergedInto)) {
-    if (!targetKey) continue; // null = bewust niet (automatisch) samenvoegen
+  // nieuw-V8R4 — een keten (a → b, b → c) altijd tot het eindpunt volgen: anders gingen de betalingen van a verloren
+  // als b eerder werd samengevoegd dan a (Meijer: "VWPFS" → "VWPFS B.V." → "Volkswagen Leasing B.V.").
+  const eindDoel = (key) => { const gezien = new Set([key]); let k = leaseMergedInto[key]; while (k && leaseMergedInto[k] && !gezien.has(k)) { gezien.add(k); k = leaseMergedInto[k]; } return k; };
+  for (const sourceKey of Object.keys(leaseMergedInto)) {
+    const targetKey = eindDoel(sourceKey);
+    if (!targetKey || targetKey === sourceKey) continue; // null = bewust niet (automatisch) samenvoegen
     const source = byKey[sourceKey];
     const target = byKey[targetKey];
     if (!source || !target || merged.has(sourceKey)) continue;

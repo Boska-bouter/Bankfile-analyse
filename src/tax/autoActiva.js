@@ -37,7 +37,7 @@ function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorie
 // Vertaalt de ingevulde "koop"-gegevens naar een activum compatibel met computeAfschrijvingPerJaar —
 // zelfde minimale afschrijvingstermijn van 5 jaar als bij een financieel-geleasede auto (zie
 // autoBijtelling.js). Geeft `null` als er niet genoeg is ingevuld.
-function buildKoopActivum(details) {
+export function buildKoopActivum(details) {
   if (!details?.aanschafwaarde || !details?.aanschafdatum) return null;
   const ingevoerdTermijn = details.afschrijvingstermijnJaren ? Number(details.afschrijvingstermijnJaren) : 0;
   return {
