@@ -916,6 +916,10 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
               });
               for (const [tx, e] of perTx) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: tx.synthetic ? "Elders betaald" : "Bank", koppeling: e.nrs.length > 1 ? `Termijn ${e.nrs.join(" en ")}` : `Termijn ${e.nrs[0]}`, kleur: tx.synthetic ? "text-slate-500" : "text-slate-700", keuze: e.handmatig ? `t:${e.nr}` : null });
               for (const tx of paymentCheck.extraAflossingen || []) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: "Bank", koppeling: "Extra aflossing", kleur: "text-slate-700", keuze: "aflossing" });
+              for (const [min, plus] of paymentCheck.teruggeboekt || []) {
+                regels.push({ datum: min.date, bedrag: min.amount, bron: "Bank", koppeling: `Teruggeboekt op ${new Date(plus.date).toLocaleDateString("nl-NL")}`, kleur: "text-slate-500" });
+                regels.push({ datum: plus.date, bedrag: plus.amount, bron: "Bank", koppeling: "Terugboeking", kleur: "text-slate-500" });
+              }
               for (const tx of paymentCheck.kosten || []) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: "Bank", koppeling: "Kosten, geen aflossing", kleur: "text-slate-700", keuze: "kosten" });
               const losse = [...paymentCheck.onverwachteBetalingen];
               const opnieuw = new Set();

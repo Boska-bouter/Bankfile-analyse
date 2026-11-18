@@ -199,7 +199,16 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   const lastDataDate = actualTransactions.reduce((max, t) => (!max || t.date > max ? t.date : max), null);
   const available = actualTransactions.map((t) => ({ tx: t, claimed: false }));
   const results = projectedPayments.map((p) => ({ projected: p, status: null, matchedTx: null, bedragVerschil: null }));
-  const extraAflossingen = [], kosten = [];
+  const extraAflossingen = [], kosten = [], teruggeboekt = [];
+  // Ronde -1 (nieuw-V8R4, Boska 18-11): een betaling die binnen 10 dagen wordt teruggeboekt (zelfde bedrag) telt niet
+  // als termijn; de betaling daarna is de echte. Voorbeeld: 16-1 betaald, 22-1 teruggeboekt, 24-1 opnieuw → termijn = 24-1.
+  for (const plus of available.filter((a) => !a.tx.synthetic && a.tx.amount > 0)) {
+    const kandidaten = available.filter((a) => !a.claimed && !a.tx.synthetic && a.tx.amount < 0 && Math.abs(Math.abs(a.tx.amount) - plus.tx.amount) <= 0.01 && a.tx.date <= plus.tx.date && plus.tx.date - a.tx.date <= 10 * 86400000);
+    const min = kandidaten.sort((a, b) => b.tx.date - a.tx.date)[0];
+    if (!min) continue;
+    min.claimed = true; plus.claimed = true;
+    teruggeboekt.push([min.tx, plus.tx]);
+  }
   // Ronde 0: handmatige koppelingen gaan voor.
   if (koppelingen && Object.keys(koppelingen).length) {
     for (const a of available) {
@@ -231,6 +240,8 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
       // hieronder bij "onverwachteBetalingen" opduikt, in plaats van een echte termijn te maskeren.
       if (a.tx.amount >= 0) continue;
       if (a.tx.date < windowStart || a.tx.date > windowEnd) continue;
+      // nieuw-V8R4 — een klein bedrag (bijv. € 6,55 kosten) is geen termijn, ook al valt het in het venster.
+      if (maandbedrag > 0 && Math.abs(a.tx.amount) < maandbedrag / 2) continue;
       // Een duidelijk veelvoud van het maandbedrag (2x, 3x, ...) is vermoedelijk een gecombineerde
       // betaling van meerdere termijnen tegelijk — die hoort bij ronde 2 hieronder, niet hier
       // grijpig aan één termijn toegekend te worden.
@@ -328,7 +339,7 @@ export function matchLeasePaymentsToSchedule(projectedPayments, actualTransactio
   }
 
   const onverwachteBetalingen = available.filter((a) => !a.claimed).map((a) => a.tx);
-  return { results, onverwachteBetalingen, extraAflossingen, kosten };
+  return { results, onverwachteBetalingen, extraAflossingen, kosten, teruggeboekt };
 }
 
 // v207 — is de eerste termijn daadwerkelijk in één bankafschrijving betaald sámen met "extra bedrag
