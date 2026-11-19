@@ -248,6 +248,11 @@ export function useRapporten({
     </>
   );
 
+  // nieuw-V9R1 — controle samenvatting voor de klant tegen de indicatieve berekening (alleen DEV).
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
+    window.__bt.klant = openKlantSamenvatting;
+    window.__bt.klantHtml = () => klantSamenvattingHtml;
+  }
   return {
     bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,

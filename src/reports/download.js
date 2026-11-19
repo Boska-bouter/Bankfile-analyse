@@ -46,6 +46,19 @@ export async function downloadRapport({ soort = "html", html, naam, excel = null
 
 const isLiggend = (html) => /@page[^{]*\{[^}]*landscape/i.test(html);
 
+export const SAFARI_PDF_CSS = [
+  ".ak-r{line-height:16px;padding-top:0!important;padding-bottom:7px!important;align-items:flex-start}",
+  ".ak-r>span{display:block;line-height:16px}",
+  ".ak-r.tot{padding-bottom:10px!important}",
+  ".ak-r.groot{line-height:20px;padding-top:4px!important}",
+  ".ak-scherm,.ak-sub2{margin-bottom:6px;line-height:16px}",
+  ".ak-tabel td,.ak-tabel th{padding-top:0!important;padding-bottom:7px!important;line-height:16px}",
+].join("");
+function isSafari() {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+  return /AppleWebKit/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|Android/i.test(ua);
+}
+
 function laadInIframe(html, breedte) {
   return new Promise((resolve, reject) => {
     const f = document.createElement("iframe");
@@ -60,7 +73,12 @@ function laadInIframe(html, breedte) {
     f.onerror = () => reject(new Error("rapport kon niet worden opgemaakt"));
     // nieuw-V8R6 — html2canvas zet op iPad-Safari tekst met line-height "normal" te laag, zodat lijnen door de tekst
     // lopen (Boska 18-11). Een vaste line-height vooraan; eigen regels van het rapport gaan voor.
-    f.srcdoc = zonderPrintOpLaden(html).replace(/<head([^>]*)>/i, '<head$1><style>body{line-height:1.35}</style>');
+    let bron = zonderPrintOpLaden(html).replace(/<head([^>]*)>/i, '<head$1><style>body{line-height:1.35}</style>');
+    // nieuw-V9R1 — Boska 19-11 (PDF op iPad): in de aangiftekaart staat de tekst nog steeds lager dan het vak eromheen,
+    // zodat blauwe vakken over de tekst van de regel erboven vallen en de dikke streep onder "Resultaat" de tekst raakt.
+    // Alleen voor Safari/WebKit: tekst hoger in het vak, ruimte eronder.
+    if (isSafari()) bron = bron.replace(/<\/head>/i, `<style>${SAFARI_PDF_CSS}</style></head>`);
+    f.srcdoc = bron;
     document.body.appendChild(f);
   });
 }

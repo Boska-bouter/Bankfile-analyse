@@ -15,7 +15,7 @@ import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAm
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar } from "../tax/autoBijtelling.js";
 import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
-import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "../tax/autoActiva.js";
+import { computeAutoActivaKostenVoorJaar, combineAutoKosten, metBtwPrivegebruik } from "../tax/autoActiva.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 
 // beide-V11R8 — uit App.jsx gehaald (opsplitsing): rente, kosten, winst en belasting voor het actieve jaar en per jaar.
@@ -45,11 +45,11 @@ export function useJaarBerekening(p) {
   const leaseAutoKostenForActiveYear = useMemo(
     () =>
       activeYear && rechtsvorm !== "bv"
-        ? combineAutoKosten(
+        ? metBtwPrivegebruik(combineAutoKosten(
             computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
             computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, activeYear, classified, effectiveCategoryBtwRates, btwVerlegd),
             autoStatus, activeYear
-          )
+          ), computeBtwPrivegebruikAuto(activeYear, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }))
         : null,
     [leaseSummary, leaseDetails, activeYear, classified, rechtsvorm, effectiveCategoryBtwRates, btwVerlegd, autoActivaDetails, autoWizardStatus, autoStatus]
   );

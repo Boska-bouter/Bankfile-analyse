@@ -16,7 +16,7 @@ import { computeActivaSummary, computeActivaAfschrijvingForYear, computeInvester
 import { computeLoanRenteForYear, computeLeaseRenteForYear } from "../tax/loanAmortization.js";
 import { computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate, isCompleteFinancialLeaseDetails } from "../tax/financialLease.js";
 import { computeLeaseAutoKostenVoorJaar, computeLeaseInvesteringenForYear, MINIMALE_AFSCHRIJVINGSTERMIJN_AUTO_JAREN } from "../tax/autoBijtelling.js";
-import { computeAutoActivaKostenVoorJaar, combineAutoKosten } from "../tax/autoActiva.js";
+import { computeAutoActivaKostenVoorJaar, combineAutoKosten, metBtwPrivegebruik } from "../tax/autoActiva.js";
 import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
 import { computeKmVergoedingVoorJaar } from "../tax/kmVergoeding.js";
 import { computeGedeeldeHuurVoorJaar, computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar } from "../tax/gedeeldeHuur.js";
@@ -218,11 +218,11 @@ function computeWinstVoorJaar(year, classified, categoryBtwRates, btwVerlegd, lo
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const leaseAutoKostenForYear = combineAutoKosten(
+  const leaseAutoKostenForYear = metBtwPrivegebruik(combineAutoKosten(
     computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified, categoryBtwRates, btwVerlegd),
     computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd),
     autoStatus, year
-  );
+  ), computeBtwPrivegebruikAuto(year, { leaseSummary: leaseSummary || [], leaseDetails: leaseDetails || {}, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates, btwVerlegd, rechtsvorm: "zzp" }));
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
   // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
@@ -270,11 +270,11 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const loanRenteForYear = computeLoanRenteForYear(loanSummary || [], loanDetails || {}, year);
   const leaseRenteForYear = computeLeaseRenteForYear(leaseSummary || [], leaseDetails || {}, year, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
   const renteAftrekbaar = (loanRenteForYear?.totaalRente || 0) + (leaseRenteForYear?.totaalRente || 0);
-  const leaseAutoKostenForYear = combineAutoKosten(
+  const leaseAutoKostenForYear = metBtwPrivegebruik(combineAutoKosten(
     computeLeaseAutoKostenVoorJaar(leaseSummary || [], leaseDetails || {}, year, classified, categoryBtwRates, btwVerlegd),
     computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, year, classified, categoryBtwRates, btwVerlegd),
     autoStatus, year
-  );
+  ), computeBtwPrivegebruikAuto(year, { leaseSummary: leaseSummary || [], leaseDetails: leaseDetails || {}, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates, btwVerlegd, rechtsvorm: "zzp" }));
   const gedeeldeHuurForYear = computeGedeeldeHuurVoorJaar(classified, year, huurZakelijkPercentageStatus, categoryBtwRates, btwVerlegd);
   // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten
   // (deels zakelijk)" (zie tax/gedeeldeHuur.js).
@@ -465,7 +465,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     (ib.autokostenOverig.totaal || 0) +
     ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
     ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
-    renteAftrekbaar -
+    renteAftrekbaar +
+    (ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) -
     (ib.leaseAutoKosten?.onttrekking || 0);
 
   // Omzet excl. BTW (ib.opbrengsten.totaal) plus de over het jaar verschuldigde BTW op de omzet
@@ -644,6 +645,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${overigeRubrieken.map((r) => rij(esc(r.naam), eh(r.totaal), "sub")).join("")}
     ${heeftAuto || leaseRente >= 0.5 ? rij(`Auto- en transportkosten${autoOnttrekking > 0 ? " (totale autokosten)" : ""}`, eh(autoTotaal), "sub") : ""}
     ${leaseRente >= 0.5 ? rij("waarvan rente financial lease", eh(leaseRente), "sub sub2") : ""}
+    ${(ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) >= 0.5 ? rij("waarvan btw-correctie privégebruik auto", eh(ib.leaseAutoKosten.btwPrivegebruikKosten), "sub sub2") : ""}
     ${nogNietSom >= 0.5 ? rij("Nog niet ingedeeld", eh(nogNietSom), "sub") : ""}
     ${autoOnttrekking > 0 ? rij("Bijtelling privégebruik auto (berekent de Belastingdienst zelf, afgetopt op de totale autokosten)", `+ ${eh(autoOnttrekking)}`) : ""}
     ${renteFinancieel >= 0.5 ? rij(`Financiële baten en lasten (rente${renteFinancieel - (loanRenteForYear?.totaalRente || 0) >= 0.5 ? " lease" : ""})`, af(renteFinancieel)) : ""}
@@ -732,7 +734,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     // = bankbedrag kosten (zakelijke rekening) − aftrekbare btw daarop − kosten in de winst die via die rekening liepen.
     const bankKostenBruto = -zakTx.filter((tx) => tx.year === year && fiscalTreatmentOf(tx.category) === "kosten").reduce((a, tx) => a + tx.amount, 0);
     const voorbelastingJaar = kwartalen.reduce((a, q) => a + (q.voorbelasting || 0), 0);
-    const nietViaBank = (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) + (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) + renteAftrekbaar + kmStorting;
+    const nietViaBank = (ib.afschrijvingen.berekendeApparatuurAfschrijving ?? ib.afschrijvingen.apparatuurInvestering ?? 0) + (ib.afschrijvingen.berekendeLeaseAfschrijving || 0) + renteAftrekbaar + kmStorting + (ib.leaseAutoKosten?.btwPrivegebruikKosten || 0);
     const kostenViaBank = kostenTotaal + autoOnttrekking - nietViaBank - priveBetaald;
     const gemengdPrive = Math.max(0, bankKostenBruto - (voorbelastingJaar - btwPriveBetaald) - kostenViaBank);
     const p2 = (f) => ({ begin: f("begin"), eind: f("eind") });
@@ -826,7 +828,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const autoContracten = (ib.leaseAutoKosten?.contracten || []).filter((c) => c.privegebruikMeerDan500km);
   const autoBlok = autoOnttrekking > 0 ? `<div class="ak-sub2">Scherm "Privégebruik auto" (meer dan 500 km privé)</div>
     ${autoContracten.filter((c) => c.cataloguswaarde).map((c) => rij(`Cataloguswaarde${c.kenteken ? ` (${esc(c.kenteken)})` : ""}`, eh(Number(c.cataloguswaarde)), "in")).join("")}
-    ${rij(`Kosten voor deze auto (totale autokosten${leaseRente >= 0.5 ? ", inclusief rente lease" : ""})`, eh(autoTotaal), "in")}
+    ${rij(`Kosten voor deze auto (totale autokosten${(() => { const d = [leaseRente >= 0.5 ? "rente lease" : "", (ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) >= 0.5 ? "btw-correctie privégebruik" : ""].filter(Boolean); return d.length ? `, inclusief ${d.join(" en ")}` : ""; })()})`, eh(autoTotaal), "in")}
     ${rij("Vanuit privémiddelen betaalde kosten voor deze auto", eh(0), "in")}
     ${rij("Onttrekking privégebruik auto (rekent de Belastingdienst zelf uit)", eh(autoOnttrekking), "sub")}
     <p class="ak-noot">Bij "vanuit privémiddelen betaald" alleen autokosten invullen die privé zijn betaald en níet bij de onderneming zijn opgevoerd; die zitten hier al allemaal in de kosten. Jaar van eerste toelating en soort energie vul je in zoals gevraagd; het percentage bepaalt de Belastingdienst.</p>` : "";
@@ -1131,7 +1133,9 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   // nieuw-V7R8 — reserve over ALLE jaren met bankgegevens, net als het scherm (useOndernemersaftrekPerJaar), ook als het rapport later
   // begint. Zo telt niet-gerealiseerde zelfstandigenaftrek van eerdere jaren altijd mee; de algemene waarschuwing daarover verviel (Boska 18-11).
   const alleJarenMetData = [...new Set(classified.filter((tx) => !tx.isMirror).map((tx) => tx.year))].sort((a, b) => a - b);
-  const jarenVoorReserve = [...new Set([...alleJarenMetData, ...yearsToInclude])]
+  // nieuw-V9R1 — alleen jaren MET bankgegevens (Boska 19-11: samenvatting voor klant DB 2026 week af als het rapport ook
+  // 2024/2025 zonder gegevens bevatte; die bouwden een reserve zelfstandigenaftrek op die er niet is).
+  const jarenVoorReserve = alleJarenMetData
     .filter((year) => resolveZelfstandigenaftrekStatusForYear(zelfstandigenaftrekStatus, year, zaLegacyJaDefault) !== "onbekend")
     .map((year) => ({
       year,

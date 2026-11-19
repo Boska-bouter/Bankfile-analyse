@@ -1,6 +1,7 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
+import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
 import { useMemo } from "react";
-import { combineAutoKosten, computeAutoActivaKostenVoorJaar } from "../tax/autoActiva.js";
+import { combineAutoKosten, metBtwPrivegebruik, computeAutoActivaKostenVoorJaar } from "../tax/autoActiva.js";
 import { computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeFinancialLeaseRate, computeOnbetaaldGedeelteKoop } from "../tax/financialLease.js";
 import { computeIbBoxMapping, zakItemsVoorIb } from "../tax/boxMapping.js";
@@ -26,11 +27,11 @@ export function useKostenTotaalByYear(p) {
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const activaAfschrijvingVoorJaar = computeActivaAfschrijvingForYear(activaSummary, activaDetails, y);
       const leaseAutoKosten = rechtsvorm !== "bv"
-        ? combineAutoKosten(
+        ? metBtwPrivegebruik(combineAutoKosten(
             computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
             computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd),
             autoStatus, y
-          )
+          ), computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }))
         : null;
       const kmVergoeding = rechtsvorm !== "bv" ? computeKmVergoedingVoorJaar(kmVergoedingDetails, autoStatus, y) : null;
       const ib = computeIbBoxMapping(zakItemsVoorJaar, loanRente, leaseRente, activaAfschrijvingVoorJaar, effectiveCategoryBtwRates, btwVerlegd, leaseAutoKosten, y, categoryZakelijkPercentageEff, autoStatus, kmVergoeding, { huur: huurZakelijkPercentageStatus, energie: energieZakelijkPercentageStatus, gemeentelijk: gemeentelijkeKostenZakelijkPercentageStatus });
@@ -41,7 +42,8 @@ export function useKostenTotaalByYear(p) {
         (ib.autokostenOverig.totaal || 0) +
         ib.overigeBedrijfskosten.reduce((a, r) => a + (r.totaal || 0), 0) +
         ib.nogNietIngedeeld.reduce((a, r) => a + (r.totaal || 0), 0) +
-        renteAftrekbaar -
+        renteAftrekbaar +
+        (ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) -
         (ib.leaseAutoKosten?.onttrekking || 0);
     }
     return map;
