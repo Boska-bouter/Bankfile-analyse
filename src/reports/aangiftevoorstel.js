@@ -630,15 +630,18 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const autoOnttrekking = ib.leaseAutoKosten?.onttrekking || 0;
   const heeftAuto = Math.abs(autoNetto) >= 0.5 || autoOnttrekking > 0;
   // nieuw-V8R7 — de Belastingdienst vraagt bij privégebruik auto de totale autokosten en verrekent zelf de bijtelling
-  // (Boska 18-11): autokosten dus volledig bij de kosten, de bijtelling als aparte regel.
+  // (Boska 18-11): autokosten dus volledig bij de kosten; sinds V9R3 de bijtelling als overige opbrengst in de W&V (OLA-test).
   // nieuw-V9R0 — besluit Boska 19-11: rente financial lease bij de autokosten (zo ingevuld in OLA), niet bij "Financiële baten en lasten".
   const leaseRente = ib.leaseAutoKosten?.leaseRenteTotaal || 0;
   const renteFinancieel = renteAftrekbaar - leaseRente;
   const autoTotaal = autoNetto + autoOnttrekking + leaseRente;
   const overigeGroep = overigeSom + nogNietSom + (heeftAuto || leaseRente >= 0.5 ? autoTotaal : 0);
   const correctie = summary.winst - ((ib.opbrengsten.totaal || 0) - kostenTotaal);
+  // nieuw-V9R3 — OLA-test Meijer 2024 (19-11, akkoord Boska): de bijtelling hoort in de W&V bij Opbrengsten > overige
+  // opbrengsten, anders keurt OLA de winstberekening af (onttrekkingen ≠ winst volgens W&V).
   const wvHtml = `${scherm("Winst-en-verliesrekening")}
     ${rij("Opbrengsten (omzet zonder btw)", eh(ib.opbrengsten.totaal || 0))}
+    ${autoOnttrekking > 0 ? rij(`Overige opbrengsten: bijtelling privégebruik auto (niet hoger dan de autokosten)`, eh(autoOnttrekking)) : ""}
     ${rij("Inkoopkosten, uitbesteed werk en andere externe kosten", eh(inkoopGroep))}
     ${machineAfschr >= 0.5 ? rij("Afschrijvingen (apparatuur en machines)", eh(machineAfschr)) : ""}
     ${rij("Overige bedrijfskosten", eh(overigeGroep))}
@@ -647,11 +650,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${leaseRente >= 0.5 ? rij("waarvan rente financial lease", eh(leaseRente), "sub sub2") : ""}
     ${(ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) >= 0.5 ? rij("waarvan btw-correctie privégebruik auto", eh(ib.leaseAutoKosten.btwPrivegebruikKosten), "sub sub2") : ""}
     ${nogNietSom >= 0.5 ? rij("Nog niet ingedeeld", eh(nogNietSom), "sub") : ""}
-    ${autoOnttrekking > 0 ? rij("Bijtelling privégebruik auto (berekent de Belastingdienst zelf, afgetopt op de totale autokosten)", `+ ${eh(autoOnttrekking)}`) : ""}
     ${renteFinancieel >= 0.5 ? rij(`Financiële baten en lasten (rente${renteFinancieel - (loanRenteForYear?.totaalRente || 0) >= 0.5 ? " lease" : ""})`, af(renteFinancieel)) : ""}
     ${Math.abs(correctie) >= 0.5 ? rij("Overige correcties (zie de winst-en-verliesrekening hieronder)", `${correctie < 0 ? "− " : ""}${eh(correctie)}`) : ""}
     ${rij("Resultaat = winst uit onderneming", `${summary.winst < 0 ? "− " : ""}${eh(summary.winst)}`, "tot")}
-    <p class="ak-noot">Vul de opbrengsten en de kosten apart in; de winst rekent de Belastingdienst zelf uit.</p>`;
+    <p class="ak-noot">Vul de opbrengsten en de kosten apart in; de winst rekent de Belastingdienst zelf uit.${autoOnttrekking > 0 ? ` De bijtelling (${eh(autoOnttrekking)}) vult u één keer in: bij Opbrengsten onder overige opbrengsten. Op het scherm Privégebruik auto rekent de Belastingdienst hetzelfde bedrag zelf uit; dat telt niet dubbel, het is de tegenboeking.` : ""}</p>`;
   // nieuw-V8R4 — met of zonder balans (wens Boska 18-11: "de balans van het banksaldo staat er niet bij").
   // Banksaldo zakelijke rekening(en) uit "saldo na mutatie"; kosten die vanaf een privérekening zijn betaald tellen
   // als privéstorting; wat dan nog overblijft zijn balansmutaties die de bank niet laat zien (auto, leaseschuld, btw).
