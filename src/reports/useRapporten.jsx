@@ -141,17 +141,17 @@ export function useRapporten({
   };
   const startBtwOverzicht = () => {
     if (!activeYear) return;
-    if ((years || []).length > 1) setBtwOverzichtKeuze([activeYear]);
+    if ((years || []).length > 1) setBtwOverzichtKeuze([]); // nieuw-V9R4 — Boska 19-11: geen jaar vooraf aangevinkt
     else openBtwOverzicht([activeYear]);
   };
   const startOnderbouwing = () => {
     if (!activeYear) return;
-    if ((years || []).length > 1) setOnderbouwingKeuze([activeYear]);
+    if ((years || []).length > 1) setOnderbouwingKeuze([]); // nieuw-V9R4 — Boska 19-11: geen jaar vooraf aangevinkt
     else openOnderbouwing([activeYear]);
   };
   const startKlantSamenvatting = () => {
     if (!activeYear) return;
-    if ((years || []).length > 1) setKlantJaarKeuze([activeYear]);
+    if ((years || []).length > 1) setKlantJaarKeuze([]); // nieuw-V9R4 — Boska 19-11: geen jaar vooraf aangevinkt
     else openKlantSamenvatting([activeYear]);
   };
   const openKlantSamenvatting = (gekozen) => {

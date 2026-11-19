@@ -800,9 +800,9 @@ export const HELP_CHAPTERS = [
     inhoud: (
       <div className="space-y-2.5">
         <p>
-          Het uitgebreide voorstel per jaar, of voor meerdere jaren tegelijk. Het opent links bij Acties. Eerst staan
-          de status van het gekozen jaar en de punten die nog openstaan; daarna volgt de keuze "Berekening bekijken" of "Ander
-          jaar/meerdere jaren kiezen". Het is een <strong>onafhankelijke reconstructie</strong>: de bedragen komen
+          Het uitgebreide voorstel per jaar, of voor meerdere jaren tegelijk. Het opent links bij Acties. Heeft het dossier
+          meer jaren, dan kies je eerst de jaren; er staat geen jaar vooraf aangevinkt. Bij één jaar staan eerst de status en
+          de open punten, met de knop "Berekening bekijken". Het is een <strong>onafhankelijke reconstructie</strong>: de bedragen komen
           uitsluitend uit de bankgegevens en de persoonlijke aannames in het dossier.
         </p>
         <p>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
@@ -34,6 +34,14 @@ export default function AangifteYearPickerModal({
 }) {
   // nieuw-V8R7 — Boska 18-11: vooraf kiezen "met of zonder balans", zodat het overzicht maar één manier toont.
   const [balans, setBalans] = useState("zonder");
+  // nieuw-V9R4 — Boska 19-11: bij meer jaren altijd eerst de jaarkeuze, zonder vooraf aangevinkt jaar
+  // (niet automatisch het jaar dat open staat).
+  const kiesJaren = (years || []).length > 1;
+  const [gewist, setGewist] = useState(!kiesJaren);
+  useEffect(() => {
+    if (kiesJaren) { setSelectedYears([]); setMeerdereJaren(true); setGewist(true); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const gekozen = gewist ? selectedYears : []; // eerste frame: oude keuze niet tonen
   const balansKeuze = toonBalansKeuze ? (
     <fieldset className="rounded-lg border border-slate-200 p-2.5 space-y-1.5">
       <legend className="px-1 text-xs font-medium text-slate-600">Hoe vul je de aangifte in bij de Belastingdienst?</legend>
@@ -76,7 +84,7 @@ export default function AangifteYearPickerModal({
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
-        {!meerdereJaren ? (
+        {!meerdereJaren && !kiesJaren ? (
           <JaarSwipe years={years} year={activeYear} onSelectYear={onSelectYear} style={{ display: "block" }}>
           <div className="space-y-3">
             <p className="text-sm font-medium">Indicatieve aangifteberekening voor {activeYear}</p>
@@ -124,12 +132,12 @@ export default function AangifteYearPickerModal({
         ) : (
           <>
             <p className="text-sm font-medium mb-2">Voor welke jaren een indicatieve aangifteberekening?</p>
-            <div className="flex flex-wrap gap-3 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {years.map((year) => (
-                <label key={year} className="inline-flex items-center gap-1.5 text-sm">
+                <label key={year} className={`inline-flex items-center gap-2 min-h-[44px] rounded-lg border px-3 text-sm cursor-pointer ${gekozen.includes(year) ? "border-teal-600 bg-teal-50" : "border-slate-300"}`}>
                   <input
-                    type="checkbox"
-                    checked={selectedYears.includes(year)}
+                    type="checkbox" className="h-5 w-5"
+                    checked={gekozen.includes(year)}
                     onChange={(e) => setSelectedYears((prev) => (e.target.checked ? [...prev, year].sort() : prev.filter((y) => y !== year)))}
                   />
                   {year}
@@ -138,13 +146,14 @@ export default function AangifteYearPickerModal({
             </div>
             <div className="mb-3">{balansKeuze}</div>
             <div className="flex gap-2">
-              <button onClick={() => onExport(undefined, balans)} className={KNOP_PRIMAIR}>
+              <button disabled={gekozen.length === 0} onClick={() => onExport(undefined, balans)} className={`${KNOP_PRIMAIR} disabled:opacity-40`}>
                 Berekening tonen
               </button>
-              <button onClick={() => setMeerdereJaren(false)} className={KNOP_SECUNDAIR}>
-                Terug
+              <button onClick={() => (kiesJaren ? onClose() : setMeerdereJaren(false))} className={KNOP_SECUNDAIR}>
+                {kiesJaren ? "Annuleren" : "Terug"}
               </button>
             </div>
+            {gekozen.length === 0 && <p className="mt-2 text-xs text-slate-500">Kies minstens één jaar.</p>}
           </>
         )}
       </div>
