@@ -1,3 +1,4 @@
+import { kmBekend, kmMaxVoorJaar } from "./tax/kmVergoeding.js";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import PriveMakenModal from "./components/prive/PriveMakenModal.jsx";
 import ZakelijkMakenModal from "./components/prive/ZakelijkMakenModal.jsx";
@@ -10,6 +11,8 @@ import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeO
 import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen, registerGiften } from "./tax/incomeTax.js";
+import { laatsteJaarTotalen, rekeningenZonderSaldo } from "./reports/aangiftevoorstel.js";
+import { laatsteJaarTotalenBv } from "./reports/aangiftevoorstel-bv.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
 import { markeerKleineBedragen, kleinOverzicht, kleineGroepen } from "./classification/kleineBedragen.js";
@@ -222,6 +225,7 @@ export default function App() {
   // (originele regels naast elkaar, incl. IBAN/volledige omschrijving/saldo per bestand).
   const [duplicateDetailGroup, setDuplicateDetailGroup] = useState(null);
   const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
+  const [beginsaldoZakelijk, setBeginsaldoZakelijk] = useState({}); // nieuw-V9R0 — { rekening: { jaar, bedrag } } voor bankbestanden zonder saldo
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
   const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
@@ -828,6 +832,7 @@ export default function App() {
     weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus,
     autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
     categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, kleinBedragInstelling,
+    beginsaldoZakelijk,
   };
   const dossierZetters = {
     parsedFiles: setParsedFiles, accountTypeByFile: setAccountTypeByFile, overridesByCounterparty: setOverridesByCounterparty,
@@ -852,6 +857,7 @@ export default function App() {
     huurZakelijkPercentageStatus: setHuurZakelijkPercentageStatusState, energieZakelijkPercentageStatus: setEnergieZakelijkPercentageStatusState, gemeentelijkeKostenZakelijkPercentageStatus: setGemeentelijkeKostenZakelijkPercentageStatusState,
     categoryZakelijkPercentage: setCategoryZakelijkPercentageState, openingBalanceCorrections: setOpeningBalanceCorrections, incomeBtwTarieven: setIncomeBtwTarieven,
     meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden, kleinBedragInstelling: setKleinBedragInstelling,
+    beginsaldoZakelijk: setBeginsaldoZakelijk,
   };
 
   useAutomatischBewaren({
@@ -1302,6 +1308,18 @@ export default function App() {
       return changed ? next : prev;
     });
   }, [years, autoWizardStatus, autoStatus]);
+  // nieuw-V8R1 — privéauto zakelijk gebruikt (wens Boska 18-11): vul per jaar de vergoeding per km in met het fiscale
+  // maximum van dat jaar (tax/kmVergoeding.js), ook voor jaren die later met een bankbestand binnenkomen. Een eigen bedrag blijft staan.
+  useEffect(() => {
+    // Eén keer per jaar (vlag automatisch), zodat het veld daarna vrij te wijzigen of leeg te maken is.
+    const ontbreekt = years.filter((y) => autoStatus?.[y] === "prive" && kmBekend(y) && kmVergoedingDetails?.[y]?.vergoedingPerKm == null && !kmVergoedingDetails?.[y]?.automatisch);
+    if (!ontbreekt.length) return;
+    setKmVergoedingDetailsState((prev) => {
+      const next = { ...prev };
+      for (const y of ontbreekt) next[y] = { ...(next[y] || {}), vergoedingPerKm: String(kmMaxVoorJaar(y)), automatisch: true };
+      return next;
+    });
+  }, [years, autoStatus, kmVergoedingDetails]);
   useEffect(() => {
     const bekendeJaren = Object.keys(zelfstandigenaftrekStatus || {}).map(Number).sort((a, b) => a - b);
     if (bekendeJaren.length === 0) return;
@@ -1735,10 +1753,10 @@ export default function App() {
     inTeStellenItems, stapVolgorde, teControlerenItems,
   });
   const {
-    exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   } = useRapporten({
-    accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, autoActivaDetails, autoStatus,
+    accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
     autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
     effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
     gemeentelijkeKostenZakelijkPercentageStatus, heeftHolding, heeftLeaseAutoDossierBreed, heeftVoorraad,
@@ -1750,6 +1768,14 @@ export default function App() {
     tariefOverrides, voorbelastingExcluded, werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus,
   });
+  // nieuw-V7R9 — fiscale regressietest (tests/regressie/fiscaal.mjs): de jaartotalen van het rapport over alle jaren (alleen DEV).
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
+    window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };
+    window.__bt.km = () => ({ autoStatus, kmVergoedingDetails }); // nieuw-V8R1 — controle km-vergoeding
+    window.__bt.rapport = (jaren, balans) => bouwRapportHtml(jaren, balans); // nieuw-V8R3 — rapport-HTML voor controle
+    window.__bt.aangiftePicker = () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); };
+    window.__bt.lease = () => leaseSummary.map((l) => ({ key: l.key, category: l.category, tx: (l.transactions || []).map((t) => [new Date(t.date).toISOString().slice(0, 10), t.amount]) })); // nieuw-V8R4 — controle leaseschuld
+  }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
   // beide-V7R0 — gegevens voor de vaste kop op elk rapport (reports/rapportKop.js), bij elke render bijgewerkt.
   registreerRapportKop({
@@ -2038,7 +2064,7 @@ export default function App() {
     setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails,
     setLeaseDetailsModalKey, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey,
     setManualWizardOpen, setMaxStappen, setMeerdereTarievenBevestigd, setModusKeuzeOpen, setModusNaLaden,
-    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverigInkomenBox1State,
+    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setBeginsaldoZakelijk, setOvergeslagenStappen, setOverigInkomenBox1State,
     setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setPriveAntwoorden,
     setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys,
     setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setSoortDossier,
@@ -3157,6 +3183,10 @@ export default function App() {
                     selectedYears={selectedAangifteYears}
                     setSelectedYears={setSelectedAangifteYears}
                     onExport={exportAangiftevoorstel}
+                    toonBalansKeuze={rechtsvorm !== "bv" && !priveOverzicht}
+                    rekeningenZonderSaldo={rekeningenZonderSaldo(classified, accountTypeByFile)}
+                    beginsaldo={beginsaldoZakelijk}
+                    setBeginsaldo={setBeginsaldoZakelijk}
                   />
                 )}
 

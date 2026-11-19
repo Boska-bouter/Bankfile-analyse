@@ -345,22 +345,19 @@ export function computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, year,
 
   if (contracten.length === 0) return null;
 
-  // "Totale autokosten" (het plafond waarop de bijtelling wordt afgetopt) = afschrijving + de 5
-  // gecategoriseerde kostenposten. De rente van een financiële lease hoort hier NIET bij — dat is een
-  // aparte financieringskost (bij "Financiële baten en lasten"), geen autokostenpost, en blijft altijd
-  // volledig en ongewijzigd aftrekbaar, ongeacht de bijtelling (zie winstCorrectie hieronder, die de
-  // rente ook nooit aanraakt). leaseRenteTotaal mag daarom niet meetellen in het plafond zelf — de
-  // rente wordt zelf nooit teruggedraaid, dus meetellen in het plafond zou de ruimte voor de
-  // onttrekking verruimen zonder dat daar iets tegenover staat. Alleen afschrijving + de
-  // gecategoriseerde autokosten tellen mee voor het plafond; leaseRenteTotaal blijft wel apart
-  // beschikbaar (voor weergave) via het veld hieronder.
+  // "Totale autokosten" = afschrijving + de gecategoriseerde kostenposten (de rente blijft apart aftrekbaar via
+  // renteAftrekbaar). Het plafond van de bijtelling is sinds nieuw-V9R0 die autokosten plus de leaserente.
   const totaleAutokosten = afschrijvingTotaal + autokostenTransactieTotaal;
-  const onttrekking = heeftAutoMetPrivegebruik ? Math.min(normaleBijtellingTotaal, totaleAutokosten) : 0;
+  // nieuw-V9R0 — besluit Boska 19-11: de rente van de financial lease is een kost van de auto en telt mee in het plafond
+  // ("kosten voor deze auto" bij de Belastingdienst). Alleen het plafond verandert; de rente blijft één keer aftrekbaar
+  // (renteAftrekbaar) en zit niet in nettoAftrekbareAutokosten.
+  const plafondAutokosten = totaleAutokosten + leaseRenteTotaal;
+  const onttrekking = heeftAutoMetPrivegebruik ? Math.min(normaleBijtellingTotaal, plafondAutokosten) : 0;
   const nettoAftrekbareAutokosten = totaleAutokosten - onttrekking;
 
   return {
     contracten,
-    afschrijvingTotaal, leaseRenteTotaal, autokostenTransactieTotaal, totaleAutokosten,
+    afschrijvingTotaal, leaseRenteTotaal, autokostenTransactieTotaal, totaleAutokosten, plafondAutokosten,
     normaleBijtellingTotaal, onttrekking, nettoAftrekbareAutokosten,
     // v205: boekwinst (positief) of boekverlies (negatief) op een dit jaar verkocht/geveild
     // leaseobject — zie de toelichting bij boekresultaat hierboven. 0 als er dit jaar geen enkele

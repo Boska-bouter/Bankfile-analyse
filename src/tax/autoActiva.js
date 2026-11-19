@@ -37,7 +37,7 @@ function sumAutokosten(classified, year, categoryBtwRates, btwVerlegd, categorie
 // Vertaalt de ingevulde "koop"-gegevens naar een activum compatibel met computeAfschrijvingPerJaar —
 // zelfde minimale afschrijvingstermijn van 5 jaar als bij een financieel-geleasede auto (zie
 // autoBijtelling.js). Geeft `null` als er niet genoeg is ingevuld.
-function buildKoopActivum(details) {
+export function buildKoopActivum(details) {
   if (!details?.aanschafwaarde || !details?.aanschafdatum) return null;
   const ingevoerdTermijn = details.afschrijvingstermijnJaren ? Number(details.afschrijvingstermijnJaren) : 0;
   return {
@@ -123,5 +123,24 @@ export function combineAutoKosten(leaseAutoKosten, autoActivaKosten, autoStatus 
     // operationeel-geleasede auto — kent dit veld niet, vandaar de fallback op 0).
     boekresultaatBeeindigingTotaal: (leaseAutoKosten.boekresultaatBeeindigingTotaal || 0) + (autoActivaKosten.boekresultaatBeeindigingTotaal || 0),
     winstCorrectie: leaseAutoKosten.winstCorrectie + autoActivaKosten.winstCorrectie,
+  };
+}
+
+// nieuw-V9R1 — Boska 19-11 (Meijer 2024, verschil € 862 op de balans): de btw-correctie privégebruik auto die aan de
+// Belastingdienst wordt afgedragen is een autokost. Telt mee in de totale autokosten en dus ook in het plafond van de
+// bijtelling: was de bijtelling afgetopt, dan stijgt die mee (winst gelijk); anders verlaagt de correctie de winst.
+export function metBtwPrivegebruik(autoKosten, btwPrivegebruik) {
+  const c = Number(btwPrivegebruik?.bedrag ?? btwPrivegebruik) || 0;
+  if (!autoKosten || !(c > 0.005)) return autoKosten;
+  const onttrekking = autoKosten.normaleBijtellingTotaal > 0 ? Math.min(autoKosten.normaleBijtellingTotaal, autoKosten.onttrekking + c) : autoKosten.onttrekking;
+  const extraOnttrekking = onttrekking - autoKosten.onttrekking;
+  return {
+    ...autoKosten,
+    btwPrivegebruikKosten: c,
+    totaleAutokosten: autoKosten.totaleAutokosten + c,
+    ...(autoKosten.plafondAutokosten != null ? { plafondAutokosten: autoKosten.plafondAutokosten + c } : {}),
+    onttrekking,
+    nettoAftrekbareAutokosten: autoKosten.nettoAftrekbareAutokosten + c - extraOnttrekking,
+    winstCorrectie: autoKosten.winstCorrectie + c - extraOnttrekking,
   };
 }

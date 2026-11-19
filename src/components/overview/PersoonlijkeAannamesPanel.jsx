@@ -1,4 +1,4 @@
-import { kmMaxVoorJaar } from "../../tax/kmVergoeding.js";
+import { kmBekend, kmMaxVoorJaar } from "../../tax/kmVergoeding.js";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -365,8 +365,8 @@ export default function PersoonlijkeAannamesPanel({
                     <span className="block text-xs font-medium text-slate-600 mb-1">Vergoeding per km (€)</span>
                     <input
                       type="text" inputMode="decimal"
-                      value={kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? ""}
-                      placeholder="bijv. 0,23"
+                      value={String(kmVergoedingDetails?.[activeYear]?.vergoedingPerKm ?? "").replace(".", ",")}
+                      placeholder={kmBekend(activeYear) ? `${kmMaxVoorJaar(activeYear).toFixed(2).replace(".", ",")} (max.)` : "nog niet bekend"}
                       onChange={(e) => { const v = e.target.value.replace(",", "."); if (/^\d*\.?\d*$/.test(v)) onSetKmVergoedingField(activeYear, "vergoedingPerKm", v); }}
                       className="w-32 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
                     />
@@ -378,7 +378,7 @@ export default function PersoonlijkeAannamesPanel({
                     const tarief = inv > 0 ? Math.min(inv, max) : max;
                     return (
                       <div className="text-xs text-slate-500">
-                        Aftrekbaar: <strong className="text-slate-800">{eur(km * tarief)}</strong> ({km.toLocaleString("nl-NL")} km × € {tarief.toFixed(2).replace(".", ",")}{inv > max ? `; ingevuld € ${inv.toFixed(2).replace(".", ",")} is meer dan het fiscale maximum` : !(inv > 0) ? ", fiscaal maximum" : ""})
+                        Aftrekbaar: <strong className="text-slate-800">{eur(km * tarief)}</strong> ({km.toLocaleString("nl-NL")} km × € {tarief.toFixed(2).replace(".", ",")}{!kmBekend(activeYear) ? `; tarief ${activeYear} nog niet bekend, gerekend met het laatst bekende jaar` : ""}{inv > max ? `; ingevuld € ${inv.toFixed(2).replace(".", ",")} is meer dan het fiscale maximum` : !(inv > 0) ? ", fiscaal maximum" : ""})
                       </div>
                     );
                   })()}

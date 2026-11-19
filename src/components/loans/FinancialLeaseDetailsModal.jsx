@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
   computeOnbetaaldGedeelteKoop, computeAanschafwaardeBedrijfsmiddel, computeFinancialLeaseRate, computeTotaleLeaseBetalingen,
-  generateProjectedLeasePayments, matchLeasePaymentsToSchedule, getLeaseSegments, assignLeaseTransactionsToSegments,
+  generateProjectedLeasePayments, matchLeasePaymentsToSchedule, betalingSleutel, getLeaseSegments, assignLeaseTransactionsToSegments,
   normalizeKenteken, mergeHandmatigeTermijnen,
 } from "../../tax/financialLease.js";
 import { computeLoanAmortization, groupAmortizationByYear } from "../../tax/loanAmortization.js";
@@ -49,6 +49,7 @@ export function formFromSegment(segment) {
     // v206: bevestiging dat termijnen (mogelijk) van een andere rekening zijn betaald — zie
     // tax/financialLease.js (mergeHandmatigeTermijnen).
     handmatigBetaaldTotEnMet: s.handmatigBetaaldTotEnMet ?? "",
+    betalingKoppelingen: s.betalingKoppelingen || {},
     // v205: "verkoopsom" (nu getoond als "Verkoop-/veilingopbrengst") is bij een daadwerkelijke
     // beëindiging het enige bedrag dat de gebruiker nog los hoeft in te vullen — restschuld/overwaarde
     // wordt sindsdien automatisch berekend (opbrengst vs. de op de bankbetalingen gebaseerde
@@ -121,6 +122,7 @@ export function cleanSegment(form) {
     contractBeeindigd: form.contractBeeindigd,
     einddatumContract: form.contractBeeindigd ? (form.einddatumContract || null) : null,
     handmatigBetaaldTotEnMet: form.handmatigBetaaldTotEnMet || null,
+    betalingKoppelingen: form.betalingKoppelingen && Object.keys(form.betalingKoppelingen).length ? form.betalingKoppelingen : undefined,
     verkoopsom: form.contractBeeindigd ? n(form.verkoopsom) : null,
     soort: form.soort || null,
     naAfloop: form.naAfloop || null,
@@ -226,8 +228,8 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
   );
   const paymentCheck = useMemo(() => {
     if (projectedPayments.length === 0) return null;
-    return matchLeasePaymentsToSchedule(projectedPayments, effectiveSegmentTransactions, Number(form.maandbedrag) || 0);
-  }, [projectedPayments, effectiveSegmentTransactions, form.maandbedrag]);
+    return matchLeasePaymentsToSchedule(projectedPayments, effectiveSegmentTransactions, Number(form.maandbedrag) || 0, form.betalingKoppelingen);
+  }, [projectedPayments, effectiveSegmentTransactions, form.maandbedrag, form.betalingKoppelingen]);
 
   // Aanvullende, grovere controle náást de per-termijn vergelijking hierboven: als de datums/
   // bedragen per termijn niet allemaal exact matchen (bijv. door een net iets verkeerd ingevulde
@@ -247,15 +249,20 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
     // correctie van de leasemaatschappij) moet een eerdere betaling verrekenen, niet als extra
     // betaling erbovenop tellen (dat gaf voorheen een te hoog "totaal betaald"). Telt ook eventuele,
     // met "Betaald t/m" bevestigde termijnen van een andere rekening mee (effectiveSegmentTransactions).
-    const totaalBetaald = Math.abs(effectiveSegmentTransactions.reduce((a, tx) => a + tx.amount, 0));
+    const kostenKop = form.betalingKoppelingen || {};
+    // nieuw-V8R6 — teruggeboekte betalingen en kosten tellen niet mee in het aantal betalingen (Boska 18-11).
+    const teruggeboektSet = new Set((paymentCheck?.teruggeboekt || []).map(([min]) => min));
+    const totaalBetaald = Math.abs(effectiveSegmentTransactions.filter((tx) => tx.synthetic || kostenKop[betalingSleutel(tx)] !== "kosten").reduce((a, tx) => a + tx.amount, 0));
+    // nieuw-V8R4 — een termijn die al (vooruit) betaald is telt ook mee, ook al ligt de vervaldatum na de laatste betaling.
+    const vooruit = new Set((paymentCheck?.results || []).filter((r) => r.matchedTx).map((r) => r.projected));
     const verwachtTotNu = projectedPayments
-      .filter((p) => p.date <= laatsteTransactieDatum)
+      .filter((p) => p.date <= laatsteTransactieDatum || vooruit.has(p))
       .reduce((a, p) => a + Math.abs(p.amount), 0);
     if (verwachtTotNu === 0) return null;
     const verschil = totaalBetaald - verwachtTotNu;
     const marge = Math.max(Number(form.maandbedrag) || 0, 25);
-    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: effectiveSegmentTransactions.filter((tx) => tx.amount < 0).length };
-  }, [effectiveSegmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag]);
+    return { totaalBetaald, verwachtTotNu, verschil, klopt: Math.abs(verschil) <= marge, aantal: effectiveSegmentTransactions.filter((tx) => tx.amount < 0 && !teruggeboektSet.has(tx) && (tx.synthetic || kostenKop[betalingSleutel(tx)] !== "kosten")).length };
+  }, [effectiveSegmentTransactions, projectedPayments, laatsteTransactieDatum, form.maandbedrag, form.betalingKoppelingen, paymentCheck]);
 
   // Berekende afschrijving per jaar voor dit contract als "Soort" is ingevuld — puur ter controle/
   // preview in dit venster, dezelfde berekening (computeLeaseAfschrijvingVoorJaar) als het
@@ -884,12 +891,78 @@ function LeaseContractSection({ form, onChange, segmentTransactions, title, canR
                 ))}
               </ul>
             )}
-            {paymentCheck.onverwachteBetalingen.length > 0 && (
-              <p className="mt-2 text-xs text-slate-500">
-                Daarnaast {paymentCheck.onverwachteBetalingen.length} betaling(en) in deze periode die niet bij een
-                verwachte termijn passen — mogelijk een extra aflossing.
-              </p>
-            )}
+            {(() => {
+              // Een terugboeking met de opnieuw gedane betaling van hetzelfde bedrag telt niet als losse betaling.
+              const losse = [...paymentCheck.onverwachteBetalingen];
+              for (const t of losse.filter((x) => x.amount > 0)) {
+                const i = losse.findIndex((x) => x.amount < 0 && Math.abs(Math.abs(x.amount) - t.amount) <= 0.01 && Math.abs(x.date - t.date) <= 5 * 86400000);
+                if (i >= 0) { losse.splice(i, 1); losse.splice(losse.indexOf(t), 1); }
+              }
+              return losse.length > 0 ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  Daarnaast {losse.length} betaling(en) in deze periode die niet bij een verwachte termijn passen — kies hieronder bij
+                  "Alle betalingen bekijken" waar ze bij horen.
+                </p>
+              ) : null;
+            })()}
+            {(() => {
+              // nieuw-V8R4 — alle betalingen zichtbaar (wens Boska 18-11: "deze zijn niet op te roepen").
+              const regels = [];
+              const perTx = new Map();
+              const kop = form.betalingKoppelingen || {};
+              const zetKoppeling = (tx, waarde) => { const n = { ...kop }; if (waarde) n[betalingSleutel(tx)] = waarde; else delete n[betalingSleutel(tx)]; onChange({ ...form, betalingKoppelingen: n }); };
+              const openTermijnen = paymentCheck.results.map((r, i) => ({ r, nr: i + 1 })).filter(({ r }) => !r.matchedTx);
+              paymentCheck.results.forEach((r, i) => {
+                if (r.matchedTx) { if (!perTx.has(r.matchedTx)) perTx.set(r.matchedTx, { nrs: [], handmatig: false }); const e = perTx.get(r.matchedTx); e.nrs.push(r.andereDatum ? `${i + 1} (andere datum)` : i + 1); if (r.handmatig) { e.handmatig = true; e.nr = i + 1; } }
+                else if (r.status === "ontbrekend") regels.push({ datum: r.projected.date, bedrag: null, bron: "", koppeling: `Termijn ${i + 1}: geen betaling gevonden`, kleur: "text-red-700" });
+              });
+              for (const [tx, e] of perTx) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: tx.synthetic ? "Elders betaald" : "Bank", koppeling: e.nrs.length > 1 ? `Termijn ${e.nrs.join(" en ")}` : `Termijn ${e.nrs[0]}`, kleur: tx.synthetic ? "text-slate-500" : "text-slate-700", keuze: e.handmatig ? `t:${e.nr}` : null });
+              for (const tx of paymentCheck.extraAflossingen || []) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: "Bank", koppeling: "Extra aflossing", kleur: "text-slate-700", keuze: "aflossing" });
+              for (const [min, plus] of paymentCheck.teruggeboekt || []) {
+                regels.push({ datum: min.date, bedrag: min.amount, bron: "Bank", koppeling: `Teruggeboekt op ${new Date(plus.date).toLocaleDateString("nl-NL")}`, kleur: "text-slate-500" });
+                regels.push({ datum: plus.date, bedrag: plus.amount, bron: "Bank", koppeling: "Terugboeking", kleur: "text-slate-500" });
+              }
+              for (const tx of paymentCheck.kosten || []) regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: "Bank", koppeling: "Kosten, geen aflossing", kleur: "text-slate-700", keuze: "kosten" });
+              const losse = [...paymentCheck.onverwachteBetalingen];
+              const opnieuw = new Set();
+              for (const t of losse.filter((x) => x.amount > 0)) {
+                const her = losse.find((x) => x.amount < 0 && !opnieuw.has(x) && Math.abs(Math.abs(x.amount) - t.amount) <= 0.01 && Math.abs(x.date - t.date) <= 5 * 86400000);
+                if (her) { opnieuw.add(her); opnieuw.add(t); }
+              }
+              for (const tx of losse) {
+                const paar = opnieuw.has(tx);
+                regels.push({ tx, datum: tx.date, bedrag: tx.amount, bron: tx.synthetic ? "Elders betaald" : "Bank", koppeling: tx.amount > 0 ? (paar ? "Terugboeking" : "Terugboeking (los)") : paar ? "Opnieuw betaald na terugboeking" : "Niet gekoppeld", kleur: paar ? "text-slate-500" : "text-amber-700", keuze: tx.amount < 0 && !tx.synthetic ? "" : null });
+              }
+              regels.sort((a, b) => new Date(a.datum) - new Date(b.datum));
+              if (!regels.length) return null;
+              const keuzelijst = (r) => (
+                <select className="border border-slate-300 rounded px-1 py-0.5 text-xs bg-white" value={r.keuze} onChange={(e) => zetKoppeling(r.tx, e.target.value)}>
+                  <option value="">{r.koppeling === "Opnieuw betaald na terugboeking" ? r.koppeling : "Niet gekoppeld"}</option>
+                  {r.keuze?.startsWith("t:") && <option value={r.keuze}>Termijn {r.keuze.slice(2)}</option>}
+                  {openTermijnen.map(({ r: t, nr }) => <option key={nr} value={`t:${nr}`}>Termijn {nr} ({new Date(t.projected.date).toLocaleDateString("nl-NL")})</option>)}
+                  <option value="aflossing">Extra aflossing</option>
+                  <option value="kosten">Kosten, geen aflossing</option>
+                </select>
+              );
+              return (
+                <details className="mt-2 text-xs" open={Object.keys(kop).length > 0 || undefined}>
+                  <summary className="cursor-pointer text-teal-800 font-medium">Alle betalingen bekijken ({regels.filter((r) => r.bedrag != null).length})</summary>
+                  <table className="mt-1 w-full">
+                    <thead><tr className="text-slate-500"><th className="text-left font-medium py-1">Datum</th><th className="text-right font-medium">Bedrag</th><th className="text-left font-medium pl-3">Bron</th><th className="text-left font-medium pl-3">Koppeling</th></tr></thead>
+                    <tbody>
+                      {regels.map((r, i) => (
+                        <tr key={i} className={`border-t border-slate-100 ${r.kleur}`}>
+                          <td className="py-1">{new Date(r.datum).toLocaleDateString("nl-NL")}</td>
+                          <td className="text-right font-mono">{r.bedrag == null ? "" : `${r.bedrag > 0 ? "+" : ""}${eur(Math.abs(r.bedrag))}`}</td>
+                          <td className="pl-3">{r.bron}</td>
+                          <td className="pl-3">{r.keuze != null ? keuzelijst(r) : r.koppeling}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              );
+            })()}
           </div>
         );
       })()}

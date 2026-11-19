@@ -1,7 +1,8 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
+import { computeBtwPrivegebruikAuto } from "../tax/btwPrivegebruikAuto.js";
 import { useMemo } from "react";
 import { INCOME_TRANSFER_CATEGORIES } from "../classification/categories.js";
-import { combineAutoKosten, computeAutoActivaKostenVoorJaar } from "../tax/autoActiva.js";
+import { combineAutoKosten, metBtwPrivegebruik, computeAutoActivaKostenVoorJaar } from "../tax/autoActiva.js";
 import { computeActivaAfschrijvingForYear } from "../tax/activa.js";
 import { computeFinancialLeaseRate, computeOnbetaaldGedeelteKoop } from "../tax/financialLease.js";
 import { computeGedeeldeEnergieVoorJaar, computeGedeeldeGemeentelijkeKostenVoorJaar, computeGedeeldeHuurVoorJaar } from "../tax/gedeeldeHuur.js";
@@ -27,11 +28,11 @@ export function useYearlySummaries(p) {
       const leaseRente = computeLeaseRenteForYear(leaseSummary, leaseDetails, y, computeOnbetaaldGedeelteKoop, computeFinancialLeaseRate);
       const renteAftrekbaar = (loanRente?.totaalRente || 0) + (leaseRente?.totaalRente || 0);
       const leaseAutoKosten = rechtsvorm !== "bv"
-        ? combineAutoKosten(
+        ? metBtwPrivegebruik(combineAutoKosten(
             computeLeaseAutoKostenVoorJaar(leaseSummary, leaseDetails, y, classified, effectiveCategoryBtwRates, btwVerlegd),
             computeAutoActivaKostenVoorJaar(autoActivaDetails, autoWizardStatus, y, classified, effectiveCategoryBtwRates, btwVerlegd),
             autoStatus, y
-          )
+          ), computeBtwPrivegebruikAuto(y, { leaseSummary, leaseDetails, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates: effectiveCategoryBtwRates, btwVerlegd, rechtsvorm }))
         : null;
       const gedeeldeHuur = computeGedeeldeHuurVoorJaar(classified, y, huurZakelijkPercentageStatus, effectiveCategoryBtwRates, btwVerlegd);
       // v291 — zelfde correctie, nu ook voor "Energie-water (deels zakelijk)"/"Gemeentelijke kosten

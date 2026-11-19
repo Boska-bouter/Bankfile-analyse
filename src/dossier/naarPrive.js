@@ -15,7 +15,7 @@ const ALLEEN_ZAKELIJK = [
   "btwVerlegd", "korRegeling", "kwartaalStatus", "voorbelastingExcluded", "periodeQuarterOverrides", "reviewedPeriodeKeys",
   "loanDetails", "leaseDetails", "leaseMergedInto", "activaDetails", "autoActivaDetails", "kmVergoedingDetails",
   "verwachteLease", "verwachteLeaseOverig", "verwachteLening", "verwachteAOV", "autoWizardStatus", "heeftVoorraad",
-  "zakelijkeSpaarRekening", "opdrachtgeversGevraagd", "incomeBtwTarieven", "meerdereTarievenBevestigd", "verwachteAangeboden",
+  "zakelijkeSpaarRekening", "beginsaldoZakelijk", "opdrachtgeversGevraagd", "incomeBtwTarieven", "meerdereTarievenBevestigd", "verwachteAangeboden",
   "confirmedLeaseTypeKeys", "ibStatus", "zvwStatus", "vpbStatus", "zelfstandigenaftrekStatus", "startersaftrekStatus",
   "werkruimteStatus", "tariefOverrides", "overigInkomenBox1", "holdingBoekingen", "heeftHolding", "rechtsvorm",
   "categoryZakelijkPercentage", "categoryBtwRates", "businessKeywords", "businessExpenseKeywords", "reviewedIncomeKeys",

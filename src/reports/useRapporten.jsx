@@ -23,7 +23,7 @@ import { buildPriveSamenvattingHtml } from "./prive/budgetRapport.js";
 import { metRapportKop } from "./rapportKop.js";
 
 export function useRapporten({
-  accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, autoActivaDetails, autoStatus,
+  accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
   autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
   effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
   gemeentelijkeKostenZakelijkPercentageStatus, heeftHolding, heeftLeaseAutoDossierBreed, heeftVoorraad,
@@ -39,13 +39,8 @@ export function useRapporten({
   // yearsOverride: gebruikt door de "Voorstel bekijken"-snelknop voor het actieve jaar, die niet
   // wil wachten op de (asynchrone) state-update van selectedAangifteYears. Zonder override wordt
   // gewoon de bestaande jaren-selectie (uit de checkboxes) gebruikt.
-  const exportAangiftevoorstel = (yearsOverride) => {
-    const targetYears = yearsOverride || selectedAangifteYears;
-    if (targetYears.length === 0) {
-      window.alert("Selecteer minstens één jaar.");
-      return;
-    }
-    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+  // nieuw-V7R9 — het rapport zelf los van het venster, zodat de fiscale regressietest (window.__bt.fiscaal) precies dezelfde cijfers leest.
+  const bouwRapportHtml = (targetYears, balans = "zonder") => {
     // nieuw-V4R8 — wat in de app al is afgehandeld (zelf gekozen, ook bewust "Overig"; "Klopt zo" in Overig/personen; kleine bedragen)
     // telt in het rapport niet als open punt, net als in Controleren (melding Boska 13-11).
     const bevestigd = maakBevestigd(reviewedOverigKeys, reviewedPersonKeys);
@@ -58,7 +53,18 @@ export function useRapporten({
       ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen })
       : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
-      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus);
+      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus, balans, beginsaldoZakelijk);
+    return html;
+  };
+  // nieuw-V8R7 — Boska 18-11: bij het openen kiezen "met of zonder balans", zodat A en B niet door elkaar staan.
+  const exportAangiftevoorstel = (yearsOverride, balans = "zonder") => {
+    const targetYears = yearsOverride || selectedAangifteYears;
+    if (targetYears.length === 0) {
+      window.alert("Selecteer minstens één jaar.");
+      return;
+    }
+    if (yearsOverride) setSelectedAangifteYears(yearsOverride);
+    const html = bouwRapportHtml(targetYears, balans);
     setAangiftevoorstelPreview(metRapportKop(html, targetYears));
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
@@ -242,8 +248,13 @@ export function useRapporten({
     </>
   );
 
+  // nieuw-V9R1 — controle samenvatting voor de klant tegen de indicatieve berekening (alleen DEV).
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
+    window.__bt.klant = openKlantSamenvatting;
+    window.__bt.klantHtml = () => klantSamenvattingHtml;
+  }
   return {
-    exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   };
 }

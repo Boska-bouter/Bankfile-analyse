@@ -57,8 +57,12 @@ const eur0 = (n) => `€ ${Number(n || 0).toLocaleString("nl-NL", { minimumFract
 
 // beide-V9R9 — de boekingen die in de winst-en-verliesrekening meetellen: alles behalve privé, plus privé-categorieën met een
 // zakelijk percentage > 0 (bijv. "Privé - energie-water" 10% bij een zelfstandige werkruimte), net als yearlySummary.js.
+// nieuw-V8R3 — privéopnames en -stortingen op de zakelijke rekening horen er ook bij (melding Boska 18-11: blok 6
+// Privéonttrekkingen bleef leeg, want die categorieën zijn fiscaal "geen"). Ze tellen niet mee in de winst.
+const PRIVE_MUTATIE = new Set([...RUBRIEK_ONTTREKKINGEN, ...RUBRIEK_STORTINGEN]);
 export function zakItemsVoorIb(classified, year, categoryZakelijkPercentage = null, autoStatus = null) {
   return classified.filter((tx) => !tx.isMirror && tx.year === year && (fiscalTreatmentOf(tx.category) !== "geen"
+    || (PRIVE_MUTATIE.has(tx.category) && tx.type === "Zakelijk")
     || effectiveZakelijkPercentage(tx.category, year, categoryZakelijkPercentage, autoStatus, false, tx) > 0));
 }
 
@@ -72,6 +76,7 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   const heeftLeaseAuto = !!leaseAutoKostenForYear;
   const factorFor = (category, tx = null) => {
     // beide-V9R9 — privé-categorie met een zakelijk percentage: alleen dat deel (zelfde als yearlySummary.js).
+    if (PRIVE_MUTATIE.has(category)) return 1;
     if (year != null && fiscalTreatmentOf(category) === "geen") return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) / 100;
     if (year == null || fiscalTreatmentOf(category) !== "kosten") return 1;
     return effectiveZakelijkPercentage(category, year, categoryZakelijkPercentage, autoStatus, heeftLeaseAuto, tx) / 100;

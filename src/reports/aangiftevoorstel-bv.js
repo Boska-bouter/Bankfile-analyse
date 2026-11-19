@@ -51,6 +51,8 @@ export function computeBvSummary(year, classified, categoryBtwRates, btwVerlegd,
 
 // V20 — verzamelt per jaarsectie het totaal (BTW + Vpb) voor de meerjaren-slotregel.
 let JAAR_TOTALEN_BV = [];
+// nieuw-V7R9 — voor de fiscale regressietest (window.__bt.fiscaal).
+export function laatsteJaarTotalenBv() { return JAAR_TOTALEN_BV.map((j) => ({ ...j })); }
 
 const STATUS_EMOJI = { groen: "🟢", oranje: "🟠", rood: "🔴" };
 const STATUS_TEKST = { groen: "Klaar voor controle", oranje: "Controle nodig", rood: "Mogelijk ontbreekt een periode" };
@@ -679,7 +681,7 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
 <html lang="nl"><head><meta charset="utf-8"><title>Indicatieve aangifteberekening BV ${jaren.join(", ")}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 11px; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 11px; line-height: 1.35; }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .subtitle { color: #64748b; font-size: 11px; margin-bottom: 20px; }
   h2 { font-size: 14px; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin: 24px 0 10px; page-break-after: avoid; }

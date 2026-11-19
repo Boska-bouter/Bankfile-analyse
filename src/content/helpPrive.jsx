@@ -11,6 +11,7 @@ import { HUISHOUD_HELP_CHAPTERS, HUISHOUD_INTRO, VERBORGEN_IN_HUISHOUDBOEKJE } f
 const VERBORGEN_IN_PRIVE = new Set([
   "jaaroverzicht", "btw-aangifte-kwartaal", "categorieen-overzicht", "persoonlijke-aannames", "huur-deels-zakelijk",
   "categorie-percentage-zakelijk", "activa-afschrijving", "lease-financieel", "btw-percentages", "doc-onderbouwing",
+  "rente-per-lening", // nieuw-V8R0 — leningen en rente-aftrek zijn zakelijk; een privédossier heeft geen leningenpaneel
 ]);
 
 const Li = ({ children }) => <li className="flex gap-2.5"><span className="text-slate-400 shrink-0">•</span><span>{children}</span></li>;
@@ -111,6 +112,20 @@ export const PRIVE_HELP_CHAPTERS = [
         <p>Een privédossier kent veertien hoofdcategorieën: Inkomen, Wonen, Verzekeringen, Zorg, Boodschappen, Vervoer, Kinderen, Abonnementen, Vrije tijd, Giften, Sparen en beleggen, Aflossingen, Belastingen en Overig.</p>
         <p>Een paar categorieën tellen mee in de belasting: loon, uitkering en pensioen (inkomen), hypotheek (rente), giften, zorgkosten, lijfrente en partneralimentatie. Toeslagen en kinderbijslag tellen mee als inkomsten, maar niet voor de belasting.</p>
         <p>"Nog te beoordelen" (Overig) betekent dat de app het niet weet. Deel die boekingen in bij Controleren of in Eenvoudig bij Nakijken.</p>
+      </div>
+    ),
+  },
+  {
+    // nieuw-V8R0 — privéversie van "Wat de app automatisch herkent", zonder de zakelijke uitleg.
+    key: "automatische-herkenning",
+    groep: "controleren",
+    titel: "Wat de app automatisch herkent",
+    inhoud: (
+      <div className="space-y-2.5">
+        <p>Bij het inlezen deelt de app elke boeking in: eerst overboekingen tussen eigen rekeningen, dan eigen zoekwoorden en eerdere keuzes, terugboekingen, de standaardcategorieën op zoekwoord, daarna personen en als laatste "Nog te beoordelen". Passen zoekwoorden van meer categorieën, dan wint het meest specifieke zoekwoord (langer, of de naam van de partij zelf). Is het gelijk, dan komt de boeking bij Controleren te staan met "Twijfel: … of …?".</p>
+        <p><strong>Retour en terugbetaling:</strong> een teruggeboekte pinbetaling, storno of restitutie komt in dezelfde categorie als de uitgave en verlaagt die.</p>
+        <p><strong>Giften:</strong> alleen bekende goede doelen met een ANBI-status (zoals KWF, Rode Kruis of Unicef) komen vanzelf bij Giften. Een gift aan een ander doel kan zelf bij Giften worden gezet.</p>
+        <p>Ontbreekt een partij? Corrigeer hem één keer bij Controleren of voeg een eigen zoekwoord toe; dat geldt vanaf dan overal.</p>
       </div>
     ),
   },

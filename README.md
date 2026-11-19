@@ -1,55 +1,61 @@
-# Bankoverzicht — Zakelijk & Privé (Vite/React)
+# BankafschriftenTool (Vite/React + Cloudflare Worker)
 
-Bankbestandanalyse-tool voor Over Rood schuldhulpverlening: verwerkt CSV/Excel/MT940-bankexports
-voor ZZP/eenmanszaak, met automatische classificatie, BTW-berekening, jaaroverzicht en een
-aangiftevoorstel. Bankgegevens en dossiers worden alleen lokaal in de browser verwerkt; account, inlog,
-rechten en de bankkoppeling lopen via een Cloudflare Worker (zie Privacy).
+Hulpmiddel voor hulpverleners en bewindvoerders om uit bankgegevens een administratie te reconstrueren, te controleren en
+fiscale uitkomsten voor te bereiden. Bankgegevens en dossiers worden alleen lokaal in de browser verwerkt; account, inlog,
+rechten, tarieven en de bankkoppeling lopen via een Cloudflare Worker (zie Privacy).
 
-Live: https://boska-bouter.github.io/Bankfile-analyse/
+Live: https://bankafschriftentool.app
 
-Dit is de Vite/React-opvolger van de oorspronkelijke standalone `index.html`
-(https://boska-bouter.github.io/Bankfile-inzicht/). De migratie is voltooid: alle functionaliteit
-van de oorspronkelijke tool is overgezet, plus een aantal nieuwe verbeteringen (zie hieronder).
+## Wat de app kan
 
-## Functionaliteit
+- **Import**: CSV, Excel (.xlsx), MT940 en CAMT.053, met controle op saldo-aansluiting, ontbrekende periodes en dubbele boekingen.
+- **Drie soorten dossier**: zakelijk (eenmanszaak/zzp of BV), privé en huishoudboekje; elk in de weergave Eenvoudig of Uitgebreid.
+- **Indeling**: automatisch op zoekwoorden, tegenpartij, IBAN en eerdere keuzes (punten per zoekwoord, twijfel = controleren).
+  Eigen correcties per boeking, per tegenpartij of via zoeken (vastgelegde boekingen blijven staan). Een te breed zoekwoord
+  (meer dan 10 tegenpartijen, plaatsnaam) geeft een waarschuwing; vaste banktekst (Transactie, Term, Pasvolgnr …) telt niet mee.
+- **Controleren**: open punten per tegenpartijgroep en per jaar, kleine bedragen, Overig, overboekingen aan personen,
+  inkomsten, leningen, lease, activa.
+- **Fiscaal (indicatief)**: btw per kwartaal (KOR, verlegd, privégebruik auto), winst, zelfstandigen- en startersaftrek
+  (met niet-gerealiseerde aftrek over alle jaren), mkb-winstvrijstelling, IB, Zvw, heffingskortingen, overig inkomen,
+  giften aan een ANBI, KIA, lease en bijtelling, Vpb en box 2 voor een BV; privé: toeslagen en persoonsgebonden aftrek.
+- **Rapporten**: indicatieve aangifteberekening (met onderbouwing), btw-overzicht, samenvatting voor de klant,
+  inkomen per maand, controlebestand (Excel).
+- **Opslag**: automatisch in de browser (IndexedDB, terugval localStorage) en als dossierbestand, optioneel versleuteld
+  (AES-256-GCM, met herstelcode). Noodmodus: de app opent zonder server hooguit 7 dagen na het laatste bezoek.
+- **Account en beheer**: aanmelden, goedkeuren door de beheerder, abonnementen per soort, beheerscherm.
 
-- **Import**: CSV, Excel (.xlsx), MT940, CAMT.053 (XML).
-- **Classificatie**: automatische indeling op basis van tegenpartij/omschrijving-zoekwoorden,
-  met handmatige correcties die tegenpartij-breed (alle jaren) worden onthouden.
-- **Categorieën**: een laag van ~14 hoofdcategorieën voor het overzicht (Huisvesting, Vervoer & auto,
-  Personeel, Belastingen & heffingen, Privé, ...), met de fijnmazige subtypes (Brandstof, Parkeren,
-  Belastingen: LH, ...) behouden onder de motorkap voor BTW-percentage, vast/variabel-indeling en
-  fiscale precisie. Zie `src/classification/categories.js` (`SUBTYPE_TO_MAIN`).
-- **BTW**: percentage per subtype, kwartaaloverzicht (netto + BTW-uitsplitsing), KOR- en
-  BTW-verlegd-instelling, voorbelasting.
-- **Jaaroverzicht**: winst uit onderneming, geschat IB, tekort/over, meerjarenoverzicht met trend,
-  vaste/variabele kosten.
-- **Reviewstappen**: inkomstenbronnen, overboekingen aan personen, "Overig" opruimen, factuurperiode
-  vs. boekingskwartaal.
-- **Leningen & lease**: rente/aflossing-splitsing per betaling (leningbedrag + startdatum + rente),
-  operationeel vs. financieel.
-- **Aangifte**: checklist, uitleg "wat waar invullen bij OB/IB", aangiftevoorstel met voorvertoning
-  (download/printen).
-- **Overig**: "Werk te doen"-dashboard met voortgang per jaar, ongedaan maken (laatste actie),
-  duplicaatdetectie, saldo-per-bestand-controle, terugkerende betalingen, project opslaan/laden,
-  automatisch bewaren per browser, Help-systeem met per-onderdeel "?"-uitleg.
+## Beperkingen
+
+- Alle uitkomsten zijn indicatief: geen aangifte en geen fiscaal advies.
+- Wat niet uit de bank blijkt (urencriterium, voorraad, privégebruik, ANBI-status) vraagt de app of neemt hij aan; de
+  aannames staan in het rapport.
+- De automatische browseropslag is niet met een wachtwoord versleuteld. Gebruik op een gedeeld apparaat alleen
+  versleutelde dossierbestanden en log uit.
+
+## In ontwikkeling
+
+- Rechtstreekse bankkoppeling (proef via Ponto; Enable Banking als alternatief). Tot die beschikbaar is: bestanden importeren.
+- Bedrijfsnamen opzoeken met AI (fase 2); de gedeelde namenlijst (fase 1) bestaat, toestemming staat standaard uit.
+- `App.jsx` (± 3.300 regels) verder opsplitsen, alleen waar een wijziging daar aanleiding voor geeft.
 
 ## Projectstructuur
 
 ```
 src/
-├── App.jsx              — hoofdcomponent: state, coördinatie tussen alle panelen
-├── classification/       — categorieregels, classificatie-engine, hoofdcategorie-mapping
-├── importers/             — CSV/Excel/MT940-parsing, kolomherkenning, duplicaatdetectie
-├── tax/                   — BTW, IB-schatting, leningen/lease, checklist, jaaroverzicht
-├── storage/               — browser-opslag, projectbestand-formaat
-├── reports/               — Excel-export, aangiftevoorstel, printen
-├── content/               — Help-teksten (gedeeld tussen het Help-paneel en de "?"-pop-ups)
-└── components/            — UI, per domein (overview, btw, review, loans, settings, dashboard, shared)
+├── App.jsx              — centrale coördinatie: state en doorgeven aan panelen
+├── app/, cards/, calc/   — hooks per onderdeel (acties, kaarten, jaarberekening, voortgang)
+├── classification/       — categorieregels, indeling, zekerheid, leren van keuzes
+├── importers/            — CSV/Excel/MT940/CAMT, kolomherkenning, duplicaten, bankkoppeling
+├── review/               — open punten, categoriewijziging, vergelijkbare boekingen
+├── tax/                  — btw, IB/Zvw, Vpb, aftrek, lease, leningen, activa, tarieven
+├── modus/                — dossiersoorten (zakelijk, privé, huishoudboekje)
+├── dossier/, storage/    — dossier laden/opslaan/omzetten, browseropslag, versleuteling
+├── reports/              — rapporten en exports
+├── content/              — help-, privacy- en voorwaardenteksten
+├── components/           — UI per domein
+└── noodmodus/            — service worker voor gebruik zonder server
+worker/                   — Cloudflare Worker: inloggen, rechten, beheer, tarieven, bankkoppeling, namenlijst
 ```
-
-`App.jsx` is met opzet nog de centrale coördinator (state + doorgeven aan panelen). Een verdere
-opsplitsing in bijv. React Context/hooks staat op de planning zodra dat nodig wordt.
 
 ## Lokaal draaien
 
@@ -61,10 +67,9 @@ npm run build     # productie-build naar dist/
 
 ## Deployen
 
-De workflow in `.github/workflows/deploy.yml` bouwt en publiceert automatisch naar GitHub Pages
-bij elke push naar `main`. Eenmalig nodig: onder repo-instellingen → Pages → bron instellen op de
-`gh-pages`-branch (die de workflow aanmaakt bij de eerste run). Controleer ook `base` in
-`vite.config.js` — die moet overeenkomen met je repo-naam.
+De app en de Worker draaien als Cloudflare Worker, gebouwd vanuit GitHub. `wrangler.jsonc` beheert de eigenaar zelf
+(D1-database, variabelen, `previews` voor DEV en top-level voor PROD); dat bestand zit nooit in een release-zip.
+Geheimen (zoals API-sleutels) staan alleen als Worker Secret, nooit in code of `wrangler.jsonc`.
 
 ### Bijwerken zonder handmatig cache legen
 
@@ -95,22 +100,19 @@ Dezelfde uitleg als in de app (`src/content/privacy.jsx`, voorwaarden artikel 4 
   7 dagen na het laatste bezoek en nooit na de einddatum van het abonnement; uitloggen wist die versie. De
   rechten in de app schermen schermen af, ze beveiligen geen gegevens: alle berekeningen draaien in de browser.
 
-## Bekende openstaande punten
+## Tests
 
-- Een zichtbaar zekerheids-/confidence-systeem in de UI is aanwezig (`src/classification/confidence.js`,
-  aangesloten via het paneel "Classificatiezekerheid")
-- Tegenpartijregels zijn expliciet beheerbaar (`CounterpartyRulesPanel`) en werken op IBAN waar het
-  bankbestand die bevat
-- Importcontrole-scherm aanwezig (samenvattend overzicht vóór classificatie, met saldo-aansluiting
-  per bestand en tussen bestanden)
-- `App.jsx` verder opsplitsen naarmate de tool groeit — staat nog open
+De map `tests/` zit niet in de release-zip (`bankoverzicht-nieuw-VxRy.zip`), wel in de bronzip
+(`releases/bron/bankoverzicht-nieuw-VxRy-bron.zip`). Bij elke release draaien:
 
-## Tests (sinds beide-V1R0)
+- `npm test`: alle unit- en scenariotests (o.a. vaste zakelijke berekening `tests/vastgelegd/zakelijk.json`, open punten,
+  zoekwoorden, giften, rechten in de Worker);
+- elk bestand in `worker/` los importeren;
+- `npm run test:e2e`: 9 hoofdroutes in de browser;
+- trefkans van de automatische indeling op 10 testdossiers (`tests/regressie/trefkans.test.js`, mag niet dalen);
+- `npm run test:fiscaal`: winst, IB, Zvw, Vpb en btw-saldo per testdossier en jaar uit het rapport, vergeleken met
+  `tests/regressie/fiscaal-vastgelegd.json`. Een bewuste wijziging leg je opnieuw vast met
+  `node tests/regressie/fiscaal.mjs --vastleggen`.
 
-De map `tests/` zit niet in de release-zip (`bankoverzicht-beide-VYRX.zip`), wel in de bronzip
-(`releases/bron/bankoverzicht-beide-VYRX-bron.zip`). Bij elke release draaien `npm test`, `npm run test:e2e`,
-`npm run build && npm run test:noodmodus` en `npm run test:reis` (de hele gebruikersreis van aanmelden tot verlengen,
-zie `tests/e2e/LEESMIJ.md`); zonder de map `tests/` werken die scripts niet.
-
-`npm test` draait de tests in `tests/`: een vaste controle dat de zakelijke berekening niet verandert
-(`tests/vastgelegd/zakelijk.json`), het dossierprofiel (`src/modus/`) en de rechten per soort in de Worker.
+Daarnaast: `npm run test:noodmodus` (na `npm run build`) en `npm run test:reis` (aanmelden tot verlengen, zie
+`tests/e2e/LEESMIJ.md`). De regressietests gebruiken de testdossiers in `/mnt/project-files/testdossiers`.

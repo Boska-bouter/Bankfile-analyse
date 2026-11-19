@@ -1,6 +1,17 @@
+import { useState } from "react";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
 import { KNOP_PRIMAIR, KNOP_SECUNDAIR } from "../../components/ui/stijl.js";
+import { parseEuroNumber } from "../../utils/amounts.js";
+
+// nieuw-V9R0 — "1.234,56", "1234.56", "€ 1.234" en "-250" als bedrag; leeg of onleesbaar = null.
+export function leesSaldo(tekst) {
+  let s = String(tekst ?? "").replace(/€/g, "").replace(/\s/g, "");
+  if (!s) return null;
+  if (!s.includes(",") && /^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  const v = parseEuroNumber(s);
+  return Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
+}
 // Keuzevenster "Indicatieve aangifteberekening": toont de status van het gekozen jaar en laat het
 // rapport voor dat jaar (of meerdere jaren) openen. Puur weergave; de selectie en het genereren van het
 // rapport zitten in App.jsx.
@@ -18,8 +29,50 @@ function aangifteStatusTekst(status, aantalPunten) {
 
 export default function AangifteYearPickerModal({
   onClose, activeYear, onSelectYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
-  selectedYears, setSelectedYears, onExport,
+  selectedYears, setSelectedYears, onExport, toonBalansKeuze = false,
+  rekeningenZonderSaldo = [], beginsaldo = {}, setBeginsaldo = null,
 }) {
+  // nieuw-V8R7 — Boska 18-11: vooraf kiezen "met of zonder balans", zodat het overzicht maar één manier toont.
+  const [balans, setBalans] = useState("zonder");
+  const balansKeuze = toonBalansKeuze ? (
+    <fieldset className="rounded-lg border border-slate-200 p-2.5 space-y-1.5">
+      <legend className="px-1 text-xs font-medium text-slate-600">Hoe vul je de aangifte in bij de Belastingdienst?</legend>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="radio" name="balans" className="mt-1" checked={balans === "zonder"} onChange={() => setBalans("zonder")} />
+        <span><b className="font-medium">Zonder balans</b><span className="block text-xs text-slate-500">Activa en passiva € 0; privéonttrekkingen sluiten aan op de winst.</span></span>
+      </label>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="radio" name="balans" className="mt-1" checked={balans === "met"} onChange={() => setBalans("met")} />
+        <span><b className="font-medium">Met balans</b><span className="block text-xs text-slate-500">Bezittingen en schulden op 1 januari en 31 december, met privéonttrekkingen en -stortingen.</span></span>
+      </label>
+      {balans === "met" && rekeningenZonderSaldo.length > 0 && setBeginsaldo && (
+        <div className="mt-1 rounded-md bg-amber-50 border border-amber-200 p-2 space-y-1.5" data-beginsaldo>
+          <p className="text-xs text-slate-700">Het bankbestand heeft geen saldo. Vul het banksaldo op 1 januari in (staat op je bankafschrift); het saldo op 31 december rekent de app uit met de boekingen.</p>
+          {rekeningenZonderSaldo.map((r) => (
+            <label key={r.key} className="block text-xs">
+              <span className="block text-slate-600">Banksaldo op 1-1-{r.eersteJaar}, rekening {r.label}</span>
+              <span className="flex items-center gap-1 mt-0.5">
+                <span className="text-slate-500">€</span>
+                <input
+                  type="text" inputMode="decimal" placeholder="bijv. 2.500,00"
+                  className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
+                  defaultValue={beginsaldo?.[r.key] ? String(beginsaldo[r.key].bedrag).replace(".", ",") : ""}
+                  onChange={(e) => {
+                    const v = leesSaldo(e.target.value);
+                    setBeginsaldo((oud) => {
+                      const nieuw = { ...(oud || {}) };
+                      if (v == null) delete nieuw[r.key]; else nieuw[r.key] = { jaar: r.eersteJaar, bedrag: v };
+                      return nieuw;
+                    });
+                  }}
+                />
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  ) : null;
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
@@ -45,9 +98,10 @@ export default function AangifteYearPickerModal({
                 ))}
               </ul>
             )}
+            {balansKeuze}
             <div className="flex gap-2 flex-wrap pt-1">
               <button
-                onClick={() => onExport([activeYear])}
+                onClick={() => onExport([activeYear], balans)}
                 className={KNOP_PRIMAIR}
               >
                 Berekening bekijken
@@ -82,8 +136,9 @@ export default function AangifteYearPickerModal({
                 </label>
               ))}
             </div>
+            <div className="mb-3">{balansKeuze}</div>
             <div className="flex gap-2">
-              <button onClick={() => onExport()} className={KNOP_PRIMAIR}>
+              <button onClick={() => onExport(undefined, balans)} className={KNOP_PRIMAIR}>
                 Berekening tonen
               </button>
               <button onClick={() => setMeerdereJaren(false)} className={KNOP_SECUNDAIR}>

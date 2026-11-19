@@ -9,13 +9,14 @@ import {
 } from "./incomeTax.js";
 import { AOW_SCHIJF_BY_YEAR, OUDERENKORTING_BY_YEAR, EIGEN_WONING_BY_YEAR, BOX3_BY_YEAR, AFTREK_BY_YEAR } from "./prive/tarieven.js";
 import { VPB_TARIEVEN_BY_YEAR, BOX2_TARIEVEN_BY_YEAR, GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR } from "./vpb.js";
+import { KM_MAX } from "./kmVergoeding.js";
 import { controleerTarievenBestand, TARIEF_GROEPEN, TARIEF_LOSSE, TARIEVEN_FORMAAT } from "./tarievenBestand.js";
 
 const TABEL = {
   ib: IB_TARIEVEN_BY_YEAR, zvw: ZVW_TARIEVEN_BY_YEAR, ahk: ALGEMENE_HEFFINGSKORTING_BY_YEAR, ak: ARBEIDSKORTING_BY_YEAR,
   kia: KIA_STAFFEL_BY_YEAR, aow: AOW_SCHIJF_BY_YEAR, ouderen: OUDERENKORTING_BY_YEAR, woning: EIGEN_WONING_BY_YEAR,
   box3: BOX3_BY_YEAR, aftrek: AFTREK_BY_YEAR, vpb: VPB_TARIEVEN_BY_YEAR, box2: BOX2_TARIEVEN_BY_YEAR,
-  gebruikelijkLoon: GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR, startersaftrek: STARTERSAFTREK_BY_YEAR,
+  gebruikelijkLoon: GEBRUIKELIJK_LOON_MINIMUM_BY_YEAR, startersaftrek: STARTERSAFTREK_BY_YEAR, kmVergoeding: KM_MAX,
 };
 const CACHE_SLEUTEL = "bankoverzicht:tarieven";
 
