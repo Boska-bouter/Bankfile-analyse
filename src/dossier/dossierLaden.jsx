@@ -113,6 +113,7 @@ export function pasDossierToe(project, { naam = null, lastModified = null } = {}
     setGemeentelijkeKostenZakelijkPercentageStatusState({});
     setCategoryZakelijkPercentageState(migreerPercentageSplitsing(gedeeldeMig.categoryZakelijkPercentage));
     setOpeningBalanceCorrections(project.openingBalanceCorrections && typeof project.openingBalanceCorrections === "object" ? project.openingBalanceCorrections : {});
+    c.setBeginsaldoZakelijk?.(project.beginsaldoZakelijk && typeof project.beginsaldoZakelijk === "object" ? project.beginsaldoZakelijk : {});
     setLoadedProjectFileName(naam);
     c.setDossierHerstelcode?.(project.__herstelcode || null);
     c.setDossierWachtwoord?.(project.__wachtwoord || null); // een beveiligd dossier blijft bij opslaan beveiligd
@@ -179,6 +180,7 @@ export async function wisDossier(c, askWizard = false) {
   setZvwStatus({});
   setVpbStatus({});
   setOpeningBalanceCorrections({});
+  c.setBeginsaldoZakelijk?.({});
   // v271 — deze 8 velden ontbraken hier: na "Wis alles" bleven ze stilzwijgend op hun oude waarde
   // staan (van vóór het wissen), waardoor bij het laden van een nieuw/ander dossier de wizard
   // sommige vragen ten onrechte oversloeg (bijv. urencriterium, stap 18, wordt overgeslagen zodra

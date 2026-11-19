@@ -21,8 +21,14 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
   let leaseElders = 0;
   const auto = { begin: 0, eind: 0 }, overig = { begin: 0, eind: 0 }, leaseschuld = { begin: 0, eind: 0 };
   const autoItems = [];
+  // nieuw-V9R0 — Boska 19-11 ("de bedrijfsmiddelen worden zelfs hoger?"): aanschaf en afschrijving van het jaar zichtbaar onder de boekwaarde.
+  const overigMut = { aanschaf: 0, afschrijving: 0 };
   const tel = (doel, be, activum = null) => {
     doel.begin += be.begin; doel.eind += be.eind;
+    if (doel === overig && activum) {
+      if (new Date(activum.aanschafdatum).getFullYear() === year) overigMut.aanschaf += Number(activum.aanschafwaarde) || 0;
+      if (be.begin >= 0.5 || be.eind >= 0.5) { const r = computeAfschrijvingPerJaar(activum, year); overigMut.afschrijving += r ? r.afschrijving || 0 : 0; }
+    }
     if (doel === auto && activum && (be.begin >= 0.5 || be.eind >= 0.5)) {
       const r = computeAfschrijvingPerJaar(activum, year);
       autoItems.push({ aanschafwaarde: Number(activum.aanschafwaarde) || 0, aanschafdatum: activum.aanschafdatum, afschrijving: r ? r.afschrijving : 0 });
@@ -59,7 +65,7 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
   for (const a of computeActivaSummary(classified || [], activaDetails || {})) {
     const d = activaDetails?.[a.key];
     if (!d || d.onbekend || !d.aanschafwaarde || !d.aanschafdatum || !d.afschrijvingstermijnJaren) continue;
-    tel(overig, beginEind(d, year));
+    tel(overig, beginEind(d, year), d);
   }
   if (autoWizardStatus?.soort === "koop" && autoActivaDetails) {
     const activum = buildKoopActivum(autoActivaDetails);
@@ -74,5 +80,5 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
     if (d < new Date(year, 0, 1)) sparen.begin -= tx.amount;
     if (d < new Date(year + 1, 0, 1)) sparen.eind -= tx.amount;
   }
-  return { auto, overig, leaseschuld, autoItems, sparen, leaseElders };
+  return { auto, overig, overigMut, leaseschuld, autoItems, sparen, leaseElders };
 }

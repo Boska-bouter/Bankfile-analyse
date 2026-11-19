@@ -11,7 +11,7 @@ import OnverklaardeOverboekingenModal from "./components/dashboard/OnverklaardeO
 import { categorieLabel, mainCategoryOf, DEFAULT_RULES, DEFAULT_FIXED_CATEGORIES, MAIN_CATEGORY_ORDER, subtypesForMainCategory, setActieveRechtsvorm, fiscalTreatmentOf } from "./classification/categories.js";
 import { DEFAULT_BTW_RATES, EMPTY_BTW_RATES, DEFAULT_VOORBELASTING_EXCLUDED, FIXED_BTW_RATE_CATEGORIES } from "./tax/btw.js";
 import { registerTariefInstellingen, registerGiften } from "./tax/incomeTax.js";
-import { laatsteJaarTotalen } from "./reports/aangiftevoorstel.js";
+import { laatsteJaarTotalen, rekeningenZonderSaldo } from "./reports/aangiftevoorstel.js";
 import { laatsteJaarTotalenBv } from "./reports/aangiftevoorstel-bv.js";
 import { useLoansAndLease } from "./hooks/useLoansAndLease.js";
 import { counterpartyKey, normKey, extractKeywordCandidate, kenmerkendeWoorden, korteJaren, normalizePersonName, extractRecurringName } from "./utils/normalization.js";
@@ -225,6 +225,7 @@ export default function App() {
   // (originele regels naast elkaar, incl. IBAN/volledige omschrijving/saldo per bestand).
   const [duplicateDetailGroup, setDuplicateDetailGroup] = useState(null);
   const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
+  const [beginsaldoZakelijk, setBeginsaldoZakelijk] = useState({}); // nieuw-V9R0 — { rekening: { jaar, bedrag } } voor bankbestanden zonder saldo
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
   const [reviewedIncomeKeys, setReviewedIncomeKeys] = useState([]);
@@ -831,6 +832,7 @@ export default function App() {
     weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus,
     autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
     categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, kleinBedragInstelling,
+    beginsaldoZakelijk,
   };
   const dossierZetters = {
     parsedFiles: setParsedFiles, accountTypeByFile: setAccountTypeByFile, overridesByCounterparty: setOverridesByCounterparty,
@@ -855,6 +857,7 @@ export default function App() {
     huurZakelijkPercentageStatus: setHuurZakelijkPercentageStatusState, energieZakelijkPercentageStatus: setEnergieZakelijkPercentageStatusState, gemeentelijkeKostenZakelijkPercentageStatus: setGemeentelijkeKostenZakelijkPercentageStatusState,
     categoryZakelijkPercentage: setCategoryZakelijkPercentageState, openingBalanceCorrections: setOpeningBalanceCorrections, incomeBtwTarieven: setIncomeBtwTarieven,
     meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden, kleinBedragInstelling: setKleinBedragInstelling,
+    beginsaldoZakelijk: setBeginsaldoZakelijk,
   };
 
   useAutomatischBewaren({
@@ -1753,7 +1756,7 @@ export default function App() {
     bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   } = useRapporten({
-    accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, autoActivaDetails, autoStatus,
+    accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
     autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
     effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
     gemeentelijkeKostenZakelijkPercentageStatus, heeftHolding, heeftLeaseAutoDossierBreed, heeftVoorraad,
@@ -2061,7 +2064,7 @@ export default function App() {
     setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails,
     setLeaseDetailsModalKey, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey,
     setManualWizardOpen, setMaxStappen, setMeerdereTarievenBevestigd, setModusKeuzeOpen, setModusNaLaden,
-    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setOvergeslagenStappen, setOverigInkomenBox1State,
+    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setBeginsaldoZakelijk, setOvergeslagenStappen, setOverigInkomenBox1State,
     setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setPriveAntwoorden,
     setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys,
     setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setSoortDossier,
@@ -3181,6 +3184,9 @@ export default function App() {
                     setSelectedYears={setSelectedAangifteYears}
                     onExport={exportAangiftevoorstel}
                     toonBalansKeuze={rechtsvorm !== "bv" && !priveOverzicht}
+                    rekeningenZonderSaldo={rekeningenZonderSaldo(classified, accountTypeByFile)}
+                    beginsaldo={beginsaldoZakelijk}
+                    setBeginsaldo={setBeginsaldoZakelijk}
                   />
                 )}
 
