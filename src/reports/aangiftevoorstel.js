@@ -666,13 +666,20 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const eersteJaar = zakTx.reduce((m, tx) => Math.min(m, tx.year ?? jaarVan(tx)), year);
     const btwJaar = (y) => y === year ? kwartalen : y === year - 1 ? btwVorig : (korRegeling ? [] : computeQuarterlyBtwForYear(classified, y, categoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, huurZakelijkPercentageStatus, categoryZakelijkPercentage, autoStatus, false, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, computeBtwPrivegebruikAuto(y, { leaseSummary: leaseSummary || [], leaseDetails: leaseDetails || {}, autoActivaDetails, autoWizardStatus, autoStatus, classified, categoryBtwRates, btwVerlegd, rechtsvorm: "zzp" })));
     const btwVerschuldigd = (ks) => ks.reduce((a, q) => a + q.verschuldigdBtw21 + q.verschuldigdBtw9 - q.voorbelasting + (q.btwPrivegebruikAuto || 0), 0);
-    const btwOpen = (tot) => {
-      let open = 0;
-      for (let y = eersteJaar; y <= tot; y++) open += btwVerschuldigd(btwJaar(y));
-      const grensStart = new Date(eersteJaar, 1, 1), grensEind = new Date(tot + 1, 0, 1);
-      for (const tx of zakTx) if ((tx.category === "Belastingen: OB" || tx.category === "Belastingen: Naheffingen OB voorgaande jaren") && new Date(tx.date) >= grensStart && new Date(tx.date) < grensEind) open += tx.amount;
-      return open;
+    // nieuw-V8R9 — Boska 18-11: kwartalen die in de app zijn afgevinkt als "betaald" tellen als betaald. Bankbetalingen in
+    // februari t/m januari erna horen bij dat jaar (Q4 wordt in januari betaald); in een jaar met afgevinkte kwartalen tellen
+    // bankbetalingen alleen nog voor de kwartalen die niet zijn afgevinkt.
+    const isOB = (tx) => tx.category === "Belastingen: OB" || tx.category === "Belastingen: Naheffingen OB voorgaande jaren";
+    const btwJaarRegel = (y, tot) => {
+      const ks = btwJaar(y);
+      const af = ks.filter((q) => kwartaalStatus?.[`${y}-Q${q.kwartaal}`]?.betaald && !(y === tot && q.kwartaal === 4));
+      const te = btwVerschuldigd(ks), afgevinkt = btwVerschuldigd(af);
+      const van = new Date(y, 1, 1), tot2 = new Date(Math.min(new Date(y + 1, 1, 1), new Date(tot + 1, 0, 1)));
+      let bank = zakTx.filter((tx) => isOB(tx) && new Date(tx.date) >= van && new Date(tx.date) < tot2).reduce((a, tx) => a + tx.amount, 0);
+      if (af.length) { const rest = te - afgevinkt; bank = rest > 0 ? Math.max(bank, -rest) : 0; }
+      return { y, te, afgevinkt, bank, saldo: te - afgevinkt + bank };
     };
+    const btwOpen = (tot) => { let open = 0; for (let y = eersteJaar; y <= tot; y++) open += btwJaarRegel(y, tot).saldo; return open; };
     const btw = korRegeling ? { begin: 0, eind: 0 } : { begin: R(year - 1 >= eersteJaar ? btwOpen(year - 1) : q4(btwVorig)), eind: R(btwOpen(year)) };
     // nieuw-V8R7 — boekingen die aan een ander jaar zijn toegerekend dan waarin de bank ze liet zien (bijv. een teruggave
     // in februari die bij vorig jaar hoort): op 31-12 een vordering (nog te ontvangen) of schuld (nog te betalen).
@@ -695,6 +702,14 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const bank = p2((k) => R(saldi[k]));
     const sparen = p2((k) => Math.max(0, R(bp.sparen[k]))), auto = p2((k) => R(bp.auto[k])), overig = p2((k) => R(bp.overig[k])), lease = p2((k) => R(bp.leaseschuld[k]));
     const btwVord = p2((k) => Math.max(0, -btw[k])), btwSchuld = p2((k) => Math.max(0, btw[k]));
+    // nieuw-V8R8 — Boska 18-11: waar de btw-schuld vandaan komt, per heel jaar: te betalen (berekend), betaald/terug (bank), nog open.
+    const btwPerJaar = [];
+    if (!korRegeling) { let open = 0; for (let y = eersteJaar; y <= year; y++) { const r = btwJaarRegel(y, year); open += r.saldo; btwPerJaar.push({ y, te: R(r.te), af: R(r.afgevinkt), bank: R(r.bank), open: R(open) }); } }
+    const metAf = btwPerJaar.some((r) => r.af !== 0);
+    const btwTabel = btwPerJaar.length && (btw.begin !== 0 || btw.eind !== 0) ? `<div class="ak-sub2">Waar komt de btw-schuld vandaan? (per jaar, ter controle)</div>
+    <table class="ak-tabel"><tr><th>Jaar</th><th class="num">Btw te betalen (berekend)</th>${metAf ? `<th class="num">Afgevinkt als betaald</th>` : ""}<th class="num">Betaald (−) of terug (+) volgens de bank</th><th class="num">Nog open</th></tr>
+    ${btwPerJaar.map((r) => `<tr><td>${r.y}</td><td class="num">${r.te < 0 ? "− " : ""}${eh(r.te)}</td>${metAf ? `<td class="num">${r.af ? (r.af < 0 ? "+ " : "− ") + eh(r.af) : "—"}</td>` : ""}<td class="num">${r.bank < 0 ? "− " : r.bank > 0 ? "+ " : ""}${eh(r.bank)}</td><td class="num">${r.open < 0 ? "terug " : ""}${eh(r.open)}</td></tr>`).join("")}</table>
+    <p class="ak-noot">Een negatief "te betalen" is btw die je terugkrijgt. Kwartalen die je in de app als betaald hebt afgevinkt, tellen als betaald; alleen Q4 van ${year} blijft op 31-12 open, want die betaal je in januari. Bankbetalingen in januari horen bij het jaar daarvoor. Wijkt dit af van je ingediende aangiften of betalingen, controleer dan de indeling van de btw-betalingen (categorie "Belastingen: OB").</p>` : "";
     const liquide = p2((k) => Math.max(0, bank[k])), rcSchuld = p2((k) => Math.max(0, -bank[k]));
     const ovlVord = p2((k) => Math.max(0, ovl[k])), ovlSchuld = p2((k) => Math.max(0, -ovl[k]));
     const activa = p2((k) => auto[k] + overig[k] + btwVord[k] + ovlVord[k] + liquide[k] + sparen[k]);
@@ -742,6 +757,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rij("Ondernemingsvermogen = totaal activa min totaal schulden", be(vermogen), "in")}
     ${rij("Totaal passiva (gelijk aan totaal activa)", be(activa), "tot")}
     <p class="ak-noot">Het ondernemingsvermogen is wat de onderneming bezit min wat ze schuldig is. Het komt niet van de bank maar volgt uit de balans; daardoor zijn activa en passiva altijd gelijk.</p>
+    ${btwTabel}
+    <!--AUTO-->
     <div class="ak-sub2">Scherm "Privéonttrekkingen en -stortingen"</div>
     ${rij("Overige privéonttrekkingen", eh(oR + Math.max(0, verschil)), "in")}
     ${rij("Overige privéstortingen", eh(sR + Math.max(0, -verschil)), "in")}
@@ -785,7 +802,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <p class="ak-noot"><b style="background:#eff6ff;padding:0 4px">Blauw</b> = invullen bij de Belastingdienst; de andere regels zijn ter controle.${metBalans ? " Dit overzicht is voor een aangifte mét balans (bedragen op 1 januari en 31 december)." : " Dit overzicht is voor een aangifte zonder balans."}</p>
     ${meldingen.length ? `<div class="ak-meld"><b>Let op, gegevens ontbreken of zijn onzeker:</b><ul>${meldingen.map((m) => `<li>${m}</li>`).join("")}</ul></div>` : ""}
     ${balans === "met" && !metBalansHtml ? `<p class="ak-noot">Een balans is niet te maken: er is geen banksaldo van de zakelijke rekening. Hieronder staat daarom de versie zonder balans.</p>` : ""}
-    ${metBalans ? `${autoBlok}${metBalansHtml}` : aRegels}`;
+    ${metBalans ? metBalansHtml.replace("<!--AUTO-->", autoBlok) : aRegels}`;
   let aftrekEnBelastingHtml;
   if (zaScenarios) {
     const kol = (sc) => { const i = ibNa(sc.ib, sc.heffingskortingen); return { aftrek: sc.ondernemersaftrekBedrag || 0, mkb: sc.winstUitsplitsing.mkbVrijstellingBedrag || 0, bel: sc.winstUitsplitsing.belastbaar, ibV: sc.ib.belasting || 0, hk: sc.heffingskortingen.totaal || 0, ibN: i, zvw: sc.zvw.bijdrage, tot: i + sc.zvw.bijdrage }; };
