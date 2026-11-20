@@ -1,6 +1,6 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { eur } from "../utils/amounts.js";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ActivaPanel from "../components/loans/ActivaPanel.jsx";
 import CategoryPercentagePanel from "../components/overview/CategoryPercentagePanel.jsx";
 import ClassificationConfidencePanel from "../components/dashboard/ClassificationConfidencePanel.jsx";
@@ -47,11 +47,16 @@ export function useControlerenCardGroups(p) {
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
     zelfstandigenaftrekStatus, rechtsvorm,
   } = p;
+  // nieuw-V9R6 — jaar van de lijsten Nog niet ingedeeld / Personen (null = alle jaren)
+  const [lijstJaar, setLijstJaar] = useState(null);
 
   return useMemo(() => {
     if (transactions.length === 0) return [];
+    // nieuw-V9R6 — via de kaarten zelf: lijst van alle jaren (het jaarfilter hoort bij Classificatiezekerheid).
+    const metAlleJaren = (c) => (c?.onClick ? { ...c, onClick: () => { setLijstJaar(null); c.onClick(); } } : c);
+    const kaarten = controlerenCardsByKey && { ...controlerenCardsByKey, overigReview: metAlleJaren(controlerenCardsByKey.overigReview), personReview: metAlleJaren(controlerenCardsByKey.personReview) };
     const g = (key, title, icon, memberKeys, extra) => {
-      const built = groupCards(controlerenCardsByKey, memberKeys, extra);
+      const built = groupCards(kaarten, memberKeys, extra);
       if (!built) return null;
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
@@ -116,8 +121,8 @@ export function useControlerenCardGroups(p) {
               jaar={activeYear}
               andereJaren={activeYear ? confidenceOpenJaren.filter((y) => Number(y) !== Number(activeYear)) : []}
               onKiesJaar={setActiveYear}
-              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick}
-              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick}
+              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick && (() => { setLijstJaar(activeYear || null); controlerenCardsByKey.overigReview.onClick(); })}
+              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick && (() => { setLijstJaar(activeYear || null); controlerenCardsByKey.personReview.onClick(); })}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
@@ -150,6 +155,8 @@ export function useControlerenCardGroups(p) {
           onSplitsRekening={splitsRekening}
           onConfirmPersonAsIs={confirmPersonAsIs}
           personBulkAction={personBulkAction}
+          lijstJaar={lijstJaar}
+          onLijstJaar={setLijstJaar}
         />
 <OpschonenPanel
           overigReviewRef={overigReviewSectionRef}
@@ -167,6 +174,8 @@ export function useControlerenCardGroups(p) {
           overigZakelijkCount={overigZakelijkPending.length}
           overigPriveCount={overigPrivePending.length}
           classified={classified}
+          lijstJaar={lijstJaar}
+          onLijstJaar={setLijstJaar}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
@@ -341,7 +350,7 @@ export function useControlerenCardGroups(p) {
         </div>
       ),
     ].filter(Boolean);
-  }, [
+  }, [lijstJaar,
     transactions.length,
     controlerenCardsByKey,
     instellingenCardsByKey,

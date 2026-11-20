@@ -1,5 +1,6 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import ReviewStep from "./ReviewStep.jsx";
+import JaarFilter, { inJaar, jaarMetOpen } from "./JaarFilter.jsx";
 import PinBulk from "./PinBulk.jsx";
 import { getCategorieProfiel } from "../../classification/categories.js";
 import { eur } from "../../utils/amounts.js";
@@ -25,6 +26,8 @@ export default function OpschonenPanel({
   overigZakelijkCount = 0,
   overigPriveCount = 0,
   classified = null,
+  lijstJaar = null,
+  onLijstJaar = null,
 
   duplicatesRef,
   duplicateGroups,
@@ -45,6 +48,13 @@ export default function OpschonenPanel({
   onOpenHelp,
 }) {
   const overigOpen = showOverigReview === null ? pendingOverigReview.length > 0 : showOverigReview;
+  const alleOverigOpen = pendingOverigReview;
+  const jaar = jaarMetOpen(lijstJaar, overigSummary);
+  const zichtbaar = pendingOverigReview.filter(inJaar(jaar));
+  const overigInJaar = overigSummary.filter(inJaar(jaar));
+  const zakelijkZichtbaar = zichtbaar.filter((i) => i.type === "Zakelijk");
+  const priveZichtbaar = zichtbaar.filter((i) => i.type !== "Zakelijk");
+  const alleJaren = jaar != null ? ` (ook hun boekingen in andere jaren)` : "";
   const needsJudgment = duplicatePendingBreakdown.onzeker > 0;
   const duplicatesOpen = showDuplicateDetails === null ? needsJudgment : showDuplicateDetails;
 
@@ -53,11 +63,11 @@ export default function OpschonenPanel({
       {overigSummary.length > 0 && (
         <section ref={overigReviewRef} className="rounded-xl border-2 border-amber-200 bg-white overflow-hidden shadow-sm">
           <button onClick={() => onToggleShowOverigReview(!overigOpen)} className="w-full px-4 py-3 bg-amber-50 text-amber-900 flex items-center gap-2 text-left">
-            {pendingOverigReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-            <span className="text-sm font-semibold">Nog niet ingedeeld</span>
-            {pendingOverigReview.length > 0 ? (
+            {zichtbaar.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+            <span className="text-sm font-semibold">Nog niet ingedeeld{jaar != null ? ` — ${jaar}` : ""}</span>
+            {zichtbaar.length > 0 ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingOverigReview.length}
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {zichtbaar.length}
               </span>
             ) : (
               <span className="text-xs text-emerald-700">Niets openstaand</span>
@@ -65,12 +75,13 @@ export default function OpschonenPanel({
             <span className="flex-1" />
             {overigOpen ? <ChevronDown className="h-4 w-4 text-amber-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />}
           </button>
-          {overigOpen && pendingOverigReview.length > 0 && <PinBulk items={pendingOverigReview} onMark={onMarkOverigItem} />}
+          {overigOpen && <JaarFilter jaar={jaar} onJaar={onLijstJaar} items={overigSummary} open={alleOverigOpen} />}
+          {overigOpen && zichtbaar.length > 0 && <PinBulk items={zichtbaar} onMark={onMarkOverigItem} />}
           {overigOpen && (
             <ReviewStep
-              items={pendingOverigReview}
-              allItems={overigSummary}
-              allDone={pendingOverigReview.length === 0}
+              items={zichtbaar}
+              allItems={overigInJaar}
+              allDone={zichtbaar.length === 0}
               search={overigSearch}
               onSearch={onOverigSearch}
               onMark={onMarkOverigItem}
@@ -80,15 +91,15 @@ export default function OpschonenPanel({
               confirmButtonClass="border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
               explanation={getCategorieProfiel() ? 'Kies per tegenpartij de juiste categorie, of klik "Categorie klopt" als het hier bewust moet blijven staan.' : 'Kies per tegenpartij de juiste categorie én of het zakelijk of privé is, of klik "Categorie klopt" als Overig hier bewust moet blijven staan.'}
               bulkAction={[
-                overigZakelijkCount > 0 && {
-                  label: `Alle zakelijke (${overigZakelijkCount}) naar "Privé opnames"`,
-                  confirmText: `${overigZakelijkCount} tegenpartij(en) in "Overig" die nu als Zakelijk staan, allemaal naar "Privé opnames" zetten?`,
-                  onApply: onBulkMarkOverigAsPriveOpname,
+                zakelijkZichtbaar.length > 0 && {
+                  label: `Alle zakelijke (${zakelijkZichtbaar.length}) naar "Privé opnames"`,
+                  confirmText: `${zakelijkZichtbaar.length} tegenpartij(en) in "Overig" die nu als Zakelijk staan, allemaal naar "Privé opnames" zetten${alleJaren}?`,
+                  onApply: () => onBulkMarkOverigAsPriveOpname(zakelijkZichtbaar),
                 },
-                overigPriveCount > 0 && {
-                  label: getCategorieProfiel() ? `Alle (${overigPriveCount}) naar "Winkels divers"` : `Alle privé (${overigPriveCount}) naar "Winkels divers"`,
-                  confirmText: `${overigPriveCount} tegenpartij(en) in "Overig" die nu als Privé staan, allemaal naar "Winkels divers" zetten?`,
-                  onApply: onBulkMarkOverigAsWinkelsDivers,
+                priveZichtbaar.length > 0 && {
+                  label: (getCategorieProfiel() ? `Alle (${priveZichtbaar.length}) naar "Winkels divers"` : `Alle privé (${priveZichtbaar.length}) naar "Winkels divers"`),
+                  confirmText: `${priveZichtbaar.length} tegenpartij(en) in "Overig" die nu als Privé staan, allemaal naar "Winkels divers" zetten${alleJaren}?`,
+                  onApply: () => onBulkMarkOverigAsWinkelsDivers(priveZichtbaar),
                 },
               ].filter(Boolean)}
             />
