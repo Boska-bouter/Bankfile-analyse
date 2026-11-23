@@ -688,7 +688,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     if (!inJaar(l) || loanDetails?.[l.key]?.onbekend) continue;
     if (!(loanDetails?.[l.key]?.leningbedrag && loanDetails?.[l.key]?.startdatum)) meldingen.push(`Lening ${naamVan(l)}: bedrag of startdatum ontbreekt. De schuld en de rente kloppen daardoor niet.`);
   }
-  const overigZak = classified.filter((tx) => !tx.isMirror && tx.year === year && (accountTypeByFile?.[tx.source] || tx.type) === "Zakelijk" && tx.category === "Overig");
+  const overigZak = classified.filter((tx) => !tx.isMirror && tx.year === year && (accountTypeByFile?.[tx.source] || tx.type) === "Zakelijk" && tx.category === "Overig" && !tx.afgehandeld); // nieuw-V9R8 — "Categorie klopt" of klein bedrag = afgehandeld (melding Boska 23-11)
   if (overigZak.length) meldingen.push(`${overigZak.length} boeking${overigZak.length === 1 ? "" : "en"} op de zakelijke rekening nog in "Overig" (samen ${eur(overigZak.reduce((a, tx) => a + tx.amount, 0))}). Deel ze in, anders tellen ze niet goed mee.`);
   let metBalansHtml = "";
   if (saldi) {
@@ -767,7 +767,9 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       const intern = somCat("Interne overboeking"), borg = somCat("Borg (waarborgsom)");
       if (Math.abs(intern) >= 250) meldingen.push(`Interne overboekingen per saldo ${intern < 0 ? "naar" : "van"} een eigen rekening die niet is geladen: ${eh(intern)}. Is dat een privérekening, dan is het een privé${intern < 0 ? "onttrekking" : "storting"}; is het een zakelijke (spaar)rekening, laad die dan ook in, want het saldo hoort op de balans.`);
       if (Math.abs(borg) >= 250) meldingen.push(`Borg (waarborgsom) per saldo ${borg < 0 ? "betaald" : "terugontvangen"}: ${eh(borg)}. Een betaalde borg is een vordering op de balans; die staat er nog niet automatisch op.`);
-      if (Math.abs(verschil) >= 250) meldingen.push(`Er blijft een verschil van ${eh(Math.abs(verschil))} dat de app niet kan verklaren. Controleer of alle zakelijke rekeningen (ook spaarrekeningen), leasecontracten en leningen zijn ingevoerd.`);
+      // nieuw-V9R8 — bevestigde Overig-boekingen tellen niet in winst of privé, dus komen in dit verschil terecht.
+      const overigAf = classified.filter((tx) => !tx.isMirror && tx.year === year && (accountTypeByFile?.[tx.source] || tx.type) === "Zakelijk" && tx.category === "Overig" && tx.afgehandeld).reduce((x, tx) => x + tx.amount, 0);
+      if (Math.abs(verschil) >= 250) meldingen.push(`Er blijft een verschil van ${eh(Math.abs(verschil))} dat de app niet kan verklaren.${Math.abs(overigAf) >= 1 ? ` Daarin zit ${eh(Math.abs(overigAf))} aan boekingen die bewust in "Overig" staan.` : ""} Controleer of alle zakelijke rekeningen (ook spaarrekeningen), leasecontracten en leningen zijn ingevoerd.`);
     }
     const bedrag = (n) => `${n < 0 ? "− " : ""}${eh(n)}`;
     const rijBron = (label, waarde, txs, noot) => txs.length
@@ -836,6 +838,8 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <p class="ak-noot">Bij "vanuit privémiddelen betaald" alleen autokosten invullen die privé zijn betaald en níet bij de onderneming zijn opgevoerd; die zitten hier al allemaal in de kosten. Jaar van eerste toelating en soort energie vul je in zoals gevraagd; het percentage bepaalt de Belastingdienst.</p>` : "";
   const aOnt = Math.max(0, Math.round(summary.winst) - Math.round(autoOnttrekking));
   const metBalans = balans === "met" && !!metBalansHtml;
+  if (balans === "met" && !metBalansHtml) meldingen.push("Geen banksaldo van de zakelijke rekening: een balans is niet te maken. Vul bij Met balans het banksaldo op 1 januari in."); // nieuw-V9R8
+  // Let op: meldingen worden als HTML getoond; vrije tekst (namen) altijd via esc().
   const aRegels = `${autoBlok}
     <div class="ak-sub2">Scherm "Privéonttrekkingen en -stortingen"</div>
     ${rij(autoOnttrekking > 0 ? "Overige privéonttrekkingen" : "Privéonttrekkingen in geld", eh(aOnt), "in")}
@@ -844,7 +848,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     <p class="ak-noot">Zonder balans (activa en passiva € 0) geldt: onttrekkingen min stortingen = winst.${autoOnttrekking > 0 ? " De Belastingdienst telt het privégebruik auto zelf op; samen is dat precies de winst." : ""}</p>`;
   const priveHtmlKaart = `${scherm(metBalans ? "Balans en privéonttrekkingen" : "Privéonttrekkingen en -stortingen")}
     <p class="ak-noot"><b style="background:#eff6ff;padding:0 4px">Blauw</b> = invullen bij de Belastingdienst; de andere regels zijn ter controle.${metBalans ? " Dit overzicht is voor een aangifte mét balans (bedragen op 1 januari en 31 december)." : " Dit overzicht is voor een aangifte zonder balans."}</p>
-    ${meldingen.length ? `<div class="ak-meld"><b>Let op, gegevens ontbreken of zijn onzeker:</b><ul>${meldingen.map((m) => `<li>${m}</li>`).join("")}</ul></div>` : ""}
+    ${meldingen.length ? `<!--MELD:${year}--><div class="ak-meld"><b>Let op, gegevens ontbreken of zijn onzeker:</b><ul>${meldingen.map((m) => `<li>${m}</li>`).join("")}</ul></div><!--/MELD-->` : ""}
     ${balans === "met" && !metBalansHtml ? `<p class="ak-noot">Een balans is niet te maken: er is geen banksaldo van de zakelijke rekening. Vul bij "Met balans" het banksaldo op 1 januari in (staat op je bankafschrift). Hieronder staat daarom de versie zonder balans.</p>` : ""}
     ${metBalans ? metBalansHtml.replace("<!--AUTO-->", autoBlok) : aRegels}`;
   let aftrekEnBelastingHtml;
@@ -1477,6 +1481,17 @@ export function downloadAangiftevoorstel(html, years, soort = "html") {
 
 // Voor download en print: het voorstel zonder de interactieve "ⓘ bron"-uitklappers (die zijn alleen
 // bedoeld voor op het scherm in de app).
+// nieuw-V9R8 — Boska 23-11: de meldingen "gegevens ontbreken" gaan niet in het document maar in een waarschuwing vooraf.
+export function haalMeldingen(html) {
+  const uit = {};
+  for (const m of String(html || "").matchAll(/<!--MELD:(\d{4})-->([\s\S]*?)<!--\/MELD-->/g)) {
+    const lijst = [...m[2].matchAll(/<li>([\s\S]*?)<\/li>/g)].map((x) => x[1]);
+    if (lijst.length) uit[m[1]] = [...(uit[m[1]] || []), ...lijst];
+  }
+  return uit;
+}
+export const zonderMeldingen = (html) => String(html || "").replace(/<!--MELD:\d{4}-->[\s\S]*?<!--\/MELD-->/g, "");
+
 export function stripBronHtml(html) {
   return String(html || "")
     .replace(/<div class="bron-inhoud">[\s\S]*?<\/p><\/div>/g, "")

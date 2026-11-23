@@ -7,6 +7,7 @@ import ClassificationConfidencePanel from "../components/dashboard/Classificatio
 import { FileSpreadsheet, Users } from "lucide-react";
 import HerkomstVanGeldPanel from "../components/review/HerkomstVanGeldPanel.jsx";
 import AanvullendeControles from "../components/review/AanvullendeControles.jsx";
+import BalansCheck from "../components/review/BalansCheck.jsx";
 import ImportControlPanel from "../components/upload/ImportControlPanel.jsx";
 import LeaseInterestPanel from "../components/loans/LeaseInterestPanel.jsx";
 import LoanInterestPanel from "../components/loans/LoanInterestPanel.jsx";
@@ -45,7 +46,7 @@ export function useControlerenCardGroups(p) {
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
-    zelfstandigenaftrekStatus, rechtsvorm,
+    zelfstandigenaftrekStatus, rechtsvorm, balansMeldingenVoor, balansCheckRef, kwartaalStatus, beginsaldoZakelijk,
   } = p;
   // nieuw-V9R6 — jaar van de lijsten Nog niet ingedeeld / Personen (null = alle jaren)
   const [lijstJaar, setLijstJaar] = useState(null);
@@ -115,6 +116,7 @@ export function useControlerenCardGroups(p) {
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} overlap={overlapKoppeling} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
           <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} onKostenVorigJaar={zetKostenVorigJaar} />
+          {activeYear && balansMeldingenVoor && <div ref={balansCheckRef}><BalansCheck jaar={activeYear} maak={balansMeldingenVoor} versie={[classified, leaseDetails, loanDetails, activaDetails, autoWizardStatus, reviewedOverigKeys, reviewedPersonKeys, kwartaalStatus, beginsaldoZakelijk]} /></div>}
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
@@ -350,7 +352,7 @@ export function useControlerenCardGroups(p) {
         </div>
       ),
     ].filter(Boolean);
-  }, [lijstJaar,
+  }, [lijstJaar, balansMeldingenVoor, kwartaalStatus, beginsaldoZakelijk, reviewedOverigKeys, reviewedPersonKeys, leaseDetails, loanDetails, activaDetails, autoWizardStatus,
     transactions.length,
     controlerenCardsByKey,
     instellingenCardsByKey,

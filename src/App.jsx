@@ -1,5 +1,6 @@
 import { kmBekend, kmMaxVoorJaar } from "./tax/kmVergoeding.js";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
+import { haalMeldingen } from "./reports/aangiftevoorstel.js";
 import PriveMakenModal from "./components/prive/PriveMakenModal.jsx";
 import ZakelijkMakenModal from "./components/prive/ZakelijkMakenModal.jsx";
 import { AlertCircle, Loader2, ListTree, MessageSquare } from "lucide-react";
@@ -588,6 +589,7 @@ export default function App() {
   const confidenceSectionRef = useRef(null);
   const personReviewSectionRef = useRef(null);
   const overigReviewSectionRef = useRef(null);
+  const balansCheckRef = useRef(null); // nieuw-V9R8 — Balanscheck in Controleren
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
   const btwSettingsSectionRef = useRef(null);
@@ -641,6 +643,7 @@ export default function App() {
   // en dan pas te scrollen (de sectie stond tot dat moment op display:none).
   const REF_TAB_ENTRIES = [
     [importControleSectionRef, "controleren"],
+    [balansCheckRef, "controleren"],
     [confidenceSectionRef, "controleren"],
     [incomeReviewSectionRef, "controleren"], // V90 — ontbrak: "Ga naar deze stap" bij Herkomst van inkomsten deed daardoor niets
     [personReviewSectionRef, "controleren"],
@@ -677,6 +680,7 @@ export default function App() {
   // moet uitgeklapt zijn, false = de kaart moet ingeklapt zijn.
   const REF_COLLAPSE_KEYS = [
     [importControleSectionRef, "importKwaliteit", true],
+    [balansCheckRef, "importKwaliteit", true],
     [confidenceSectionRef, "importKwaliteit", true],
     [incomeReviewSectionRef, "herkomstOpschonen", true],
     [personReviewSectionRef, "herkomstOpschonen", true],
@@ -1648,7 +1652,11 @@ export default function App() {
       actionLabel: isOpen ? "Inklappen ↑" : `Alle ${card.title} bekijken`,
     };
   };
+  // nieuw-V9R8 — balanscheck in Controleren: dezelfde meldingen als het rapport "Met balans" (useRapporten komt verderop).
+  const rapportRef = useRef(null);
+  const balansMeldingenVoor = useMemo(() => (jaar) => (rapportRef.current ? haalMeldingen(rapportRef.current([jaar], "met"))[jaar] || [] : []), []);
   const controlerenCardGroups = useControlerenCardGroups({
+    balansMeldingenVoor: rechtsvorm !== "bv" && !priveOverzicht ? balansMeldingenVoor : null, balansCheckRef, kwartaalStatus, beginsaldoZakelijk,
     rechtsvorm, confidenceOpenJaren: confidenceSummary?.openJaren || [], setActiveYear, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
@@ -1756,6 +1764,7 @@ export default function App() {
     bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   } = useRapporten({
+    naarBalanscheck: (jaar) => { if (jaar) setActiveYear(Number(jaar)); jumpToSection(balansCheckRef); },
     accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
     autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
     effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
@@ -1768,6 +1777,7 @@ export default function App() {
     tariefOverrides, voorbelastingExcluded, werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus,
   });
+  rapportRef.current = bouwRapportHtml;
   // nieuw-V7R9 — fiscale regressietest (tests/regressie/fiscaal.mjs): de jaartotalen van het rapport over alle jaren (alleen DEV).
   if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
     window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };

@@ -14,7 +14,8 @@ import { eur } from "../utils/amounts.js";
 import { aandachtspuntenHtml, bepaalAandachtspunten } from "./aandachtspunten.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./aangiftevoorstel-bv.js";
 import { buildAangiftevoorstelPriveHtml } from "./aangiftevoorstel-prive.js";
-import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, stripBronHtml, zonderUitlegHtml } from "./aangiftevoorstel.js";
+import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, haalMeldingen, stripBronHtml, zonderMeldingen, zonderUitlegHtml } from "./aangiftevoorstel.js";
+import RapportWaarschuwingModal from "../components/modals/RapportWaarschuwingModal.jsx";
 import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./btwOverzicht.js";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./klantSamenvatting.js";
 import { buildOnderbouwingHtml, downloadOnderbouwing } from "./onderbouwing.js";
@@ -32,7 +33,7 @@ export function useRapporten({
   overigInkomenBox1, periodeQuarterOverrides, priveOverzicht, priveRekeningGeladen, rechtsvorm, reviewedOverigKeys,
   reviewedPersonKeys, selectedAangifteYears, setSelectedAangifteYears, setShowAangifteMeerdereJaren,
   setShowAangifteYearPicker, startersaftrekEff, startersaftrekStatus, tariefOverrides, voorbelastingExcluded,
-  werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault, zelfstandigenaftrekStatus,
+  werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, naarBalanscheck,
 }) {
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
 
@@ -57,6 +58,7 @@ export function useRapporten({
     return html;
   };
   // nieuw-V8R7 — Boska 18-11: bij het openen kiezen "met of zonder balans", zodat A en B niet door elkaar staan.
+  const [rapportWaarschuwing, setRapportWaarschuwing] = useState(null); // { meldingen, html }
   const exportAangiftevoorstel = (yearsOverride, balans = "zonder") => {
     const targetYears = yearsOverride || selectedAangifteYears;
     if (targetYears.length === 0) {
@@ -65,7 +67,11 @@ export function useRapporten({
     }
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = bouwRapportHtml(targetYears, balans);
-    setAangiftevoorstelPreview(metRapportKop(html, targetYears));
+    // nieuw-V9R8 — Boska 23-11: ontbrekende gegevens eerst melden, niet in het document zetten.
+    const meldingen = haalMeldingen(html);
+    const schoon = metRapportKop(zonderMeldingen(html), targetYears);
+    if (Object.keys(meldingen).length) setRapportWaarschuwing({ meldingen, html: schoon });
+    else setAangiftevoorstelPreview(schoon);
     setShowAangifteYearPicker(false);
     setShowAangifteMeerdereJaren(false);
   };
@@ -231,6 +237,14 @@ export function useRapporten({
           onDownload={(soort) => downloadKlantSamenvatting(klantSamenvattingHtml, jarenBereik(klantSamenvattingJaren), soort)}
           onPrint={() => printHtmlDocument(klantSamenvattingHtml)}
           onClose={() => setKlantSamenvattingHtml(null)}
+        />
+      )}
+      {rapportWaarschuwing && (
+        <RapportWaarschuwingModal
+          meldingen={rapportWaarschuwing.meldingen}
+          onHerstel={() => { const j = Object.keys(rapportWaarschuwing.meldingen).sort()[0]; setRapportWaarschuwing(null); naarBalanscheck?.(j); }}
+          onSluit={() => setRapportWaarschuwing(null)}
+          onDoorgaan={() => { setAangiftevoorstelPreview(rapportWaarschuwing.html); setRapportWaarschuwing(null); }}
         />
       )}
       {aangiftevoorstelPreview && (
