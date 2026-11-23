@@ -10,6 +10,7 @@ export function useControlerenDashboardCards(p) {
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
     setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear = null, setActiveYear = null,
+    balansOpen = null, balansCheckRef = null,
   } = p;
   // nieuw-V5R7 — jaartal bij de open punten (Boska 16-11)
   const metJaren = (n, jaren) => (n > 0 && jaren?.length ? `${n} (${korteJaren(jaren)})` : n);
@@ -116,6 +117,25 @@ export function useControlerenDashboardCards(p) {
           jumpToSection(duplicatesSectionRef);
         },
       },
+      // nieuw-V9R9 — Boska 23-11: wat de Balanscheck mist is een open punt, niet pas een verrassing bij het document.
+      ...(balansOpen && balansCheckRef ? [(() => {
+        const jaren = Object.keys(balansOpen).filter((j) => balansOpen[j] > 0).map(Number).sort((a, b) => a - b);
+        const n = jaren.reduce((a, j) => a + balansOpen[j], 0);
+        return {
+          key: "balanscheck",
+          title: "Balanscheck",
+          icon: <AlertTriangle className="h-3.5 w-3.5" />,
+          value: metJaren(n, jaren),
+          openCount: n,
+          subtitle: n > 0 ? "punt(en) nakijken of afvinken" : "Alles nagekeken",
+          tone: n > 0 ? "attention" : "ok",
+          hint: "Naar de Balanscheck",
+          onClick: () => {
+            if (n > 0 && setActiveYear && !jaren.includes(Number(activeYear))) setActiveYear(jaren[0]);
+            jumpToSection(balansCheckRef);
+          },
+        };
+      })()] : []),
     ];
   }, [
     transactions.length,
@@ -128,6 +148,8 @@ export function useControlerenDashboardCards(p) {
     duplicatePendingBreakdown,
     activeYear, // nieuw-V6R6 — anders sprong de kaart naar het jaar van bij het laden (regressietest 16-11)
     setActiveYear,
+    balansOpen,
+    balansCheckRef,
   ]);
   // beide-V1R0 — welke kaarten en in welke volgorde bepaalt het profiel van het dossier (zakelijk: alle, zoals altijd).
   const keuze = p.modus?.kaarten?.controleren ?? null;

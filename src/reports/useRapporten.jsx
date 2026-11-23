@@ -14,7 +14,7 @@ import { eur } from "../utils/amounts.js";
 import { aandachtspuntenHtml, bepaalAandachtspunten } from "./aandachtspunten.js";
 import { buildAangiftevoorstelBvHtml, downloadAangiftevoorstelBv } from "./aangiftevoorstel-bv.js";
 import { buildAangiftevoorstelPriveHtml } from "./aangiftevoorstel-prive.js";
-import { buildAangiftevoorstelHtml, downloadAangiftevoorstel, haalMeldingen, stripBronHtml, zonderMeldingen, zonderUitlegHtml } from "./aangiftevoorstel.js";
+import { balansSleutel, buildAangiftevoorstelHtml, downloadAangiftevoorstel, haalMeldingen, stripBronHtml, zonderMeldingen, zonderUitlegHtml } from "./aangiftevoorstel.js";
 import RapportWaarschuwingModal from "../components/modals/RapportWaarschuwingModal.jsx";
 import { buildBtwOverzichtHtml, downloadBtwOverzicht } from "./btwOverzicht.js";
 import { buildKlantSamenvattingHtml, downloadKlantSamenvatting } from "./klantSamenvatting.js";
@@ -33,7 +33,7 @@ export function useRapporten({
   overigInkomenBox1, periodeQuarterOverrides, priveOverzicht, priveRekeningGeladen, rechtsvorm, reviewedOverigKeys,
   reviewedPersonKeys, selectedAangifteYears, setSelectedAangifteYears, setShowAangifteMeerdereJaren,
   setShowAangifteYearPicker, startersaftrekEff, startersaftrekStatus, tariefOverrides, voorbelastingExcluded,
-  werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, naarBalanscheck,
+  werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, naarBalanscheck, bevestigdeControles, voorlopigeAanslag,
 }) {
   const [aangiftevoorstelPreview, setAangiftevoorstelPreview] = useState(null); // HTML-string of null
 
@@ -51,10 +51,10 @@ export function useRapporten({
       zelfstandigenaftrekStatus, startersaftrekStatus, tariefOverrides, overigInkomenBox1, autoStatus, priveRekeningGeladen, heeftVoorraad, rechtsvorm,
     }));
     const html = priveOverzicht
-      ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen })
+      ? buildAangiftevoorstelPriveHtml({ jaren: [...targetYears].sort(), overzicht: priveOverzicht, namen: eigenNamen, voorlopigeAanslag })
       : rechtsvorm === "bv"
       ? buildAangiftevoorstelBvHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, heeftHolding, { categoryZakelijkPercentage: categoryZakelijkPercentageEff, autoStatus, heeftLeaseAuto: heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus })
-      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus, balans, beginsaldoZakelijk);
+      : buildAangiftevoorstelHtml(targetYears, classifiedR, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, loanSummary, loanDetails, leaseSummary, leaseDetails, activaDetails, heeftVoorraad, importDiagnostics, accountTypeByFile, fileContinuity, kwartaalStatus, zelfstandigenaftrekStatus, startersaftrekEff, huurZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, autoActivaDetails, autoWizardStatus, kmVergoedingDetails, zaLegacyJaDefault, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, aandachtspuntenBlok, werkruimteStatus, balans, beginsaldoZakelijk, voorlopigeAanslag);
     return html;
   };
   // nieuw-V8R7 — Boska 18-11: bij het openen kiezen "met of zonder balans", zodat A en B niet door elkaar staan.
@@ -68,7 +68,12 @@ export function useRapporten({
     if (yearsOverride) setSelectedAangifteYears(yearsOverride);
     const html = bouwRapportHtml(targetYears, balans);
     // nieuw-V9R8 — Boska 23-11: ontbrekende gegevens eerst melden, niet in het document zetten.
-    const meldingen = haalMeldingen(html);
+    // nieuw-V9R9 — afgevinkte Balanscheck-punten ("Gezien, klopt") niet opnieuw melden.
+    const meldingen = {};
+    for (const [j, lijst] of Object.entries(haalMeldingen(html))) {
+      const open = lijst.filter((m) => !bevestigdeControles?.[balansSleutel(j, m.k)]);
+      if (open.length) meldingen[j] = open;
+    }
     const schoon = metRapportKop(zonderMeldingen(html), targetYears);
     if (Object.keys(meldingen).length) setRapportWaarschuwing({ meldingen, html: schoon });
     else setAangiftevoorstelPreview(schoon);

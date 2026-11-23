@@ -10,6 +10,7 @@ const norm = (s) => String(s || "").replace(/\s+/g, "").toUpperCase();
 
 // Velden die alleen in een zakelijk of privé (belasting)dossier betekenis hebben; ze gaan niet mee.
 const ALLEEN_BELASTING = [
+  "voorlopigeAanslag",
   "btwVerlegd", "korRegeling", "kwartaalStatus", "voorbelastingExcluded", "periodeQuarterOverrides", "reviewedPeriodeKeys",
   "loanDetails", "leaseDetails", "leaseMergedInto", "activaDetails", "autoActivaDetails", "kmVergoedingDetails",
   "verwachteLease", "verwachteLeaseOverig", "verwachteLening", "verwachteAOV", "autoWizardStatus", "heeftVoorraad",

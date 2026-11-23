@@ -1,3 +1,4 @@
+import VoorlopigeAanslagInvoer from "./VoorlopigeAanslagInvoer.jsx";
 import { useEffect, useState } from "react";
 import { metBolletjes } from "../shared/StatusDot.jsx";
 import JaarSwipe from "../shared/JaarSwipe.jsx";
@@ -31,6 +32,7 @@ export default function AangifteYearPickerModal({
   onClose, activeYear, onSelectYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
   selectedYears, setSelectedYears, onExport, toonBalansKeuze = false,
   rekeningenZonderSaldo = [], beginsaldo = {}, setBeginsaldo = null,
+  voorlopigeAanslag = {}, setVoorlopigeAanslag = null, voorlopigBank = {},
 }) {
   // nieuw-V8R7 — Boska 18-11: vooraf kiezen "met of zonder balans", zodat het overzicht maar één manier toont.
   const [balans, setBalans] = useState("zonder");
@@ -83,7 +85,7 @@ export default function AangifteYearPickerModal({
   ) : null;
   return (
     <div className="fixed inset-0 z-40 bg-slate-900/50 flex items-center justify-center p-2" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-auto p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
         {!meerdereJaren && !kiesJaren ? (
           <JaarSwipe years={years} year={activeYear} onSelectYear={onSelectYear} style={{ display: "block" }}>
           <div className="space-y-3">
@@ -107,6 +109,7 @@ export default function AangifteYearPickerModal({
               </ul>
             )}
             {balansKeuze}
+            <VoorlopigeAanslagInvoer key={activeYear} jaren={[activeYear]} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} />
             <div className="flex gap-2 flex-wrap pt-1">
               <button
                 onClick={() => onExport([activeYear], balans)}
@@ -145,6 +148,7 @@ export default function AangifteYearPickerModal({
               ))}
             </div>
             <div className="mb-3">{balansKeuze}</div>
+            {gekozen.length > 0 && <div className="mb-3"><VoorlopigeAanslagInvoer key={gekozen.join(",")} jaren={gekozen} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} /></div>}
             <div className="flex gap-2">
               <button disabled={gekozen.length === 0} onClick={() => onExport(undefined, balans)} className={`${KNOP_PRIMAIR} disabled:opacity-40`}>
                 Berekening tonen

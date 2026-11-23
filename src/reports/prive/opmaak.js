@@ -29,7 +29,7 @@ export function document({ titel, sub, inhoud, disclaimer = STANDAARD_DISCLAIMER
  .uitkomst{font-size:15px;font-weight:bold;margin:6px 0} .terug{color:#047857} .bij{color:#b91c1c}
  .aannames{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-top:8px} .aannames ul{margin:4px 0 0;padding-left:16px}
  .disc{margin-top:22px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#475569;font-size:10.5px}
- .groen{color:#047857} .oranje{color:#b45309} .rood{color:#b91c1c}
+ .noot{color:#64748b;font-size:11px;margin:2px 0 8px} .groen{color:#047857} .oranje{color:#b45309} .rood{color:#b91c1c}
  .jaar{break-before:page} .jaar:first-of-type{break-before:auto} @media print{body{padding:0}}
 </style></head><body>
 <h1>${esc(titel)}</h1>

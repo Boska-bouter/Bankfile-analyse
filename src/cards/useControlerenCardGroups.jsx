@@ -46,7 +46,7 @@ export function useControlerenCardGroups(p) {
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
-    zelfstandigenaftrekStatus, rechtsvorm, balansMeldingenVoor, balansCheckRef, kwartaalStatus, beginsaldoZakelijk,
+    zelfstandigenaftrekStatus, rechtsvorm, balansCheck, balansCheckRef,
   } = p;
   // nieuw-V9R6 — jaar van de lijsten Nog niet ingedeeld / Personen (null = alle jaren)
   const [lijstJaar, setLijstJaar] = useState(null);
@@ -67,7 +67,7 @@ export function useControlerenCardGroups(p) {
     return [
       withExpand(
         (() => {
-          let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence", "balanscheck"]);
           const nCtl = aanvullendeControles ? (aanvullendeControles.dekking.aantalVerdacht > 0 ? 1 : 0) + aanvullendeControles.terugkerend.length + (aanvullendeControles.kostenIn?.length || 0) : 0;
           if (basis && nCtl > 0) basis = { ...basis, lines: [...basis.lines, { label: "Aanvullende controles", value: `🟠 ${nCtl} om te bekijken` }] };
           if (!basis || !aansluitControleInfo.heeftData) return basis;
@@ -116,7 +116,7 @@ export function useControlerenCardGroups(p) {
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} overlap={overlapKoppeling} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
           <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} onKostenVorigJaar={zetKostenVorigJaar} />
-          {activeYear && balansMeldingenVoor && <div ref={balansCheckRef}><BalansCheck jaar={activeYear} maak={balansMeldingenVoor} versie={[classified, leaseDetails, loanDetails, activaDetails, autoWizardStatus, reviewedOverigKeys, reviewedPersonKeys, kwartaalStatus, beginsaldoZakelijk]} /></div>}
+          {activeYear && balansCheck && <div ref={balansCheckRef}><BalansCheck jaar={activeYear} {...balansCheck} /></div>}
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
@@ -352,7 +352,7 @@ export function useControlerenCardGroups(p) {
         </div>
       ),
     ].filter(Boolean);
-  }, [lijstJaar, balansMeldingenVoor, kwartaalStatus, beginsaldoZakelijk, reviewedOverigKeys, reviewedPersonKeys, leaseDetails, loanDetails, activaDetails, autoWizardStatus,
+  }, [lijstJaar, balansCheck,
     transactions.length,
     controlerenCardsByKey,
     instellingenCardsByKey,
