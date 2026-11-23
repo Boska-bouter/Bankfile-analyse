@@ -812,7 +812,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rij("Totaal privéstortingen", eh(sR + Math.max(0, -verschil)))}
     ${rij("Saldo privé (onttrekkingen min stortingen)", bedrag(oR + bR - sR + verschil))}
     ${rij(`Controle: vermogensverschil (${bedrag(vermogen.eind - vermogen.begin)}) + saldo privé = winst`, bedrag(wR), "tot")}
-    <div class="ak-sub2">Toelichting op de bedragen die je invult (klik op een regel voor de boekingen)</div>
+    <div class="ak-sub2">Toelichting op de bedragen die je invult<span class="bron-knop"> (klik op een regel voor de boekingen)</span></div>
     ${rijBron("Overige privéonttrekkingen: opnames van de bank", eh(R(opnames)), txOpnames)}
     ${priveUitZak >= 0.5 ? rijBron("Overige privéonttrekkingen: privé-uitgaven betaald vanaf de zakelijke rekening", eh(R(priveUitZak)), privePosten.filter((tx) => tx.amount < 0)) : ""}
     ${gemengdPrive >= 0.5 ? rijBron("Overige privéonttrekkingen: privé-deel van kosten betaald vanaf de zakelijke rekening (bijv. huur, energie, auto)", eh(R(gemengdPrive)), txGemengd, "Alle kosten die vanaf de zakelijke rekening zijn betaald (incl. btw). Alleen het privé-deel (wat niet in de winst telt, na het zakelijke percentage) is hierboven als onttrekking meegenomen.") : ""}
@@ -1481,8 +1481,10 @@ export function stripBronHtml(html) {
   return String(html || "")
     .replace(/<div class="bron-inhoud">[\s\S]*?<\/p><\/div>/g, "")
     .replace(/ ?<span class="bron-knop"[^>]*>[^<]*<\/span>/g, "")
-    .replace(/<details class="bron"><summary class="categorie-detail">/g, '<div class="categorie-detail">')
-    .replace(/<\/summary><\/details>/g, "</div>");
+    // nieuw-V9R7 — ook bron-regels met een andere klasse (bijv. "ak-r sub" in Met balans): anders bleef een open
+    // <details><summary> staan en werd de PDF duizenden pixels breed met lege pagina's (melding Boska 23-11).
+    .replace(/<details class="bron"[^>]*>\s*<summary class="([^"]*)">/g, '<div class="$1">')
+    .replace(/<\/summary>\s*<\/details>/g, "</div>");
 }
 
 // De uitgebreide uitleg achteraan (Bijlage: Toelichtingen) is optioneel: weglaten voor een korter document.

@@ -53,6 +53,14 @@ function laadInIframe(html, breedte) {
     f.style.cssText = `position:fixed;left:-30000px;top:0;width:${breedte}px;height:1000px;border:0;background:#fff`;
     const klaar = () => {
       const doc = f.contentDocument;
+      // nieuw-V9R7 — vangnet: een uitklapblok (<details>) hoort niet in een PDF. Alleen de kopregel blijft staan,
+      // zodat een open blok de pagina nooit meer breed en leeg maakt (melding Boska 23-11).
+      for (const d of [...(doc?.querySelectorAll("details") || [])].reverse()) {
+        const s = d.querySelector(":scope > summary");
+        const div = doc.createElement("div");
+        if (s) { div.className = s.className; div.append(...s.childNodes); }
+        d.replaceWith(div);
+      }
       const fonts = doc?.fonts?.ready || Promise.resolve();
       fonts.then(() => setTimeout(() => resolve(f), 50));
     };
