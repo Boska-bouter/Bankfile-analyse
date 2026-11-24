@@ -32,7 +32,7 @@ function Regel({ label, waarde, betaald, onBedrag, onBetaald }) {
   );
 }
 
-export default function VoorlopigeAanslagInvoer({ jaren = [], waarde = {}, onChange, bank = {} }) {
+export default function VoorlopigeAanslagInvoer({ jaren = [], waarde = {}, onChange, bank = {}, zonderZvw = false }) {
   const [open, setOpen] = useState(() => Object.fromEntries(jaren.filter((j) => waarde?.[j]).map((j) => [j, true])));
   if (!onChange || !jaren.length) return null;
   const zet = (j, veld, v) => onChange((oud) => {
@@ -51,14 +51,14 @@ export default function VoorlopigeAanslagInvoer({ jaren = [], waarde = {}, onCha
             + Voorlopige aanslag {j} invullen
           </button>
         );
-        const ingevuld = Math.abs(v.ib || 0) + Math.abs(v.zvw || 0);
+        const ingevuld = Math.abs(v.ib || 0) + (zonderZvw ? 0 : Math.abs(v.zvw || 0));
         const b = bank?.[j] || 0;
         return (
           <div key={j} className="space-y-2 rounded-md bg-slate-50 p-2">
             <p className="text-sm font-semibold text-slate-800">Voorlopige aanslag {j}</p>
             <p className="text-xs text-slate-500">Vul het jaarbedrag in (staat bovenaan de brief), niet het bedrag per maand. Wordt bewaard in het dossier.</p>
             <Regel label="Inkomstenbelasting/premie volksverzekeringen" waarde={v.ib || 0} betaald={v.betaald} onBedrag={(x) => zet(j, "ib", x)} onBetaald={(x) => zet(j, "betaald", x)} />
-            <Regel label="Bijdrage Zvw (vaak een aparte brief; geen brief, dan leeg laten)" waarde={v.zvw || 0} betaald={v.betaaldZvw} onBedrag={(x) => zet(j, "zvw", x)} onBetaald={(x) => zet(j, "betaaldZvw", x)} />
+            {!zonderZvw && <Regel label="Bijdrage Zvw (vaak een aparte brief; geen brief, dan leeg laten)" waarde={v.zvw || 0} betaald={v.betaaldZvw} onBedrag={(x) => zet(j, "zvw", x)} onBetaald={(x) => zet(j, "betaaldZvw", x)} />}
             {b >= 1 && <p className={`text-xs ${ingevuld > 0 && ingevuld < b * 0.5 ? "text-amber-800" : "text-slate-500"}`}>Op de bank in {j}: € {eur(b)} betaald aan inkomstenbelasting of Zvw (ook eventuele aanslagen van eerdere jaren).{ingevuld > 0 && ingevuld < b * 0.5 ? " Dat is veel meer dan ingevuld: klopt het jaarbedrag?" : ""}</p>}
           </div>
         );

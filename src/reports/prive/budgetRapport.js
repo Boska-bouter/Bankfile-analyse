@@ -3,6 +3,7 @@
 import { esc, bedrag, metTeken, rij, kopRij, document } from "./opmaak.js";
 import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL, VERSCHOVEN_LABEL } from "../../calc/prive/budget.js";
 import { maandRegels, MAANDEN } from "./maandoverzicht.js";
+import { voorlopigPerJaar } from "../voorlopigeAanslag.js";
 
 function jaarBudget(jaar, d) {
   const b = d.budget;
@@ -30,8 +31,22 @@ export function buildBudgetRapportHtml({ jaren, overzicht, namen = null, vandaag
   });
 }
 
+// nieuw-V10R1 — Boska 23-11: voorlopige aanslag verrekenen (zelfde tekens: + = bij te betalen, − = terug).
+function vaHtml(js, d, alle) {
+  const v = voorlopigPerJaar(js, (j) => d(j).belasting.verschil, alle, { zonderZvw: true });
+  if (!v) return "</table>";
+  const w = (n) => (n == null ? "—" : bedrag(n));
+  const regels = [
+    v.ib.some((x) => x != null) ? rij("Voorlopige aanslag IB: terug (−) of bij (+)", v.ib.map(w)) : "",
+    v.zvw.some((x) => x != null) ? rij("Voorlopige aanslag Zvw: terug (−) of bij (+)", v.zvw.map(w)) : "",
+    rij("Bij de definitieve aanslag: terug (−) of bij (+)", v.rest.map(w), "sterk"),
+    v.open.some((x) => x != null) ? rij("Daarnaast nog open op de voorlopige aanslag: terug (−) of bij (+)", v.open.map(w)) : "",
+  ];
+  return `${regels.join("")}</table>${v.noot ? `<p class="noot">${esc(v.noot)}</p>` : ""}`;
+}
+
 // Samenvatting in één oogopslag (vervangt de zakelijke klantsamenvatting in een privédossier).
-export function buildPriveSamenvattingHtml({ jaren, overzicht, namen = null, openPunten = [], vandaag = new Date() }) {
+export function buildPriveSamenvattingHtml({ jaren, overzicht, namen = null, openPunten = [], voorlopigeAanslag = null, vandaag = new Date() }) {
   const js = jaren.filter((j) => overzicht?.perJaar?.[j]);
   const d = (j) => overzicht.perJaar[j];
   const r = (l, f, cls) => rij(l, js.map(f), cls);
@@ -51,7 +66,7 @@ ${r(VASTE_LASTEN_LABEL, (j) => metTeken(tot(j).vasteLasten, true), "sub")}</tabl
 <h2>Indicatie inkomstenbelasting</h2><table>${kopRij(js)}
 ${r("Inkomstenbelasting", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.ib)))}
 ${r("Al ingehouden loonheffing", (j) => (d(j).belasting.loonheffingGeschat ? "al ingehouden" : bedrag(d(j).belasting.loonheffing)))}
-${r("Terug (−) of bij (+)", (j) => bedrag(d(j).belasting.verschil), "sterk")}</table>
+${r("Terug (−) of bij (+)", (j) => bedrag(d(j).belasting.verschil), "sterk")}${vaHtml(js, d, voorlopigeAanslag)}
 ${js.some((j) => d(j).aannames.length) ? `<div class="aannames"><strong>Aannames</strong><ul>${[...new Set(js.flatMap((j) => d(j).aannames))].map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div>` : ""}
 <h2>Nog open</h2>${openPunten.length ? `<ul>${openPunten.map((o) => `<li>${esc(o.label)}${o.count != null ? ` (${o.count})` : ""}</li>`).join("")}</ul>` : "<p>Er staan geen open punten meer.</p>"}`;
   return document({

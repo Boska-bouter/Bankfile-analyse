@@ -433,7 +433,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   else if (geelGatenDitJaar.length > 0) openPunten.push(`Saldo tussen ${esc(geelGatenDitJaar[0].fileA)} en ${esc(geelGatenDitJaar[0].fileB)} sluit niet helemaal aan (verschil ${eur(geelGatenDitJaar[0].diff)}, nog geen echt gat)`);
   if (onzekerDitJaar > 0) openPunten.push(`${onzekerDitJaar} transactie${onzekerDitJaar === 1 ? "" : "s"} nog onzeker geclassificeerd`);
   if (yc.priveTransferMissingMirrors.length > 0) openPunten.push(`${yc.priveTransferMissingMirrors.length} privé-overboeking(en) zonder spiegelboeking`);
-  if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing (niet aftrekbaar)`);
+  if (yc.loonheffingBoetes.length > 0) openPunten.push(`${yc.loonheffingBoetes.length} boete(s) bij loonheffing: niet aftrekbaar, zet op "Belastingen: overig"`);
   // v205: vroegtijdige beëindiging (verkoop/veiling) van een leaseauto/-machine dit jaar — zie de
   // toelichting bij winstCorrectie/computeLeaseAutoKostenVoorJaar<!--V--> en de Bijlage<!--/V-->.
   const beeindigdeLeaseContracten = (leaseAutoKostenForYear?.contracten || []).filter((c) => c.beeindigingsresultaat);
@@ -779,22 +779,24 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     const verschil = wR - (vermogen.eind - vermogen.begin + oR + bR - sR);
     if (balans === "met") {
       const q3q4 = btwVerschuldigd(kwartalen.filter((q) => q.kwartaal >= 3));
+      // nieuw-V10R2 — Boska 24-11: een kwartaal dat na de laatste bankdatum eindigt (nog niet aan te geven) hoeft geen status te hebben.
+      const laatsteBankdatum = zakTx.reduce((m, tx) => { const d = tx.date ? new Date(tx.date) : null; return d && d > m ? d : m; }, new Date(0));
       // nieuw-V9R9 — Boska 23-11: staan alle kwartalen in de status (aangegeven/betaald), dan is de open btw zo opgegeven: geen melding.
-      const btwStatusCompleet = Array.from({ length: year - eersteJaar + 1 }, (_, i) => eersteJaar + i).every((y) => btwJaar(y).every((q) => { const st = kwartaalStatus?.[`${y}-Q${q.kwartaal}`]; return st && (st.aangegeven || st.betaald); }));
+      const btwStatusCompleet = Array.from({ length: year - eersteJaar + 1 }, (_, i) => eersteJaar + i).every((y) => btwJaar(y).every((q) => { const st = kwartaalStatus?.[`${y}-Q${q.kwartaal}`]; return (st && (st.aangegeven || st.betaald)) || new Date(y, q.kwartaal * 3, 0) > laatsteBankdatum; }));
       if (!btwStatusCompleet && btw.eind > Math.max(500, q3q4 + 250)) meld(`btw:${Math.round(btw.eind)}`, `Volgens de bank is er ${eh(btw.eind)} btw nog niet betaald, meer dan het laatste kwartaal. Klopt dat? Als de btw van een andere rekening is betaald of anders is ingedeeld, zet die betalingen dan op de categorie "Belastingen: OB".`);
-      if (!classified.some((tx) => !tx.isMirror && tx.year === year && (accountTypeByFile?.[tx.source] || tx.type) === "Prive")) meld("geenprive", "Er is geen privérekening geladen. Zakelijke kosten die vanaf de privérekening zijn betaald, ziet de app daardoor niet.");
+      // nieuw-V10R2 — Boska 23-11: "geen privérekening geladen" is bekend en voegt niets toe; geen melding meer.
       // nieuw-V9R9 — Boska 23-11 (JvS 2026): kwartaal afgevinkt als betaald zonder betaling vanaf de zakelijke rekening. De
       // berekening telt het als privé betaald, maar dat moet bevestigd worden: vaak is de status per ongeluk aangevinkt.
       if (btwPriveStorting >= 1) meld(`btwprive:${Math.round(btwPriveStorting)}`, `Btw-kwartalen staan als betaald (${eh(btwPriveStorting)}), maar die betaling is niet vanaf de zakelijke rekening gedaan. De berekening telt het als privé betaald. Is de btw nog niet betaald, zet het kwartaal dan terug op niet betaald bij Basisvragen bewerken (btw-kwartalen).`);
       // nieuw-V9R9 — overboekingen naar een andere eigen zakelijke rekening en borg staan nu op de balans (geen melding meer).
       // Alleen het saldo van zo'n rekening op 1-1 is onbekend: berekend als minimum, Boska kan het echte saldo invullen.
       for (const r of bp.sparenRek || []) {
-        if (r.berekend && r.eersteJaar === year && r.start >= 1) meld(`spaarsaldo:${r.iban || "onbekend"}:${year}:${Math.round(r.start)}`, `${r.iban ? `Rekening ${esc(r.iban.replace(/(.{4})/g, "$1 ").trim())}` : "Eigen rekening"}${r.naam ? ` (${esc(r.naam)})` : ""}: het saldo op 1-1-${year} ontbreekt. Er ging later meer van af dan erop werd gezet, dus er stond minstens ${eh(r.start)} op. Neem het saldo over van het jaaroverzicht of het eerste bankafschrift van ${year}.`);
+        // nieuw-V10R2 — Boska 24-11: bij elke niet geladen eigen zakelijke rekening de vraag of daar omzet of kosten op lopen.
+        if (r.eersteJaar === year && !classified.some((tx) => tx.omzetViaRekening && String(tx.counterpartyIban || "").replace(/\s+/g, "").toUpperCase() === r.iban)) meld(`spaarsaldo:${r.iban || "onbekend"}:${year}:${Math.round(r.start)}`, `${r.iban ? `Rekening ${esc(r.iban.replace(/(.{4})/g, "$1 ").trim())}` : "Eigen rekening"}${r.naam ? ` (${esc(r.naam)})` : ""} is een eigen zakelijke rekening zonder bankbestand.${r.berekend && r.start >= 1 ? ` Van die rekening kwam ${eh(r.start)} meer binnen dan erheen ging.` : ""} Komt er op die rekening omzet binnen (bijvoorbeeld pin of contant) of worden er kosten van betaald? Dan ontbreekt die in de winst: voeg het bankbestand toe.`);
       }
       // nieuw-V9R8 — bevestigde Overig-boekingen tellen niet in winst of privé, dus komen in dit verschil terecht.
-            // nieuw-V9R9 — Boska 23-11 ("een verschil moet ergens vandaan komen"): betaalde loonheffing telt niet in de winst en niet als privé.
-      const lhBetaald = -zakTx.filter((tx) => tx.year === year && (tx.category === "Belastingen: LH" || tx.category === "Belastingen: Naheffingen LH voorgaande jaren")).reduce((x, tx) => x + tx.amount, 0);
-      if (Math.abs(verschil) >= 250) meld(`verschil:${Math.round(verschil)}`, `Er blijft een verschil van ${eh(Math.abs(verschil))}: er is ${verschil > 0 ? "minder" : "meer"} geld dan de winst, de privéboekingen en de balans verklaren.${lhBetaald >= 1 ? ` Daarin zit ${eh(lhBetaald)} betaalde loonheffing; die telt nu niet als kosten in de winst.` : ""} Mogelijk ontbreekt een zakelijke (spaar)rekening, lening of leasecontract.`);
+      // nieuw-V10R2 — Boska 23-11: alleen het feit, geen gissing naar de oorzaak (loonheffing telt nu als loonkosten).
+      if (Math.abs(verschil) >= 250) meld(`verschil:${Math.round(verschil)}`, `Er blijft een verschil van ${eh(Math.abs(verschil))}: er is ${verschil > 0 ? "minder" : "meer"} geld dan de winst, de privéboekingen en de balans verklaren.`);
     }
     const bedrag = (n) => `${n < 0 ? "− " : ""}${eh(n)}`;
     const rijBron = (label, waarde, txs, noot) => txs.length

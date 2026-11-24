@@ -4,12 +4,16 @@ import { useState } from "react";
 import { eur } from "../../utils/amounts.js";
 import { KAART } from "./PriveKaarten.jsx";
 import { metTeken as teken } from "../../reports/prive/opmaak.js";
+import { voorlopigPerJaar } from "../../reports/voorlopigeAanslag.js";
 import { sparenLabel, hoofdLabel, overLabel, VASTE_LASTEN_LABEL, EIGEN_BETAAL_LABEL, SALDO_LABEL, VERSCHOVEN_LABEL } from "../../calc/prive/budget.js";
 
-export default function PriveMeerjarenKaart({ jaren, perJaar }) {
+export default function PriveMeerjarenKaart({ jaren, perJaar, voorlopigeAanslag = null }) {
   const [perHoofd, setPerHoofd] = useState(false);
   if (jaren.length < 1) return null;
   const hoofden = [...new Set(jaren.flatMap((j) => perJaar[j]?.budget.uitgavenPerHoofd.map((h) => h.hoofd) || []))];
+  // nieuw-V10R1 — voorlopige aanslag verrekenen (+ = bij te betalen, − = terug).
+  const va = voorlopigPerJaar(jaren, (j) => perJaar[j]?.belasting.verschil ?? null, voorlopigeAanslag, { zonderZvw: true });
+  const vaRij = (label, arr, cls) => rij(label, (j) => { const n = arr[jaren.indexOf(j)]; return n == null ? "—" : eur(n); }, cls);
   const tot = (j) => perJaar[j].budget.totaal;
   const hoofdBedrag = (j, h) => perJaar[j]?.budget.uitgavenPerHoofd.find((x) => x.hoofd === h)?.bedrag || 0;
   const rij = (label, f, cls = "") => (
@@ -38,6 +42,10 @@ export default function PriveMeerjarenKaart({ jaren, perJaar }) {
             {rij(SALDO_LABEL, (j) => teken(tot(j).saldo))}
             {perHoofd && rij(VASTE_LASTEN_LABEL, (j) => teken(tot(j).vasteLasten, true), "text-xs text-slate-500")}
             {rij("Inkomstenbelasting: terug (−) of bij (+)", (j) => eur(perJaar[j].belasting.verschil))}
+            {va && va.ib.some((x) => x != null) && vaRij("Voorlopige aanslag IB: terug (−) of bij (+)", va.ib)}
+            {va && va.zvw.some((x) => x != null) && vaRij("Voorlopige aanslag Zvw: terug (−) of bij (+)", va.zvw)}
+            {va && vaRij("Bij de definitieve aanslag: terug (−) of bij (+)", va.rest, "font-semibold")}
+            {va && va.open.some((x) => x != null) && vaRij("Nog open op de voorlopige aanslag", va.open)}
           </tbody>
         </table>
       </div>

@@ -8,7 +8,7 @@ import DownloadKnop from "../shared/DownloadKnop.jsx";
 
 const ACTIE = "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50";
 
-export default function PriveOverzicht({ overzicht, jaar, jaren, onSelectYear, onVasteLasten, onBerekening, onVragen, onActie, onSamenvatting, ibGedaan, onIbGedaan }) {
+export default function PriveOverzicht({ overzicht, jaar, jaren, onSelectYear, onVasteLasten, onBerekening, onVragen, onActie, onSamenvatting, ibGedaan, onIbGedaan, voorlopigeAanslag }) {
   const [maand, setMaand] = useState(false);
   const d = overzicht?.perJaar?.[jaar];
   if (!d) return null;
@@ -23,7 +23,7 @@ export default function PriveOverzicht({ overzicht, jaar, jaren, onSelectYear, o
           <SparenKaart jaar={jaar} budget={d.budget} belasting={d.belasting} />
         </div>
       </div>
-      <PriveMeerjarenKaart jaren={jaren} perJaar={overzicht.perJaar} />
+      <PriveMeerjarenKaart jaren={jaren} perJaar={overzicht.perJaar} voorlopigeAanslag={voorlopigeAanslag} />
       <div className="flex flex-wrap gap-2">
         {onBerekening && <button type="button" onClick={onBerekening} className={ACTIE}>Berekening inkomstenbelasting</button>}
         {onSamenvatting && <button type="button" onClick={onSamenvatting} className={ACTIE}>Samenvatting</button>}

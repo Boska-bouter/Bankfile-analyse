@@ -6,7 +6,7 @@ import { downloadRapport } from "./download.js";
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, vandaag = new Date() }) {
+export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, voorlopig = null, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
   // nieuw-V3R1 — altijd expliciet "te betalen" of "te ontvangen" bij een saldo (wens Boska 11-11).
@@ -37,8 +37,16 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
   const hkNootHtml = hkNoten.length
     ? `<p class="noot">De heffingskorting (${hkNoten.map((j) => `${meer ? `${esc(j.jaar)}: ` : ""}${eur(j.hkNoot.totaal)}`).join(", ")}) is hoger dan de berekende IB. Een heffingskorting verlaagt de IB hooguit tot € 0; het restant wordt niet uitbetaald. Op de Zvw-bijdrage telt de heffingskorting niet.</p>`
     : "";
+  // nieuw-V10R1 — Boska 23-11: voorlopige aanslag gaat af van het totaal; daaronder wat bij de definitieve aanslag overblijft.
+  const vaWaarde = (n) => (n == null ? "—" : n < 0 ? `+ ${eur(-n)} (teruggaaf)` : `− ${eur(n)}`);
+  const voorlopigHtml = voorlopig && !isBV
+    ? (voorlopig.ib.some((x) => x != null) ? rij("Af: voorlopige aanslag inkomstenbelasting", voorlopig.ib.map(vaWaarde)) : "")
+      + (voorlopig.zvw.some((x) => x != null) ? rij("Af: voorlopige aanslag Zvw", voorlopig.zvw.map(vaWaarde)) : "")
+      + rij("Bij de definitieve aanslag", voorlopig.rest.map((n) => (n == null ? "—" : saldo(n))), true)
+      + (voorlopig.open.some((x) => x != null) ? rij("Daarnaast nog open op de voorlopige aanslag", voorlopig.open.map((n) => (n == null ? "—" : saldo(n)))) : "")
+    : "";
   const belastingHtml = heeftBelasting
-    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? deelWaarde(d) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? saldo(j.belasting.totaal) : "—")), true)}</table>${hkNootHtml}${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? saldo(j.belasting.btw) : "—")))}</table>` : ""}`
+    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? deelWaarde(d) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? saldo(j.belasting.totaal) : "—")), true)}${voorlopigHtml}</table>${voorlopig?.noot ? `<p class="noot">${esc(voorlopig.noot)}</p>` : ""}${hkNootHtml}${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? saldo(j.belasting.btw) : "—")))}</table>` : ""}`
     : `<p>Nog niet te berekenen.</p>`;
   const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");

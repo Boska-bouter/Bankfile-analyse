@@ -81,7 +81,7 @@ function jaarBlok(jaar, d, namen, voorlopig = null) {
 }
 
 export function buildAangiftevoorstelPriveHtml({ jaren, overzicht, namen = null, vandaag = new Date(), voorlopigeAanslag = null }) {
-  const blokken = jaren.filter((j) => overzicht?.perJaar?.[j]).map((j) => jaarBlok(j, overzicht.perJaar[j], namen, voorlopigVoorJaar(voorlopigeAanslag, j))).join("");
+  const blokken = jaren.filter((j) => overzicht?.perJaar?.[j]).map((j) => jaarBlok(j, overzicht.perJaar[j], namen, voorlopigVoorJaar(voorlopigeAanslag, j, { zonderZvw: true }))).join("");
   return document({
     titel: `Indicatie inkomstenbelasting ${jaren.join(", ")}`,
     sub: `${namen?.ondernemer ? `${esc(namen.ondernemer)}${namen?.partner ? ` en ${esc(namen.partner)}` : ""} · ` : ""}privé · opgesteld ${vandaag.toLocaleDateString("nl-NL")}`,

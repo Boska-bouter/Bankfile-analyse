@@ -1,3 +1,4 @@
+import { markeerOmzetViaRekening } from "./classification/omzetViaRekening.js";
 import { kmBekend, kmMaxVoorJaar } from "./tax/kmVergoeding.js";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { balansSleutel, haalMeldingen } from "./reports/aangiftevoorstel.js";
@@ -555,7 +556,8 @@ export default function App() {
   const [bevestigdeControles, setBevestigdeControles] = useState({}); // C — { sleutel: true } voor 'klopt zo' bij aanvullende controles
   // nieuw-V9R8 — Balanscheck (Boska 23-11): meldingen van de balans per jaar [{ k, tekst }]; "Gezien, klopt" = bevestigdeControles["balans|jaar|k"].
   const [balansPerJaar, setBalansPerJaar] = useState({});
-  const balansOpenVan = (jaar) => (balansPerJaar[jaar] || []).filter((m) => !bevestigdeControles?.[balansSleutel(jaar, m.k)]);
+  // nieuw-V10R2 — na "Ja, omzet" is de vraag over die rekening beantwoord (ook als er niets terugkwam).
+  const balansOpenVan = (jaar) => (balansPerJaar[jaar] || []).filter((m) => !bevestigdeControles?.[balansSleutel(jaar, m.k)] && !(m.k.startsWith("spaarsaldo:") && bevestigdeControles?.[`omzetrek|${m.k.split(":")[1]}`]));
   const balansOpen = useMemo(() => Object.fromEntries(Object.keys(balansPerJaar).map((j) => [j, balansOpenVan(j).length])), [balansPerJaar, bevestigdeControles]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showLog, setShowLog] = useState(false);
   const [showZoek, setShowZoek] = useState(false);
@@ -1049,7 +1051,12 @@ export default function App() {
   useNamenTerugsturen(classifiedBasis, namenToestemming); // nieuw-V2R1 — alleen met toestemming
   useNamenOpzoeken(classifiedBasis, categoryRules, namenAi); // nieuw-V2R2 — onbekende bedrijfsnamen opzoeken met AI
   // huishoudboekje-V6R9 — kleine onzekere boekingen tellen niet als open punt (zie classification/kleineBedragen.js).
-  const classified = useMemo(() => markeerKleineBedragen(classifiedBasis, kleinBedragInstelling), [classifiedBasis, kleinBedragInstelling]);
+  // nieuw-V10R2 — eigen rekening zonder bankbestand met omzet (Balanscheck "Ja, omzet"): overschot telt als omzet.
+  // Sleutel als tekst, zodat andere afgevinkte controles niet alles opnieuw laten berekenen. Niet bij BV (daar geen Balanscheck).
+  const omzetRekeningenSleutel = rechtsvorm === "bv" ? "" : Object.keys(bevestigdeControles || {}).filter((k) => k.startsWith("omzetrek|") && bevestigdeControles[k]).map((k) => k.slice(9)).sort().join("|");
+  const omzetRekeningen = useMemo(() => (omzetRekeningenSleutel ? omzetRekeningenSleutel.split("|") : []), [omzetRekeningenSleutel]);
+  const geladenIbansSleutel = Object.values(ownAccountByFile || {}).filter(Boolean).sort().join("|");
+  const classified = useMemo(() => markeerKleineBedragen(markeerOmzetViaRekening(classifiedBasis, omzetRekeningen, { geladen: geladenIbansSleutel.split("|"), overridesByRow }), kleinBedragInstelling), [classifiedBasis, omzetRekeningen, geladenIbansSleutel, overridesByRow, kleinBedragInstelling]);
   const kleinBedragOverzicht = useMemo(() => kleinOverzicht(classified, kleinBedragInstelling), [classified, kleinBedragInstelling]);
   const kleinBedragGroepen = useMemo(() => kleineGroepen(classified), [classified]);
   // nieuw-V1R5 — één set props voor de kaart bij Controleren en bij Instellingen (bevestigd = melding bij Controleren afgesloten)
@@ -1660,12 +1667,15 @@ export default function App() {
   };
   const controlerenCardGroups = useControlerenCardGroups({
     balansCheck: rechtsvorm !== "bv" && !priveOverzicht ? {
-      lijst: (balansPerJaar[activeYear] || []).map((m) => ({ ...m, bevestigd: !!bevestigdeControles?.[balansSleutel(activeYear, m.k)] })),
-      onBevestig: (k) => bevestigControle(balansSleutel(activeYear, k)),
-      onHerroep: (k) => herroepControle(balansSleutel(activeYear, k)),
+      lijst: (balansPerJaar[activeYear] || []).filter((m) => !(m.k.startsWith("spaarsaldo:") && bevestigdeControles?.[`omzetrek|${m.k.split(":")[1]}`])).map((m) => ({ ...m, bevestigd: !!bevestigdeControles?.[balansSleutel(activeYear, m.k)] })),
+      onBevestig: (k, j = activeYear) => bevestigControle(balansSleutel(j, k)),
+      onHerroep: (k, j = activeYear) => herroepControle(balansSleutel(j, k)),
+      onOmzet: (iban) => bevestigControle(`omzetrek|${iban}`),
+      omzetRekeningen, onOmzetTerug: (iban) => herroepControle(`omzetrek|${iban}`),
       onBestandToevoegen: () => startBankbestandToevoegen(),
       andereJaren: Object.keys(balansOpen).filter((j) => balansOpen[j] > 0 && Number(j) !== Number(activeYear)).sort(),
-      onSaldo: (iban, jaar, bedrag) => setBeginsaldoZakelijk((prev) => ({ ...(prev || {}), [`rek:${iban === "onbekend" ? "" : iban}`]: { jaar, bedrag } })),
+      // nieuw-V10R2 — Boska 23-11 ("ik kan ze niet zien"): open punten van de andere jaren ook tonen.
+      andereLijsten: Object.fromEntries(Object.keys(balansOpen).filter((j) => balansOpen[j] > 0 && Number(j) !== Number(activeYear)).map((j) => [j, balansOpenVan(j)])),
     } : null, balansCheckRef,
     rechtsvorm, confidenceOpenJaren: confidenceSummary?.openJaren || [], setActiveYear, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
@@ -1772,7 +1782,7 @@ export default function App() {
   });
   const {
     bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
-    rapportVensters,
+    rapportVensters, indicatieTotaal,
   } = useRapporten({
     naarBalanscheck: (jaar) => { if (jaar) setActiveYear(Number(jaar)); jumpToSection(balansCheckRef); }, bevestigdeControles, voorlopigeAanslag,
     accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
@@ -1801,6 +1811,7 @@ export default function App() {
     window.__bt.km = () => ({ autoStatus, kmVergoedingDetails }); // nieuw-V8R1 — controle km-vergoeding
     window.__bt.rapport = (jaren, balans) => bouwRapportHtml(jaren, balans); // nieuw-V8R3 — rapport-HTML voor controle
     window.__bt.aangiftePicker = () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); };
+    window.__bt.voorlopig = (v) => setVoorlopigeAanslag(v); window.__bt.meerjaren = () => setShowMultiYearModal(true); // nieuw-V10R1 — mockups
     window.__bt.lease = () => leaseSummary.map((l) => ({ key: l.key, category: l.category, tx: (l.transactions || []).map((t) => [new Date(t.date).toISOString().slice(0, 10), t.amount]) })); // nieuw-V8R4 — controle leaseschuld
   }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
@@ -2405,6 +2416,8 @@ export default function App() {
           zvwStatus={zvwStatus}
           setZvwGedaan={setZvwGedaan}
           onOpenHelp={setHelpPopupChapter}
+          voorlopigeAanslag={voorlopigeAanslag}
+          indicatieTotaal={indicatieTotaal}
         />
       )}
 
@@ -2688,6 +2701,7 @@ export default function App() {
                 onBerekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
                 onVragen={() => setManualWizardOpen(true)}
                 onActie={handleDetailsJump} onSamenvatting={startKlantSamenvatting}
+                voorlopigeAanslag={voorlopigeAanslag}
                 ibGedaan={!!ibStatus[activeYear]?.gedaan} onIbGedaan={(v) => setIbGedaan(activeYear, v)}
               />
             )}
@@ -3215,6 +3229,7 @@ export default function App() {
                     beginsaldo={beginsaldoZakelijk}
                     voorlopigeAanslag={rechtsvorm !== "bv" ? voorlopigeAanslag : {}}
                     setVoorlopigeAanslag={rechtsvorm !== "bv" ? setVoorlopigeAanslag : null}
+                    zonderZvw={!!priveOverzicht}
                     voorlopigBank={Object.fromEntries((years || []).map((j) => [j, -classified.filter((tx) => !tx.isMirror && tx.date && new Date(tx.date).getFullYear() === j && (tx.category === "Belastingen: IB" || tx.category === "Belastingen: ZVW")).reduce((a, tx) => a + tx.amount, 0)]))}
                     setBeginsaldo={setBeginsaldoZakelijk}
                   />

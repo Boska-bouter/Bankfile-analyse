@@ -22,6 +22,7 @@ import { buildOnderbouwingHtml, downloadOnderbouwing } from "./onderbouwing.js";
 import { printHtmlDocument } from "./printReport.js";
 import { buildPriveSamenvattingHtml } from "./prive/budgetRapport.js";
 import { metRapportKop } from "./rapportKop.js";
+import { voorlopigPerJaar } from "./voorlopigeAanslag.js";
 
 export function useRapporten({
   accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
@@ -171,12 +172,13 @@ export function useRapporten({
     setKlantJaarKeuze(null);
     setKlantSamenvattingJaren(jaren);
     if (priveOverzicht) {
-      setKlantSamenvattingHtml(metRapportKop(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }), jaren));
+      setKlantSamenvattingHtml(metRapportKop(buildPriveSamenvattingHtml({ jaren, overzicht: priveOverzicht, namen: eigenNamen, voorlopigeAanslag, openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })) }), jaren));
       return;
     }
     setKlantSamenvattingHtml(metRapportKop(buildKlantSamenvattingHtml({
       klantNaam: eigenNamen?.ondernemer, rechtsvorm,
       jaren: jaren.map(klantJaarData),
+      voorlopig: rechtsvorm === "bv" ? null : voorlopigPerJaar(jaren, (y) => klantJaarData(y).belasting?.totaal ?? null, voorlopigeAanslag),
       profiel: dossierProfiel,
       openPunten: alleStappen.map((s) => ({ label: s.label, count: s.count })),
       // nieuw-V3R7 — vanuit Eenvoudig: één regel met de zekerheid per jaar (onzeker bedrag in euro's).
@@ -272,8 +274,10 @@ export function useRapporten({
     window.__bt.klant = openKlantSamenvatting;
     window.__bt.klantHtml = () => klantSamenvattingHtml;
   }
+  // nieuw-V10R1 — totaal IB + Zvw volgens de indicatieve berekening (zelfde als de klantsamenvatting), voor het meerjarenoverzicht.
+  const indicatieTotaal = (y) => (yearlySummaries?.[y] ? klantJaarData(y).belasting?.totaal ?? null : null);
   return {
-    bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
+    bouwRapportHtml, indicatieTotaal, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
     rapportVensters,
   };
 }

@@ -32,7 +32,7 @@ export default function AangifteYearPickerModal({
   onClose, activeYear, onSelectYear, years, yearProgress, aangifteOpenPunten, meerdereJaren, setMeerdereJaren,
   selectedYears, setSelectedYears, onExport, toonBalansKeuze = false,
   rekeningenZonderSaldo = [], beginsaldo = {}, setBeginsaldo = null,
-  voorlopigeAanslag = {}, setVoorlopigeAanslag = null, voorlopigBank = {},
+  voorlopigeAanslag = {}, setVoorlopigeAanslag = null, voorlopigBank = {}, zonderZvw = false,
 }) {
   // nieuw-V8R7 — Boska 18-11: vooraf kiezen "met of zonder balans", zodat het overzicht maar één manier toont.
   const [balans, setBalans] = useState("zonder");
@@ -109,7 +109,7 @@ export default function AangifteYearPickerModal({
               </ul>
             )}
             {balansKeuze}
-            <VoorlopigeAanslagInvoer key={activeYear} jaren={[activeYear]} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} />
+            <VoorlopigeAanslagInvoer key={activeYear} jaren={[activeYear]} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} zonderZvw={zonderZvw} />
             <div className="flex gap-2 flex-wrap pt-1">
               <button
                 onClick={() => onExport([activeYear], balans)}
@@ -148,7 +148,7 @@ export default function AangifteYearPickerModal({
               ))}
             </div>
             <div className="mb-3">{balansKeuze}</div>
-            {gekozen.length > 0 && <div className="mb-3"><VoorlopigeAanslagInvoer key={gekozen.join(",")} jaren={gekozen} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} /></div>}
+            {gekozen.length > 0 && <div className="mb-3"><VoorlopigeAanslagInvoer key={gekozen.join(",")} jaren={gekozen} waarde={voorlopigeAanslag} onChange={setVoorlopigeAanslag} bank={voorlopigBank} zonderZvw={zonderZvw} /></div>}
             <div className="flex gap-2">
               <button disabled={gekozen.length === 0} onClick={() => onExport(undefined, balans)} className={`${KNOP_PRIMAIR} disabled:opacity-40`}>
                 Berekening tonen

@@ -32,6 +32,7 @@ const RUBRIEK_ANDERE_KOSTEN = [
   "Privé - mobiel", "Privé - internet/TV", "Privé - streaming diensten", "Privé overige abonnementen", "Privé - bankkosten", // beide-V9R9 — zakelijk deel vanaf privé
   "Zakelijk overige abonnementen", "Verzekering: Zakelijk", "Schade-uitkering verzekering", "Verzekeringen", "AOV (arbeidsongeschiktheidsverzekering)", "Onderhoud apparatuur/machines",
   "Webshops & online aankopen", "Winkels divers", "Loonadministratie", "Uitbetalen loon",
+  "Belastingen: LH", "Belastingen: Naheffingen LH voorgaande jaren", // nieuw-V10R2 — loonkosten personeel
   "Incasso, juridisch & schulden",
   // De twee "deels zakelijk"-abonnementscategorieën (zie categorySplit.js) horen in dezelfde
   // rubriek als de andere abonnementen/kosten hierboven.
@@ -40,8 +41,8 @@ const RUBRIEK_ANDERE_KOSTEN = [
 const RUBRIEK_ONTTREKKINGEN = ["Privé opnames", "Ontvangen van zakelijk"];
 const RUBRIEK_STORTINGEN = ["Terugboeking van privé", "Terugboeking naar zakelijk"];
 const BELASTINGEN_GEEN_KOSTENPOST = [
-  "Belastingen: IB", "Belastingen: IH", "Belastingen: LH", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
-  "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen LH voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
+  "Belastingen: IB", "Belastingen: IH", "Belastingen: OB", "Belastingen: ZVW", "Belastingen: overig",
+  "Belastingen: Naheffingen OB voorgaande jaren", "Belastingen: Naheffingen IB voorgaande jaren",
 ];
 // Alles wat hierboven niet met naam genoemd wordt, en dus zonder toelichting in "nog niet
 // ingedeeld" terecht zou komen als het toch een keer als Zakelijk voorkomt.

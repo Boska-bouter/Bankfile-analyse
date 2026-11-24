@@ -7,7 +7,7 @@ import MultiYearOverviewBV from "../overview/MultiYearOverviewBV.jsx";
 export default function MultiYearModal({
   onClose, rechtsvorm, years, yearlySummaries, yearlyOpenOB, korRegeling, activeYear, setActiveYear,
   kostenTotaalByYear, costBreakdownByYear, volledigeJaren, businessAdvies, dgaSalarisByYear, rcVerloop, evVerloop,
-  yearlyProgress, vpbStatus, setVpbGedaan, ibStatus, setIbGedaan, zvwStatus, setZvwGedaan, onOpenHelp,
+  yearlyProgress, vpbStatus, setVpbGedaan, ibStatus, setIbGedaan, zvwStatus, setZvwGedaan, onOpenHelp, voorlopigeAanslag, indicatieTotaal,
 }) {
   return (
     <ModalShell title="Meerjarenoverzicht" onClose={onClose} maxWidth="max-w-5xl">
@@ -43,6 +43,8 @@ export default function MultiYearModal({
           activeYear={activeYear}
           onOpenHelp={onOpenHelp}
           yearlyProgress={yearlyProgress}
+          voorlopigeAanslag={voorlopigeAanslag}
+          indicatieTotaal={indicatieTotaal}
         />
       )}
     </ModalShell>
