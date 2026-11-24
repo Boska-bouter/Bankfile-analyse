@@ -72,7 +72,7 @@ export function useRapporten({
     // nieuw-V9R9 — afgevinkte Balanscheck-punten ("Gezien, klopt") niet opnieuw melden.
     const meldingen = {};
     for (const [j, lijst] of Object.entries(haalMeldingen(html))) {
-      const open = lijst.filter((m) => !bevestigdeControles?.[balansSleutel(j, m.k)]);
+      const open = lijst.filter((m) => !bevestigdeControles?.[balansSleutel(j, m.k)] && !(m.k.startsWith("spaarsaldo:") && bevestigdeControles?.[`omzetrek|${m.k.split(":")[1]}`]));
       if (open.length) meldingen[j] = open;
     }
     const schoon = metRapportKop(zonderMeldingen(html), targetYears);
