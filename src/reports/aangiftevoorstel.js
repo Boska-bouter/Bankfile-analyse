@@ -819,7 +819,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
       for (const r of bp.sparenRek || []) {
         // nieuw-V10R2 — Boska 24-11: bij elke niet geladen eigen zakelijke rekening de vraag of daar omzet of kosten op lopen.
         // Beantwoord als er van die rekening al omzet binnenkomt: via "Ja, omzet" of zelf ingedeeld als Zakelijke inkomsten (Boska 24-11).
-        if (r.eersteJaar === year && !classified.some((tx) => (tx.omzetViaRekening || (tx.amount > 0 && String(tx.category || "").startsWith("Zakelijke inkomsten"))) && String(tx.counterpartyIban || "").replace(/\s+/g, "").toUpperCase() === r.iban)) meld(`spaarsaldo:${r.iban || "onbekend"}:${year}:${Math.round(r.start)}`, `${r.iban ? `Rekening ${esc(r.iban.replace(/(.{4})/g, "$1 ").trim())}` : "Eigen rekening"}${r.naam ? ` (${esc(r.naam)})` : ""} is een eigen zakelijke rekening zonder bankbestand.${r.berekend && r.start >= 1 ? ` Van die rekening kwam ${eh(r.start)} meer binnen dan erheen ging.` : ""} Komt er op die rekening omzet binnen (bijvoorbeeld pin of contant) of worden er kosten van betaald? Dan ontbreekt die in de winst: voeg het bankbestand toe.`);
+        // nieuw-V10R9 — Boska 25-11: een zakelijke spaarrekening (alle overboekingen staan op "zakelijk sparen") krijgt geen
+        // omzet of kosten: geen vraag. Ook als de bank geen rekeningnummer meegeeft (ING Oranje spaarrekening).
+        if (r.spaar) continue;
+        if (r.eersteJaar === year && !classified.some((tx) => (tx.omzetViaRekening || (tx.amount > 0 && String(tx.category || "").startsWith("Zakelijke inkomsten"))) && String(tx.counterpartyIban || "").replace(/\s+/g, "").toUpperCase() === r.iban)) meld(`spaarsaldo:${r.iban || "onbekend"}:${year}:${Math.round(r.start)}`, `${r.iban ? `Rekening ${esc(r.weergave || r.iban.replace(/(.{4})/g, "$1 ").trim())}` : "Eigen rekening"}${r.naam ? ` (${esc(r.naam)})` : ""} is een eigen zakelijke rekening zonder bankbestand.${r.berekend && r.start >= 1 ? ` Van die rekening kwam ${eh(r.start)} meer binnen dan erheen ging.` : ""} Komt er op die rekening omzet binnen (bijvoorbeeld pin of contant) of worden er kosten van betaald? Dan ontbreekt die in de winst: voeg het bankbestand toe.`);
       }
       // nieuw-V9R8 — bevestigde Overig-boekingen tellen niet in winst of privé, dus komen in dit verschil terecht.
       // nieuw-V10R2 — Boska 23-11: alleen het feit, geen gissing naar de oorzaak (loonheffing telt nu als loonkosten).
@@ -847,7 +850,7 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rij("Liquide middelen (banksaldo zakelijke rekening)", be(liquide), "in")}
     ${zonderSaldo.length ? `<p class="ak-noot">Het bankbestand heeft geen saldo. Het banksaldo is berekend: het ingevulde saldo op 1-1-${zonderSaldo.map((r) => beginsaldo?.[r.key]?.jaar).filter(Boolean).join(" en 1-1-")} plus alle boekingen daarna. Vergelijk het saldo op 31-12 met je bankafschrift.</p>` : ""}
     ${heeft(sparen) ? rij("Liquide middelen (andere zakelijke rekening of spaarrekening, uit de overboekingen)", be(sparen), "in") : ""}
-    ${(bp.sparenRek || []).filter((r) => r.start >= 1).map((r) => `<p class="ak-noot">Saldo ${r.iban ? esc(r.iban) : "eigen rekening"} op 1-1-${r.eersteJaar}: ${eh(r.start)}${r.berekend ? " (berekend: er ging meer af dan erop werd gezet)" : " (ingevuld)"} plus alle overboekingen daarna.</p>`).join("")}
+    ${(bp.sparenRek || []).filter((r) => r.start >= 1).map((r) => `<p class="ak-noot">Saldo ${r.iban ? esc(r.weergave || r.iban) : "eigen rekening"} op 1-1-${r.eersteJaar}: ${eh(r.start)}${r.berekend ? " (berekend: er ging meer af dan erop werd gezet)" : " (ingevuld)"} plus alle overboekingen daarna.</p>`).join("")}
     ${heeft(borgVord) ? rij("Overige vorderingen: betaalde waarborgsommen (borg)", be(borgVord), "in") : ""}
     ${bp.borg?.berekendBegin >= 1 && heeft(borgVord) ? `<p class="ak-noot">Borg die terugkwam zonder dat de betaling in de bankbestanden staat, is eerder betaald: ${eh(bp.borg.berekendBegin)} stond daarom al als vordering op de balans.</p>` : ""}
     ${rij("Totaal activa", be(activa), "tot")}
@@ -1231,14 +1234,20 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   const somVan = (k) => bepaald.reduce((a, j) => a + (j[k] || 0), 0);
   const btwTekst = (v) => v == null ? "KOR" : `${eur(Math.abs(v))} ${v < 0 ? "terug" : "te betalen"}`;
   const heeftBtw = JAAR_TOTALEN.some((j) => j.btw != null);
+  // nieuw-V10R9 — Boska 25-11: een opgegeven voorlopige aanslag ook in het overzicht bovenin (kolommen voorlopig en wat resteert).
+  const vlVan = (y) => voorlopigVoorJaar(voorlopig, y);
+  const heeftVl = JAAR_TOTALEN.some((j) => vlVan(j.year));
+  const restTekst = (r) => Math.abs(r) < 0.5 ? "€ 0" : `${eur(Math.abs(r))} ${r < 0 ? "terug" : "bij"}`;
+  const vlCellen = (j) => { if (!heeftVl) return ""; const v = vlVan(j.year); return v ? `<td class="num">${eur(v.totaal)}</td><td class="num"><strong>${restTekst(j.totaal - v.totaal)}</strong></td>` : `<td class="num">—</td><td class="num"><strong>${restTekst(j.totaal)}</strong></td>`; };
+  const vlTotaal = bepaald.reduce((a, j) => a + (vlVan(j.year)?.totaal || 0), 0);
   const overzichtJarenHtml = yearsToInclude.length > 1 && JAAR_TOTALEN.length > 0
     ? `<h2>Overzicht ${Math.min(...yearsToInclude)} – ${Math.max(...yearsToInclude)}</h2>
-  <div class="totaal-kaart"><table class="samenvatting-scenarios overzicht-jaren"><thead><tr><th>Jaar</th><th>Winst uit onderneming</th><th>IB ná heffingskorting</th><th>Zvw-bijdrage</th><th>IB + Zvw</th>${heeftBtw ? "<th>BTW-saldo jaar</th>" : ""}</tr></thead><tbody>
+  <div class="totaal-kaart"><table class="samenvatting-scenarios overzicht-jaren"><thead><tr><th>Jaar</th><th>Winst uit onderneming</th><th>IB ná heffingskorting</th><th>Zvw-bijdrage</th><th>IB + Zvw</th>${heeftVl ? "<th>Voorlopige aanslag</th><th>Na voorlopige aanslag</th>" : ""}${heeftBtw ? "<th>BTW-saldo jaar</th>" : ""}</tr></thead><tbody>
     ${JAAR_TOTALEN.map((j) => j.onbekend
-      ? `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num" colspan="3">urencriterium onbekend — zie de twee scenario's in dat jaar</td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`
-      : `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num">${eur(j.ib)}</td><td class="num">${eur(j.zvw)}</td><td class="num"><strong>${eur(j.totaal)}</strong></td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`).join("")}
-    <tr class="totaal"><td>Totaal${onbekendeJaren.length ? ` (zonder ${onbekendeJaren.join(", ")})` : ""}</td><td class="num">${eur(somVan("winst"))}</td><td class="num">${eur(somVan("ib"))}</td><td class="num">${eur(somVan("zvw"))}</td><td class="num">${eur(grandTotaal)}</td>${heeftBtw ? `<td class="num btw">${btwTekst(bepaald.reduce((a, j) => a + (j.btw || 0), 0))}</td>` : ""}</tr>
-  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, op basis van de bankgegevens. De IB is berekend na aftrek van de ondernemersaftrek (zoals de zelfstandigenaftrek) en de MKB-winstvrijstelling, voor zover die van toepassing zijn. Zonder verrekening van voorschotten, voorlopige aanslagen of wat al is betaald.${heeftBtw ? " De BTW wordt per kwartaal aangegeven en staat daarom apart, niet in het totaal IB + Zvw." : ""} Per jaar volgt hieronder de volledige berekening.</p></div>`
+      ? `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num" colspan="${heeftVl ? 5 : 3}">urencriterium onbekend — zie de twee scenario's in dat jaar</td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`
+      : `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num">${eur(j.ib)}</td><td class="num">${eur(j.zvw)}</td><td class="num"><strong>${eur(j.totaal)}</strong></td>${vlCellen(j)}${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`).join("")}
+    <tr class="totaal"><td>Totaal${onbekendeJaren.length ? ` (zonder ${onbekendeJaren.join(", ")})` : ""}</td><td class="num">${eur(somVan("winst"))}</td><td class="num">${eur(somVan("ib"))}</td><td class="num">${eur(somVan("zvw"))}</td><td class="num">${eur(grandTotaal)}</td>${heeftVl ? `<td class="num">${eur(vlTotaal)}</td><td class="num">${restTekst(grandTotaal - vlTotaal)}</td>` : ""}${heeftBtw ? `<td class="num btw">${btwTekst(bepaald.reduce((a, j) => a + (j.btw || 0), 0))}</td>` : ""}</tr>
+  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, op basis van de bankgegevens. De IB is berekend na aftrek van de ondernemersaftrek (zoals de zelfstandigenaftrek) en de MKB-winstvrijstelling, voor zover die van toepassing zijn.${heeftVl ? " Voorlopige aanslag = de opgegeven voorlopige aanslag IB en Zvw; Na voorlopige aanslag = wat bij de definitieve aanslag nog bij moet of terugkomt. Of de voorlopige aanslag al is betaald, staat per jaar hieronder." : " Zonder verrekening van voorschotten, voorlopige aanslagen of wat al is betaald."}${heeftBtw ? " De BTW wordt per kwartaal aangegeven en staat daarom apart, niet in het totaal IB + Zvw." : ""} Per jaar volgt hieronder de volledige berekening.</p></div>`
     : "";
 
   return `<!DOCTYPE html>

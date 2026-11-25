@@ -94,7 +94,7 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
     const start = ingevuld ?? r.minStart;
     const begin = start + r.tot(new Date(year, 0, 1)), eind = start + r.tot(new Date(year + 1, 0, 1));
     sparen.begin += begin; sparen.eind += eind;
-    sparenRek.push({ iban: r.iban, naam: r.naam, eersteJaar: r.eersteJaar, start, berekend: ingevuld == null, begin, eind });
+    sparenRek.push({ iban: r.iban, naam: r.naam, weergave: r.weergave, spaar: r.spaar, eersteJaar: r.eersteJaar, start, berekend: ingevuld == null, begin, eind });
   }
   // nieuw-V9R9 — Boska 23-11 ("borg moet gewoon mee op de balans"): betaalde borg = vordering; borg die terugkomt zonder
   // dat de betaling in de bankbestanden staat, is al eerder betaald en stond op 1-1 van het eerste jaar al als vordering.
@@ -120,7 +120,7 @@ function perTegenrekening(classified, accountTypeByFile, filter, samen = false) 
     if (!isZak(tx)) continue;
     if (!samen && tx.counterpartyIban && geladen.has(norm(tx.counterpartyIban))) continue;
     const iban = samen ? "" : String(tx.counterpartyIban || "").replace(/\s+/g, "").toUpperCase();
-    if (!m.has(iban)) m.set(iban, { iban, naam: tx.counterparty || "", txs: [] });
+    if (!m.has(iban)) m.set(iban, { iban, naam: tx.counterparty || "", weergave: tx.tegenrekeningUitOmschrijving ? String(tx.counterpartyIban).trim() : null, txs: [] });
     m.get(iban).txs.push(tx);
   }
   return [...m.values()].map((r) => {
@@ -128,7 +128,7 @@ function perTegenrekening(classified, accountTypeByFile, filter, samen = false) 
     let saldo = 0, laagste = 0;
     for (const tx of txs) { saldo -= tx.amount; laagste = Math.min(laagste, saldo); }
     return {
-      iban: r.iban, naam: r.naam, eersteJaar: new Date(txs[0].date).getFullYear(), minStart: -laagste,
+      iban: r.iban, naam: r.naam, weergave: r.weergave, spaar: txs.every((tx) => tx.category === "Interne overboeking: zakelijk sparen"), eersteJaar: new Date(txs[0].date).getFullYear(), minStart: -laagste,
       tot: (d) => -txs.filter((tx) => new Date(tx.date) < d).reduce((a, tx) => a + tx.amount, 0),
     };
   });

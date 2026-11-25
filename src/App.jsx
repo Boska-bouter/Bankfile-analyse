@@ -2259,7 +2259,8 @@ export default function App() {
   // beide-V1R3 — in een privédossier bestaan de zakelijke vragen niet; die tellen dan nooit als overgeslagen.
   const zakelijkeVragen = modus.onderdelen.omzet !== false;
   const overgeslagenInEenvoudig = [
-    (eigenRekeningenExtra === null || (zakelijkeVragen && zakelijkeSpaarRekening === null)) && "andere eigen rekeningen",
+    // nieuw-V10R9 — de vraag "spaarrekening gekoppeld?" bestaat niet meer; spaarrekeningen staan in de lijst eigen rekeningen.
+    eigenRekeningenExtra === null && "andere eigen rekeningen",
     zakelijkeVragen && opdrachtgeversGevraagd === null && "klanten en leveranciers",
     // nieuw-V6R9 — de machinevraag geldt alleen als overgeslagen als de volledige wizard nooit is doorlopen
     // (dan is ook de klantenvraag nog open) en er geen bedrijfsmiddelen zijn. Oudere, in Uitgebreid gemaakte

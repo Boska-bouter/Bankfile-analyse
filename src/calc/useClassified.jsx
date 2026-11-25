@@ -90,7 +90,7 @@ export function useClassified(p) {
       //   Omdat de boeking dan niet meer vastligt, kan de gebruiker hem ook zelf anders indelen (per boeking of per tegenpartij).
       if (transferLocked && accountTypeByFile[tx.source] === "Zakelijk" && LENING_EIGEN.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
         const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
-        const eigen = overridesByRow[tx.id] || (sleutel ? overridesByCounterparty[sleutel] : null);
+        const eigen = overridesByRow[tx.id] || (sleutel && (!tx.tegenrekeningUitOmschrijving || sleutel.startsWith("IBAN::")) ? overridesByCounterparty[sleutel] : null);
         const lening = { ...tx, ...resolved, category: "Leningen", transferLocked: false, leningEigenRekening: true, accountType: "Zakelijk" };
         if (eigen?.category) return { ...lening, category: eigen.category, confidence: { level: "override", label: overridesByRow[tx.id] ? "Handmatig bevestigd (deze transactie)" : "Handmatig bevestigd (tegenpartij)" } };
         return { ...lening, confidence: { level: "heuristic", label: "Lening van of naar eigen/partnerrekening (staat in de omschrijving)" } };
@@ -98,7 +98,7 @@ export function useClassified(p) {
       // nieuw-V7R1 — voorgeschoten kosten terugbetaald aan eigen/partnerrekening: niet vast, op controleren (Dakhlaoui 17-11).
       if (transferLocked && accountTypeByFile[tx.source] === "Zakelijk" && tx.amount < 0 && VOORGESCHOTEN_EIGEN.test(`${tx.description || ""} ${tx.fullDescription || ""}`)) {
         const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
-        const eigen = overridesByRow[tx.id] || (sleutel ? overridesByCounterparty[sleutel] : null);
+        const eigen = overridesByRow[tx.id] || (sleutel && (!tx.tegenrekeningUitOmschrijving || sleutel.startsWith("IBAN::")) ? overridesByCounterparty[sleutel] : null);
         const los = { ...tx, ...resolved, transferLocked: false, voorgeschotenEigen: true, accountType: "Zakelijk" };
         if (overridesByRow[tx.id]?.category) return { ...los, category: overridesByRow[tx.id].category, confidence: { level: "override", label: "Handmatig bevestigd (deze transactie)" } };
         if (eigen?.category && eigen.category !== resolved.category) return { ...los, category: eigen.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
@@ -116,7 +116,10 @@ export function useClassified(p) {
       const nietGeladen = transferLocked && !(ownAccountsElsewhereByFile[tx.source] || []).find((o) => ibansMatch(tx.counterpartyIban, o.iban))?.isLoadedFile;
       if (nietGeladen) {
         const sleutel = overrideSleutel(tx, overridesByCounterparty, accountTypeByFile[tx.source]);
-        const rij = overridesByRow[tx.id], cp = sleutel ? overridesByCounterparty[sleutel] : null;
+        // nieuw-V10R9 — een keuze per boeking gaat altijd voor de keuze per tegenpartij (ook als die keuze gelijk is aan de herkenning).
+        // Is de rekening alleen in de omschrijving gevonden (eigenRekeningInOmschrijving.js), dan is de tegenpartijnaam vaak je eigen
+        // bedrijfsnaam: een oude keuze op die naam (Meijer: "Overig") geldt dan niet voor de overboekingen naar de opgegeven rekening.
+        const rij = overridesByRow[tx.id], cp = sleutel && !rij?.category && (!tx.tegenrekeningUitOmschrijving || sleutel.startsWith("IBAN::")) ? overridesByCounterparty[sleutel] : null;
         const los = { ...tx, ...resolved, transferLocked: false, accountType: accountTypeByFile[tx.source] === "Zakelijk" ? "Zakelijk" : "Prive" };
         if (rij?.category && rij.category !== resolved.category) return { ...los, category: rij.category, confidence: { level: "override", label: "Handmatig bevestigd (deze transactie)" } };
         if (cp?.category && cp.category !== resolved.category) return { ...los, category: cp.category, confidence: { level: "override", label: "Handmatig bevestigd (tegenpartij)" } };
