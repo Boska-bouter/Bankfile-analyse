@@ -121,7 +121,13 @@ function meetBreuken(doc) {
     const cs = win.getComputedStyle(el);
     if (cs.display === "none" || cs.display.startsWith("inline")) continue;
     const r = el.getBoundingClientRect();
-    if (!r.height) continue;
+    // nieuw-V10R8 — Boska 25-11 ("ieder jaar op een nieuwe pagina"): de scheiding tussen de jaren is een leeg blok
+    // zonder hoogte; die werd hier overgeslagen, zodat een nieuw jaar midden op een pagina begon.
+    if (!r.height) {
+      const t = Math.round(r.top + sy);
+      if (/page|always/.test(cs.breakBefore || "") || cs.pageBreakBefore === "always" || /page|always/.test(cs.breakAfter || "") || cs.pageBreakAfter === "always") verplicht.add(t);
+      continue;
+    }
     const top = Math.round(r.top + sy), onder = Math.round(r.bottom + sy);
     kandidaten.push(top);
     if (cs.display === "table-row" || /avoid/.test(cs.breakInside || "") || /avoid/.test(cs.pageBreakInside || "")) vermijd.push([top, onder]);
@@ -132,6 +138,17 @@ function meetBreuken(doc) {
     if (/^H[12]$/.test(el.tagName)) hoofd.push(top);
     if (/\b(aangifte-kaart|kerncijfers-kaart|totaal-kaart)\b/.test(el.className || "")) heel.push([top, onder]);
     if (/\b(ak-scherm|ak-sub|ak-sub2)\b/.test(el.className || "")) vermijd.push([top, onder + 40]); // tussenkop bij de regels eronder
+    // nieuw-V10R8 — Boska 25-11 ("niet middenin afbreken"): een kopregel met de regels die erbij horen
+    // (categorieën, toelichting, "Hierin") niet over twee pagina's verdelen, als het geheel kort genoeg is.
+    // Klassen als los woord (niet "bron-knop"); <details> zijn hier al vervangen door een div met de klasse van de summary.
+    if (/(^|\s)(rubriek|subrubriek|ak-r)(\s|$)/.test(el.className || "")) {
+      let eind = onder, nx = el.nextElementSibling;
+      while (nx && /(^|\s)(categorie-detail|toelichting|ak-wat)(\s|$)/.test(nx.className || "")) {
+        const rb = nx.getBoundingClientRect(); if (rb.height) eind = Math.max(eind, Math.round(rb.bottom + sy)); nx = nx.nextElementSibling;
+      }
+      // Ruim onder een halve pagina (staand ~1.112 px): anders kan er geen breukpunt overblijven en breekt de PDF door tekst.
+      if (eind > onder && eind - top < 450) vermijd.push([top, eind]);
+    }
   }
   return { kandidaten, vermijd, verplicht, voorkeur, hoofd, heel };
 }

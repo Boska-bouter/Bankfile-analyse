@@ -38,11 +38,11 @@ ${rijen.map((t) => `<tr><td class="d">${fmtDatum(t.date)}</td><td>${esc(t.counte
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Onderbouwing ${esc(titel)}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
 <style>
 *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:11px;line-height:1.35}
-h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;margin-bottom:14px} h2.jaar{font-size:16px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:26px 0 6px;break-before:page} h2.jaar:first-of-type{break-before:auto}
+h1{font-size:20px;margin:0 0 2px} .sub{color:#334155;margin-bottom:14px} h2.jaar{font-size:16px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:26px 0 6px;break-before:page} h2.jaar:first-of-type{break-before:auto}
 h3{font-size:12px;margin:16px 0 4px;color:#0f172a} table{width:100%;border-collapse:collapse;margin-bottom:10px;break-inside:auto}
 th{background:#f1f5f9;text-align:left;padding:4px 6px;font-size:11px} td{padding:3px 6px;border-bottom:1px solid #f1f5f9} td.d{white-space:nowrap}
 .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums} tr.tot td{font-weight:bold;border-top:1px solid #94a3b8;border-bottom:none}
-.noot{color:#64748b;font-size:10px;margin-top:14px}
+.noot{color:#334155;font-size:10px;margin-top:14px}
 .totaal-kaart{border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin:8px 0 14px;break-inside:avoid} .aannames-kop{font-weight:bold;font-size:12px;margin:0 0 4px} .toelichting{color:#475569;font-size:10px;margin:3px 0}
 table.samenvatting-scenarios th{text-align:left} table.samenvatting-scenarios th.num{text-align:right} table.samenvatting-scenarios tr.total td{font-weight:bold;border-top:1px solid #94a3b8} tr{break-inside:avoid} @media print{body{padding:0}}
 </style></head><body>

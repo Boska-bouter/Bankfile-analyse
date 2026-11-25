@@ -683,18 +683,18 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 11px; line-height: 1.35; }
   h1 { font-size: 18px; margin: 0 0 4px; }
-  .subtitle { color: #64748b; font-size: 11px; margin-bottom: 20px; }
+  .subtitle { color: #334155; font-size: 11px; margin-bottom: 20px; }
   h2 { font-size: 14px; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin: 24px 0 10px; page-break-after: avoid; }
-  h3 { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; margin: 14px 0 6px; }
+  h3 { font-size: 11px; color: #334155; text-transform: uppercase; letter-spacing: 0.02em; margin: 14px 0 6px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
   th, td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; text-align: left; }
-  th { font-size: 9px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #cbd5e1; }
+  th { font-size: 9px; text-transform: uppercase; color: #334155; border-bottom: 1px solid #cbd5e1; }
   tr.total td { font-weight: bold; border-top: 1px solid #0f172a; border-bottom: none; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .wvr { margin-bottom: 8px; }
   .wvr .rubriek { display: flex; justify-content: space-between; padding: 5px 6px; border-bottom: 1px solid #f1f5f9; font-weight: 600; }
   .wvr .subrubriek { display: flex; justify-content: space-between; padding: 3px 6px 3px 18px; border-bottom: 1px solid #f8fafc; color: #475569; font-weight: 400; }
-  .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #94a3b8; font-weight: 400; font-size: 9.5px; }
+  .wvr .categorie-detail { display: flex; justify-content: space-between; padding: 2px 6px 2px 32px; color: #475569; font-weight: 400; font-size: 9.5px; }
   details.bron > summary { list-style: none; cursor: pointer; }
   details.bron > summary::-webkit-details-marker { display: none; }
   details.bron > summary:hover { background: #f8fafc; }
@@ -705,19 +705,19 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   .bron-inhoud th, .bron-inhoud td { padding: 2px 5px; }
   @media print { .bron-knop, .bron-inhoud { display: none !important; } }
   .wvr .rubriek.total { border-top: 2px solid #0f172a; border-bottom: none; margin-top: 4px; padding-top: 8px; background: #f0fdf4; }
-  .wvr .toelichting { color: #64748b; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
+  .wvr .toelichting { color: #334155; font-size: 9.5px; font-style: italic; margin: 0 0 6px 6px; }
   .kerncijfers-kaart { margin: 0 0 12px; padding: 14px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .kerncijfers-hoofd { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
-  .kerncijfers-hoofd .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+  .kerncijfers-hoofd .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; color: #334155; }
   .kerncijfers-hoofd .bedrag-groot { font-size: 22px; font-weight: bold; color: #0f172a; }
   .kerncijfers-stappen { margin: 0 0 8px; }
-  .kerncijfers-stappen > div { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10.5px; color: #64748b; }
+  .kerncijfers-stappen > div { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10.5px; color: #334155; }
   .kerncijfers-stappen > div.tussentotaal { font-weight: 600; color: #1e293b; border-top: 1px solid #f1f5f9; margin-top: 3px; padding-top: 6px; }
   .kerncijfers-resultaat { display: flex; flex-wrap: wrap; gap: 24px; padding-top: 10px; margin-top: 4px; border-top: 1px solid #e2e8f0; }
   .kerncijfers-resultaat > div { display: flex; flex-direction: column; }
-  .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #64748b; }
+  .kerncijfers-resultaat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.02em; color: #334155; }
   .kerncijfers-resultaat .bedrag-groot { font-size: 19px; font-weight: bold; color: #0f172a; }
-  .kerncijfers-voetnoot { font-size: 9.5px; color: #94a3b8; margin: 6px 0 0; }
+  .kerncijfers-voetnoot { font-size: 9.5px; color: #475569; margin: 6px 0 0; }
   .totaal-kaart { margin: 0 0 12px; padding: 10px 14px; background: #f0f9ff; border: 2px solid #0f172a; border-radius: 8px; break-inside: avoid; page-break-inside: avoid; }
   .totaal-regel { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
   .totaal-eind { border-top: 1px solid #94a3b8; margin-top: 4px; padding-top: 6px; font-size: 14px; font-weight: bold; color: #0f172a; }
@@ -740,12 +740,12 @@ export function buildAangiftevoorstelBvHtml(yearsToInclude, classified, category
   .onzekerheden li { margin-bottom: 3px; }
   .onzekerheden p { margin: 6px 0; }
   .vergelijk-hint { color: #2563eb; font-size: 9.5px; font-style: italic; margin: -4px 0 8px; }
-  .disclaimer { margin-top: 28px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #64748b; font-size: 9.5px; }
+  .disclaimer { margin-top: 28px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #334155; font-size: 9.5px; }
   .bv-melding { margin: 0 0 20px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #78350f; font-size: 10.5px; line-height: 1.5; }
   .samenvatting-scenarios { width: 100%; margin: 8px 0; font-size: 10px; }
   .samenvatting-scenarios th, .samenvatting-scenarios td { border-bottom: 1px solid #e2e8f0; padding: 3px 6px; text-align: left; }
   .samenvatting-scenarios th:not(:first-child), .samenvatting-scenarios td.num { text-align: right; }
-  .overzicht-jaren { font-size: 11px; } .overzicht-jaren td.btw { color: #64748b; } .overzicht-jaren tr.totaal td { font-weight: bold; border-top: 2px solid #0f172a; border-bottom: none; }
+  .overzicht-jaren { font-size: 11px; } .overzicht-jaren td.btw { color: #334155; } .overzicht-jaren tr.totaal td { font-weight: bold; border-top: 2px solid #0f172a; border-bottom: none; }
   @page { size: A4 portrait; margin: 16mm; }
 </style></head>
 <body>
